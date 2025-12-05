@@ -1,8 +1,8 @@
 -- Legal-Mind Initial Database Schema
 -- Creates tables for multi-tenant SaaS platform for law firms
 
--- Enable UUID extension
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+-- Enable pgcrypto extension for gen_random_uuid()
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- ==========================================
 -- TABLES
@@ -10,7 +10,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- Create tenants table (law firms)
 CREATE TABLE tenants (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
   email TEXT UNIQUE NOT NULL,
   domain TEXT UNIQUE,
@@ -21,7 +21,7 @@ CREATE TABLE tenants (
 
 -- Create users table (lawyers within tenants)
 CREATE TABLE users (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
   email TEXT UNIQUE NOT NULL,
   full_name TEXT,
@@ -33,7 +33,7 @@ CREATE TABLE users (
 
 -- Create surveys table
 CREATE TABLE surveys (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
   created_by UUID NOT NULL REFERENCES users(id),
   title TEXT NOT NULL,
@@ -46,7 +46,7 @@ CREATE TABLE surveys (
 
 -- Create survey_links table (unique tokens for clients)
 CREATE TABLE survey_links (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   survey_id UUID NOT NULL REFERENCES surveys(id) ON DELETE CASCADE,
   token TEXT UNIQUE NOT NULL,
   client_email TEXT,
@@ -58,7 +58,7 @@ CREATE TABLE survey_links (
 
 -- Create responses table
 CREATE TABLE responses (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   survey_link_id UUID NOT NULL REFERENCES survey_links(id) ON DELETE CASCADE,
   tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
   answers JSONB NOT NULL,
@@ -70,7 +70,7 @@ CREATE TABLE responses (
 
 -- Create appointments table
 CREATE TABLE appointments (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   response_id UUID REFERENCES responses(id) ON DELETE SET NULL,
   tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
   lawyer_id UUID NOT NULL REFERENCES users(id),
