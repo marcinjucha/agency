@@ -1,0 +1,18 @@
+{
+  "name": "@legal-mind/database",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "lint": "eslint .",
+    "clean": "rm -rf dist",
+    "generate-types": "supabase gen types typescript --local > src/types.ts"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0"
+  }
+}
