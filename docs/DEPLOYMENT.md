@@ -36,10 +36,10 @@ Legal-Mind uses a Turborepo monorepo with 2 separate Next.js applications that d
 3. **Environment Variables**
    Add these in Vercel Dashboard → Settings → Environment Variables:
    ```bash
-   NEXT_PUBLIC_SUPABASE_URL=https://zsrpdslhnuwmzewwoexr.supabase.co
-   NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpzcnBkc2xobnV3bXpld3dvZXhyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzMwOTE4NzcsImV4cCI6MjA0ODY2Nzg3N30.lmykUCOSNUUJP-aVWWP4teSzYMBzbKb0LBIq-lSA_e8
-   N8N_WEBHOOK_URL=https://your-n8n-instance.com/webhook/form-submit
-   NEXT_PUBLIC_APP_URL=https://your-domain.vercel.app
+   SUPABASE_URL=https://zsrpdslhnuwmzewwoexr.supabase.co
+   SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpzcnBkc2xobnV3bXpld3dvZXhyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzMwOTE4NzcsImV4cCI6MjA0ODY2Nzg3N30.lmykUCOSNUUJP-aVWWP4teSzYMBzbKb0LBIq-lSA_e8
+   N8N_WEBHOOK_URL=https://n8n.n8n-mj.freeddns.org/webhook/form-submit
+   HOST_URL=https://your-domain.vercel.app
    ```
 
    **IMPORTANT:** Set for all environments (Production, Preview, Development)
