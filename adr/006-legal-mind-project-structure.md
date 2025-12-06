@@ -281,15 +281,16 @@ import { surveySchema } from '@legal-mind/validators'
 
 **Principle:** Use the right tool for the job
 
-**No Global State Management Library**
-- ❌ No Redux, Zustand, or Jotai at root level
-- ✓ Use React Context for truly global state (theme, user session)
-- ✓ Use TanStack Query for server state (CMS only)
-- ✓ Use URL params for filter state (search, pagination)
+**State Management Hierarchy:**
+- ✅ **TanStack Query** for server state (CMS only)
+- ✅ **Zustand** for client state when React Context is too complex
+- ✅ **React Context** for simple global state (theme, i18n)
+- ✅ **URL params** for filter state (search, pagination)
+- ❌ **No Redux** (too heavy, unnecessary for our use case)
 
 **CMS App (Complex Data Fetching):**
 ```typescript
-// ✅ TanStack Query for:
+// ✅ TanStack Query for SERVER state:
 - Surveys list (cache, refetch, optimistic updates)
 - Responses list (pagination, filtering)
 - Dashboard stats (background refetch)
@@ -300,6 +301,29 @@ const { data: surveys } = useQuery({
   queryFn: () => getSurveys(filters),
   staleTime: 1000 * 60 * 5, // 5 min cache
 })
+
+// ✅ Zustand for CLIENT state (when needed):
+- Survey Builder UI state (selected question, drag state)
+- Multi-step form progress
+- Sidebar collapse/expand state
+- Any complex local state that multiple components need
+
+// Example (Survey Builder):
+import { create } from 'zustand'
+
+interface SurveyBuilderStore {
+  selectedQuestionId: string | null
+  setSelectedQuestion: (id: string | null) => void
+  isDragging: boolean
+  setIsDragging: (dragging: boolean) => void
+}
+
+export const useSurveyBuilder = create<SurveyBuilderStore>((set) => ({
+  selectedQuestionId: null,
+  setSelectedQuestion: (id) => set({ selectedQuestionId: id }),
+  isDragging: false,
+  setIsDragging: (dragging) => set({ isDragging: dragging }),
+}))
 ```
 
 **Website App (Simple Forms):**
@@ -318,10 +342,28 @@ const onSubmit = async (data) => {
 }
 ```
 
+**When to use Zustand:**
+- ✅ Survey Builder (selected questions, drag state, preview mode)
+- ✅ Complex forms with multi-step wizards
+- ✅ UI state shared across many components
+- ✅ State that needs to persist during navigation
+- ❌ Simple component state (use useState)
+- ❌ Server state (use TanStack Query)
+- ❌ Form state (use React Hook Form)
+
+**Installation (when needed):**
+```bash
+# Add to apps/cms/package.json
+npm install zustand --workspace=@legal-mind/cms
+```
+
 **Rationale:**
-- TanStack Query adds 13kb → only use where it provides value
+- Zustand is lightweight (1kb) and has excellent DevTools
+- Simpler API than Context + useReducer for complex state
+- Better performance than Context (no re-render cascades)
+- Perfect for Survey Builder drag-drop UI state
+- TanStack Query handles server state → Zustand for client state
 - Website forms are simple → React Hook Form sufficient
-- CMS has complex data fetching → TanStack Query essential
 
 ---
 
@@ -1016,8 +1058,9 @@ When adding:
 │  └─ lib/        → Utils (supabase, helpers)         │
 │                                                      │
 │  STATE MANAGEMENT                                   │
-│  ├─ CMS        → TanStack Query (complex fetching)  │
-│  └─ Website    → React Hook Form (simple forms)     │
+│  ├─ Server     → TanStack Query (API data)          │
+│  ├─ Client     → Zustand (UI state, lightweight)    │
+│  └─ Forms      → React Hook Form (validation)       │
 │                                                      │
 │  DATABASE                                           │
 │  ├─ Access     → RLS policies (multi-tenant)        │
