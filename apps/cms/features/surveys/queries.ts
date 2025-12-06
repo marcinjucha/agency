@@ -5,46 +5,34 @@ import type { Tables } from '@legal-mind/database'
  * Fetch all surveys for the current user's tenant
  * Type-safe query with full TypeScript autocomplete
  */
-export async function getSurveys() {
-  const supabase = createClient()
-
-  const { data, error } = await supabase
-    .from('surveys') // ✅ TypeScript knows: 'tenants' | 'users' | 'surveys' | etc.
-    .select('*')     // ✅ TypeScript knows all columns
-    .order('created_at', { ascending: false })
-
-  if (error) throw error
-
-  // data is typed as:
-  // Array<{
-  //   id: string
-  //   title: string
-  //   description: string | null
-  //   tenant_id: string
-  //   created_by: string
-  //   questions: Json
-  //   status: string | null
-  //   created_at: string | null
-  //   updated_at: string | null
-  // }>
-
-  return data
-}
-
-/**
- * Fetch a single survey with creator information
- * Demonstrates type-safe joins
- */
-export async function getSurvey(id: string) {
+export async function getSurveys(): Promise<Tables<'surveys'>[]> {
   const supabase = createClient()
 
   const { data, error } = await supabase
     .from('surveys')
-    .select('*, created_by(full_name)') // ✅ TypeScript validates join
-    .eq('id', id)
-    .single()
+    .select('*')
+    .order('created_at', { ascending: false })
 
   if (error) throw error
+  return data || []
+}
+
+/**
+ * Fetch a single survey
+ * Returns full survey data
+ */
+export async function getSurvey(id: string): Promise<Tables<'surveys'>> {
+  const supabase = createClient()
+
+  const { data, error } = await supabase
+    .from('surveys')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle()
+
+  if (error) throw error
+  if (!data) throw new Error('Survey not found')
+
   return data
 }
 
