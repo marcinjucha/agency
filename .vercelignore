@@ -1,0 +1,32 @@
+# Vercel ignore file
+# Speeds up deployment by not uploading unnecessary files
+
+# Dependencies
+node_modules
+
+# Build outputs (rebuilt on Vercel)
+.next
+dist
+out
+build
+
+# Logs
+*.log
+
+# Tests
+**/__tests__
+**/*.test.*
+**/*.spec.*
+coverage
+
+# Documentation (not needed for build)
+docs
+*.md
+!README.md
+
+# Development
+.env*.local
+.turbo
+
+# OS
+.DS_Store

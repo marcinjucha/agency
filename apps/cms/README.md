@@ -1,36 +1,105 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Legal Mind - CMS App
 
-## Getting Started
+Admin panel for law firms to manage surveys, responses, and appointments.
 
-First, run the development server:
+## URLs
+
+- **Development:** http://localhost:3001
+- **Production:** https://legal-mind-cms.vercel.app (or custom domain)
+
+## Features
+
+- ✅ Authentication (Supabase Auth)
+- ✅ Dashboard with stats
+- ✅ Survey management (list, create)
+- 🚧 Survey Builder (in progress)
+- 🚧 Responses list with AI qualification
+- 🚧 Calendar management
+- 🚧 Google Calendar integration
+
+## Development
 
 ```bash
+# From monorepo root
+npm run dev:cms
+
+# Or directly
+cd apps/cms
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Build
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+# From monorepo root
+npm run build:cms
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+# Or with Turbo
+npx turbo run build --filter=@legal-mind/cms
+```
 
-## Learn More
+## Environment Variables
 
-To learn more about Next.js, take a look at the following resources:
+See `.env.local.example` for all required variables.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+**Critical variables:**
+- `SUPABASE_SERVICE_ROLE_KEY` - Server-side admin access (KEEP SECRET!)
+- `GOOGLE_CLIENT_SECRET` - OAuth secret (KEEP SECRET!)
+- `OPENAI_API_KEY` - AI API access (KEEP SECRET!)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Authentication
 
-## Deploy on Vercel
+### First User Setup
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Before you can login, you need to create a user in Supabase:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. Go to Supabase Dashboard → Authentication → Users
+2. Create new user with email/password
+3. Go to SQL Editor and run:
+   ```sql
+   -- Create tenant
+   INSERT INTO tenants (name, email) VALUES ('My Firm', 'admin@firm.com');
+
+   -- Link user to tenant (use IDs from above)
+   INSERT INTO users (id, tenant_id, email, full_name, role)
+   VALUES ('[auth-user-id]', '[tenant-id]', 'admin@firm.com', 'Admin', 'owner');
+   ```
+
+### Middleware Protection
+
+All routes except `/login` are protected by middleware.
+Unauthenticated users are redirected to `/login`.
+
+## Deployment
+
+Deployed automatically via Vercel when pushing to `main` branch.
+
+Manual deployment:
+```bash
+vercel --cwd apps/cms --prod
+```
+
+See `/docs/DEPLOYMENT.md` for full instructions.
+
+## Tech Stack
+
+- **Framework:** Next.js 16 (App Router)
+- **State Management:** TanStack Query (server state)
+- **Forms:** React Hook Form + Zod
+- **UI:** shadcn/ui components from @legal-mind/ui
+- **Database:** Supabase (PostgreSQL + Auth)
+- **Auth:** Supabase Auth with middleware
+- **Styling:** Tailwind CSS
+
+## Routes
+
+```
+/login                    - Authentication page
+/admin                    - Dashboard (protected)
+/admin/surveys            - Survey list (protected)
+/admin/surveys/new        - Create survey (protected)
+/admin/surveys/[id]       - Edit survey (protected, coming soon)
+/admin/responses          - Responses list (protected, coming soon)
+/admin/calendar           - Calendar (protected, coming soon)
+/admin/settings           - Settings (protected, coming soon)
+```
