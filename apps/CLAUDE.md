@@ -1,0 +1,92 @@
+# apps/ - Applications Directory
+
+This directory contains the two Next.js applications that make up Legal-Mind.
+
+## Structure
+
+```
+apps/
+├── website/     # Public-facing application
+└── cms/         # Admin panel application
+```
+
+## Applications
+
+### apps/website/
+**Purpose:** Public marketing website and client survey forms
+
+**Users:** Prospective clients, survey respondents (anonymous)
+
+**Key Features:**
+- Marketing pages (homepage, pricing, about, contact)
+- Dynamic survey forms (`/survey/[token]`)
+- Calendar booking interface
+- No authentication required
+
+**Port:** 3000 (development)
+**URL:** https://legal-mind-website.vercel.app (production)
+
+**When to add code here:**
+- Public-facing pages (anyone can access)
+- Client survey form components
+- Marketing content
+- Landing pages
+
+### apps/cms/
+**Purpose:** Admin panel for law firms
+
+**Users:** Lawyers, law firm staff (authenticated)
+
+**Key Features:**
+- Authentication (login/logout)
+- Survey builder and management
+- Client responses with AI qualification
+- Calendar management
+- Dashboard analytics
+
+**Port:** 3001 (development)
+**URL:** https://legal-mind-cms.vercel.app (production)
+
+**When to add code here:**
+- Admin-only features
+- Protected routes requiring authentication
+- Survey management tools
+- Response analysis
+- Internal dashboards
+
+## Separation Principle
+
+**Rule:** Separate by authentication boundary, not by feature
+
+- If it requires login → `apps/cms/`
+- If it's public → `apps/website/`
+
+## Shared Code
+
+Don't duplicate code between apps. Use:
+- `packages/ui/` for shared components
+- `packages/database/` for shared types
+- `packages/validators/` for shared validation
+
+## Development
+
+```bash
+# Start both apps
+npm run dev
+
+# Start individually
+npm run dev:website
+npm run dev:cms
+```
+
+## Deployment
+
+Each app deploys independently to Vercel:
+- Changes to `apps/website/` → redeploys website only
+- Changes to `apps/cms/` → redeploys CMS only
+- Changes to `packages/` → redeploys both (transpiled)
+
+## Related Documentation
+
+- [ADR-006: Project Structure](../adr/006-legal-mind-project-structure.md)
+- [Architecture Overview](../docs/ARCHITECTURE.md)

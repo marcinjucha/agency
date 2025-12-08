@@ -1,0 +1,229 @@
+# features/ - Business Logic (CMS)
+
+This directory contains business logic separated from routing (ADR-005 pattern).
+
+## Purpose
+
+Keep `app/` clean (routing only) and put all business logic here:
+- Data fetching
+- State management
+- Component logic
+- Server Actions
+- Validation
+
+## Structure
+
+```
+features/
+├── surveys/         # Survey management
+│   ├── components/  # SurveyList, SurveyBuilder
+│   ├── actions.ts   # createSurvey, updateSurvey, deleteSurvey
+│   ├── queries.ts   # getSurveys, getSurvey, getSurveyByToken
+│   ├── validations.ts # Zod schemas (future)
+│   └── types.ts     # TypeScript types (future)
+│
+├── responses/       # Response management (TODO)
+├── calendar/        # Calendar integration (TODO)
+└── auth/            # Auth helpers (TODO)
+```
+
+## Pattern (ADR-005)
+
+Each feature follows this structure:
+
+```
+features/{feature}/
+├── components/      # Feature-specific React components
+├── actions.ts       # Server Actions (mutations)
+├── queries.ts       # Data fetching functions
+├── validations.ts   # Zod schemas
+├── types.ts         # TypeScript interfaces
+└── __tests__/       # Tests
+```
+
+## Example: Surveys Feature
+
+### components/SurveyList.tsx
+```typescript
+'use client'
+import { useQuery } from '@tanstack/react-query'
+import { getSurveys } from '../queries'
+
+export function SurveyList() {
+  const { data: surveys } = useQuery({
+    queryKey: ['surveys'],
+    queryFn: getSurveys
+  })
+  // Component logic here
+}
+```
+
+### queries.ts
+```typescript
+import { createClient } from '@/lib/supabase/client'
+import type { Tables } from '@legal-mind/database'
+
+export async function getSurveys(): Promise<Tables<'surveys'>[]> {
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from('surveys')
+    .select('*')
+    .order('created_at', { ascending: false })
+
+  if (error) throw error
+  return data || []
+}
+```
+
+### actions.ts
+```typescript
+'use server'
+import { createClient } from '@/lib/supabase/server'
+import { revalidatePath } from 'next/cache'
+
+export async function createSurvey(data: { title: string }) {
+  const supabase = await createClient()
+
+  const { data: survey, error } = await supabase
+    .from('surveys')
+    .insert(data)
+    .select()
+    .single()
+
+  if (error) return { success: false, error: error.message }
+
+  revalidatePath('/admin/surveys')
+  return { success: true, surveyId: survey.id }
+}
+```
+
+## Usage in Routes
+
+**app/admin/surveys/page.tsx:**
+```typescript
+import { SurveyList } from '@/features/surveys/components/SurveyList'
+
+export default function SurveysPage() {
+  return (
+    <div>
+      <h1>Surveys</h1>
+      <SurveyList />
+    </div>
+  )
+}
+```
+
+**Minimal routing logic** - all complex logic in features/.
+
+## Why This Pattern?
+
+**Benefits:**
+- ✅ **Testable:** Business logic isolated from Next.js
+- ✅ **Reusable:** Features can be extracted to packages
+- ✅ **Discoverable:** Find all survey code in one place
+- ✅ **Maintainable:** Clear separation of concerns
+- ✅ **Scalable:** Easy to add new features
+
+**Comparison:**
+
+```typescript
+// ❌ BAD: Logic in app/
+app/admin/surveys/page.tsx:
+  - 200 lines of code
+  - Fetching, state, rendering, validation all mixed
+
+// ✅ GOOD: Logic in features/
+app/admin/surveys/page.tsx:
+  - 10 lines of code (just imports and layout)
+
+features/surveys/components/SurveyList.tsx:
+  - 80 lines (component logic)
+
+features/surveys/queries.ts:
+  - 40 lines (data fetching)
+
+features/surveys/actions.ts:
+  - 70 lines (mutations)
+```
+
+## File Naming
+
+- Components: PascalCase (`SurveyList.tsx`)
+- Actions/Queries: camelCase functions (`getSurveys()`, `createSurvey()`)
+- Types: PascalCase (`Survey`, `Question`)
+- Files: lowercase with dash (`survey-utils.ts`)
+
+## Adding a New Feature
+
+```bash
+# 1. Create feature folder
+mkdir -p features/new-feature/components
+
+# 2. Create files
+touch features/new-feature/components/NewFeatureList.tsx
+touch features/new-feature/actions.ts
+touch features/new-feature/queries.ts
+
+# 3. Create route
+mkdir -p app/admin/new-feature
+touch app/admin/new-feature/page.tsx
+
+# 4. Import in route
+# app/admin/new-feature/page.tsx
+import { NewFeatureList } from '@/features/new-feature/components/NewFeatureList'
+```
+
+## Server Actions vs API Routes
+
+**Use Server Actions (preferred):**
+```typescript
+'use server'
+export async function createSurvey(data: FormData) {
+  // Direct database access
+  // Automatic serialization
+  // Built-in with Next.js
+}
+```
+
+**Use API Routes only for:**
+- External webhooks (n8n)
+- Third-party integrations
+- Public endpoints
+
+## TanStack Query Integration
+
+**queries.ts exports functions** that TanStack Query calls:
+
+```typescript
+// features/surveys/queries.ts
+export async function getSurveys() {
+  // Fetch logic
+}
+
+// features/surveys/components/SurveyList.tsx
+const { data } = useQuery({
+  queryKey: ['surveys'],
+  queryFn: getSurveys  // ← References query function
+})
+```
+
+## Type Safety
+
+Always use explicit return types:
+
+```typescript
+// ✅ GOOD
+export async function getSurveys(): Promise<Tables<'surveys'>[]> {
+  // ...
+}
+
+// ❌ BAD (TanStack Query can't infer types)
+export async function getSurveys() {
+  // ...
+}
+```
+
+## Related Documentation
+
+- [ADR-005: App vs Features Separation](../../../adr/005-app-vs-features-separation.md)
+- [ADR-006: Component Organization](../../../adr/006-legal-mind-project-structure.md#7-component-organization-pattern)
