@@ -4,6 +4,54 @@
 
 Legal-Mind is a SaaS platform that helps law firms automate client intake through AI-powered survey forms and intelligent calendar booking.
 
+## 🚀 Quick Start
+
+### 1. Install Dependencies
+
+```bash
+npm install
+```
+
+### 2. Setup Environment Variables
+
+Copy `.env.local.example` to `.env.local` in both apps and fill in your values:
+
+```bash
+cp apps/website/.env.local.example apps/website/.env.local
+cp apps/cms/.env.local.example apps/cms/.env.local
+```
+
+**Already configured** with production values! ✅
+
+### 3. Start Development Servers
+
+**Option A: Run Both Apps**
+```bash
+npm run dev
+```
+- Website: http://localhost:3000
+- CMS: http://localhost:3001
+
+**Option B: Run Individual Apps**
+```bash
+npm run dev:website   # Website only
+npm run dev:cms       # CMS only
+```
+
+**Option C: Use VSCode Tasks**
+- Press `Cmd+Shift+B` (macOS) or `Ctrl+Shift+B` (Windows)
+- Select "Dev: All Apps" or "Dev: CMS" or "Dev: Website"
+
+### 4. Open in VSCode
+
+```bash
+code legal-mind.code-workspace
+```
+
+This opens a multi-root workspace with all packages visible in sidebar.
+
+---
+
 ## 🏗️ Architecture
 
 **Turborepo Monorepo** with 2 Next.js applications:
@@ -16,22 +64,43 @@ Legal-Mind is a SaaS platform that helps law firms automate client intake throug
 - `@legal-mind/database` - Supabase types and queries
 - `@legal-mind/validators` - Zod validation schemas
 
-## 🚀 Tech Stack
+---
 
-- **Frontend:** Next.js 15, React 18, TypeScript, Tailwind CSS
-- **State Management:** TanStack Query (CMS only)
+## 🚢 Deployment
+
+**Live URLs:**
+- Website: https://legal-mind-website.vercel.app
+- CMS: https://legal-mind-cms.vercel.app/login
+
+**Auto-deployment:**
+Push to `main` branch → Vercel automatically deploys
+
+**Manual deployment:**
+```bash
+vercel --cwd apps/website --prod
+vercel --cwd apps/cms --prod
+```
+
+---
+
+## 🎯 Tech Stack
+
+- **Frontend:** Next.js 16, React 19, TypeScript, Tailwind CSS 4
+- **State:** TanStack Query (CMS), React Hook Form
 - **Database:** Supabase (PostgreSQL + Auth + Realtime)
 - **Automation:** n8n + OpenAI
 - **Calendar:** Google Calendar API
 - **Deployment:** Vercel (2 projects)
 - **Monorepo:** Turborepo
 
+---
+
 ## 📋 Features
 
 ### For Law Firms (CMS)
 - ✅ Create custom intake surveys
-- ✅ AI-powered client qualification
-- ✅ View and manage responses
+- ✅ Manage questions (7 types)
+- ✅ View responses with AI qualification
 - ✅ Google Calendar integration
 - ✅ Dashboard analytics
 
@@ -41,85 +110,20 @@ Legal-Mind is a SaaS platform that helps law firms automate client intake throug
 - ✅ Book appointments instantly
 - ✅ Email confirmations
 
-## 🛠️ Getting Started
-
-### Prerequisites
-
-- Node.js 18+
-- npm 10+
-- Supabase CLI (for local development)
-- Docker (for n8n)
-
-### Installation
-
-1. **Clone the repository**
-```bash
-git clone <repository-url>
-cd legal-mind
-```
-
-2. **Install dependencies**
-```bash
-npm install
-```
-
-3. **Setup Supabase**
-```bash
-# Install Supabase CLI
-npm install -g supabase
-
-# Initialize Supabase
-supabase init
-
-# Start local Supabase
-supabase start
-```
-
-4. **Configure environment variables**
-
-Create `.env.local` files in both apps:
-
-**`apps/website/.env.local`**
-```bash
-NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
-```
-
-**`apps/cms/.env.local`**
-```bash
-NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-GOOGLE_CLIENT_ID=your-google-client-id
-GOOGLE_CLIENT_SECRET=your-google-client-secret
-```
-
-5. **Run database migrations**
-```bash
-supabase db reset
-```
-
-6. **Start development servers**
-```bash
-# Start all apps
-npm run dev
-
-# Website: http://localhost:3000
-# CMS: http://localhost:3001
-```
+---
 
 ## 📁 Project Structure
 
 ```
 legal-mind/
 ├── apps/
-│   ├── website/              # Public app
+│   ├── website/              # Public app (port 3000)
 │   │   ├── app/
 │   │   │   ├── (marketing)/  # Landing pages
 │   │   │   └── survey/       # Survey forms
 │   │   └── features/
 │   │
-│   └── cms/                  # Admin app
+│   └── cms/                  # Admin app (port 3001)
 │       ├── app/
 │       │   ├── login/        # Auth
 │       │   └── admin/        # Protected routes
@@ -131,12 +135,11 @@ legal-mind/
 │   ├── database/             # Supabase types
 │   └── validators/           # Zod schemas
 │
-├── supabase/
-│   └── migrations/           # Database schema
-│
-└── docs/
-    └── ARCHITECTURE.md       # Architecture documentation
+└── supabase/
+    └── migrations/           # Database schema
 ```
+
+---
 
 ## 🧪 Development
 
@@ -144,9 +147,9 @@ legal-mind/
 
 ```bash
 # Development
-npm run dev              # Start all apps in dev mode
-npm run dev:website      # Start website only
-npm run dev:cms          # Start CMS only
+npm run dev              # Start all apps
+npm run dev:website      # Start website (localhost:3000)
+npm run dev:cms          # Start CMS (localhost:3001)
 
 # Building
 npm run build            # Build all apps
@@ -159,114 +162,98 @@ npm run lint             # Lint all apps
 npm run format           # Format code with Prettier
 
 # Supabase
-npm run db:reset         # Reset database (warning: deletes all data)
 npm run db:types         # Generate TypeScript types from DB
 ```
 
-### Folder Structure Pattern
+### VSCode Tasks
 
-We follow the **ADR-005** pattern:
-- `app/` - Routing only (page.tsx, layout.tsx)
-- `features/` - Business logic (components, actions, queries)
-- `components/` - UI components
-- `lib/` - Utilities
+Press `Cmd+Shift+P` and type "Tasks: Run Task":
+- **Dev: All Apps** - Start both servers
+- **Dev: CMS** - Start CMS only
+- **Dev: Website** - Start Website only
+- **Build: All** - Build all apps
+- **Build: CMS** - Build CMS only
+- **Build: Website** - Build Website only
 
-Example:
-```typescript
-// app/admin/surveys/page.tsx (routing)
-import { SurveyList } from '@/features/surveys/components/SurveyList'
+---
 
-export default function SurveysPage() {
-  return <SurveyList />
-}
+## 🔐 Authentication
 
-// features/surveys/components/SurveyList.tsx (logic)
-'use client'
-import { useQuery } from '@tanstack/react-query'
-import { getSurveys } from '../queries'
+### First User Setup
 
-export function SurveyList() {
-  const { data: surveys } = useQuery({
-    queryKey: ['surveys'],
-    queryFn: getSurveys
-  })
-  // ... component logic
-}
-```
+Before you can login, create a user in Supabase:
 
-## 🚢 Deployment
+1. Go to [Supabase Auth](https://app.supabase.com/project/zsrpdslhnuwmzewwoexr/auth/users)
+2. Click "Add User" → Create with email/password
+3. Run SQL from `supabase/seed_first_user.sql`
+4. Login at http://localhost:3001/login
 
-### Vercel Setup
+See `supabase/seed_first_user.sql` for detailed instructions.
 
-**Project 1: Website**
-```bash
-vercel --cwd apps/website
-
-# Settings in Vercel Dashboard:
-# - Root Directory: apps/website
-# - Build Command: cd ../.. && turbo run build --filter=@legal-mind/website
-# - Install Command: npm install
-```
-
-**Project 2: CMS**
-```bash
-vercel --cwd apps/cms
-
-# Settings in Vercel Dashboard:
-# - Root Directory: apps/cms
-# - Build Command: cd ../.. && turbo run build --filter=@legal-mind/cms
-# - Install Command: npm install
-```
-
-### Environment Variables (Production)
-
-Set these in Vercel Dashboard for each project:
-
-**Website:**
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- `N8N_WEBHOOK_URL`
-
-**CMS:**
-- All website variables +
-- `SUPABASE_SERVICE_ROLE_KEY`
-- `GOOGLE_CLIENT_ID`
-- `GOOGLE_CLIENT_SECRET`
-- `GOOGLE_REDIRECT_URI`
-- `OPENAI_API_KEY`
+---
 
 ## 📖 Documentation
 
-- [Architecture Documentation](./docs/ARCHITECTURE.md) - Detailed architecture overview
-- [Implementation Plan](./.claude/plans/wise-growing-meadow.md) - Complete implementation plan
-- [ADR-001: Monorepo Structure](./adr/001-monorepo-structure.md) - Turborepo decision
-- [ADR-005: App vs Features Separation](./adr/005-app-vs-features-separation.md) - Folder structure
+- [Architecture](./docs/ARCHITECTURE.md) - System design overview
+- [Deployment](./docs/DEPLOYMENT.md) - Vercel setup guide
+- [Implementation Status](./docs/IMPLEMENTATION_STATUS.md) - Current progress
+- [ADR-006](./adr/006-legal-mind-project-structure.md) - Project patterns
 
-## 🔒 Security
+---
 
-- **Authentication:** Supabase Auth (email/password + Google OAuth)
-- **Authorization:** Row Level Security (RLS) policies
-- **Multi-tenancy:** Tenant isolation enforced at DB level
-- **API Protection:** Middleware guards all admin routes
-- **Secrets:** Environment variables (never committed to git)
+## 🔧 Troubleshooting
+
+### CMS won't start
+
+```bash
+cd apps/cms
+npm install
+npm run dev
+```
+
+### TypeScript errors
+
+```bash
+npm run db:types  # Regenerate types from Supabase
+```
+
+### Build fails
+
+```bash
+npm run clean  # Clear .next folders
+npm install    # Reinstall dependencies
+npm run build  # Try again
+```
+
+---
 
 ## 🤝 Contributing
 
-1. Create a feature branch: `git checkout -b feature/amazing-feature`
-2. Commit your changes: `git commit -m 'Add amazing feature'`
-3. Push to the branch: `git push origin feature/amazing-feature`
-4. Open a Pull Request
+1. Create feature branch: `git checkout -b feature/amazing-feature`
+2. Make changes
+3. Commit: `git commit -m 'feat: add amazing feature'`
+4. Push: `git push origin feature/amazing-feature`
+5. Create Merge Request on GitLab
+
+---
 
 ## 📝 License
 
 [To be decided]
 
+---
+
 ## 🙋 Support
 
-For questions or issues:
-- Check [Architecture Documentation](./docs/ARCHITECTURE.md)
-- Review [ADR documents](./adr/)
-- Contact the team
+**Live Apps:**
+- Website: https://legal-mind-website.vercel.app
+- CMS: https://legal-mind-cms.vercel.app
+
+**Supabase:**
+- Dashboard: https://app.supabase.com/project/zsrpdslhnuwmzewwoexr
+
+**Repository:**
+- GitLab: https://gitlab.com/friendly-coders/legal-mind
 
 ---
 
