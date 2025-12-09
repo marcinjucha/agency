@@ -18,13 +18,13 @@
 >    - Change `[ ]` to `[x]` in this file (PROJECT_ROADMAP.md) for completed items
 >    - Update "Current Status Summary" section with new progress percentages
 >    - Update "Recent Milestones" section with what was accomplished
->    - Update IMPLEMENTATION_STATUS.md with detailed progress log
+>    - Update "Last Updated" date at the top of this file
 > 6. **COMMIT FREQUENTLY:** After each logical step (file created, feature working, bug fixed), create a git commit with a concise message (2-5 sentences max). Use conventional commit format: `feat:`, `fix:`, `refactor:`, `docs:`, etc.
 >
 > **Other useful docs:**
-> - `ARCHITECTURE.md` - Technical details
-> - `IMPLEMENTATION_STATUS.md` - Detailed progress log
-> - `adr/006-legal-mind-project-structure.md` - Code patterns
+> - `ARCHITECTURE.md` - Technical details and system design
+> - `adr/006-legal-mind-project-structure.md` - Code organization patterns
+> - `archive/IMPLEMENTATION_STATUS.md` - Historical progress log (archived)
 
 > **Last Updated:** 2025-12-09
 > **Current Phase:** Phase 1 Complete ✅ + Phase 2 Starting 🚧
