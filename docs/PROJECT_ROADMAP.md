@@ -1,6 +1,25 @@
 # Legal-Mind: Project Roadmap & Implementation Status
 
-> **For AI Assistants:** This document provides complete project overview, architecture decisions, implementation plan, and current status. Use this to understand what's been built and what needs to be done next.
+> **📌 NOTE FOR AI ASSISTANTS:**
+>
+> **This is the MAIN DOCUMENT for understanding this project.** Read this file first to get complete context about:
+> - What we're building (Vision & Goals)
+> - How it works (Architecture)
+> - What's already done (Phase 1: ✅ Complete)
+> - What needs to be built next (Phase 2-6 with checklists)
+> - Current priorities (Next Steps section)
+>
+> **When helping with this project:**
+> 1. Read this file to understand full context
+> 2. Check "Current Status Summary" to see what's done
+> 3. Look at "Next Steps" to understand priorities
+> 4. Follow patterns in "Development Guidelines"
+> 5. Update this file after completing tasks (change checkboxes)
+>
+> **Other useful docs:**
+> - `ARCHITECTURE.md` - Technical details
+> - `IMPLEMENTATION_STATUS.md` - Detailed progress log
+> - `adr/006-legal-mind-project-structure.md` - Code patterns
 
 > **Last Updated:** 2025-12-09
 > **Current Phase:** Phase 1 Complete ✅ + Phase 2 Starting 🚧
