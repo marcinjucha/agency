@@ -7,6 +7,7 @@ import { Button, Input, Label, Card } from '@legal-mind/ui'
 import { ArrowLeft, Plus, Trash2, Save } from 'lucide-react'
 import Link from 'next/link'
 import type { Tables } from '@legal-mind/database'
+import { SurveyLinks } from './SurveyLinks'
 
 type Question = {
   id: string
@@ -96,8 +97,8 @@ export function SurveyBuilder({ survey }: SurveyBuilderProps) {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left: Survey Settings */}
-        <div className="lg:col-span-1">
+        {/* Left: Survey Settings + Survey Links */}
+        <div className="lg:col-span-1 space-y-6">
           <Card className="p-6 sticky top-6">
             <h2 className="text-lg font-semibold mb-4">Survey Settings</h2>
 
@@ -130,6 +131,9 @@ export function SurveyBuilder({ survey }: SurveyBuilderProps) {
               </div>
             </div>
           </Card>
+
+          {/* Survey Links Section */}
+          <SurveyLinks surveyId={survey.id} />
         </div>
 
         {/* Right: Questions Builder */}

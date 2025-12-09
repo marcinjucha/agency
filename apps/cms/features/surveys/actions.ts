@@ -109,3 +109,83 @@ export async function deleteSurvey(id: string): Promise<{ success: boolean; erro
     return { success: false, error: 'Failed to delete survey' }
   }
 }
+
+/**
+ * Generate a new survey link
+ * Creates a unique token for survey access
+ */
+export async function generateSurveyLink(
+  surveyId: string,
+  options: {
+    clientEmail?: string
+    expiresAt?: string // ISO date string
+    maxSubmissions?: number | null
+  }
+): Promise<{ success: boolean; linkId?: string; token?: string; error?: string }> {
+  try {
+    const supabase = await createClient()
+
+    // Verify user has access to this survey (via tenant_id RLS)
+    const { data: survey } = await supabase
+      .from('surveys')
+      .select('id')
+      .eq('id', surveyId)
+      .maybeSingle()
+
+    if (!survey) {
+      return { success: false, error: 'Survey not found or access denied' }
+    }
+
+    // Generate unique token using crypto.randomUUID()
+    const token = crypto.randomUUID()
+
+    // Insert link
+    const linkData: TablesInsert<'survey_links'> = {
+      survey_id: surveyId,
+      token,
+      client_email: options.clientEmail || null,
+      expires_at: options.expiresAt || null,
+      max_submissions: options.maxSubmissions ?? null, // null = unlimited
+      submission_count: 0,
+    }
+
+    const { data: link, error: insertError } = await supabase
+      .from('survey_links')
+      .insert(linkData as any)
+      .select()
+      .single()
+
+    if (insertError || !link) {
+      return { success: false, error: insertError?.message || 'Failed to generate link' }
+    }
+
+    revalidatePath(`/admin/surveys/${surveyId}`)
+    return {
+      success: true,
+      linkId: (link as Tables<'survey_links'>).id,
+      token: (link as Tables<'survey_links'>).token,
+    }
+  } catch (error) {
+    return { success: false, error: 'Failed to generate survey link' }
+  }
+}
+
+/**
+ * Delete a survey link
+ */
+export async function deleteSurveyLink(linkId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const supabase = await createClient()
+
+    // RLS will ensure user can only delete links for their tenant's surveys
+    const { error } = await supabase.from('survey_links').delete().eq('id', linkId)
+
+    if (error) {
+      return { success: false, error: error.message }
+    }
+
+    return { success: true }
+  } catch (error) {
+    return { success: false, error: 'Failed to delete survey link' }
+  }
+}

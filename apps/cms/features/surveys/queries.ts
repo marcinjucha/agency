@@ -69,3 +69,20 @@ export async function getSurveyByToken(token: string) {
 
   return survey
 }
+
+/**
+ * Fetch all links for a specific survey
+ * Returns links ordered by creation date (newest first)
+ */
+export async function getSurveyLinks(surveyId: string): Promise<Tables<'survey_links'>[]> {
+  const supabase = createClient()
+
+  const { data, error } = await supabase
+    .from('survey_links')
+    .select('*')
+    .eq('survey_id', surveyId)
+    .order('created_at', { ascending: false })
+
+  if (error) throw error
+  return data || []
+}
