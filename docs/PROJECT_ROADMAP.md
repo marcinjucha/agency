@@ -14,7 +14,11 @@
 > 2. Check "Current Status Summary" to see what's done
 > 3. Look at "Next Steps" to understand priorities
 > 4. Follow patterns in "Development Guidelines"
-> 5. Update this file after completing tasks (change checkboxes)
+> 5. **UPDATE DOCUMENTATION:** After completing tasks:
+>    - Change `[ ]` to `[x]` in this file (PROJECT_ROADMAP.md) for completed items
+>    - Update "Current Status Summary" section with new progress percentages
+>    - Update "Recent Milestones" section with what was accomplished
+>    - Update IMPLEMENTATION_STATUS.md with detailed progress log
 > 6. **COMMIT FREQUENTLY:** After each logical step (file created, feature working, bug fixed), create a git commit with a concise message (2-5 sentences max). Use conventional commit format: `feat:`, `fix:`, `refactor:`, `docs:`, etc.
 >
 > **Other useful docs:**
