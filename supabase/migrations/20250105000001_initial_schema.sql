@@ -51,7 +51,7 @@ CREATE TABLE survey_links (
   token TEXT UNIQUE NOT NULL,
   client_email TEXT,
   expires_at TIMESTAMPTZ,
-  max_submissions INT DEFAULT 1,
+  max_submissions INT DEFAULT NULL,
   submission_count INT DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -102,6 +102,30 @@ CREATE INDEX idx_appointments_start_time ON appointments(start_time);
 CREATE INDEX idx_appointments_status ON appointments(status);
 
 -- ==========================================
+-- HELPER FUNCTION FOR RLS
+-- ==========================================
+
+-- Create a STABLE function that returns current user's tenant_id
+-- STABLE means it's cached within a single query (performance optimization)
+-- SECURITY DEFINER means it runs with elevated privileges (bypasses RLS)
+-- This function is the KEY to preventing infinite recursion in RLS policies
+CREATE OR REPLACE FUNCTION public.current_user_tenant_id()
+RETURNS uuid
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT tenant_id FROM users WHERE id = auth.uid();
+$$;
+
+-- Grant execute permission to authenticated and anon users
+GRANT EXECUTE ON FUNCTION public.current_user_tenant_id() TO authenticated, anon;
+
+COMMENT ON FUNCTION public.current_user_tenant_id() IS
+  'Returns the tenant_id for the current authenticated user. Used in RLS policies to prevent infinite recursion. SECURITY DEFINER allows it to bypass RLS when querying users table.';
+
+-- ==========================================
 -- ROW LEVEL SECURITY (RLS)
 -- ==========================================
 
@@ -113,49 +137,72 @@ ALTER TABLE survey_links ENABLE ROW LEVEL SECURITY;
 ALTER TABLE responses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE appointments ENABLE ROW LEVEL SECURITY;
 
--- RLS Policies for tenants
+-- Force RLS for users table (even for owners)
+ALTER TABLE users FORCE ROW LEVEL SECURITY;
+
+-- ==========================================
+-- RLS POLICIES - TENANTS
+-- ==========================================
+
 CREATE POLICY "Users can view own tenant"
   ON tenants FOR SELECT
-  USING (id = (SELECT tenant_id FROM users WHERE id = auth.uid()));
+  USING (id = public.current_user_tenant_id());
 
 CREATE POLICY "Users can update own tenant"
   ON tenants FOR UPDATE
-  USING (id = (SELECT tenant_id FROM users WHERE id = auth.uid()))
-  WITH CHECK (id = (SELECT tenant_id FROM users WHERE id = auth.uid()));
+  USING (id = public.current_user_tenant_id())
+  WITH CHECK (id = public.current_user_tenant_id());
 
--- RLS Policies for users
-CREATE POLICY "Users can view own tenant users"
+-- ==========================================
+-- RLS POLICIES - USERS
+-- ==========================================
+
+-- Users can always view their own profile (by auth.uid())
+CREATE POLICY "Users can view own profile"
   ON users FOR SELECT
-  USING (tenant_id = (SELECT tenant_id FROM users WHERE id = auth.uid()));
+  USING (id = auth.uid());
 
+-- Users can view other users in their tenant
+CREATE POLICY "Users can view tenant users"
+  ON users FOR SELECT
+  USING (tenant_id = public.current_user_tenant_id());
+
+-- Users can update their own profile
 CREATE POLICY "Users can update own profile"
   ON users FOR UPDATE
   USING (id = auth.uid())
   WITH CHECK (id = auth.uid());
 
--- RLS Policies for surveys
+-- ==========================================
+-- RLS POLICIES - SURVEYS
+-- ==========================================
+
 CREATE POLICY "Users can view own tenant surveys"
   ON surveys FOR SELECT
-  USING (tenant_id = (SELECT tenant_id FROM users WHERE id = auth.uid()));
+  USING (tenant_id = public.current_user_tenant_id());
 
 CREATE POLICY "Users can create surveys in own tenant"
   ON surveys FOR INSERT
-  WITH CHECK (tenant_id = (SELECT tenant_id FROM users WHERE id = auth.uid()));
+  WITH CHECK (tenant_id = public.current_user_tenant_id());
 
 CREATE POLICY "Users can update own tenant surveys"
   ON surveys FOR UPDATE
-  USING (tenant_id = (SELECT tenant_id FROM users WHERE id = auth.uid()))
-  WITH CHECK (tenant_id = (SELECT tenant_id FROM users WHERE id = auth.uid()));
+  USING (tenant_id = public.current_user_tenant_id())
+  WITH CHECK (tenant_id = public.current_user_tenant_id());
 
 CREATE POLICY "Users can delete own tenant surveys"
   ON surveys FOR DELETE
-  USING (tenant_id = (SELECT tenant_id FROM users WHERE id = auth.uid()));
+  USING (tenant_id = public.current_user_tenant_id());
 
--- RLS Policies for survey_links
+-- ==========================================
+-- RLS POLICIES - SURVEY LINKS
+-- ==========================================
+
+-- Authenticated users can manage survey links for their tenant's surveys
 CREATE POLICY "Users can manage own tenant survey links"
   ON survey_links FOR ALL
   USING (survey_id IN (
-    SELECT id FROM surveys WHERE tenant_id = (SELECT tenant_id FROM users WHERE id = auth.uid())
+    SELECT id FROM surveys WHERE tenant_id = public.current_user_tenant_id()
   ));
 
 -- Public access to survey links (for client form)
@@ -163,29 +210,39 @@ CREATE POLICY "Anyone can view survey links by token"
   ON survey_links FOR SELECT
   USING (true);
 
--- RLS Policies for responses
+-- ==========================================
+-- RLS POLICIES - RESPONSES
+-- ==========================================
+
+-- Authenticated users can view their tenant's responses
 CREATE POLICY "Users can view own tenant responses"
   ON responses FOR SELECT
-  USING (tenant_id = (SELECT tenant_id FROM users WHERE id = auth.uid()));
+  USING (tenant_id = public.current_user_tenant_id());
 
+-- Authenticated users can update their tenant's responses
 CREATE POLICY "Users can update own tenant responses"
   ON responses FOR UPDATE
-  USING (tenant_id = (SELECT tenant_id FROM users WHERE id = auth.uid()))
-  WITH CHECK (tenant_id = (SELECT tenant_id FROM users WHERE id = auth.uid()));
+  USING (tenant_id = public.current_user_tenant_id())
+  WITH CHECK (tenant_id = public.current_user_tenant_id());
 
 -- Public access to create responses (for client form submission)
 CREATE POLICY "Anyone can create responses"
   ON responses FOR INSERT
   WITH CHECK (true);
 
--- RLS Policies for appointments
+-- ==========================================
+-- RLS POLICIES - APPOINTMENTS
+-- ==========================================
+
+-- Authenticated users can view their tenant's appointments
 CREATE POLICY "Users can view own tenant appointments"
   ON appointments FOR SELECT
-  USING (tenant_id = (SELECT tenant_id FROM users WHERE id = auth.uid()));
+  USING (tenant_id = public.current_user_tenant_id());
 
+-- Authenticated users can manage their tenant's appointments
 CREATE POLICY "Users can manage own tenant appointments"
   ON appointments FOR ALL
-  USING (tenant_id = (SELECT tenant_id FROM users WHERE id = auth.uid()));
+  USING (tenant_id = public.current_user_tenant_id());
 
 -- Public access to create appointments (for client booking)
 CREATE POLICY "Anyone can create appointments"
@@ -205,7 +262,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Apply updated_at trigger to all tables
+-- Apply updated_at trigger to all tables with updated_at column
 CREATE TRIGGER update_tenants_updated_at
   BEFORE UPDATE ON tenants
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
@@ -241,3 +298,4 @@ COMMENT ON COLUMN surveys.questions IS 'JSONB array of question objects with typ
 COMMENT ON COLUMN responses.answers IS 'JSONB object mapping question IDs to client answers';
 COMMENT ON COLUMN responses.ai_qualification IS 'JSONB object with AI analysis results from n8n workflow';
 COMMENT ON COLUMN users.google_calendar_token IS 'JSONB object with OAuth tokens for Google Calendar integration';
+COMMENT ON COLUMN survey_links.max_submissions IS 'Maximum number of submissions allowed for this link. NULL means unlimited.';
