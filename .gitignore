@@ -55,7 +55,6 @@ Thumbs.db
 .temp/
 
 # Claude Code
-.claude/
 
 # Optional
 *.sublime-project

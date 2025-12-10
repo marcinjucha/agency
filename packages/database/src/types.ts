@@ -163,6 +163,7 @@ export type Database = {
           created_at: string | null
           expires_at: string | null
           id: string
+          is_active: boolean
           max_submissions: number | null
           submission_count: number | null
           survey_id: string
@@ -173,6 +174,7 @@ export type Database = {
           created_at?: string | null
           expires_at?: string | null
           id?: string
+          is_active?: boolean
           max_submissions?: number | null
           submission_count?: number | null
           survey_id: string
@@ -183,6 +185,7 @@ export type Database = {
           created_at?: string | null
           expires_at?: string | null
           id?: string
+          is_active?: boolean
           max_submissions?: number | null
           submission_count?: number | null
           survey_id?: string
@@ -325,7 +328,11 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      current_user_tenant_id: { Args: never; Returns: string }
+      increment_submission_count: {
+        Args: { link_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

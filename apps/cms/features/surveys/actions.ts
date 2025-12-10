@@ -147,6 +147,7 @@ export async function generateSurveyLink(
       expires_at: options.expiresAt || null,
       max_submissions: options.maxSubmissions ?? null, // null = unlimited
       submission_count: 0,
+      is_active: true, // CRITICAL: Required for RLS policy to allow public access
     }
 
     const { data: link, error: insertError } = await supabase

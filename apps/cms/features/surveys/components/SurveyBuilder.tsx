@@ -12,9 +12,10 @@ import { SurveyLinks } from './SurveyLinks'
 type Question = {
   id: string
   type: 'text' | 'textarea' | 'email' | 'tel' | 'select' | 'radio' | 'checkbox'
-  label: string
+  question: string
   required: boolean
   options?: string[]
+  order: number
 }
 
 type SurveyBuilderProps = {
@@ -24,9 +25,19 @@ type SurveyBuilderProps = {
 export function SurveyBuilder({ survey }: SurveyBuilderProps) {
   const [title, setTitle] = useState(survey.title)
   const [description, setDescription] = useState(survey.description || '')
-  const [questions, setQuestions] = useState<Question[]>(
-    Array.isArray(survey.questions) ? (survey.questions as Question[]) : []
-  )
+  const [questions, setQuestions] = useState<Question[]>(() => {
+    // Migrate old format with 'label' to new format with 'question'
+    if (!Array.isArray(survey.questions)) return []
+
+    return (survey.questions as any[]).map((q, index) => ({
+      id: q.id,
+      type: q.type,
+      question: q.question || q.label || 'New Question', // Support both old and new format
+      required: q.required || false,
+      options: q.options,
+      order: q.order !== undefined ? q.order : index,
+    }))
+  })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
@@ -35,8 +46,9 @@ export function SurveyBuilder({ survey }: SurveyBuilderProps) {
     const newQuestion: Question = {
       id: crypto.randomUUID(),
       type: 'text',
-      label: 'New Question',
+      question: 'New Question',
       required: false,
+      order: questions.length,
     }
     setQuestions([...questions, newQuestion])
   }
@@ -173,8 +185,8 @@ export function SurveyBuilder({ survey }: SurveyBuilderProps) {
                     <div>
                       <Label>Question Text</Label>
                       <Input
-                        value={question.label}
-                        onChange={(e) => updateQuestion(question.id, { label: e.target.value })}
+                        value={question.question}
+                        onChange={(e) => updateQuestion(question.id, { question: e.target.value })}
                         placeholder="What is your name?"
                       />
                     </div>
