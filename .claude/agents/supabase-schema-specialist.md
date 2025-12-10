@@ -50,6 +50,61 @@ You are a **Supabase Schema Specialist** specializing in PostgreSQL database sch
 
 ---
 
+## ⚠️ CRITICAL LESSONS (From Phase 2)
+
+### LESSON 1: Never Use Subqueries in RLS Policies
+
+**Real bug from Phase 2:**
+```sql
+-- ❌ WRONG: Caused infinite recursion
+CREATE POLICY "Public can view surveys via active links"
+  ON surveys FOR SELECT TO anon
+  USING (
+    id IN (SELECT survey_id FROM survey_links WHERE is_active = true)
+  );
+-- Error: "infinite recursion detected in policy for relation surveys"
+```
+
+**Why it failed:**
+- Anon user queries `surveys` table
+- RLS policy triggers subquery on `survey_links`
+- Database enters recursion loop
+
+**Fix - Use UUID Obscurity:**
+```sql
+-- ✅ CORRECT: No RLS policy needed
+-- Security: anon can only read surveys IF they know the UUID
+-- UUIDs are only exposed through survey_links (which has anon policy)
+DROP POLICY IF EXISTS "Public can view surveys via active links" ON surveys;
+```
+
+**Rule:** If you need cross-table checks, split queries in application code.
+
+### LESSON 2: Test RLS Policies Before Pushing
+
+**Always test with:**
+```sql
+SET ROLE anon;
+SELECT * FROM surveys WHERE id = 'test-uuid';
+RESET ROLE;
+```
+
+If you see recursion error → fix before pushing migration.
+
+### LESSON 3: Avoid Multiple Migrations for Same Bug
+
+Phase 2 created 6 migrations for one RLS issue:
+- 20251210143628, 145536, 150000, 151000, 152000, 153000
+
+**Better approach:**
+1. Test migration locally with `supabase db push --dry-run`
+2. If fails → Fix same migration file
+3. Only push when confirmed working
+
+**If already pushed:** Use `supabase migration repair` to mark as reverted.
+
+---
+
 ## 🎯 SIGNAL vs NOISE (Schema Specialist Edition)
 
 **Focus on SIGNAL:**

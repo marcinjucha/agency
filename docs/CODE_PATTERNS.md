@@ -8,18 +8,83 @@
 
 ## 📚 Table of Contents
 
-1. [Supabase Clients (CRITICAL)](#1-supabase-clients-critical)
-2. [Server Actions (Mutations)](#2-server-actions-mutations)
-3. [Queries (Data Fetching)](#3-queries-data-fetching)
-4. [Components with TanStack Query](#4-components-with-tanstack-query)
-5. [Components without TanStack Query](#5-components-without-tanstack-query)
-6. [Types (Auto-generated)](#6-types-auto-generated)
-7. [Validation (Zod)](#7-validation-zod)
-8. [File Organization (ADR-005)](#8-file-organization-adr-005)
+1. [RLS Policy Pitfalls (CRITICAL)](#1-rls-policy-pitfalls-critical)
+2. [Supabase Clients](#2-supabase-clients)
+3. [Server Actions (Mutations)](#3-server-actions-mutations)
+4. [Queries (Data Fetching)](#4-queries-data-fetching)
+5. [Components with TanStack Query](#5-components-with-tanstack-query)
+6. [Components without TanStack Query](#6-components-without-tanstack-query)
+7. [Types (Auto-generated)](#7-types-auto-generated)
+8. [Validation (Zod)](#8-validation-zod)
+9. [File Organization (ADR-005)](#9-file-organization-adr-005)
 
 ---
 
-## 1. Supabase Clients (CRITICAL)
+## 1. RLS Policy Pitfalls (CRITICAL)
+
+### ⚠️ Never Use Subqueries in RLS Policies
+
+**Phase 2 Bug:** RLS policy with subquery caused infinite recursion.
+
+```sql
+-- ❌ WRONG: Infinite recursion
+CREATE POLICY "Public can view surveys via active links"
+  ON surveys FOR SELECT TO anon
+  USING (
+    id IN (SELECT survey_id FROM survey_links WHERE is_active = true)
+  );
+```
+
+**Error:** `infinite recursion detected in policy for relation "surveys"`
+
+**Why:** Anon queries surveys → RLS checks survey_links → Database recursion loop
+
+### ✅ Solution: UUID Obscurity + Split Queries
+
+**No RLS policy needed on surveys:**
+```sql
+-- ✅ CORRECT: Drop the problematic policy
+DROP POLICY IF EXISTS "Public can view surveys via active links" ON surveys;
+
+-- Security: UUIDs are only exposed through survey_links
+-- Anon can read surveys IF they know the UUID
+```
+
+**Split queries in application code:**
+```typescript
+// Step 1: Fetch survey_links (has anon RLS policy)
+const { data: link } = await supabase
+  .from('survey_links')
+  .select('*')
+  .eq('token', token)
+  .single()
+
+// Step 2: Validate link (expired, inactive, max_submissions)
+if (!link.is_active) return { error: 'inactive' }
+
+// Step 3: Fetch survey separately (no RLS recursion)
+const { data: survey } = await supabase
+  .from('surveys')
+  .select('*')
+  .eq('id', link.survey_id)
+  .single()
+```
+
+### Testing RLS Policies
+
+**Always test before pushing:**
+```sql
+-- Test as anon user
+SET ROLE anon;
+SELECT * FROM surveys WHERE id = 'test-uuid-here';
+RESET ROLE;
+
+-- If you see recursion error → fix policy before migration
+```
+
+---
+
+## 2. Supabase Clients
 
 ### ⚠️ Most Common Mistake: Using Wrong Client
 
@@ -109,7 +174,7 @@ export async function getSurveys() {
 
 ---
 
-## 2. Server Actions (Mutations)
+## 3. Server Actions (Mutations)
 
 **When:** Creating, updating, deleting data
 
@@ -262,7 +327,7 @@ export async function actionName(
 
 ---
 
-## 3. Queries (Data Fetching)
+## 4. Queries (Data Fetching)
 
 **When:** Reading data from database
 
@@ -386,7 +451,7 @@ export async function getThing(id: string): Promise<Tables<'things'>> {
 
 ---
 
-## 4. Components with TanStack Query
+## 5. Components with TanStack Query
 
 **When:** CMS app, frequent data fetching, caching needed
 
@@ -507,7 +572,7 @@ export function ThingList() {
 
 ---
 
-## 5. Components without TanStack Query
+## 6. Components without TanStack Query
 
 **When:** Website app, one-time submission, no caching needed
 
@@ -603,7 +668,7 @@ export function SurveyForm({ surveyId, questions }: SurveyFormProps) {
 
 ---
 
-## 6. Types (Auto-generated)
+## 7. Types (Auto-generated)
 
 **NEVER manually edit** `packages/database/src/types.ts`!
 
@@ -666,7 +731,7 @@ const updates: Partial<Pick<Tables<'surveys'>, 'title' | 'status'>> = {
 
 ---
 
-## 7. Validation (Zod)
+## 8. Validation (Zod)
 
 **File Pattern:** `packages/validators/src/{feature}.ts`
 
@@ -742,7 +807,7 @@ export function generateSurveySchema(questions: Question[]) {
 
 ---
 
-## 8. File Organization (ADR-005)
+## 9. File Organization (ADR-005)
 
 ### Rule: app/ = Routing, features/ = Logic
 

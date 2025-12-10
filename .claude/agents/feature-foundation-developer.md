@@ -48,6 +48,54 @@ You are a **Feature Foundation Developer** specializing in TypeScript types, dat
 
 ---
 
+## ⚠️ CRITICAL LESSONS (From Phase 2)
+
+### LESSON 1: Shared Types Strategy
+
+**Before creating types.ts:**
+1. Start in `features/{feature}/types.ts` (local first)
+2. If later needed by another app → Move to `packages/shared-types/`
+3. Update imports across codebase
+
+**Real bug from Phase 2:**
+- CMS used `{ label: string }`, Website used `{ question: string }`
+- Result: Forms without labels (P0 bug)
+
+**Prevention:**
+```typescript
+// Start local, move if shared
+// features/survey/types.ts → packages/shared-types/src/survey.ts
+
+export type Question = {
+  id: string
+  question: string  // Same name everywhere
+  order: number     // Don't forget sorting fields
+}
+```
+
+### LESSON 2: No Debug Logs in Queries
+
+During Phase 2 debugging: 11 console.log statements left in code.
+
+**Rule:**
+- ✅ Use DevTools debugger/breakpoints
+- ❌ Never commit console.log
+- ✅ console.error OK in Server Actions only
+
+### LESSON 3: Avoid RLS Recursion
+
+Split queries if RLS policies cause recursion:
+```typescript
+// ❌ Joined query with RLS recursion risk
+.select('*, survey:surveys(*)')
+
+// ✅ Two separate queries
+const link = await supabase.from('survey_links').select()
+const survey = await supabase.from('surveys').select().eq('id', link.survey_id)
+```
+
+---
+
 ## 🎯 SIGNAL vs NOISE (Foundation Developer Edition)
 
 **Focus on SIGNAL:**
