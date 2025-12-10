@@ -614,9 +614,10 @@ npm run build
 ## 🔗 Related Documentation
 
 ### Primary Documents
+- **[PROJECT_ROADMAP.md](./PROJECT_ROADMAP.md)** - This document (what to build)
+- **[CODE_PATTERNS.md](./CODE_PATTERNS.md)** - Code examples (how to build)
 - **[ARCHITECTURE.md](./ARCHITECTURE.md)** - Detailed technical architecture
-- **[IMPLEMENTATION_STATUS.md](./IMPLEMENTATION_STATUS.md)** - Detailed progress log
-- **[PROJECT_ROADMAP.md](./PROJECT_ROADMAP.md)** - This document
+- **[IMPLEMENTATION_STATUS.md](./archive/IMPLEMENTATION_STATUS.md)** - Historical progress log (archived)
 
 ### Architecture Decision Records (ADRs)
 - **[adr/001-monorepo-structure.md](./adr/001-monorepo-structure.md)** - Why Turborepo
@@ -649,10 +650,11 @@ npm run build
 
 When helping with this project:
 1. **Read PROJECT_ROADMAP.md** (this file) for full context
-2. **Check IMPLEMENTATION_STATUS.md** for latest progress
-3. **Follow ADR patterns** in `adr/` directory
-4. **Reference architecture** in ARCHITECTURE.md for technical details
-5. **Update docs** after making changes
+2. **Read CODE_PATTERNS.md** for concrete code examples (HOW to implement)
+3. **Check current phase** status to understand what's done
+4. **Follow ADR patterns** in `adr/` directory
+5. **Reference ARCHITECTURE.md** for technical details
+6. **Update docs** after making changes
 
 ### Code Organization Patterns
 
