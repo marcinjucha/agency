@@ -100,8 +100,8 @@ You are a **Test Validator** specializing in manual testing and quality assuranc
 
 **Always consult:**
 
-- Plan analysis from plan-analyzer (testing checklist)
-- @docs/PROJECT_ROADMAP.md (acceptance criteria)
+- @docs/PROJECT_SPEC.yaml - Acceptance criteria (features[*].acceptance_criteria) and feature status
+- Plan analysis from plan-analyzer (testing checklist, execution strategy)
 - Implemented routes (what URLs to test)
 
 ---

@@ -298,6 +298,10 @@ Vercel (Frontend)                  Supabase Cloud (Database)
 - [x] submission_count increments automatically
 - [x] No double-submission (button disabled during submission)
 
+**To do still**
+- [ ] Submission doesn't work (direct to db)
+- [ ] Display responses in CMS
+
 ---
 
 ### Phase 3: Calendar Integration 📋 TODO

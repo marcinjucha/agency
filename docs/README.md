@@ -12,7 +12,7 @@ Welcome to Legal-Mind documentation. This directory contains everything you need
 
 1. **[PROJECT_ROADMAP.md](./PROJECT_ROADMAP.md)** - Complete project overview, plan, and current status
 2. **[ARCHITECTURE.md](./ARCHITECTURE.md)** - Technical architecture and design decisions
-3. **[IMPLEMENTATION_STATUS.md](./IMPLEMENTATION_STATUS.md)** - Detailed progress and commit history
+3. **[PROJECT_SPEC.yaml](./PROJECT_SPEC.yaml)** - Machine-readable specification for AI agents
 
 ---
 
@@ -22,9 +22,10 @@ Welcome to Legal-Mind documentation. This directory contains everything you need
 
 | Document | Purpose | When to Read |
 |----------|---------|--------------|
-| **[PROJECT_ROADMAP.md](./PROJECT_ROADMAP.md)** | Master plan: vision, architecture, phases, status | **Start here** - Essential for AI context |
-| **[ARCHITECTURE.md](./ARCHITECTURE.md)** | Technical architecture, tech stack, system design | When understanding how things work |
-| **[IMPLEMENTATION_STATUS.md](./IMPLEMENTATION_STATUS.md)** | Current progress, git history, next steps | When checking what's done |
+| **[PROJECT_ROADMAP.md](./PROJECT_ROADMAP.md)** | Master plan: vision, architecture, phases, status | **Start here** - Essential context |
+| **[PROJECT_SPEC.yaml](./PROJECT_SPEC.yaml)** | Machine-readable spec: features, dependencies, files (for AI agents) | For structured project data |
+| **[ARCHITECTURE.md](./ARCHITECTURE.md)** | Technical architecture, tech stack, system design, cross-app dependencies | When understanding how things work |
+| **[CODE_PATTERNS.md](./CODE_PATTERNS.md)** | Concrete code examples and implementation patterns | When building features |
 
 ### Architecture Decision Records (ADRs)
 
@@ -56,11 +57,12 @@ Older documents kept for reference (not actively maintained):
 
 **Read this first:**
 1. **[PROJECT_ROADMAP.md](./PROJECT_ROADMAP.md)** - Full context in one file
-2. **[adr/006-legal-mind-project-structure.md](./adr/006-legal-mind-project-structure.md)** - Code patterns
+2. **[PROJECT_SPEC.yaml](./PROJECT_SPEC.yaml)** - Structured spec (parse this for feature details)
+3. **[PROJECT_SPEC_SCHEMA.md](./PROJECT_SPEC_SCHEMA.md)** - How to read the YAML structure
 
 **Then reference:**
-- ARCHITECTURE.md for technical details
-- IMPLEMENTATION_STATUS.md for current progress
+- ARCHITECTURE.md for technical details and cross-cutting concerns
+- CODE_PATTERNS.md for implementation patterns
 
 ### For New Developers
 
@@ -87,17 +89,17 @@ Older documents kept for reference (not actively maintained):
 
 ## 📊 Current Project Status
 
-> **As of:** December 9, 2025
+> **As of:** December 12, 2025
 
 | Metric | Value |
 |--------|-------|
-| **Phase** | Phase 1 Complete ✅, Phase 2 Starting 🚧 |
-| **Progress** | 88% Foundation (15/17 tasks) |
-| **Commits** | 23 total |
+| **Phase** | Phase 1 Complete ✅, Phase 2 In Progress 🚧 |
+| **Progress** | 100% Phase 1, 75% Phase 2 (3/5 features) = 25% MVP |
+| **Commits** | 19 total (cleaned up commit history) |
 | **Deployment** | ✅ Live on Vercel (2 apps) |
-| **Latest Feature** | Survey Link Generation |
+| **Latest Feature** | Dynamic survey form with 7 question types |
 
-**Next Priority:** Build dynamic survey form (Website app)
+**Next Priority:** Fix form submission (RLS policy) + Build response management in CMS
 
 ---
 
@@ -108,7 +110,7 @@ Older documents kept for reference (not actively maintained):
 | Question | Document |
 |----------|----------|
 | Understand the project vision | PROJECT_ROADMAP.md → Vision & Goals |
-| Know what's already built | IMPLEMENTATION_STATUS.md |
+| Know what's already built | PROJECT_ROADMAP.md → Current Status Summary |
 | Understand the architecture | ARCHITECTURE.md |
 | Know what to build next | PROJECT_ROADMAP.md → Next Steps |
 | Understand code organization | adr/005, adr/006 |
@@ -129,8 +131,8 @@ Older documents kept for reference (not actively maintained):
 | Question | Document |
 |----------|----------|
 | Overall project progress | PROJECT_ROADMAP.md → Current Status |
-| Specific feature progress | IMPLEMENTATION_STATUS.md |
-| Recent changes | IMPLEMENTATION_STATUS.md → Git Commit History |
+| Specific feature progress | PROJECT_SPEC.yaml → phases.features[*].status |
+| Recent changes | PROJECT_ROADMAP.md → Recent Milestones |
 | Next priorities | PROJECT_ROADMAP.md → Next Steps |
 
 ---
@@ -140,19 +142,19 @@ Older documents kept for reference (not actively maintained):
 ### When to Update
 
 **After completing a feature:**
-- [x] Update PROJECT_ROADMAP.md (change 📋 TODO to ✅ COMPLETE)
-- [x] Update IMPLEMENTATION_STATUS.md (add to completed section)
+- [x] Update PROJECT_SPEC.yaml (change status: pending → complete, mark acceptance_criteria as verified)
+- [x] Update PROJECT_ROADMAP.md (change [x] for completed items, update progress %)
 - [x] Commit changes with: `docs: update status after [feature name]`
 
 **After making architectural decision:**
 - [ ] Create new ADR in `adr/` directory
-- [ ] Update ARCHITECTURE.md if high-level changes
+- [ ] Update ARCHITECTURE.md if high-level changes (especially "Cross-Cutting Concerns" section)
 - [ ] Reference ADR in PROJECT_ROADMAP.md if relevant
 
 **After major milestone:**
-- [ ] Update PROJECT_ROADMAP.md → Current Status
-- [ ] Update IMPLEMENTATION_STATUS.md → Session Statistics
-- [ ] Consider updating README.md (this file)
+- [ ] Update PROJECT_SPEC.yaml (update phase progress, mark features complete)
+- [ ] Update PROJECT_ROADMAP.md → Current Status Summary + Recent Milestones
+- [ ] Update both file `last_updated` dates
 
 ### How to Update
 
@@ -175,11 +177,13 @@ Older documents kept for reference (not actively maintained):
 
 ### Document Types
 
-- **Roadmap:** Living document (updated frequently)
-- **Architecture:** Stable document (updated on major changes)
-- **ADRs:** Immutable records (never edit, only add new)
-- **Status:** Log document (append-only)
-- **Guides:** How-to documents (updated as needed)
+- **PROJECT_ROADMAP.md:** Living document - narrative plan with timelines (updated frequently)
+- **PROJECT_SPEC.yaml:** Machine-readable spec for AI agents (updated when features change)
+- **PROJECT_SPEC_SCHEMA.md:** Documentation of YAML structure (stable, rarely changes)
+- **ARCHITECTURE.md:** Technical design (stable, updated on major changes or new cross-cutting concerns)
+- **ADRs:** Immutable decision records (never edit, only add new)
+- **CODE_PATTERNS.md:** How-to examples (updated with new patterns)
+- **Guides:** How-to documents (not yet created)
 
 ---
 
@@ -215,8 +219,8 @@ Older documents kept for reference (not actively maintained):
 
 ---
 
-**Last Updated:** December 9, 2025
+**Last Updated:** December 12, 2025
 **Maintained By:** Development Team
-**Next Review:** After Phase 2 completion
+**Next Review:** After Phase 3 completion
 
 *This README serves as the central index for all documentation. Start with PROJECT_ROADMAP.md for complete project context.*

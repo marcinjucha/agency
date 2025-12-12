@@ -177,6 +177,127 @@ legal-mind/
 
 ---
 
+## Cross-Cutting Concerns & Dependencies
+
+### Shared Packages
+
+Both `apps/website` and `apps/cms` depend on 3 shared packages:
+
+**@legal-mind/ui** - React components
+- Imported from: `packages/ui/src/components/`
+- Usage: Button, Card, Input, Form, Dialog, etc.
+- Built with: shadcn/ui + Tailwind CSS
+- Impact: UI changes affect BOTH apps
+
+**@legal-mind/database** - Supabase types
+- Location: `packages/database/src/types.ts`
+- Auto-generated from: `npm run db:types` (reads live Supabase schema)
+- Usage: `import type { Tables } from '@legal-mind/database'`
+- Impact: Database schema change → regenerate types → affects BOTH apps
+- When to update: After migrations with `npm run db:types`
+
+**@legal-mind/validators** - Zod schemas
+- Location: `packages/validators/src/`
+- Used by: CMS (survey creation), Website (form submission)
+- Impact: Adding new question type → update validators → affects BOTH apps
+
+### Change Impact Map
+
+**Database Schema Change**
+```
+1. supabase/migrations/YYYY_new_field.sql (write migration)
+2. npm run db:types (regenerate types)
+   ↓
+3. packages/database/src/types.ts (auto-updated)
+   ↓
+4. apps/cms/features/surveys/actions.ts (must update to handle new field)
+5. apps/cms/features/surveys/components/SurveyBuilder.tsx (add new field to UI)
+   ↓
+6. apps/website/features/survey/queries.ts (field now available in responses)
+7. apps/website/features/survey/components/SurveyForm.tsx (render new field if needed)
+
+Testing: CMS create → Website display (end-to-end)
+```
+
+**UI Component Change**
+```
+1. packages/ui/src/components/button.tsx (modify component)
+   ↓
+2. Rebuild: npm run build:ui
+   ↓
+3. apps/cms automatically gets update (depends on @legal-mind/ui)
+4. apps/website automatically gets update (depends on @legal-mind/ui)
+
+Both apps affected → test in both
+```
+
+**Question Type Addition**
+```
+1. packages/validators/src/survey.ts (add new type to schema)
+   ↓
+2. apps/cms/features/surveys/components/SurveyBuilder.tsx (add UI option)
+3. apps/cms/features/surveys/ (update relevant actions/components)
+   ↓
+4. apps/website/features/survey/validation.ts (add validation for new type)
+5. apps/website/features/survey/components/QuestionField.tsx (render new type)
+
+Both apps affected → test CMS create → Website render
+```
+
+### CMS ↔ Website Communication
+
+**No Direct API calls** - Communication happens ONLY through Supabase database
+
+**Workflow:**
+```
+Phase 1: CMS (Lawyer)
+├─ apps/cms/features/surveys/actions.ts → createSurvey()
+├─ Inserts to surveys table (tenant_id = lawyer's tenant)
+└─ Generates survey_links with unique token
+
+Phase 2: Website (Client)
+├─ apps/website/app/survey/[token]/page.tsx
+├─ Reads survey via token using RLS policy (anon access allowed)
+└─ apps/website/features/survey/queries.ts → getSurveyByToken()
+
+Phase 3: Client Submission
+├─ apps/website/features/survey/actions.ts → submitSurveyResponse()
+├─ Inserts to responses table with tenant_id from surveys
+├─ Calls increment_submission_count() database function
+└─ n8n webhook triggered (on responses insert)
+
+Phase 4: CMS (Lawyer) Reviews
+├─ apps/cms/features/responses/queries.ts → getResponses()
+├─ RLS policy filters: tenant_id = lawyer's tenant
+└─ Only sees responses from their own tenant
+```
+
+**Database as Communication Layer:**
+- All data sharing through Supabase tables
+- RLS policies enforce access control:
+  - `anon` role: Can read surveys (if active link exists), INSERT responses
+  - `authenticated` role: Can read/write their tenant's data only
+  - CMS middleware ensures only authenticated requests to admin routes
+- No authentication token needed for client forms (uses anon key)
+
+### Deployment Independence
+
+**Each app deploys separately to Vercel:**
+```
+apps/website → legal-mind-website.vercel.app
+(Vercel Project #1)
+
+apps/cms → legal-mind-cms.vercel.app
+(Vercel Project #2)
+
+packages/* → shared code (auto-transpiled in both builds)
+```
+
+**Benefit:** Changes to CMS don't trigger website rebuild, and vice versa
+**Trade-off:** Shared package updates require rebuilding both apps
+
+---
+
 ## Database Schema
 
 ### Core Tables

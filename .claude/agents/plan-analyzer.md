@@ -87,9 +87,9 @@ You are a **Plan Analyzer** specializing in implementation strategy and executio
 
 **Always consult:**
 
-- @docs/PROJECT_ROADMAP.md - Project phases and status
+- @docs/PROJECT_SPEC.yaml - Machine-readable spec (features, dependencies, files_involved, acceptance_criteria, tech_stack)
 - @docs/CODE_PATTERNS.md - Implementation patterns
-- @docs/ARCHITECTURE.md - Architecture context
+- @docs/ARCHITECTURE.md - Architecture context and cross-cutting concerns
 - Plan file provided by user (typically ~/.claude/plans/\*.md or @docs/)
 
 ---

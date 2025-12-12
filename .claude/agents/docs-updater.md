@@ -84,7 +84,8 @@ You are a **Docs Updater** specializing in documentation maintenance and git com
 ## REFERENCE DOCUMENTATION
 
 **Always consult:**
-- @docs/PROJECT_ROADMAP.md - Main document to update
+- @docs/PROJECT_SPEC.yaml - Machine-readable spec to update (mark features complete, update acceptance_criteria verified: true)
+- @docs/PROJECT_ROADMAP.md - Human-readable roadmap to update (mark tasks [x], progress %)
 - Test results from test-validator (what worked)
 - Plan analysis from plan-analyzer (what was planned)
 - Git history (existing commit style)
@@ -195,7 +196,38 @@ December 10, 2025: Phase 2 Complete! ✅
 
 ## STANDARD PATTERNS
 
-### Pattern 1: Update PROJECT_ROADMAP.md
+### Pattern 0: Update PROJECT_SPEC.yaml (FIRST - Machine-Readable)
+
+**What to update:**
+```yaml
+# 1. Update feature status
+features:
+  - name: "Form Submission"
+    id: "form-submission"
+    status: "complete"  # ← Change from "in-progress"
+
+# 2. Mark acceptance criteria as verified
+    acceptance_criteria:
+      - description: "Client form submission saves to responses table"
+        verified: true  # ← Change from false
+
+# 3. Update phase progress
+  - name: "Phase 2"
+    status: "complete"  # ← Change from "in-progress"
+    progress: 100       # ← Change from 75
+
+# 4. Update status_summary section
+status_summary:
+  phase_2: "✅ Complete (100%)"  # ← Update emoji and percentage
+
+# 5. Update project last_updated
+project:
+  last_updated: "2025-12-12"  # ← Today's date
+```
+
+**Why first:** AI agents read PROJECT_SPEC.yaml for structured data
+
+### Pattern 1: Update PROJECT_ROADMAP.md (SECOND - Human-Readable)
 
 **What to update:**
 ```markdown
@@ -318,7 +350,37 @@ From plan-analyzer:
 - What tasks were in plan?
 - What's the high-level outcome?
 
-### Step 2: Update PROJECT_ROADMAP.md
+### Step 2: Update PROJECT_SPEC.yaml (Machine-Readable - PRIORITY)
+
+**Changes to make:**
+1. Find feature by id (e.g., "form-submission")
+2. Change status: "in-progress" → "complete"
+3. Mark all acceptance_criteria verified: false → true
+4. Update phase progress: XX% → 100%
+5. Update phase status: "in-progress" → "complete"
+6. Update status_summary section
+7. Update project.last_updated date
+
+**Example:**
+```yaml
+# Before
+- name: "Form Submission"
+  id: "form-submission"
+  status: "in-progress"
+  acceptance_criteria:
+    - description: "Form saves to database"
+      verified: false
+
+# After
+- name: "Form Submission"
+  id: "form-submission"
+  status: "complete"
+  acceptance_criteria:
+    - description: "Form saves to database"
+      verified: true
+```
+
+### Step 3: Update PROJECT_ROADMAP.md (Human-Readable)
 
 **Changes to make:**
 1. Mark completed tasks [x]
@@ -327,7 +389,7 @@ From plan-analyzer:
 4. Add milestone to "Recent Milestones"
 5. Update "Last Updated" date
 
-### Step 3: Create Commit Message
+### Step 4: Create Commit Message
 
 **Process:**
 1. Identify commit type (feat, fix, etc.)
@@ -337,9 +399,10 @@ From plan-analyzer:
 5. Verify no footers
 6. Keep present tense
 
-### Step 4: Stage and Commit
+### Step 5: Stage and Commit
 
 ```bash
+git add docs/PROJECT_SPEC.yaml
 git add docs/PROJECT_ROADMAP.md
 git add [other files if needed]
 git commit -m "$(cat <<'EOF'
@@ -348,7 +411,7 @@ EOF
 )"
 ```
 
-### Step 5: Ask About Push (REQUIRED)
+### Step 6: Ask About Push (REQUIRED)
 
 **ALWAYS ask user before pushing:**
 ```

@@ -268,7 +268,7 @@ Phase 8: Complete!
 **Validates:**
 - Happy path (critical user flows)
 - Edge cases (expired links, limits, errors)
-- All acceptance criteria from plan
+- All acceptance criteria from @docs/PROJECT_SPEC.yaml
 - Data integrity (database checks)
 
 **Output:** Test results with P0/P1/P2 issues, recommendations
@@ -293,6 +293,7 @@ Phase 8: Complete!
 **Purpose:** Update documentation and create commit
 
 **Updates:**
+- @docs/PROJECT_SPEC.yaml (mark features complete, update acceptance_criteria verified: true)
 - @docs/PROJECT_ROADMAP.md (mark tasks [x], progress %, milestones)
 - Other docs if needed (ARCHITECTURE.md, CODE_PATTERNS.md)
 - Creates git commit (signal-focused, no footers)
