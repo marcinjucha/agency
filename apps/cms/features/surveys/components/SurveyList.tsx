@@ -52,10 +52,10 @@ export function SurveyList() {
         <Card key={survey.id} className="p-6 hover:shadow-md transition-shadow">
           <Link href={`/admin/surveys/${survey.id}`}>
             <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <h3 className="text-lg font-semibold text-gray-900">{survey.title}</h3>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-lg font-semibold text-gray-900 truncate">{survey.title}</h3>
                 {survey.description && (
-                  <p className="text-sm text-gray-600 mt-1">{survey.description}</p>
+                  <p className="text-sm text-gray-600 mt-1 truncate">{survey.description}</p>
                 )}
                 <div className="flex items-center gap-4 mt-3 text-sm text-gray-500">
                   <span className="flex items-center gap-1">
