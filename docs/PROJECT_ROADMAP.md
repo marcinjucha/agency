@@ -298,9 +298,9 @@ Vercel (Frontend)                  Supabase Cloud (Database)
 - [x] submission_count increments automatically
 - [x] No double-submission (button disabled during submission)
 
-**To do still**
-- [ ] Submission doesn't work (direct to db)
-- [ ] Display responses in CMS
+**Completed**
+- [x] Submission works (via API route with service role)
+- [ ] Display responses in CMS (pending)
 
 ---
 
@@ -517,6 +517,13 @@ Vercel (Frontend)                  Supabase Cloud (Database)
 **Overall MVP Progress:** 100% Phase 1 + 100% Phase 2 = **33% Total MVP**
 
 ### Recent Milestones
+
+**December 12, 2025:** Phase 2 Form Submission Fixed! ✅
+- **Service Role Solution** - Used service role key for public submissions (safe when tenant_id from database)
+- **API Route Pattern** - Switched from Server Action to API Route for proper HTTP context
+- **RLS Debugging** - Identified that Supabase SDK anon role doesn't work in Next.js server context
+- **Manual SQL Testing** - Verified RLS policy works correctly with SET ROLE anon
+- **Documentation** - Added lesson to LESSONS_LEARNED.md and pattern to server-action-developer agent
 
 **December 10, 2025:** Phase 2 Complete! ✅
 - **Client Survey Form** - Dynamic form rendering from survey JSON

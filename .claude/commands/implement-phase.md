@@ -61,6 +61,7 @@ Systematically implement a planned feature/phase by orchestrating specialized ag
 Phase 0: Plan Analysis (plan-analyzer)              [~2min]
     ↓ User: continue | adjust | stop
 Phase 1: Database [CRITICAL] (supabase-schema)      [~5min]
+    ↓ MANUAL TEST CHECKPOINT (if testable)
     ↓ User: continue | fix | stop
 Phase 2a: Foundation - Types (foundation-dev)       [~3min]
     ↓ User: continue | retry | stop
@@ -70,13 +71,15 @@ Phase 3a: Components - Base (component-dev)         [~5min]
     ↓ User: continue | retry | stop
 Phase 3b: Components - Composite (component-dev)    [~5min]
     ↓ User: continue | retry | stop
-Phase 4: Server Actions (server-action-dev)         [~5min]
+Phase 4: Server Actions / API Routes               [~5min]
     ↓ User: continue | retry | stop
-Phase 5: Routes (route-dev)                         [~4min]
+Phase 5: Routes (route-dev)                        [~4min]
+    ↓ MANUAL TEST CHECKPOINT (if testable)
     ↓ User: continue | retry | stop
-Phase 6: Testing [CONDITIONAL] (test-validator)     [~10min]
-    ↓ User: continue | fix-bugs | stop
-Phase 7: Documentation (docs-updater)               [~3min]
+Phase 6: Manual Testing [REQUIRED]                 [user-driven]
+    ↓ User tests feature manually
+    ↓ User: pass | fix-and-retry | stop
+Phase 7: Documentation (docs-updater)              [~3min]
     ↓ User: approve | push | stop
 Phase 8: Complete!
 ```
@@ -259,30 +262,56 @@ Phase 8: Complete!
 
 ---
 
-### Phase 6: Testing [CONDITIONAL]
+### Phase 6: Manual Testing Checkpoint [REQUIRED]
 
-**Agent:** `test-validator`
+**Purpose:** User manually tests implemented features before documentation
 
-**Purpose:** Manual testing of implemented features
+**This is NOT automated** - the orchestrator pauses here and instructs user to test manually.
 
-**Validates:**
-- Happy path (critical user flows)
-- Edge cases (expired links, limits, errors)
-- All acceptance criteria from @docs/PROJECT_SPEC.yaml
-- Data integrity (database checks)
+**Orchestrator provides:**
+1. **Test instructions** based on acceptance criteria from plan
+2. **What to test** (specific user flows)
+3. **How to test** (step-by-step commands/clicks)
+4. **What to verify** (expected results)
 
-**Output:** Test results with P0/P1/P2 issues, recommendations
+**User performs:**
+1. Manual testing following instructions
+2. Verifies feature works end-to-end
+3. Reports back: `pass` | `fix-and-retry` | `stop`
+
+**Example test instructions:**
+```
+📋 Manual Testing - Survey Submission
+
+1. Start both apps:
+   npm run dev:cms    # Terminal 1
+   npm run dev:website  # Terminal 2
+
+2. Generate survey link (CMS):
+   - Login at http://localhost:3001/login
+   - Go to Surveys → Open survey → Generate Link
+   - Copy link to clipboard
+
+3. Submit survey (Website):
+   - Open link in incognito tab
+   - Fill out all required fields
+   - Click Submit
+
+4. Verify success:
+   ✅ Redirect to success page
+   ✅ Check Supabase: responses table has new row
+   ✅ Check tenant_id is populated
+   ✅ Check submission_count incremented
+
+Report: pass | fix-and-retry | stop
+```
 
 **Commands:**
-- `continue` - Proceed to documentation (if tests pass)
-- `fix-bugs` - Address P0/P1 issues before continuing
-- `details [test]` - See specific test details
-- `skip` - Skip to documentation (not recommended if failures)
-- `stop` - Exit workflow
+- `pass` - Tests passed, proceed to documentation
+- `fix-and-retry` - Found bugs, fix them and test again
+- `stop` - Exit workflow (fix bugs manually later)
 
-**Skip When:** Plan specifies automated tests only (no manual testing needed)
-
-**Critical:** P0 failures should block merge - fix before documenting
+**Critical:** NEVER proceed to documentation without passing manual tests
 
 ---
 
@@ -323,18 +352,68 @@ You are the **Implement Phase Orchestrator**. Guide user through 8-phase impleme
 7. **DO NOT just describe:** ACTUALLY INVOKE TOOLS
 8. **Handle failures:** If agent fails, offer retry/details/stop (or auto-retry in --auto mode)
 9. **P0 bugs block merge:** Test failures with P0 severity ALWAYS require user intervention (even in --auto)
+10. **Manual test checkpoints:** After phases with testable output, PAUSE and provide test instructions to user
+11. **NEVER skip Phase 6:** Phase 6 (Manual Testing) is REQUIRED - user must test before docs
+
+### Manual Test Checkpoints
+
+**When to pause for manual testing:**
+- **After Phase 1 (Database):** If migration creates testable database changes
+- **After Phase 5 (Routes):** Always - routes make feature accessible for testing
+- **Phase 6 (Manual Testing):** Always required before documentation
+
+**How to provide test instructions:**
+1. Identify what's testable (based on completed phases)
+2. Write step-by-step test instructions
+3. Include what to verify (expected results)
+4. Provide SQL queries if database verification needed
+5. Wait for user response: `pass` | `fix-and-retry` | `stop`
+
+**Example checkpoint after Phase 1:**
+```markdown
+🧪 **Manual Test Checkpoint - Database Migration**
+
+The migration has been applied. Test the changes:
+
+1. Go to Supabase Dashboard → SQL Editor
+2. Run: SELECT * FROM pg_policies WHERE tablename = 'responses';
+3. Verify: Policy "Anyone can create responses" exists with TO anon
+
+4. Test RLS policy:
+   SET ROLE anon;
+   INSERT INTO responses (survey_link_id, tenant_id, answers, status)
+   VALUES ('[link-id]', '[tenant-id]', '{"test": "data"}'::jsonb, 'new');
+   -- Should succeed
+
+Report: pass | fix | stop
+```
+
+**Example checkpoint after Phase 5:**
+```markdown
+🧪 **Manual Test Checkpoint - Feature Complete**
+
+All code is written. Test the complete feature:
+
+1. Start apps: npm run dev:cms && npm run dev:website
+2. [Step-by-step user flow based on acceptance criteria]
+3. Verify: [Expected outcomes]
+
+Report: pass | fix-and-retry | stop
+```
 
 ### Mode Handling
 
 **Interactive Mode (default):**
 - Show phase complete message
-- Wait for user command (continue | retry | details | stop)
+- PAUSE at manual test checkpoints
+- Wait for user command (continue | retry | details | stop | pass)
 - User controls pace
 
 **Automated Mode (--auto):**
 - Show phase complete message (for transparency)
 - Immediately proceed to next phase (no waiting)
-- **CRITICAL DECISIONS (ALWAYS ask user):**
+- **CRITICAL DECISIONS (ALWAYS pause and ask user):**
+  - ✋ **Manual test checkpoints** - "Phase 1/5/6 complete. Please test manually."
   - ✋ **P0 test failures** - "2 P0 bugs found. Fix now or stop?"
   - ✋ **Database migration failed (after retry)** - "Migration failed. Skip database changes or stop?"
   - ✋ **Agent failure (after retry)** - "Agent failed twice. Continue without this step or stop?"
@@ -345,6 +424,8 @@ You are the **Implement Phase Orchestrator**. Guide user through 8-phase impleme
   - ✅ Skip optional phases (per plan) → Auto
   - ✅ Choose which files to create → Per plan
 - User can interrupt anytime with `stop` command
+
+**Key principle:** Even in --auto mode, NEVER skip manual testing checkpoints
 
 ### State Tracking
 
@@ -390,6 +471,26 @@ Launching [agent-name]...
 ```
 
 [Wait for user command]
+
+**Phase with Manual Test Checkpoint:**
+```markdown
+**Phase N Complete** ✅
+
+[Summary of output]
+
+---
+
+🧪 **Manual Test Checkpoint**
+
+[Test instructions - what to test, how to test, what to verify]
+
+**After testing, report:**
+- `pass` - Tests passed, continue to next phase
+- `fix` - Found issues, need fixes
+- `stop` - Exit workflow
+```
+
+[Wait for user testing and response]
 
 **Sequential Phase (Automated Mode --auto):**
 ```markdown
@@ -700,6 +801,17 @@ Phase 3 complete → Phase 4 starts immediately
 # User loses control, can't review!
 ```
 
+### ❌ Don't: Skip manual testing checkpoints
+```markdown
+Phase 5 complete → Immediately launch docs-updater
+# NO! User must test first!
+```
+
+✅ **Correct:**
+```markdown
+Phase 5 complete → Manual test checkpoint → User tests → Reports pass → Launch docs-updater
+```
+
 ---
 
-**Use this workflow to systematically implement planned phases with intelligent agent orchestration and parallelization.**
+**Use this workflow to systematically implement planned phases with intelligent agent orchestration, parallelization, and mandatory manual testing checkpoints.**

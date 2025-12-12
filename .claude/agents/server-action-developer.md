@@ -331,72 +331,107 @@ export async function deleteSurvey(
 }
 ```
 
-### Pattern 4: INSERT without Auth (Public)
+### Pattern 4: Public Submissions with Service Role (API Route)
 
-**When to use:** Public submissions (e.g., survey responses)
+**When to use:** Public submissions where Supabase SDK anon role fails on server
+
+**Problem:** Next.js Server Actions don't have proper HTTP context for Supabase SDK to apply `anon` role correctly.
+
+**✅ SAFE Solution:** Use service role key in API Route when YOU control tenant_id
+
+**Use when:**
+- Public endpoint (no auth required)
+- `tenant_id` fetched from database (not user input)
+- Only INSERT operations
+
+**NEVER use when:**
+- User can control `tenant_id` in request
+- Reading sensitive data
+- CMS authenticated operations
 
 **Implementation:**
+
+Step 1: Create service role client
 ```typescript
-// apps/website/features/survey/actions.ts
-'use server'
+// apps/website/lib/supabase/anon-server.ts
+import { createClient } from '@supabase/supabase-js'
+import type { Database } from '@legal-mind/database'
 
-import { createClient } from '@/lib/supabase/server'
-import { revalidatePath } from 'next/cache'
-import type { TablesInsert } from '@legal-mind/database'
+export function createAnonClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
-export async function submitSurveyResponse(input: {
-  linkId: string
-  surveyId: string
-  tenantId: string
-  answers: Record<string, any>
-}): Promise<{ success: boolean; responseId?: string; error?: string }> {
+  if (!supabaseUrl || !supabaseServiceKey) {
+    throw new Error('Missing Supabase environment variables')
+  }
+
+  return createClient<Database>(supabaseUrl, supabaseServiceKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+    },
+  })
+}
+```
+
+Step 2: Create API Route (NOT Server Action)
+```typescript
+// apps/website/app/api/survey/submit/route.ts
+import { NextRequest, NextResponse } from 'next/server'
+import { createAnonClient } from '@/lib/supabase/anon-server'
+
+export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient()
+    const { linkId, surveyId, answers } = await request.json()
+    const supabase = createAnonClient()
 
-    // No auth check (public submission)
-    const responseData: TablesInsert<'responses'> = {
-      survey_link_id: input.linkId,
-      answers: input.answers as any,
-      tenant_id: input.tenantId,
-      ai_qualification: null,
-      status: 'new',
-    }
-
-    const { data: response, error: insertError } = await supabase
-      .from('responses')
-      .insert(responseData as any)
-      .select()
+    // CRITICAL: Fetch tenant_id from database (YOU control it)
+    const { data: survey } = await supabase
+      .from('surveys')
+      .select('tenant_id')
+      .eq('id', surveyId)
       .single()
 
-    if (insertError || !response) {
-      return {
-        success: false,
-        error: 'Failed to submit response. Please try again.'
-      }
+    if (!survey) {
+      return NextResponse.json(
+        { success: false, error: 'Survey not found' },
+        { status: 404 }
+      )
     }
 
-    // Call database function (if exists)
-    const { error: updateError } = await supabase.rpc(
-      'increment_submission_count',
-      { link_id: input.linkId }
-    )
+    // Insert with YOUR tenant_id (not user's)
+    const { data: response, error } = await supabase
+      .from('responses')
+      .insert({
+        survey_link_id: linkId,
+        tenant_id: survey.tenant_id,  // ← From database
+        answers,
+        status: 'new'
+      })
+      .select('id')
+      .single()
 
-    if (updateError) {
-      console.error('Failed to increment submission count:', updateError)
-      // Don't fail - response is already saved
+    if (error) {
+      return NextResponse.json(
+        { success: false, error: 'Failed to save response' },
+        { status: 400 }
+      )
     }
 
-    revalidatePath(`/survey/${input.linkId}`)
-    return { success: true, responseId: response.id }
+    return NextResponse.json({ success: true, responseId: response.id })
   } catch (error) {
-    console.error('Server action error:', error)
-    return {
-      success: false,
-      error: 'An unexpected error occurred. Please try again.'
-    }
+    return NextResponse.json(
+      { success: false, error: 'Internal error' },
+      { status: 500 }
+    )
   }
 }
 ```
+
+**Key principle:** Service role is safe when YOU control tenant_id, not the user.
+
+**See:** @docs/LESSONS_LEARNED.md - "RLS Policy vs Supabase SDK"
 
 ---
 

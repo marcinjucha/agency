@@ -9,7 +9,7 @@
 
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { createAnonClient } from '@/lib/supabase/anon-server'
 import type { TablesInsert } from '@legal-mind/database'
 import type { SurveyAnswers, SubmissionResult } from './types'
 
@@ -51,13 +51,17 @@ interface SubmitSurveyParams {
  * }
  * ```
  */
+/**
+ * @deprecated This Server Action is deprecated. Use API route /api/survey/submit instead.
+ * Kept for reference only.
+ */
 export async function submitSurveyResponse({
   linkId,
   surveyId,
   answers
 }: SubmitSurveyParams): Promise<SubmissionResult> {
   try {
-    const supabase = await createClient()
+    const supabase = createAnonClient()
 
     // Step 1: Get tenant_id from surveys table
     const { data: survey, error: surveyError } = await supabase

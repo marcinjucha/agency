@@ -30,7 +30,6 @@ import { useRouter } from 'next/navigation'
 import { Button, Card } from '@legal-mind/ui'
 import { QuestionField } from './QuestionField'
 import { generateSurveySchema } from '../validation'
-import { submitSurveyResponse } from '../actions'
 import type { SurveyData, SurveyAnswers } from '../types'
 
 interface SurveyFormProps {
@@ -65,20 +64,29 @@ export function SurveyForm({ survey, linkId, token }: SurveyFormProps) {
     setSubmitError(null)
 
     try {
-      const result = await submitSurveyResponse({
-        linkId,
-        surveyId: survey.id,
-        answers: data,
+      const response = await fetch('/api/survey/submit', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          linkId,
+          surveyId: survey.id,
+          answers: data,
+        }),
       })
+
+      const result = await response.json()
 
       if (result.success) {
         // Redirect to success page on successful submission
         router.push(`/survey/${token}/success`)
       } else {
-        // Display error message from Server Action
+        // Display error message from API
         setSubmitError(result.error || 'Failed to submit survey. Please try again.')
       }
-    } catch {
+    } catch (error) {
+      console.error('Form submission error:', error)
       setSubmitError('An unexpected error occurred. Please try again.')
     } finally {
       setIsSubmitting(false)

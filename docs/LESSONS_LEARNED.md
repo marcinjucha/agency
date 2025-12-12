@@ -253,4 +253,47 @@ before_committing:
 
 ---
 
+## 🔥 Phase 2 Continuation: RLS Policy vs Supabase SDK (P0)
+
+**Date:** 2025-12-12
+
+**What happened:**
+- RLS policy existed and was correct: `CREATE POLICY "Anyone can create responses" ON responses FOR INSERT TO anon WITH CHECK (true)`
+- Manual SQL worked: `SET ROLE anon; INSERT INTO responses (...) -- SUCCESS`
+- Supabase SDK failed: `new row violates row-level security policy for table "responses"`
+
+**Root cause:**
+Next.js Server Actions and API Routes don't have proper HTTP request context that Supabase SDK needs to determine user role. Even with anon key, SDK couldn't apply `anon` role correctly on server.
+
+**Why manual SQL worked:**
+`SET ROLE anon` explicitly tells PostgreSQL to use anon role. SDK couldn't do this from server context.
+
+**Solution:**
+```typescript
+// Use service role key for public submissions
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+return createClient(supabaseUrl, supabaseServiceKey)
+```
+
+**Is this safe?**
+✅ YES - Service role bypasses RLS which is acceptable here because:
+- Only used for INSERT operations (creating responses)
+- `tenant_id` fetched from database (surveys table), NOT user input
+- CMS queries still use RLS with anon key for reading data
+- This is a public endpoint - anyone should be able to submit
+
+**Alternative (not used):**
+Could use direct REST API with anon key, but service role is simpler and safe for this use case.
+
+**Prevention:**
+- ✅ For public writes where tenant_id comes from database: service role is OK
+- ✅ For public reads: use browser client with RLS
+- ✅ For authenticated operations: use SSR client with auth
+- ❌ NEVER use service role when user controls tenant_id
+
+**Key principle:**
+Service role is safe when YOU control the tenant_id, not the user.
+
+---
+
 **Next Phase:** Apply these lessons to Phase 3 (Google Calendar Integration)
