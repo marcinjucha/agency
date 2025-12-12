@@ -4,39 +4,20 @@
  * Foundation types for the client-facing survey feature.
  * All queries, validation schemas, and components import from this file.
  *
+ * NOTE: Core question types (QuestionType, Question, SurveyAnswers) are imported
+ * from @legal-mind/validators/common to ensure consistency across all features.
+ *
  * @module apps/website/features/survey/types
  */
 
-/**
- * Supported question types in surveys
- */
-export type QuestionType =
-  | 'text'
-  | 'textarea'
-  | 'email'
-  | 'tel'
-  | 'select'
-  | 'radio'
-  | 'checkbox'
+import type {
+  Question,
+  QuestionType,
+  SurveyAnswers,
+} from '@legal-mind/validators'
 
-/**
- * Individual survey question structure
- * Stored as JSONB in database, typed here for TypeScript safety
- */
-export interface Question {
-  /** Unique identifier for the question */
-  id: string
-  /** Question type determining input field rendering */
-  type: QuestionType
-  /** Question text displayed to user */
-  question: string
-  /** Whether the question must be answered */
-  required: boolean
-  /** Available options for select/radio/checkbox types */
-  options?: string[]
-  /** Display order in the survey */
-  order: number
-}
+// Re-export shared types for convenience
+export type { Question, QuestionType, SurveyAnswers }
 
 /**
  * Survey metadata and questions
@@ -93,15 +74,6 @@ export interface LinkValidation {
   data?: SurveyLinkData
 }
 
-/**
- * Survey form answers
- * Dynamic key-value map where:
- * - Keys are question IDs (string UUIDs)
- * - Values are either:
- *   - string: for text, textarea, email, tel, select, radio
- *   - string[]: for checkbox (multiple selections)
- */
-export type SurveyAnswers = Record<string, string | string[]>
 
 /**
  * Survey submission result
