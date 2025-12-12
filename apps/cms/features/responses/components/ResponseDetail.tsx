@@ -233,19 +233,11 @@ export function ResponseDetail({ responseId }: ResponseDetailProps) {
         </div>
       </Card>
 
-      {/* Actions Footer */}
+      {/* Actions Footer - Placeholder */}
       <Card className="p-6 bg-gray-50 border-gray-200">
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-gray-600">
-            More actions coming in Phase 5 (status update, notes, export, etc.)
-          </p>
-          <Link href="/admin/responses">
-            <Button variant="outline">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to List
-            </Button>
-          </Link>
-        </div>
+        <p className="text-sm text-gray-600">
+          More actions coming in Phase 5 (status update, notes, export, etc.)
+        </p>
       </Card>
     </div>
   )

@@ -30,6 +30,20 @@ import type {
 // Re-export shared types so consumers only import from this file
 export type { Question, QuestionType, ResponseStatus, SurveyAnswers, SurveyData, SurveyLinkData }
 
+/**
+ * Minimal survey link data for response context
+ * Subset of SurveyLinkData with only the fields we need for responses
+ * Used internally in response queries to maintain type safety
+ */
+export interface ResponseSurveyLinkContext {
+  /** Survey link UUID from database */
+  id: string
+  /** Unique access token for the survey link */
+  token: string
+  /** Foreign key to surveys table */
+  survey_id: string
+}
+
 
 /**
  * AI qualification metadata
@@ -92,7 +106,7 @@ export interface ResponseWithRelations {
   /** Response last update timestamp (ISO 8601) */
   updated_at: string | null
   /** Joined survey_links data for token access */
-  survey_links?: SurveyLinkData
+  survey_links?: ResponseSurveyLinkContext
   /** Joined surveys data for question context */
   surveys?: SurveyData
 }

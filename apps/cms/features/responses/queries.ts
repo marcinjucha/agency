@@ -1,5 +1,35 @@
 import { createClient } from '@/lib/supabase/client'
-import type { ResponseListItem, ResponseWithRelations } from './types'
+import type { Tables } from '@legal-mind/database'
+import type { ResponseListItem, ResponseWithRelations, ResponseSurveyLinkContext } from './types'
+
+/**
+ * Raw Supabase response structure from nested join query
+ * Matches the select() query structure with nested survey_links and surveys
+ */
+type SupabaseResponseRow = Tables<'responses'> & {
+  survey_links: (Tables<'survey_links'> & {
+    surveys: Tables<'surveys'>
+  }) | null
+}
+
+/**
+ * Transform Supabase nested response to ResponseListItem
+ * Converts nested survey_links.surveys structure to flat structure
+ * Maintains type safety by explicitly mapping to expected output type
+ */
+function transformToListItem(data: SupabaseResponseRow): ResponseListItem {
+  return {
+    id: data.id,
+    status: (data.status as ResponseListItem['status']),
+    created_at: data.created_at,
+    survey_links: {
+      survey_id: data.survey_links?.survey_id || '',
+    },
+    surveys: {
+      title: data.survey_links?.surveys?.title || 'Unknown Survey',
+    },
+  }
+}
 
 /**
  * Fetch all responses for the authenticated user's tenant
@@ -16,13 +46,53 @@ export async function getResponses(): Promise<ResponseListItem[]> {
     .from('responses')
     .select(`
       *,
-      survey_link:survey_links(id, token, client_email, survey_id),
-      survey:survey_links!inner(survey:surveys(id, title))
+      survey_links(id, token, client_email, survey_id, surveys(id, title))
     `)
     .order('created_at', { ascending: false })
 
   if (error) throw error
-  return data || []
+
+  return (data as SupabaseResponseRow[] || []).map(transformToListItem)
+}
+
+/**
+ * Raw Supabase response structure for detail view with full survey data
+ */
+type SupabaseDetailResponseRow = SupabaseResponseRow
+
+/**
+ * Transform Supabase nested response to ResponseWithRelations
+ * Converts database row with nested relations to typed response object
+ * Uses ResponseSurveyLinkContext for type-safe subset of survey_links data
+ */
+function transformToDetailResponse(data: SupabaseDetailResponseRow): ResponseWithRelations {
+  const surveyLinkContext: ResponseSurveyLinkContext | undefined = data.survey_links
+    ? {
+        id: data.survey_links.id,
+        token: data.survey_links.token,
+        survey_id: data.survey_links.survey_id,
+      }
+    : undefined
+
+  return {
+    id: data.id,
+    survey_link_id: data.survey_link_id,
+    tenant_id: data.tenant_id,
+    answers: (data.answers ?? {}) as ResponseWithRelations['answers'],
+    ai_qualification: (data.ai_qualification ?? null) as ResponseWithRelations['ai_qualification'],
+    status: (data.status as ResponseWithRelations['status']),
+    created_at: data.created_at,
+    updated_at: data.updated_at,
+    survey_links: surveyLinkContext,
+    surveys: data.survey_links?.surveys
+      ? ({
+          id: data.survey_links.surveys.id,
+          title: data.survey_links.surveys.title,
+          description: data.survey_links.surveys.description,
+          questions: (data.survey_links.surveys.questions ?? []) as any[],
+        } as ResponseWithRelations['surveys'])
+      : undefined,
+  }
 }
 
 /**
@@ -41,13 +111,15 @@ export async function getResponse(id: string): Promise<ResponseWithRelations | n
     .from('responses')
     .select(`
       *,
-      survey_link:survey_links(*, survey:surveys(*))
+      survey_links(id, token, survey_id, surveys(id, title, description, questions))
     `)
     .eq('id', id)
     .maybeSingle()
 
   if (error) throw error
-  return data || null
+  if (!data) return null
+
+  return transformToDetailResponse(data as SupabaseDetailResponseRow)
 }
 
 /**
