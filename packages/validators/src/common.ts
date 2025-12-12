@@ -71,3 +71,56 @@ export type SurveyAnswers = Record<string, string | string[]>
  * Tracks where a client response is in the qualification workflow
  */
 export type ResponseStatus = 'new' | 'qualified' | 'disqualified' | 'contacted'
+
+/**
+ * Survey metadata structure
+ * Represents a survey with its questions
+ * Used across: CMS survey builder, Website survey form, CMS response display
+ */
+export interface SurveyData {
+  /** Survey UUID from database */
+  id: string
+
+  /** Survey title */
+  title: string
+
+  /** Optional survey description */
+  description: string | null
+
+  /** Array of questions (JSONB field typed as Question[]) */
+  questions: Question[]
+}
+
+/**
+ * Survey link structure
+ * Represents a shareable survey link with related survey data
+ * Used across: Website form access, CMS response display
+ */
+export interface SurveyLinkData {
+  /** Survey link UUID from database */
+  id: string
+
+  /** Unique access token for the survey link */
+  token: string
+
+  /** Foreign key to surveys table */
+  survey_id: string
+
+  /** Optional client email for tracking */
+  client_email: string | null
+
+  /** Optional expiration timestamp (ISO 8601) */
+  expires_at: string | null
+
+  /** Maximum allowed submissions (null = unlimited) */
+  max_submissions: number | null
+
+  /** Current submission count */
+  submission_count: number | null
+
+  /** Whether the link is active */
+  is_active: boolean
+
+  /** Joined survey data */
+  survey: SurveyData
+}

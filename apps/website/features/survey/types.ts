@@ -14,50 +14,12 @@ import type {
   Question,
   QuestionType,
   SurveyAnswers,
+  SurveyData,
+  SurveyLinkData,
 } from '@legal-mind/validators'
 
 // Re-export shared types for convenience
-export type { Question, QuestionType, SurveyAnswers }
-
-/**
- * Survey metadata and questions
- * Core survey data structure
- */
-export interface SurveyData {
-  /** Survey UUID from database */
-  id: string
-  /** Survey title */
-  title: string
-  /** Optional survey description */
-  description: string | null
-  /** Array of questions (JSONB field typed as Question[]) */
-  questions: Question[]
-}
-
-/**
- * Survey link with related survey data
- * Returned from queries that join survey_links and surveys tables
- */
-export interface SurveyLinkData {
-  /** Survey link UUID from database */
-  id: string
-  /** Unique access token for the survey link */
-  token: string
-  /** Foreign key to surveys table */
-  survey_id: string
-  /** Optional client email for tracking */
-  client_email: string | null
-  /** Optional expiration timestamp (ISO 8601) */
-  expires_at: string | null
-  /** Maximum allowed submissions (null = unlimited) */
-  max_submissions: number | null
-  /** Current submission count */
-  submission_count: number | null
-  /** Whether the link is active */
-  is_active: boolean
-  /** Joined survey data */
-  survey: SurveyData
-}
+export type { Question, QuestionType, SurveyAnswers, SurveyData, SurveyLinkData }
 
 /**
  * Survey link validation result

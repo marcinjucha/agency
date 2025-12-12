@@ -23,47 +23,12 @@ import type {
   QuestionType,
   ResponseStatus,
   SurveyAnswers,
+  SurveyData,
+  SurveyLinkData,
 } from '@legal-mind/validators'
 
 // Re-export shared types so consumers only import from this file
-export type { Question, QuestionType, ResponseStatus, SurveyAnswers }
-
-/**
- * Survey metadata needed in response detail view
- * Subset of survey data joined with response for displaying context
- *
- * @example
- * const survey: SurveyMetadata = {
- *   id: "s-123",
- *   title: "Client Intake Form",
- *   questions: [...]
- * }
- */
-export interface SurveyMetadata {
-  /** Survey UUID from database */
-  id: string
-  /** Survey title */
-  title: string
-  /** Array of questions (JSONB field typed as Question[]) */
-  questions: Question[]
-}
-
-/**
- * Survey link metadata needed in response detail view
- * Subset of survey_links data joined with response
- *
- * @example
- * const link: SurveyLinkMetadata = {
- *   token: "abc123",
- *   survey_id: "s-123"
- * }
- */
-export interface SurveyLinkMetadata {
-  /** Unique access token for the survey link */
-  token: string
-  /** Foreign key to surveys table */
-  survey_id: string
-}
+export type { Question, QuestionType, ResponseStatus, SurveyAnswers, SurveyData, SurveyLinkData }
 
 
 /**
@@ -127,9 +92,9 @@ export interface ResponseWithRelations {
   /** Response last update timestamp (ISO 8601) */
   updated_at: string | null
   /** Joined survey_links data for token access */
-  survey_links?: SurveyLinkMetadata
+  survey_links?: SurveyLinkData
   /** Joined surveys data for question context */
-  surveys?: SurveyMetadata
+  surveys?: SurveyData
 }
 
 /**
