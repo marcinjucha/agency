@@ -61,23 +61,28 @@ Systematically implement a planned feature/phase by orchestrating specialized ag
 Phase 0: Plan Analysis (plan-analyzer)              [~2min]
     ↓ User: continue | adjust | stop
 Phase 1: Database [CRITICAL] (supabase-schema)      [~5min]
+    ↓ BUILD VERIFICATION: npm run build:cms
     ↓ MANUAL TEST CHECKPOINT (if testable)
     ↓ User: continue | fix | stop
 Phase 2a: Foundation - Types (foundation-dev)       [~3min]
     ↓ User: continue | retry | stop
 Phase 2b: Foundation ⚡⚡⚡ (2x foundation-dev)        [~5min]
+    ↓ BUILD VERIFICATION: npm run build:cms ← MUST PASS
     ↓ User: continue | retry | stop
 Phase 3a: Components - Base (component-dev)         [~5min]
     ↓ User: continue | retry | stop
 Phase 3b: Components - Composite (component-dev)    [~5min]
+    ↓ BUILD VERIFICATION: npm run build:cms ← MUST PASS
     ↓ User: continue | retry | stop
 Phase 4: Server Actions / API Routes               [~5min]
+    ↓ BUILD VERIFICATION: npm run build:cms ← MUST PASS
     ↓ User: continue | retry | stop
 Phase 5: Routes (route-dev)                        [~4min]
-    ↓ MANUAL TEST CHECKPOINT (if testable)
-    ↓ User: continue | retry | stop
+    ↓ BUILD VERIFICATION: npm run build ← BOTH APPS MUST PASS
+    ↓ MANUAL TEST CHECKPOINT (required - test the feature)
+    ↓ User: pass | fix-and-retry | stop
 Phase 6: Manual Testing [REQUIRED]                 [user-driven]
-    ↓ User tests feature manually
+    ↓ User tests complete feature manually
     ↓ User: pass | fix-and-retry | stop
 Phase 7: Documentation (docs-updater)              [~3min]
     ↓ User: approve | push | stop
@@ -353,7 +358,69 @@ You are the **Implement Phase Orchestrator**. Guide user through 8-phase impleme
 8. **Handle failures:** If agent fails, offer retry/details/stop (or auto-retry in --auto mode)
 9. **P0 bugs block merge:** Test failures with P0 severity ALWAYS require user intervention (even in --auto)
 10. **Manual test checkpoints:** After phases with testable output, PAUSE and provide test instructions to user
-11. **NEVER skip Phase 6:** Phase 6 (Manual Testing) is REQUIRED - user must test before docs
+11. **Build verification:** After each code-generating phase, verify the build succeeds - catch TypeScript errors early
+12. **NEVER skip Phase 6:** Phase 6 (Manual Testing) is REQUIRED - user must test before docs
+
+### Build Verification Checkpoints
+
+**CRITICAL:** After every code-generating phase, run a build test to catch errors early.
+
+**When to build:**
+- **After Phase 2b (Foundation):** `npm run build:cms` - Verify types/queries compile
+- **After Phase 3b (Components):** `npm run build:cms` - Verify components compile
+- **After Phase 4 (Server Actions):** `npm run build:cms` - Verify actions compile
+- **After Phase 5 (Routes):** `npm run build` - Build BOTH apps (cms + website)
+
+**Why build after each phase:**
+- ✅ Catch TypeScript errors immediately (not at end)
+- ✅ Identify missing imports, type mismatches early
+- ✅ Prevent cascading failures in dependent code
+- ✅ Quick feedback loop for agents to fix issues
+- ✅ Avoid massive refactor at the end
+
+**How to verify build:**
+
+```bash
+# Build CMS only (fastest - for phases affecting CMS)
+npm run build:cms
+
+# Build Website only (for phases affecting Website)
+npm run build:website
+
+# Build both apps (complete verification)
+npm run build
+```
+
+**Expected output on success:**
+```
+✓ Compiled successfully
+Running TypeScript...
+✓ Generating static pages
+[No errors]
+```
+
+**If build fails:**
+1. Read the error message carefully (line number, what's wrong)
+2. Report error to the next agent or user
+3. Agent fixes the issue
+4. Rebuild to verify fix
+5. Continue only after build succeeds
+
+**Example build error handling:**
+
+```markdown
+❌ Build Failed After Phase 3
+
+Error: Property 'label' does not exist on type 'Question'
+Location: apps/cms/features/responses/components/ResponseDetail.tsx:178
+
+Fix: Change `pair.question.label` to `pair.question.question`
+
+Retrying build...
+✅ Build now succeeds
+```
+
+---
 
 ### Manual Test Checkpoints
 
@@ -801,6 +868,17 @@ Phase 3 complete → Phase 4 starts immediately
 # User loses control, can't review!
 ```
 
+### ❌ Don't: Skip build verification
+```markdown
+Phase 2b complete → Immediately launch Phase 3
+# NO! Must verify build succeeds first!
+```
+
+✅ **Correct:**
+```markdown
+Phase 2b complete → npm run build:cms → Verify succeeds → Phase 3 starts
+```
+
 ### ❌ Don't: Skip manual testing checkpoints
 ```markdown
 Phase 5 complete → Immediately launch docs-updater
@@ -809,7 +887,23 @@ Phase 5 complete → Immediately launch docs-updater
 
 ✅ **Correct:**
 ```markdown
-Phase 5 complete → Manual test checkpoint → User tests → Reports pass → Launch docs-updater
+Phase 5 complete → npm run build (both apps) → Manual test checkpoint → User tests → Reports pass → Launch docs-updater
+```
+
+### ❌ Don't: Accumulate build errors
+```markdown
+Phase 2b: Build fails - ignore it
+Phase 3: Build fails - continue anyway
+Phase 4: Build fails - deal with it later
+# NO! Now have 10+ errors to fix!
+```
+
+✅ **Correct:**
+```markdown
+Phase 2b: Build fails → Agent fixes immediately → Rebuild verifies fix → Continue to Phase 3
+Phase 3: Build succeeds → Continue to Phase 4
+Phase 4: Build succeeds → Continue to Phase 5
+# Clean builds all the way!
 ```
 
 ---
