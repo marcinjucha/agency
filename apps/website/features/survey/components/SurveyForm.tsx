@@ -79,8 +79,11 @@ export function SurveyForm({ survey, linkId, token }: SurveyFormProps) {
       const result = await response.json()
 
       if (result.success) {
-        // Redirect to success page with responseId for calendar booking
-        const queryString = result.responseId ? `?responseId=${result.responseId}` : ''
+        // Redirect to success page with responseId and linkId for calendar booking
+        const params = new URLSearchParams()
+        if (result.responseId) params.append('responseId', result.responseId)
+        if (result.linkId) params.append('linkId', result.linkId)
+        const queryString = params.toString() ? `?${params.toString()}` : ''
         router.push(`/survey/${token}/success${queryString}`)
       } else {
         // Display error message from API

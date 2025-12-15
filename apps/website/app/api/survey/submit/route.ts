@@ -77,7 +77,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      responseId: responseData_inserted.id
+      responseId: responseData_inserted.id,
+      linkId: linkId  // Include linkId for calendar booking
     })
   } catch (error) {
     console.error('Unexpected error submitting survey:', error)

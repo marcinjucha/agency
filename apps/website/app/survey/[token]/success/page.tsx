@@ -7,13 +7,14 @@ interface PageProps {
   }>
   searchParams: Promise<{
     responseId?: string
+    linkId?: string
   }>
 }
 
 export default async function SuccessPage({ params, searchParams }: PageProps) {
   // IMPORTANT: Next.js 15 requires await params
   const { token } = await params
-  const { responseId } = await searchParams
+  const { responseId, linkId } = await searchParams
 
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -48,12 +49,12 @@ export default async function SuccessPage({ params, searchParams }: PageProps) {
         </div>
 
         {/* Calendar Booking Section */}
-        {responseId ? (
+        {responseId && linkId ? (
           <div>
             <h2 className="text-2xl font-bold text-gray-900 mb-6">
               Book Your Appointment
             </h2>
-            <CalendarBooking surveyId={token} responseId={responseId} />
+            <CalendarBooking surveyId={linkId} responseId={responseId} />
           </div>
         ) : (
           <Card className="p-8">
