@@ -209,13 +209,10 @@ function calculateAvailableSlots(
 
     // Check availability (with buffer)
     if (isSlotAvailable(slotStart, slotEnd, busyEvents)) {
-      // Format times with timezone offset
-      const startISO = formatISOWithTimezone(slotStart, tzOffset)
-      const endISO = formatISOWithTimezone(slotEnd, tzOffset)
-
+      // Format times as UTC ISO strings (Zod requires Z format)
       slots.push({
-        start: startISO,
-        end: endISO,
+        start: slotStart.toISOString(),
+        end: slotEnd.toISOString(),
       })
     }
 
@@ -354,6 +351,7 @@ export async function GET(request: NextRequest): Promise<
       timezone: TIMEZONE,
     }
 
+    console.log('[SLOTS API] Returning slots:', JSON.stringify(response.slots.slice(0, 2), null, 2))
     return NextResponse.json(response)
   } catch (error) {
     console.error('Unexpected error in slots API:', error)

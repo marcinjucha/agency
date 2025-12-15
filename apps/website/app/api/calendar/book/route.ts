@@ -66,7 +66,9 @@ export async function POST(request: NextRequest) {
   try {
     // Parse and validate request body
     const body = await request.json()
+    console.log('[BOOKING API] Received body:', JSON.stringify(body, null, 2))
     const validatedData = bookingRequestSchema.parse(body)
+    console.log('[BOOKING API] Validation passed')
 
     // Step 1: Validate survey exists and get lawyer info
     const { data: surveyLink, error: surveyError } = await supabase
@@ -210,6 +212,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     // Handle Zod validation errors
     if (error instanceof z.ZodError) {
+      console.error('[BOOKING API] Zod validation failed:', error.errors)
       return NextResponse.json(
         {
           error: 'Invalid request body',
