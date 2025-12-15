@@ -224,18 +224,15 @@ function TimeSlotsGrid({
  *
  * @param surveyId - Survey UUID for tracking
  * @param responseId - Response UUID from survey submission
- * @param lawyerEmail - Optional: specific lawyer email for booking
  */
 interface CalendarBookingProps {
   surveyId: string
   responseId: string
-  lawyerEmail?: string
 }
 
 export function CalendarBooking({
   surveyId,
   responseId,
-  lawyerEmail,
 }: CalendarBookingProps) {
   // State: Multi-step form flow
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
@@ -283,9 +280,6 @@ export function CalendarBooking({
         surveyId,
         date: dateStr,
       })
-      if (lawyerEmail) {
-        params.append('lawyerEmail', lawyerEmail)
-      }
 
       const response = await fetch(`/api/calendar/slots?${params.toString()}`)
 
@@ -344,8 +338,7 @@ export function CalendarBooking({
           endTime: selectedSlot.end,
           clientName: data.clientName,
           clientEmail: data.clientEmail,
-          notes: data.notes || null,
-          lawyerEmail: lawyerEmail || null,
+          notes: data.notes || '',
         }),
       })
 
