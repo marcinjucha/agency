@@ -278,45 +278,169 @@ Phase 8: Complete!
 2. **What to test** (specific user flows)
 3. **How to test** (step-by-step commands/clicks)
 4. **What to verify** (expected results)
+5. **Debug logging setup** (CRITICAL for troubleshooting)
 
 **User performs:**
 1. Manual testing following instructions
 2. Verifies feature works end-to-end
 3. Reports back: `pass` | `fix-and-retry` | `stop`
 
-**Example test instructions:**
+---
+
+### Debug Logging for Manual Tests [CRITICAL]
+
+**ALWAYS add debug logging before manual testing** - this accelerates debugging by 10x when issues occur.
+
+**Step 1: Add console.log to API endpoints/Server Actions**
+
+Before starting dev servers, add logging to all new/modified API routes:
+
+```typescript
+// Example: API Route logging pattern
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json()
+    console.log('[API_NAME] Received body:', JSON.stringify(body, null, 2))
+
+    const validatedData = schema.parse(body)
+    console.log('[API_NAME] Validation passed')
+
+    // ... business logic ...
+
+    const result = await someOperation()
+    console.log('[API_NAME] Result:', result)
+
+    return NextResponse.json({ success: true, data: result })
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      console.error('[API_NAME] Validation failed:', error.errors)
+      return NextResponse.json({ error: 'Validation failed' }, { status: 400 })
+    }
+    console.error('[API_NAME] Error:', error)
+    return NextResponse.json({ error: 'Internal error' }, { status: 500 })
+  }
+}
+```
+
+**Key logging points:**
+- ✅ Request body received (before validation)
+- ✅ Validation passed/failed (with Zod errors)
+- ✅ Database query results
+- ✅ External API responses
+- ✅ All errors (with context)
+
+**Step 2: Start dev servers in background with log capture**
+
+```bash
+# Kill any existing processes
+pkill -9 node; pkill -9 next
+
+# Start website with log capture
+npm run dev:website > /tmp/dev-website.log 2>&1 &
+
+# Start CMS with log capture (if needed)
+npm run dev:cms > /tmp/dev-cms.log 2>&1 &
+
+# Wait for servers to start
+sleep 8
+
+# Verify servers are running
+curl -s http://localhost:3000 > /dev/null && echo "✅ Website ready"
+curl -s http://localhost:3001 > /dev/null && echo "✅ CMS ready"
+```
+
+**Step 3: Monitor logs during testing**
+
+While user tests, you can check logs on demand:
+
+```bash
+# Check recent website logs
+tail -50 /tmp/dev-website.log
+
+# Check recent CMS logs
+tail -50 /tmp/dev-cms.log
+
+# Follow logs in real-time (if needed)
+tail -f /tmp/dev-website.log
+
+# Search for specific API calls
+grep -A 10 "API_NAME" /tmp/dev-website.log
+
+# Search for errors
+grep -i "error\|failed\|invalid" /tmp/dev-website.log
+```
+
+**Step 4: User reports result, you check logs**
+
+```markdown
+User: "I see error: Invalid request body"
+
+Assistant checks:
+tail -100 /tmp/dev-website.log | grep -A 15 "API_NAME"
+
+Log shows:
+[API_NAME] Received body: { "field": "value" }
+[API_NAME] Validation failed: [{ path: "field", message: "..." }]
+
+→ Immediately see exact problem and fix it
+```
+
+---
+
+**Example test instructions with logging:**
 ```
 📋 Manual Testing - Survey Submission
 
-1. Start both apps:
-   npm run dev:cms    # Terminal 1
-   npm run dev:website  # Terminal 2
+**Setup (Assistant does this):**
+1. Add debug logging to API endpoints:
+   - apps/website/app/api/survey/submit/route.ts
+   - Add console.log for: body received, validation, database results
 
-2. Generate survey link (CMS):
+2. Start dev servers in background:
+   pkill -9 node
+   npm run dev:website > /tmp/dev-website.log 2>&1 &
+   npm run dev:cms > /tmp/dev-cms.log 2>&1 &
+   sleep 8
+
+3. Verify servers ready:
+   ✅ http://localhost:3000
+   ✅ http://localhost:3001
+
+**User Testing:**
+1. Generate survey link (CMS):
    - Login at http://localhost:3001/login
    - Go to Surveys → Open survey → Generate Link
    - Copy link to clipboard
 
-3. Submit survey (Website):
+2. Submit survey (Website):
    - Open link in incognito tab
    - Fill out all required fields
    - Click Submit
 
-4. Verify success:
+3. Verify success:
    ✅ Redirect to success page
    ✅ Check Supabase: responses table has new row
    ✅ Check tenant_id is populated
-   ✅ Check submission_count incremented
 
-Report: pass | fix-and-retry | stop
+**If error occurs:**
+- User reports the error message
+- Assistant checks: tail -100 /tmp/dev-website.log
+- Logs show exact problem (request body, validation error, database error)
+- Fix immediately with context
+
+Report: pass | check (see logs) | stop
 ```
 
 **Commands:**
 - `pass` - Tests passed, proceed to documentation
+- `check` - User saw error, check logs to debug
 - `fix-and-retry` - Found bugs, fix them and test again
 - `stop` - Exit workflow (fix bugs manually later)
 
-**Critical:** NEVER proceed to documentation without passing manual tests
+**Critical:**
+- NEVER proceed to documentation without passing manual tests
+- ALWAYS add debug logging before starting manual tests
+- ALWAYS capture logs to /tmp/ for easy inspection
 
 ---
 
