@@ -1,0 +1,1102 @@
+plan_analysis:
+  source: '/Users/marcinjucha/.claude/plans/swirling-humming-puffin.md'
+  phase: 'Phase 3: Calendar Integration'
+  complexity: 'medium-high'
+  total_files: 19
+  total_lines_of_code_estimate: '2000-2500'
+  database_changes: false
+  reason_no_db_changes: 'Schema complete from Phase 1. Only google_calendar_token JSONB field exists already.'
+
+---
+
+## EXECUTION PHASES
+
+execution_phases:
+  - phase: 0
+    name: 'External Setup - Google Cloud'
+    type: sequential
+    critical: true
+    blocks_next: true
+    duration: '15-30 minutes'
+    status: 'prerequisite-user-action'
+
+    tasks:
+      - action: 'Create Google Cloud project'
+        scope: 'User manual setup'
+        verification: 'Project visible in Google Cloud Console'
+
+      - action: 'Enable Google Calendar API'
+        scope: 'User manual setup'
+        verification: 'API appears in APIs & Services → Library'
+
+      - action: 'Create OAuth 2.0 credentials'
+        scope: 'User manual setup'
+        verification: 'Client ID and Secret obtained'
+
+      - action: 'Configure redirect URIs'
+        scope: 'User manual setup'
+        redirect_uris:
+          - 'http://localhost:3001/api/auth/google/callback'
+          - 'https://legal-mind-cms.vercel.app/api/auth/google/callback'
+        verification: 'URIs saved in OAuth consent screen'
+
+      - action: 'Install dependencies'
+        commands:
+          - 'npm install googleapis --workspace apps/cms'
+          - 'npm install date-fns --workspace apps/website'
+          - 'npm install date-fns --workspace apps/cms'
+        verification: 'No errors during npm install'
+
+    notes: 'STATUS: User has provided credentials. Ready to configure .env.local'
+
+  - phase: 1
+    name: 'CMS - Google Calendar OAuth Foundation (CRITICAL)'
+    type: sequential
+    critical: true
+    blocks_next: true
+    build_verify: true
+    testing_required: true
+    duration: '2-3 hours'
+
+    files:
+      - path: 'apps/cms/lib/google-calendar/oauth.ts'
+        type: 'utility'
+        action: 'Create OAuth flow and token management'
+        depends_on: []
+        imports:
+          - 'googleapis library'
+          - 'Supabase server client'
+        exports:
+          - 'getAuthUrl(userId: string)'
+          - 'handleCallback(code: string, userId: string)'
+          - 'refreshAccessToken(refreshToken: string)'
+          - 'revokeAccess(userId: string)'
+        complexity: 'high'
+        risk: 'Token expiration handling - must refresh automatically'
+
+      - path: 'apps/cms/app/api/auth/google/route.ts'
+        type: 'api-route'
+        action: 'GET endpoint to initiate OAuth flow'
+        depends_on: ['apps/cms/lib/google-calendar/oauth.ts']
+        method: 'GET'
+        request_params:
+          - 'redirect parameter (optional, default: /admin/settings)'
+        response: 'Redirect to Google OAuth consent screen'
+        complexity: 'medium'
+
+      - path: 'apps/cms/app/api/auth/google/callback/route.ts'
+        type: 'api-route'
+        action: 'GET endpoint to handle OAuth callback'
+        depends_on: ['apps/cms/lib/google-calendar/oauth.ts']
+        method: 'GET'
+        request_params:
+          - 'code (from Google)'
+          - 'state (CSRF token)'
+        response: 'Redirect to /admin/settings with success message'
+        error_handling:
+          - 'Invalid code → error message'
+          - 'Token save failure → error message'
+        complexity: 'medium'
+
+      - path: 'apps/cms/features/calendar/actions.ts'
+        type: 'server-action'
+        action: 'Create connectGoogleCalendar() and disconnectGoogleCalendar() Server Actions'
+        depends_on: ['apps/cms/lib/google-calendar/oauth.ts']
+        exports:
+          - 'connectGoogleCalendar() → redirects to /api/auth/google'
+          - 'disconnectGoogleCalendar() → revokes token'
+        complexity: 'low'
+
+      - path: 'apps/cms/app/admin/settings/page.tsx'
+        type: 'page'
+        action: 'Create settings page with calendar connection UI'
+        depends_on: ['apps/cms/features/calendar/actions.ts']
+        ui_elements:
+          - 'Calendar connection status badge'
+          - 'Connect button → calls /api/auth/google'
+          - 'Disconnect button → calls disconnectGoogleCalendar'
+          - 'Refresh token status'
+        complexity: 'medium'
+
+    acceptance_criteria:
+      - 'Lawyer can click "Connect Google Calendar" in /admin/settings'
+      - 'OAuth flow redirects to Google consent screen'
+      - 'After consent, tokens saved to users.google_calendar_token (JSONB)'
+      - 'Settings page shows "Connected" status with email'
+      - 'Lawyer can disconnect and revoke access'
+      - 'Token refresh works automatically on API calls'
+
+    testing:
+      - 'Manual: Click connect button, verify Google redirect'
+      - 'Manual: Grant permission, verify redirect back'
+      - 'Verify in Supabase: users.google_calendar_token has tokens'
+      - 'Manual: Click disconnect, verify token revoked'
+
+    build_verify:
+      - 'npm run build (CMS) - no TypeScript errors'
+      - 'No import cycles'
+      - 'API routes properly exported'
+
+    notes:
+      - 'This phase is FOUNDATION - all other calendar phases depend on it'
+      - 'Token refresh logic critical - must not fail silently'
+      - 'Error handling essential (expired links, revoked tokens)'
+
+  - phase: 2
+    name: 'CMS - Calendar Event Utilities (CRITICAL)'
+    type: sequential
+    critical: true
+    blocks_next: true
+    build_verify: true
+    testing_required: true
+    duration: '2 hours'
+
+    files:
+      - path: 'apps/cms/lib/google-calendar/events.ts'
+        type: 'utility'
+        action: 'Create Google Calendar API wrapper functions'
+        depends_on: ['apps/cms/lib/google-calendar/oauth.ts']
+        imports:
+          - 'googleapis library'
+          - 'oauth.ts (refreshAccessToken, getAuthUrl)'
+          - 'date-fns'
+        exports:
+          - 'getCalendarClient(userId: string)'
+          - 'getEvents(userId: string, timeMin: Date, timeMax: Date)'
+          - 'createEvent(userId: string, eventData: EventData)'
+          - 'updateEvent(userId: string, eventId: string, updates: Partial<EventData>)'
+          - 'deleteEvent(userId: string, eventId: string)'
+        error_handling:
+          - 'Disconnected calendar (no token) → throw error'
+          - 'Expired token → auto-refresh → retry'
+          - 'Invalid grant → return error'
+          - 'Quota limits → return error with message'
+        complexity: 'high'
+        risk: 'Token lifecycle management - refresh must be automatic'
+
+    acceptance_criteria:
+      - 'Can fetch lawyer calendar events for date range'
+      - 'Can create test event in lawyer calendar'
+      - 'Token refresh works when token expires'
+      - 'Error handling for disconnected calendar'
+      - 'Timezone-aware date handling'
+
+    testing:
+      - 'Unit: Mock googleapis library, test getEvents()'
+      - 'Integration: With real Google token, fetch events'
+      - 'Integration: Create test event, verify in Google Calendar'
+      - 'Test token refresh (mock expired token → auto refresh)'
+
+    build_verify:
+      - 'npm run build (CMS) - no errors'
+      - 'All functions properly typed'
+
+    notes:
+      - 'CRITICAL for Website phases - events.ts used by slots API'
+      - 'Must handle Google API rate limits gracefully'
+      - 'Token refresh logic from oauth.ts must integrate seamlessly'
+
+  - phase: 3
+    name: 'Website - Slots API Foundation (CRITICAL)'
+    type: sequential
+    critical: true
+    blocks_next: true
+    build_verify: true
+    testing_required: true
+    duration: '2-2.5 hours'
+
+    parallel_group: false
+    reason_sequential: 'Types must be defined before queries and API route'
+
+    files:
+      - path: 'apps/website/features/calendar/types.ts'
+        type: 'types'
+        action: 'Define TypeScript types for calendar'
+        depends_on: []
+        exports:
+          - 'TimeSlot interface (startTime, endTime, available)'
+          - 'BookingData interface (client info)'
+          - 'SlotAvailability interface'
+        complexity: 'low'
+
+      - path: 'apps/website/features/calendar/queries.ts'
+        type: 'query'
+        action: 'Create database query functions'
+        depends_on: ['apps/website/features/calendar/types.ts']
+        exports:
+          - 'getSurveyLawyer(surveyId: string) → Get lawyer_id'
+          - 'getSurveyByToken(token: string) → Get survey + lawyer'
+          - 'getAppointmentsByLawyer(lawyerId: string, date: Date)'
+        complexity: 'medium'
+
+      - path: 'apps/website/app/api/calendar/slots/route.ts'
+        type: 'api-route'
+        action: 'GET endpoint returning available slots'
+        depends_on:
+          - 'apps/website/features/calendar/types.ts'
+          - 'apps/website/features/calendar/queries.ts'
+          - 'apps/cms/lib/google-calendar/events.ts'
+        method: 'GET'
+        query_params:
+          - 'surveyId: string (required)'
+          - 'date: string (YYYY-MM-DD, required)'
+        response:
+          type: 'TimeSlot[]'
+          example:
+            - 'startTime: "09:00", endTime: "10:00"'
+            - 'startTime: "10:15", endTime: "11:15"'
+        algorithm:
+          - '1. Get lawyer_id from surveyId'
+          - '2. Fetch lawyer tokens from users table'
+          - '3. Call getEvents() from cms/lib/google-calendar/events.ts'
+          - '4. Calculate available slots (working hours 9-17, 60 min slots, 15 min buffer)'
+          - '5. Filter out: busy times, past times, lunch break'
+          - '6. Return sorted array'
+        error_handling:
+          - 'Invalid surveyId → 404'
+          - 'Lawyer has no calendar token → Return message "Calendar not connected"'
+          - 'Google API error → Return empty array with error flag'
+          - 'Past date → Return empty array'
+        complexity: 'high'
+        notes: 'This is the HEART of the booking feature'
+
+    acceptance_criteria:
+      - 'API returns available slots for valid surveyId + date'
+      - 'Slots respect 9 AM - 5 PM working hours'
+      - 'Excludes busy times from lawyer calendar'
+      - 'Applies 15-minute buffer between appointments'
+      - 'Handles timezone correctly (Europe/Warsaw)'
+      - 'Returns empty array if no slots'
+      - 'Error handling for disconnected calendar'
+
+    testing:
+      - 'Unit: Test slot calculation algorithm'
+      - 'Integration: With mock Google events, verify gaps calculated'
+      - 'Integration: Real API call with test lawyer calendar'
+      - 'Edge case: Lawyer has no gaps → returns empty'
+      - 'Edge case: Past date → returns empty'
+      - 'Timezone: Test during DST transition'
+
+    build_verify:
+      - 'npm run build (Website) - no errors'
+      - 'API route properly typed'
+
+    notes:
+      - 'CRITICAL dependency for booking component'
+      - 'Slot calculation is complex - test thoroughly'
+      - 'Timezone bugs common - use date-fns with explicit timezone'
+
+  - phase: 4
+    name: 'Website - Booking Component UI (Parallel with Phase 5)'
+    type: sequential
+    blocks_next: true
+    build_verify: true
+    testing_required: true
+    duration: '3 hours'
+
+    parallel_with: 'Phase 5 (Booking API) - can start in parallel after slots API done'
+
+    files:
+      - path: 'apps/website/features/calendar/components/CalendarBooking.tsx'
+        type: 'component'
+        action: 'Create client component for date/time selection'
+        depends_on:
+          - 'apps/website/features/calendar/types.ts'
+          - 'apps/website/app/api/calendar/slots/route.ts'
+        component_type: 'Client Component (use client)'
+        props:
+          - 'surveyId: string'
+          - 'responseId: string'
+        state_management:
+          - 'selectedDate: Date | null'
+          - 'availableSlots: TimeSlot[]'
+          - 'selectedSlot: TimeSlot | null'
+          - 'isLoadingSlots: boolean'
+          - 'isSubmittingBooking: boolean'
+          - 'bookingConfirmed: boolean'
+        flow:
+          - '1. User selects date from date picker'
+          - '2. Component calls GET /api/calendar/slots'
+          - '3. Display available slots in grid'
+          - '4. User clicks slot to select'
+          - '5. Show booking form (name, email, notes)'
+          - '6. User submits → calls POST /api/calendar/book'
+          - '7. Show confirmation message'
+        ui_elements:
+          - 'Date picker (react-datepicker or native input[type=date])'
+          - 'Time slot grid (buttons)'
+          - 'Booking form (name, email, notes text area)'
+          - 'Submit button (disabled during submission)'
+          - 'Confirmation message'
+          - 'Loading spinners'
+          - 'Error alerts'
+        validation:
+          - 'Name: required'
+          - 'Email: required, valid email format'
+          - 'Notes: optional'
+        complexity: 'high'
+        risk: 'State management complexity - multiple loading states'
+
+    acceptance_criteria:
+      - 'Client can select date from date picker'
+      - 'Available time slots load after date selection'
+      - 'Client can click time slot to select'
+      - 'Booking form appears with client details fields'
+      - 'Form validates (name and email required)'
+      - 'Submit button disabled during submission'
+      - 'Success message shows after booking confirmed'
+      - 'Error handling for API failures'
+      - 'Mobile responsive'
+
+    testing:
+      - 'Manual: Select date, verify slots load'
+      - 'Manual: Click slot, verify form appears'
+      - 'Manual: Submit with invalid email, verify error'
+      - 'Manual: Submit with empty name, verify error'
+      - 'Manual: Submit valid form, verify success message'
+      - 'Manual: Test on mobile (responsive)'
+      - 'Behavior: Disable submit button during submission'
+
+    build_verify:
+      - 'npm run build (Website) - no errors'
+
+    notes:
+      - 'This is the CLIENT-FACING booking interface'
+      - 'UX critical - must be intuitive'
+      - 'Error messages must be clear for non-technical users'
+
+  - phase: 5
+    name: 'Website - Booking Creation API (Parallel with Phase 4)'
+    type: sequential
+    blocks_next: true
+    build_verify: true
+    testing_required: true
+    duration: '2-2.5 hours'
+
+    parallel_with: 'Phase 4 (Booking Component) - can start after slots API done'
+
+    files:
+      - path: 'apps/website/app/api/calendar/book/route.ts'
+        type: 'api-route'
+        action: 'POST endpoint to create appointment'
+        depends_on:
+          - 'apps/cms/lib/google-calendar/events.ts'
+          - 'apps/website/app/api/calendar/slots/route.ts'
+        method: 'POST'
+        request_body:
+          - 'surveyId: string'
+          - 'responseId: string'
+          - 'startTime: ISO string'
+          - 'endTime: ISO string'
+          - 'clientName: string'
+          - 'clientEmail: string'
+          - 'notes?: string'
+        response:
+          success:
+            - 'appointmentId: string'
+            - 'message: string'
+            - 'confirmationDetails: {startTime, endTime, lawyerEmail}'
+          error:
+            - 'errorCode: string'
+            - 'message: string'
+        algorithm:
+          - '1. Validate request body (Zod schema)'
+          - '2. Get survey → lawyer_id → tenant_id'
+          - '3. Check for conflicts:'
+          - '   a. Query appointments table for overlapping times'
+          - '   b. Query Google Calendar for conflicts'
+          - '4. Create appointment in database'
+          - '5. Create Google Calendar event'
+          - '6. Store google_calendar_event_id in appointments'
+          - '7. Return appointmentId + confirmation'
+        error_handling:
+          - 'Invalid request body → 400'
+          - 'Survey not found → 404'
+          - 'Double-booking detected → 409 Conflict'
+          - 'Google API failure → 503 Service Unavailable'
+          - 'Database error → 500'
+        double_booking_prevention:
+          - 'Query appointments WHERE start_time < endTime AND end_time > startTime'
+          - 'Query Google Calendar getEvents()'
+          - 'If conflict → return 409 "Time slot no longer available"'
+        complexity: 'high'
+        risk: 'Double-booking race condition - must use database transactions'
+        risk_mitigation: 'Use Supabase atomic insert + check before insert'
+
+    acceptance_criteria:
+      - 'Creates appointment in database with all fields'
+      - 'Creates event in lawyer Google Calendar'
+      - 'Links appointment to response_id'
+      - 'Stores google_calendar_event_id for future updates'
+      - 'Prevents double-booking (conflict detection)'
+      - 'Returns appointmentId on success'
+      - 'Error handling for API failures'
+      - 'Handles concurrent bookings safely'
+
+    testing:
+      - 'Unit: Validate request body schema'
+      - 'Integration: Create appointment, verify in database'
+      - 'Integration: Verify event created in Google Calendar'
+      - 'Integration: Query google_calendar_event_id populated'
+      - 'Edge case: Double-booking attempt → returns 409'
+      - 'Edge case: Google API timeout → graceful error'
+      - 'Concurrency: Two bookings same slot → one succeeds, one fails'
+
+    build_verify:
+      - 'npm run build (Website) - no errors'
+
+    notes:
+      - 'CRITICAL - prevents double-booking'
+      - 'Race condition risk - test concurrency'
+      - 'Google API integration must be resilient'
+
+  - phase: 6
+    name: 'Website - Success Page Integration'
+    type: sequential
+    blocks_next: false
+    build_verify: true
+    testing_required: true
+    duration: '1-1.5 hours'
+
+    depends_on: ['Phase 4: Booking Component', 'Phase 5: Booking API']
+
+    files:
+      - path: 'apps/website/app/api/survey/submit/route.ts'
+        type: 'api-route-update'
+        action: 'Modify submit endpoint to pass responseId'
+        depends_on: []
+        changes:
+          - 'After successful response insert, redirect includes responseId'
+          - 'Redirect URL: /survey/{token}/success?responseId={id}'
+        complexity: 'low'
+
+      - path: 'apps/website/app/survey/[token]/success/page.tsx'
+        type: 'page-update'
+        action: 'Integrate CalendarBooking component'
+        depends_on: ['apps/website/features/calendar/components/CalendarBooking.tsx']
+        changes:
+          - 'Read responseId from URL query params'
+          - 'Read surveyId from survey context'
+          - 'Import and render <CalendarBooking surveyId={surveyId} responseId={responseId} />'
+          - 'Add fallback: if calendar unavailable, show message'
+        ui_flow:
+          - 'Display: "Thank you for submitting!"'
+          - 'Display: CalendarBooking component'
+          - 'If lawyer has no calendar: "Calendar unavailable. We will contact you."'
+        complexity: 'low'
+
+    acceptance_criteria:
+      - 'Success page displays CalendarBooking component'
+      - 'Component receives surveyId and responseId props'
+      - 'Calendar booking works end-to-end after survey submission'
+      - 'Error handling if calendar unavailable'
+      - 'Mobile responsive'
+
+    testing:
+      - 'End-to-end: Submit survey → success page loads'
+      - 'End-to-end: Success page → select date → verify slots load'
+      - 'End-to-end: Book appointment → verify confirmation'
+      - 'Manual: Test on mobile'
+      - 'Edge case: Lawyer has no calendar → show fallback message'
+
+    build_verify:
+      - 'npm run build (Website) - no errors'
+
+    notes:
+      - 'This completes the client-facing flow'
+      - 'Must have fallback for missing calendar'
+
+  - phase: 7
+    name: 'CMS - Appointments List (BONUS)'
+    type: sequential
+    blocks_next: false
+    build_verify: true
+    testing_required: false
+    duration: '1.5 hours'
+
+    optional: true
+    included_in_phase_3: 'Per plan decision: "CMS Appointments List - add to Phase 3!"'
+
+    files:
+      - path: 'apps/cms/features/appointments/types.ts'
+        type: 'types'
+        action: 'Define appointment types'
+        depends_on: []
+        exports:
+          - 'AppointmentWithResponse'
+          - 'AppointmentListItem'
+        complexity: 'low'
+
+      - path: 'apps/cms/features/appointments/queries.ts'
+        type: 'query'
+        action: 'Create query functions for appointments'
+        depends_on: ['apps/cms/features/appointments/types.ts']
+        exports:
+          - 'getAppointments(filters?: {status?, dateRange?, lawyerId?})'
+          - 'getAppointment(id: string)'
+        complexity: 'medium'
+
+      - path: 'apps/cms/features/appointments/components/AppointmentList.tsx'
+        type: 'component'
+        action: 'Create list view with TanStack Query'
+        depends_on: ['apps/cms/features/appointments/queries.ts']
+        features:
+          - 'List with TanStack Query'
+          - 'Sort by date (upcoming first)'
+          - 'Status badges'
+          - 'Click to view detail'
+          - 'Shows: client name, date/time, status, linked response'
+        complexity: 'medium'
+
+      - path: 'apps/cms/features/appointments/components/AppointmentCard.tsx'
+        type: 'component'
+        action: 'Create individual appointment card'
+        depends_on: ['apps/cms/features/appointments/types.ts']
+        complexity: 'low'
+
+      - path: 'apps/cms/app/admin/appointments/page.tsx'
+        type: 'page'
+        action: 'Create appointments list route'
+        depends_on: ['apps/cms/features/appointments/components/AppointmentList.tsx']
+        complexity: 'low'
+
+      - path: 'apps/cms/components/admin/Sidebar.tsx'
+        type: 'component-update'
+        action: 'Add Appointments navigation link'
+        changes:
+          - 'Add link: /admin/appointments'
+          - 'Icon: calendar-check or similar'
+        complexity: 'low'
+
+    acceptance_criteria:
+      - 'Lawyer can view all appointments for their tenant'
+      - 'List shows: client name, date/time, status, linked response'
+      - 'Can click appointment to view details'
+      - 'Shows "no appointments" message if empty'
+      - 'Appointments filtered by tenant via RLS'
+      - 'Upcoming appointments shown first'
+
+    testing: null
+    notes:
+      - 'OPTIONAL - deferred full response management to Phase 4'
+      - 'Simple implementation - just list view'
+      - 'Click detail → view response in responses section'
+
+  - phase: 8
+    name: 'Manual Testing & Verification'
+    type: sequential
+    blocks_next: false
+    duration: '2-3 hours'
+
+    checkpoint_after_phase: 2
+    tests:
+      checkpoint_1_oauth:
+        - 'CMS: /admin/settings → Connect Google Calendar'
+        - 'Verify redirect to Google'
+        - 'Grant permission'
+        - 'Verify redirect back to settings'
+        - 'Verify "Connected" status shows'
+        - 'Supabase: Check users.google_calendar_token populated'
+
+      checkpoint_2_events:
+        - 'Create test event in lawyer Google Calendar'
+        - 'SQL: Call getEvents() function'
+        - 'Verify returns lawyer events'
+
+      checkpoint_3_slots_api:
+        - 'Website: curl GET /api/calendar/slots?surveyId=xxx&date=2025-12-15'
+        - 'Verify returns time slots'
+        - 'Verify excludes busy times'
+        - 'Verify respects 9-5 hours'
+
+      checkpoint_4_booking_component:
+        - 'Success page: Verify calendar component renders'
+        - 'Click date → verify slots load'
+        - 'Click slot → verify form appears'
+        - 'Submit form → verify success'
+
+      checkpoint_5_end_to_end:
+        - 'Submit survey form'
+        - 'Redirect to success with calendar'
+        - 'Book appointment'
+        - 'Verify in appointments table'
+        - 'Verify in lawyer Google Calendar'
+        - 'Verify CMS appointments list shows booking'
+
+---
+
+## CRITICAL DEPENDENCIES & BLOCKING
+
+critical_path:
+  - phase_0: 'Google Cloud Setup'
+    blocks: ['phase_1']
+    reason: 'Need credentials for environment variables'
+
+  - phase_1: 'CMS OAuth'
+    blocks: ['phase_2', 'phase_3', 'phase_4']
+    reason: 'Tokens must be stored before other phases can access them'
+
+  - phase_2: 'CMS Calendar Events'
+    blocks: ['phase_3', 'phase_5']
+    reason: 'Website needs events.ts to calculate slots and create appointments'
+
+  - phase_3: 'Website Slots API'
+    blocks: ['phase_4', 'phase_5']
+    reason: 'Booking component and API both need working slots endpoint'
+
+parallelization_opportunities:
+  - phases: [4, 5]
+    name: 'Booking Component & API can develop in parallel'
+    reason: 'Both depend on Phase 3 (Slots API). Component UI can use mock data initially.'
+    implementation:
+      - 'Phase 4: Start with mock availableSlots data'
+      - 'Phase 5: Build booking API independently'
+      - 'Phase 4: Integrate with real API once Phase 5 done'
+    risk: 'Low - clear interface boundary'
+    estimated_time_saved: '30-45 minutes'
+
+sequential_phases:
+  - 'Phase 0 → Phase 1: Google credentials needed'
+  - 'Phase 1 → Phase 2: OAuth tokens needed'
+  - 'Phase 2 → Phase 3,4,5: Calendar events needed'
+  - 'Phase 6: Must come after Phase 4 & 5 complete'
+
+---
+
+## BUILD VERIFICATION CHECKPOINTS
+
+build_verification:
+  after_phase_1_oauth:
+    - command: 'npm run build -w apps/cms'
+    - verify:
+        - 'No TypeScript errors'
+        - 'No import errors'
+        - 'API routes properly exported'
+
+  after_phase_2_events:
+    - command: 'npm run build -w apps/cms'
+    - verify:
+        - 'events.ts properly typed'
+        - 'No circular imports'
+
+  after_phase_3_slots:
+    - command: 'npm run build -w apps/website'
+    - verify:
+        - 'API route properly typed'
+        - 'No missing dependencies'
+
+  after_phase_4_component:
+    - command: 'npm run build -w apps/website'
+    - verify:
+        - 'Component imports resolve'
+        - 'No missing types'
+
+  before_launch:
+    - command: 'npm run build'
+    - verify:
+        - 'Both apps build without errors'
+        - 'No warnings'
+
+---
+
+## TESTING REQUIREMENTS
+
+testing_strategy:
+  business_flows:
+    - flow: 'Lawyer connects Google Calendar'
+      personas: ['Lawyer']
+      validates:
+        - 'OAuth flow works'
+        - 'Token stored securely'
+        - 'Status shows Connected'
+
+    - flow: 'Client books appointment after survey'
+      personas: ['Client', 'Lawyer']
+      validates:
+        - 'Form → Success page with calendar'
+        - 'Date selection works'
+        - 'Slots load correctly'
+        - 'Appointment created in DB'
+        - 'Event created in Google Calendar'
+        - 'Confirmation message shows'
+
+    - flow: 'Double-booking prevention'
+      personas: ['Client (2 concurrent)']
+      validates:
+        - 'Same slot bookable by only one client'
+        - 'Second client gets "slot unavailable"'
+
+    - flow: 'Expired link blocks booking'
+      personas: ['Client with old link']
+      validates:
+        - 'Calendar unavailable message shows'
+        - 'Form not submittable'
+
+  developer_critical:
+    - 'Token refresh works automatically'
+    - 'RLS policies isolate tenant data'
+    - 'Timezone handling correct (Europe/Warsaw)'
+    - 'Google API errors handled gracefully'
+    - 'Supabase operations atomic (no partial writes)'
+
+  edge_cases:
+    - 'Lawyer has no calendar connected'
+    - 'Lawyer calendar has no free slots'
+    - 'Past dates return empty slots'
+    - 'Google API rate limit exceeded'
+    - 'Token revoked externally (lawyer removed from calendar)'
+    - 'Network timeout during booking'
+    - 'Concurrent booking attempts (race condition)'
+
+  skip_trivial:
+    - 'Component renders checks'
+    - 'Button has className'
+    - 'Form inputs accept text'
+    - 'Date picker opens'
+
+---
+
+## RISK ASSESSMENT
+
+risks:
+  - category: 'Token Expiration'
+    severity: 'P1-CRITICAL'
+    description: 'Access tokens expire after 1 hour. Refresh token logic must be automatic and fail gracefully.'
+    probability: 'high'
+    mitigation:
+      - 'Implement refreshAccessToken() in oauth.ts'
+      - 'Call automatically in events.ts before API calls'
+      - 'Test token refresh with expired tokens'
+      - 'Monitor token refresh failures in logs'
+    acceptance_criteria:
+      - 'Refresh happens transparently (user doesn't know)'
+      - 'No silent failures - log all refresh attempts'
+
+  - category: 'Double Booking Race Condition'
+    severity: 'P1-CRITICAL'
+    description: 'Two clients book same slot concurrently. Only one should succeed.'
+    probability: 'medium'
+    mitigation:
+      - 'Check conflicts BEFORE inserting appointment'
+      - 'Use database transaction for atomicity'
+      - 'Query both appointments table AND Google Calendar'
+      - 'Load test with concurrent bookings'
+    acceptance_criteria:
+      - 'Second client gets clear error: "Slot no longer available"'
+      - 'Only one appointment created'
+
+  - category: 'Timezone Bugs'
+    severity: 'P1-CRITICAL'
+    description: 'Poland uses Europe/Warsaw timezone. DST transitions tricky.'
+    probability: 'medium'
+    mitigation:
+      - 'Use date-fns with explicit timezone: tz.format(date, format, { timeZone: "Europe/Warsaw" })'
+      - 'Never use native Date methods'
+      - 'Test during DST transition (March, October)'
+      - 'Verify slots calculation respects DST'
+    acceptance_criteria:
+      - 'Slots calculated correctly year-round'
+      - 'No "off by 1 hour" errors'
+
+  - category: 'Google API Rate Limits'
+    severity: 'P2-HIGH'
+    description: 'Calendar API has quota limits. High traffic may exceed.'
+    probability: 'low'
+    mitigation:
+      - 'Cache available slots (consider Redis in future)'
+      - 'Implement exponential backoff for retries'
+      - 'Return error message when quota exceeded'
+      - 'Monitor API usage in Google Cloud Console'
+    acceptance_criteria:
+      - 'No sudden API failures under normal load'
+
+  - category: 'Lawyer Disconnects Calendar'
+    severity: 'P2-HIGH'
+    description: 'Lawyer revokes access or tokens become invalid'
+    probability: 'high'
+    mitigation:
+      - 'Show clear message to client: "Calendar currently unavailable"'
+      - 'Return empty slots array + "calendar unavailable" flag'
+      - 'Lawyer sees disconnect message in CMS'
+      - 'Client form remains functional (doesn't crash)'
+    acceptance_criteria:
+      - 'No crashes - graceful degradation'
+      - 'Clear user messaging'
+
+  - category: 'Import/Dependency Issues'
+    severity: 'P2-HIGH'
+    description: 'cms/lib/google-calendar files used by website - monorepo dependency issues'
+    probability: 'low'
+    mitigation:
+      - 'Use shared package pattern if cms-specific code needed in website'
+      - 'Or: Move google-calendar to packages/google-calendar'
+      - 'Test imports after each phase'
+      - 'Watch for circular dependencies'
+    acceptance_criteria:
+      - 'npm run build succeeds for both apps'
+
+  - category: 'Environment Variables Missing'
+    severity: 'P1-CRITICAL'
+    description: 'Missing GOOGLE_CLIENT_ID/SECRET in .env.local'
+    probability: 'high'
+    mitigation:
+      - 'Provide .env.example template'
+      - 'Check for missing vars at startup'
+      - 'Show clear error if missing'
+    acceptance_criteria:
+      - 'Clear error message if vars missing'
+      - '.env.example provided'
+
+---
+
+## SKIP CONDITIONS
+
+skip_conditions:
+  - condition: 'Phase 7 (CMS Appointments List)'
+    skip_if: 'User requests MVP version without admin appointments view'
+    impact: 'Lawyer cannot see booked appointments in CMS (only via Google Calendar)'
+    recommendation: 'Include - adds value for lawyer workflow'
+
+  - condition: 'Email Notifications'
+    skip_if: 'Not mentioned in plan - deferred to Phase 5'
+    impact: 'Clients and lawyers don't receive confirmation emails'
+    status: 'Deferred to Phase 5 (n8n workflows)'
+
+---
+
+## RESOURCE ESTIMATION
+
+resource_needs:
+  total_agents_parallel: 2
+  phases_parallelizable: [4, 5]
+
+  agent_allocation:
+    agent_1_cms:
+      phases: [0, 1, 2, 7]
+      specialization: 'Backend + OAuth'
+      total_hours: '6-7'
+
+    agent_2_website:
+      phases: [3, 4, 5, 6]
+      specialization: 'Frontend + API integration'
+      total_hours: '8-9'
+
+    sequential_phases:
+      - [0, 1, 2]
+      - [3, 4 parallel 5]
+      - [6, 7]
+
+  estimated_total_duration:
+    ideal_with_parallelization: '10-12 hours (2-3 days intense, 1 week part-time)'
+    sequential_only: '14-16 hours (2+ weeks part-time)'
+
+---
+
+## ENVIRONMENT VARIABLES
+
+env_variables:
+  cms_env_local:
+    - 'NEXT_PUBLIC_SUPABASE_URL (existing)'
+    - 'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY (existing)'
+    - 'SUPABASE_SERVICE_ROLE_KEY (existing)'
+    - 'GOOGLE_CLIENT_ID (NEW - from user)'
+    - 'GOOGLE_CLIENT_SECRET (NEW - from user)'
+    - 'GOOGLE_REDIRECT_URI=http://localhost:3001/api/auth/google/callback'
+
+  cms_vercel_env:
+    - 'GOOGLE_CLIENT_ID'
+    - 'GOOGLE_CLIENT_SECRET'
+    - 'GOOGLE_REDIRECT_URI=https://legal-mind-cms.vercel.app/api/auth/google/callback'
+
+  website_env:
+    - 'No new vars needed (uses existing Supabase keys)'
+
+---
+
+## SUCCESS CRITERIA (Phase 3 Complete)
+
+success_criteria_cms:
+  - 'Lawyer can connect Google Calendar via OAuth'
+  - 'Tokens stored securely in users.google_calendar_token'
+  - 'Settings page shows connection status'
+  - 'Lawyer can disconnect/revoke access'
+  - 'Token refresh works automatically'
+
+success_criteria_website:
+  - 'Client sees calendar interface after survey submission'
+  - 'Available time slots display correctly'
+  - 'Client can book appointment'
+  - 'Appointment created in database'
+  - 'Event created in lawyer Google Calendar'
+  - 'No double-booking possible'
+  - 'Confirmation message shows after booking'
+  - 'Mobile responsive'
+
+success_criteria_technical:
+  - 'Both apps build without errors'
+  - 'Token refresh works automatically'
+  - 'Timezone handling correct'
+  - 'Error handling for disconnected calendar'
+  - 'RLS policies enforce tenant isolation'
+  - 'Double-booking prevented'
+  - 'All Google API errors handled gracefully'
+
+---
+
+## DOCUMENTATION UPDATES (Post-Implementation)
+
+docs_updates:
+  - file: '@docs/PROJECT_SPEC.yaml'
+    updates:
+      - 'Mark Phase 3 as complete'
+      - 'Mark all features as verified: true'
+      - 'Update overall_progress: 35% → 60%'
+
+  - file: '@docs/PROJECT_ROADMAP.md'
+    updates:
+      - 'Mark Phase 3 tasks with [x]'
+      - 'Update progress %'
+      - 'Add "Recent Milestones" entry'
+
+  - file: '@docs/CODE_PATTERNS.md'
+    add_sections:
+      - 'Google Calendar OAuth pattern'
+      - 'API route for external data (slots calculation)'
+      - 'Timezone-aware date manipulation with date-fns'
+
+  - file: '@docs/ARCHITECTURE.md'
+    updates:
+      - 'Add Google Calendar data flow diagram'
+      - 'Document cms/lib/google-calendar as shared utility'
+
+---
+
+## AGENTS NEEDED FOR EXECUTION
+
+agents_required:
+  - phase: [0]
+    agent_type: 'user-action'
+    reason: 'Google Cloud setup requires manual intervention'
+    deliverable: 'Google credentials in .env.local'
+
+  - phase: [1, 2, 7]
+    agent_type: 'cms-backend-developer'
+    reason: 'CMS OAuth, Google Calendar API integration, appointments list'
+    specialization: 'Next.js API routes, Supabase, OAuth flows'
+    parallel: false
+    count: 1
+
+  - phase: [3, 4, 5, 6]
+    agent_type: 'website-full-stack'
+    reason: 'Slots API, booking component, success page integration'
+    specialization: 'React components, API routes, TanStack Query'
+    parallel_opportunity: 'Phases 4 & 5 can be parallel'
+    count: 1
+
+  - phase: [all]
+    agent_type: 'tester'
+    reason: 'Manual testing and verification'
+    tasks: ['OAuth flow', 'slots calculation', 'double-booking', 'end-to-end booking']
+    count: 1
+    duration: '2-3 hours'
+
+---
+
+## CRITICAL NOTES FOR IMPLEMENTERS
+
+critical_notes:
+  - 'Token Expiration: oauth.ts MUST implement automatic refresh. No silent failures.'
+  - 'Double Booking: Phase 5 MUST check conflicts before insert. Test concurrency.'
+  - 'Timezone: Always use date-fns with Europe/Warsaw timezone. Never use native Date.'
+  - 'Imports: Monitor for monorepo dependency issues (cms code used by website).'
+  - 'Error Handling: Every external API call (Google) must have graceful fallback.'
+  - 'Testing: Manual E2E testing mandatory. Automated tests nice-to-have.'
+  - 'Database: Verify RLS policies enforce tenant isolation in all queries.'
+
+recommended_agent_pattern:
+  description: 'For optimal parallelization with 2 agents'
+  scenario: |
+    Agent 1 (CMS Backend):
+    - Completes Phase 0-2 (OAuth setup)
+    - Can start Phase 7 (Appointments) while Agent 2 works on website
+
+    Agent 2 (Website Full-Stack):
+    - Waits for Phase 0-2 completion (needs oauth tokens)
+    - Completes Phase 3 (Slots API)
+    - Starts Phase 4 & 5 in PARALLEL (mock data in component)
+    - Completes Phase 6 (Success page integration)
+
+  time_saved: '2-3 hours vs sequential'
+
+---
+
+## ESTIMATED EFFORT BY PHASE
+
+effort_breakdown:
+  phase_0:
+    name: 'Google Cloud Setup'
+    type: 'user-action'
+    duration: '15-30 min'
+    complexity: 'low'
+    prerequisite: true
+
+  phase_1:
+    name: 'CMS OAuth'
+    type: 'backend'
+    duration: '2-3 hours'
+    complexity: 'high'
+    critical: true
+
+  phase_2:
+    name: 'CMS Calendar Events'
+    type: 'backend'
+    duration: '2 hours'
+    complexity: 'high'
+    critical: true
+
+  phase_3:
+    name: 'Website Slots API'
+    type: 'full-stack'
+    duration: '2-2.5 hours'
+    complexity: 'high'
+    critical: true
+
+  phase_4:
+    name: 'Booking Component'
+    type: 'frontend'
+    duration: '3 hours'
+    complexity: 'high'
+    can_parallelize: true
+
+  phase_5:
+    name: 'Booking API'
+    type: 'backend'
+    duration: '2-2.5 hours'
+    complexity: 'high'
+    can_parallelize: true
+
+  phase_6:
+    name: 'Success Page Integration'
+    type: 'frontend'
+    duration: '1-1.5 hours'
+    complexity: 'low'
+    depends_on: ['phase_4', 'phase_5']
+
+  phase_7:
+    name: 'CMS Appointments List'
+    type: 'frontend'
+    duration: '1.5 hours'
+    complexity: 'medium'
+    optional: true
+
+  phase_8:
+    name: 'Manual Testing'
+    type: 'qa'
+    duration: '2-3 hours'
+    complexity: 'medium'
+    required: true
+
+  total_duration:
+    sequential: '14-16 hours (2+ weeks part-time)'
+    parallel_optimal: '10-12 hours (2-3 days intense, 1 week part-time)'
+    with_extended_testing: '16-18 hours'

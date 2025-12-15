@@ -1,0 +1,150 @@
+================================================================================
+CALENDAR BOOKING COMPONENT - IMPLEMENTATION COMPLETE
+================================================================================
+
+FILE CREATED:
+  apps/website/features/survey/components/CalendarBooking.tsx (609 lines)
+
+COMPONENT FEATURES:
+  ✓ Multi-step appointment booking interface
+  ✓ Date picker with HTML5 input[type="date"]
+  ✓ Dynamic time slots fetched from /api/calendar/slots
+  ✓ Time slot selection grid (2 cols mobile, 3 cols desktop)
+  ✓ Booking form with name/email/notes fields
+  ✓ React Hook Form + Zod validation
+  ✓ Success confirmation page with appointment details
+  ✓ Comprehensive error handling and loading states
+  ✓ Full accessibility support (ARIA labels, keyboard nav)
+  ✓ Mobile-responsive design (Tailwind CSS)
+
+STATE MANAGEMENT:
+  • Date Selection: selectedDate (Date | null)
+  • Slot Selection: selectedSlot (CalendarSlot | null)
+  • API Loading: slotsLoading, slots[], slotsError
+  • Form Submission: isSubmitting, submitError
+  • Success Flow: bookingSuccess flag
+  • Form State: React Hook Form useForm hook
+
+VALIDATION:
+  • Date: HTML5 min attribute prevents past dates
+  • Name: 2-100 characters (Zod)
+  • Email: Valid email format (Zod)
+  • Notes: 0-500 characters (Zod, optional)
+  • Validation Mode: onBlur (validates on field blur)
+
+API ENDPOINTS:
+  1. GET /api/calendar/slots?surveyId={id}&date={YYYY-MM-DD}
+     → Returns: { slots: [{ start, end }] }
+     → Errors: 404 (not connected), 500 (server error)
+
+  2. POST /api/calendar/book
+     → Body: surveyId, responseId, startTime, endTime,
+              clientName, clientEmail, notes, lawyerEmail
+     → Response: { success: boolean, error?: string }
+
+COMPONENT STRUCTURE:
+  CalendarBooking (Main)
+  ├── SuccessMessage (sub-component)
+  │   └── Displays confirmation with date/time summary
+  ├── ErrorAlert (sub-component)
+  │   └── Consistent error message UI
+  ├── LoadingSlots (sub-component)
+  │   └── Animated skeleton loader for time slots
+  └── TimeSlotsGrid (sub-component)
+      └── Interactive time selection buttons
+
+PROPS:
+  interface CalendarBookingProps {
+    surveyId: string           // Survey UUID for tracking
+    responseId: string         // Response UUID from survey submit
+    lawyerEmail?: string       // Optional: specific lawyer email
+  }
+
+STYLING:
+  • Framework: Tailwind CSS + shadcn/ui components
+  • Colors: Blue primary, Red error, Green success
+  • Layout: Mobile-first responsive design
+  • Icons: Lucide React (Calendar, Clock, CheckCircle, AlertCircle)
+  • Fonts: Headings (4xl bold), Labels (base medium), Text (sm normal)
+
+ACCESSIBILITY:
+  ✓ Proper <label> elements with htmlFor attributes
+  ✓ aria-invalid on fields with errors
+  ✓ role="alert" on error messages (screen reader announces)
+  ✓ Keyboard navigation: Tab, Enter, Space
+  ✓ Native HTML5 date input (native mobile picker)
+  ✓ ARIA descriptive text for fields (aria-describedby)
+  ✓ Error messages linked to fields
+
+RESPONSIVE DESIGN:
+  Mobile (< 640px):
+    • Single column time slot grid
+    • Full-width form inputs
+    • Centered layout with padding
+
+  Tablet (640px - 1024px):
+    • Two-column time slot grid
+    • Readable label sizes
+
+  Desktop (1024px+):
+    • Three-column time slot grid
+    • Max-width 2xl (896px) centered card
+    • Spacious padding
+
+KEY IMPLEMENTATION PATTERNS:
+  1. No TanStack Query (website app rule - use fetch only)
+  2. React Hook Form with Zod resolver (matches SurveyForm pattern)
+  3. State-based step progression (date → slots → form → success)
+  4. Error handling at each step (loading, error, empty, success)
+  5. Inline sub-components for clarity (no separate files)
+  6. Comprehensive JSDoc documentation
+  7. TypeScript interfaces for all data structures
+
+USAGE EXAMPLE:
+  import { CalendarBooking } from '@/features/survey/components/CalendarBooking'
+
+  export function MyPage() {
+    return (
+      <CalendarBooking
+        surveyId="123e4567-e89b-12d3-a456-426614174000"
+        responseId="550e8400-e29b-41d4-a716-446655440000"
+        lawyerEmail="john@example.com"
+      />
+    )
+  }
+
+TESTING CHECKLIST:
+  □ Date picker shows future dates only
+  □ Selecting date loads slots (spinner visible)
+  □ Empty slots show error message
+  □ Calendar unavailable shows specific error
+  □ Selected slot highlights blue
+  □ Appointment summary shows correctly
+  □ Form validation works (name/email)
+  □ Submit disabled until slot selected
+  □ Submit shows spinner while loading
+  □ Success page shows after booking
+  □ Error shows on booking failure
+  □ Fully keyboard navigable
+  □ Mobile responsive (375px)
+  □ Desktop responsive (1440px)
+  □ Accessible to screen readers
+  □ Error messages announced
+
+DOCUMENTATION:
+  1. CALENDAR_BOOKING_GUIDE.md - Comprehensive implementation guide
+  2. CalendarBooking.tsx - Inline JSDoc documentation
+  3. This file - Quick reference summary
+
+INTEGRATION PATH:
+  1. Route page (app/survey/[token]/page.tsx) uses CalendarBooking
+  2. After survey form submission, show CalendarBooking
+  3. Pass surveyId + responseId to component
+  4. User selects date/time/fills form
+  5. Component calls /api/calendar/book
+  6. Success page confirms appointment
+
+================================================================================
+IMPLEMENTATION STATUS: COMPLETE ✓
+Ready for integration testing with API endpoints
+================================================================================

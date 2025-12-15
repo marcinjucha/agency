@@ -79,8 +79,9 @@ export function SurveyForm({ survey, linkId, token }: SurveyFormProps) {
       const result = await response.json()
 
       if (result.success) {
-        // Redirect to success page on successful submission
-        router.push(`/survey/${token}/success`)
+        // Redirect to success page with responseId for calendar booking
+        const queryString = result.responseId ? `?responseId=${result.responseId}` : ''
+        router.push(`/survey/${token}/success${queryString}`)
       } else {
         // Display error message from API
         setSubmitError(result.error || 'Failed to submit survey. Please try again.')
