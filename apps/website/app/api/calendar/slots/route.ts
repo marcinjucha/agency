@@ -15,8 +15,10 @@
  * Errors:
  * - 400: Missing or invalid parameters
  * - 404: Survey not found
- * - 403: Calendar not connected (no tokens)
  * - 500: Database or calendar API error
+ *
+ * Note: If calendar is not connected, returns all slots as available (9 AM - 5 PM)
+ * This allows testing without requiring calendar setup
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -297,31 +299,33 @@ export async function GET(request: NextRequest): Promise<
       )
     }
 
-    // Check if calendar is connected
-    if (!tokenData.token) {
-      return NextResponse.json(
-        { success: false, error: 'Calendar not connected' },
-        { status: 403 }
-      )
-    }
-
     // Step 4: Get busy events from calendar
-    const googleToken = tokenData.token as { access_token: string }
     let busyEvents: Array<{
       start: { dateTime: string }
       end: { dateTime: string }
     }> = []
 
-    try {
-      // Get start and end of day
-      const tzOffset = getWarsawUTCOffset(requestedDate)
-      const dayStartUTC = new Date(requestedDate.getFullYear(), requestedDate.getMonth(), requestedDate.getDate(), -tzOffset, 0, 0)
-      const dayEndUTC = new Date(requestedDate.getFullYear(), requestedDate.getMonth(), requestedDate.getDate(), 24 - tzOffset, 0, 0)
+    // If calendar is connected, fetch busy events
+    // If not connected, return all slots as available (mock mode for development)
+    if (tokenData.token) {
+      try {
+        const googleToken = tokenData.token as { access_token: string }
 
-      busyEvents = await getCalendarEvents(googleToken.access_token, dayStartUTC, dayEndUTC)
-    } catch (error) {
-      console.error('Error fetching calendar events:', error)
-      // Don't fail - just return all slots available if calendar fetch fails
+        // Get start and end of day
+        const tzOffset = getWarsawUTCOffset(requestedDate)
+        const dayStartUTC = new Date(requestedDate.getFullYear(), requestedDate.getMonth(), requestedDate.getDate(), -tzOffset, 0, 0)
+        const dayEndUTC = new Date(requestedDate.getFullYear(), requestedDate.getMonth(), requestedDate.getDate(), 24 - tzOffset, 0, 0)
+
+        busyEvents = await getCalendarEvents(googleToken.access_token, dayStartUTC, dayEndUTC)
+      } catch (error) {
+        console.error('Error fetching calendar events:', error)
+        // Don't fail - just return all slots available if calendar fetch fails
+        busyEvents = []
+      }
+    } else {
+      // Calendar not connected - for development/testing, return all slots as available
+      // In production, you may want to return an error instead
+      console.info('Calendar not connected - returning all slots as available (development mode)')
       busyEvents = []
     }
 
