@@ -22,9 +22,16 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getSurveyWithLawyer, getLawyerCalendarToken } from '@/features/calendar/queries'
+import { getLawyerCalendarToken } from '@/features/calendar/queries'
 import type { AvailableSlotsResponse, ErrorResponse, TimeSlot } from '@/features/calendar/types'
 import { parse, addHours, addMinutes } from 'date-fns'
+import { createClient } from '@supabase/supabase-js'
+
+// Initialize Supabase client with service role key
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+  process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+)
 
 const TIMEZONE = 'Europe/Warsaw'
 const WORK_START_HOUR = 9 // 9 AM
@@ -269,22 +276,30 @@ export async function GET(request: NextRequest): Promise<
       )
     }
 
-    // Step 2: Get survey and lawyer info
-    let surveyData
-    try {
-      surveyData = await getSurveyWithLawyer(surveyId)
-    } catch (error) {
-      if (error instanceof Error && error.message === 'Survey not found') {
-        return NextResponse.json(
-          { success: false, error: 'Survey not found' },
-          { status: 404 }
-        )
-      }
-      console.error('Error fetching survey:', error)
+    // Step 2: Get survey link and lawyer info
+    const { data: surveyLink, error: surveyError } = await supabase
+      .from('survey_links')
+      .select('surveys(id, created_by, tenant_id)')
+      .eq('id', surveyId)
+      .single()
+
+    if (surveyError || !surveyLink) {
       return NextResponse.json(
-        { success: false, error: 'Failed to fetch survey' },
-        { status: 500 }
+        { success: false, error: 'Survey not found' },
+        { status: 404 }
       )
+    }
+
+    const survey = surveyLink.surveys as unknown as {
+      id: string
+      created_by: string
+      tenant_id: string
+    }
+
+    const surveyData = {
+      id: survey.id,
+      user_id: survey.created_by,  // Map created_by to user_id for consistency
+      tenant_id: survey.tenant_id
     }
 
     // Step 3: Get lawyer's calendar token

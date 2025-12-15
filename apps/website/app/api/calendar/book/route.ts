@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
     // Step 1: Validate survey exists and get lawyer info
     const { data: surveyLink, error: surveyError } = await supabase
       .from('survey_links')
-      .select('surveys(id, user_id, tenant_id)')
+      .select('surveys(id, created_by, tenant_id)')
       .eq('id', validatedData.surveyId)
       .single()
 
@@ -84,10 +84,10 @@ export async function POST(request: NextRequest) {
 
     const survey = surveyLink.surveys as unknown as {
       id: string
-      user_id: string
+      created_by: string
       tenant_id: string
     }
-    const lawyerId = survey.user_id
+    const lawyerId = survey.created_by
     const tenantId = survey.tenant_id
 
     // Step 2: Validate response exists and belongs to this survey
@@ -109,7 +109,7 @@ export async function POST(request: NextRequest) {
     const { data: existingAppointments, error: conflictError } = await supabase
       .from('appointments')
       .select('id, start_time, end_time')
-      .eq('user_id', lawyerId)
+      .eq('lawyer_id', lawyerId)
       .eq('status', 'scheduled')
       .neq('id', '') // Exclude deleted appointments
 
@@ -145,7 +145,7 @@ export async function POST(request: NextRequest) {
       .from('appointments')
       .insert({
         response_id: validatedData.responseId,
-        user_id: lawyerId,
+        lawyer_id: lawyerId,
         tenant_id: tenantId,
         start_time: validatedData.startTime,
         end_time: validatedData.endTime,
