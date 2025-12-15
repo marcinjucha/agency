@@ -113,7 +113,6 @@ export async function POST(request: NextRequest) {
       .select('id, start_time, end_time')
       .eq('lawyer_id', lawyerId)
       .eq('status', 'scheduled')
-      .neq('id', '') // Exclude deleted appointments
 
     if (conflictError) {
       console.error('Error checking conflicts:', conflictError)
