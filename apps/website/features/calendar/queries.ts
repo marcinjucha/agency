@@ -72,6 +72,8 @@ export async function getLawyerCalendarToken(
 }> {
   const supabase = await createClient()
 
+  console.log('[CALENDAR] Getting token for lawyerId:', lawyerId, 'tenantId:', tenantId)
+
   const { data: user, error } = await supabase
     .from('users')
     .select('google_calendar_token, tenant_id')
@@ -79,11 +81,15 @@ export async function getLawyerCalendarToken(
     .eq('tenant_id', tenantId)
     .maybeSingle()
 
+  console.log('[CALENDAR] Query result:', { user, error })
+
   if (error) {
+    console.error('[CALENDAR] Query error:', error)
     throw new Error(`Failed to fetch lawyer: ${error.message}`)
   }
 
   if (!user) {
+    console.error('[CALENDAR] User not found for lawyerId:', lawyerId, 'tenantId:', tenantId)
     throw new Error('Lawyer not found')
   }
 
@@ -91,6 +97,8 @@ export async function getLawyerCalendarToken(
     Tables<'users'>,
     'google_calendar_token' | 'tenant_id'
   >
+
+  console.log('[CALENDAR] User found, token:', typedUser.google_calendar_token ? 'present' : 'null')
 
   return {
     token: typedUser.google_calendar_token,

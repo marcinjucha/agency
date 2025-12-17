@@ -309,9 +309,12 @@ export async function GET(request: NextRequest): Promise<
       tenant_id: survey.tenant_id
     }
 
+    console.log('[SLOTS API] Survey data:', surveyData)
+
     // Step 3: Get lawyer's calendar token
     let tokenData
     try {
+      console.log('[SLOTS API] Getting calendar token for user:', surveyData.user_id)
       tokenData = await getLawyerCalendarToken(surveyData.user_id, surveyData.tenant_id)
     } catch (error) {
       console.error('Error fetching calendar token:', error)
