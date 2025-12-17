@@ -12,8 +12,9 @@ export interface GoogleCalendarToken {
   email: string | undefined
 }
 
-// ⚠️ MOCK MODE - Set to false after Google API redirect_uri is fixed
-const USE_MOCK_OAUTH = true
+// ⚠️ MOCK MODE - Control via environment variable
+// If GOOGLE_MOCK_MODE env var is missing or not set to 'true', use real OAuth
+const USE_MOCK_OAUTH = process.env.GOOGLE_MOCK_MODE === 'true'
 
 /**
  * Create OAuth2 client instance
@@ -26,11 +27,30 @@ function createOAuthClient() {
 
   const clientId = process.env.GOOGLE_CLIENT_ID
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET
-  const redirectUri = process.env.GOOGLE_REDIRECT_URI
+  const hostUrl = process.env.HOST_URL
+  const callbackPath = process.env.GOOGLE_CALLBACK_PATH
 
-  if (!clientId || !clientSecret || !redirectUri) {
-    throw new Error('Missing Google OAuth environment variables')
+  if (!clientId) {
+    console.error('❌ Missing environment variable: GOOGLE_CLIENT_ID')
+    throw new Error('Missing GOOGLE_CLIENT_ID')
   }
+
+  if (!clientSecret) {
+    console.error('❌ Missing environment variable: GOOGLE_CLIENT_SECRET')
+    throw new Error('Missing GOOGLE_CLIENT_SECRET')
+  }
+
+  if (!hostUrl) {
+    console.error('❌ Missing environment variable: HOST_URL')
+    throw new Error('Missing HOST_URL')
+  }
+
+  if (!callbackPath) {
+    console.error('❌ Missing environment variable: GOOGLE_CALLBACK_PATH')
+    throw new Error('Missing GOOGLE_CALLBACK_PATH')
+  }
+
+  const redirectUri = `${hostUrl}${callbackPath}`
 
   return new google.auth.OAuth2(clientId, clientSecret, redirectUri)
 }
@@ -43,7 +63,20 @@ export function getAuthUrl(userId: string, state: string): string {
   if (USE_MOCK_OAUTH) {
     // Mock: Create a simple mock code and redirect to callback
     const mockCode = `mock_code_${userId}_${Date.now()}`
-    const redirectUri = process.env.GOOGLE_REDIRECT_URI || 'http://localhost:3001/api/auth/google/callback'
+    const hostUrl = process.env.HOST_URL
+    const callbackPath = process.env.GOOGLE_CALLBACK_PATH
+
+    if (!hostUrl) {
+      console.error('❌ Missing environment variable: HOST_URL')
+      throw new Error('Missing HOST_URL')
+    }
+
+    if (!callbackPath) {
+      console.error('❌ Missing environment variable: GOOGLE_CALLBACK_PATH')
+      throw new Error('Missing GOOGLE_CALLBACK_PATH')
+    }
+
+    const redirectUri = `${hostUrl}${callbackPath}`
     return `${redirectUri}?code=${mockCode}&state=${state}`
   }
 
