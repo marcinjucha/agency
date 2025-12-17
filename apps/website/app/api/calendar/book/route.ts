@@ -3,10 +3,20 @@ import { z } from 'zod'
 import { createClient } from '@supabase/supabase-js'
 
 // Initialize Supabase client with service role key for server-side operations
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-  process.env.SUPABASE_SERVICE_ROLE_KEY || ''
-)
+const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+if (!supabaseUrl) {
+  console.error('❌ Missing environment variable: SUPABASE_URL')
+  throw new Error('Missing SUPABASE_URL')
+}
+
+if (!supabaseKey) {
+  console.error('❌ Missing environment variable: SUPABASE_SERVICE_ROLE_KEY')
+  throw new Error('Missing SUPABASE_SERVICE_ROLE_KEY')
+}
+
+const supabase = createClient(supabaseUrl, supabaseKey)
 
 // Validation schema for booking request
 const bookingRequestSchema = z.object({
