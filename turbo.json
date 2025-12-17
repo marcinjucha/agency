@@ -10,7 +10,8 @@
     "HOST_URL",
     "GOOGLE_CLIENT_ID",
     "GOOGLE_CLIENT_SECRET",
-    "GOOGLE_REDIRECT_URI",
+    "GOOGLE_CALLBACK_PATH",
+    "GOOGLE_MOCK_MODE",
     "OPENAI_API_KEY"
   ],
   "tasks": {
