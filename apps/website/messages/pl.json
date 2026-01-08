@@ -1,0 +1,78 @@
+{
+  "nav": {
+    "solutions": "Rozwiązania",
+    "pricing": "Cennik",
+    "about": "O nas",
+    "contact": "Kontakt",
+    "demo": "Zacznij demo"
+  },
+  "hero": {
+    "headline": "5 dni → 15 minut. Automatyczny client intake dla polskich kancelarii.",
+    "subheading": "Smart surveys + AI kwalifikacja + instant booking = 40% więcej klientów",
+    "ctaPrimary": "Zacznij demo",
+    "ctaSecondary": "Dowiedz się więcej"
+  },
+  "problems": {
+    "title": "Jakie problemy rozwiązuje Legal Hub?"
+  },
+  "benefits": {
+    "title": "Co zyskujesz z Legal Hub?"
+  },
+  "features": {
+    "title": "Jak działa Legal Hub?",
+    "comingSoon": "Wkrótce"
+  },
+  "howItWorks": {
+    "title": "Jak wygląda workflow klienta?",
+    "step1": {
+      "title": "Klient dostaje email",
+      "description": "Z linkiem do formularza"
+    },
+    "step2": {
+      "title": "Wypełnia formularz",
+      "description": "5 minut"
+    },
+    "step3": {
+      "title": "AI analizuje",
+      "description": "Natychmiast"
+    },
+    "step4": {
+      "title": "Ty przeglądasź",
+      "description": "5 minut"
+    },
+    "step5": {
+      "title": "Klient rezerwuje",
+      "description": "2 minuty"
+    },
+    "step6": {
+      "title": "Potwierdzenie",
+      "description": "Natychmiast"
+    }
+  },
+  "pricing": {
+    "title": "Przejrzyste ceny dla każdej kancelarii",
+    "setup": "Setup",
+    "monthly": "/miesiąc",
+    "bestFor": "Najlepiej dla",
+    "features": "Możliwości",
+    "selectPlan": "Wybierz plan"
+  },
+  "testimonials": {
+    "title": "Co mówią nasze klienty?"
+  },
+  "faq": {
+    "title": "Najczęściej zadawane pytania"
+  },
+  "cta": {
+    "headline": "Gotów do automatyzacji client intake?",
+    "description": "Dołącz do rosnącej listy polskich kancelarii które używają Legal Hub",
+    "button": "Zacznij demo (to darmowe)",
+    "subtext": "Instalacja: 15 minut • Onboarding: Przez nasz zespół • Brak kart kredytowych"
+  },
+  "footer": {
+    "copyright": "© 2026 Legal Hub. Wszelkie prawa zastrzeżone.",
+    "privacy": "Polityka prywatności",
+    "terms": "Warunki użytkowania",
+    "contact": "Kontakt"
+  }
+}

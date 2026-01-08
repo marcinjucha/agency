@@ -1,0 +1,78 @@
+{
+  "nav": {
+    "solutions": "Solutions",
+    "pricing": "Pricing",
+    "about": "About",
+    "contact": "Contact",
+    "demo": "Start demo"
+  },
+  "hero": {
+    "headline": "5 days → 15 minutes. Automatic client intake for law firms.",
+    "subheading": "Smart surveys + AI qualification + instant booking = 40% more clients",
+    "ctaPrimary": "Start demo",
+    "ctaSecondary": "Learn more"
+  },
+  "problems": {
+    "title": "What problems does Legal Hub solve?"
+  },
+  "benefits": {
+    "title": "What do you gain with Legal Hub?"
+  },
+  "features": {
+    "title": "How does Legal Hub work?",
+    "comingSoon": "Coming soon"
+  },
+  "howItWorks": {
+    "title": "What is the client workflow?",
+    "step1": {
+      "title": "Client receives email",
+      "description": "With form link"
+    },
+    "step2": {
+      "title": "Fills form",
+      "description": "5 minutes"
+    },
+    "step3": {
+      "title": "AI analyzes",
+      "description": "Instantly"
+    },
+    "step4": {
+      "title": "You review",
+      "description": "5 minutes"
+    },
+    "step5": {
+      "title": "Client books",
+      "description": "2 minutes"
+    },
+    "step6": {
+      "title": "Confirmation",
+      "description": "Instantly"
+    }
+  },
+  "pricing": {
+    "title": "Clear pricing for every law firm",
+    "setup": "Setup",
+    "monthly": "/month",
+    "bestFor": "Best for",
+    "features": "Features",
+    "selectPlan": "Select plan"
+  },
+  "testimonials": {
+    "title": "What our customers say"
+  },
+  "faq": {
+    "title": "Frequently asked questions"
+  },
+  "cta": {
+    "headline": "Ready to automate client intake?",
+    "description": "Join a growing list of law firms using Legal Hub",
+    "button": "Start demo (it's free)",
+    "subtext": "Setup: 15 minutes • Onboarding: By our team • No credit card required"
+  },
+  "footer": {
+    "copyright": "© 2026 Legal Hub. All rights reserved.",
+    "privacy": "Privacy Policy",
+    "terms": "Terms of Use",
+    "contact": "Contact"
+  }
+}
