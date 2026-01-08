@@ -79,14 +79,17 @@ Phase 4: Server Actions / API Routes               [~5min]
     ↓ User: continue | retry | stop
 Phase 5: Routes (route-dev)                        [~4min]
     ↓ BUILD VERIFICATION: npm run build ← BOTH APPS MUST PASS
-    ↓ MANUAL TEST CHECKPOINT (required - test the feature)
-    ↓ User: pass | fix-and-retry | stop
-Phase 6: Manual Testing [REQUIRED]                 [user-driven]
+    ↓ User: continue | retry | stop
+Phase 6: Implementation Verification              [~2-3min]
+    ↓ (implementation-validator)
+    ↓ STATIC CODE ANALYSIS - verify correctness, patterns, bugs
+    ↓ User: pass | fix | details | stop
+Phase 7: Manual Testing [REQUIRED]                 [user-driven]
     ↓ User tests complete feature manually
     ↓ User: pass | fix-and-retry | stop
-Phase 7: Documentation (docs-updater)              [~3min]
+Phase 8: Documentation (docs-updater)              [~3min]
     ↓ User: approve | push | stop
-Phase 8: Complete!
+Phase 9: Complete!
 ```
 
 **Speed:** ~45-60 minutes for medium complexity (interactive) | ~50-70 minutes (automated)
@@ -117,11 +120,18 @@ Phase 8: Complete!
 - Database requirements (migrations, RLS, functions)
 - Skip conditions (when phases optional)
 - Risk areas (critical steps needing attention)
+- **Ambiguities and missing details** (asks user for clarification)
+
+**Critical:** Agent MUST identify and ask about:
+- Unclear requirements (vague features)
+- Missing implementation details (how should X work?)
+- Ambiguous architecture decisions (which approach to use?)
+- Undefined edge cases (what happens when...?)
 
 **Output:** YAML with execution strategy, dependencies, agents needed
 
 **Commands:**
-- `continue` - Proceed with execution
+- `continue` - Proceed with execution (after clarifying ambiguities)
 - `adjust` - Modify strategy
 - `stop` - Exit workflow
 
@@ -260,14 +270,46 @@ Phase 8: Complete!
 **Output:** Routes ready for testing
 
 **Commands:**
-- `continue` - Proceed to testing
+- `continue` - Proceed to implementation verification
 - `retry [route]` - Recreate specific route
 - `details [route]` - See full route code
 - `stop` - Exit workflow
 
 ---
 
-### Phase 6: Manual Testing Checkpoint [REQUIRED]
+### Phase 6: Implementation Verification
+
+**Agent:** `implementation-validator`
+
+**Purpose:** Verify implementation correctness before manual testing
+
+**Analyzes:**
+- Business logic correctness (does code match requirements?)
+- Plan alignment (all planned features implemented?)
+- Code quality (follows CODE_PATTERNS.md?)
+- Bug detection (potential errors, missing error handling, edge cases)
+- Completeness (all required files created?)
+- Security (RLS, auth, tenant_id correct?)
+
+**Creates:**
+- YAML verification report with P0/P1/P2 issues
+- Suggestions for which agent to use for fixes
+
+**Output:** Verification report with implementation status
+
+**Commands:**
+- `pass` - Verification passed, proceed to manual testing
+- `fix` - Issues found, need to fix (agent will suggest which implementation agent to use)
+- `details` - Show full verification report
+- `stop` - Exit workflow
+
+**Skip When:** Never (always verify implementation)
+
+**Critical:** This phase catches code-level issues before manual testing saves time. Agent performs static analysis - no execution required.
+
+---
+
+### Phase 7: Manual Testing [REQUIRED]
 
 **Purpose:** User manually tests implemented features before documentation
 
@@ -444,7 +486,7 @@ Report: pass | check (see logs) | stop
 
 ---
 
-### Phase 7: Documentation [SEQUENTIAL]
+### Phase 8: Documentation [SEQUENTIAL]
 
 **Agent:** `docs-updater`
 
@@ -468,7 +510,7 @@ Report: pass | check (see logs) | stop
 
 ## Orchestrator Instructions
 
-You are the **Implement Phase Orchestrator**. Guide user through 8-phase implementation workflow with smart parallelization.
+You are the **Implement Phase Orchestrator**. Guide user through 9-phase implementation workflow with smart parallelization (Phase 0-9).
 
 ### Critical Instructions
 
@@ -483,7 +525,8 @@ You are the **Implement Phase Orchestrator**. Guide user through 8-phase impleme
 9. **P0 bugs block merge:** Test failures with P0 severity ALWAYS require user intervention (even in --auto)
 10. **Manual test checkpoints:** After phases with testable output, PAUSE and provide test instructions to user
 11. **Build verification:** After each code-generating phase, verify the build succeeds - catch TypeScript errors early
-12. **NEVER skip Phase 6:** Phase 6 (Manual Testing) is REQUIRED - user must test before docs
+12. **Implementation verification:** After Phase 5 (Routes), ALWAYS run Phase 6 (implementation-validator) to catch code issues before manual testing
+13. **NEVER skip Phase 7:** Phase 7 (Manual Testing) is REQUIRED - user must test before docs
 
 ### Build Verification Checkpoints
 
@@ -551,7 +594,7 @@ Retrying build...
 **When to pause for manual testing:**
 - **After Phase 1 (Database):** If migration creates testable database changes
 - **After Phase 5 (Routes):** Always - routes make feature accessible for testing
-- **Phase 6 (Manual Testing):** Always required before documentation
+- **Phase 7 (Manual Testing):** Always required before documentation
 
 **How to provide test instructions:**
 1. Identify what's testable (based on completed phases)
@@ -898,7 +941,42 @@ Created: SurveyForm.tsx (form + validation + submission)
 **Commands:** `continue` | `details` | `stop`
 ```
 
-[Continues through Phase 4-7...]
+[Continues through Phase 4-5...]
+
+**Phase 6:**
+```markdown
+**Phase 6: Implementation Verification**
+
+Analyzing implementation against plan and CODE_PATTERNS...
+```
+
+[Task: implementation-validator]
+
+```markdown
+**Implementation Verification Complete** ✅
+
+Summary:
+- Business Logic: ✅ Correct (all features implemented correctly)
+- Plan Alignment: ✅ Complete (all planned features present)
+- Code Quality: ✅ Good (follows CODE_PATTERNS.md)
+- Bug Detection: ⚠️ Minor issues (1 P1 issue found)
+- Completeness: ✅ All files created
+- Security: ✅ Secure (RLS, auth, tenant_id correct)
+
+Issues Found: 1 P1
+
+**P1 Issues:**
+- Missing error handling in queries.ts:23
+  Fix: Add null check before returning data
+
+**Next:** Fix P1 issue or proceed to manual testing?
+
+**Commands:** `fix` | `pass` | `details` | `stop`
+```
+
+[User: pass - issue non-blocking, can test manually]
+
+[Continues through Phase 7-8...]
 
 **Final:**
 ```markdown
@@ -912,6 +990,7 @@ Summary:
 - Components: 2 components built ✅
 - Server Actions: actions.ts created ✅
 - Routes: 2 pages created ✅
+- Implementation Verification: Code analyzed, 1 P1 issue (non-blocking) ✅
 - Testing: All tests passed ✅
 - Documentation: Updated + committed ✅
 
@@ -960,7 +1039,7 @@ plan_analysis:
   testing_strategy:
     skip_if: "Automated tests handle validation"
 
-→ Orchestrator: "Skipping Phase 6 (Testing) - automated tests only"
+→ Orchestrator: "Skipping Phase 7 (Testing) - automated tests only"
 ```
 
 ---
@@ -1011,7 +1090,18 @@ Phase 5 complete → Immediately launch docs-updater
 
 ✅ **Correct:**
 ```markdown
-Phase 5 complete → npm run build (both apps) → Manual test checkpoint → User tests → Reports pass → Launch docs-updater
+Phase 5 complete → npm run build (both apps) → Phase 6 (implementation-validator) → Manual test checkpoint → User tests → Reports pass → Launch docs-updater
+```
+
+### ❌ Don't: Skip implementation verification
+```markdown
+Phase 5 complete → Build succeeds → Immediately launch test-validator
+# NO! Must verify code correctness first!
+```
+
+✅ **Correct:**
+```markdown
+Phase 5 complete → Build succeeds → Launch implementation-validator → Analyze code → Fix P0 issues → Launch test-validator
 ```
 
 ### ❌ Don't: Accumulate build errors
