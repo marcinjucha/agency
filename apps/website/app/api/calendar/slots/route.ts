@@ -22,7 +22,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getLawyerCalendarToken } from '@/features/calendar/queries'
+import { getLawyerCalendarTokenPublic } from '@/features/calendar/queries'
 import type { AvailableSlotsResponse, ErrorResponse, TimeSlot } from '@/features/calendar/types'
 import { parse, addHours, addMinutes } from 'date-fns'
 import { createClient } from '@supabase/supabase-js'
@@ -315,7 +315,7 @@ export async function GET(request: NextRequest): Promise<
     let tokenData
     try {
       console.log('[SLOTS API] Getting calendar token for user:', surveyData.user_id)
-      tokenData = await getLawyerCalendarToken(surveyData.user_id, surveyData.tenant_id)
+      tokenData = await getLawyerCalendarTokenPublic(surveyData.user_id, surveyData.tenant_id)
     } catch (error) {
       console.error('Error fetching calendar token:', error)
       return NextResponse.json(
