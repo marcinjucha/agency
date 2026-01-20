@@ -91,8 +91,12 @@ Phase 7: Manual Testing [REQUIRED]
     ↓ User tests complete feature manually
     ↓ User: pass | fix-and-retry | stop
 Phase 8: Documentation (docs-updater)
-    ↓ User: approve | push | stop
-Phase 9: Complete!
+    ↓ Updates PROJECT_ROADMAP.md + PROJECT_SPEC.yaml
+    ↓ User: approve | adjust | stop
+Phase 9: Git Operations (git-specialist)
+    ↓ Creates commit, optionally pushes
+    ↓ User: commit | push | pr | skip | stop
+Phase 10: Complete!
 ```
 
 **Optimizations:**
@@ -517,27 +521,66 @@ Report: pass | check (see logs) | stop
 
 **Agent:** `docs-updater`
 
-**Purpose:** Update documentation and create commit
+**Purpose:** Update documentation with progress and results
 
 **Updates:**
 - @docs/PROJECT_SPEC.yaml (mark features complete, update acceptance_criteria verified: true)
 - @docs/PROJECT_ROADMAP.md (mark tasks [x], progress %, milestones)
-- Other docs if needed (ARCHITECTURE.md, CODE_PATTERNS.md)
-- Creates git commit (signal-focused, no footers)
+- Creates summary for git-specialist
 
-**Output:** Documentation updated, commit created locally
+**Output:** Documentation updated, summary ready for git-specialist
 
 **Commands:**
-- `approve` - Approve changes (commit created)
-- `push` - Push to remote (after approval)
-- `adjust` - Modify commit message
+- `approve` - Approve documentation updates
+- `adjust` - Modify documentation
 - `stop` - Exit workflow
+
+---
+
+### Phase 9: Git Operations [SEQUENTIAL]
+
+**Agent:** `git-specialist`
+
+**Purpose:** Create commit for documentation changes, optionally clean history and push
+
+**Depends on:** Phase 8 (Documentation updated)
+
+**Creates:**
+- Git commit with signal-focused message
+- (Optional) Cleaned git history via interactive rebase
+- (Optional) Pull request
+- (Optional) Push to remote
+
+**Workflow:**
+1. Review staged changes (git status, git diff --staged)
+2. Analyze what was updated (from docs-updater summary)
+3. Create commit with high-level message
+4. (Optional) Clean pending commits if issues found
+5. Ask user about push
+
+**Output:** Commit created locally, optionally pushed to remote
+
+**Commands:**
+- `commit` - Create commit and stop (default)
+- `clean` - Clean pending commits first, then commit
+- `push` - Create commit and push to remote (asks confirmation)
+- `pr` - Create commit, push, and open pull request
+- `skip` - Skip git operations entirely (user will commit manually)
+- `stop` - Exit workflow
+
+**Skip When:** User wants to commit manually later (optional phase)
+
+**Critical:**
+- Always ask before push (never auto-push)
+- Signal-focused commit messages (no footers, present tense)
+- User can skip this phase entirely
+- Build should already pass (verified in Phase 6)
 
 ---
 
 ## Orchestrator Instructions
 
-You are the **Implement Phase Orchestrator**. Guide user through 9-phase implementation workflow with smart parallelization (Phase 0-9).
+You are the **Implement Phase Orchestrator**. Guide user through 10-phase implementation workflow with smart parallelization (Phase 0-10).
 
 ### Agent Mapping - MUST USE Task Tool
 
@@ -557,6 +600,7 @@ You are the **Implement Phase Orchestrator**. Guide user through 9-phase impleme
 | **Phase 6** | `implementation-validator` | ✅ REQUIRED |
 | **Phase 7** | N/A (manual testing by user) | ❌ NO AGENT |
 | **Phase 8** | `docs-updater` | ✅ REQUIRED |
+| **Phase 9** | `git-specialist` | ✅ REQUIRED |
 
 **Example Task tool calls:**
 ```typescript
@@ -593,6 +637,9 @@ Task(subagent_type="implementation-validator", description="Verify implementatio
 
 // Phase 8
 Task(subagent_type="docs-updater", description="Update documentation", prompt="...")
+
+// Phase 9
+Task(subagent_type="git-specialist", description="Create git commit", prompt="...")
 ```
 
 ### Critical Instructions
@@ -1094,7 +1141,86 @@ Issues Found: 1 P1
 
 [User: pass - issue non-blocking, can test manually]
 
-[Continues through Phase 7-8...]
+**Phase 7:**
+```markdown
+**Phase 7: Manual Testing** [REQUIRED]
+
+Please test the implementation manually:
+
+**Test Checklist:**
+- [ ] Navigate to /survey/[token] with valid token
+- [ ] Form renders with all questions from survey JSON
+- [ ] Submit valid form - response saves to database
+- [ ] Submit invalid form - validation errors appear
+- [ ] All 7 question types work correctly
+- [ ] Loading states appear during submission
+- [ ] Success message after submission
+
+**Commands:** `pass` | `fail` | `details` | `stop`
+```
+
+[User: pass - all tests successful]
+
+**Phase 8:**
+```markdown
+**Phase 8: Documentation**
+
+Updating documentation with implementation results...
+```
+
+[Task tool call with subagent_type="docs-updater"]
+
+```markdown
+**Documentation Updated** ✅
+
+Files modified:
+- docs/PROJECT_SPEC.yaml: Marked Phase 2 features complete, verified acceptance criteria
+- docs/PROJECT_ROADMAP.md: Updated progress to 100%, added milestone
+
+Summary:
+Phase 2 Complete: Client survey form with 7 question types
+Clients can now receive survey links and submit responses with validation.
+
+**Next:** Phase 9 (Git Operations)
+
+**Commands:** `continue` | `adjust` | `stop`
+```
+
+[User: continue]
+
+**Phase 9:**
+```markdown
+**Phase 9: Git Operations**
+
+Creating commit for documentation changes...
+```
+
+[Task tool call with subagent_type="git-specialist"]
+
+```markdown
+**Commit Created** ✅
+
+Commit message:
+feat: add client survey form with 7 question types
+
+Clients can now receive survey links and submit responses.
+Form validates inputs (email, phone, required fields) and
+saves to database with multi-tenant isolation.
+
+**Next:** Would you like to push to remote?
+
+**Commands:** `push` | `pr` | `skip` | `stop`
+```
+
+[User: push]
+
+```markdown
+**Pushing to remote...**
+
+✅ Pushed to origin/main
+
+**All Phases Complete!** ✅
+```
 
 **Final:**
 ```markdown
@@ -1108,13 +1234,15 @@ Summary:
 - Routes: 2 pages created ✅
 - Implementation Verification: Code analyzed, 1 P1 issue (non-blocking) ✅
 - Testing: All tests passed ✅
-- Documentation: Updated + committed ✅
+- Documentation: PROJECT_ROADMAP.md + PROJECT_SPEC.yaml updated ✅
+- Git: Committed + pushed to remote ✅
 
-**Commit created:** `feat: add client survey form with 7 question types`
+**Commit:** `feat: add client survey form with 7 question types`
+**Branch:** main (pushed)
 
 **Commands:**
-- `push` - Push to remote
 - `summary` - Show detailed summary
+- `pr` - Create pull request (if needed)
 ```
 
 ---
