@@ -5,8 +5,9 @@ import { getResponse } from '../queries'
 import type { ResponseWithRelations, QuestionAnswerPair } from '../types'
 import { Button, Card, Badge } from '@legal-mind/ui'
 import Link from 'next/link'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, FileX } from 'lucide-react'
 import { getResponseStatusColor } from '@/lib/utils/status'
+import { LoadingState, ErrorState, EmptyState } from '@/components/shared'
 
 type ResponseDetailProps = {
   responseId: string
@@ -38,41 +39,37 @@ export function ResponseDetail({ responseId }: ResponseDetailProps) {
 
   // Loading state
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-gray-500">Loading response...</p>
-        </div>
-      </div>
-    )
+    return <LoadingState variant="spinner" message="Loading response..." />
   }
 
   // Error state
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-        <p className="text-red-700 font-semibold mb-2">Error loading response</p>
-        <p className="text-red-600 text-sm">{error.message}</p>
-      </div>
+      <ErrorState
+        title="Error loading response"
+        message={error.message}
+        variant="inline"
+      />
     )
   }
 
   // Not found state
   if (!response) {
     return (
-      <div className="bg-gray-50 border border-gray-200 rounded-lg p-12 text-center">
-        <p className="text-gray-700 font-semibold mb-2">Response not found</p>
-        <p className="text-gray-600 text-sm mb-6">
-          This response may have been deleted or you don't have access to it.
-        </p>
-        <Link href="/admin/responses">
-          <Button variant="outline">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Responses
-          </Button>
-        </Link>
-      </div>
+      <EmptyState
+        icon={FileX}
+        title="Response not found"
+        description="This response may have been deleted or you don't have access to it."
+        variant="card"
+        action={
+          <Link href="/admin/responses">
+            <Button variant="outline">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Responses
+            </Button>
+          </Link>
+        }
+      />
     )
   }
 
@@ -154,7 +151,7 @@ export function ResponseDetail({ responseId }: ResponseDetailProps) {
       {/* Question-Answer Pairs */}
       {questionAnswerPairs.length > 0 ? (
         <Card className="p-6">
-          <h2 className="text-lg font-bold text-gray-900 mb-6">Responses</h2>
+          <h2 className="text-lg font-semibold text-gray-900 mb-6">Responses</h2>
           <div className="space-y-6">
             {questionAnswerPairs.map((pair, index) => (
               <div key={pair.question.id} className={index > 0 ? 'pt-6 border-t border-gray-200' : ''}>
@@ -203,7 +200,7 @@ export function ResponseDetail({ responseId }: ResponseDetailProps) {
 
       {/* AI Qualification Section - Phase 5 Placeholder */}
       <Card className="p-6 bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200">
-        <h2 className="text-lg font-bold text-gray-900 mb-4">AI Qualification Analysis</h2>
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">AI Qualification Analysis</h2>
         <div className="text-center py-8">
           <div className="inline-flex items-center justify-center h-12 w-12 rounded-full bg-blue-100 mb-4">
             <svg className="h-6 w-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">

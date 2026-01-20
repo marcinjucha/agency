@@ -16,7 +16,7 @@
 
 **Available Components:**
 - Button, Card, Badge, Input, Label
-- Dialog, Select, Textarea, Checkbox
+- Dialog, Select, Textarea, Checkbox, Skeleton
 - Form (React Hook Form integration)
 - Toast (notifications)
 
@@ -163,26 +163,109 @@ xl:  1280px+  // Large desktop
 
 ## Component Patterns
 
-### Loading States
+### Shared State Components
+**Location:** `apps/cms/components/shared/`
+
+These components standardize loading, error, and empty states across the CMS.
+
+#### LoadingState
+**4 variants:** `spinner`, `skeleton-table`, `skeleton-list`, `skeleton-card`
+
 ```typescript
-<LoadingState variant="spinner" />
-<LoadingState variant="skeleton-table" rows={5} />
+import { LoadingState } from '@/components/shared'
+
+// Spinner (centered, with optional message)
+<LoadingState variant="spinner" message="Loading surveys..." />
+
+// Skeleton table (5 rows by default)
+<Card className="p-6">
+  <LoadingState variant="skeleton-table" rows={5} />
+</Card>
+
+// Skeleton list (text lines)
+<LoadingState variant="skeleton-list" rows={3} />
+
+// Skeleton card (multiple elements)
+<LoadingState variant="skeleton-card" rows={2} />
 ```
 
-### Error States
+**Theme tokens:**
+- Spinner: `border-primary`, `text-muted-foreground`
+- Skeleton: `bg-muted` (via Skeleton component)
+
+#### ErrorState
+**2 variants:** `card`, `inline`
+
 ```typescript
-<ErrorState message={error.message} onRetry={refetch} />
+import { ErrorState } from '@/components/shared'
+
+// Card variant (default, with padding)
+<ErrorState
+  title="Failed to load appointments"
+  message={error.message}
+  onRetry={() => refetch()}
+  variant="card"
+/>
+
+// Inline variant (no card wrapper)
+<ErrorState
+  message={error.message}
+  variant="inline"
+/>
 ```
 
-### Empty States
+**Theme tokens:**
+- Icon: `text-destructive`
+- Border: `border-destructive/50`
+- Background: `bg-destructive/5` (card), `bg-destructive/10` (inline)
+
+**Features:**
+- Optional retry button (pass `onRetry` prop)
+- AlertCircle icon from Lucide
+- Accessible: `role="alert"`, `aria-live="polite"`
+
+#### EmptyState
+**2 variants:** `card`, `inline`
+
 ```typescript
+import { EmptyState } from '@/components/shared'
+import { FileText, Plus } from 'lucide-react'
+import { Button } from '@legal-mind/ui'
+import Link from 'next/link'
+
+// Card variant (with padding)
+<EmptyState
+  icon={CalendarCheck}
+  title="No appointments found"
+  description="Appointments will appear here after clients book time slots."
+  variant="card"
+/>
+
+// Inline variant (default, no card wrapper)
 <EmptyState
   icon={FileText}
   title="No surveys"
-  description="Create your first survey"
-  action={<Button>Create Survey</Button>}
+  description="Get started by creating a new survey."
+  action={
+    <Link href="/admin/surveys/new">
+      <Button>
+        <Plus className="mr-2 h-4 w-4" />
+        Create Survey
+      </Button>
+    </Link>
+  }
 />
 ```
+
+**Theme tokens:**
+- Icon: `text-muted-foreground` (12x12 size)
+- Title: `text-foreground`, `text-lg font-semibold`
+- Description: `text-muted-foreground`, `text-sm`
+
+**Features:**
+- Accepts any Lucide icon
+- Optional action (ReactNode)
+- Centered layout with max-width description
 
 ### Forms
 ```typescript
