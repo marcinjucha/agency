@@ -26,9 +26,9 @@
 > - `adr/006-legal-mind-project-structure.md` - Code organization patterns
 > - `archive/IMPLEMENTATION_STATUS.md` - Historical progress log (archived)
 
-> **Last Updated:** 2025-12-15
+> **Last Updated:** 2026-01-20
 > **Current Phase:** Phase 3 Complete ✅ | Phase 4 Ready 📋
-> **Progress:** 100% Phase 1 (17/17 tasks) | 100% Phase 2 (8/8 tasks) | 100% Phase 3 (7/7 tasks)
+> **Progress:** 100% Phase 1 (17/17 tasks) | 100% Phase 2 (8/8 tasks) | 100% Phase 3 (10/10 tasks)
 
 ---
 
@@ -380,6 +380,17 @@ Vercel (Frontend)                  Supabase Cloud (Database)
 - [x] API returns proper validation errors with field details
 - [x] Responsive UI with proper loading and error states
 
+#### CMS Appointment Management ✅
+- [x] Appointment list view at /admin/appointments
+- [x] Display appointments filtered by current lawyer (lawyer_id = user.id)
+- [x] Sort by start_time ASC (upcoming first)
+- [x] Conditional navigation to response detail (if response_id exists)
+- [x] TanStack Query with 5-second auto-refresh
+- [x] Status badges (scheduled=blue, completed=green, cancelled=red, no_show=gray)
+- [x] Mobile responsive 12-column grid
+- [x] Loading skeleton, error with retry, empty state
+- [x] Sidebar navigation link with CalendarCheck icon
+
 ---
 
 ### Phase 4: Response Management 📋 TODO
@@ -522,7 +533,7 @@ Vercel (Frontend)                  Supabase Cloud (Database)
 
 ## 📊 Current Status Summary
 
-**Last Updated:** January 8, 2026
+**Last Updated:** January 20, 2026
 **Git Commits:** 25+ total (well-organized history)
 **Git Branch:** main
 **Remote:** gitlab.com/friendly-coders/legal-mind
@@ -533,14 +544,28 @@ Vercel (Frontend)                  Supabase Cloud (Database)
 |-------|--------|----------|---------------|
 | Phase 1: Foundation | ✅ Complete | 100% | All features working + deployed |
 | Phase 2: Survey Form & Responses | ✅ Complete | 100% | Dynamic form, submission, response management UI |
-| Phase 3: Calendar | ✅ Complete | 100% | OAuth mocked, slots API, booking flow |
+| Phase 3: Calendar | ✅ Complete | 100% | OAuth mocked, slots API, booking flow, appointment list CMS |
 | Phase 4: Responses Analysis | 📋 Planned | 0% | Week 6 |
 | Phase 5: n8n/AI | 🔮 Future | 0% | Week 7-8 |
 | Phase 6: Polish | ✅ Complete | 100% | Landing Page MVP complete |
 
-**Overall MVP Progress:** 100% Phase 1 + 100% Phase 2 + 100% Phase 6 (Landing Page) = **40% Total MVP**
+**Overall MVP Progress:** 100% Phase 1 + 100% Phase 2 + 100% Phase 3 + 100% Phase 6 (Landing Page) = **60% Total MVP**
 
 ### Recent Milestones
+
+**January 20, 2026:** CMS Appointment List Complete! ✅
+- **Feature:** View and manage client appointments in CMS admin panel
+- **Files Created:** types.ts, queries.ts, AppointmentList.tsx, page.tsx (4 files in features/appointments)
+- **Navigation:** Added Appointments link to Sidebar (CalendarCheck icon, positioned after Responses)
+- **Filtering:** Shows only current lawyer's appointments (lawyer_id = user.id)
+- **Sorting:** Upcoming appointments at top (start_time ASC)
+- **UI Pattern:** Mirrors ResponseList exactly (TanStack Query, 5-second auto-refresh)
+- **States:** Loading skeleton, error with retry button, empty state, success list
+- **Navigation:** Click appointment → response detail (if response_id exists)
+- **Status Badges:** Color-coded (scheduled=blue, completed=green, cancelled=red, no_show=gray)
+- **Mobile Responsive:** 12-column grid layout
+- **Build Verified:** TypeScript compilation passed, zero errors
+- **Testing:** Manual testing passed, all acceptance criteria met
 
 **January 8, 2026:** Legal Hub Landing Page Complete! ✅
 - **18 Components Created** - 12 card component pairs (Phase 2) + 6 layout components (Phase 3)

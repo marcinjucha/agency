@@ -3,9 +3,9 @@ project:
   description: "SaaS platform for Polish law firms to streamline client intake through smart surveys, calendar booking, and AI qualification"
   version: "2.0.0"
   status: "in-progress"
-  last_updated: "2025-12-15"
+  last_updated: "2026-01-20"
   overall_progress: "60%"
-  note: "Phase 1 ✅ complete (100%). Phase 2 ✅ complete (100%). Phase 3 ✅ complete (100% - Calendar integration with mocked Google API). Next: Phase 4 - Response Analysis & Management"
+  note: "Phase 1 ✅ complete (100%). Phase 2 ✅ complete (100%). Phase 3 ✅ complete (100% - Calendar integration with mocked Google API + CMS appointment list). Next: Phase 4 - Response Analysis & Management"
 
 phases:
   - name: "Phase 1: Foundation & CMS Core"
@@ -644,6 +644,8 @@ phases:
             verified: true
           - description: "Appointment linked to response_id for tracking"
             verified: true
+          - description: "Lawyer can view appointments in CMS"
+            verified: true
 
         dependencies:
           - feature_id: "calendar-booking-ui"
@@ -658,6 +660,12 @@ phases:
           - path: "apps/cms/features/appointments/actions.ts"
             type: "action"
             description: "Create appointment, call Google API"
+          - path: "apps/cms/features/appointments/queries.ts"
+            type: "query"
+            description: "Fetch appointments for CMS display"
+          - path: "apps/cms/features/appointments/components/AppointmentList.tsx"
+            type: "component"
+            description: "Appointment list view in CMS"
 
         tech_stack:
           - name: "Supabase"
@@ -1111,7 +1119,7 @@ dependencies:
 status_summary:
   phase_1: "✅ Complete (100%) - 6/6 features: infrastructure, auth, database, layout, builder, links"
   phase_2: "✅ Complete (100%) - 5/5 features: form rendering, success page, form submission, response management, shared types"
-  phase_3: "📋 Planned (0%) - 4 features: OAuth, available slots, booking UI, confirmation emails"
+  phase_3: "✅ Complete (100%) - 4/4 features: OAuth (mocked), available slots API, booking UI, appointment list CMS"
   phase_4: "📋 Planned (0%) - 4 features: detail view, status mgmt, filtering, PDF export"
   phase_5: "🔮 Future (0%) - 4 features: n8n infrastructure, AI analysis, email notifications, monitoring"
   phase_6: "🔮 Future (0%) - 3 features: marketing pages, CMS settings, production readiness"
