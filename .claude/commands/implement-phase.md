@@ -58,51 +58,48 @@ Systematically implement a planned feature/phase by orchestrating specialized ag
 ## Workflow Phases
 
 ```
-Phase 0: Plan Analysis (plan-analyzer)              [~2min]
+Phase 0: Plan Analysis (plan-analyzer)
     ↓ User: continue | adjust | stop
-Phase 1: Database [CRITICAL] (supabase-schema)      [~5min]
+Phase 1: Database [CRITICAL] (supabase-schema)
     ↓ BUILD VERIFICATION: npm run build:cms
     ↓ MANUAL TEST CHECKPOINT (if testable)
     ↓ User: continue | fix | stop
-Phase 2a: Foundation - Types (foundation-dev)       [~3min]
+Phase 2a: Foundation - Types (foundation-dev)
     ↓ User: continue | retry | stop
-Phase 2b: Foundation ⚡⚡⚡ (2x foundation-dev)        [~5min]
+Phase 2b: Foundation ⚡⚡⚡ (2x foundation-dev)
     ↓ BUILD VERIFICATION: npm run build:cms ← MUST PASS
     ↓ User: continue | retry | stop
-Phase 3a: Components - Base (component-dev)         [~5min]
+Phase 3a: Components - Base (component-dev)
     ↓ User: continue | retry | stop
-Phase 3b: Components - Composite (component-dev)    [~5min]
+Phase 3b: Components - Composite (component-dev)
     ↓ BUILD VERIFICATION: npm run build:cms ← MUST PASS
     ↓ User: continue | retry | stop
-Phase 4: Server Actions / API Routes               [~5min]
+Phase 3c: UI/UX Review (ui-ux-designer)
+    ↓ BUILD VERIFICATION: npm run build:cms (if changes made)
+    ↓ User: continue | fix | stop
+Phase 4: Server Actions / API Routes
     ↓ BUILD VERIFICATION: npm run build:cms ← MUST PASS
     ↓ User: continue | retry | stop
-Phase 5: Routes (route-dev)                        [~4min]
+Phase 5: Routes (route-dev)
     ↓ BUILD VERIFICATION: npm run build ← BOTH APPS MUST PASS
     ↓ User: continue | retry | stop
-Phase 6: Implementation Verification              [~2-3min]
+Phase 6: Implementation Verification
     ↓ (implementation-validator)
     ↓ STATIC CODE ANALYSIS - verify correctness, patterns, bugs
     ↓ User: pass | fix | details | stop
-Phase 7: Manual Testing [REQUIRED]                 [user-driven]
+Phase 7: Manual Testing [REQUIRED]
     ↓ User tests complete feature manually
     ↓ User: pass | fix-and-retry | stop
-Phase 8: Documentation (docs-updater)              [~3min]
+Phase 8: Documentation (docs-updater)
     ↓ User: approve | push | stop
 Phase 9: Complete!
 ```
 
-**Speed:** ~45-60 minutes for medium complexity (interactive) | ~50-70 minutes (automated)
-- Parallelization saves ~10 minutes (queries + validation together)
-- Database and testing are the longest phases
-- Automated mode slightly slower (no human decision-making shortcuts)
-
 **Optimizations:**
-- Phase 2b: queries + validation parallel (saves ~5min)
+- Phase 2b: queries + validation parallel
 - Phase 3a: Multiple base components parallel (if plan has them)
 - Skip testing phase if automated tests only
 - Smart dependency detection prevents blocking
-- Automated mode removes waiting time but adds agent execution overhead
 
 ---
 
@@ -230,6 +227,36 @@ Phase 9: Complete!
 - `stop` - Exit workflow
 
 **Note:** If plan has multiple independent components, they can be parallel in 3a. But dependent components (like SurveyForm) must be sequential.
+
+---
+
+### Phase 3c: UI/UX Review [SEQUENTIAL]
+
+**Agent:** `ui-ux-designer`
+
+**Purpose:** Review components for design excellence, accessibility, and visual polish
+
+**Reviews:**
+- shadcn/ui component usage and design system compliance
+- Tailwind spacing consistency (4px scale)
+- Visual hierarchy and typography
+- Accessibility (WCAG 2.1 AA compliance)
+- Responsive design patterns (mobile-first)
+- UI states (loading, error, empty, disabled)
+
+**Why after 3b:** Components are functionally complete, ready for design review
+
+**Output:** YAML report with P0/P1/P2 design issues and concrete recommendations
+
+**Commands:**
+- `continue` - Design approved, proceed to server actions
+- `fix` - Design issues found, component-developer fixes them
+- `details` - See full UI/UX review report
+- `stop` - Exit workflow
+
+**Skip When:** Components are purely functional with no UI (rare)
+
+**Note:** If P0 or P1 design issues found, component-developer should fix before Phase 4.
 
 ---
 
@@ -512,21 +539,78 @@ Report: pass | check (see logs) | stop
 
 You are the **Implement Phase Orchestrator**. Guide user through 9-phase implementation workflow with smart parallelization (Phase 0-9).
 
+### Agent Mapping - MUST USE Task Tool
+
+**CRITICAL:** For EVERY phase, you MUST use the Task tool with the exact `subagent_type` specified below.
+
+| Phase | Agent (subagent_type) | Tool Call Required |
+|-------|----------------------|-------------------|
+| **Phase 0** | `plan-analyzer` | ✅ REQUIRED |
+| **Phase 1** | `supabase-schema-specialist` | ✅ REQUIRED |
+| **Phase 2a** | `feature-foundation-developer` | ✅ REQUIRED (types.ts) |
+| **Phase 2b** | `feature-foundation-developer` | ✅ REQUIRED (queries.ts + validation.ts - 2x parallel) |
+| **Phase 3a** | `component-developer` | ✅ REQUIRED (base components) |
+| **Phase 3b** | `component-developer` | ✅ REQUIRED (composite components) |
+| **Phase 3c** | `ui-ux-designer` | ✅ REQUIRED (UI/UX review) |
+| **Phase 4** | `server-action-developer` | ✅ REQUIRED |
+| **Phase 5** | `route-developer` | ✅ REQUIRED |
+| **Phase 6** | `implementation-validator` | ✅ REQUIRED |
+| **Phase 7** | N/A (manual testing by user) | ❌ NO AGENT |
+| **Phase 8** | `docs-updater` | ✅ REQUIRED |
+
+**Example Task tool calls:**
+```typescript
+// Phase 0
+Task(subagent_type="plan-analyzer", description="Analyze Phase 2 plan", prompt="...")
+
+// Phase 1
+Task(subagent_type="supabase-schema-specialist", description="Create database migration", prompt="...")
+
+// Phase 2a
+Task(subagent_type="feature-foundation-developer", description="Create types.ts", prompt="...")
+
+// Phase 2b (PARALLEL - single message, 2 Task calls)
+Task(subagent_type="feature-foundation-developer", description="Create queries.ts", prompt="...")
+Task(subagent_type="feature-foundation-developer", description="Create validation.ts", prompt="...")
+
+// Phase 3a
+Task(subagent_type="component-developer", description="Create QuestionField component", prompt="...")
+
+// Phase 3b
+Task(subagent_type="component-developer", description="Create SurveyForm component", prompt="...")
+
+// Phase 3c
+Task(subagent_type="ui-ux-designer", description="Review component UI/UX", prompt="...")
+
+// Phase 4
+Task(subagent_type="server-action-developer", description="Create Server Actions", prompt="...")
+
+// Phase 5
+Task(subagent_type="route-developer", description="Create page routes", prompt="...")
+
+// Phase 6
+Task(subagent_type="implementation-validator", description="Verify implementation", prompt="...")
+
+// Phase 8
+Task(subagent_type="docs-updater", description="Update documentation", prompt="...")
+```
+
 ### Critical Instructions
 
-1. **Use Task tool for agents:** Launch agents using Task tool (NOT slash commands)
+1. **Use Task tool for agents:** Launch agents using Task tool (NOT slash commands) - see Agent Mapping table above
 2. **Parallel execution:** Launch ALL parallel agents in SINGLE message (multiple Task calls)
 3. **Sequential execution (Interactive mode):** Wait for user approval before next phase
 4. **Automated mode (--auto flag):** Run all phases without waiting, only stop on P0 test failures
 5. **Context passing:** Pass plan analysis + previous outputs to each agent
 6. **State tracking:** Track currentPhase, completedPhases, skippedPhases, outputs, mode (interactive/auto)
-7. **DO NOT just describe:** ACTUALLY INVOKE TOOLS
+7. **DO NOT just describe:** ACTUALLY INVOKE TOOLS - use Task tool with correct subagent_type
 8. **Handle failures:** If agent fails, offer retry/details/stop (or auto-retry in --auto mode)
 9. **P0 bugs block merge:** Test failures with P0 severity ALWAYS require user intervention (even in --auto)
 10. **Manual test checkpoints:** After phases with testable output, PAUSE and provide test instructions to user
 11. **Build verification:** After each code-generating phase, verify the build succeeds - catch TypeScript errors early
 12. **Implementation verification:** After Phase 5 (Routes), ALWAYS run Phase 6 (implementation-validator) to catch code issues before manual testing
 13. **NEVER skip Phase 7:** Phase 7 (Manual Testing) is REQUIRED - user must test before docs
+14. **ALWAYS use correct agent:** Reference Agent Mapping table - never guess or use wrong subagent_type
 
 ### Build Verification Checkpoints
 
@@ -535,6 +619,7 @@ You are the **Implement Phase Orchestrator**. Guide user through 9-phase impleme
 **When to build:**
 - **After Phase 2b (Foundation):** `npm run build:cms` - Verify types/queries compile
 - **After Phase 3b (Components):** `npm run build:cms` - Verify components compile
+- **After Phase 3c (UI/UX Review):** `npm run build:cms` (if design changes made) - Verify fixes compile
 - **After Phase 4 (Server Actions):** `npm run build:cms` - Verify actions compile
 - **After Phase 5 (Routes):** `npm run build` - Build BOTH apps (cms + website)
 
@@ -683,6 +768,8 @@ Report: pass | fix-and-retry | stop
 
 ### Phase Execution Pattern
 
+**CRITICAL:** Every phase MUST use Task tool with correct subagent_type from Agent Mapping table.
+
 **Sequential Phase (Interactive Mode):**
 ```markdown
 **Phase N: Name**
@@ -692,7 +779,7 @@ Report: pass | fix-and-retry | stop
 Launching [agent-name]...
 ```
 
-[Task tool invocation]
+[Task tool invocation - REQUIRED, use correct subagent_type from Agent Mapping table]
 
 ```markdown
 **Phase N Complete** ✅
@@ -755,7 +842,7 @@ Launching [X] agents simultaneously:
 3. agent-3 - [purpose]
 ```
 
-[Launch ALL agents in SINGLE message]
+[Launch ALL agents in SINGLE message - multiple Task tool calls with correct subagent_type]
 
 ```markdown
 **Phase N Complete** ✅
@@ -815,13 +902,12 @@ Must fix before proceeding.
 Analyzing Phase 2 plan from @docs/PROJECT_ROADMAP.md...
 ```
 
-[Task: plan-analyzer]
+[Task tool call with subagent_type="plan-analyzer"]
 
 ```markdown
 **Analysis Complete** ✅
 
 Complexity: medium
-Duration: ~90min
 Database changes: Yes (RLS policy needed)
 Parallel phases: Foundation (3 files), Components (2 files)
 
@@ -839,7 +925,7 @@ Parallel phases: Foundation (3 files), Components (2 files)
 Creating migration for public survey access RLS policy...
 ```
 
-[Task: supabase-schema-specialist]
+[Task tool call with subagent_type="supabase-schema-specialist"]
 
 ```markdown
 **Database Setup Complete** ✅
@@ -862,7 +948,7 @@ Verification: RLS policy active in Supabase
 Creating types.ts (needed by queries and validation)...
 ```
 
-[Task: feature-foundation-developer]
+[Task tool call with subagent_type="feature-foundation-developer"]
 
 ```markdown
 **Types Complete** ✅
@@ -885,7 +971,7 @@ Launching 2 agents simultaneously:
 2. validation.ts - Dynamic Zod schemas
 ```
 
-[Single message, 2 Task calls]
+[Single message, 2 Task tool calls with subagent_type="feature-foundation-developer"]
 
 ```markdown
 **Foundation Complete** ✅
@@ -908,7 +994,7 @@ Created:
 Creating QuestionField.tsx (needed by SurveyForm)...
 ```
 
-[Task: component-developer]
+[Task tool call with subagent_type="component-developer"]
 
 ```markdown
 **QuestionField Complete** ✅
@@ -929,17 +1015,49 @@ Created: QuestionField.tsx (7 question types with Controller)
 Creating SurveyForm.tsx (uses QuestionField)...
 ```
 
-[Task: component-developer]
+[Task tool call with subagent_type="component-developer"]
 
 ```markdown
 **SurveyForm Complete** ✅
 
 Created: SurveyForm.tsx (form + validation + submission)
 
-**Next:** Phase 4 (Server Actions)
+**Next:** Phase 3c (UI/UX Review)
 
 **Commands:** `continue` | `details` | `stop`
 ```
+
+[User: continue OR auto-proceed in --auto mode]
+
+**Phase 3c:**
+```markdown
+**Phase 3c: UI/UX Review**
+
+Reviewing component design and accessibility...
+```
+
+[Task tool call with subagent_type="ui-ux-designer"]
+
+```markdown
+**UI/UX Review Complete** ✅
+
+Overall Rating: Good
+Issues Found: 2 P1 (spacing inconsistencies, missing focus states)
+
+**P1 Issues:**
+- Inconsistent spacing: Use gap-6 instead of gap-5
+- Missing focus states: Add focus:ring-2 to interactive elements
+
+Recommendations:
+- Follow Tailwind spacing scale consistently
+- Ensure all interactive elements have visible focus indicators
+
+**Next:** Fix P1 issues or proceed to Phase 4 (Server Actions)?
+
+**Commands:** `fix` | `continue` | `details` | `stop`
+```
+
+[User: continue - issues are minor OR auto-proceed in --auto mode]
 
 [Continues through Phase 4-5...]
 
@@ -950,7 +1068,7 @@ Created: SurveyForm.tsx (form + validation + submission)
 Analyzing implementation against plan and CODE_PATTERNS...
 ```
 
-[Task: implementation-validator]
+[Task tool call with subagent_type="implementation-validator"]
 
 ```markdown
 **Implementation Verification Complete** ✅
@@ -982,8 +1100,6 @@ Issues Found: 1 P1
 ```markdown
 **All Phases Complete!** ✅
 
-Duration: 52 minutes
-
 Summary:
 - Database: RLS policy added ✅
 - Foundation: 3 files created ✅
@@ -1011,7 +1127,7 @@ Summary:
 ```markdown
 Phase 2: Launch 3x feature-foundation-developer
 → types.ts, queries.ts, validation.ts
-→ Saves ~10min vs sequential
+→ Parallel execution for efficiency
 ```
 
 **Components phase (parallel if independent):**
@@ -1049,7 +1165,7 @@ plan_analysis:
 ### ❌ Don't: Sequential when could be parallel
 ```markdown
 Phase 2: Launch types.ts → wait → Launch queries.ts → wait → Launch validation.ts
-# Wastes 20 minutes!
+# Inefficient! Should be parallel!
 ```
 
 ### ❌ Don't: Start components before foundation ready
@@ -1118,6 +1234,25 @@ Phase 2b: Build fails → Agent fixes immediately → Rebuild verifies fix → C
 Phase 3: Build succeeds → Continue to Phase 4
 Phase 4: Build succeeds → Continue to Phase 5
 # Clean builds all the way!
+```
+
+### ❌ Don't: Use wrong agent or skip Task tool
+```markdown
+Phase 2a: "Let me create types.ts manually"
+# NO! Must use Task tool with subagent_type="feature-foundation-developer"
+
+Phase 4: "Launching general-purpose agent..."
+# NO! Must use Task tool with subagent_type="server-action-developer"
+
+Phase 6: "I'll verify the code myself..."
+# NO! Must use Task tool with subagent_type="implementation-validator"
+```
+
+✅ **Correct:**
+```markdown
+Phase 2a: Task(subagent_type="feature-foundation-developer", description="Create types.ts", prompt="...")
+Phase 4: Task(subagent_type="server-action-developer", description="Create actions.ts", prompt="...")
+Phase 6: Task(subagent_type="implementation-validator", description="Verify implementation", prompt="...")
 ```
 
 ---

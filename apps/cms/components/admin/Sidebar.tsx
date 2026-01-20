@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, FileText, Inbox, Calendar, Settings, LogOut } from 'lucide-react'
+import { LayoutDashboard, FileText, Inbox, CalendarCheck, Calendar, Settings, LogOut } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 
@@ -10,6 +10,7 @@ const menuItems = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/admin/surveys', label: 'Surveys', icon: FileText },
   { href: '/admin/responses', label: 'Responses', icon: Inbox },
+  { href: '/admin/appointments', label: 'Appointments', icon: CalendarCheck },
   { href: '/admin/calendar', label: 'Calendar', icon: Calendar },
   { href: '/admin/settings', label: 'Settings', icon: Settings },
 ]
