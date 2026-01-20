@@ -1,7 +1,15 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Button } from '@legal-mind/ui'
+import {
+  Button,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@legal-mind/ui'
 import { getGoogleCalendarStatus, disconnectGoogleCalendar } from '../actions'
 import { AlertCircle, CheckCircle, Loader2, LogOut } from 'lucide-react'
 
@@ -15,6 +23,7 @@ export function CalendarSettings() {
   const [status, setStatus] = useState<CalendarStatus | null>(null)
   const [loading, setLoading] = useState(true)
   const [disconnecting, setDisconnecting] = useState(false)
+  const [showDisconnectDialog, setShowDisconnectDialog] = useState(false)
   const [showMessage, setShowMessage] = useState<{
     type: 'success' | 'error'
     text: string
@@ -61,11 +70,12 @@ export function CalendarSettings() {
     window.location.href = '/api/auth/google'
   }
 
-  async function handleDisconnect() {
-    if (!window.confirm('Are you sure? This will revoke Google Calendar access.')) {
-      return
-    }
+  function handleDisconnectClick() {
+    setShowDisconnectDialog(true)
+  }
 
+  async function handleConfirmDisconnect() {
+    setShowDisconnectDialog(false)
     setDisconnecting(true)
     try {
       const result = await disconnectGoogleCalendar()
@@ -147,7 +157,7 @@ export function CalendarSettings() {
 
           <Button
             variant="outline"
-            onClick={handleDisconnect}
+            onClick={handleDisconnectClick}
             disabled={disconnecting}
             className="mt-4 w-full sm:w-auto"
           >
@@ -163,6 +173,32 @@ export function CalendarSettings() {
               </>
             )}
           </Button>
+
+          {/* Disconnect Confirmation Dialog */}
+          <Dialog open={showDisconnectDialog} onOpenChange={setShowDisconnectDialog}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Disconnect Google Calendar?</DialogTitle>
+                <DialogDescription>
+                  This will revoke Google Calendar access. You can reconnect at any time.
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowDisconnectDialog(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={handleConfirmDisconnect}
+                >
+                  Disconnect
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       ) : (
         <div className="border border-gray-200 rounded-lg p-4">

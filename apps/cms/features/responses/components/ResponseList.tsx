@@ -6,6 +6,7 @@ import { Button, Card } from '@legal-mind/ui'
 import { useRouter } from 'next/navigation'
 import { ArrowRight, Loader2, AlertCircle, FileText } from 'lucide-react'
 import type { ResponseListItem, ResponseStatus } from '../types'
+import { getResponseStatusColor } from '@/lib/utils/status'
 
 /**
  * ResponseList Component
@@ -45,27 +46,44 @@ export function ResponseList() {
   if (isLoading) {
     return (
       <Card className="overflow-hidden">
-        <div className="divide-y divide-gray-200">
-          {/* Table Header */}
-          <div className="grid grid-cols-12 gap-4 px-6 py-4 bg-gray-50 border-b border-gray-200">
-            <div className="col-span-5 text-sm font-semibold text-gray-900">Survey</div>
-            <div className="col-span-3 text-sm font-semibold text-gray-900">Submitted</div>
-            <div className="col-span-2 text-sm font-semibold text-gray-900">Status</div>
-            <div className="col-span-2 text-sm font-semibold text-gray-900">Actions</div>
-          </div>
-
-          {/* Skeleton Rows */}
-          {[...Array(5)].map((_, i) => (
-            <div
-              key={i}
-              className="grid grid-cols-12 gap-4 px-6 py-4 border-b border-gray-200 hover:bg-gray-50"
-            >
-              <div className="col-span-5 bg-gray-200 h-4 rounded animate-pulse" />
-              <div className="col-span-3 bg-gray-200 h-4 rounded animate-pulse" />
-              <div className="col-span-2 bg-gray-200 h-4 rounded animate-pulse" />
-              <div className="col-span-2 bg-gray-200 h-4 rounded animate-pulse" />
-            </div>
-          ))}
+        <div className="overflow-x-auto">
+          <table className="w-full" aria-label="Responses list loading">
+            <thead className="bg-gray-50 border-b border-gray-200">
+              <tr>
+                <th scope="col" className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
+                  Survey
+                </th>
+                <th scope="col" className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
+                  Submitted
+                </th>
+                <th scope="col" className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
+                  Status
+                </th>
+                <th scope="col" className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {/* Skeleton Rows */}
+              {[...Array(5)].map((_, i) => (
+                <tr key={i} className="hover:bg-gray-50">
+                  <td className="px-6 py-4">
+                    <div className="bg-gray-200 h-4 rounded animate-pulse" />
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="bg-gray-200 h-4 rounded animate-pulse" />
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="bg-gray-200 h-4 rounded animate-pulse" />
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="bg-gray-200 h-4 rounded animate-pulse" />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </Card>
     )
@@ -112,16 +130,24 @@ export function ResponseList() {
   return (
     <Card className="overflow-hidden">
       <div className="overflow-x-auto">
-        <div className="inline-block min-w-full">
-          <div className="divide-y divide-gray-200">
-            {/* Table Header */}
-            <div className="grid grid-cols-12 gap-4 px-6 py-4 bg-gray-50 border-b border-gray-200">
-              <div className="col-span-5 text-sm font-semibold text-gray-900">Survey</div>
-              <div className="col-span-3 text-sm font-semibold text-gray-900">Submitted</div>
-              <div className="col-span-2 text-sm font-semibold text-gray-900">Status</div>
-              <div className="col-span-2 text-sm font-semibold text-gray-900">Actions</div>
-            </div>
-
+        <table className="w-full" aria-label="Responses list">
+          <thead className="bg-gray-50 border-b border-gray-200">
+            <tr>
+              <th scope="col" className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
+                Survey
+              </th>
+              <th scope="col" className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
+                Submitted
+              </th>
+              <th scope="col" className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
+                Status
+              </th>
+              <th scope="col" className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
+                Actions
+              </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-200">
             {/* Table Rows */}
             {responses.map((response) => (
               <ResponseRow
@@ -130,8 +156,13 @@ export function ResponseList() {
                 onRowClick={() => router.push(`/admin/responses/${response.id}`)}
               />
             ))}
-          </div>
-        </div>
+          </tbody>
+        </table>
+      </div>
+
+      {/* Live region for screen readers */}
+      <div className="sr-only" aria-live="polite" aria-atomic="true">
+        {responses.length} {responses.length === 1 ? 'response' : 'responses'} loaded
       </div>
 
       {/* Footer with count */}
@@ -160,22 +191,6 @@ function ResponseRow({
   response: ResponseListItem
   onRowClick: () => void
 }) {
-  // Get status badge color
-  const getStatusColor = (status: ResponseStatus | null) => {
-    switch (status) {
-      case 'new':
-        return 'bg-blue-100 text-blue-800'
-      case 'qualified':
-        return 'bg-green-100 text-green-800'
-      case 'disqualified':
-        return 'bg-red-100 text-red-800'
-      case 'contacted':
-        return 'bg-purple-100 text-purple-800'
-      default:
-        return 'bg-gray-100 text-gray-800'
-    }
-  }
-
   // Format date: "Dec 12, 2025 10:30 AM"
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'Unknown date'
@@ -202,46 +217,48 @@ function ResponseRow({
     surveyTitle.length > 50 ? `${surveyTitle.substring(0, 47)}...` : surveyTitle
 
   return (
-    <div
+    <tr
       onClick={onRowClick}
-      className="grid grid-cols-12 gap-4 px-6 py-4 border-b border-gray-200 hover:bg-gray-50 cursor-pointer transition-colors"
+      className="hover:bg-gray-50 cursor-pointer transition-colors"
     >
-      {/* Survey Title Column (40%) */}
-      <div className="col-span-5">
+      {/* Survey Title Column */}
+      <td className="px-6 py-4">
         <p className="text-sm font-medium text-gray-900 truncate" title={surveyTitle}>
           {truncatedTitle}
         </p>
-      </div>
+      </td>
 
-      {/* Submitted Date Column (30%) */}
-      <div className="col-span-3">
+      {/* Submitted Date Column */}
+      <td className="px-6 py-4">
         <p className="text-sm text-gray-600">{formatDate(response.created_at)}</p>
-      </div>
+      </td>
 
-      {/* Status Column (20%) */}
-      <div className="col-span-2">
+      {/* Status Column */}
+      <td className="px-6 py-4">
         <span
-          className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
+          className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getResponseStatusColor(
             response.status
           )}`}
         >
           {response.status || 'unknown'}
         </span>
-      </div>
+      </td>
 
-      {/* Actions Column (10%) */}
-      <div className="col-span-2 flex items-center justify-end">
-        <button
-          onClick={(e) => {
-            e.stopPropagation()
-            onRowClick()
-          }}
-          className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
-          aria-label="View response details"
-        >
-          <ArrowRight className="h-5 w-5" />
-        </button>
-      </div>
-    </div>
+      {/* Actions Column */}
+      <td className="px-6 py-4">
+        <div className="flex items-center justify-end">
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              onRowClick()
+            }}
+            className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+            aria-label="View response details"
+          >
+            <ArrowRight className="h-5 w-5" />
+          </button>
+        </div>
+      </td>
+    </tr>
   )
 }
