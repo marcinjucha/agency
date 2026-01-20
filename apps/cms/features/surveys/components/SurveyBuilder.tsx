@@ -174,7 +174,7 @@ export function SurveyBuilder({ survey }: SurveyBuilderProps) {
                     <span className="text-sm font-medium text-gray-500">Question {index + 1}</span>
                     <button
                       onClick={() => deleteQuestion(question.id)}
-                      className="text-red-600 hover:text-red-700"
+                      className="p-3 text-red-600 hover:text-red-700 rounded-md hover:bg-red-50 transition-colors"
                       aria-label="Delete question"
                     >
                       <Trash2 className="h-4 w-4" />

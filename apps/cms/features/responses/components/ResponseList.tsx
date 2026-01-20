@@ -2,11 +2,12 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { getResponses } from '../queries'
-import { Button, Card } from '@legal-mind/ui'
+import { Card } from '@legal-mind/ui'
 import { useRouter } from 'next/navigation'
-import { ArrowRight, Loader2, AlertCircle, FileText } from 'lucide-react'
+import { ArrowRight, FileText } from 'lucide-react'
 import type { ResponseListItem, ResponseStatus } from '../types'
 import { getResponseStatusColor } from '@/lib/utils/status'
+import { LoadingState, ErrorState, EmptyState } from '@/components/shared'
 
 /**
  * ResponseList Component
@@ -45,46 +46,8 @@ export function ResponseList() {
   // LOADING STATE: Skeleton rows
   if (isLoading) {
     return (
-      <Card className="overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full" aria-label="Responses list loading">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th scope="col" className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
-                  Survey
-                </th>
-                <th scope="col" className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
-                  Submitted
-                </th>
-                <th scope="col" className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
-                  Status
-                </th>
-                <th scope="col" className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {/* Skeleton Rows */}
-              {[...Array(5)].map((_, i) => (
-                <tr key={i} className="hover:bg-gray-50">
-                  <td className="px-6 py-4">
-                    <div className="bg-gray-200 h-4 rounded animate-pulse" />
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="bg-gray-200 h-4 rounded animate-pulse" />
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="bg-gray-200 h-4 rounded animate-pulse" />
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="bg-gray-200 h-4 rounded animate-pulse" />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+      <Card className="p-6">
+        <LoadingState variant="skeleton-table" rows={5} />
       </Card>
     )
   }
@@ -92,37 +55,24 @@ export function ResponseList() {
   // ERROR STATE: Show error with retry button
   if (error) {
     return (
-      <Card className="bg-red-50 border-red-200 p-6">
-        <div className="flex items-center gap-4">
-          <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0" />
-          <div className="flex-1">
-            <h3 className="font-semibold text-red-900">Failed to load responses</h3>
-            <p className="text-sm text-red-700 mt-1">
-              {error instanceof Error ? error.message : 'An error occurred'}
-            </p>
-          </div>
-          <Button
-            onClick={() => refetch()}
-            variant="outline"
-            className="flex-shrink-0"
-          >
-            Retry
-          </Button>
-        </div>
-      </Card>
+      <ErrorState
+        title="Failed to load responses"
+        message={error instanceof Error ? error.message : 'An error occurred'}
+        onRetry={() => refetch()}
+        variant="card"
+      />
     )
   }
 
   // EMPTY STATE: No responses
   if (!responses || responses.length === 0) {
     return (
-      <Card className="p-12 text-center">
-        <FileText className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">No responses yet</h3>
-        <p className="text-gray-600">
-          Create a survey and share the link to start collecting responses.
-        </p>
-      </Card>
+      <EmptyState
+        icon={FileText}
+        title="No responses yet"
+        description="Create a survey and share the link to start collecting responses."
+        variant="card"
+      />
     )
   }
 
@@ -252,7 +202,7 @@ function ResponseRow({
               e.stopPropagation()
               onRowClick()
             }}
-            className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+            className="p-3 text-gray-400 hover:text-gray-600 transition-colors rounded-md hover:bg-gray-100"
             aria-label="View response details"
           >
             <ArrowRight className="h-5 w-5" />
