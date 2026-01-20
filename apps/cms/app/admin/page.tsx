@@ -56,7 +56,7 @@ export default async function DashboardPage() {
       <div className="mt-8 bg-white p-6 rounded-lg shadow-sm border border-gray-200">
         <h2 className="text-xl font-semibold text-gray-900 mb-4">Getting Started</h2>
         <div className="space-y-3 text-gray-600">
-          <p>👋 Welcome to Legal Mind CMS!</p>
+          <p>Welcome to Legal Mind CMS!</p>
           <p>
             1. Create your first survey in the <span className="font-semibold">Surveys</span> section
           </p>

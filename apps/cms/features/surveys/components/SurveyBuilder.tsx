@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { updateSurvey } from '../actions'
-import { Button, Input, Label, Card } from '@legal-mind/ui'
+import { Button, Input, Label, Card, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Textarea, Checkbox } from '@legal-mind/ui'
 import { ArrowLeft, Plus, Trash2, Save } from 'lucide-react'
 import Link from 'next/link'
 import type { Tables } from '@legal-mind/database'
@@ -194,34 +194,36 @@ export function SurveyBuilder({ survey }: SurveyBuilderProps) {
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <Label>Type</Label>
-                        <select
+                        <Select
                           value={question.type}
-                          onChange={(e) =>
+                          onValueChange={(value) =>
                             updateQuestion(question.id, {
-                              type: e.target.value as Question['type'],
+                              type: value as Question['type'],
                             })
                           }
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md"
                         >
-                          <option value="text">Short Text</option>
-                          <option value="textarea">Long Text</option>
-                          <option value="email">Email</option>
-                          <option value="tel">Phone</option>
-                          <option value="select">Dropdown</option>
-                          <option value="radio">Multiple Choice</option>
-                          <option value="checkbox">Checkboxes</option>
-                        </select>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select question type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="text">Short Text</SelectItem>
+                            <SelectItem value="textarea">Long Text</SelectItem>
+                            <SelectItem value="email">Email</SelectItem>
+                            <SelectItem value="tel">Phone</SelectItem>
+                            <SelectItem value="select">Dropdown</SelectItem>
+                            <SelectItem value="radio">Multiple Choice</SelectItem>
+                            <SelectItem value="checkbox">Checkboxes</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
 
                       <div className="flex items-end">
-                        <label className="flex items-center gap-2">
-                          <input
-                            type="checkbox"
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <Checkbox
                             checked={question.required}
-                            onChange={(e) =>
-                              updateQuestion(question.id, { required: e.target.checked })
+                            onCheckedChange={(checked) =>
+                              updateQuestion(question.id, { required: checked === true })
                             }
-                            className="w-4 h-4"
                           />
                           <span className="text-sm">Required</span>
                         </label>
@@ -233,7 +235,7 @@ export function SurveyBuilder({ survey }: SurveyBuilderProps) {
                       question.type === 'checkbox') && (
                       <div>
                         <Label>Options (one per line)</Label>
-                        <textarea
+                        <Textarea
                           value={question.options?.join('\n') || ''}
                           onChange={(e) =>
                             updateQuestion(question.id, {
@@ -242,7 +244,6 @@ export function SurveyBuilder({ survey }: SurveyBuilderProps) {
                           }
                           placeholder="Option 1&#10;Option 2&#10;Option 3"
                           rows={4}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md"
                         />
                       </div>
                     )}

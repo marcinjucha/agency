@@ -6,6 +6,7 @@ import type { ResponseWithRelations, QuestionAnswerPair } from '../types'
 import { Button, Card, Badge } from '@legal-mind/ui'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
+import { getResponseStatusColor } from '@/lib/utils/status'
 
 type ResponseDetailProps = {
   responseId: string
@@ -97,22 +98,6 @@ export function ResponseDetail({ responseId }: ResponseDetailProps) {
       })
     : 'Unknown date'
 
-  // Status badge styling
-  const getStatusBadgeColor = (status: string | null) => {
-    switch (status) {
-      case 'new':
-        return 'bg-blue-100 text-blue-700'
-      case 'qualified':
-        return 'bg-green-100 text-green-700'
-      case 'disqualified':
-        return 'bg-red-100 text-red-700'
-      case 'contacted':
-        return 'bg-purple-100 text-purple-700'
-      default:
-        return 'bg-gray-100 text-gray-700'
-    }
-  }
-
   return (
     <div className="space-y-6">
       {/* Back Button */}
@@ -134,7 +119,7 @@ export function ResponseDetail({ responseId }: ResponseDetailProps) {
               Submitted on {submissionDate}
             </p>
           </div>
-          <Badge className={`${getStatusBadgeColor(response.status)} px-3 py-1 rounded-full text-sm font-medium`}>
+          <Badge className={`${getResponseStatusColor(response.status)} px-3 py-1 rounded-full text-sm font-medium`}>
             {response.status || 'Pending'}
           </Badge>
         </div>

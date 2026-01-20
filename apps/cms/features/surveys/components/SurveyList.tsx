@@ -5,6 +5,7 @@ import { getSurveys } from '../queries'
 import { Button, Card } from '@legal-mind/ui'
 import Link from 'next/link'
 import { FileText, Plus } from 'lucide-react'
+import { getSurveyStatusColor } from '@/lib/utils/status'
 
 export function SurveyList() {
   const { data: surveys, isLoading, error } = useQuery({
@@ -63,13 +64,9 @@ export function SurveyList() {
                     {Array.isArray(survey.questions) ? survey.questions.length : 0} questions
                   </span>
                   <span
-                    className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      survey.status === 'active'
-                        ? 'bg-green-100 text-green-700'
-                        : survey.status === 'draft'
-                        ? 'bg-yellow-100 text-yellow-700'
-                        : 'bg-gray-100 text-gray-700'
-                    }`}
+                    className={`px-2 py-1 rounded-full text-xs font-medium ${getSurveyStatusColor(
+                      survey.status
+                    )}`}
                   >
                     {survey.status}
                   </span>
