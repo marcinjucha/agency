@@ -55,7 +55,7 @@ export function Navbar({ onDemoClick }: NavbarProps) {
             {/* Logo/Brand */}
             <Link
               href="/"
-              className="flex items-center gap-2 text-2xl font-bold text-gray-900 hover:text-blue-600 transition-colors"
+              className="flex items-center gap-2 text-2xl font-bold text-foreground hover:text-primary transition-colors"
             >
               <span>Legal Hub</span>
             </Link>
@@ -67,7 +67,7 @@ export function Navbar({ onDemoClick }: NavbarProps) {
                   key={link.href}
                   href={link.href}
                   onClick={handleNavLinkClick}
-                  className="text-gray-700 hover:text-blue-600 transition-colors font-medium text-sm"
+                  className="text-muted-foreground hover:text-primary transition-colors font-medium text-sm"
                   aria-label={`Navigate to ${link.label}`}
                 >
                   {link.label}
@@ -79,7 +79,7 @@ export function Navbar({ onDemoClick }: NavbarProps) {
             <div className="hidden lg:flex">
               <Button
                 onClick={handleDemoClick}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground"
                 size="default"
               >
                 Zarezerwuj demo
@@ -89,7 +89,7 @@ export function Navbar({ onDemoClick }: NavbarProps) {
             {/* Mobile Menu Button */}
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="lg:hidden p-2 text-gray-700 hover:text-blue-600 transition-colors"
+              className="lg:hidden p-3 text-muted-foreground hover:text-primary transition-colors"
               aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
               aria-expanded={isMenuOpen}
               aria-controls="mobile-menu"
@@ -126,7 +126,7 @@ export function Navbar({ onDemoClick }: NavbarProps) {
             <div className="flex justify-end p-4">
               <button
                 onClick={() => setIsMenuOpen(false)}
-                className="p-2 text-gray-700 hover:text-blue-600 transition-colors"
+                className="p-3 text-muted-foreground hover:text-primary transition-colors"
                 aria-label="Close menu"
               >
                 <X className="h-6 w-6" />
@@ -140,7 +140,7 @@ export function Navbar({ onDemoClick }: NavbarProps) {
                   key={link.href}
                   href={link.href}
                   onClick={handleNavLinkClick}
-                  className="text-gray-700 hover:text-blue-600 transition-colors font-medium text-base block py-2"
+                  className="text-muted-foreground hover:text-primary transition-colors font-medium text-base block py-2"
                   aria-label={`Navigate to ${link.label}`}
                 >
                   {link.label}
@@ -150,7 +150,7 @@ export function Navbar({ onDemoClick }: NavbarProps) {
               {/* Mobile Demo Button */}
               <Button
                 onClick={handleDemoClick}
-                className="bg-blue-600 hover:bg-blue-700 text-white w-full mt-4"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground w-full mt-4"
                 size="default"
               >
                 Zarezerwuj demo

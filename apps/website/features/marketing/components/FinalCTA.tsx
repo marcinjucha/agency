@@ -37,26 +37,26 @@ import Link from 'next/link'
 export function FinalCTA() {
   return (
     <section
-      className="py-16 md:py-24 lg:py-32 px-4 bg-gradient-to-br from-blue-600 to-blue-700 relative overflow-hidden"
+      className="py-16 md:py-24 lg:py-32 px-4 bg-gradient-to-br from-primary to-primary/90 relative overflow-hidden"
       aria-label="Final call to action section"
     >
       {/* Decorative background element */}
       <div className="absolute inset-0 opacity-10">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-white rounded-full blur-3xl transform translate-x-1/2 -translate-y-1/2" />
-        <div className="absolute bottom-0 left-0 w-80 h-80 bg-white rounded-full blur-3xl transform -translate-x-1/2 translate-y-1/2" />
+        <div className="absolute top-0 right-0 w-96 h-96 bg-primary-foreground rounded-full blur-3xl transform translate-x-1/2 -translate-y-1/2" />
+        <div className="absolute bottom-0 left-0 w-80 h-80 bg-primary-foreground rounded-full blur-3xl transform -translate-x-1/2 translate-y-1/2" />
       </div>
 
       {/* Content Container */}
       <div className="relative z-10 max-w-3xl mx-auto text-center">
         {/* Headline */}
-        <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-6 leading-tight">
+        <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-primary-foreground mb-6 leading-tight">
           Zamieniaj więcej klientów.
           <br className="hidden sm:inline" />
           Pracuj mniej.
         </h2>
 
         {/* Subheading */}
-        <p className="text-lg md:text-xl text-blue-100 mb-10 max-w-2xl mx-auto leading-relaxed">
+        <p className="text-lg md:text-xl text-primary-foreground/80 mb-10 max-w-2xl mx-auto leading-relaxed">
           Automatyzuj intake formularze i kwalifikacje, aby skoncentrować się na tym, co naprawdę ważne: wygrywaniu spraw i budowaniu relacji z klientami.
         </p>
 
@@ -66,7 +66,7 @@ export function FinalCTA() {
           <Link href="#demo" className="w-full sm:w-auto">
             <Button
               size="lg"
-              className="w-full bg-white text-blue-600 hover:bg-blue-50 font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
+              className="w-full bg-background text-primary hover:bg-primary/5 font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
               aria-label="Zarezerwuj demo Legal Hub - otwiera formularz rezerwacji"
             >
               Zarezerwuj demo
@@ -78,7 +78,7 @@ export function FinalCTA() {
             <Button
               variant="outline"
               size="lg"
-              className="w-full border-2 border-white text-white hover:bg-blue-500 font-semibold transition-all duration-200"
+              className="w-full border-2 border-primary-foreground text-primary-foreground hover:bg-primary/80 font-semibold transition-all duration-200"
               aria-label="Dowiedz się więcej o Legal Hub - przechodzi do strony o nas"
             >
               Dowiedz się więcej
@@ -87,7 +87,7 @@ export function FinalCTA() {
         </div>
 
         {/* Trust Badge */}
-        <p className="text-blue-100 text-sm md:text-base mt-12 font-medium">
+        <p className="text-primary-foreground/80 text-sm md:text-base mt-12 font-medium">
           Dołącz do kancelarii, które już automatyzują swoje procesy
         </p>
       </div>

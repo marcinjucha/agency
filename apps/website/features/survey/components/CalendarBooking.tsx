@@ -39,7 +39,8 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Button, Card, Input, Label } from '@legal-mind/ui'
-import { Calendar, Clock, CheckCircle, AlertCircle } from 'lucide-react'
+import { Calendar, Clock, CheckCircle } from 'lucide-react'
+import { LoadingState, ErrorState } from '@/components/shared'
 
 /**
  * Slot object structure returned from /api/calendar/slots
@@ -98,83 +99,42 @@ function SuccessMessage({
   return (
     <div className="text-center py-12">
       <div className="flex justify-center mb-6">
-        <CheckCircle className="h-16 w-16 text-green-600" />
+        <CheckCircle className="h-16 w-16 text-primary" />
       </div>
-      <h2 className="text-3xl font-bold text-gray-900 mb-3">
+      <h2 className="text-3xl font-bold text-foreground mb-3">
         Appointment Confirmed!
       </h2>
-      <p className="text-gray-600 mb-8">
+      <p className="text-muted-foreground mb-8">
         Your appointment has been successfully booked.
       </p>
 
       {/* Booking Details Summary */}
-      <div className="bg-gray-50 rounded-lg p-6 mb-8 max-w-sm mx-auto">
+      <div className="bg-muted rounded-lg p-6 mb-8 max-w-sm mx-auto">
         <div className="space-y-4">
           <div className="flex items-center gap-3 text-left">
-            <Calendar className="h-5 w-5 text-blue-600 flex-shrink-0" />
+            <Calendar className="h-5 w-5 text-primary flex-shrink-0" />
             <div>
-              <p className="text-sm text-gray-600">Date</p>
-              <p className="font-semibold text-gray-900">{formattedDate}</p>
+              <p className="text-sm text-muted-foreground">Date</p>
+              <p className="font-semibold text-foreground">{formattedDate}</p>
             </div>
           </div>
           <div className="flex items-center gap-3 text-left">
-            <Clock className="h-5 w-5 text-blue-600 flex-shrink-0" />
+            <Clock className="h-5 w-5 text-primary flex-shrink-0" />
             <div>
-              <p className="text-sm text-gray-600">Time</p>
-              <p className="font-semibold text-gray-900">{formattedTime}</p>
+              <p className="text-sm text-muted-foreground">Time</p>
+              <p className="font-semibold text-foreground">{formattedTime}</p>
             </div>
           </div>
         </div>
       </div>
 
-      <p className="text-gray-600">
+      <p className="text-muted-foreground">
         A confirmation email has been sent to your inbox.
       </p>
     </div>
   )
 }
 
-/**
- * Error alert component
- */
-function ErrorAlert({
-  message,
-  className = '',
-}: {
-  message: string
-  className?: string
-}) {
-  return (
-    <div
-      className={`bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-lg flex items-start gap-3 ${className}`}
-      role="alert"
-    >
-      <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
-      <div>
-        <p className="font-medium">Error</p>
-        <p className="text-sm">{message}</p>
-      </div>
-    </div>
-  )
-}
-
-/**
- * Loading skeleton for time slots
- */
-function LoadingSlots() {
-  return (
-    <div className="space-y-2">
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <div
-            key={i}
-            className="h-10 bg-gray-200 rounded-md animate-pulse"
-          />
-        ))}
-      </div>
-    </div>
-  )
-}
 
 /**
  * Time slots grid component
@@ -204,10 +164,10 @@ function TimeSlotsGrid({
           <button
             key={index}
             onClick={() => onSelectSlot(slot)}
-            className={`p-3 rounded-lg border-2 transition-all font-medium text-sm ${
+            className={`p-3 rounded-lg border-2 transition-all font-medium text-sm min-h-[48px] ${
               isSelected
-                ? 'bg-blue-600 text-white border-blue-600 shadow-md'
-                : 'bg-white text-gray-900 border-gray-300 hover:border-blue-400 hover:bg-blue-50'
+                ? 'bg-primary text-primary-foreground border-primary shadow-md'
+                : 'bg-card text-foreground border-border hover:border-primary hover:bg-primary/5'
             }`}
             type="button"
           >
@@ -366,7 +326,7 @@ export function CalendarBooking({
   // Render success state
   if (bookingSuccess) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="min-h-screen bg-gradient-to-br from-muted/30 to-muted py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-2xl mx-auto">
           <Card className="shadow-xl border-0">
             <div className="p-8 sm:p-12">
@@ -380,16 +340,16 @@ export function CalendarBooking({
 
   // Render booking form
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-muted/30 to-muted py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-2xl mx-auto">
         <Card className="shadow-xl border-0">
           <div className="p-8 sm:p-12">
             {/* Header */}
-            <div className="mb-8 pb-6 border-b border-gray-200">
-              <h1 className="text-4xl font-bold text-gray-900 mb-3">
+            <div className="mb-8 pb-6 border-b border-border">
+              <h1 className="text-4xl font-bold text-foreground mb-3">
                 Book an Appointment
               </h1>
-              <p className="text-lg text-gray-600">
+              <p className="text-lg text-muted-foreground">
                 Select a convenient time for your consultation
               </p>
             </div>
@@ -399,10 +359,10 @@ export function CalendarBooking({
               <div className="space-y-3">
                 <Label
                   htmlFor="appointment-date"
-                  className="text-base font-medium text-gray-900"
+                  className="text-base font-medium text-foreground"
                 >
                   Select a Date
-                  <span className="text-red-500 ml-1">*</span>
+                  <span className="text-destructive ml-1">*</span>
                 </Label>
                 <input
                   id="appointment-date"
@@ -410,12 +370,12 @@ export function CalendarBooking({
                   value={selectedDate ? selectedDate.toISOString().split('T')[0] : ''}
                   onChange={handleDateChange}
                   min={minDate}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                   aria-describedby="date-help"
                 />
                 <p
                   id="date-help"
-                  className="text-sm text-gray-600"
+                  className="text-sm text-muted-foreground"
                 >
                   Choose a date at least one day from today
                 </p>
@@ -424,15 +384,15 @@ export function CalendarBooking({
               {/* STEP 2: Time Slots (shown after date selected) */}
               {selectedDate && (
                 <div className="space-y-3">
-                  <Label className="text-base font-medium text-gray-900">
+                  <Label className="text-base font-medium text-foreground">
                     Select a Time
-                    <span className="text-red-500 ml-1">*</span>
+                    <span className="text-destructive ml-1">*</span>
                   </Label>
 
-                  {slotsLoading && <LoadingSlots />}
+                  {slotsLoading && <LoadingState variant="skeleton-list" rows={6} />}
 
                   {slotsError && (
-                    <ErrorAlert message={slotsError} />
+                    <ErrorState message={slotsError} variant="inline" title="Calendar Error" />
                   )}
 
                   {!slotsLoading && slots.length > 0 && (
@@ -444,7 +404,7 @@ export function CalendarBooking({
                   )}
 
                   {!slotsLoading && !slotsError && slots.length === 0 && (
-                    <p className="text-gray-600 py-6 text-center">
+                    <p className="text-muted-foreground py-6 text-center">
                       No slots available for this date. Please try another date.
                     </p>
                   )}
@@ -454,8 +414,8 @@ export function CalendarBooking({
               {/* STEP 3: Booking Form (shown after slot selected) */}
               {selectedSlot && (
                 <>
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <p className="text-sm text-blue-900">
+                  <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
+                    <p className="text-sm text-primary">
                       <strong>Selected appointment:</strong> {selectedDate?.toLocaleDateString('pl-PL')} at{' '}
                       {new Date(selectedSlot.start).toLocaleTimeString('pl-PL', {
                         hour: '2-digit',
@@ -469,10 +429,10 @@ export function CalendarBooking({
                     <div className="space-y-3">
                       <Label
                         htmlFor="client-name"
-                        className="text-base font-medium text-gray-900"
+                        className="text-base font-medium text-foreground"
                       >
                         Your Name
-                        <span className="text-red-500 ml-1">*</span>
+                        <span className="text-destructive ml-1">*</span>
                       </Label>
                       <Input
                         id="client-name"
@@ -480,11 +440,11 @@ export function CalendarBooking({
                         placeholder="John Doe"
                         {...register('clientName')}
                         aria-invalid={errors.clientName ? 'true' : 'false'}
-                        className={errors.clientName ? 'border-red-500' : ''}
+                        className={errors.clientName ? 'border-destructive' : ''}
                       />
                       {errors.clientName && (
                         <p
-                          className="text-sm text-red-500"
+                          className="text-sm text-destructive"
                           role="alert"
                         >
                           {errors.clientName.message}
@@ -496,10 +456,10 @@ export function CalendarBooking({
                     <div className="space-y-3">
                       <Label
                         htmlFor="client-email"
-                        className="text-base font-medium text-gray-900"
+                        className="text-base font-medium text-foreground"
                       >
                         Email Address
-                        <span className="text-red-500 ml-1">*</span>
+                        <span className="text-destructive ml-1">*</span>
                       </Label>
                       <Input
                         id="client-email"
@@ -507,11 +467,11 @@ export function CalendarBooking({
                         placeholder="you@example.com"
                         {...register('clientEmail')}
                         aria-invalid={errors.clientEmail ? 'true' : 'false'}
-                        className={errors.clientEmail ? 'border-red-500' : ''}
+                        className={errors.clientEmail ? 'border-destructive' : ''}
                       />
                       {errors.clientEmail && (
                         <p
-                          className="text-sm text-red-500"
+                          className="text-sm text-destructive"
                           role="alert"
                         >
                           {errors.clientEmail.message}
@@ -523,7 +483,7 @@ export function CalendarBooking({
                     <div className="space-y-3">
                       <Label
                         htmlFor="appointment-notes"
-                        className="text-base font-medium text-gray-900"
+                        className="text-base font-medium text-foreground"
                       >
                         Additional Notes (Optional)
                       </Label>
@@ -532,14 +492,14 @@ export function CalendarBooking({
                         rows={4}
                         placeholder="Tell us about your case or any special requests..."
                         {...register('notes')}
-                        className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                          errors.notes ? 'border-red-500' : 'border-gray-300'
+                        className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent ${
+                          errors.notes ? 'border-destructive' : 'border-border'
                         }`}
                         aria-invalid={errors.notes ? 'true' : 'false'}
                       />
                       {errors.notes && (
                         <p
-                          className="text-sm text-red-500"
+                          className="text-sm text-destructive"
                           role="alert"
                         >
                           {errors.notes.message}
@@ -552,7 +512,7 @@ export function CalendarBooking({
 
               {/* Submission Error Alert */}
               {submitError && (
-                <ErrorAlert message={submitError} />
+                <ErrorState message={submitError} variant="inline" title="Booking Error" />
               )}
 
               {/* Submit Button (only enabled when slot selected) */}
@@ -561,12 +521,12 @@ export function CalendarBooking({
                   <Button
                     type="submit"
                     disabled={isSubmitting}
-                    className="w-full h-12 text-lg font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                    className="w-full h-12 text-lg font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg shadow-md hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isSubmitting ? (
                       <span className="flex items-center justify-center">
                         <svg
-                          className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                          className="animate-spin -ml-1 mr-3 h-5 w-5 text-primary-foreground"
                           xmlns="http://www.w3.org/2000/svg"
                           fill="none"
                           viewBox="0 0 24 24"

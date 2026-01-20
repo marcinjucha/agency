@@ -118,14 +118,15 @@ function NewsletterForm() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           disabled={isSubscribed}
-          className="bg-slate-800 border-slate-700 text-white placeholder:text-gray-500 focus:border-blue-500"
+          className="bg-card border-border text-foreground placeholder:text-muted-foreground focus:border-primary"
           aria-label="Email address for newsletter"
         />
         <Button
           type="submit"
           disabled={isSubscribed}
           size="sm"
-          className="bg-blue-600 hover:bg-blue-700 text-white"
+          className="bg-primary hover:bg-primary/90 text-primary-foreground"
+          aria-label="Subscribe to newsletter"
         >
           {isSubscribed ? (
             <span className="flex items-center gap-1">
@@ -136,9 +137,9 @@ function NewsletterForm() {
           )}
         </Button>
       </div>
-      {error && <p className="text-red-400 text-xs">{error}</p>}
+      {error && <p className="text-destructive text-xs">{error}</p>}
       {isSubscribed && (
-        <p className="text-green-400 text-xs">
+        <p className="text-primary text-xs">
           Thanks for subscribing! Check your email.
         </p>
       )}
@@ -155,13 +156,13 @@ function FooterColumn({
 }) {
   return (
     <div>
-      <h3 className="text-white font-semibold text-sm mb-4">{title}</h3>
+      <h3 className="text-foreground font-semibold text-sm mb-4">{title}</h3>
       <ul className="space-y-3">
         {links.map((link) => (
           <li key={link.href}>
             <Link
               href={link.href}
-              className="text-gray-400 hover:text-white transition-colors duration-200 text-sm flex items-center gap-1 group"
+              className="text-muted-foreground hover:text-foreground transition-colors duration-200 text-sm flex items-center gap-1 group"
             >
               {link.label}
               <ChevronRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
@@ -185,7 +186,7 @@ function SocialLinks() {
             aria-label={social.ariaLabel}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-gray-400 hover:text-white transition-colors duration-200"
+            className="text-muted-foreground hover:text-foreground transition-colors duration-200"
             title={social.label}
           >
             <Icon className="w-5 h-5" />
@@ -199,17 +200,17 @@ function SocialLinks() {
 
 export function Footer() {
   return (
-    <footer className="bg-slate-900 text-gray-300">
+    <footer className="bg-card text-muted-foreground border-t border-border">
       {/* Main Footer Content */}
-      <div className="border-b border-slate-800">
+      <div className="border-b border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16">
           {/* Top Section: Logo and Newsletter */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12 pb-12 border-b border-slate-800">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12 pb-12 border-b border-border">
             {/* Brand Section */}
             <div>
               <div className="mb-4">
-                <h2 className="text-2xl font-bold text-white">Legal Hub</h2>
-                <p className="text-gray-400 text-sm mt-2 leading-relaxed">
+                <h2 className="text-2xl font-bold text-foreground">Legal Hub</h2>
+                <p className="text-muted-foreground text-sm mt-2 leading-relaxed">
                   Empower your law practice with AI-driven client qualification.
                   Streamline intake, qualify leads, and focus on winning cases.
                 </p>
@@ -217,7 +218,7 @@ export function Footer() {
 
               {/* Social Links */}
               <div className="mt-6">
-                <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-3">
+                <p className="text-muted-foreground text-xs font-semibold uppercase tracking-wider mb-3">
                   Follow us
                 </p>
                 <SocialLinks />
@@ -227,10 +228,10 @@ export function Footer() {
             {/* Newsletter Section */}
             <div className="md:flex md:flex-col md:justify-start">
               <div>
-                <h3 className="text-white font-semibold text-sm mb-2">
+                <h3 className="text-foreground font-semibold text-sm mb-2">
                   Stay Updated
                 </h3>
-                <p className="text-gray-400 text-sm mb-4">
+                <p className="text-muted-foreground text-sm mb-4">
                   Get the latest updates on features and news delivered to your
                   inbox.
                 </p>
@@ -253,32 +254,32 @@ export function Footer() {
       </div>
 
       {/* Copyright Section */}
-      <div className="bg-slate-950">
+      <div className="bg-muted">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <p className="text-gray-500 text-sm text-center sm:text-left">
+            <p className="text-muted-foreground text-sm text-center sm:text-left">
               © 2025 Legal Hub. All rights reserved.
             </p>
 
             {/* Footer Meta Links */}
-            <div className="flex items-center gap-4 text-sm text-gray-500">
+            <div className="flex items-center gap-4 text-sm text-muted-foreground">
               <a
                 href="#sitemap"
-                className="hover:text-gray-300 transition-colors duration-200"
+                className="hover:text-foreground transition-colors duration-200"
               >
                 Sitemap
               </a>
-              <span className="text-gray-600">•</span>
+              <span className="text-muted-foreground/50">•</span>
               <a
                 href="#status"
-                className="hover:text-gray-300 transition-colors duration-200"
+                className="hover:text-foreground transition-colors duration-200"
               >
                 Status
               </a>
-              <span className="text-gray-600">•</span>
+              <span className="text-muted-foreground/50">•</span>
               <a
                 href="#security"
-                className="hover:text-gray-300 transition-colors duration-200"
+                className="hover:text-foreground transition-colors duration-200"
               >
                 Security
               </a>

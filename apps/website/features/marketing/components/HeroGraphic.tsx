@@ -23,6 +23,7 @@ export function HeroGraphic() {
         viewBox="0 0 400 400"
         xmlns="http://www.w3.org/2000/svg"
         preserveAspectRatio="xMidYMid meet"
+        aria-hidden="true"
       >
         {/* Define gradients */}
         <defs>
@@ -128,8 +129,8 @@ export function HeroGraphic() {
       </svg>
 
       {/* Floating label - "Automatyzacja" */}
-      <div className="absolute bottom-12 right-0 bg-white px-4 py-2 rounded-lg shadow-lg border border-blue-100 animate-bounce" style={{ animationDelay: '0.5s' }}>
-        <p className="text-sm font-semibold text-blue-600">Automatyzacja 24/7</p>
+      <div className="absolute bottom-12 right-0 bg-card px-4 py-2 rounded-lg shadow-lg border border-primary/10 animate-bounce" style={{ animationDelay: '0.5s' }}>
+        <p className="text-sm font-semibold text-primary">Automatyzacja 24/7</p>
       </div>
     </div>
   )

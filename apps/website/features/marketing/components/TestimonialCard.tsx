@@ -24,12 +24,12 @@ type TestimonialCardProps = {
  */
 export function TestimonialCard({ testimonial }: TestimonialCardProps) {
   return (
-    <Card className="h-full flex flex-col">
+    <Card className="h-full flex flex-col hover:shadow-lg transition-shadow duration-200">
       <CardContent className="flex flex-col h-full pt-6">
         {/* Stars */}
         <div className="flex gap-1 mb-4">
           {[...Array(5)].map((_, i) => (
-            <span key={i} className="text-xl">
+            <span key={i} className="text-xl text-primary">
               ★
             </span>
           ))}
@@ -37,23 +37,23 @@ export function TestimonialCard({ testimonial }: TestimonialCardProps) {
 
         {/* Quote */}
         <blockquote className="flex-grow mb-6">
-          <p className="text-gray-700 italic leading-relaxed">
+          <p className="text-muted-foreground italic leading-relaxed">
             "{testimonial.quote}"
           </p>
         </blockquote>
 
         {/* Author Info */}
-        <div className="border-t pt-4">
-          <p className="font-semibold text-gray-900">{testimonial.author}</p>
+        <div className="border-t border-border pt-4">
+          <p className="font-semibold text-foreground">{testimonial.author}</p>
 
           {testimonial.company && (
-            <p className="text-sm text-gray-600">{testimonial.company}</p>
+            <p className="text-sm text-muted-foreground">{testimonial.company}</p>
           )}
 
-          <p className="text-sm text-gray-500">{testimonial.city}</p>
+          <p className="text-sm text-muted-foreground">{testimonial.city}</p>
 
           {testimonial.metrics && (
-            <p className="text-sm text-blue-600 font-medium mt-2">
+            <p className="text-sm text-primary font-medium mt-2">
               {testimonial.metrics}
             </p>
           )}

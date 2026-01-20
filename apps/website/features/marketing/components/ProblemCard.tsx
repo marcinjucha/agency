@@ -27,14 +27,14 @@ export function ProblemCard({ problem, number }: ProblemCardProps) {
       <div className="flex items-start gap-4 mb-4">
         {/* Icon */}
         <div className="flex-shrink-0">
-          <div className="flex items-center justify-center w-12 h-12 rounded-lg bg-blue-100">
-            <IconComponent className="w-6 h-6 text-blue-600" />
+          <div className="flex items-center justify-center w-12 h-12 rounded-lg bg-primary/10">
+            <IconComponent className="w-6 h-6 text-primary" />
           </div>
         </div>
 
         {/* Number Badge */}
         <div className="flex-shrink-0">
-          <div className="flex items-center justify-center w-8 h-8 rounded-full bg-gray-200 text-gray-700 text-sm font-semibold">
+          <div className="flex items-center justify-center w-8 h-8 rounded-full bg-muted text-muted-foreground text-sm font-semibold">
             {number}
           </div>
         </div>
@@ -43,12 +43,12 @@ export function ProblemCard({ problem, number }: ProblemCardProps) {
       {/* Content */}
       <div className="flex-grow">
         {/* Headline */}
-        <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-3">
+        <h3 className="text-lg font-semibold text-foreground mb-2 line-clamp-3">
           {problem.headline}
         </h3>
 
         {/* Description */}
-        <p className="text-sm text-gray-600 leading-relaxed">
+        <p className="text-sm text-muted-foreground leading-relaxed">
           {problem.description}
         </p>
       </div>

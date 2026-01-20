@@ -21,10 +21,10 @@ export function Features() {
       <div className="max-w-7xl mx-auto">
         {/* Section Heading */}
         <div className="text-center mb-16">
-          <h2 className="text-4xl font-bold text-gray-900 mb-4">
+          <h2 className="text-4xl font-bold text-foreground mb-4">
             Nasz stos technologiczny
           </h2>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
             Wszystkie narzędzia potrzebne do automatyzacji procesu przyjmowania klientów
           </p>
         </div>

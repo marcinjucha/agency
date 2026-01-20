@@ -285,6 +285,187 @@ const form = useForm({
 
 ---
 
+## App-Specific Patterns
+
+### CMS App (`apps/cms/`)
+
+**Purpose:** Admin dashboard for managing surveys, responses, appointments
+
+**Users:** Internal (lawyers, admins)
+
+**Key Patterns:**
+- **Semantic tables** - AppointmentList, ResponseList with proper ARIA
+- **CRUD forms** - SurveyBuilder, CalendarSettings
+- **Status badges** - Centralized utilities (`apps/cms/lib/utils/status.ts`)
+- **Data-heavy views** - TanStack Query for server state
+- **Protected routes** - All routes behind authentication
+
+**Shared State Components:**
+- Location: `apps/cms/components/shared/`
+- LoadingState, ErrorState, EmptyState
+- Used across all data views
+
+### Website App (`apps/website/`)
+
+**Purpose:** Public marketing site and survey forms
+
+**Users:** External (clients, website visitors)
+
+**Key Patterns:**
+- **Marketing sections** - Landing page components (Hero, Features, Benefits)
+- **Public forms** - SurveyForm, CalendarBooking (no authentication)
+- **Card components** - FeatureCard, BenefitCard, ProblemCard, TestimonialCard
+- **Static data** - No TanStack Query (simple server components)
+- **Consistent hover states** - `hover:shadow-lg transition-shadow duration-200`
+
+**Shared State Components:**
+- Location: `apps/website/components/shared/`
+- LoadingState, ErrorState, EmptyState (same API as CMS)
+- Used in survey forms and booking flows
+
+**Marketing Components:**
+```typescript
+// Card hover pattern (standardized)
+<Card className="h-full p-6 hover:shadow-lg transition-shadow duration-200">
+  // Content
+</Card>
+
+// Hero gradient backgrounds
+<section className="bg-gradient-to-br from-primary/5 via-background to-primary/5">
+  // Content
+</section>
+
+// Call-to-action sections
+<section className="bg-gradient-to-br from-primary to-primary/90">
+  // High-contrast content with primary-foreground text
+</section>
+```
+
+**Survey Components:**
+```typescript
+// SurveyForm - Public survey submission
+import { SurveyForm } from '@/features/survey/components/SurveyForm'
+
+// QuestionField - Multi-type renderer (7 question types)
+// Supports: text, email, tel, textarea, select, radio, checkbox
+
+// CalendarBooking - Multi-step appointment booking
+// Steps: Date picker → Time slots → Booking form → Confirmation
+```
+
+---
+
+## Cross-App Consistency
+
+### MUST Be Consistent Across Both Apps
+
+1. **Design tokens** - Same color variables from `globals.css`
+2. **shadcn/ui components** - Same components from `@legal-mind/ui`
+3. **Accessibility standards** - WCAG 2.1 AA compliance
+4. **Lucide icons** - No emoji (except where intentional)
+5. **Touch targets** - ≥44x44px minimum (use `p-3` for icon buttons)
+6. **Shared component API** - LoadingState, ErrorState, EmptyState
+
+### CAN Be Different
+
+- **CMS:** Table-heavy, admin-focused UI
+- **Website:** Marketing-focused, conversion-optimized
+- **CMS:** TanStack Query for complex data management
+- **Website:** Simple server components, minimal client state
+- **CMS:** Protected routes with authentication
+- **Website:** Public access, no authentication
+
+---
+
+## Shared UI Library (`@legal-mind/ui`)
+
+**Location:** `packages/ui/src/components/ui/`
+
+**Used by:** Both CMS and Website apps
+
+**Core Components:**
+- **Button** - 6 variants (default, secondary, outline, ghost, destructive, link)
+- **Card** - Container component
+- **Badge** - 4 variants (default, secondary, outline, destructive)
+- **Form Controls** - Input, Label, Textarea, Select, Checkbox
+- **Dialog** - Modal dialogs (replaces window.confirm)
+- **Skeleton** - Loading placeholders
+- **Toast** - Notifications
+- **Form** - React Hook Form integration
+
+**Theme Tokens:**
+All components use CSS custom properties from `globals.css`:
+```css
+/* Primary colors */
+--primary: 221.2 83.2% 53.3%
+--primary-foreground: 210 40% 98%
+
+/* Destructive colors */
+--destructive: 0 84.2% 60.2%
+--destructive-foreground: 210 40% 98%
+
+/* Neutral colors */
+--foreground: 222.2 84% 4.9%
+--muted-foreground: 215.4 16.3% 46.9%
+--background: 0 0% 100%
+--muted: 210 40% 96.1%
+--border: 214.3 31.8% 91.4%
+```
+
+**Spacing:** Tailwind scale (2, 4, 6, 8, 12, 16, 24, 32)
+
+**Typography:** rem-based scale with font-semibold/bold
+
+**Installation:**
+```bash
+cd packages/ui && npx shadcn@latest add [component-name]
+```
+
+**Export Pattern:**
+All components exported from `packages/ui/src/index.ts`:
+```typescript
+import { Button, Card, Badge } from '@legal-mind/ui'
+```
+
+---
+
+## Implementation Checklist (New Components)
+
+When creating new components in either app, ensure:
+
+**Theme & Design:**
+- [ ] Uses shadcn/ui components (not native HTML)
+- [ ] Uses theme tokens (not hardcoded colors like `bg-blue-600`)
+- [ ] Follows spacing scale (2, 4, 6, 8, 12, 16, 24, 32)
+- [ ] Follows typography hierarchy (3xl/xl/lg/base/sm)
+- [ ] Uses Lucide icons (not emoji)
+
+**Accessibility:**
+- [ ] Icon buttons have `aria-label`
+- [ ] Form errors linked with `aria-describedby`
+- [ ] Touch targets ≥44x44px (use `p-3` minimum for icon buttons)
+- [ ] Decorative SVGs have `aria-hidden="true"`
+- [ ] Interactive elements keyboard accessible
+
+**Responsive:**
+- [ ] Mobile-first approach (base styles for mobile)
+- [ ] Uses breakpoints: sm/md/lg/xl
+- [ ] Touch-friendly on mobile devices
+
+**State Management:**
+- [ ] Loading states use `LoadingState` component
+- [ ] Error states use `ErrorState` component
+- [ ] Empty states use `EmptyState` component (if applicable)
+- [ ] Forms use React Hook Form + Zod validation
+
+**Code Quality:**
+- [ ] No hardcoded colors (verified with grep)
+- [ ] No arbitrary spacing values
+- [ ] No inline styles
+- [ ] Proper TypeScript types
+
+---
+
 ## Shadows
 
 ```typescript

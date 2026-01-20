@@ -36,9 +36,9 @@ export function QuestionField({
   return (
     <div className="space-y-3">
       {/* Question Label */}
-      <Label htmlFor={id} className="text-base font-medium text-gray-900">
+      <Label htmlFor={id} className="text-base font-medium text-foreground">
         {text}
-        {required && <span className="text-red-500 ml-1">*</span>}
+        {required && <span className="text-destructive ml-1">*</span>}
       </Label>
 
       {/* TEXT / EMAIL / TEL - Use Input component with register */}
@@ -48,7 +48,8 @@ export function QuestionField({
           type={type}
           {...register(id)}
           aria-invalid={error ? 'true' : 'false'}
-          className={error ? 'border-red-500' : ''}
+          aria-describedby={error ? `${id}-error` : undefined}
+          className={error ? 'border-destructive' : ''}
         />
       )}
 
@@ -58,10 +59,11 @@ export function QuestionField({
           id={id}
           {...register(id)}
           rows={4}
-          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-            error ? 'border-red-500' : 'border-gray-300'
+          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary ${
+            error ? 'border-destructive' : 'border-border'
           }`}
           aria-invalid={error ? 'true' : 'false'}
+          aria-describedby={error ? `${id}-error` : undefined}
         />
       )}
 
@@ -70,10 +72,11 @@ export function QuestionField({
         <select
           id={id}
           {...register(id)}
-          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-            error ? 'border-red-500' : 'border-gray-300'
+          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary ${
+            error ? 'border-destructive' : 'border-border'
           }`}
           aria-invalid={error ? 'true' : 'false'}
+          aria-describedby={error ? `${id}-error` : undefined}
         >
           <option value="">Select an option...</option>
           {options?.map((option) => (
@@ -86,7 +89,7 @@ export function QuestionField({
 
       {/* RADIO - Native radio buttons with register */}
       {type === 'radio' && (
-        <div className="space-y-2">
+        <div className="space-y-2" role="radiogroup" aria-describedby={error ? `${id}-error` : undefined}>
           {options?.map((option) => (
             <div key={option} className="flex items-center space-x-2">
               <input
@@ -94,7 +97,8 @@ export function QuestionField({
                 id={`${id}-${option}`}
                 value={option}
                 {...register(id)}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                className="h-4 w-4 text-primary focus:ring-primary"
+                aria-invalid={error ? 'true' : 'false'}
               />
               <label htmlFor={`${id}-${option}`} className="text-sm">
                 {option}
@@ -111,7 +115,7 @@ export function QuestionField({
           control={control}
           defaultValue={[]}
           render={({ field }) => (
-            <div className="space-y-2">
+            <div className="space-y-2" role="group" aria-describedby={error ? `${id}-error` : undefined}>
               {options?.map((option) => (
                 <div key={option} className="flex items-center space-x-2">
                   <input
@@ -128,7 +132,8 @@ export function QuestionField({
                         field.onChange(values.filter((v) => v !== option))
                       }
                     }}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 rounded"
+                    className="h-4 w-4 text-primary focus:ring-primary rounded"
+                    aria-invalid={error ? 'true' : 'false'}
                   />
                   <label htmlFor={`${id}-${option}`} className="text-sm">
                     {option}
@@ -142,7 +147,7 @@ export function QuestionField({
 
       {/* Error Message - Linked to field for accessibility */}
       {error && (
-        <p className="text-sm text-red-500 mt-1" role="alert">
+        <p id={`${id}-error`} className="text-sm text-destructive mt-1" role="alert">
           {error}
         </p>
       )}

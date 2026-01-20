@@ -101,17 +101,17 @@ export function SurveyForm({ survey, linkId, token }: SurveyFormProps) {
   const sortedQuestions = [...survey.questions].sort((a, b) => a.order - b.order)
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-muted/30 to-muted py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-3xl mx-auto">
         <Card className="shadow-xl border-0">
           <div className="p-8 sm:p-12">
             {/* Survey Header */}
-            <div className="mb-8 pb-6 border-b border-gray-200">
-              <h1 className="text-4xl font-bold text-gray-900 mb-3">
+            <div className="mb-8 pb-6 border-b border-border">
+              <h1 className="text-4xl font-bold text-foreground mb-3">
                 {survey.title}
               </h1>
               {survey.description && (
-                <p className="text-lg text-gray-600">{survey.description}</p>
+                <p className="text-lg text-muted-foreground">{survey.description}</p>
               )}
             </div>
 
@@ -131,7 +131,7 @@ export function SurveyForm({ survey, linkId, token }: SurveyFormProps) {
               {/* Submission Error Alert */}
               {submitError && (
                 <div
-                  className="bg-red-50 border-l-4 border-red-500 text-red-700 px-6 py-4 rounded-r shadow-sm"
+                  className="bg-destructive/10 border-l-4 border-destructive text-destructive px-6 py-4 rounded-r shadow-sm"
                   role="alert"
                 >
                   <p className="font-medium">Submission Error</p>
@@ -144,12 +144,12 @@ export function SurveyForm({ survey, linkId, token }: SurveyFormProps) {
                 <Button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full h-12 text-lg font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                  className="w-full h-12 text-lg font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg shadow-md hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isSubmitting ? (
                     <span className="flex items-center justify-center">
                       <svg
-                        className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                        className="animate-spin -ml-1 mr-3 h-5 w-5 text-primary-foreground"
                         xmlns="http://www.w3.org/2000/svg"
                         fill="none"
                         viewBox="0 0 24 24"

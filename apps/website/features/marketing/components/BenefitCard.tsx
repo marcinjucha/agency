@@ -61,16 +61,16 @@ export function BenefitCard({ benefit, icon }: BenefitCardProps) {
   const Icon = getIcon(iconName)
 
   return (
-    <Card className="p-6 h-full flex flex-col gap-4 hover:shadow-lg transition-shadow">
+    <Card className="p-6 h-full flex flex-col gap-4 hover:shadow-lg transition-shadow duration-200">
       {/* Icon */}
-      <div className="flex items-center justify-center w-12 h-12 rounded-lg bg-blue-50">
-        <Icon size={24} className="text-blue-600" aria-hidden="true" />
+      <div className="flex items-center justify-center w-12 h-12 rounded-lg bg-primary/5">
+        <Icon size={24} className="text-primary" aria-hidden="true" />
       </div>
 
       {/* Metric - Prominently Displayed */}
       <div className="flex flex-col gap-1">
         <p
-          className="text-2xl font-bold text-blue-600"
+          className="text-2xl font-bold text-primary"
           role="doc-subtitle"
           aria-label={`Benefit metric: ${benefit.metric}`}
         >
@@ -79,15 +79,15 @@ export function BenefitCard({ benefit, icon }: BenefitCardProps) {
       </div>
 
       {/* Headline */}
-      <h3 className="text-lg font-semibold text-gray-900 leading-snug">
+      <h3 className="text-lg font-semibold text-foreground leading-snug">
         {benefit.headline}
       </h3>
 
       {/* Explanation */}
-      <p className="text-sm text-gray-600 flex-grow">{benefit.explanation}</p>
+      <p className="text-sm text-muted-foreground flex-grow">{benefit.explanation}</p>
 
       {/* Subtext */}
-      <p className="text-xs text-gray-500 italic border-t border-gray-200 pt-3">
+      <p className="text-xs text-muted-foreground italic border-t border-border pt-3">
         {benefit.subtext}
       </p>
     </Card>

@@ -20,10 +20,10 @@ export function Problems() {
       <div className="max-w-7xl mx-auto">
         {/* Section Header */}
         <div className="text-center mb-12">
-          <h2 className="text-3xl sm:text-4xl lg:text-4xl font-bold text-gray-900 mb-4">
+          <h2 className="text-3xl sm:text-4xl lg:text-4xl font-bold text-foreground mb-4">
             Problemy, które rozwiązujemy
           </h2>
-          <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto">
+          <p className="text-base sm:text-lg text-muted-foreground max-w-2xl mx-auto">
             Te wyzwania dotykają każdą małą kancelarię. Tradycyjne procesy kosztują Cię czas, pieniądze i klientów.
           </p>
         </div>

@@ -34,7 +34,7 @@ export default async function SurveyPage({ params }: PageProps) {
   // Handle validation errors
   if (!result.isValid) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 p-6">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-muted/30 to-muted p-6">
         <Card className="max-w-md w-full p-10 text-center shadow-xl border-0">
           <div className="mb-6">
             <svg
@@ -51,10 +51,10 @@ export default async function SurveyPage({ params }: PageProps) {
               />
             </svg>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-3">
+          <h1 className="text-3xl font-bold text-foreground mb-3">
             Survey Unavailable
           </h1>
-          <p className="text-lg text-gray-600">{result.message}</p>
+          <p className="text-lg text-muted-foreground">{result.message}</p>
         </Card>
       </div>
     )

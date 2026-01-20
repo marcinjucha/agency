@@ -32,21 +32,21 @@ export function FAQ() {
       <div className="max-w-4xl mx-auto">
         {/* Section Heading */}
         <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-900">
+          <h2 className="text-3xl md:text-4xl font-bold text-foreground">
             Pytania i odpowiedzi
           </h2>
         </div>
 
         {/* Accordion Container */}
-        <div className="space-y-0 border border-gray-200 rounded-lg overflow-hidden">
+        <div className="space-y-0 border border-border rounded-lg overflow-hidden">
           {FAQS.map((faq, index) => {
             const isExpanded = expandedId === faq.id
 
             return (
               <div
                 key={faq.id}
-                className={`border-b last:border-b-0 ${
-                  isExpanded ? 'bg-blue-50' : 'bg-white hover:bg-gray-50'
+                className={`border-b border-border last:border-b-0 ${
+                  isExpanded ? 'bg-primary/5' : 'bg-card hover:bg-muted/50'
                 } transition-colors`}
               >
                 {/* Question Trigger */}
@@ -60,13 +60,13 @@ export function FAQ() {
                   }}
                   aria-expanded={isExpanded}
                   aria-controls={`faq-answer-${faq.id}`}
-                  className="w-full px-6 py-4 flex items-start justify-between gap-4 hover:bg-opacity-50 transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  className="w-full px-6 py-4 flex items-start justify-between gap-4 hover:bg-opacity-50 transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
                 >
-                  <span className="text-left text-lg font-semibold text-gray-900">
+                  <span className="text-left text-lg font-semibold text-foreground">
                     {faq.question}
                   </span>
                   <ChevronDown
-                    className={`w-5 h-5 text-gray-600 flex-shrink-0 transition-transform duration-300 ${
+                    className={`w-5 h-5 text-muted-foreground flex-shrink-0 transition-transform duration-300 ${
                       isExpanded ? 'rotate-180' : ''
                     }`}
                     aria-hidden="true"
@@ -80,7 +80,7 @@ export function FAQ() {
                     isExpanded ? 'max-h-96' : 'max-h-0'
                   }`}
                 >
-                  <div className="px-6 py-4 text-gray-600 leading-relaxed border-t border-gray-100">
+                  <div className="px-6 py-4 text-muted-foreground leading-relaxed border-t border-border">
                     {faq.answer}
                   </div>
                 </div>

@@ -17,7 +17,7 @@ export default async function SuccessPage({ params, searchParams }: PageProps) {
   const { responseId, linkId } = await searchParams
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-muted/30 to-muted py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto">
         {/* Thank You Section */}
         <div className="mb-12">
@@ -38,11 +38,11 @@ export default async function SuccessPage({ params, searchParams }: PageProps) {
               </svg>
             </div>
 
-            <h1 className="text-3xl font-bold text-gray-900 mb-4">
+            <h1 className="text-3xl font-bold text-foreground mb-4">
               Thank You!
             </h1>
 
-            <p className="text-gray-600">
+            <p className="text-muted-foreground">
               Your survey has been submitted successfully. We will review your responses and get back to you soon.
             </p>
           </Card>
@@ -51,14 +51,14 @@ export default async function SuccessPage({ params, searchParams }: PageProps) {
         {/* Calendar Booking Section */}
         {responseId && linkId ? (
           <div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">
+            <h2 className="text-2xl font-bold text-foreground mb-6">
               Book Your Appointment
             </h2>
             <CalendarBooking surveyId={linkId} responseId={responseId} />
           </div>
         ) : (
           <Card className="p-8">
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800">
+            <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 text-sm text-primary">
               <p className="font-medium mb-1">What's Next?</p>
               <p>You will receive a confirmation email shortly. If you need to book an appointment, check your email for further instructions.</p>
             </div>

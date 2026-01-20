@@ -21,26 +21,22 @@ export function FeatureCard({ feature }: FeatureCardProps) {
 
   return (
     <Card
-      className={`h-full p-6 flex flex-col transition-all duration-200 ${
-        feature.isComingSoon
-          ? 'opacity-75 hover:shadow-md'
-          : 'hover:shadow-lg'
-      }`}
+      className="h-full p-6 flex flex-col hover:shadow-lg transition-shadow duration-200"
     >
       {/* Icon */}
       <div className="flex-shrink-0 mb-4">
         <div
           className={`flex items-center justify-center w-12 h-12 rounded-lg ${
             feature.isComingSoon
-              ? 'bg-gray-100'
-              : 'bg-blue-100'
+              ? 'bg-muted'
+              : 'bg-primary/10'
           }`}
         >
           <IconComponent
             className={`w-6 h-6 ${
               feature.isComingSoon
-                ? 'text-gray-400'
-                : 'text-blue-600'
+                ? 'text-muted-foreground'
+                : 'text-primary'
             }`}
           />
         </div>
@@ -50,13 +46,13 @@ export function FeatureCard({ feature }: FeatureCardProps) {
       <div className="flex-grow">
         {/* Headline with Coming Soon Badge */}
         <div className="flex items-start justify-between gap-2 mb-2">
-          <h3 className="text-lg font-semibold text-gray-900 line-clamp-2">
+          <h3 className="text-lg font-semibold text-foreground line-clamp-2">
             {feature.name}
           </h3>
           {feature.isComingSoon && (
             <Badge
               variant="secondary"
-              className="flex-shrink-0 text-xs whitespace-nowrap bg-gray-200 text-gray-700"
+              className="flex-shrink-0 text-xs whitespace-nowrap"
             >
               Coming Soon
             </Badge>
@@ -64,11 +60,7 @@ export function FeatureCard({ feature }: FeatureCardProps) {
         </div>
 
         {/* Description */}
-        <p className={`text-sm leading-relaxed ${
-          feature.isComingSoon
-            ? 'text-gray-500'
-            : 'text-gray-600'
-        }`}>
+        <p className="text-sm leading-relaxed text-muted-foreground">
           {feature.description}
         </p>
       </div>
