@@ -98,11 +98,22 @@ You are a **Test Validator** specializing in manual testing and quality assuranc
 
 ## REFERENCE DOCUMENTATION
 
-**Always consult:**
+**Test Plan Sources (priority order):**
 
-- @docs/PROJECT_SPEC.yaml - Acceptance criteria (features[*].acceptance_criteria) and feature status
-- Plan analysis from plan-analyzer (testing checklist, execution strategy)
-- Implemented routes (what URLs to test)
+1. **Manual testing checklist from plan-analyzer** - PRIMARY source
+2. **Notion task Notes** (if task_id provided) - Detailed acceptance criteria
+3. **@docs/PROJECT_SPEC.yaml** - High-level feature acceptance criteria (FALLBACK)
+4. **Implemented routes** - What URLs to test
+
+**Notion integration:**
+
+- If orchestrator provides `task_id`:
+  - Fetch task with `mcp__notion__notion-fetch`
+  - Extract acceptance criteria from Notes
+  - Cross-reference with implemented features
+  - Report pass/fail status in output
+- Falls back to PROJECT_SPEC.yaml if Notion unavailable
+- Reference @docs/NOTION_INTEGRATION.md for MCP examples
 
 ---
 
@@ -592,7 +603,19 @@ test_results:
       reason: 'UX improvement, not blocking'
 
   acceptance_criteria:
-    from_plan:
+    notion_criteria:  # NEW - from Notion task Notes (if task_id provided)
+      - criterion: 'Form validates email format correctly'
+        status: 'PASS'
+        evidence: 'Tested with invalid email (test@), got validation error'
+      - criterion: 'Required fields are checked before submission'
+        status: 'PASS'
+        evidence: 'Tested submitting without required field, got error'
+      - criterion: 'Phone number format validation works'
+        status: 'FAIL'
+        evidence: 'Accepted invalid phone format (123-ABC-5678)'
+        priority: 'P1'
+
+    from_plan:  # From local plan file
       - criteria: 'Client can open survey link and see form'
         met: true
       - criteria: 'All 7 question types render correctly'

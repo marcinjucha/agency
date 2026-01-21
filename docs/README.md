@@ -1,8 +1,10 @@
 # Legal-Mind Documentation
 
-> **Central hub for all project documentation**
+> **Central hub for project architecture and technical decisions**
 
-Welcome to Legal-Mind documentation. This directory contains everything you need to understand, build, and maintain the project.
+Welcome to Legal-Mind documentation. This directory contains architecture, design patterns, and technical context.
+
+**For task tracking and roadmap:** See [Notion workspace](https://notion.so) (Agency Projects & Tasks)
 
 ---
 
@@ -10,9 +12,10 @@ Welcome to Legal-Mind documentation. This directory contains everything you need
 
 **New to the project?** Start here:
 
-1. **[PROJECT_ROADMAP.md](./PROJECT_ROADMAP.md)** - Complete project overview, plan, and current status
-2. **[ARCHITECTURE.md](./ARCHITECTURE.md)** - Technical architecture and design decisions
-3. **[PROJECT_SPEC.yaml](./PROJECT_SPEC.yaml)** - Machine-readable specification for AI agents
+1. **[Notion](https://notion.so)** - Current tasks, roadmap, and project status (Source of truth)
+2. **[PROJECT_SPEC.yaml](./PROJECT_SPEC.yaml)** - Architecture decisions and WHY (not WHAT)
+3. **[ARCHITECTURE.md](./ARCHITECTURE.md)** - Technical architecture and system design
+4. **[CODE_PATTERNS.md](./CODE_PATTERNS.md)** - Implementation patterns and examples
 
 ---
 
@@ -22,10 +25,11 @@ Welcome to Legal-Mind documentation. This directory contains everything you need
 
 | Document | Purpose | When to Read |
 |----------|---------|--------------|
-| **[PROJECT_ROADMAP.md](./PROJECT_ROADMAP.md)** | Master plan: vision, architecture, phases, status | **Start here** - Essential context |
-| **[PROJECT_SPEC.yaml](./PROJECT_SPEC.yaml)** | Machine-readable spec: features, dependencies, files (for AI agents) | For structured project data |
-| **[ARCHITECTURE.md](./ARCHITECTURE.md)** | Technical architecture, tech stack, system design, cross-app dependencies | When understanding how things work |
+| **[NOTION_INTEGRATION.md](./NOTION_INTEGRATION.md)** | **Notion integration guide** for agents: how to read tasks, update status, and reference local docs | **Essential for AI agents** - read first |
+| **[PROJECT_SPEC.yaml](./PROJECT_SPEC.yaml)** | WHY we made decisions: tech stack rationale, architecture choices, lightweight acceptance criteria | When understanding context and philosophy |
+| **[ARCHITECTURE.md](./ARCHITECTURE.md)** | Technical architecture, system design, cross-app dependencies | When understanding how things work |
 | **[CODE_PATTERNS.md](./CODE_PATTERNS.md)** | Concrete code examples and implementation patterns | When building features |
+| **[design-system.md](./design-system.md)** | UI/UX guidelines, component library, accessibility standards | When designing interfaces |
 
 ### Architecture Decision Records (ADRs)
 
@@ -33,21 +37,16 @@ Documents explaining **why** we made specific architectural choices:
 
 - **[001-monorepo-structure.md](./adr/001-monorepo-structure.md)** - Why Turborepo
 - **[005-app-vs-features-separation.md](./adr/005-app-vs-features-separation.md)** - Code organization pattern
-- **[006-legal-mind-project-structure.md](./adr/006-legal-mind-project-structure.md)** - Project-specific patterns
 
-### Guides (Coming Soon)
+### Technology Guides
 
-- `guides/getting-started.md` - Quick setup (10 minutes to first build)
-- `guides/development.md` - Local development workflow
-- `guides/deployment.md` - Deploy to Vercel
+Reference guides for learning (12 files in `guides/` directory):
 
-### Historical Documents
+- **Supabase guides** (4 files): GUIDE, QUICK_REFERENCE, RLS_PATTERNS, CASE_STUDY
+- **TanStack Query guides** (4 files): GUIDE, QUICK_REFERENCE, PATTERNS, CASE_STUDY
+- **Turborepo guides** (4 files): GUIDE, QUICK_REFERENCE, PATTERNS, CASE_STUDY
 
-Older documents kept for reference (not actively maintained):
-
-- `archive/architecture-implementation-plan.md` - Original detailed 1385-line implementation plan
-- `archive/recommendation-for-mvp.md` - Early MVP recommendations
-- `archive/sas-product-discussion.md` - Initial product discussions
+*These guides are kept for learning purposes and are not actively maintained.*
 
 ---
 
@@ -55,51 +54,66 @@ Older documents kept for reference (not actively maintained):
 
 ### For AI Assistants (Claude, ChatGPT, etc.)
 
-**Read this first:**
-1. **[PROJECT_ROADMAP.md](./PROJECT_ROADMAP.md)** - Full context in one file
-2. **[PROJECT_SPEC.yaml](./PROJECT_SPEC.yaml)** - Structured spec (parse this for feature details)
-3. **[PROJECT_SPEC_SCHEMA.md](./PROJECT_SPEC_SCHEMA.md)** - How to read the YAML structure
+**IMPORTANT:** Notion is the source of truth for task tracking and roadmap.
 
-**Then reference:**
-- ARCHITECTURE.md for technical details and cross-cutting concerns
-- CODE_PATTERNS.md for implementation patterns
+**Read this first:**
+1. **[NOTION_INTEGRATION.md](./NOTION_INTEGRATION.md)** - **CRITICAL: Integration guide with Notion MCP examples**
+2. **Notion** - Query tasks with status "In Progress" to know what to implement
+3. **[PROJECT_SPEC.yaml](./PROJECT_SPEC.yaml)** - WHY decisions were made (architecture, tech stack rationale)
+4. **[ARCHITECTURE.md](./ARCHITECTURE.md)** - System design and cross-cutting concerns
+5. **[CODE_PATTERNS.md](./CODE_PATTERNS.md)** - Implementation patterns
+
+**Integration pattern (see NOTION_INTEGRATION.md for details):**
+- Phase 0: Read from Notion (tasks with status="In Progress")
+- Phase 1-7: Execute implementation
+- Phase 8: Update Notion (change status to "Done")
+- Reference PROJECT_SPEC.yaml for architecture context (WHY)
+
+**Notion MCP Tools:**
+- `mcp__notion__notion-search` - Find tasks by status
+- `mcp__notion__notion-fetch` - Get task details
+- `mcp__notion__notion-update-page` - Update task status
+- `mcp__notion__notion-create-pages` - Create documentation
 
 ### For New Developers
 
 **Day 1:**
-1. Read PROJECT_ROADMAP.md (Vision + Current Status)
-2. Read ARCHITECTURE.md (Tech Stack)
-3. Follow `guides/getting-started.md` (when available)
+1. Check Notion for current project status (Agency Projects & Tasks)
+2. Read PROJECT_SPEC.yaml (Architecture decisions and WHY)
+3. Read ARCHITECTURE.md (Tech Stack)
 
 **Day 2-7:**
-- Study ADRs to understand patterns
-- Read IMPLEMENTATION_STATUS.md to see what's done
-- Dive into codebase with context
+- Study ADRs to understand patterns (adr/001, adr/005)
+- Read CODE_PATTERNS.md for implementation examples
+- Explore guides/ directory for learning
 
 ### For Project Manager / Stakeholder
 
-**Read:**
-- PROJECT_ROADMAP.md → Sections:
-  - Vision & Goals
-  - Implementation Phases (checkboxes)
-  - Current Status Summary
-  - Next Steps
+**Check Notion for:**
+- Current tasks (status: In Progress, Done, Not Started)
+- Project progress (% complete)
+- Next priorities (what's coming up)
+
+**Check docs/ for:**
+- PROJECT_SPEC.yaml → Architecture and technical context
+- ARCHITECTURE.md → System design overview
 
 ---
 
 ## 📊 Current Project Status
 
-> **As of:** December 12, 2025
+> **As of:** January 21, 2026
 
 | Metric | Value |
 |--------|-------|
-| **Phase** | Phase 1 Complete ✅, Phase 2 In Progress 🚧 |
-| **Progress** | 100% Phase 1, 75% Phase 2 (3/5 features) = 25% MVP |
-| **Commits** | 19 total (cleaned up commit history) |
-| **Deployment** | ✅ Live on Vercel (2 apps) |
-| **Latest Feature** | Dynamic survey form with 7 question types |
+| **Phase** | Phase 4 Complete ✅ (UI/UX improvements) |
+| **Progress** | 80% MVP (Phases 1-4 complete, Phase 5 next) |
+| **Deployment** | ✅ Live on Vercel (2 apps: CMS + Website) |
+| **Latest Feature** | WCAG 2.1 AA compliance, responsive design, component library |
 
-**Next Priority:** Fix form submission (RLS policy) + Build response management in CMS
+**Next Priority:** Phase 5 - n8n Workflows & AI Analysis
+
+**Task Tracking:** Check [Notion](https://notion.so) for current tasks with status "In Progress"
 
 ---
 
@@ -109,13 +123,11 @@ Older documents kept for reference (not actively maintained):
 
 | Question | Document |
 |----------|----------|
-| Understand the project vision | PROJECT_ROADMAP.md → Vision & Goals |
-| Know what's already built | PROJECT_ROADMAP.md → Current Status Summary |
+| Know what to build next | **Notion** → Tasks with status "In Progress" |
 | Understand the architecture | ARCHITECTURE.md |
-| Know what to build next | PROJECT_ROADMAP.md → Next Steps |
-| Understand code organization | adr/005, adr/006 |
-| Set up development environment | guides/getting-started.md (coming soon) |
-| Deploy to production | guides/deployment.md (coming soon) |
+| Understand code organization | adr/005-app-vs-features-separation.md |
+| See implementation patterns | CODE_PATTERNS.md |
+| Understand UI/UX guidelines | design-system.md |
 
 ### "Why did we...?"
 
@@ -123,17 +135,17 @@ Older documents kept for reference (not actively maintained):
 |----------|----------|
 | Use Turborepo | adr/001-monorepo-structure.md |
 | Separate app/ and features/ | adr/005-app-vs-features-separation.md |
-| Use specific folder structure | adr/006-legal-mind-project-structure.md |
-| Choose this tech stack | ARCHITECTURE.md → Tech Stack Decisions |
+| Choose this tech stack | PROJECT_SPEC.yaml → architecture.tech_stack[*].why |
+| Make specific decisions | PROJECT_SPEC.yaml → architecture.key_decisions |
 
 ### "What's the status of...?"
 
 | Question | Document |
 |----------|----------|
-| Overall project progress | PROJECT_ROADMAP.md → Current Status |
-| Specific feature progress | PROJECT_SPEC.yaml → phases.features[*].status |
-| Recent changes | PROJECT_ROADMAP.md → Recent Milestones |
-| Next priorities | PROJECT_ROADMAP.md → Next Steps |
+| Overall project progress | **Notion** → Agency Projects |
+| Specific feature progress | **Notion** → Agency Tasks |
+| Next priorities | **Notion** → Tasks with status "Not Started" |
+| Architecture context | PROJECT_SPEC.yaml → features[*].why |
 
 ---
 
@@ -142,26 +154,30 @@ Older documents kept for reference (not actively maintained):
 ### When to Update
 
 **After completing a feature:**
-- [x] Update PROJECT_SPEC.yaml (change status: pending → complete, mark acceptance_criteria as verified)
-- [x] Update PROJECT_ROADMAP.md (change [x] for completed items, update progress %)
-- [x] Commit changes with: `docs: update status after [feature name]`
+- [x] Update Notion task status (In Progress → Done) - **PRIMARY**
+- [x] Optionally update PROJECT_SPEC.yaml if architecture decisions changed
+- [x] Commit changes with: `docs: update after [feature name]`
 
 **After making architectural decision:**
 - [ ] Create new ADR in `adr/` directory
-- [ ] Update ARCHITECTURE.md if high-level changes (especially "Cross-Cutting Concerns" section)
-- [ ] Reference ADR in PROJECT_ROADMAP.md if relevant
+- [ ] Update ARCHITECTURE.md if high-level changes
+- [ ] Update PROJECT_SPEC.yaml → architecture.key_decisions if needed
 
 **After major milestone:**
-- [ ] Update PROJECT_SPEC.yaml (update phase progress, mark features complete)
-- [ ] Update PROJECT_ROADMAP.md → Current Status Summary + Recent Milestones
-- [ ] Update both file `last_updated` dates
+- [ ] Update Notion project progress
+- [ ] Update PROJECT_SPEC.yaml → status_summary if phase complete
+- [ ] Update README.md → Current Project Status
 
 ### How to Update
 
-1. Edit the relevant file(s)
-2. Update "Last Updated" date
+**Notion updates (PRIMARY):**
+1. Agents automatically update task status after implementation
+2. User manually updates priorities and creates new tasks
+
+**Local docs updates (SECONDARY):**
+1. Edit PROJECT_SPEC.yaml only for architecture changes (WHY, not WHAT)
+2. Update "last_updated" date
 3. Commit with descriptive message
-4. Push to repository
 
 ---
 
@@ -169,21 +185,20 @@ Older documents kept for reference (not actively maintained):
 
 ### Our Standards
 
-1. **Single Source of Truth:** PROJECT_ROADMAP.md is the master document
-2. **Keep It Updated:** Update docs in same commit as code changes
-3. **Write for Humans:** Clear, concise, scannable
-4. **Provide Context:** Explain "why", not just "what"
-5. **Use Examples:** Code snippets, diagrams, real scenarios
+1. **Notion = Source of Truth:** Task tracking, roadmap, and WHAT to build lives in Notion
+2. **Local Docs = WHY Context:** Architecture decisions, tech stack rationale, design patterns
+3. **Signal vs Noise:** Focus on WHY decisions were made, not detailed acceptance criteria
+4. **Write for Humans:** Clear, concise, scannable
+5. **Provide Context:** Explain rationale behind choices
 
 ### Document Types
 
-- **PROJECT_ROADMAP.md:** Living document - narrative plan with timelines (updated frequently)
-- **PROJECT_SPEC.yaml:** Machine-readable spec for AI agents (updated when features change)
-- **PROJECT_SPEC_SCHEMA.md:** Documentation of YAML structure (stable, rarely changes)
-- **ARCHITECTURE.md:** Technical design (stable, updated on major changes or new cross-cutting concerns)
+- **Notion (PRIMARY):** Task tracking, roadmap, detailed acceptance criteria (updated daily by agents)
+- **PROJECT_SPEC.yaml (SECONDARY):** WHY we made decisions (architecture, tech stack rationale, lightweight acceptance criteria)
+- **ARCHITECTURE.md:** Technical design (stable, updated on major changes)
 - **ADRs:** Immutable decision records (never edit, only add new)
-- **CODE_PATTERNS.md:** How-to examples (updated with new patterns)
-- **Guides:** How-to documents (not yet created)
+- **CODE_PATTERNS.md:** Implementation examples (updated with new patterns)
+- **Guides:** Technology references (stable, for learning)
 
 ---
 
@@ -219,8 +234,8 @@ Older documents kept for reference (not actively maintained):
 
 ---
 
-**Last Updated:** December 12, 2025
-**Maintained By:** Development Team
-**Next Review:** After Phase 3 completion
+**Last Updated:** January 21, 2026
+**Maintained By:** Development Team + AI Agents
+**Next Review:** After Phase 5 completion (n8n & AI)
 
-*This README serves as the central index for all documentation. Start with PROJECT_ROADMAP.md for complete project context.*
+*This README serves as the central index for all documentation. Start with Notion for task tracking, then check PROJECT_SPEC.yaml for architecture context.*

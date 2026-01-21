@@ -334,10 +334,87 @@ ambiguities_detected:
 action: ASK_USER_BEFORE_CONTINUING
 ```
 
+**If Notion task provided:**
+
+- Check if task Notes contain clear plan content
+- If Notes are vague: "Task Notes in Notion are incomplete. Please clarify: [list ambiguities]"
+- If Skills Project (Type = 🎓 Learning OR has `📚 Skills Projects` relation): "⚠️ This task is linked to Skills Projects - aborting. Use agency tasks only."
+
 **If NO ambiguities found:**
 
 - Plan is clear and detailed
 - Proceed directly to Step 1
+
+---
+
+## NOTION CONTEXT (OPTIONAL)
+
+**Reference:** See @docs/NOTION_INTEGRATION.md for Notion MCP examples
+
+**When Notion task provided by orchestrator:**
+
+The orchestrator may provide Notion task context when using `--notion-task-id` parameter. This is OPTIONAL - not all invocations will have Notion context.
+
+**Task details available:**
+
+```yaml
+notion_context:
+  task_id: "abc123"
+  task_name: "Implement Redis caching"
+  task_notes: |
+    # Detailed implementation plan
+    - Add Redis client
+    - Create caching layer
+    - Update queries to use cache
+  project: "Legal-Mind MVP"
+  priority: "🔴 Urgent"
+  deadline: "2026-01-25"
+```
+
+**Use Notion context to:**
+
+1. **Validate plan aligns with task description**
+   - Check task name matches plan intent
+   - Ensure Notes provide clear implementation details
+
+2. **Check for project-level dependencies**
+   - If task links to project, can reference project context
+   - Check project Type and Skills Projects relation
+
+3. **Reference deadline for complexity estimation**
+   - If deadline is urgent, flag in analysis
+   - Suggest skipping non-critical steps if time-constrained
+
+4. **Warn if Skills Project detected**
+   - If project Type = "🎓 Learning" → ABORT analysis
+   - If project has `📚 Skills Projects` relation → ABORT analysis
+   - Skills Projects are personal learning, not agency work
+
+**Example workflow with Notion:**
+
+```yaml
+# Orchestrator provides Notion context
+notion_context:
+  task_id: "abc123"
+  task_name: "Add Redis caching layer"
+  project_type: "🏗️ Infrastructure"  # NOT "🎓 Learning" ✅
+  priority: "🔴 Urgent"
+
+# Step 0: Check Notion context
+skills_project_check: false  # Good - agency work
+plan_clarity: "clear"  # Task Notes have detailed plan
+
+# Proceed with analysis
+analysis:
+  complexity: "medium"
+  urgency_note: "Priority is Urgent - consider skipping optional documentation"
+```
+
+**Fallback if no Notion context:**
+
+- Orchestrator didn't provide `--notion-task-id`
+- This is a local plan workflow
+- Continue analysis normally with plan file
 
 ---
 

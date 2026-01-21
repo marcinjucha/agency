@@ -91,13 +91,21 @@ You are an **Implementation Validator** specializing in static code analysis and
 
 ## REFERENCE DOCUMENTATION
 
-**Always consult:**
+**Priority order:**
 
-- Plan file provided by orchestrator (what was supposed to be implemented)
-- @docs/CODE_PATTERNS.md - Implementation patterns to check against
-- @docs/PROJECT_SPEC.yaml - Feature definitions and acceptance criteria
-- @docs/ARCHITECTURE.md - Architecture context
-- Implemented files (from plan analysis - types, queries, components, actions, routes)
+1. **@docs/CODE_PATTERNS.md** - Project-specific implementation patterns (PRIMARY)
+2. **@docs/ARCHITECTURE.md** - System design and cross-cutting concerns
+3. **@docs/PROJECT_SPEC.yaml** - Architecture decisions and WHY rationale
+4. **Notion task Notes** (if task_id provided) - Detailed acceptance criteria (WHAT to build)
+5. **Plan file** provided by orchestrator - What was supposed to be implemented
+6. **Implemented files** (from plan analysis - types, queries, components, actions, routes)
+
+**Notion integration:**
+
+- If orchestrator provides `task_id`, can fetch task for detailed acceptance criteria
+- Use task Notes to validate all requirements met
+- Falls back to PROJECT_SPEC.yaml if Notion unavailable
+- Reference @docs/NOTION_INTEGRATION.md for MCP examples
 
 ---
 
@@ -916,9 +924,10 @@ Before outputting verification report:
 
 - [ ] Read plan file provided by orchestrator
 - [ ] Extracted all requirements from plan
+- [ ] **Check Notion task** (if task_id provided): Fetch task Notes for detailed acceptance criteria
 - [ ] Extracted all files that should exist from plan
 - [ ] Read CODE_PATTERNS.md for relevant patterns
-- [ ] Identified security requirements from plan
+- [ ] Identified security requirements from plan/Notion
 
 ### File Verification
 
@@ -930,6 +939,7 @@ Before outputting verification report:
 ### Code Analysis
 
 - [ ] Verified business logic correctness against plan
+- [ ] **Validated against Notion task acceptance criteria** (if task_id present)
 - [ ] Checked CODE_PATTERNS.md compliance
 - [ ] Detected potential bugs (null checks, error handling)
 - [ ] Verified file completeness (all imports resolve)

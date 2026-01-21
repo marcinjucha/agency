@@ -19,7 +19,7 @@ Systematically implement a planned feature/phase by orchestrating specialized ag
 ## Usage
 
 ```bash
-/implement-phase [plan-reference] [--auto]
+/implement-phase [plan-reference] [--auto] [--notion-task-id=<task-id>]
 ```
 
 **Examples:**
@@ -28,14 +28,31 @@ Systematically implement a planned feature/phase by orchestrating specialized ag
 /implement-phase Phase 2
 /implement-phase survey-form
 
+# With Notion task (NEW) - reads task from Notion, syncs status to "Done"
+/implement-phase --notion-task-id=29284f14-76e0-8012-abc123
+
 # Automated mode - run all phases without confirmation
 /implement-phase Phase 2 --auto
 /implement-phase ~/.claude/plans/abundant-waddling-rossum.md --auto
+
+# Notion task + automated mode
+/implement-phase --notion-task-id=29284f14-76e0-8012-abc123 --auto
 ```
+
+**Parameters:**
+- `plan-reference` - Phase name or path to plan file (e.g., "Phase 2", "~/.claude/plans/plan.md")
+- `--auto` - Run all phases without manual approval (except manual testing)
+- `--notion-task-id=<task-id>` - Use Notion task as source, sync status when complete
 
 **Modes:**
 - **Interactive (default):** Waits for user approval after each phase
 - **Automated (--auto):** Runs all phases sequentially, only stops on P0 failures
+- **Notion Integration:** If `--notion-task-id` provided, reads from Notion and syncs status to "Done" after completion
+
+**Behavior:**
+- If `--notion-task-id` provided: Fetch task from Notion, use task Notes as plan, sync status after Phase 8
+- If plan file provided: Traditional workflow (read local file)
+- Falls back to local if Notion unavailable
 
 ---
 
@@ -107,6 +124,187 @@ Phase 10: Complete!
 
 ---
 
+## NOTION INTEGRATION WORKFLOW
+
+**Reference:** See @docs/NOTION_INTEGRATION.md for complete MCP examples and patterns
+
+### Overview
+
+When `--notion-task-id` is provided, the workflow integrates with Notion:
+- **Phase 0:** Reads task from Notion (Name, Notes, Projects context)
+- **Phases 1-7:** Execute normally (using Notes as plan content)
+- **Phase 8:** docs-updater syncs status to "Done" and adds completion notes
+- **Phase 9:** git-specialist creates commit
+
+### Phase 0: Reading from Notion (plan-analyzer)
+
+**When Notion task provided:**
+
+```typescript
+// Step 1: Fetch task details
+const task = await mcp__notion__notion-fetch({
+  id: notionTaskId
+});
+
+// Step 2: Extract plan from task
+const planContent = task.properties.Notes;  // Task description
+const taskName = task.properties.Name;      // Task title
+const priority = task.properties.Priority;  // Optional context
+const deadline = task.properties.Deadline;  // Optional context
+
+// Step 3: Check for Skills Projects (FILTER OUT)
+const projectRelation = task.properties["📊 Projects"];
+if (projectRelation) {
+  const project = await mcp__notion__notion-fetch({ id: projectId });
+
+  // Method 1: Check Type property (PRIMARY)
+  const projectType = project.properties["Type"]?.select?.name;
+  if (projectType === "🎓 Learning") {
+    // ABORT - This is personal learning, not agency work
+    throw new Error("Skills Project detected - use agency tasks only");
+  }
+
+  // Method 2: Check Skills Projects relation (FALLBACK)
+  if (project.properties["📚 Skills Projects"]?.length > 0) {
+    // ABORT - This is a Skills Project
+    throw new Error("Skills Project detected - use agency tasks only");
+  }
+}
+
+// Step 4: Pass to plan-analyzer
+const planAnalysis = await planAnalyzer({
+  taskName: taskName,
+  planContent: planContent,
+  notionContext: {
+    task_id: notionTaskId,
+    project_id: projectId,
+    priority: priority,
+    deadline: deadline
+  }
+});
+```
+
+**Status Values (IMPORTANT):**
+- Notion statuses are **case-sensitive with spaces**
+- ✅ Correct: `"In Progress"`, `"Done"`
+- ❌ Wrong: `"in_progress"`, `"done"`, `"in-progress"`
+
+**Fallback Strategy:**
+```yaml
+If Notion API unavailable:
+  - Log warning: "Notion API unavailable, falling back to local plan"
+  - Read from local plan file (if provided)
+  - Continue execution with available data
+  - Phase 8 skips Notion sync (sync_status: "failed")
+```
+
+### Phase 8: Syncing to Notion (docs-updater)
+
+**When Notion task provided:**
+
+docs-updater receives `notion_task_id` from orchestrator and:
+
+```typescript
+// 1. Update task status in Notion
+await mcp__notion__notion-update-page({
+  data: {
+    page_id: notionTaskId,
+    command: "update_properties",
+    properties: {
+      "Status": "Done"  // Change from "In Progress" to "Done"
+    }
+  }
+});
+
+// 2. Add completion notes to task
+await mcp__notion__notion-update-page({
+  data: {
+    page_id: notionTaskId,
+    command: "insert_content_after",
+    selection_with_ellipsis: "## Notes...",
+    new_str: "\n\n## Completion Summary\n- Implementation complete\n- All acceptance criteria met\n- Build verified successfully"
+  }
+});
+
+// 3. Optionally create documentation page (complex features only)
+// See @docs/NOTION_INTEGRATION.md for examples
+```
+
+**Orchestrator passes to docs-updater:**
+```yaml
+notion_context:
+  task_id: "29284f14-76e0-8012-8708-abc123"
+  task_url: "https://notion.so/29284f14-76e0-8012-8708-abc123"
+  sync_required: true
+```
+
+### State Tracking with Notion
+
+```json
+{
+  "mode": "interactive | automated",
+  "planFile": "~/.claude/plans/example.md | null",
+  "notion_task_id": "29284f14-76e0-8012-8708-abc123",
+  "notion_task_url": "https://notion.so/29284f14-76e0-8012-8708-abc123",
+  "notion_sync_status": "pending | synced | failed",
+  "currentPhase": "2a",
+  "completedPhases": ["0", "1", "2a"],
+  "outputs": {
+    "phase0": {
+      "strategy": "...",
+      "notion_context": {
+        "task_id": "abc123",
+        "task_name": "Implement Redis caching",
+        "project": "Legal-Mind MVP",
+        "priority": "🔴 Urgent"
+      }
+    }
+  }
+}
+```
+
+### Error Handling
+
+**Notion API Unavailable:**
+```markdown
+⚠️ Notion API unavailable
+
+Falling back to local plan file (if provided)
+
+Phase 0-7: Execute using local data
+Phase 8: Skip Notion sync (status: failed)
+
+Output includes: notion_sync_status: "failed"
+```
+
+**Task Not Found:**
+```markdown
+❌ Notion task not found
+
+Task ID: 29284f14-76e0-8012-abc123
+
+Verify:
+- Task ID is correct (UUID format)
+- Task exists in Agency Tasks database
+- Notion MCP connection is active
+
+**Commands:** `retry` | `use-local` | `stop`
+```
+
+**Skills Project Detected:**
+```markdown
+⚠️ Skills Project detected
+
+This task is linked to a Skills Project (Type: 🎓 Learning).
+Agency implementation workflows only process agency work.
+
+**Reason:** Personal learning projects should not trigger automated agents.
+
+**Commands:** `select-different-task` | `stop`
+```
+
+---
+
 ## Phase Descriptions
 
 ### Phase 0: Plan Analysis
@@ -114,6 +312,16 @@ Phase 10: Complete!
 **Agent:** `plan-analyzer`
 
 **Purpose:** Analyze plan and create optimized execution strategy
+
+**Input Sources (priority order):**
+1. **Notion task** (if `--notion-task-id` provided) - **PRIMARY**
+2. **Local plan file** (if path provided) - **FALLBACK**
+
+**When Notion task provided:**
+- Fetch task with `mcp__notion__notion-fetch`
+- Extract: Name (title), Notes (plan content), Projects (context)
+- Check project for Skills Projects relation → filter out if present
+- Pass to plan-analyzer: "Analyze this Notion task: [Name]\n\n[Notes]"
 
 **Analyzes:**
 - File dependencies (what must be created before what)
@@ -129,7 +337,7 @@ Phase 10: Complete!
 - Ambiguous architecture decisions (which approach to use?)
 - Undefined edge cases (what happens when...?)
 
-**Output:** YAML with execution strategy, dependencies, agents needed
+**Output:** YAML with execution strategy, dependencies, agents needed, **notion_context** (if Notion task)
 
 **Commands:**
 - `continue` - Proceed with execution (after clarifying ambiguities)
@@ -523,12 +731,27 @@ Report: pass | check (see logs) | stop
 
 **Purpose:** Update documentation with progress and results
 
+**Input:**
+- Test results from Phase 7
+- **Notion task_id** (if Notion workflow) - **CRITICAL: Pass this to agent**
+
 **Updates:**
 - @docs/PROJECT_SPEC.yaml (mark features complete, update acceptance_criteria verified: true)
-- @docs/PROJECT_ROADMAP.md (mark tasks [x], progress %, milestones)
-- Creates summary for git-specialist
+- **Notion task** (if task_id present):
+  - Update Status: "In Progress" → "Done"
+  - Add completion notes to task Notes
+  - Optionally create doc page in Documentation database
+- Creates YAML summary for git-specialist
 
-**Output:** Documentation updated, summary ready for git-specialist
+**Orchestrator must pass:**
+```yaml
+notion_context:
+  task_id: "29284f14-76e0-8012-8708-abc123"  # From Phase 0
+  task_url: "https://notion.so/29284f14-76e0-8012-8708-abc123"
+  sync_required: true
+```
+
+**Output:** Documentation updated (local + Notion), summary ready for git-specialist
 
 **Commands:**
 - `approve` - Approve documentation updates
@@ -649,7 +872,7 @@ Task(subagent_type="git-specialist", description="Create git commit", prompt="..
 3. **Sequential execution (Interactive mode):** Wait for user approval before next phase
 4. **Automated mode (--auto flag):** Run all phases without waiting, only stop on P0 test failures
 5. **Context passing:** Pass plan analysis + previous outputs to each agent
-6. **State tracking:** Track currentPhase, completedPhases, skippedPhases, outputs, mode (interactive/auto)
+6. **State tracking:** Track currentPhase, completedPhases, skippedPhases, outputs, mode (interactive/auto), **notion_task_id**, **notion_sync_status**
 7. **DO NOT just describe:** ACTUALLY INVOKE TOOLS - use Task tool with correct subagent_type
 8. **Handle failures:** If agent fails, offer retry/details/stop (or auto-retry in --auto mode)
 9. **P0 bugs block merge:** Test failures with P0 severity ALWAYS require user intervention (even in --auto)
@@ -658,6 +881,14 @@ Task(subagent_type="git-specialist", description="Create git commit", prompt="..
 12. **Implementation verification:** After Phase 5 (Routes), ALWAYS run Phase 6 (implementation-validator) to catch code issues before manual testing
 13. **NEVER skip Phase 7:** Phase 7 (Manual Testing) is REQUIRED - user must test before docs
 14. **ALWAYS use correct agent:** Reference Agent Mapping table - never guess or use wrong subagent_type
+15. **Notion Integration:**
+    - ALWAYS pass notion_task_id to docs-updater if present (Phase 8)
+    - ALWAYS check for Skills Projects in Phase 0 (filter out if present)
+    - NEVER proceed with Skills Projects tasks (Type = 🎓 Learning)
+    - ALWAYS fall back to local plan if Notion unavailable
+16. **Notion Status Values:** Use exact values: `"In Progress"`, `"Done"` (case-sensitive with spaces)
+17. **Notion MCP Reference:** See @docs/NOTION_INTEGRATION.md for complete MCP patterns and examples
+18. **Skills Projects Filtering:** If project Type = "🎓 Learning" OR has `📚 Skills Projects` relation → ABORT with error message
 
 ### Build Verification Checkpoints
 
@@ -798,12 +1029,24 @@ Report: pass | fix-and-retry | stop
 ```json
 {
   "mode": "interactive | automated",
-  "planFile": "~/.claude/plans/example.md",
+  "planFile": "~/.claude/plans/example.md | null",
+  "notion_task_id": "29284f14-76e0-8012-8708-abc123",
+  "notion_task_url": "https://notion.so/29284f14-76e0-8012-8708-abc123",
+  "notion_sync_status": "pending | synced | failed",
   "currentPhase": "2a",
   "completedPhases": ["0", "1", "2a"],
   "skippedPhases": [],
   "outputs": {
-    "phase0": { "strategy": "..." },
+    "phase0": {
+      "strategy": "...",
+      "notion_context": {
+        "task_id": "abc123",
+        "task_name": "Implement Redis caching",
+        "project": "Legal-Mind MVP",
+        "priority": "🔴 Urgent",
+        "deadline": "2026-01-25"
+      }
+    },
     "phase1": { "migration": "...", "types_regenerated": true },
     "phase2a": { "file": "types.ts" },
     "phase2b": { "files": ["queries.ts", "validation.ts"] }

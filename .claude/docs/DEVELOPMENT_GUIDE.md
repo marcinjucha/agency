@@ -1,10 +1,10 @@
-# Development Guide - Digital Shelf iOS
+# Development Guide - Legal-Mind
 
 **For:** Human developers building features in this codebase
 
 **Core Philosophy:** Signal over Noise - Focus on high-value work
 
-**Related:** See `.claude/SIGNAL_VS_NOISE_PHILOSOPHY.md` for universal concept
+**Related:** See `.claude/docs/SIGNAL_VS_NOISE_PHILOSOPHY.md` for universal concept
 
 ---
 
@@ -37,43 +37,51 @@
 ### Examples
 
 **✅ Write These:**
-```swift
+```typescript
 // Complete user journey (passes all 3 questions)
-func testUserCompletesRouteCaptureAndUploadSucceeds() async {
-    await sut.send(.onAppear)
-    await sut.receive(\.routesLoaded)
-    await sut.send(.routeTapped(routeId))
-    await sut.receive(\.navigateToDetails)
-    await sut.send(.captureCompleted(image))
-    await sut.receive(\.uploadCompleted)
+test('lawyer creates survey, generates link, client submits form', async () => {
+  // 1. Lawyer creates survey
+  const survey = await createSurvey({ title: 'Client Intake' })
+  expect(survey.id).toBeDefined()
 
-    XCTAssertEqual(analytics.captureCompletedCount, 1)
-}
+  // 2. Generate link
+  const link = await generateSurveyLink(survey.id)
+  expect(link.token).toBeDefined()
+
+  // 3. Client submits
+  const response = await submitSurveyResponse(link.token, { answers: {...} })
+  expect(response.status).toBe('new')
+
+  // 4. Lawyer sees response
+  const responses = await getResponses()
+  expect(responses).toHaveLength(1)
+})
 
 // Error handling (passes all 3)
-func testUploadFailureShowsRetryOption() async {
-    await sut.send(.uploadButtonTapped)
-    useCase.stubbedUploadResult.send(.failure(NetworkError.offline))
+test('expired survey link shows error to client', async () => {
+  const expiredLink = await createExpiredLink()
 
-    await sut.receive(\.uploadFailed) {
-        $0.showRetryButton = true
-    }
-}
+  const result = await submitSurveyResponse(expiredLink.token, { answers: {...} })
+
+  expect(result.error).toBe('Link expired')
+  expect(result.success).toBe(false)
+})
 ```
 
 **❌ Skip These:**
-```swift
+```typescript
 // Obvious computed property (fails Q2, Q3)
-func testIsButtonEnabledWhenInputNotEmpty() {
-    state.input = "text"
-    XCTAssertTrue(state.isButtonEnabled)
-}
+test('survey has title', () => {
+  const survey = { title: 'Test' }
+  expect(survey.title).toBe('Test')
+})
 
 // Implementation detail (fails Q1)
-func testOnAppearCallsUseCaseInitialize() async {
-    await sut.send(.onAppear)
-    XCTAssertEqual(useCase.initializeCallCount, 1)
-}
+test('getSurveys calls supabase.from', async () => {
+  const spy = vi.spyOn(supabase, 'from')
+  await getSurveys()
+  expect(spy).toHaveBeenCalledWith('surveys')
+})
 ```
 
 ### Testing ROI
@@ -105,86 +113,61 @@ func testOnAppearCallsUseCaseInitialize() async {
 **User profile screen:**
 ```
 ✅ Right-sized (3 layers):
-Model → Repository → Use Case → TCA + View
+Types → Queries/Actions → Component
 
 ❌ Over-engineered (5 layers):
-User + UserProfile + UserSettings models
+User + UserProfile + UserSettings types
 → UserRepository + ProfileRepository
 → UserProfileService + ValidationService
 → LoadUseCase + UpdateUseCase
-→ Coordinator + TCA + View
+→ Multiple components
 ```
 
 **Why simpler wins:**
-- Half the files (6 vs 12+)
-- Faster to build (3h vs 6h)
+- Half the files (3 vs 10+)
+- Faster to build (2h vs 4h)
 - Easier to change
 - No unused code
 
 **Add complexity when second use appears**
 
-### Service vs Use Case Decision
+### Shared Package Decision
 
 **Simple rule:**
 
-**Create Service when:**
-- ✅ Combining 2+ repositories (prevents cycles)
-- ✅ Complex algorithm (calculations, data merging)
+**Create shared package when:**
+- ✅ Used by 2+ apps NOW (CMS + Website)
+- ✅ Type definitions (database types)
+- ✅ UI components (forms, buttons)
 
-**Use Case enough when:**
-- ✅ Simple orchestration (delegates to repo)
-- ✅ No complex logic
+**Keep in app when:**
+- ✅ Single app usage
+- ✅ Feature-specific logic
+- ✅ Not yet reused
 
 **Example:**
 
-```swift
-// ✅ Service needed (combines 5 repos)
-final class RouteWithHistoryService {
-    @Dependency(\.routeData) var routeData
-    @Dependency(\.history) var history
-    @Dependency(\.uploads) var uploads
-    @Dependency(\.aisles) var aisles
-    @Dependency(\.network) var network
+```typescript
+// ✅ Shared package needed (used by both apps)
+packages/ui/src/components/Button.tsx
+packages/database/src/types.ts
+packages/validators/src/survey.ts
 
-    // Complex merging logic
-}
-
-// ✅ Use Case enough (thin delegation)
-final class ProfileUseCase {
-    @Dependency(\.userRepository) var userRepo
-
-    var userPublisher: AnyPublisher<User, Never> {
-        userRepo.currentUserPublisher
-    }
-}
-```
-
-### Never: Repository→Repository
-
-```swift
-// ❌ NEVER
-final class RouteRepository {
-    @Dependency(\.uploadRepository) var uploadRepo  // Cycle risk!
-}
-
-// ✅ INSTEAD - Service
-final class RouteWithUploadService {
-    @Dependency(\.routeRepository) var routeRepo
-    @Dependency(\.uploadRepository) var uploadRepo
-    // Service combines both
-}
+// ✅ App-specific (only CMS uses)
+apps/cms/features/surveys/actions.ts
+apps/cms/features/responses/queries.ts
 ```
 
 ### Abstractions: Wait for 2+ Uses
 
 **Don't abstract until concrete second use:**
 
-```swift
-// Feature 1: Route filtering
+```typescript
+// Feature 1: Survey filtering
 // ❌ DON'T create generic FilterService<T>
 // (Don't know pattern yet)
 
-// Feature 2: Module filtering
+// Feature 2: Response filtering
 // ✅ NOW create FilterService<T>
 // (Pattern is clear)
 ```
@@ -200,64 +183,75 @@ final class RouteWithUploadService {
 **P0 - Production Blockers (70% time):**
 
 **Database N+1 queries (30%):**
-```swift
+```typescript
 // ❌ P0 ISSUE - 100 queries
-for route in routes {
-    let modules = try RouteModule
-        .filter(Column("routeId") == route.id)
-        .fetchAll(db)  // Separate query per route!
+for (const survey of surveys) {
+  const links = await supabase
+    .from('survey_links')
+    .select('*')
+    .eq('survey_id', survey.id)  // Separate query per survey!
 }
 // Impact: 1s → 10s
 
-// ✅ FIX - 1 query
-let routesWithModules = try Route
-    .including(all: Route.modules)
-    .fetchAll(db)
+// ✅ FIX - 1 query with join
+const { data } = await supabase
+  .from('surveys')
+  .select(`
+    *,
+    survey_links(*)
+  `)
 // Impact: 10s → 100ms (100x faster)
 ```
 
-**Image batch processing (30%):**
-```swift
-// ❌ P0 ISSUE - UI freeze
-for image in images {  // 300 images sync!
-    let data = exportOptions.data(from: image)
-    upload(data)
+**Large data serialization (30%):**
+```typescript
+// ❌ P0 ISSUE - Serialize huge objects
+export async function getResponses() {
+  const { data } = await supabase
+    .from('responses')
+    .select('*')  // Returns all JSONB data!
+  return data  // 5MB JSON serialized to client
 }
-// Impact: UI frozen 30+ seconds
+// Impact: 5s load time
 
-// ✅ FIX - Async with limit
-await withThrowingTaskGroup { group in
-    for image in images {
-        group.addTask {
-            await autoreleasepool {
-                let data = await exportOptions.dataAsync(from: image)
-                try await upload(data)
-            }
-        }
-    }
+// ✅ FIX - Select only what you need
+export async function getResponses() {
+  const { data } = await supabase
+    .from('responses')
+    .select('id, status, created_at, survey_links(survey_id)')
+  return data  // 50KB
 }
-// Impact: UI responsive
+// Impact: 5s → 500ms (10x faster)
 ```
 
-**Missing .share() (10%):**
-```swift
-// ❌ P0 ISSUE - Memory leak
-var publisher: AnyPublisher<[Route], Never> {
-    routeRepo.publisher  // Each subscription = new DB connection!
+**Missing TanStack Query cache (10%):**
+```typescript
+// ❌ P0 ISSUE - No caching
+function SurveyList() {
+  const [surveys, setSurveys] = useState([])
+  useEffect(() => {
+    getSurveys().then(setSurveys)  // Fetches every render!
+  }, [])
 }
 
-// ✅ FIX
-private lazy var sharedPublisher = routeRepo.publisher
-    .share()
-    .eraseToAnyPublisher()
+// ✅ FIX - TanStack Query
+function SurveyList() {
+  const { data: surveys } = useQuery({
+    queryKey: ['surveys'],
+    queryFn: getSurveys,
+    staleTime: 5 * 60 * 1000  // Cache 5 min
+  })
+}
 ```
 
 **P1 - Engineering Quality (20% time):**
-- Main thread blocking
-- Unnecessary stored state
+- Unnecessary re-renders
+- Client-side data fetching (should be RSC)
+- Missing error boundaries
 
 **P2 - Nice to Have (10% or skip):**
-- Minor optimizations
+- Minor bundle size optimizations
+- Image format optimizations
 - Cold path improvements
 
 **Rule:** Fix P0 first, P1 if time, skip P2
@@ -273,57 +267,63 @@ private lazy var sharedPublisher = routeRepo.publisher
 ### Good Comments
 
 **Non-obvious decisions:**
-```swift
-// ✅ GOOD - Explains race condition
-// Critical: Use publisher value directly, not repository property
-// Repository property may be stale during publisher emission
-guard let storeId = newStoreId else { return }
+```typescript
+// ✅ GOOD - Explains RLS limitation
+// Split query to avoid RLS infinite recursion
+// Anon queries surveys → RLS checks survey_links → Database loop
+const { data: link } = await supabase
+  .from('survey_links')
+  .select('*')
+  .eq('token', token)
+  .single()
+
+const { data: survey } = await supabase
+  .from('surveys')
+  .select('*')
+  .eq('id', link.survey_id)
+  .single()
 ```
 
 **Timing dependencies:**
-```swift
+```typescript
 // ✅ GOOD - Documents timing
-// 50ms delay prevents race condition where
-// storeChangeLoadingState(false) arrives before updateRoutes
-DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-    useCase.stubbedLoadingState.send(false)
-}
+// Revalidate after mutation to bust Next.js cache
+// Without this, list shows stale data until manual refresh
+revalidatePath('/admin/surveys')
 ```
 
 **Business constraints:**
-```swift
+```typescript
 // ✅ GOOD - Documents business rule
-// Group by 15-second windows to prevent duplicate processing
-// of rapid successive uploads in same session
-let timeWindow: TimeInterval = 15
+// Max 100 submissions per link to prevent abuse
+// Based on typical law firm intake (10-50 clients/month)
+const MAX_SUBMISSIONS = 100
 ```
 
 ### Bad Comments
 
 **Obvious code:**
-```swift
+```typescript
 // ❌ BAD
-// Send onAppear action
-await sut.send(.onAppear)
+// Fetch surveys
+const surveys = await getSurveys()
 
 // ❌ BAD
 // Set loading to true
-state.isLoading = true
+setIsLoading(true)
 
 // ❌ BAD
-// Loop through routes
-for route in routes {
-    if route.isComplete {
-        completed.append(route)
-    }
-}
+// Loop through surveys
+surveys.forEach((survey) => {
+  console.log(survey.title)
+})
 ```
 
 **Better - no comments, clear names:**
-```swift
-await sut.send(.onAppear)
-state.isLoading = true
-let completedRoutes = routes.filter { $0.isComplete }
+```typescript
+const surveys = await getSurveys()
+setIsLoading(true)
+surveys.forEach((survey) => console.log(survey.title))
 ```
 
 ### Checklist
@@ -342,22 +342,22 @@ let completedRoutes = routes.filter { $0.isComplete }
 ### Log Errors + Milestones Only
 
 **Good logging:**
-```swift
+```typescript
 // ✅ SIGNAL - Helps production debugging
-logger.info("Upload started: sessionId=\(id), imageCount=\(count)")
-logger.error("Upload failed: sessionId=\(id), error=\(error), retry=\(attempt)")
-logger.info("Upload completed: sessionId=\(id), duration=\(duration)s")
+console.info(`Survey created: surveyId=${id}, tenantId=${tenantId}`)
+console.error(`Form submission failed: linkToken=${token}, error=${error.message}`)
+console.info(`Link generated: surveyId=${surveyId}, token=${token}, expiresAt=${expiresAt}`)
 ```
 
-**Why good:** 3 logs per upload, complete picture, useful context
+**Why good:** 3 logs per operation, complete picture, useful context
 
 **Bad logging:**
-```swift
+```typescript
 // ❌ NOISE - 1000 logs/min
-logger.debug("Entering loadRoutes()")
-logger.debug("Fetching from repository")
-logger.debug("x = \(x), y = \(y)")
-logger.debug("Exiting loadRoutes()")
+console.debug('Entering getSurveys()')
+console.debug('Fetching from supabase')
+console.debug(`x = ${x}, y = ${y}`)
+console.debug('Exiting getSurveys()')
 ```
 
 **Why bad:** Buries errors in noise, obvious from execution
@@ -390,15 +390,15 @@ WRITE TEST
 ### Which Layers Does Feature Need?
 
 ```
-How many data sources?
-├─ 1 → Repository + Use Case
-└─ 2+ → Repository + Service + Use Case
+Where is it used?
+├─ Both apps (CMS + Website) → Shared package
+└─ One app → App feature folder
 
 Complex algorithm?
-├─ YES → Add Service
-└─ NO → Use Case enough
+├─ YES → Add service layer
+└─ NO → Actions + Queries enough
 
-Result: 3-5 layers (not always 5)
+Result: 2-4 layers (not always 4)
 ```
 
 ### Should I Optimize This?
@@ -406,9 +406,9 @@ Result: 3-5 layers (not always 5)
 ```
 Measure impact
     ↓
-P0 (database, images, memory)? ──YES→ FIX NOW
+P0 (database, serialization, cache)? ──YES→ FIX NOW
     ↓ NO
-P1 (main thread, state)? ──YES→ FIX IF TIME
+P1 (re-renders, RSC)? ──YES→ FIX IF TIME
     ↓ NO
 P2 (minor tweaks)? ──YES→ SKIP
 ```
@@ -416,294 +416,294 @@ P2 (minor tweaks)? ──YES→ SKIP
 ### Where Should Code Live?
 
 ```
-Used by 2+ features NOW?
-├─ YES → Module (Core/Model/CommonUI)
-│         public, add DependencyKey
-└─ NO → App layer (feature folder)
-          internal, use makeWithDeps
+Used by 2+ apps NOW?
+├─ YES → Shared package (packages/*)
+│         export from index.ts
+└─ NO → App feature folder (apps/*/features/)
+          internal, not exported
 
-When 2nd use appears → Move to Module
+When 2nd app needs it → Move to shared package
 ```
 
 ---
 
-## 🚀 Workflows & Commands
+## 🚀 Workflows & Project Structure
 
-### Build New Feature
+### Monorepo Structure
 
-**Fast workflow (4 phases):**
-```bash
-/ios-feature-lite "add route filtering by status"
+```
+legal-mind/
+├── apps/
+│   ├── website/           # Public app (no auth)
+│   │   ├── app/          # Next.js routes
+│   │   ├── features/     # Feature logic (ADR-005)
+│   │   └── lib/          # App utilities
+│   │
+│   └── cms/              # Admin app (auth required)
+│       ├── app/          # Next.js routes
+│       ├── features/     # Feature logic (ADR-005)
+│       └── lib/          # App utilities
+│
+├── packages/
+│   ├── ui/               # Shared shadcn/ui components
+│   ├── database/         # Supabase types
+│   └── validators/       # Zod schemas
+│
+└── supabase/
+    └── migrations/       # Database schema
 ```
 
-**Phases:**
-- Phase 0: Context analysis (determines what to skip)
-- Phase 1: Requirements (MVP + optional)
-- Phase 2: Architecture + Data Flow
-- Phase 3: Implementation (all layers)
-- Phase 4: Testing (signal tests only)
+### Feature Structure (ADR-005)
 
-**Result:** 3-5 hours for moderate feature
+**Rule:** `app/` = Routing, `features/` = Logic
 
-**Detailed workflow (6-9 phases):**
-```bash
-/ios-feature-workflow "complex multi-feature integration"
+```
+apps/cms/features/surveys/
+├── components/
+│   ├── SurveyList.tsx       # List view
+│   ├── SurveyBuilder.tsx    # Edit form
+│   └── SurveyLinks.tsx      # Link management
+├── actions.ts               # Server Actions (create, update, delete)
+├── queries.ts               # Data fetching (read)
+├── types.ts                 # TypeScript types (optional)
+└── validation.ts            # Zod schemas (optional)
 ```
 
-**Phases:**
-- Phase 0: Context analysis (smart skipping)
-- Phase 1: Requirements
-- Phase 2: Module Placement (conditional - skipped if single feature)
-- Phase 3: Architecture
-- Phase 4: Data Flow (conditional - skipped if simple logic)
-- Phase 5: Layer Implementation
-- Phase 6: TCA Store
-- Phase 7: SwiftUI View
-- Phase 8A: Business Tests (starts after Phase 5)
-- Phase 8B: Presentation Tests (starts after Phase 7)
+**Route Structure:**
 
-**Result:** Typical 6-7 phases (skips 2-3), 60-75 min
-
-### Debug Issue
-
-```bash
-/ios-debug "route list not updating after upload"
+```
+apps/cms/app/admin/surveys/
+├── page.tsx                 # List page (imports SurveyList)
+├── new/
+│   └── page.tsx            # Create page
+└── [id]/
+    └── page.tsx            # Edit page
 ```
 
-**Phases:**
-- Phase 1: Parallel analysis (3 agents: problem, data flow, layer isolation)
-- Phase 2: Root cause identification
-- Phase 3: Parallel implementation (fix + test)
-- Phase 4: Verification
+**Example Route (minimal code):**
 
-**Result:** 60-90 min
+```typescript
+// apps/cms/app/admin/surveys/page.tsx
+import { SurveyList } from '@/features/surveys/components/SurveyList'
 
-### Performance Check
-
-```bash
-/ios-performance-check                    # Changed files
-/ios-performance-check DigitalShelf/Screens/Routes/
-/ios-performance-check --all
+export default function SurveysPage() {
+  return (
+    <div>
+      <h1>Surveys</h1>
+      <SurveyList />
+    </div>
+  )
+}
 ```
 
-**Checks:**
-- P0 (70%): Database (30%), Images (30%), Publishers (10%)
-- P1 (20%): State (10%), Background (10%)
-- P2 (10%): UI (5%), Other (5%)
-
-**Result:** 20 seconds, prioritized issue list
-
-### Pre-Merge Validation
-
-```bash
-/ios-pre-merge-check
-/ios-pre-merge-check --fast              # Skip performance
-/ios-pre-merge-check --skip-commits      # Skip commit prep
-```
-
-**Phases:**
-- Phase 1: SwiftLint auto-fix
-- Phase 2: 5 validators parallel (boundaries, architecture, TCA, performance, design)
-- Phase 3: Consolidated report
-- Phase 4: Commit preparation (optional)
-
-**Result:** 2.7-3.7 min, comprehensive validation
+**Key Points:**
+- ✅ `app/` folder = routing ONLY (minimal code)
+- ✅ `features/` folder = business logic
+- ✅ Group by feature, not by type
 
 ---
 
-## 📊 Agent Categories (When Using Which)
+## 📐 Code Patterns
 
-### Foundation Agents (Comprehensive = Signal)
+### Server Actions (Mutations)
 
-**When to use:** Output feeds into other agents' decisions
+**When:** Creating, updating, deleting data
 
-**ios-requirements-analyst:**
-- Extracts MVP + optional features
-- Asks questions for ambiguities
-- Output: YAML requirements
+**File Pattern:** `features/{feature}/actions.ts`
 
-**ios-architect:**
-- Designs essential layers (not all possible)
-- YAGNI - layers needed NOW
-- Output: Architecture design
+```typescript
+'use server'
 
-**ios-data-flow-tracer:**
-- Traces ALL paths (including edge cases)
-- Publisher chains, race conditions
-- Output: Complete flow (comprehensive = signal here!)
+import { createClient } from '@/lib/supabase/server'
+import { revalidatePath } from 'next/cache'
+import type { TablesInsert } from '@legal-mind/database'
 
-**ios-debug-analyst:**
-- Multiple pattern-based hypotheses
-- Observable symptoms only
-- Output: Structured problem analysis
+export async function createSurvey(formData: {
+  title: string
+  description?: string
+}): Promise<{ success: boolean; surveyId?: string; error?: string }> {
+  try {
+    const supabase = await createClient()  // ← AWAIT required
 
-**ios-root-cause-finder:**
-- Deep dive into THE root cause
-- Detailed WHY explanation
-- Output: Fix strategy step-by-step
+    // Get current user
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { success: false, error: 'Not authenticated' }
 
-**ios-layer-isolator:**
-- Tests ALL 4 layers systematically
-- Evidence from bug symptoms
-- Output: Which layer is faulty
+    // Create survey
+    const { data: survey, error } = await supabase
+      .from('surveys')
+      .insert({
+        title: formData.title,
+        description: formData.description,
+        tenant_id: user.tenant_id,
+        created_by: user.id,
+      })
+      .select()
+      .single()
 
-**ios-module-boundary-validator:**
-- Checks ALL module boundaries
-- Finds ALL violations (can't miss any)
-- Output: Violation list
+    if (error) return { success: false, error: error.message }
 
-**Characteristic:** Thorough analysis, used by other agents
+    // ✅ Revalidate path to bust cache
+    revalidatePath('/admin/surveys')
 
----
-
-### Implementation Agents (Focused = Signal)
-
-**When to use:** Generate code/deliverables
-
-**ios-layer-developer:**
-- Code needed NOW (no boilerplate)
-- YAGNI - no unused helpers
-- Output: Models → Repos → Services → Use Cases
-
-**ios-tca-developer:**
-- Minimal state (derive, don't store)
-- Meaningful actions (not granular)
-- Output: TCA Store
-
-**ios-swiftui-designer:**
-- Functional & consistent (not pixel-perfect)
-- Design system compliance
-- Output: SwiftUI View
-
-**ios-feature-developer:**
-- MVP fast (not comprehensive slow)
-- Essential layers only
-- Output: Complete working feature
-
-**Characteristic:** YAGNI principle, ship MVP
-
----
-
-### Validation Agents (Prioritized = Signal)
-
-**When to use:** Find issues to fix
-
-**ios-testing-specialist:**
-- 3-Question Rule for every test
-- Signal tests > noise tests
-- Output: High-value test suite
-
-**ios-performance-analyzer:**
-- Weighted: P0 (70%), P1 (20%), P2 (10%)
-- Fix P0 first, skip P2
-- Output: Prioritized issue list
-
-**Characteristic:** Focus on critical issues
-
----
-
-### Decision Agents (Clear Choice = Signal)
-
-**When to use:** Need recommendation
-
-**ios-module-placement:**
-- Binary: Module or App
-- Based on CURRENT usage (not "might be")
-- Output: Clear placement decisions
-
-**ios-git-commit-squasher:**
-- Algorithmic: factors met or not
-- Single recommendation (not alternatives)
-- Output: Squash command ready
-
-**ios-context-analyzer:**
-- Determines workflow phases
-- Eager: include when doubt
-- Output: Skip decisions
-
-**Characteristic:** Make decision, not explore options
-
----
-
-## 🔧 Practical Workflows
-
-### Building Feature (Step-by-Step)
-
-**1. Start workflow (choose one):**
-```bash
-/ios-feature-lite "description"      # Fast (4-5 phases)
-/ios-feature-workflow "description"  # Detailed (6-9 phases)
+    return { success: true, surveyId: survey.id }
+  } catch (error) {
+    return { success: false, error: 'Failed to create survey' }
+  }
+}
 ```
 
-**2. Phase 0 - Context Analysis:**
-- Reviews complexity
-- Determines which phases to skip
-- Recommends workflow
-- **Action:** Review, proceed
+**Key Points:**
+- ✅ Always `'use server'` as first line
+- ✅ Use server client with `await createClient()`
+- ✅ Return structured result `{ success, data?, error? }`
+- ✅ Always `revalidatePath()` after mutations
+- ✅ Try-catch for error handling
 
-**3. Phase 1 - Requirements:**
-- Extracts MVP + optional
-- Asks clarifying questions
-- **Action:** Answer questions, approve
+### Queries (Data Fetching)
 
-**4. Phase 2 - Architecture:**
-- Essential layers only (YAGNI)
-- Module placement (if cross-cutting)
-- Data flow (if not simple)
-- **Action:** Approve design
+**When:** Reading data from database
 
-**5. Phase 3+ - Implementation:**
-- Bottom-up: Models → Data → Business → Presentation
-- Code needed NOW
-- **Action:** Review code, approve writes
+**File Pattern:** `features/{feature}/queries.ts`
 
-**6. Testing:**
-- Signal tests only (3-Question Rule)
-- **Action:** Review, approve
+```typescript
+import { createClient } from '@/lib/supabase/client'  // ← Browser client
+import type { Tables } from '@legal-mind/database'
 
-**7. Validation:**
-```bash
-/ios-performance-check    # P0 issues
-/ios-pre-merge-check      # Full validation
+export async function getSurveys(): Promise<Tables<'surveys'>[]> {
+  const supabase = createClient()  // ← NO await (browser client)
+
+  const { data, error } = await supabase
+    .from('surveys')
+    .select('*')
+    .order('created_at', { ascending: false })
+
+  if (error) throw error  // ← Throw for TanStack Query to catch
+  return data || []
+}
+
+export async function getSurvey(id: string): Promise<Tables<'surveys'>> {
+  const supabase = createClient()
+
+  const { data, error } = await supabase
+    .from('surveys')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle()  // ← Returns null if not found
+
+  if (error) throw error
+  if (!data) throw new Error('Survey not found')
+
+  return data
+}
 ```
-- Fix P0 (blocks merge)
-- Accept P1/P2 warnings
-- **Action:** Fix critical, create PR
 
-**Total time:** 3-5 hours typical feature
+**Key Points:**
+- ✅ Use browser client (NO await on createClient)
+- ✅ Explicit return types `Promise<Tables<'table'>>`
+- ✅ Throw errors (TanStack Query catches them)
+- ✅ Use `.maybeSingle()` for single row queries
 
----
+### Components with TanStack Query (CMS)
 
-### Debugging (Step-by-Step)
+**When:** CMS app, frequent data fetching, caching needed
 
-**1. Start debug:**
-```bash
-/ios-debug "route list not updating after upload"
+```typescript
+'use client'
+
+import { useQuery } from '@tanstack/react-query'
+import { getSurveys } from '../queries'
+import { Button, Card } from '@legal-mind/ui'
+import Link from 'next/link'
+
+export function SurveyList() {
+  const { data: surveys, isLoading, error } = useQuery({
+    queryKey: ['surveys'],
+    queryFn: getSurveys,
+  })
+
+  if (isLoading) return <LoadingState />
+  if (error) return <ErrorState error={error} />
+  if (!surveys || surveys.length === 0) return <EmptyState />
+
+  return (
+    <div className="space-y-4">
+      {surveys.map((survey) => (
+        <Card key={survey.id}>
+          <h3>{survey.title}</h3>
+          <p>{survey.description}</p>
+        </Card>
+      ))}
+    </div>
+  )
+}
 ```
 
-**2. Phase 1 - Analysis (3 agents parallel):**
-- ios-debug-analyst: Pattern-based hypotheses
-- ios-data-flow-tracer: Trace publisher chain
-- ios-layer-isolator: Test all 4 layers
-- **Action:** Review combined analysis
+**Key Points:**
+- ✅ Always `'use client'` directive
+- ✅ Handle all states: loading, error, empty, success
+- ✅ Use `queryKey` for cache management
 
-**3. Phase 2 - Root Cause:**
-- Reads suspected files
-- Identifies exact issue
-- Designs fix strategy
-- **Action:** Approve fix approach
+### Components with React Hook Form (Website)
 
-**4. Phase 3 - Implementation (2 agents parallel):**
-- ios-layer-developer: Generate fix
-- ios-testing-specialist: Regression test
-- **Action:** Review code, approve writes
+**When:** Website app, one-time submission, no caching needed
 
-**5. Phase 4 - Verification:**
-- Test execution analysis
-- Manual steps
-- **Action:** Verify fix works
+```typescript
+'use client'
 
-**Total time:** 60-90 min
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { submitSurveyResponse } from '../actions'
+import { surveySchema } from '../validation'
+
+export function SurveyForm({ surveyId, questions }) {
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const router = useRouter()
+
+  const { register, handleSubmit, formState: { errors } } = useForm({
+    resolver: zodResolver(surveySchema),
+  })
+
+  const onSubmit = async (data) => {
+    setIsSubmitting(true)
+    const result = await submitSurveyResponse({ surveyId, answers: data })
+
+    if (result.success) {
+      router.push('/survey/success')
+    } else {
+      setIsSubmitting(false)
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)}>
+      {questions.map((question) => (
+        <div key={question.id}>
+          <label>{question.label}</label>
+          <input {...register(question.id)} />
+          {errors[question.id] && (
+            <span className="text-red-500">
+              {errors[question.id]?.message}
+            </span>
+          )}
+        </div>
+      ))}
+
+      <button type="submit" disabled={isSubmitting}>
+        {isSubmitting ? 'Submitting...' : 'Submit'}
+      </button>
+    </form>
+  )
+}
+```
+
+**Key Points:**
+- ✅ Use `useState` for local state
+- ✅ Call Server Actions directly
+- ✅ React Hook Form for form management
+- ✅ Zod for validation
 
 ---
 
@@ -712,25 +712,26 @@ When 2nd use appears → Move to Module
 ### P0 - Must Fix (Blocks Merge)
 
 **Architecture:**
-- [ ] No Repository→Repository dependencies?
-- [ ] Service created if combining repos?
-- [ ] No Core→App imports?
-- [ ] Use Case doesn't have DependencyKey?
+- [ ] Features in `features/` folder (not `app/`)?
+- [ ] Server Actions use server client?
+- [ ] Queries use browser client?
+- [ ] No sensitive data in client components?
 
-**TCA Critical:**
-- [ ] No @Dependency in TaskGroup?
-- [ ] @ObservableState on State structs?
-- [ ] BindingReducer() first in reducer?
-- [ ] Publishers cancelled in onDisappear?
+**Next.js Critical:**
+- [ ] `'use server'` in Server Actions?
+- [ ] `'use client'` in Client Components?
+- [ ] `revalidatePath()` after mutations?
+- [ ] No `await` on browser client?
 
 **Performance:**
 - [ ] No N+1 queries?
-- [ ] Image processing async?
-- [ ] Publishers have .share() where needed?
+- [ ] Select only needed fields?
+- [ ] TanStack Query for CMS data fetching?
 
-**Tests:**
-- [ ] Critical user journeys tested?
-- [ ] Error handling tested?
+**Security:**
+- [ ] RLS policies enforce tenant isolation?
+- [ ] No service role key in client code?
+- [ ] User authentication checked in Server Actions?
 
 **Verdict:** Any P0 failed → Request changes
 
@@ -739,14 +740,14 @@ When 2nd use appears → Move to Module
 - [ ] Tests follow 3-Question Rule?
 - [ ] No tests of obvious code?
 - [ ] Comments explain WHY (not WHAT)?
-- [ ] Colors from enum?
-- [ ] L10n constants?
+- [ ] Error states handled?
+- [ ] Loading states shown?
 
 **Verdict:** All P0 passed → Approve (comment on P1)
 
 ---
 
-## 📐 Measuring Success
+## 📊 Measuring Success
 
 ### Weekly Self-Audit
 
@@ -790,11 +791,10 @@ When 2nd use appears → Move to Module
 |------|--------|-------|----------|
 | **Testing** | User journeys, errors, complex logic | Obvious properties, framework code | "What bug does this catch?" |
 | **Architecture** | Layers needed NOW | Future-proofing, 1-use abstractions | "Needed NOW or maybe later?" |
-| **Performance** | P0 (70%): DB, images, memory | P2 (10%): Cold paths, minor tweaks | "What's measured impact?" |
+| **Performance** | P0 (70%): DB, serialization, cache | P2 (10%): Cold paths, minor tweaks | "What's measured impact?" |
 | **Comments** | WHY (race, business rules) | WHAT (obvious from code) | "Is this non-obvious?" |
 | **Logging** | Errors, milestones | Function entry/exit, variables | "Helps debug production?" |
-| **UI** | Functional, consistent | Pixel-perfect, premature polish | "Affects completing task?" |
-| **Module** | Used 2+ places NOW | Might be reused later | "Reused NOW or maybe?" |
+| **Shared Packages** | Used 2+ apps NOW | Might be reused later | "Reused NOW or maybe?" |
 
 ---
 
@@ -816,21 +816,21 @@ When 2nd use appears → Move to Module
 
 **Solution:** YAGNI - add when needed
 
-### 3. "Best Practices Everywhere"
-
-**Mistake:** "Every repo needs full error handling"
-
-**Reality:** Validate at boundaries only
-
-**Solution:** Handle real errors, not theoretical
-
-### 4. "Optimize Everything"
+### 3. "Optimize Everything"
 
 **Mistake:** "Found issue, must fix"
 
 **Reality:** P2 cold path ≠ P0 hot path
 
 **Solution:** Weighted priority, fix P0
+
+### 4. "Over-Abstracting Too Early"
+
+**Mistake:** "Create shared package now in case we need it"
+
+**Reality:** Premature abstraction harder to change
+
+**Solution:** Wait for 2+ concrete uses
 
 ---
 

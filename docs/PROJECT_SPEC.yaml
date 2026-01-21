@@ -3,1162 +3,409 @@ project:
   description: "SaaS platform for Polish law firms to streamline client intake through smart surveys, calendar booking, and AI qualification"
   version: "2.0.0"
   status: "in-progress"
-  last_updated: "2026-01-20"
-  overall_progress: "80%"
-  note: "Phase 1 ✅ complete (100%). Phase 2 ✅ complete (100%). Phase 3 ✅ complete (100%). Phase 4 ✅ complete (100% - UI/UX improvements with WCAG 2.1 AA compliance). Next: Phase 5 - n8n Workflows & AI Analysis"
-
-phases:
-  - name: "Phase 1: Foundation & CMS Core"
-    id: "phase-1"
-    description: "Monorepo setup, authentication, database, and survey builder"
-    status: "complete"
-    progress: 100
-    estimated_duration: "3 weeks"
-
-    features:
-      - name: "Monorepo & Infrastructure"
-        id: "monorepo-setup"
-        description: "Turborepo with shared packages, builds, and deployment pipeline"
-        status: "complete"
-
-        acceptance_criteria:
-          - description: "Turborepo configured with npm workspaces"
-            verified: true
-          - description: "Both apps build independently without errors"
-            verified: true
-          - description: "Shared packages (ui, database, validators) accessible from both apps"
-            verified: true
-          - description: "TypeScript strict mode enabled globally"
-            verified: true
-
-        dependencies: []
-
-        files_involved:
-          - path: "turbo.json"
-            type: "config"
-            description: "Turborepo pipeline configuration"
-          - path: "package.json"
-            type: "config"
-            description: "Workspace definition and shared scripts"
-          - path: "packages/ui/package.json"
-            type: "config"
-            description: "Shared UI components package"
-
-        tech_stack:
-          - name: "Turborepo"
-            version: "^2.0"
-            why: "Code sharing, independent deployments, smart caching"
-          - name: "npm workspaces"
-            version: "^10.0"
-            why: "Monorepo package management"
-
-        notes: "Configured for zero-config deployments on Vercel"
-
-      - name: "Authentication System"
-        id: "authentication"
-        description: "Email/password login for lawyers, session management via Supabase Auth"
-        status: "complete"
-
-        acceptance_criteria:
-          - description: "Lawyer can register with email and password"
-            verified: true
-          - description: "Lawyer can login to CMS admin panel"
-            verified: true
-          - description: "Middleware protects /admin routes from unauthenticated users"
-            verified: true
-          - description: "Sessions persisted in cookies, survives page reload"
-            verified: true
-          - description: "Lawyer can logout successfully"
-            verified: true
-
-        dependencies:
-          - feature_id: "database-schema"
-            reason: "Needs users table and Supabase Auth setup"
-
-        files_involved:
-          - path: "apps/cms/app/login/page.tsx"
-            type: "page"
-            description: "Login form page"
-          - path: "apps/cms/middleware.ts"
-            type: "action"
-            description: "Route protection middleware"
-          - path: "apps/cms/lib/supabase/server.ts"
-            type: "utility"
-            description: "Server-side Supabase client with auth context"
-
-        tech_stack:
-          - name: "Supabase Auth"
-            version: "built-in"
-            why: "Email/password, session management, multi-tenant support"
-          - name: "Next.js Middleware"
-            version: "^16"
-            why: "Protect routes before rendering"
-
-        notes: "Uses JWT tokens in cookies for secure session management"
-
-      - name: "Database Schema & Multi-Tenancy"
-        id: "database-schema"
-        description: "PostgreSQL schema with 6 tables, RLS policies for multi-tenant isolation"
-        status: "complete"
-
-        acceptance_criteria:
-          - description: "6 tables created: tenants, users, surveys, survey_links, responses, appointments"
-            verified: true
-          - description: "Row Level Security (RLS) enforces tenant isolation"
-            verified: true
-          - description: "All tables have proper indexes for common queries"
-            verified: true
-          - description: "TypeScript types auto-generated from schema"
-            verified: true
-
-        dependencies: []
-
-        files_involved:
-          - path: "supabase/migrations/20250105000001_initial_schema.sql"
-            type: "migration"
-            description: "Initial schema with all 6 tables"
-          - path: "packages/database/src/types.ts"
-            type: "type"
-            description: "Auto-generated TypeScript types from Supabase"
-
-        tech_stack:
-          - name: "PostgreSQL"
-            version: "^17"
-            why: "JSONB support, RLS policies, performance"
-          - name: "Supabase"
-            version: "cloud"
-            why: "Managed PostgreSQL, Auth, Realtime, free tier"
-
-        notes: "Every table has tenant_id column for RLS filtering"
-
-      - name: "CMS Admin Layout"
-        id: "cms-admin-layout"
-        description: "Admin sidebar navigation, dashboard, layout structure"
-        status: "complete"
-
-        acceptance_criteria:
-          - description: "Admin sidebar displays with navigation links"
-            verified: true
-          - description: "Dashboard page shows real-time stats (surveys, responses, appointments)"
-            verified: true
-          - description: "Layout responsive on mobile"
-            verified: true
-          - description: "Sidebar collapses on small screens"
-            verified: true
-
-        dependencies:
-          - feature_id: "authentication"
-            reason: "Only authenticated users see admin layout"
-          - feature_id: "monorepo-setup"
-            reason: "Needs @legal-mind/ui package for components"
-
-        files_involved:
-          - path: "apps/cms/components/admin/Sidebar.tsx"
-            type: "component"
-            description: "Navigation sidebar with links to features"
-          - path: "apps/cms/app/admin/layout.tsx"
-            type: "layout"
-            description: "Admin layout wrapper"
-          - path: "apps/cms/app/admin/page.tsx"
-            type: "page"
-            description: "Dashboard homepage"
-          - path: "apps/cms/app/providers.tsx"
-            type: "provider"
-            description: "TanStack Query setup for CMS app"
-
-        tech_stack:
-          - name: "React"
-            version: "^19"
-            why: "Component-based UI"
-          - name: "Tailwind CSS"
-            version: "^4"
-            why: "Utility-first styling"
-
-        notes: "Dashboard stats query will be implemented in Phase 2"
-
-      - name: "Survey Builder"
-        id: "survey-builder"
-        description: "Drag-drop UI for creating surveys with 7 question types"
-        status: "complete"
-
-        acceptance_criteria:
-          - description: "Lawyer can create new survey with title and description"
-            verified: true
-          - description: "Lawyer can add questions of 7 types: text, textarea, email, tel, select, radio, checkbox"
-            verified: true
-          - description: "Lawyer can edit question text and options"
-            verified: true
-          - description: "Lawyer can delete questions with confirmation"
-            verified: true
-          - description: "Questions persist to database on save"
-            verified: true
-          - description: "Survey list shows all surveys for tenant"
-            verified: true
-
-        dependencies:
-          - feature_id: "authentication"
-            reason: "Only authenticated lawyers can create surveys"
-          - feature_id: "database-schema"
-            reason: "Needs surveys and survey_links tables"
-
-        files_involved:
-          - path: "apps/cms/features/surveys/actions.ts"
-            type: "action"
-            description: "Server Actions: createSurvey, updateSurvey, deleteSurvey"
-          - path: "apps/cms/features/surveys/queries.ts"
-            type: "query"
-            description: "Fetch surveys and survey details"
-          - path: "apps/cms/features/surveys/components/SurveyBuilder.tsx"
-            type: "component"
-            description: "Main survey editor component"
-          - path: "apps/cms/features/surveys/components/SurveyList.tsx"
-            type: "component"
-            description: "List view of all surveys"
-          - path: "apps/cms/app/admin/surveys/page.tsx"
-            type: "page"
-            description: "Survey list route"
-          - path: "apps/cms/app/admin/surveys/new/page.tsx"
-            type: "page"
-            description: "Create survey route"
-          - path: "apps/cms/app/admin/surveys/[id]/page.tsx"
-            type: "page"
-            description: "Edit survey route"
-          - path: "packages/validators/src/survey.ts"
-            type: "validator"
-            description: "Zod schema for survey validation"
-
-        tech_stack:
-          - name: "React Hook Form"
-            version: "^7"
-            why: "Complex form state management"
-          - name: "Zod"
-            version: "^3"
-            why: "Type-safe validation"
-          - name: "TanStack Query"
-            version: "^5"
-            why: "Survey data caching and synchronization"
-
-        notes: "7 question types support: text (single/multi-line), email, phone, select (dropdown), radio buttons, checkboxes"
-
-      - name: "Survey Link Generation"
-        id: "survey-link-generation"
-        description: "Generate unique shareable links with optional expiration and submission limits"
-        status: "complete"
-
-        acceptance_criteria:
-          - description: "Lawyer can generate unique survey link with UUID token"
-            verified: true
-          - description: "Link can be copied to clipboard with visual feedback"
-            verified: true
-          - description: "Link can have optional expiration date"
-            verified: true
-          - description: "Link can have optional max submission limit"
-            verified: true
-          - description: "Lawyer can delete links with confirmation dialog"
-            verified: true
-          - description: "Link list shows all links with submission counts and status"
-            verified: true
-          - description: "Expired or maxed-out links show error to clients"
-            verified: true
-
-        dependencies:
-          - feature_id: "survey-builder"
-            reason: "Requires existing survey"
-          - feature_id: "database-schema"
-            reason: "Needs survey_links table"
-
-        files_involved:
-          - path: "apps/cms/features/surveys/components/SurveyLinks.tsx"
-            type: "component"
-            description: "Link generation and management UI"
-          - path: "apps/cms/features/surveys/queries.ts"
-            type: "query"
-            description: "getSurveyLinks() for fetching links"
-          - path: "apps/cms/features/surveys/actions.ts"
-            type: "action"
-            description: "generateLink, deleteLink Server Actions"
-          - path: "supabase/migrations/20251210143628_add_public_survey_access.sql"
-            type: "migration"
-            description: "RLS policy for public survey access and increment_submission_count() function"
-
-        tech_stack:
-          - name: "crypto.randomUUID()"
-            version: "built-in"
-            why: "Generate unique tokens"
-          - name: "TanStack Query"
-            version: "^5"
-            why: "Real-time link list updates"
-
-        notes: "Unlimited submissions by default (max_submissions = null), RLS allows anonymous link reads"
-
-  - name: "Phase 2: Client Survey Form & Response Management"
-    id: "phase-2"
-    description: "Dynamic form rendering, client submission, and CMS response display"
-    status: "complete"
-    progress: 100
-    estimated_duration: "1 week"
-
-    features:
-      - name: "Dynamic Survey Form"
-        id: "dynamic-survey-form"
-        description: "Render survey questions dynamically from JSON, with client-side validation"
-        status: "complete"
-
-        acceptance_criteria:
-          - description: "Anonymous client can access survey via unique link token"
-            verified: true
-          - description: "All 7 question types render correctly (text, textarea, email, tel, select, radio, checkbox)"
-            verified: true
-          - description: "Form validates on client-side (required fields, email format, phone format, checkbox minimums)"
-            verified: true
-          - description: "Validation errors display inline under each field"
-            verified: true
-          - description: "Submit button disabled during submission"
-            verified: true
-          - description: "Submission errors show error alert above form"
-            verified: true
-
-        dependencies:
-          - feature_id: "survey-link-generation"
-            reason: "Needs survey links to access forms"
-          - feature_id: "database-schema"
-            reason: "Needs responses table"
-
-        files_involved:
-          - path: "apps/website/app/survey/[token]/page.tsx"
-            type: "page"
-            description: "Survey form route - fetches survey by token and renders SurveyForm"
-          - path: "apps/website/features/survey/queries.ts"
-            type: "query"
-            description: "getSurveyByToken() with link validation logic"
-          - path: "apps/website/features/survey/components/SurveyForm.tsx"
-            type: "component"
-            description: "React Hook Form integration with Zod validation"
-          - path: "apps/website/features/survey/components/QuestionField.tsx"
-            type: "component"
-            description: "Renderer for 7 question types"
-          - path: "apps/website/features/survey/validation.ts"
-            type: "validator"
-            description: "Dynamic Zod schema generation from survey questions"
-          - path: "apps/website/features/survey/types.ts"
-            type: "type"
-            description: "Question and SurveyData TypeScript types"
-
-        tech_stack:
-          - name: "React Hook Form"
-            version: "^7"
-            why: "Form state and submission"
-          - name: "Zod"
-            version: "^3"
-            why: "Dynamic schema generation and validation"
-          - name: "next/navigation"
-            version: "^16"
-            why: "Client-side routing"
-
-        notes: "Checkbox fields use React Hook Form Controller for array handling"
-
-      - name: "Form Submission & Response Storage"
-        id: "form-submission"
-        description: "API Route to save responses to database, atomically increment submission counter"
-        status: "complete"
-
-        acceptance_criteria:
-          - description: "Client form submission saves to responses table"
-            verified: true
-          - description: "Response includes survey_link_id, answers (JSONB), tenant_id, status"
-            verified: true
-          - description: "Submission count atomically incremented on survey_links"
-            verified: true
-          - description: "RLS policy allows anonymous inserts to responses"
-            verified: true
-          - description: "Success redirect to /survey/{token}/success page"
-            verified: true
-          - description: "Error messages display for invalid links (expired, maxed-out, not found)"
-            verified: true
-
-        dependencies:
-          - feature_id: "dynamic-survey-form"
-            reason: "Form must render before submission is possible"
-          - feature_id: "database-schema"
-            reason: "Needs responses table with RLS"
-
-        files_involved:
-          - path: "apps/website/app/api/survey/submit/route.ts"
-            type: "api"
-            description: "POST endpoint for survey submission"
-          - path: "apps/website/lib/supabase/anon-server.ts"
-            type: "utility"
-            description: "Service role client for public submissions"
-          - path: "apps/website/features/survey/queries.ts"
-            type: "query"
-            description: "getSurveyByToken with validation"
-          - path: "supabase/migrations/[new]_enable_public_responses.sql"
-            type: "migration"
-            description: "RLS policy to allow anonymous response inserts (TODO)"
-
-        tech_stack:
-          - name: "API Routes"
-            version: "next.js 16"
-            why: "Better HTTP context for anonymous Supabase operations"
-          - name: "Service Role Key"
-            version: "supabase"
-            why: "Bypass RLS for public submissions (safe when tenant_id from database)"
-          - name: "Supabase"
-            version: "cloud"
-            why: "Database persistence with RLS"
-
-        notes: "Uses service role key (safe because tenant_id from database). RLS policy exists but SDK can't use anon role from server context."
-
-      - name: "Success Page & Redirect"
-        id: "success-page"
-        description: "Thank you page after successful submission with next steps preview"
-        status: "complete"
-
-        acceptance_criteria:
-          - description: "Client redirected to /survey/{token}/success after submission"
-            verified: true
-          - description: "Success page displays thank you message"
-            verified: true
-          - description: "Success page shows next steps (calendar booking preview)"
-            verified: true
-          - description: "Page is accessible only after form submission (via redirect)"
-            verified: true
-
-        dependencies:
-          - feature_id: "form-submission"
-            reason: "Redirected to after successful submission"
-
-        files_involved:
-          - path: "apps/website/app/survey/[token]/success/page.tsx"
-            type: "page"
-            description: "Success page component"
-
-        tech_stack:
-          - name: "Next.js"
-            version: "^16"
-            why: "Dynamic routing"
-
-        notes: "Placeholder for Phase 3 calendar booking preview"
-
-      - name: "Response Management UI (CMS)"
-        id: "response-management"
-        description: "Display submitted client responses in admin panel with list view and detail view"
-        status: "complete"
-
-        acceptance_criteria:
-          - description: "Lawyer can view all responses for their tenant"
-            verified: true
-          - description: "Response list shows submission date, status, survey title"
-            verified: true
-          - description: "Lawyer can click response to view detail with all question-answer pairs"
-            verified: true
-          - description: "Response detail shows AI qualification (placeholder for Phase 5)"
-            verified: true
-          - description: "Responses filtered by tenant_id via RLS"
-            verified: true
-          - description: "Empty state shows when no responses exist"
-            verified: true
-          - description: "Loading state while fetching responses"
-            verified: true
-
-        dependencies:
-          - feature_id: "form-submission"
-            reason: "Can only show responses after form submission works"
-          - feature_id: "authentication"
-            reason: "Only authenticated lawyers can view responses"
-
-        files_involved:
-          - path: "apps/cms/features/responses/components/ResponseList.tsx"
-            type: "component"
-            description: "List view with TanStack Query"
-          - path: "apps/cms/features/responses/components/ResponseDetail.tsx"
-            type: "component"
-            description: "Individual response detail view"
-          - path: "apps/cms/features/responses/queries.ts"
-            type: "query"
-            description: "getResponses, getResponse query functions"
-          - path: "apps/cms/features/responses/types.ts"
-            type: "type"
-            description: "Response TypeScript types"
-          - path: "apps/cms/app/admin/responses/page.tsx"
-            type: "page"
-            description: "Responses list route"
-          - path: "apps/cms/app/admin/responses/[id]/page.tsx"
-            type: "page"
-            description: "Response detail route"
-          - path: "apps/cms/components/admin/Sidebar.tsx"
-            type: "component"
-            description: "Add Responses navigation link"
-
-        tech_stack:
-          - name: "TanStack Query"
-            version: "^5"
-            why: "Fetch and cache responses"
-          - name: "React"
-            version: "^19"
-            why: "Component composition"
-
-        notes: "RLS ensures lawyers only see their tenant's responses. Phase 5 will add AI qualification display."
-
-  - name: "Phase 3: Calendar Integration"
-    id: "phase-3"
-    description: "Google Calendar OAuth, available slots, and booking flow"
-    status: "complete"
-    progress: 100
-    estimated_duration: "1 week"
-
-    features:
-      - name: "Google Calendar OAuth"
-        id: "google-calendar-oauth"
-        description: "Connect lawyer's Google Calendar with OAuth 2.0, store refresh tokens (mocked for MVP)"
-        status: "complete"
-
-        acceptance_criteria:
-          - description: "Lawyer can initiate Google Calendar connection from CMS settings"
-            verified: true
-          - description: "OAuth flow redirects to Google, asks for calendar permissions (mocked)"
-            verified: true
-          - description: "Refresh token securely stored in users.google_calendar_token"
-            verified: true
-          - description: "Lawyer can disconnect/revoke calendar access"
-            verified: true
-          - description: "Token refresh logic handles expired tokens (mocked)"
-            verified: true
-
-        dependencies:
-          - feature_id: "authentication"
-            reason: "Only authenticated lawyers can connect calendar"
-          - feature_id: "database-schema"
-            reason: "Needs google_calendar_token field in users table"
-
-        files_involved:
-          - path: "apps/cms/lib/google-calendar/oauth.ts"
-            type: "utility"
-            description: "OAuth flow and token management"
-          - path: "apps/cms/app/admin/settings/calendar/page.tsx"
-            type: "page"
-            description: "Calendar connection settings"
-
-        tech_stack:
-          - name: "Google Calendar API"
-            version: "v3"
-            why: "Calendar access and event management"
-          - name: "next-auth"
-            version: "^5 (optional)"
-            why: "OAuth helper (or implement custom)"
-
-        notes: "Requires Google Cloud project setup and credentials"
-
-      - name: "Available Slots API"
-        id: "available-slots-api"
-        description: "Fetch lawyer's calendar, calculate available slots with buffer time"
-        status: "complete"
-
-        acceptance_criteria:
-          - description: "API endpoint /api/calendar/slots returns available time slots"
-            verified: true
-          - description: "Slots respect working hours (9 AM - 5 PM by default)"
-            verified: true
-          - description: "15-minute buffer between appointments"
-            verified: true
-          - description: "Handles timezone correctly (Europe/Warsaw with DST support)"
-            verified: true
-          - description: "Prevents double-booking"
-            verified: true
-
-        dependencies:
-          - feature_id: "google-calendar-oauth"
-            reason: "Needs access token to fetch calendar events"
-
-        files_involved:
-          - path: "apps/website/app/api/calendar/slots/route.ts"
-            type: "api"
-            description: "GET endpoint for available slots"
-          - path: "apps/cms/lib/google-calendar/events.ts"
-            type: "utility"
-            description: "Calendar event fetching and slot calculation"
-
-        tech_stack:
-          - name: "Google Calendar API"
-            version: "v3"
-            why: "Fetch calendar events"
-          - name: "date-fns"
-            version: "^3"
-            why: "Timezone-aware slot calculation"
-
-        notes: "Slot calculation algorithm: fetch events → find gaps → apply buffer → return available slots"
-
-      - name: "Calendar Booking UI"
-        id: "calendar-booking-ui"
-        description: "Date picker and time slot selector on survey success page"
-        status: "complete"
-
-        acceptance_criteria:
-          - description: "Client sees calendar interface after form submission"
-            verified: true
-          - description: "Client can select date from calendar picker"
-            verified: true
-          - description: "Selected date shows available time slots"
-            verified: true
-          - description: "Client can click slot to book appointment"
-            verified: true
-          - description: "Booking confirmation shows appointment details"
-            verified: true
-
-        dependencies:
-          - feature_id: "success-page"
-            reason: "Calendar display replaces placeholder on success page"
-          - feature_id: "available-slots-api"
-            reason: "Needs slots API to populate UI"
-
-        files_involved:
-          - path: "apps/website/features/survey/components/CalendarBooking.tsx"
-            type: "component"
-            description: "Date picker and slot selector"
-          - path: "apps/website/app/survey/[token]/success/page.tsx"
-            type: "page"
-            description: "Integrate calendar into success page"
-
-        tech_stack:
-          - name: "react-datepicker"
-            version: "^4 (or headless-ui)"
-            why: "Calendar UI component"
-
-        notes: "Consider accessibility (keyboard navigation, screen readers)"
-
-      - name: "Booking Creation & Notifications"
-        id: "booking-creation"
-        description: "Create appointment in database and Google Calendar"
-        status: "complete"
-
-        acceptance_criteria:
-          - description: "Booking creates record in appointments table"
-            verified: true
-          - description: "Booking creates event in lawyer's Google Calendar (mocked)"
-            verified: true
-          - description: "Double-booking prevention works (conflict detection)"
-            verified: true
-          - description: "API returns proper error codes (400, 404, 409, 500)"
-            verified: true
-          - description: "Validation errors display with detailed field messages"
-            verified: true
-          - description: "Appointment linked to response_id for tracking"
-            verified: true
-          - description: "Lawyer can view appointments in CMS"
-            verified: true
-
-        dependencies:
-          - feature_id: "calendar-booking-ui"
-            reason: "User interaction to trigger booking"
-          - feature_id: "google-calendar-oauth"
-            reason: "Needs calendar write access"
-
-        files_involved:
-          - path: "apps/website/app/api/calendar/book/route.ts"
-            type: "api"
-            description: "POST endpoint to create booking"
-          - path: "apps/cms/features/appointments/actions.ts"
-            type: "action"
-            description: "Create appointment, call Google API"
-          - path: "apps/cms/features/appointments/queries.ts"
-            type: "query"
-            description: "Fetch appointments for CMS display"
-          - path: "apps/cms/features/appointments/components/AppointmentList.tsx"
-            type: "component"
-            description: "Appointment list view in CMS"
-
-        tech_stack:
-          - name: "Supabase"
-            version: "cloud"
-            why: "Store appointments"
-          - name: "SendGrid (or Resend)"
-            version: "^2"
-            why: "Email notifications"
-          - name: "Google Calendar API"
-            version: "v3"
-            why: "Create events"
-
-        notes: "Email notifications to be moved to n8n in Phase 5"
-
-  - name: "Phase 4: UI/UX Improvements"
-    id: "phase-4"
-    description: "WCAG 2.1 AA accessibility compliance, design system establishment, reusable component library"
-    status: "complete"
-    progress: 100
-    estimated_duration: "1 week"
-
-    features:
-      - name: "Sprint 1: Accessibility Critical Path"
-        id: "accessibility-critical-path"
-        description: "Semantic HTML, ARIA labels, keyboard navigation, accessible Dialog component"
-        status: "complete"
-
-        acceptance_criteria:
-          - description: "Semantic HTML table structures in AppointmentList and ResponseList"
-            verified: true
-          - description: "ARIA labels audit completed (already compliant)"
-            verified: true
-          - description: "Keyboard focus management with skip-to-content link"
-            verified: true
-          - description: "Live regions for screen readers implemented"
-            verified: true
-          - description: "Accessible Dialog component replaces window.confirm"
-            verified: true
-
-        dependencies: []
-
-        files_involved:
-          - path: "apps/cms/features/appointments/components/AppointmentList.tsx"
-            type: "component"
-            description: "Semantic table structure"
-          - path: "apps/cms/features/responses/components/ResponseList.tsx"
-            type: "component"
-            description: "Semantic table structure"
-          - path: "packages/ui/src/dialog.tsx"
-            type: "component"
-            description: "Accessible Dialog component"
-
-        tech_stack:
-          - name: "shadcn/ui Dialog"
-            version: "latest"
-            why: "WCAG-compliant dialog component"
-
-        notes: "WCAG 2.1 AA compliance achieved"
-
-      - name: "Sprint 2: Design System Foundation"
-        id: "design-system-foundation"
-        description: "Verify shadcn/ui components, centralize status colors, audit emojis and spacing"
-        status: "complete"
-
-        acceptance_criteria:
-          - description: "shadcn/ui component library verified and exported"
-            verified: true
-          - description: "Centralized status color utilities created"
-            verified: true
-          - description: "Emoji audit completed (none found - all Lucide icons)"
-            verified: true
-          - description: "Spacing audit completed"
-            verified: true
-
-        dependencies:
-          - feature_id: "accessibility-critical-path"
-            reason: "Build on accessible foundation"
-
-        files_involved:
-          - path: "packages/ui/src/index.ts"
-            type: "export"
-            description: "Barrel export of shadcn/ui components"
-          - path: "apps/cms/lib/utils/status-colors.ts"
-            type: "utility"
-            description: "Centralized status color utilities"
-
-        tech_stack:
-          - name: "Lucide Icons"
-            version: "latest"
-            why: "Consistent iconography"
-
-        notes: "Design system foundation established"
-
-      - name: "Sprint 3: Component Library Expansion"
-        id: "component-library-expansion"
-        description: "Create reusable LoadingState, ErrorState, EmptyState components and replace custom implementations"
-        status: "complete"
-
-        acceptance_criteria:
-          - description: "LoadingState component created with 4 variants"
-            verified: true
-          - description: "ErrorState component created with 2 variants"
-            verified: true
-          - description: "EmptyState component created with 2 variants"
-            verified: true
-          - description: "Replaced custom states in SurveyList, AppointmentList, ResponseDetail, ResponseList"
-            verified: true
-          - description: "Skeleton component installed and exported"
-            verified: true
-          - description: "design-system.md documentation updated"
-            verified: true
-
-        dependencies:
-          - feature_id: "design-system-foundation"
-            reason: "Build on design system foundation"
-
-        files_involved:
-          - path: "packages/ui/src/loading-state.tsx"
-            type: "component"
-            description: "Reusable loading state component"
-          - path: "packages/ui/src/error-state.tsx"
-            type: "component"
-            description: "Reusable error state component"
-          - path: "packages/ui/src/empty-state.tsx"
-            type: "component"
-            description: "Reusable empty state component"
-          - path: "packages/ui/src/skeleton.tsx"
-            type: "component"
-            description: "Skeleton loading component"
-          - path: "apps/cms/features/surveys/components/SurveyList.tsx"
-            type: "component"
-            description: "Updated to use shared components"
-          - path: "apps/cms/features/appointments/components/AppointmentList.tsx"
-            type: "component"
-            description: "Updated to use shared components"
-          - path: "apps/cms/features/responses/components/ResponseDetail.tsx"
-            type: "component"
-            description: "Updated to use shared components"
-          - path: "apps/cms/features/responses/components/ResponseList.tsx"
-            type: "component"
-            description: "Updated to use shared components"
-
-        tech_stack:
-          - name: "React"
-            version: "^19"
-            why: "Component composition"
-
-        notes: "Eliminated 160+ lines of duplicated code"
-
-      - name: "Sprint 4: Responsive Design & Visual Polish"
-        id: "responsive-visual-polish"
-        description: "Verify responsive layouts, fix touch targets, improve typography, fix root page"
-        status: "complete"
-
-        acceptance_criteria:
-          - description: "Responsive table layouts verified"
-            verified: true
-          - description: "Touch target sizes fixed (WCAG 2.1 AA compliant)"
-            verified: true
-          - description: "Root page placeholder fixed with redirect to /admin"
-            verified: true
-          - description: "Shadow, typography, and border radius consistency verified"
-            verified: true
-          - description: "Typography hierarchy fixed in ResponseDetail"
-            verified: true
-
-        dependencies:
-          - feature_id: "component-library-expansion"
-            reason: "Build on component library"
-
-        files_involved:
-          - path: "apps/cms/features/responses/components/ResponseList.tsx"
-            type: "component"
-            description: "Responsive layout improvements"
-          - path: "apps/cms/features/appointments/components/AppointmentList.tsx"
-            type: "component"
-            description: "Responsive layout improvements"
-          - path: "apps/cms/features/surveys/components/SurveyBuilder.tsx"
-            type: "component"
-            description: "Touch target improvements"
-          - path: "apps/cms/app/page.tsx"
-            type: "page"
-            description: "Redirect to /admin"
-          - path: "apps/cms/features/responses/components/ResponseDetail.tsx"
-            type: "component"
-            description: "Typography hierarchy improvements"
-
-        tech_stack:
-          - name: "Tailwind CSS"
-            version: "^4"
-            why: "Responsive design utilities"
-
-        notes: "Professional visual polish achieved"
-
-  - name: "Phase 5: n8n Workflows & AI Analysis"
-    id: "phase-5"
-    description: "Workflow automation, AI qualification, email notifications"
-    status: "pending"
-    progress: 0
-    estimated_duration: "2 weeks"
-
-    features:
-      - name: "n8n Infrastructure"
-        id: "n8n-infrastructure"
-        description: "Self-hosted n8n on Hetzner VPS with Docker, SSL, reverse proxy"
-        status: "pending"
-
-        acceptance_criteria:
-          - description: "Hetzner VPS provisioned (CX21)"
-            verified: false
-          - description: "Docker and Docker Compose installed"
-            verified: false
-          - description: "n8n running and accessible via subdomain"
-            verified: false
-          - description: "SSL certificate via Let's Encrypt"
-            verified: false
-          - description: "Firewall configured (UFW)"
-            verified: false
-
-        dependencies: []
-
-        files_involved:
-          - path: "infrastructure/n8n/docker-compose.yml"
-            type: "config"
-            description: "n8n deployment configuration"
-
-        tech_stack:
-          - name: "Hetzner"
-            version: "cloud"
-            why: "Affordable VPS hosting"
-          - name: "Docker"
-            version: "^25"
-            why: "Containerization"
-          - name: "Nginx"
-            version: "^1.25"
-            why: "Reverse proxy"
-
-        notes: "Cost: ~€5-20/month"
-
-      - name: "AI Qualification Workflow"
-        id: "ai-qualification"
-        description: "Webhook receives form submission, AI analyzes, stores results in database"
-        status: "pending"
-
-        acceptance_criteria:
-          - description: "Webhook triggered on form submission"
-            verified: false
-          - description: "OpenAI GPT-4 analyzes responses"
-            verified: false
-          - description: "Claude integration for detailed summaries"
-            verified: false
-          - description: "Results stored in responses.ai_qualification (JSONB)"
-            verified: false
-          - description: "Analysis completes within 30 seconds"
-            verified: false
-          - description: "Error handling and retry logic"
-            verified: false
-
-        dependencies:
-          - feature_id: "n8n-infrastructure"
-            reason: "Runs on n8n platform"
-          - feature_id: "form-submission"
-            reason: "Triggered by form submission"
-
-        files_involved:
-          - path: "infrastructure/n8n/workflows/form-submission-ai-analysis.json"
-            type: "config"
-            description: "n8n workflow definition"
-
-        tech_stack:
-          - name: "OpenAI GPT-4"
-            version: "gpt-4"
-            why: "Quick analysis"
-          - name: "Claude"
-            version: "claude-opus"
-            why: "Detailed summaries"
-          - name: "n8n"
-            version: "^1.0"
-            why: "Workflow orchestration"
-
-        notes: "Cost: ~€30-50/month in AI usage"
-
-      - name: "Email Notifications"
-        id: "email-notifications"
-        description: "SMTP setup for form confirmation, booking confirmation, lawyer digest"
-        status: "pending"
-
-        acceptance_criteria:
-          - description: "Client receives form submission confirmation email"
-            verified: false
-          - description: "Client receives booking confirmation with calendar invite"
-            verified: false
-          - description: "Lawyer receives daily digest of new responses"
-            verified: false
-          - description: "Emails properly templated and personalized"
-            verified: false
-          - description: "Unsubscribe links included"
-            verified: false
-
-        dependencies:
-          - feature_id: "n8n-infrastructure"
-            reason: "Emails sent via n8n workflows"
-
-        files_involved:
-          - path: "infrastructure/n8n/workflows/form-confirmation-email.json"
-            type: "config"
-            description: "Form confirmation workflow"
-          - path: "infrastructure/n8n/workflows/booking-confirmation-email.json"
-            type: "config"
-            description: "Booking confirmation workflow"
-          - path: "infrastructure/n8n/templates/"
-            type: "config"
-            description: "Email templates"
-
-        tech_stack:
-          - name: "SendGrid or AWS SES"
-            version: "latest"
-            why: "Email delivery"
-          - name: "n8n"
-            version: "^1.0"
-            why: "Workflow execution"
-
-        notes: "Consider email rendering across clients (Outlook, Gmail, etc.)"
-
-      - name: "Monitoring & Error Handling"
-        id: "monitoring"
-        description: "n8n execution logs, error tracking, performance monitoring"
-        status: "pending"
-
-        acceptance_criteria:
-          - description: "n8n execution logs viewable in dashboard"
-            verified: false
-          - description: "Failed workflows trigger alerts (Slack or email)"
-            verified: false
-          - description: "Cost monitoring for AI usage"
-            verified: false
-          - description: "Response time metrics tracked"
-            verified: false
-
-        dependencies:
-          - feature_id: "n8n-infrastructure"
-            reason: "Monitoring on n8n instance"
-
-        files_involved: []
-
-        tech_stack:
-          - name: "n8n built-in logs"
-            version: "^1.0"
-            why: "Workflow execution monitoring"
-          - name: "Slack webhooks"
-            version: "latest"
-            why: "Alert notifications"
-
-        notes: "Sentry integration optional for error tracking"
-
-  - name: "Phase 6: Marketing & Polish"
-    id: "phase-6"
-    description: "Marketing pages, CMS settings, production readiness"
-    status: "pending"
-    progress: 0
-    estimated_duration: "2 weeks"
-
-    features:
-      - name: "Marketing Website"
-        id: "marketing-website"
-        description: "Homepage, pricing, about, contact pages"
-        status: "pending"
-
-        acceptance_criteria:
-          - description: "Homepage with hero section and feature highlights"
-            verified: false
-          - description: "Pricing page with subscription tiers"
-            verified: false
-          - description: "About page (o-nas)"
-            verified: false
-          - description: "Contact page (kontakt)"
-            verified: false
-          - description: "Terms of Service and Privacy Policy"
-            verified: false
-
-        dependencies: []
-
-        files_involved:
-          - path: "apps/website/app/(marketing)/page.tsx"
-            type: "page"
-            description: "Homepage"
-          - path: "apps/website/app/(marketing)/pricing/page.tsx"
-            type: "page"
-            description: "Pricing page"
-
-        tech_stack:
-          - name: "React"
-            version: "^19"
-            why: "Components"
-          - name: "Tailwind CSS"
-            version: "^4"
-            why: "Styling"
-
-        notes: "Use shadcn/ui components for consistency"
-
-      - name: "CMS Settings & Admin Panel"
-        id: "cms-settings"
-        description: "Law firm profile, user management, notification preferences"
-        status: "pending"
-
-        acceptance_criteria:
-          - description: "Settings page accessible from admin panel"
-            verified: false
-          - description: "Law firm can edit company profile"
-            verified: false
-          - description: "Admin can manage team members (add/remove/roles)"
-            verified: false
-          - description: "Notification preferences (email, SMS, frequency)"
-            verified: false
-          - description: "Calendar connection/disconnection"
-            verified: false
-
-        dependencies:
-          - feature_id: "authentication"
-            reason: "Only authenticated users"
-
-        files_involved:
-          - path: "apps/cms/app/admin/settings/page.tsx"
-            type: "page"
-            description: "Settings main page"
-
-        tech_stack: []
-
-        notes: "Foundation for future multi-user team management"
-
-      - name: "Production Readiness"
-        id: "production-readiness"
-        description: "Error tracking, analytics, performance monitoring, security audit"
-        status: "pending"
-
-        acceptance_criteria:
-          - description: "Error tracking enabled (Sentry or similar)"
-            verified: false
-          - description: "Analytics tracking (Vercel Analytics or Plausible)"
-            verified: false
-          - description: "Lighthouse score > 90 for website"
-            verified: false
-          - description: "No critical security vulnerabilities (via npm audit)"
-            verified: false
-          - description: "E2E tests for critical user flows"
-            verified: false
-          - description: "Load testing completed"
-            verified: false
-
-        dependencies: []
-
-        files_involved: []
-
-        tech_stack:
-          - name: "Sentry"
-            version: "latest"
-            why: "Error tracking"
-          - name: "Vercel Analytics"
-            version: "latest"
-            why: "Usage analytics"
-          - name: "Playwright"
-            version: "^1"
-            why: "E2E testing"
-
-        notes: "Set up error budget (allowed errors per week)"
+  last_updated: "2026-01-21"
+
+# IMPORTANT: This file focuses on WHY (architecture, decisions, rationale)
+# For detailed WHAT (acceptance criteria, file paths, task tracking), see Notion:
+# - Notion Tasks: Task-level acceptance criteria and implementation details
+# - Notion Projects: Feature-level context and dependencies
+
+architecture:
+  overview: "Monorepo with two Next.js apps (CMS for lawyers, Website for clients), shared packages for UI/database/validation"
+
+  tech_stack:
+    monorepo:
+      - name: "Turborepo"
+        version: "^2.0"
+        why: "Code sharing across apps, independent deployments, smart caching for build performance"
+      - name: "npm workspaces"
+        version: "^10.0"
+        why: "Native monorepo package management without external tools"
+
+    frontend:
+      - name: "Next.js"
+        version: "^16 (App Router)"
+        why: "RSC for data fetching, Server Actions for mutations, zero-config Vercel deployment"
+      - name: "React"
+        version: "^19"
+        why: "Component composition, hooks for state management"
+      - name: "Tailwind CSS"
+        version: "^4"
+        why: "Utility-first styling, responsive design, design system consistency"
+      - name: "shadcn/ui"
+        version: "latest"
+        why: "Accessible, customizable components (WCAG 2.1 AA compliant)"
+
+    backend:
+      - name: "Supabase"
+        version: "cloud"
+        why: "Managed PostgreSQL + Auth + Realtime, RLS for multi-tenant isolation, generous free tier"
+      - name: "PostgreSQL"
+        version: "^17"
+        why: "JSONB for flexible survey responses, RLS policies for tenant isolation, performance"
+
+    state_management:
+      - name: "TanStack Query"
+        version: "^5"
+        why: "Server state caching, automatic refetching, optimistic updates (CMS only)"
+      - name: "React Hook Form"
+        version: "^7"
+        why: "Complex form state, validation integration with Zod"
+      - name: "Zod"
+        version: "^3"
+        why: "Type-safe validation, runtime schema generation for dynamic surveys"
+
+    future:
+      - name: "n8n"
+        version: "self-hosted"
+        why: "Workflow automation for AI analysis and email notifications (Phase 5)"
+
+  key_decisions:
+    - decision: "API Routes for public submissions (not Server Actions)"
+      rationale: "Better HTTP context for anonymous operations, service role key usage is safe when tenant_id derived from database"
+
+    - decision: "RLS for multi-tenancy (not application-level filtering)"
+      rationale: "Database-level enforcement prevents data leaks, PostgreSQL performance better than app-level joins"
+
+    - decision: "JSONB for survey responses (not relational tables)"
+      rationale: "Dynamic survey schemas, flexible question types, simpler queries for response display"
+
+    - decision: "TanStack Query only in CMS (not Website)"
+      rationale: "CMS needs caching/refetching, Website is mostly static SSR/SSG"
+
+    - decision: "shadcn/ui (not pre-built component library)"
+      rationale: "Full control over components, accessibility out of box, no bundle bloat"
+
+    - decision: "Monorepo with shared packages (not separate repos)"
+      rationale: "Type sharing, code reuse, atomic commits across apps"
+
+  design_patterns:
+    - pattern: "Feature-based folder structure"
+      why: "Co-locate types, queries, actions, components by domain (surveys, responses, appointments)"
+
+    - pattern: "Server Components for data fetching, Client Components for interactivity"
+      why: "Minimize client bundle, leverage RSC for auth/database queries"
+
+    - pattern: "Server Actions for mutations, API Routes for public endpoints"
+      why: "Server Actions for authenticated ops, API Routes for anonymous clients"
+
+features:
+  phase_1_foundation:
+    - name: "Monorepo & Infrastructure"
+      status: "complete"
+      why: "Enable code sharing, independent app deployments, and type-safe integrations"
+      acceptance_criteria:
+        - "Both apps build independently without errors"
+        - "Shared packages accessible from both apps"
+        - "TypeScript strict mode enforced globally"
+      dependencies: []
+
+    - name: "Authentication System"
+      status: "complete"
+      why: "Secure lawyer access to CMS, session management for protected routes"
+      acceptance_criteria:
+        - "Lawyers can register/login with email/password"
+        - "Middleware protects /admin routes from unauthenticated users"
+        - "Sessions persist in cookies, survive page reload"
+      dependencies:
+        - feature: "Database Schema"
+          reason: "Needs users table and Supabase Auth setup"
+
+    - name: "Database Schema & Multi-Tenancy"
+      status: "complete"
+      why: "Multi-tenant data isolation via RLS, flexible JSONB responses, performance indexes"
+      acceptance_criteria:
+        - "6 tables with RLS policies (tenants, users, surveys, survey_links, responses, appointments)"
+        - "TypeScript types auto-generated from schema"
+        - "Proper indexes for common queries"
+      tech_decisions:
+        - decision: "JSONB for survey responses"
+          rationale: "Dynamic schemas, no migration needed for new question types"
+        - decision: "RLS policies on all tables"
+          rationale: "Database-level tenant isolation prevents data leaks"
+      dependencies: []
+
+    - name: "CMS Admin Layout"
+      status: "complete"
+      why: "Navigation hub for lawyers, dashboard for real-time stats"
+      acceptance_criteria:
+        - "Responsive sidebar navigation"
+        - "Dashboard shows real-time stats (surveys, responses, appointments)"
+      dependencies:
+        - feature: "Authentication"
+          reason: "Only authenticated users see admin layout"
+
+    - name: "Survey Builder"
+      status: "complete"
+      why: "Empower lawyers to create custom surveys without code"
+      acceptance_criteria:
+        - "Lawyers can create surveys with 7 question types (text, textarea, email, tel, select, radio, checkbox)"
+        - "Questions persist to database on save"
+        - "Survey list shows all surveys for tenant"
+      tech_decisions:
+        - decision: "React Hook Form for builder"
+          rationale: "Complex form state with nested arrays (questions, options)"
+        - decision: "TanStack Query for survey list"
+          rationale: "Real-time updates, cache invalidation on mutations"
+      dependencies:
+        - feature: "Authentication"
+        - feature: "Database Schema"
+
+    - name: "Survey Link Generation"
+      status: "complete"
+      why: "Secure, shareable links with expiration and submission limits"
+      acceptance_criteria:
+        - "Generate unique links with UUID tokens"
+        - "Optional expiration date and max submission limit"
+        - "Expired/maxed-out links show error to clients"
+      tech_decisions:
+        - decision: "RLS allows anonymous link reads"
+          rationale: "Clients need to validate link without authentication"
+        - decision: "Atomic counter increment via PostgreSQL function"
+          rationale: "Prevent race conditions on submission count"
+      dependencies:
+        - feature: "Survey Builder"
+
+  phase_2_client_form:
+    - name: "Dynamic Survey Form"
+      status: "complete"
+      why: "Client-facing form that renders dynamically from JSON, validates before submission"
+      acceptance_criteria:
+        - "All 7 question types render correctly"
+        - "Client-side validation with inline error messages"
+        - "Form accessible via unique link token"
+      tech_decisions:
+        - decision: "Zod schema generation from survey JSON"
+          rationale: "Type-safe validation, runtime schema for dynamic surveys"
+        - decision: "React Hook Form Controller for checkboxes"
+          rationale: "Array handling for multi-select questions"
+      dependencies:
+        - feature: "Survey Link Generation"
+
+    - name: "Form Submission & Response Storage"
+      status: "complete"
+      why: "Persist client responses with multi-tenant isolation, atomic submission counter"
+      acceptance_criteria:
+        - "Responses saved to database with tenant_id, survey_link_id, answers (JSONB)"
+        - "Submission count atomically incremented"
+        - "RLS policy allows anonymous inserts"
+      tech_decisions:
+        - decision: "API Route (not Server Action)"
+          rationale: "Better HTTP context for anonymous operations"
+        - decision: "Service role key for public submissions"
+          rationale: "Safe when tenant_id derived from database, not user input"
+      dependencies:
+        - feature: "Dynamic Survey Form"
+
+    - name: "Success Page & Redirect"
+      status: "complete"
+      why: "Confirm submission success, preview next steps (calendar booking)"
+      acceptance_criteria:
+        - "Thank you message after submission"
+        - "Calendar booking UI placeholder (Phase 3)"
+      dependencies:
+        - feature: "Form Submission"
+
+    - name: "Response Management UI (CMS)"
+      status: "complete"
+      why: "Lawyers view submitted responses, prepare for AI qualification (Phase 5)"
+      acceptance_criteria:
+        - "Response list with submission date, status, survey title"
+        - "Response detail shows question-answer pairs"
+        - "RLS ensures lawyers only see their tenant's responses"
+      dependencies:
+        - feature: "Form Submission"
+        - feature: "Authentication"
+
+  phase_3_calendar:
+    - name: "Google Calendar OAuth"
+      status: "complete"
+      why: "Connect lawyer's calendar for availability and booking"
+      acceptance_criteria:
+        - "Lawyers can connect/disconnect Google Calendar"
+        - "OAuth refresh token stored securely"
+      tech_decisions:
+        - decision: "Mocked OAuth for MVP"
+          rationale: "Avoid Google Cloud setup complexity during development"
+      dependencies:
+        - feature: "Authentication"
+
+    - name: "Available Slots API"
+      status: "complete"
+      why: "Calculate lawyer's availability with buffer time, prevent double-booking"
+      acceptance_criteria:
+        - "API returns available time slots respecting working hours"
+        - "15-minute buffer between appointments"
+        - "Timezone-aware (Europe/Warsaw with DST)"
+      tech_decisions:
+        - decision: "date-fns for timezone calculations"
+          rationale: "Lightweight, reliable DST handling"
+      dependencies:
+        - feature: "Google Calendar OAuth"
+
+    - name: "Calendar Booking UI"
+      status: "complete"
+      why: "Client-facing interface to book appointments after form submission"
+      acceptance_criteria:
+        - "Date picker and time slot selector"
+        - "Booking confirmation shows appointment details"
+      dependencies:
+        - feature: "Success Page"
+        - feature: "Available Slots API"
+
+    - name: "Booking Creation & Notifications"
+      status: "complete"
+      why: "Persist appointments, sync with Google Calendar, notify participants"
+      acceptance_criteria:
+        - "Appointment record in database linked to response_id"
+        - "Google Calendar event created (mocked)"
+        - "Double-booking prevention (conflict detection)"
+      tech_decisions:
+        - decision: "Email notifications deferred to n8n (Phase 5)"
+          rationale: "Centralize all notifications in workflow automation"
+      dependencies:
+        - feature: "Calendar Booking UI"
+
+  phase_4_uiux:
+    - name: "Accessibility Critical Path"
+      status: "complete"
+      why: "WCAG 2.1 AA compliance for semantic HTML, keyboard navigation, screen readers"
+      acceptance_criteria:
+        - "Semantic HTML table structures in AppointmentList and ResponseList"
+        - "Keyboard focus management with skip-to-content link"
+        - "Accessible Dialog component (replaces window.confirm)"
+      tech_decisions:
+        - decision: "shadcn/ui Dialog for confirmations"
+          rationale: "WCAG-compliant, keyboard accessible, focus trap"
+      dependencies: []
+
+    - name: "Design System Foundation"
+      status: "complete"
+      why: "Centralized component library, consistent status colors, iconography"
+      acceptance_criteria:
+        - "shadcn/ui components verified and exported from @legal-mind/ui"
+        - "Centralized status color utilities"
+        - "Lucide Icons for consistent iconography"
+      dependencies:
+        - feature: "Accessibility Critical Path"
+
+    - name: "Component Library Expansion"
+      status: "complete"
+      why: "Eliminate duplicated loading/error/empty states, improve maintainability"
+      acceptance_criteria:
+        - "LoadingState, ErrorState, EmptyState components created"
+        - "Replaced custom states in SurveyList, AppointmentList, ResponseDetail, ResponseList"
+        - "Skeleton component installed and exported"
+      tech_decisions:
+        - decision: "4 LoadingState variants (spinner, skeleton, page, inline)"
+          rationale: "Match context: full-page vs inline loading"
+      dependencies:
+        - feature: "Design System Foundation"
+
+    - name: "Responsive Design & Visual Polish"
+      status: "complete"
+      why: "Touch-friendly targets (WCAG 2.1 AA), responsive layouts, typography hierarchy"
+      acceptance_criteria:
+        - "Touch target sizes ≥44px (WCAG compliant)"
+        - "Responsive table layouts verified"
+        - "Typography hierarchy fixed in ResponseDetail"
+      dependencies:
+        - feature: "Component Library Expansion"
+
+  phase_5_n8n_ai:
+    - name: "n8n Infrastructure"
+      status: "pending"
+      why: "Self-hosted workflow automation for AI analysis and email notifications"
+      acceptance_criteria:
+        - "n8n running on Hetzner VPS with Docker, SSL, reverse proxy"
+      tech_decisions:
+        - decision: "Self-hosted n8n (not cloud)"
+          rationale: "Lower cost, full control, privacy compliance"
+      dependencies: []
+
+    - name: "AI Qualification Workflow"
+      status: "pending"
+      why: "Automated client qualification to prioritize high-value leads"
+      acceptance_criteria:
+        - "Webhook triggered on form submission"
+        - "AI analyzes responses and stores results in responses.ai_qualification"
+      tech_decisions:
+        - decision: "OpenAI GPT-4 for quick analysis"
+          rationale: "Fast, cost-effective for simple qualification"
+        - decision: "Claude for detailed summaries"
+          rationale: "Better context understanding, longer outputs"
+      dependencies:
+        - feature: "n8n Infrastructure"
+        - feature: "Form Submission"
+
+    - name: "Email Notifications"
+      status: "pending"
+      why: "Automated confirmation emails, lawyer digests"
+      acceptance_criteria:
+        - "Client receives form submission confirmation"
+        - "Lawyer receives daily digest of new responses"
+      dependencies:
+        - feature: "n8n Infrastructure"
+
+    - name: "Monitoring & Error Handling"
+      status: "pending"
+      why: "Track workflow execution, alert on failures, monitor AI costs"
+      acceptance_criteria:
+        - "Failed workflows trigger alerts"
+        - "Cost monitoring for AI usage"
+      dependencies:
+        - feature: "n8n Infrastructure"
+
+  phase_6_marketing:
+    - name: "Marketing Website"
+      status: "pending"
+      why: "Public-facing pages for customer acquisition"
+      acceptance_criteria:
+        - "Homepage, pricing, about, contact pages"
+      dependencies: []
+
+    - name: "CMS Settings & Admin Panel"
+      status: "pending"
+      why: "Law firm profile management, team administration"
+      acceptance_criteria:
+        - "Law firm can edit company profile"
+        - "Admin can manage team members"
+      dependencies:
+        - feature: "Authentication"
+
+    - name: "Production Readiness"
+      status: "pending"
+      why: "Error tracking, analytics, security audit, E2E tests"
+      acceptance_criteria:
+        - "Error tracking enabled (Sentry)"
+        - "Lighthouse score > 90"
+        - "No critical security vulnerabilities"
+      dependencies: []
 
 dependencies:
-  # Phase 2 blockers
-  - from: "form-submission"
-    to: "response-management"
+  - from: "Form Submission"
+    to: "Response Management"
     reason: "Cannot display responses until submission works"
 
-  - from: "survey-link-generation"
-    to: "dynamic-survey-form"
+  - from: "Survey Link Generation"
+    to: "Dynamic Survey Form"
     reason: "Form accessed via token from survey_links"
 
-  # Phase 3 blockers
-  - from: "response-management"
-    to: "calendar-booking-ui"
+  - from: "Response Management"
+    to: "Calendar Booking UI"
     reason: "Calendar shown after form success and response recorded"
 
-  # Phase 4 depends on Phase 3
-  - from: "booking-creation"
-    to: "response-detail"
+  - from: "Booking Creation"
+    to: "Response Detail"
     reason: "Appointment linked to response in detail view"
 
 status_summary:
-  phase_1: "✅ Complete (100%) - 6/6 features: infrastructure, auth, database, layout, builder, links"
-  phase_2: "✅ Complete (100%) - 5/5 features: form rendering, success page, form submission, response management, shared types"
-  phase_3: "✅ Complete (100%) - 4/4 features: OAuth (mocked), available slots API, booking UI, appointment list CMS"
-  phase_4: "✅ Complete (100%) - 4/4 sprints: accessibility critical path, design system foundation, component library expansion, responsive design & visual polish"
-  phase_5: "🔮 Future (0%) - 4 features: n8n infrastructure, AI analysis, email notifications, monitoring"
-  phase_6: "🔮 Future (0%) - 3 features: marketing pages, CMS settings, production readiness"
+  phase_1: "✅ Complete (100%) - Foundation & CMS Core"
+  phase_2: "✅ Complete (100%) - Client Survey Form & Response Management"
+  phase_3: "✅ Complete (100%) - Calendar Integration"
+  phase_4: "✅ Complete (100%) - UI/UX Improvements"
+  phase_5: "📋 Next (0%) - n8n Workflows & AI Analysis"
+  phase_6: "🔮 Future (0%) - Marketing & Polish"
 
 critical_path:
   - "Phase 1 Foundation (✅ COMPLETE)"
