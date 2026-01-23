@@ -1,6 +1,8 @@
 ---
 name: supabase-schema-specialist
 color: red
+skills:
+  - supabase-patterns
 description: >
   **Use this agent PROACTIVELY** when database schema changes are needed - migrations, RLS policies, PostgreSQL functions, or type regeneration.
 
@@ -144,12 +146,13 @@ Phase 2 created 6 migrations for one RLS issue:
 
 ## REFERENCE DOCUMENTATION
 
-**Always consult:**
+**Skills (auto-loaded):**
+- `supabase-patterns` - RLS policies, migrations, type regeneration, client selection
+- `architecture-decisions` - Multi-tenancy architecture, tenant isolation
 
+**Migration Examples:**
 - @supabase/migrations/ - Existing migrations
 - @supabase/migrations_archive/README.md - RLS recursion lessons learned
-- @docs/CODE_PATTERNS.md - RLS patterns
-- @docs/ARCHITECTURE.md - Multi-tenancy architecture
 - Plan analysis from plan-analyzer (input)
 
 ---

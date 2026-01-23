@@ -1,6 +1,8 @@
 ---
 name: git-specialist
 color: blue
+skills:
+  - signal-vs-noise
 description: >
   **Use this agent PROACTIVELY** when git operations are needed - commits, history cleanup, pull requests, or reviewing changes.
 

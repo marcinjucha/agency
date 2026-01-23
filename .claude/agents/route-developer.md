@@ -1,6 +1,9 @@
 ---
 name: route-developer
 color: orange
+skills:
+  - code-patterns
+  - architecture-decisions
 description: >
   **Use this agent PROACTIVELY** when creating Next.js routes (pages) - the entry points that users visit in the browser.
 
@@ -85,9 +88,12 @@ You are a **Route Developer** specializing in Next.js App Router routes. Your mi
 
 ## REFERENCE DOCUMENTATION
 
-**Always consult:**
-- @docs/CODE_PATTERNS.md - Route patterns, ADR-005
-- @apps/cms/app/admin/ - Existing route examples
+**Skills (auto-loaded):**
+- `code-patterns` - Route patterns, ADR-005 (app/ vs features/)
+- `architecture-decisions` - Monorepo structure, app separation
+
+**Route Examples:**
+- @apps/cms/app/admin/ - Existing CMS route examples
 - @apps/website/app/ - Website route examples
 - Plan analysis from plan-analyzer (input)
 

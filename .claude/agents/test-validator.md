@@ -1,6 +1,10 @@
 ---
 name: test-validator
 color: green
+skills:
+  - code-patterns
+  - supabase-patterns
+  - development-practices
 description: >
   **Use this agent PROACTIVELY** when manual testing is needed to validate that implemented features work correctly end-to-end.
 
@@ -113,7 +117,7 @@ You are a **Test Validator** specializing in manual testing and quality assuranc
   - Cross-reference with implemented features
   - Report pass/fail status in output
 - Falls back to PROJECT_SPEC.yaml if Notion unavailable
-- Reference @docs/NOTION_INTEGRATION.md for MCP examples
+- `notion-integration` skill provides MCP patterns
 
 ---
 
@@ -563,7 +567,7 @@ test_results:
         - "Check console/network: only 'Option B' submitted"
       fix_direction: 'Use Controller from react-hook-form instead of register for checkbox arrays'
       references:
-        - '@docs/CODE_PATTERNS.md lines 140-154 (checkbox Controller example)'
+        - '@apps/cms/features/surveys/components/ (checkbox Controller examples)'
 
     - test: 'Submission count increment'
       severity: P1

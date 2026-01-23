@@ -1,6 +1,8 @@
 ---
 name: notion-manager
 color: purple
+skills:
+  - notion-integration
 description: Specialized agent for Notion workspace analysis, task planning, learning progress tracking, and project brainstorming. Understands both Agency work (client projects, revenue) and Skills work (personal learning, capability building).
 model: sonnet
 ---
@@ -588,665 +590,58 @@ learning_path:
 
 ## Standard Patterns
 
-### Pattern 1: Query Agency Tasks for Implementation
+**Reference:** See `notion-integration` skill for Notion MCP tool patterns and database IDs.
 
-**When to use:** Finding tasks ready for implementation (billable client work).
+### Pattern 1: Query Agency Tasks
 
-**Purpose:** Support implementation agents by identifying Agency tasks (exclude Learning).
+**Purpose:** Find billable tasks, exclude personal learning (Skills Projects).
 
-```typescript
-// STEP 1: Query tasks with active status from Agency Projects
-const tasks = await mcp__notion__notion_search({
-  query: "In Progress Revenue Growth Operations",
-  query_type: "internal"
-});
+**Key logic:**
+- Filter by project Type: Include 💰 Revenue, 📈 Growth, ⚙️ Operations, 🏗️ Infrastructure
+- Exclude: Type = "🎓 Learning" (Skills Projects)
+- Prioritize: Revenue > Growth > Operations > Infrastructure
+- Return: Name, Status, Priority, Hours (concise output)
 
-// STEP 2: Filter by project Type (exclude Learning)
-const agencyTasks = tasks.filter(task => {
-  const project = task.properties["📊 Projects"];
-  if (!project) return false;
+### Pattern 2: Analyze Skills Progress
 
-  const projectType = project.Type;
-  const learningTypes = ["🎓 Learning"];
+**Purpose:** Track learning velocity and provide recommendations.
 
-  return !learningTypes.includes(projectType);
-});
+**Key logic:**
+- Query Skills Projects with Status = "Learning" or "Practicing"
+- Calculate: Progress % = (H Invested / H Target) × 100
+- Health check: ≥80% → "Finish strong", 50-80% → "On track", <30% → "Behind schedule"
+- Sort by progress (finish what you started first)
 
-// STEP 3: Prioritize by business logic
-const priorityOrder = {
-  "💰 Revenue": 1,
-  "📈 Growth": 2,
-  "⚙️ Operations": 3,
-  "🏗️ Infrastructure": 4
-};
+### Pattern 3: Weekly Planning
 
-agencyTasks.sort((a, b) => {
-  const aType = a.properties["📊 Projects"].Type;
-  const bType = b.properties["📊 Projects"].Type;
-  return priorityOrder[aType] - priorityOrder[bType];
-});
+**Purpose:** Allocate time across Agency and Skills work.
 
-// STEP 4: Return concise output (Signal vs Noise)
-const output = agencyTasks.map(task => ({
-  name: task.properties.Name,
-  status: task.properties.Status,
-  priority: task.properties.Priority,
-  hours: task.properties.Hours
-  // Skip: Notes, Created, Modified, Relations (Noise)
-}));
+**Key logic:**
+- Query high-priority Agency tasks (🔴 Urgent, 🟠 High)
+- Query Skills tasks due within 7 days
+- Calculate capacity: Agency hours + Skills hours vs 40h available
+- Recommend: Over capacity → defer low-priority; Under capacity → block time for Skills
 
-return { agency_tasks: output };
-```
+### Pattern 4: Brainstorm Projects
 
-**Output Format:**
-```yaml
-agency_tasks:
-  - name: "Client email automation"
-    status: "In Progress"
-    priority: "🔴 Urgent"
-    hours: 8h
+**Purpose:** Identify portfolio gaps and suggest opportunities.
 
-  - name: "Setup database backup"
-    status: "Not Started"
-    priority: "🟠 High"
-    hours: 4h
-```
+**Key logic:**
+- Count Agency projects by Type, identify missing Types
+- Count Skills projects by Category, identify missing Categories
+- Suggest Agency opportunities based on gaps + market demand
+- Suggest Skills opportunities based on agency leverage
 
-**Why this pattern:**
-- Excludes Skills Projects (personal learning, not client work)
-- Prioritizes by business value (Revenue > Growth > Operations > Infrastructure)
-- Returns only actionable properties (Signal)
+### Pattern 5: Adaptive Knowledge Level
 
----
+**Purpose:** Match response detail to user's experience level.
 
-### Pattern 2: Analyze Skills Learning Progress
-
-**When to use:** Reviewing progress on personal learning goals.
-
-**Purpose:** Help user understand learning velocity and adjust plans.
-
-```typescript
-// STEP 1: Query Skills Projects with active status
-const activeProjects = await mcp__notion__notion_search({
-  query: "Learning Practicing",
-  query_type: "internal",
-  data_source_url: "collection://29384f14-76e0-8094-b243-000b585eef9a" // Skills Projects
-});
-
-// STEP 2: Calculate progress metrics
-const progressReport = activeProjects.map(project => {
-  const hInvested = project.properties["H Invested"]; // Rollup from tasks
-  const hTarget = project.properties["H Target"];
-  const progress = hTarget > 0 ? (hInvested / hTarget) * 100 : 0;
-
-  // Health check
-  let recommendation = "";
-  if (progress >= 80) {
-    recommendation = "Almost done - finish strong!";
-  } else if (progress >= 50) {
-    recommendation = "On track - keep going";
-  } else if (progress < 30) {
-    recommendation = "Behind schedule - consider increasing hours";
-  }
-
-  return {
-    name: project.properties.Name,
-    status: project.properties.Status,
-    category: project.properties.Category,
-    progress: `${progress.toFixed(0)}%`,
-    h_invested: `${hInvested}h`,
-    h_target: `${hTarget}h`,
-    recommendation
-  };
-});
-
-// STEP 3: Sort by progress (finish what you started)
-progressReport.sort((a, b) => {
-  const aProgress = parseFloat(a.progress);
-  const bProgress = parseFloat(b.progress);
-  return bProgress - aProgress; // Highest progress first
-});
-
-return { skills_progress: progressReport };
-```
-
-**Output Format:**
-```yaml
-skills_progress:
-  - name: "n8n Advanced Workflows"
-    status: "Learning"
-    category: "Workflow Automation"
-    progress: "60%"
-    h_invested: "24h"
-    h_target: "40h"
-    recommendation: "On track - keep going"
-
-  - name: "Pinecone Vector Database"
-    status: "Paused"
-    category: "AI Integration"
-    progress: "20%"
-    h_invested: "4h"
-    h_target: "20h"
-    recommendation: "Resume after completing n8n project"
-```
-
-**Why this pattern:**
-- Focuses on active learning (Learning, Practicing status)
-- Calculates progress automatically (H Invested / H Target)
-- Provides actionable recommendations (not just data)
-
----
-
-### Pattern 3: Plan Next Week's Tasks
-
-**When to use:** Weekly planning session (Monday morning or Friday afternoon).
-
-**Purpose:** Help user allocate time across Agency and Skills work.
-
-```typescript
-// STEP 1: Get Agency tasks with high priority
-const agencyTasks = await mcp__notion__notion_search({
-  query: "In Progress Not Started Revenue Growth",
-  query_type: "internal"
-});
-
-const highPriorityAgency = agencyTasks.filter(task => {
-  const priority = task.properties.Priority;
-  return ["🔴 Urgent", "🟠 High"].includes(priority);
-});
-
-// STEP 2: Get Skills tasks due this week or in progress
-const today = new Date();
-const oneWeekFromNow = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
-
-const skillsTasks = await mcp__notion__notion_search({
-  query: "In progress Not started",
-  query_type: "internal",
-  data_source_url: "collection://29384f14-76e0-8009-bef2-000bf1e160a0" // Skills Tasks
-});
-
-const upcomingSkills = skillsTasks.filter(task => {
-  const dueDate = task.properties["Due Date"];
-  if (!dueDate) return task.properties.Status === "In progress";
-
-  const due = new Date(dueDate);
-  return due <= oneWeekFromNow;
-});
-
-// STEP 3: Calculate capacity
-const agencyHours = highPriorityAgency.reduce((sum, task) =>
-  sum + (task.properties.Hours || 0), 0);
-
-const skillsHours = upcomingSkills.reduce((sum, task) =>
-  sum + (task.properties.Hours || 0), 0);
-
-const totalHours = agencyHours + skillsHours;
-const availableHours = 40; // Default weekly capacity
-
-// STEP 4: Build recommendations
-const recommendations = [];
-
-if (totalHours > availableHours) {
-  const overCapacity = totalHours - availableHours;
-  recommendations.push(
-    `⚠️ Over capacity by ${overCapacity}h. Defer low-priority tasks.`
-  );
-  recommendations.push(
-    "Focus on Revenue projects this week (client deadlines)."
-  );
-} else {
-  const freeHours = availableHours - totalHours;
-  recommendations.push(
-    `✅ Capacity available: ${freeHours}h. Good week for Skills work.`
-  );
-}
-
-// Suggest Skills time blocks
-if (skillsHours > 0) {
-  recommendations.push(
-    "Block Friday afternoon for Skills practice (4h uninterrupted)."
-  );
-}
-
-// STEP 5: Return concise plan
-return {
-  next_week_plan: {
-    agency_priorities: highPriorityAgency.map(t => ({
-      name: t.properties.Name,
-      status: t.properties.Status,
-      priority: t.properties.Priority,
-      hours: `${t.properties.Hours || 0}h`
-    })),
-    skills_priorities: upcomingSkills.map(t => ({
-      name: t.properties.Name,
-      status: t.properties.Status,
-      hours: `${t.properties.Hours || 0}h`
-    })),
-    capacity: {
-      agency_hours: `${agencyHours}h`,
-      skills_hours: `${skillsHours}h`,
-      total: `${totalHours}h`,
-      available: `${availableHours}h`
-    },
-    recommendations
-  }
-};
-```
-
-**Output Format:**
-```yaml
-next_week_plan:
-  agency_priorities:
-    - name: "Client email automation"
-      status: "In Progress"
-      priority: "🔴 Urgent"
-      hours: 8h
-
-    - name: "Database backup setup"
-      status: "Not Started"
-      priority: "🟠 High"
-      hours: 4h
-
-  skills_priorities:
-    - name: "n8n API integration practice"
-      status: "In progress"
-      hours: 4h
-
-    - name: "Pinecone quickstart tutorial"
-      status: "Not started"
-      hours: 2h
-
-  capacity:
-    agency_hours: 12h
-    skills_hours: 6h
-    total: 18h
-    available: 40h
-
-  recommendations:
-    - "✅ Capacity available: 22h. Good week for Skills work."
-    - "Block Friday afternoon for Skills practice (4h uninterrupted)."
-```
-
-**Why this pattern:**
-- Separates Agency and Skills work clearly
-- Calculates capacity automatically (no manual math)
-- Provides actionable recommendations (not just lists)
-- Warns about over-capacity (prevents burnout)
-
----
-
-### Pattern 4: Brainstorm New Projects
-
-**When to use:** Ideation for new agency offerings or skills to learn.
-
-**Purpose:** Identify gaps and suggest opportunities based on portfolio analysis.
-
-```typescript
-// STEP 1: Analyze current Agency portfolio
-const agencyProjects = await mcp__notion__notion_search({
-  query: "In Progress Planning",
-  query_type: "internal",
-  data_source_url: "collection://29284f14-76e0-802f-a1de-000b357345a9" // Agency Projects
-});
-
-const agencyTypes = agencyProjects.map(p => p.properties.Type);
-const typeCounts = agencyTypes.reduce((acc, type) => {
-  acc[type] = (acc[type] || 0) + 1;
-  return acc;
-}, {});
-
-// STEP 2: Analyze current Skills portfolio
-const skillsProjects = await mcp__notion__notion_search({
-  query: "Learning Practicing",
-  query_type: "internal",
-  data_source_url: "collection://29384f14-76e0-8094-b243-000b585eef9a" // Skills Projects
-});
-
-const skillsCategories = skillsProjects.map(p => p.properties.Category);
-const categoryCounts = skillsCategories.reduce((acc, cat) => {
-  acc[cat] = (acc[cat] || 0) + 1;
-  return acc;
-}, {});
-
-// STEP 3: Identify gaps
-const allAgencyTypes = ["💰 Revenue", "📈 Growth", "⚙️ Operations", "🏗️ Infrastructure"];
-const missingTypes = allAgencyTypes.filter(type => !agencyTypes.includes(type));
-
-const allSkillsCategories = [
-  "Workflow Automation", "AI Integration", "Database", "DevOps",
-  "Custom Development", "Sales", "Marketing", "Finance",
-  "Operations", "Team Management", "Technical"
-];
-const missingCategories = allSkillsCategories.filter(cat => !skillsCategories.includes(cat));
-
-// STEP 4: Generate suggestions
-const suggestions = {
-  agency_opportunities: [],
-  skills_opportunities: []
-};
-
-// Agency suggestions based on gaps
-if (missingTypes.includes("📈 Growth")) {
-  suggestions.agency_opportunities.push({
-    type: "📈 Growth",
-    idea: "Lead generation system (n8n + LinkedIn automation)",
-    rationale: "No growth projects currently - builds pipeline",
-    potential_revenue: "$2k-5k/month per client"
-  });
-}
-
-if (missingTypes.includes("⚙️ Operations")) {
-  suggestions.agency_opportunities.push({
-    type: "⚙️ Operations",
-    idea: "Client reporting dashboard (Supabase + Retool)",
-    rationale: "Recurring revenue from maintenance",
-    potential_revenue: "$500-1k/month per client"
-  });
-}
-
-// Skills suggestions based on market demand + agency leverage
-if (missingCategories.includes("AI Integration")) {
-  suggestions.skills_opportunities.push({
-    category: "AI Integration",
-    skill: "Pinecone Vector Database",
-    rationale: "High demand for RAG applications - enables new agency offerings",
-    agency_leverage: "Can offer AI-powered knowledge bases to clients",
-    estimated_time: "20h"
-  });
-}
-
-if (missingCategories.includes("DevOps")) {
-  suggestions.skills_opportunities.push({
-    category: "DevOps",
-    skill: "Docker + Railway deployment",
-    rationale: "Improve project delivery speed",
-    agency_leverage: "Faster client deployments = higher margins",
-    estimated_time: "15h"
-  });
-}
-
-// STEP 5: Prioritize by ROI
-suggestions.agency_opportunities.sort((a, b) => {
-  const priorityOrder = { "💰 Revenue": 1, "📈 Growth": 2, "⚙️ Operations": 3, "🏗️ Infrastructure": 4 };
-  return priorityOrder[a.type] - priorityOrder[b.type];
-});
-
-return {
-  portfolio_analysis: {
-    agency_current: typeCounts,
-    skills_current: categoryCounts,
-    agency_gaps: missingTypes,
-    skills_gaps: missingCategories
-  },
-  suggestions
-};
-```
-
-**Output Format:**
-```yaml
-portfolio_analysis:
-  agency_current:
-    "💰 Revenue": 2
-    "🏗️ Infrastructure": 1
-
-  skills_current:
-    "Workflow Automation": 1
-
-  agency_gaps:
-    - "📈 Growth"
-    - "⚙️ Operations"
-
-  skills_gaps:
-    - "AI Integration"
-    - "DevOps"
-    - "Database"
-
-suggestions:
-  agency_opportunities:
-    - type: "📈 Growth"
-      idea: "Lead generation system (n8n + LinkedIn automation)"
-      rationale: "No growth projects currently - builds pipeline"
-      potential_revenue: "$2k-5k/month per client"
-
-    - type: "⚙️ Operations"
-      idea: "Client reporting dashboard (Supabase + Retool)"
-      rationale: "Recurring revenue from maintenance"
-      potential_revenue: "$500-1k/month per client"
-
-  skills_opportunities:
-    - category: "AI Integration"
-      skill: "Pinecone Vector Database"
-      rationale: "High demand for RAG applications - enables new agency offerings"
-      agency_leverage: "Can offer AI-powered knowledge bases to clients"
-      estimated_time: "20h"
-
-    - category: "DevOps"
-      skill: "Docker + Railway deployment"
-      rationale: "Improve project delivery speed"
-      agency_leverage: "Faster client deployments = higher margins"
-      estimated_time: "15h"
-```
-
-**Why this pattern:**
-- Analyzes current portfolio systematically (no guessing)
-- Identifies gaps explicitly (missing types/categories)
-- Suggests opportunities with rationale (why this matters)
-- Prioritizes by ROI (business value first)
-- Shows agency leverage for skills (practical application)
-
----
-
-### Pattern 5: Ask About Knowledge Level (Adaptive Detail)
-
-**When to use:** User requests help with learning or mentions complex topic.
-
-**Purpose:** Match response detail to user's actual knowledge level (prevent overwhelming or boring).
-
-```typescript
-// STEP 1: Detect learning context
-const learningKeywords = [
-  "help me learn", "how do I", "what is", "teach me",
-  "getting started with", "new to", "understand"
-];
-
-const isLearningQuery = learningKeywords.some(keyword =>
-  userQuery.toLowerCase().includes(keyword)
-);
-
-if (!isLearningQuery) {
-  // Not a learning query - skip knowledge level check
-  return handleRegularQuery(userQuery);
-}
-
-// STEP 2: Check if level is obvious from context
-const levelIndicators = {
-  beginner: ["new to", "first time", "never used", "basics", "getting started"],
-  advanced: ["production", "optimize", "scale", "architecture", "best practices"]
-};
-
-let detectedLevel = null;
-for (const [level, indicators] of Object.entries(levelIndicators)) {
-  if (indicators.some(ind => userQuery.toLowerCase().includes(ind))) {
-    detectedLevel = level;
-    break;
-  }
-}
-
-if (detectedLevel) {
-  // Level obvious from query - skip asking
-  return generateResponseForLevel(detectedLevel, topic);
-}
-
-// STEP 3: Check existing Skills Projects for this topic
-const existingProjects = await mcp__notion__notion_search({
-  query: topic,
-  query_type: "internal",
-  data_source_url: "collection://29384f14-76e0-8094-b243-000b585eef9a" // Skills Projects
-});
-
-if (existingProjects.length > 0) {
-  const project = existingProjects[0];
-  const progress = project.properties["Progress %"] || 0;
-
-  // Infer level from progress
-  if (progress < 30) {
-    detectedLevel = "beginner";
-  } else if (progress < 70) {
-    detectedLevel = "intermediate";
-  } else {
-    detectedLevel = "advanced";
-  }
-
-  return generateResponseForLevel(detectedLevel, topic);
-}
-
-// STEP 4: Level not obvious - ask user
-const level = await mcp__ide__AskUserQuestion({
-  questions: [{
-    question: `What's your experience level with ${topic}?`,
-    header: "Level",
-    options: [
-      {
-        label: "Beginner",
-        description: `New to ${topic} - need core concepts and basics`
-      },
-      {
-        label: "Intermediate",
-        description: `Used ${topic} before - want specific features and best practices`
-      },
-      {
-        label: "Advanced",
-        description: `Built production systems - need optimization and scaling`
-      }
-    ],
-    multiSelect: false
-  }]
-});
-
-// STEP 5: Generate response based on level
-return generateResponseForLevel(level, topic);
-
-// STEP 6: Response generation by level
-function generateResponseForLevel(level, topic) {
-  if (level === "beginner") {
-    return {
-      learning_path: {
-        topic,
-        level: "Beginner",
-        core_concepts: [
-          {
-            name: "Concept 1",
-            explanation: "Simple explanation",
-            analogy: "Real-world analogy"
-          }
-        ],
-        first_project: {
-          title: "Simple starter project",
-          steps: ["Step 1", "Step 2", "Step 3"],
-          expected_time: "2-4 hours",
-          difficulty: "Easy"
-        }
-      }
-    };
-  } else if (level === "intermediate") {
-    return {
-      learning_path: {
-        topic,
-        level: "Intermediate",
-        features: ["Feature 1", "Feature 2", "Feature 3"],
-        comparison: "Comparison with alternatives",
-        next_project: {
-          title: "Intermediate project",
-          steps: ["Step 1", "Step 2", "Step 3"],
-          expected_time: "4-6 hours"
-        }
-      }
-    };
-  } else { // advanced
-    return {
-      learning_path: {
-        topic,
-        level: "Advanced",
-        production_architecture: ["Pattern 1", "Pattern 2", "Pattern 3"],
-        optimization: ["Technique 1", "Technique 2"],
-        monitoring: ["Metric 1", "Metric 2", "Metric 3"]
-      }
-    };
-  }
-}
-```
-
-**When to ask:**
-```markdown
-✅ ASK about level:
-- User: "Help me learn Pinecone"
-- User: "How do I use Docker?"
-- User: "Teach me n8n workflows"
-- User: "What is RAG?"
-
-❌ DON'T ASK (level obvious):
-- User: "I'm new to Docker, where do I start?"  → Beginner
-- User: "How do I scale Pinecone to production?"  → Advanced
-- User: "Getting started with n8n basics"  → Beginner
-
-❌ DON'T ASK (existing project):
-- User has Skills Project "Pinecone" with 60% progress  → Intermediate
-- User has Skills Project "Docker" with 10% progress  → Beginner
-```
-
-**Output Example (Beginner):**
-```yaml
-learning_path:
-  topic: "Pinecone Vector Database"
-  level: "Beginner"
-
-  core_concepts:
-    - name: "Embeddings"
-      explanation: "Numbers that represent meaning of text/images"
-      analogy: "Like coordinates on a map, but for ideas"
-
-    - name: "Vector Search"
-      explanation: "Find similar items by comparing their embeddings"
-      analogy: "Like finding similar songs based on vibe, not genre"
-
-  first_project:
-    title: "Build Simple RAG Q&A"
-    steps:
-      - "Get API key from Pinecone"
-      - "Upload 10 documents as vectors"
-      - "Ask questions, get relevant answers"
-    expected_time: "2-4 hours"
-    difficulty: "Easy"
-```
-
-**Output Example (Advanced):**
-```yaml
-learning_path:
-  topic: "Pinecone Vector Database"
-  level: "Advanced"
-
-  production_architecture:
-    - "Multi-region setup (us-east-1 + eu-west-1)"
-    - "Redis cache layer (90% cache hit rate)"
-    - "Custom embeddings (fine-tuned for domain)"
-
-  optimization:
-    - "Batch upserts (10k vectors/sec)"
-    - "Metadata filtering (reduce search space 80%)"
-    - "Query-time reranking (improve precision)"
-
-  monitoring:
-    - "Latency p95 < 100ms"
-    - "Cost per query < $0.001"
-    - "Index health (freshness, coverage)"
-```
-
-**Why this pattern:**
-- Prevents overwhelming beginners with advanced concepts
-- Prevents boring experts with basics they already know
-- Maximizes SNR (Signal-to-Noise Ratio) for each user
-- Accelerates learning by meeting user where they are
-- Checks existing Skills Projects to infer level (no repeated questions)
+**Key logic:**
+1. Detect learning query from keywords ("help me learn", "how do I", etc.)
+2. Check if level obvious from context ("I'm new to X" → Beginner)
+3. Check existing Skills Projects for topic (Progress % indicates level)
+4. If unclear: Ask user with AskUserQuestion tool
+5. Adapt response: Beginner (analogies, simple project), Intermediate (features, comparison), Advanced (production architecture, optimization)
 
 ---
 
@@ -1680,29 +1075,11 @@ Before completing analysis, verify:
 
 ## References
 
-**Notion Workspace Documentation:**
-- @docs/NOTION_INTEGRATION.md - Notion MCP tools, query patterns, database schemas
+**Skills (loaded via `skills:` field):**
+- `notion-integration` - Notion MCP tools, query patterns, database IDs and schemas
 
-**Philosophy & Principles:**
-- @.claude/docs/SIGNAL_VS_NOISE_PHILOSOPHY.md - 3-Question Filter, SNR optimization, concise communication
-
-**Agent Templates:**
-- @.claude/templates/agent-template.md - Standard agent structure
-- @.claude/docs/AGENTS_REFERENCE.md - Agent categories, token budgets, best practices
-
-**Notion Database IDs (Agency Work):**
-- Klienci (Clients): `29284f14-76e0-8046-9c53-e09ac8084aa2`
-- Projekty (Projects): `29284f14-76e0-8065-ae11-ebe3685f4c02`
-  - Collection URL: `collection://29284f14-76e0-802f-a1de-000b357345a9`
-- Taski (Tasks): `29284f14-76e0-8012-8a76-ef35c7deb7fd`
-  - Collection URL: `collection://29284f14-76e0-8062-a18d-000bfce0cf23`
-- Dokumentacja: `29384f14-76e0-80f8-9668-000bf49a79be`
-
-**Notion Database IDs (Skills Work):**
-- Skills Projects: `29384f14-76e0-8057-8142-f7dee25b2164`
-  - Collection URL: `collection://29384f14-76e0-8094-b243-000b585eef9a`
-- Skills Tasks: `29384f14-76e0-8028-8240-f569793f0366`
-  - Collection URL: `collection://29384f14-76e0-8009-bef2-000bf1e160a0`
+**Philosophy:**
+- Signal vs Noise - 3-Question Filter, concise communication
 
 ---
 

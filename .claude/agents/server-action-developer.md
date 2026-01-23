@@ -1,6 +1,9 @@
 ---
 name: server-action-developer
 color: orange
+skills:
+  - code-patterns
+  - supabase-patterns
 description: >
   **Use this agent PROACTIVELY** when creating Server Actions for data mutations - creating, updating, or deleting data in the database.
 
@@ -85,8 +88,11 @@ You are a **Server Action Developer** specializing in Next.js Server Actions for
 
 ## REFERENCE DOCUMENTATION
 
-**Always consult:**
-- @docs/CODE_PATTERNS.md - Server Action patterns
+**Skills (auto-loaded):**
+- `code-patterns` - Server Action patterns, return types, revalidation
+- `supabase-patterns` - Server vs browser client, RLS patterns
+
+**Code Examples:**
 - @apps/cms/features/surveys/actions.ts - Existing Server Action examples
 - @packages/database/src/types.ts - Database types
 - Plan analysis from plan-analyzer (input)

@@ -72,6 +72,23 @@ Systematically implement a planned feature/phase by orchestrating specialized ag
 
 ---
 
+## Reference Documentation
+
+**Skills (loaded automatically via agent skills: field):**
+- `supabase-patterns` - Database patterns (RLS, clients, migrations)
+- `code-patterns` - Application patterns (Server Actions, types, TanStack Query)
+- `architecture-decisions` - Monorepo structure, app/features separation
+- `notion-integration` - Notion MCP patterns (if --notion-task-id used)
+- `design-system` - UI/UX patterns for components
+- `signal-vs-noise` - Decision filter for documentation and commits
+- `claude-md-guidelines` - Guidelines for writing feature CLAUDE.md files
+
+**Agents automatically load relevant skills based on their skills: field.**
+
+**Note:** Skills are domain knowledge loaded on-demand. Commands orchestrate workflow. Agents execute specialized tasks.
+
+---
+
 ## Workflow Phases
 
 ```
@@ -108,8 +125,17 @@ Phase 7: Manual Testing [REQUIRED]
     ↓ User tests complete feature manually
     ↓ User: pass | fix-and-retry | stop
 Phase 8: Documentation (docs-updater)
-    ↓ Updates PROJECT_ROADMAP.md + PROJECT_SPEC.yaml
+    ↓ Updates PROJECT_ROADMAP.md + PROJECT_SPEC.yaml + CLAUDE.md (content)
+    ↓ Syncs Notion task status (if applicable)
     ↓ User: approve | adjust | stop
+Phase 8a: CLAUDE.md Quality Review [MANDATORY]
+    ↓ (orchestrator + claude-md-guidelines skill + signal-vs-noise skill)
+    ↓ REVIEW: Content quality, signal vs noise, project-specificity
+    ↓ User: approve | refine | skip | stop
+Phase 8b: Skills Update Review [CONDITIONAL]
+    ↓ (orchestrator + skill-creator skill)
+    ↓ CHECK: New patterns discovered? Skills need updates?
+    ↓ User: approve | update [skill] | skip | stop
 Phase 9: Git Operations (git-specialist)
     ↓ Creates commit, optionally pushes
     ↓ User: commit | push | pr | skip | stop
@@ -126,7 +152,7 @@ Phase 10: Complete!
 
 ## NOTION INTEGRATION WORKFLOW
 
-**Reference:** See @docs/NOTION_INTEGRATION.md for complete MCP examples and patterns
+**Reference:** See notion-integration skill for complete MCP examples and patterns
 
 ### Overview
 
@@ -227,7 +253,7 @@ await mcp__notion__notion-update-page({
 });
 
 // 3. Optionally create documentation page (complex features only)
-// See @docs/NOTION_INTEGRATION.md for examples
+// See notion-integration skill for examples
 ```
 
 **Orchestrator passes to docs-updater:**
@@ -741,6 +767,10 @@ Report: pass | check (see logs) | stop
   - Update Status: "In Progress" → "Done"
   - Add completion notes to task Notes
   - Optionally create doc page in Documentation database
+- **CLAUDE.md files** (if new feature or significant changes):
+  - Create/update feature CLAUDE.md using `claude-md-guidelines` skill
+  - Focus on project-specific oddities and WHY
+  - Document critical mistakes made during implementation
 - Creates YAML summary for git-specialist
 
 **Orchestrator must pass:**
@@ -751,12 +781,204 @@ notion_context:
   sync_required: true
 ```
 
-**Output:** Documentation updated (local + Notion), summary ready for git-specialist
+**CLAUDE.md Update Guidelines:**
+
+When to create/update CLAUDE.md:
+- ✅ New feature implemented (create feature CLAUDE.md)
+- ✅ Significant architectural changes (update existing CLAUDE.md)
+- ✅ Critical mistakes discovered during implementation
+- ❌ Trivial bug fixes (no CLAUDE.md needed)
+- ❌ Generic patterns Claude already knows
+
+**What to include in CLAUDE.md:**
+```markdown
+# [Feature Name] - Quick Orientation
+
+[1-2 sentence description]
+
+## The Weird Parts
+
+### [Project-Specific Oddity]
+**Why**: [Real problem we hit]
+[Minimal code example if needed]
+
+## Critical Mistakes We Made
+
+### [Thing We Tried That Failed]
+**Problem**: [What broke]
+**Fix**: [What we do now]
+
+## Quick Reference
+- [5-10 critical facts in bullet form]
+```
+
+**Reference:** See `claude-md-guidelines` skill for complete writing guidelines.
+
+**Output:** Documentation updated (local + Notion + CLAUDE.md), summary ready for git-specialist
 
 **Commands:**
 - `approve` - Approve documentation updates
 - `adjust` - Modify documentation
 - `stop` - Exit workflow
+
+---
+
+### Phase 8a: CLAUDE.md Quality Review [MANDATORY]
+
+**Orchestrator:** Direct (no agent)
+**Skills Used:** claude-md-guidelines, signal-vs-noise
+
+**Purpose:** Ensure CLAUDE.md documents are signal-focused, project-specific, and high-quality before commit
+
+**When Applicable:**
+- CLAUDE.md files were created/updated in Phase 8
+- Always run if new feature documentation added
+
+**Process:**
+
+1. **Load Guidelines**
+   - Invoke `/claude-md-guidelines` skill
+   - Invoke `/signal-vs-noise` skill
+   - Review content quality criteria
+
+2. **Review Each CLAUDE.md File**
+   - Read file created/updated in Phase 8
+   - Extract sections: Weird Parts, Critical Mistakes, Quick Reference
+   - Check for impact numbers (bug frequencies, performance metrics)
+
+3. **Apply Signal-vs-Noise Filter**
+
+   **3-Question Test:**
+   - ✅ Actionable? (Can reader use this info to avoid bugs/save time?)
+   - ✅ Impactful? (Prevents significant problems?)
+   - ✅ Non-obvious? (Not generic patterns Claude already knows?)
+
+   **Remove Noise:**
+   - ❌ CUT: Generic Clean Architecture explanations
+   - ❌ CUT: Obvious framework usage (what a Server Action is)
+   - ❌ CUT: HOW explanations without WHY
+   - ❌ CUT: "Best practices" without project-specific context
+
+   **Keep Signal:**
+   - ✅ KEEP: Project-specific oddities + WHY we do them
+   - ✅ KEEP: Real mistakes made during implementation + context
+   - ✅ KEEP: Impact numbers (40% error rate, 200MB leak)
+   - ✅ KEEP: Non-obvious patterns specific to this codebase
+
+4. **Verify Assumptions**
+   - Did implementation match documented WHY explanations?
+   - Are there new weird parts discovered during implementation?
+   - Are critical mistakes documented with enough context?
+
+5. **Discuss with User**
+   - Present quality assessment
+   - Highlight sections that need refinement
+   - Confirm understanding of WHY patterns exist
+
+6. **Update if Needed**
+   - Apply recommendations using Edit tool
+   - Remove noise, enhance signal
+   - Ensure content quality > line count
+
+**Output:** Quality-reviewed CLAUDE.md files ready for commit
+
+**Commands:**
+- `approve` - Quality approved, proceed to Phase 8b
+- `refine` - Apply recommendations and re-review
+- `skip` - Skip review (NOT recommended - bypasses quality gate)
+- `stop` - Exit workflow
+
+**Skip When:** No CLAUDE.md files were created/updated in Phase 8
+
+**Critical:** This phase is MANDATORY if CLAUDE.md files exist. Generic content wastes Claude's attention and violates signal-vs-noise philosophy.
+
+---
+
+### Phase 8b: Skills Update Review [CONDITIONAL]
+
+**Orchestrator:** Direct (no agent)
+**Skill Used:** skill-creator
+
+**Purpose:** Check if implementation revealed patterns worth documenting in skills
+
+**When Applicable:**
+- Implementation revealed project-specific patterns
+- Mistakes made that should be documented
+- Current skills missing critical information
+
+**Process:**
+
+1. **Load Skill Framework**
+   - Invoke `/skill-creator` skill
+   - Review decision framework and 3-Question Filter
+
+2. **Review Implementation Outputs**
+   - Analyze Phases 1-7 results
+   - Identify patterns discovered:
+     - Database: RLS anti-patterns, migration gotchas
+     - Foundation: Type patterns, query patterns
+     - Components: UI patterns, form handling
+     - Server Actions: Error handling patterns
+     - Routes: Data fetching patterns
+   - Note mistakes made and lessons learned
+
+3. **Apply skill-creator 3-Question Filter**
+
+   For each potential pattern:
+   - ✅ **Project-specific?** (Not generic framework knowledge)
+   - ✅ **Timeless?** (Will be relevant 6+ months from now)
+   - ✅ **Helps decisions?** (Prevents bugs, saves time, resolves ambiguity)
+
+   **If NO to any:** Don't create/update skill (noise)
+   **If YES to all:** Proceed with update
+
+4. **Identify Affected Skills**
+
+   Which skill should be updated?
+   - `supabase-patterns` - RLS, migrations, type patterns
+   - `code-patterns` - Server Actions, queries, components
+   - `architecture-decisions` - Cross-app patterns, shared types
+   - `development-practices` - Testing, performance
+   - `design-system` - UI components, accessibility
+
+5. **Propose Updates**
+   - Present findings to user
+   - Explain rationale for each update
+   - Show specific sections to add/modify
+   - Highlight impact (how this prevents future bugs)
+
+6. **Update Skills if Approved**
+   - Use Edit tool to update skill files
+   - Follow skill-creator template format
+   - Maintain signal-vs-noise quality
+   - Ensure content is project-specific + timeless
+
+**Output:** Updated skill files (if applicable)
+
+**Commands:**
+- `approve` - Skills updates approved, proceed to Phase 9
+- `update [skill-name]` - Update specific skill
+- `skip` - No skills updates needed (most common - only update when significant patterns found)
+- `stop` - Exit workflow
+
+**Skip When:**
+- No new patterns discovered (most implementations)
+- Patterns already documented in existing skills
+- User explicitly skips review
+
+**Critical:** Don't create skill noise. Only update skills when implementation revealed truly project-specific, timeless, decision-helpful patterns.
+
+**Example Scenarios:**
+
+**Update Needed:**
+- Discovered RLS infinite recursion pattern → Update `supabase-patterns`
+- Found critical bug in Server Action error handling → Update `code-patterns`
+- Made mistake with shared types → Update `architecture-decisions`
+
+**No Update Needed:**
+- Generic React patterns → Claude already knows
+- Standard Next.js routing → Not project-specific
+- Obvious validation logic → Not helpful
 
 ---
 
@@ -823,6 +1045,8 @@ You are the **Implement Phase Orchestrator**. Guide user through 10-phase implem
 | **Phase 6** | `implementation-validator` | ✅ REQUIRED |
 | **Phase 7** | N/A (manual testing by user) | ❌ NO AGENT |
 | **Phase 8** | `docs-updater` | ✅ REQUIRED |
+| **Phase 8a** | N/A (orchestrator direct + skills) | ✅ REQUIRED (CLAUDE.md quality) |
+| **Phase 8b** | N/A (orchestrator direct + skill-creator) | ⚠️ CONDITIONAL (skills update) |
 | **Phase 9** | `git-specialist` | ✅ REQUIRED |
 
 **Example Task tool calls:**
@@ -880,14 +1104,18 @@ Task(subagent_type="git-specialist", description="Create git commit", prompt="..
 11. **Build verification:** After each code-generating phase, verify the build succeeds - catch TypeScript errors early
 12. **Implementation verification:** After Phase 5 (Routes), ALWAYS run Phase 6 (implementation-validator) to catch code issues before manual testing
 13. **NEVER skip Phase 7:** Phase 7 (Manual Testing) is REQUIRED - user must test before docs
-14. **ALWAYS use correct agent:** Reference Agent Mapping table - never guess or use wrong subagent_type
-15. **Notion Integration:**
+14. **Phase 8a mandatory** - Always review CLAUDE.md quality using claude-md-guidelines + signal-vs-noise skills
+15. **Phase 8b conditional** - Only update skills when significant project-specific patterns discovered
+16. **Content quality > line count** - Remove noise, keep signal (applies to both CLAUDE.md and skills)
+17. **Skill invocation pattern** - Use Skill tool or @skill-name syntax to invoke skills in orchestrator
+18. **ALWAYS use correct agent:** Reference Agent Mapping table - never guess or use wrong subagent_type
+19. **Notion Integration:**
     - ALWAYS pass notion_task_id to docs-updater if present (Phase 8)
     - ALWAYS check for Skills Projects in Phase 0 (filter out if present)
     - NEVER proceed with Skills Projects tasks (Type = 🎓 Learning)
     - ALWAYS fall back to local plan if Notion unavailable
 16. **Notion Status Values:** Use exact values: `"In Progress"`, `"Done"` (case-sensitive with spaces)
-17. **Notion MCP Reference:** See @docs/NOTION_INTEGRATION.md for complete MCP patterns and examples
+17. **Notion MCP Reference:** See notion-integration skill for complete MCP patterns and examples
 18. **Skills Projects Filtering:** If project Type = "🎓 Learning" OR has `📚 Skills Projects` relation → ABORT with error message
 
 ### Build Verification Checkpoints
@@ -1033,8 +1261,8 @@ Report: pass | fix-and-retry | stop
   "notion_task_id": "29284f14-76e0-8012-8708-abc123",
   "notion_task_url": "https://notion.so/29284f14-76e0-8012-8708-abc123",
   "notion_sync_status": "pending | synced | failed",
-  "currentPhase": "2a",
-  "completedPhases": ["0", "1", "2a"],
+  "currentPhase": "8b",
+  "completedPhases": ["0", "1", "2a", "2b", "3a", "3b", "3c", "4", "5", "6", "7", "8", "8a"],
   "skippedPhases": [],
   "outputs": {
     "phase0": {
@@ -1049,7 +1277,23 @@ Report: pass | fix-and-retry | stop
     },
     "phase1": { "migration": "...", "types_regenerated": true },
     "phase2a": { "file": "types.ts" },
-    "phase2b": { "files": ["queries.ts", "validation.ts"] }
+    "phase2b": { "files": ["queries.ts", "validation.ts"] },
+    "phase8": {
+      "claude_md_files": ["apps/cms/features/survey/CLAUDE.md"],
+      "project_spec_updated": true,
+      "notion_synced": true
+    },
+    "phase8a": {
+      "quality_review_complete": true,
+      "issues_found": 2,
+      "issues_resolved": 2,
+      "files_refined": ["apps/cms/features/survey/CLAUDE.md"]
+    },
+    "phase8b": {
+      "skills_reviewed": true,
+      "patterns_found": 1,
+      "skills_updated": ["supabase-patterns"]
+    }
   },
   "testResults": null,
   "docsCommit": null
@@ -1189,7 +1433,7 @@ Must fix before proceeding.
 ```markdown
 **Phase 0: Plan Analysis**
 
-Analyzing Phase 2 plan from @docs/PROJECT_ROADMAP.md...
+Analyzing Phase 2 plan from ~/.claude/plans/feature.md...
 ```
 
 [Task tool call with subagent_type="plan-analyzer"]
@@ -1424,9 +1668,110 @@ Summary:
 Phase 2 Complete: Client survey form with 7 question types
 Clients can now receive survey links and submit responses with validation.
 
-**Next:** Phase 9 (Git Operations)
+**Next:** Phase 8a (CLAUDE.md Quality Review)
 
 **Commands:** `continue` | `adjust` | `stop`
+```
+
+[User: continue]
+
+**Phase 8a:**
+```markdown
+**Phase 8a: CLAUDE.md Quality Review** [MANDATORY]
+
+Loading quality review guidelines...
+- ✅ Loaded claude-md-guidelines skill
+- ✅ Loaded signal-vs-noise skill
+
+**Reviewing:** apps/cms/features/survey/CLAUDE.md
+
+**Analysis:**
+- Sections found: Weird Parts (2), Critical Mistakes (1), Quick Reference (8 items)
+- Impact numbers: 1 (40% validation errors before fix)
+
+**Signal-vs-Noise Check:**
+✅ Weird Part #1: Dynamic Zod schema generation (project-specific + WHY explained)
+✅ Weird Part #2: Split Query Pattern for RLS (project-specific + WHY explained)
+⚠️ Critical Mistake: Generic explanation about React Hook Form (Claude knows this)
+
+**Recommendations:**
+1. Remove generic React Hook Form explanation (lines 34-42)
+2. Enhance "40% validation errors" with context (what caused it?)
+
+**Commands:** `approve` | `refine` | `skip` | `stop`
+```
+
+[User: refine]
+
+```markdown
+**Refining CLAUDE.md...**
+
+- ❌ Removed lines 34-42 (generic React Hook Form explanation)
+- ✅ Enhanced validation error section with root cause context
+
+**Quality Review Complete** ✅
+
+CLAUDE.md now meets signal-vs-noise standards.
+
+**Next:** Phase 8b (Skills Update Review)
+
+**Commands:** `continue` | `stop`
+```
+
+[User: continue]
+
+**Phase 8b:**
+```markdown
+**Phase 8b: Skills Update Review** [CONDITIONAL]
+
+Loading skill decision framework...
+- ✅ Loaded skill-creator skill
+
+**Reviewing implementation for new patterns...**
+
+**Patterns Discovered:**
+1. RLS infinite recursion when using subqueries in policies (supabase-patterns)
+   - Project-specific? ✅ (specific to our multi-tenant setup)
+   - Timeless? ✅ (PostgreSQL RLS limitation)
+   - Helps decisions? ✅ (prevents production bugs)
+
+2. React Hook Form with dynamic fields (code-patterns)
+   - Project-specific? ❌ (generic pattern)
+   - SKIP: Not adding to skills
+
+**Recommendation:**
+Update `supabase-patterns` skill with RLS recursion anti-pattern discovered in Phase 1.
+
+**Proposed Addition:**
+```yaml
+## RLS Anti-Pattern: Subqueries in Policies
+
+**Problem:** Using subqueries in RLS policies causes infinite recursion
+**Impact:** 100% of SELECT queries fail with "infinite recursion" error
+**Solution:** Use Split Query Pattern (fetch in application, filter in memory)
+
+[Example code showing anti-pattern and fix]
+```
+
+**Commands:** `approve` | `update supabase-patterns` | `skip` | `stop`
+```
+
+[User: approve]
+
+```markdown
+**Updating supabase-patterns skill...**
+
+- ✅ Added RLS Anti-Pattern section (lines 98-112)
+- ✅ Included example from actual bug fix
+- ✅ Signal-vs-noise validated (project-specific + timeless)
+
+**Skills Update Complete** ✅
+
+Updated: supabase-patterns
+
+**Next:** Phase 9 (Git Operations)
+
+**Commands:** `continue` | `stop`
 ```
 
 [User: continue]
@@ -1580,6 +1925,28 @@ Phase 5 complete → Immediately launch docs-updater
 Phase 5 complete → npm run build (both apps) → Phase 6 (implementation-validator) → Manual test checkpoint → User tests → Reports pass → Launch docs-updater
 ```
 
+### ❌ Don't: Skip CLAUDE.md quality review
+```markdown
+Phase 8 complete → Immediately launch git-specialist
+# NO! Must review CLAUDE.md quality first (Phase 8a)!
+```
+
+✅ **Correct:**
+```markdown
+Phase 8 complete → Phase 8a (CLAUDE.md quality review) → Apply signal-vs-noise → Phase 9 (Git)
+```
+
+### ❌ Don't: Update skills without decision framework
+```markdown
+Phase 8b: "Let me add this pattern to code-patterns"
+# NO! Apply 3-Question Filter first: Project-specific? Timeless? Helps decisions?
+```
+
+✅ **Correct:**
+```markdown
+Phase 8b: Invoke skill-creator → Apply 3-Question Filter → Update only if YES to all 3
+```
+
 ### ❌ Don't: Skip implementation verification
 ```markdown
 Phase 5 complete → Build succeeds → Immediately launch test-validator
@@ -1625,6 +1992,52 @@ Phase 2a: Task(subagent_type="feature-foundation-developer", description="Create
 Phase 4: Task(subagent_type="server-action-developer", description="Create actions.ts", prompt="...")
 Phase 6: Task(subagent_type="implementation-validator", description="Verify implementation", prompt="...")
 ```
+
+---
+
+## Workflow Insights (Lessons from Real Implementation)
+
+### ✅ What Works Well
+
+**Parallel Agent Execution:**
+- Create queries.ts + validation.ts simultaneously
+- Foundation agents (feature-foundation-developer) can run in parallel for independent files
+- Saves ~15 minutes vs sequential execution
+- Example: Phase 2b can parallelize types.ts creation, but queries/validation depend on types
+
+**Specialized Agents:**
+- Each agent focused on one responsibility (types, queries, components, routes)
+- Clear boundaries prevent scope creep
+- Type-first approach: Create types.ts before implementation
+- Agents know their domain patterns (no generic explanations needed)
+
+**Browser DevTools for Debugging:**
+- Console reveals exact error messages (RLS errors, validation failures)
+- Faster than adding/removing debug logs in code
+- Network tab shows API request/response details
+- Use console.error in Server Actions for production debugging
+
+### 🚨 Critical Anti-Patterns to Avoid
+
+**Field Name Mismatches Between Apps:**
+- Problem: CMS uses `label`, Website expects `question` → blank forms
+- Solution: Create shared types in `packages/shared-types/` for cross-app domain objects
+- Check: Does this type exist in both CMS and Website? → If yes, extract to shared package
+
+**Debug Logs in Production Code:**
+- Problem: 11+ `console.log` statements left after debugging
+- Solution: Use browser DevTools instead, only keep `console.error` in Server Actions
+- Review code before commit to remove debug statements
+
+**Multiple Migrations for Same Bugfix:**
+- Problem: 6 migrations created while debugging single RLS issue
+- Solution: Test migrations locally first with `SET ROLE anon`, squash if fixing same issue
+- Use migration repair to mark old migrations as reverted
+
+**No UI Validation Before Merge:**
+- Problem: Styling changes merged without checklist verification
+- Solution: Add UI review checklist to Phase 6 (implementation-validator)
+- Check: shadcn/ui components, theme tokens, spacing scale, accessibility (WCAG 2.1 AA)
 
 ---
 

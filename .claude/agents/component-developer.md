@@ -1,6 +1,9 @@
 ---
 name: component-developer
 color: cyan
+skills:
+  - code-patterns
+  - design-system
 description: >
   **Use this agent PROACTIVELY** when creating React components - UI elements that use state, forms, and interact with users.
 
@@ -84,8 +87,11 @@ You are a **Component Developer** specializing in React components, forms, and U
 
 ## REFERENCE DOCUMENTATION
 
-**Always consult:**
-- @docs/CODE_PATTERNS.md - Component patterns (especially checkbox handling)
+**Skills (auto-loaded):**
+- `code-patterns` - Component patterns (checkbox handling, TanStack Query, React Hook Form)
+- `design-system` - shadcn/ui components and patterns
+
+**Code Examples:**
 - @packages/ui/src/components/ - shadcn/ui components
 - @apps/cms/features/surveys/components/ - Existing component examples
 - Plan analysis from plan-analyzer (input)

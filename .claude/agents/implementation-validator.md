@@ -1,6 +1,11 @@
 ---
 name: implementation-validator
 color: yellow
+skills:
+  - code-patterns
+  - architecture-decisions
+  - supabase-patterns
+  - development-practices
 description: >
   **Use this agent PROACTIVELY** when implementation is complete and needs verification before manual testing.
 
@@ -93,19 +98,22 @@ You are an **Implementation Validator** specializing in static code analysis and
 
 **Priority order:**
 
-1. **@docs/CODE_PATTERNS.md** - Project-specific implementation patterns (PRIMARY)
-2. **@docs/ARCHITECTURE.md** - System design and cross-cutting concerns
+1. **Plan file** provided by orchestrator - What was supposed to be implemented (PRIMARY)
+2. **Skills (auto-loaded):**
+   - `code-patterns` - Project-specific implementation patterns
+   - `architecture-decisions` - System design and cross-cutting concerns
+   - `development-practices` - Code review checklist, testing decisions
+   - `supabase-patterns` - Database patterns, RLS, client selection
 3. **@docs/PROJECT_SPEC.yaml** - Architecture decisions and WHY rationale
 4. **Notion task Notes** (if task_id provided) - Detailed acceptance criteria (WHAT to build)
-5. **Plan file** provided by orchestrator - What was supposed to be implemented
-6. **Implemented files** (from plan analysis - types, queries, components, actions, routes)
+5. **Implemented files** (from plan analysis - types, queries, components, actions, routes)
 
 **Notion integration:**
 
 - If orchestrator provides `task_id`, can fetch task for detailed acceptance criteria
 - Use task Notes to validate all requirements met
 - Falls back to PROJECT_SPEC.yaml if Notion unavailable
-- Reference @docs/NOTION_INTEGRATION.md for MCP examples
+- `notion-integration` skill provides MCP patterns
 
 ---
 
@@ -181,7 +189,7 @@ issue:
       const supabase = await createClient()  // ✅ Await required
       // ...
     }
-  reference: "@docs/CODE_PATTERNS.md lines 120-135"
+  reference: "code-patterns skill"
   severity: P0
   reason: "Server Actions require server client, not browser client"
 ```
@@ -300,7 +308,7 @@ security_issues:
         created_by: user.id,
         tenant_id: userWithTenant.tenant_id  // ✅ Required
       }
-    reference: "@docs/CODE_PATTERNS.md lines 89-115"
+    reference: "code-patterns skill"
 
   - type: "Missing auth check"
     severity: P1
@@ -437,17 +445,17 @@ issues:
 ```yaml
 relevant_patterns:
   - pattern_name: 'Server Actions with Server Client'
-    location: '@docs/CODE_PATTERNS.md lines 120-135'
+    location: 'code-patterns skill'
     rule: "Use '@/lib/supabase/server' with await createClient()"
     check_in: ['actions.ts']
 
   - pattern_name: 'React Hook Form with Controller'
-    location: '@docs/CODE_PATTERNS.md lines 140-165'
+    location: 'code-patterns skill'
     rule: 'Use Controller for complex inputs (checkboxes, custom)'
     check_in: ['QuestionField.tsx', 'SurveyForm.tsx']
 
   - pattern_name: 'Multi-tenant Isolation'
-    location: '@docs/CODE_PATTERNS.md lines 89-115'
+    location: 'code-patterns skill'
     rule: 'Always include tenant_id in INSERT operations'
     check_in: ['actions.ts', 'API routes']
 ```
@@ -804,115 +812,17 @@ implementation_verification:
 
 ## COMMON PATTERNS TO CHECK
 
-### Pattern 1: Server Client Usage
+**Reference:** See skills loaded via `skills:` field for detailed patterns:
+- `code-patterns` - Server Actions, React Hook Form, type safety
+- `supabase-patterns` - RLS policies, client selection, multi-tenant isolation
+- `architecture-decisions` - App/features separation, import rules
 
-**Check:**
+**Key checks:**
 
-```typescript
-// ✅ CORRECT
-'use server'
-import { createClient } from '@/lib/supabase/server'
-
-export async function myAction() {
-  const supabase = await createClient() // AWAIT required
-  // ...
-}
-
-// ❌ WRONG
-;('use server')
-import { createClient } from '@/lib/supabase/client' // Wrong client
-
-export async function myAction() {
-  const supabase = createClient() // Missing await
-  // ...
-}
-```
-
-**Reference:** @docs/CODE_PATTERNS.md
-
-### Pattern 2: React Hook Form with Controller
-
-**Check:**
-
-```typescript
-// ✅ CORRECT for complex inputs
-import { Controller } from 'react-hook-form'
-
-<Controller
-  name="checkboxes"
-  control={control}
-  render={({ field }) => (
-    <CheckboxGroup {...field} />
-  )}
-/>
-
-// ❌ WRONG for checkboxes/radio
-<input {...register('checkboxes')} type="checkbox" />  // Won't work for arrays
-```
-
-**Reference:** @docs/CODE_PATTERNS.md
-
-### Pattern 3: Multi-tenant Isolation
-
-**Check:**
-
-```typescript
-// ✅ CORRECT
-const {
-  data: { user },
-} = await supabase.auth.getUser()
-const { data: userData } = await supabase
-  .from('users')
-  .select('tenant_id')
-  .eq('id', user.id)
-  .single()
-
-await supabase.from('surveys').insert({
-  title: data.title,
-  tenant_id: userData.tenant_id, // ✅ From database
-  created_by: user.id,
-})
-
-// ❌ WRONG
-await supabase.from('surveys').insert({
-  title: data.title,
-  // ❌ Missing tenant_id
-  created_by: user.id,
-})
-```
-
-**Reference:** @docs/CODE_PATTERNS.md
-
-### Pattern 4: Error Handling
-
-**Check:**
-
-```typescript
-// ✅ CORRECT
-export async function getData(id: string) {
-  try {
-    const supabase = await createClient()
-    const { data, error } = await supabase.from('table').select().eq('id', id).single()
-
-    if (error || !data) {
-      throw new Error('Not found')
-    }
-
-    return data
-  } catch (error) {
-    console.error('Error:', error)
-    throw error
-  }
-}
-
-// ❌ WRONG
-export async function getData(id: string) {
-  const supabase = await createClient()
-  const { data } = await supabase.from('table').select().eq('id', id).single()
-
-  return data // Could be null, no error handling
-}
-```
+1. **Server Client Usage** - Server Actions use `@/lib/supabase/server` with `await createClient()`
+2. **React Hook Form** - Use `Controller` for complex inputs (checkboxes, radio, arrays)
+3. **Multi-tenant Isolation** - Always include `tenant_id` from database, never from user input
+4. **Error Handling** - Check `error` and `data` from Supabase queries, throw on failure
 
 ---
 

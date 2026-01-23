@@ -1,6 +1,9 @@
 ---
 name: feature-foundation-developer
 color: orange
+skills:
+  - code-patterns
+  - supabase-patterns
 description: >
   **Use this agent PROACTIVELY** when creating the foundational TypeScript files for a feature - types, queries, and validation schemas.
 
@@ -139,9 +142,11 @@ const survey = await supabase.from('surveys').select().eq('id', link.survey_id)
 
 ## REFERENCE DOCUMENTATION
 
-**Always consult:**
+**Skills (auto-loaded):**
+- `code-patterns` - Query/Validation patterns, type safety
+- `supabase-patterns` - Browser client usage, query patterns
 
-- @docs/CODE_PATTERNS.md - Query/Validation patterns
+**Type Definitions:**
 - @packages/database/src/types.ts - Database types
 - @apps/cms/features/surveys/ - Existing foundation examples
 - Plan analysis from plan-analyzer (input)
@@ -238,7 +243,7 @@ export default async function SurveyPage({ params }: PageProps) {
 
 - Plan says "TanStack Query" → Browser client
 - Plan says "Server Component" → Server client
-- Check @docs/CODE_PATTERNS.md for app-specific patterns
+- Check `code-patterns` skill for app-specific patterns (auto-loaded)
 
 ### 🚨 RULE 2: Explicit Return Types
 
