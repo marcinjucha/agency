@@ -22,10 +22,10 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getLawyerCalendarTokenPublic } from '@/features/calendar/queries'
 import type { AvailableSlotsResponse, ErrorResponse, TimeSlot } from '@/features/calendar/types'
 import { parse, addHours, addMinutes } from 'date-fns'
 import { createClient } from '@supabase/supabase-js'
+import { getValidAccessToken, refreshAccessToken } from '@legal-mind/calendar'
 
 // Initialize Supabase client with service role key
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -311,18 +311,23 @@ export async function GET(request: NextRequest): Promise<
 
     console.log('[SLOTS API] Survey data:', surveyData)
 
-    // Step 3: Get lawyer's calendar token
-    let tokenData
-    try {
-      console.log('[SLOTS API] Getting calendar token for user:', surveyData.user_id)
-      tokenData = await getLawyerCalendarTokenPublic(surveyData.user_id, surveyData.tenant_id)
-    } catch (error) {
-      console.error('Error fetching calendar token:', error)
+    // Step 3: Get valid access token with auto-refresh
+    const tokenResult = await getValidAccessToken(
+      surveyData.user_id,
+      supabase,
+      refreshAccessToken
+    )
+
+    if (tokenResult.error) {
+      console.error('[SLOTS API] Failed to get access token:', tokenResult.error)
       return NextResponse.json(
-        { success: false, error: 'Failed to fetch calendar settings' },
+        { success: false, error: 'Calendar not available' },
         { status: 500 }
       )
     }
+
+    // TypeScript: accessToken is guaranteed to be string here (no error case)
+    const accessToken = tokenResult.accessToken!
 
     // Step 4: Get busy events from calendar
     let busyEvents: Array<{
@@ -330,27 +335,16 @@ export async function GET(request: NextRequest): Promise<
       end: { dateTime: string }
     }> = []
 
-    // If calendar is connected, fetch busy events
-    // If not connected, return all slots as available (mock mode for development)
-    if (tokenData.token) {
-      try {
-        const googleToken = tokenData.token as { access_token: string }
+    try {
+      // Get start and end of day
+      const tzOffset = getWarsawUTCOffset(requestedDate)
+      const dayStartUTC = new Date(requestedDate.getFullYear(), requestedDate.getMonth(), requestedDate.getDate(), -tzOffset, 0, 0)
+      const dayEndUTC = new Date(requestedDate.getFullYear(), requestedDate.getMonth(), requestedDate.getDate(), 24 - tzOffset, 0, 0)
 
-        // Get start and end of day
-        const tzOffset = getWarsawUTCOffset(requestedDate)
-        const dayStartUTC = new Date(requestedDate.getFullYear(), requestedDate.getMonth(), requestedDate.getDate(), -tzOffset, 0, 0)
-        const dayEndUTC = new Date(requestedDate.getFullYear(), requestedDate.getMonth(), requestedDate.getDate(), 24 - tzOffset, 0, 0)
-
-        busyEvents = await getCalendarEvents(googleToken.access_token, dayStartUTC, dayEndUTC)
-      } catch (error) {
-        console.error('Error fetching calendar events:', error)
-        // Don't fail - just return all slots available if calendar fetch fails
-        busyEvents = []
-      }
-    } else {
-      // Calendar not connected - for development/testing, return all slots as available
-      // In production, you may want to return an error instead
-      console.info('Calendar not connected - returning all slots as available (development mode)')
+      busyEvents = await getCalendarEvents(accessToken, dayStartUTC, dayEndUTC)
+    } catch (error) {
+      console.error('[SLOTS API] Error fetching calendar events:', error)
+      // Don't fail - just return all slots available if calendar fetch fails
       busyEvents = []
     }
 

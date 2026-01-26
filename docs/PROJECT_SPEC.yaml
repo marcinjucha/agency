@@ -254,7 +254,7 @@ features:
         - feature: "Available Slots API"
 
     - name: "Booking Creation & Notifications"
-      status: "complete"
+      status: "in-progress"
       why: "Persist appointments, sync with Google Calendar, notify participants"
       acceptance_criteria:
         - "Appointment record in database linked to response_id"
@@ -265,6 +265,44 @@ features:
           rationale: "Centralize all notifications in workflow automation"
       dependencies:
         - feature: "Calendar Booking UI"
+      notes: |
+        2026-01-26: Priority 1 Implementation Complete (Code)
+
+        CREATED:
+        - Shared calendar package (@legal-mind/calendar)
+        - Token manager with auto-refresh (5-minute buffer before expiry)
+        - Real Google Calendar event creation (replaces mock)
+        - OAuth token refresh logic (moved from CMS)
+
+        FIXED:
+        - Booking API: Replaced mock createEvent with real Google Calendar API
+        - Slots API: Integrated token manager with auto-refresh
+        - Architecture: No cross-app imports (ADR-005 compliant)
+        - Graceful degradation: Appointment saves even if calendar fails
+
+        ARCHITECTURE:
+        - Token manager checks expiry + auto-refreshes + updates database
+        - Booking uses graceful degradation (calendar failure doesn't block)
+        - Slots fails fast (calendar required for availability)
+        - Dependency injection pattern (no circular dependencies)
+
+        TESTING INCOMPLETE (P0 FAILURE):
+        - P0 Test #1 FAILED: Events not appearing in Google Calendar
+        - Error: "Invalid authentication credentials"
+        - Appointment creation works (saves to database)
+        - Calendar integration fails (event not created)
+
+        ROOT CAUSE INVESTIGATION NEEDED:
+        1. Check env vars: GOOGLE_MOCK_MODE or USE_MOCK_CALENDAR (may be enabled)
+        2. Verify OAuth token in database (expires_at, access_token validity)
+        3. Test token refresh flow (auto-refresh may not trigger)
+        4. Verify OAuth credentials (client ID/secret correct)
+
+        TODO BEFORE MARKING COMPLETE:
+        - [ ] Debug authentication issue (mock mode vs invalid token)
+        - [ ] Complete P0/P1 manual testing scenarios
+        - [ ] Verify events appear in Google Calendar
+        - [ ] Test token auto-refresh with expired token
 
   phase_4_uiux:
     - name: "Accessibility Critical Path"
@@ -402,7 +440,7 @@ dependencies:
 status_summary:
   phase_1: "✅ Complete (100%) - Foundation & CMS Core"
   phase_2: "✅ Complete (100%) - Client Survey Form & Response Management"
-  phase_3: "✅ Complete (100%) - Calendar Integration"
+  phase_3: "⚠️ In Progress (90%) - Calendar Integration (code complete, testing incomplete)"
   phase_4: "✅ Complete (100%) - UI/UX Improvements"
   phase_5: "📋 Next (0%) - n8n Workflows & AI Analysis"
   phase_6: "🔮 Future (0%) - Marketing & Polish"
@@ -410,7 +448,7 @@ status_summary:
 critical_path:
   - "Phase 1 Foundation (✅ COMPLETE)"
   - "Phase 2 Form Submission & Response Management (✅ COMPLETE)"
-  - "Phase 3 Calendar Integration (✅ COMPLETE)"
+  - "Phase 3 Calendar Integration (⚠️ IN PROGRESS - code complete, testing incomplete)"
   - "Phase 4 UI/UX Improvements (✅ COMPLETE)"
   - "Phase 5 n8n & AI Analysis (📋 NEXT)"
   - "Phase 6 Marketing & Production"

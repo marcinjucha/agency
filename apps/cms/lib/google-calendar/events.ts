@@ -1,7 +1,7 @@
 import { google, calendar_v3 } from 'googleapis'
 
 // ⚠️ MOCK MODE - Set to false after Google API is properly configured
-const USE_MOCK_CALENDAR = true
+const USE_MOCK_CALENDAR = false
 
 export interface CalendarEvent {
   id: string
@@ -58,7 +58,7 @@ export async function getEvents(
       orderBy: 'startTime',
     })
 
-    return (response.data.items || []).map(event => ({
+    return (response.data.items || []).map((event) => ({
       id: event.id || '',
       summary: event.summary || '',
       start: { dateTime: event.start?.dateTime || '' },
@@ -141,10 +141,7 @@ export async function updateEvent(
 /**
  * Delete/cancel a calendar event
  */
-export async function deleteEvent(
-  accessToken: string,
-  eventId: string
-): Promise<void> {
+export async function deleteEvent(accessToken: string, eventId: string): Promise<void> {
   if (USE_MOCK_CALENDAR) {
     // Mock: Just return
     return

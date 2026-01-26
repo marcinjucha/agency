@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createClient } from '@supabase/supabase-js'
+import { getValidAccessToken, refreshAccessToken, createEvent } from '@legal-mind/calendar'
 
 // Initialize Supabase client with service role key for server-side operations
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -177,27 +178,62 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Step 5: Create Google Calendar event (mocked for now)
+    // Step 5: Create Google Calendar event
     let googleEventId: string | null = null
 
     try {
-      // In production, this would call Google Calendar API
-      // For now, using mock event ID (matches mock mode in events.ts)
-      googleEventId = `mock_event_${newAppointment.id}_${Date.now()}`
+      // Get fresh access token with auto-refresh
+      const tokenResult = await getValidAccessToken(
+        survey.created_by,
+        supabase,
+        refreshAccessToken
+      )
 
-      // Update appointment with Google Calendar event ID
-      const { error: updateError } = await supabase
-        .from('appointments')
-        .update({ google_calendar_event_id: googleEventId })
-        .eq('id', newAppointment.id)
+      if (tokenResult.error) {
+        console.error('[BOOKING API] Failed to get access token:', tokenResult.error)
+        // Graceful degradation: Save appointment even if calendar fails
+      } else {
+        console.log('[BOOKING API] Token retrieved successfully, length:', tokenResult.accessToken?.length)
+        console.log('[BOOKING API] Token preview:', tokenResult.accessToken?.substring(0, 20) + '...')
 
-      if (updateError) {
-        console.error('Error updating appointment with event ID:', updateError)
-        // Don't fail the booking if this fails, the appointment is already created
+        // Create event in Google Calendar
+        try {
+          const calendarEvent = {
+            summary: `Appointment: ${validatedData.clientName}`,
+            description: `Client: ${validatedData.clientName}\nEmail: ${validatedData.clientEmail}\nNotes: ${validatedData.notes || 'N/A'}`,
+            start: {
+              dateTime: validatedData.startTime,
+              timeZone: 'Europe/Warsaw',
+            },
+            end: {
+              dateTime: validatedData.endTime,
+              timeZone: 'Europe/Warsaw',
+            },
+            attendees: [{ email: validatedData.clientEmail }],
+          }
+
+          googleEventId = await createEvent(tokenResult.accessToken!, calendarEvent)
+        } catch (eventError) {
+          console.error('Failed to create Google Calendar event:', eventError)
+          // Graceful degradation: Continue without event ID
+        }
+      }
+
+      // Update appointment with Google Calendar event ID (if created)
+      if (googleEventId) {
+        const { error: updateError } = await supabase
+          .from('appointments')
+          .update({ google_calendar_event_id: googleEventId })
+          .eq('id', newAppointment.id)
+
+        if (updateError) {
+          console.error('Error updating appointment with event ID:', updateError)
+          // Don't fail the booking if this fails, the appointment is already created
+        }
       }
     } catch (error) {
-      console.error('Error creating Google Calendar event:', error)
-      // Don't fail the booking if calendar event creation fails
+      console.error('Error in calendar integration:', error)
+      // Don't fail the booking if calendar integration fails
       // The appointment is already created in the database
     }
 
