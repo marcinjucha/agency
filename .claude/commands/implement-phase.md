@@ -24,34 +24,42 @@ Systematically implement a planned feature/phase by orchestrating specialized ag
 
 **Examples:**
 ```bash
-# Interactive mode (default) - ask for approval after each phase
-/implement-phase Phase 2
-/implement-phase survey-form
+# NOTION-FIRST (recommended) - searches Notion automatically
+/implement-phase calendar integration
+/implement-phase google calendar fix
 
-# With Notion task (NEW) - reads task from Notion, syncs status to "Done"
-/implement-phase --notion-task-id=29284f14-76e0-8012-abc123
+# With specific Notion task ID - skip search, use directly
+/implement-phase --notion-task-id=2ed84f14-76e0-80c0-8da7-d574cdf2a4fe
 
-# Automated mode - run all phases without confirmation
-/implement-phase Phase 2 --auto
-/implement-phase ~/.claude/plans/abundant-waddling-rossum.md --auto
+# Skip Notion, use local file only
+/implement-phase Phase 2 --skip-notion
+/implement-phase ~/.claude/plans/plan.md --skip-notion
 
-# Notion task + automated mode
-/implement-phase --notion-task-id=29284f14-76e0-8012-abc123 --auto
+# Automated mode with Notion
+/implement-phase calendar integration --auto
+
+# Automated mode with specific Notion task
+/implement-phase --notion-task-id=2ed84f14-76e0-80c0-8da7-d574cdf2a4fe --auto
 ```
 
 **Parameters:**
-- `plan-reference` - Phase name or path to plan file (e.g., "Phase 2", "~/.claude/plans/plan.md")
+- `plan-reference` - Search term for Notion OR path to local file (e.g., "calendar integration", "~/.claude/plans/plan.md")
 - `--auto` - Run all phases without manual approval (except manual testing)
-- `--notion-task-id=<task-id>` - Use Notion task as source, sync status when complete
+- `--notion-task-id=<task-id>` - Use specific Notion task (skips search)
+- `--skip-notion` - Skip Notion search, use only local files
 
 **Modes:**
 - **Interactive (default):** Waits for user approval after each phase
 - **Automated (--auto):** Runs all phases sequentially, only stops on P0 failures
-- **Notion Integration:** If `--notion-task-id` provided, reads from Notion and syncs status to "Done" after completion
+- **Notion-First (default):** Searches Notion for tasks matching plan-reference, lets user select
+- **Direct Task (--notion-task-id):** Skip search, use specific Notion task directly
+- **Local Only (--skip-notion):** Skip Notion entirely, use local files only
 
-**Behavior:**
-- If `--notion-task-id` provided: Fetch task from Notion, use task Notes as plan, sync status after Phase 8
-- If plan file provided: Traditional workflow (read local file)
+**Behavior (NOTION-FIRST):**
+- **ALWAYS start by searching Notion** for relevant tasks (unless `--skip-notion` flag provided)
+- If Notion task found: Use it as primary source, sync status after Phase 8
+- If `--notion-task-id` provided: Skip search, fetch specific task directly
+- If plan file provided AND Notion empty: Use local file as fallback
 - Falls back to local if Notion unavailable
 
 ---
@@ -92,59 +100,63 @@ Systematically implement a planned feature/phase by orchestrating specialized ag
 ## Workflow Phases
 
 ```
-Phase 0: Plan Analysis (plan-analyzer)
+Phase 1: Notion Discovery [AUTOMATIC] (orchestrator)
+    ↓ Search Notion for tasks matching plan-reference
+    ↓ Filter out Skills Projects (Type = 🎓 Learning)
+    ↓ Present Agency tasks to user for selection
+    ↓ User: select task | use-local | stop
+Phase 2: Plan Analysis (analysis-agent)
     ↓ User: continue | adjust | stop
-Phase 1: Database [CRITICAL] (supabase-schema)
+Phase 3: Database [CRITICAL] (database-specialist)
     ↓ BUILD VERIFICATION: npm run build:cms
     ↓ MANUAL TEST CHECKPOINT (if testable)
     ↓ User: continue | fix | stop
-Phase 2a: Foundation - Types (foundation-dev)
+Phase 4a: Foundation - Types (code-developer)
     ↓ User: continue | retry | stop
-Phase 2b: Foundation ⚡⚡⚡ (2x foundation-dev)
+Phase 4b: Foundation ⚡⚡⚡ (2x code-developer)
     ↓ BUILD VERIFICATION: npm run build:cms ← MUST PASS
     ↓ User: continue | retry | stop
-Phase 3a: Components - Base (component-dev)
+Phase 5a: Components - Base (code-developer)
     ↓ User: continue | retry | stop
-Phase 3b: Components - Composite (component-dev)
+Phase 5b: Components - Composite (code-developer)
     ↓ BUILD VERIFICATION: npm run build:cms ← MUST PASS
     ↓ User: continue | retry | stop
-Phase 3c: UI/UX Review (ui-ux-designer)
+Phase 5c: UI/UX Review (ui-ux-designer)
     ↓ BUILD VERIFICATION: npm run build:cms (if changes made)
     ↓ User: continue | fix | stop
-Phase 4: Server Actions / API Routes
+Phase 6: Server Actions / API Routes (code-developer)
     ↓ BUILD VERIFICATION: npm run build:cms ← MUST PASS
     ↓ User: continue | retry | stop
-Phase 5: Routes (route-dev)
+Phase 7: Routes (code-developer)
     ↓ BUILD VERIFICATION: npm run build ← BOTH APPS MUST PASS
     ↓ User: continue | retry | stop
-Phase 6: Implementation Verification
-    ↓ (implementation-validator)
+Phase 8: Implementation Verification (analysis-agent)
     ↓ STATIC CODE ANALYSIS - verify correctness, patterns, bugs
     ↓ User: pass | fix | details | stop
-Phase 7: Manual Testing [REQUIRED]
+Phase 9: Manual Testing [REQUIRED]
     ↓ User tests complete feature manually
     ↓ User: pass | fix-and-retry | stop
-Phase 8: Documentation (docs-updater)
+Phase 10: Documentation (project-manager-agent)
     ↓ Updates PROJECT_ROADMAP.md + PROJECT_SPEC.yaml + CLAUDE.md (content)
     ↓ Syncs Notion task status (if applicable)
     ↓ User: approve | adjust | stop
-Phase 8a: CLAUDE.md Quality Review [MANDATORY]
+Phase 10a: CLAUDE.md Quality Review [MANDATORY]
     ↓ (orchestrator + claude-md-guidelines skill + signal-vs-noise skill)
     ↓ REVIEW: Content quality, signal vs noise, project-specificity
     ↓ User: approve | refine | skip | stop
-Phase 8b: Skills Update Review [CONDITIONAL]
+Phase 10b: Skills Update Review [CONDITIONAL]
     ↓ (orchestrator + skill-creator skill)
     ↓ CHECK: New patterns discovered? Skills need updates?
     ↓ User: approve | update [skill] | skip | stop
-Phase 9: Git Operations (git-specialist)
+Phase 11: Git Operations (project-manager-agent)
     ↓ Creates commit, optionally pushes
     ↓ User: commit | push | pr | skip | stop
-Phase 10: Complete!
+Phase 12: Complete!
 ```
 
 **Optimizations:**
-- Phase 2b: queries + validation parallel
-- Phase 3a: Multiple base components parallel (if plan has them)
+- Phase 4b: queries + validation parallel
+- Phase 5a: Multiple base components parallel (if plan has them)
 - Skip testing phase if automated tests only
 - Smart dependency detection prevents blocking
 
@@ -156,59 +168,27 @@ Phase 10: Complete!
 
 ### Overview
 
-When `--notion-task-id` is provided, the workflow integrates with Notion:
-- **Phase 0:** Reads task from Notion (Name, Notes, Projects context)
-- **Phases 1-7:** Execute normally (using Notes as plan content)
-- **Phase 8:** docs-updater syncs status to "Done" and adds completion notes
-- **Phase 9:** git-specialist creates commit
+When Notion task is used, the workflow integrates with Notion:
+- **Phase 1:** Searches and presents Notion tasks (unless --notion-task-id provided)
+- **Phase 2:** Analyzes selected task (Name, Notes, Projects context)
+- **Phases 3-9:** Execute normally (using Notes as plan content)
+- **Phase 10:** project-manager-agent syncs status to "Done" and adds completion notes
+- **Phase 11:** project-manager-agent creates commit
 
-### Phase 0: Reading from Notion (plan-analyzer)
+### Phase 1-2: Reading from Notion (orchestrator + analysis-agent)
 
-**When Notion task provided:**
+**When Notion task selected:**
 
-```typescript
-// Step 1: Fetch task details
-const task = await mcp__notion__notion-fetch({
-  id: notionTaskId
-});
+1. **Extract plan from task:**
+   - Plan content: Notes property
+   - Task name: Name property
+   - Context: Priority, Deadline, Projects
 
-// Step 2: Extract plan from task
-const planContent = task.properties.Notes;  // Task description
-const taskName = task.properties.Name;      // Task title
-const priority = task.properties.Priority;  // Optional context
-const deadline = task.properties.Deadline;  // Optional context
+2. **Skills Projects already filtered** in Phase 1
 
-// Step 3: Check for Skills Projects (FILTER OUT)
-const projectRelation = task.properties["📊 Projects"];
-if (projectRelation) {
-  const project = await mcp__notion__notion-fetch({ id: projectId });
-
-  // Method 1: Check Type property (PRIMARY)
-  const projectType = project.properties["Type"]?.select?.name;
-  if (projectType === "🎓 Learning") {
-    // ABORT - This is personal learning, not agency work
-    throw new Error("Skills Project detected - use agency tasks only");
-  }
-
-  // Method 2: Check Skills Projects relation (FALLBACK)
-  if (project.properties["📚 Skills Projects"]?.length > 0) {
-    // ABORT - This is a Skills Project
-    throw new Error("Skills Project detected - use agency tasks only");
-  }
-}
-
-// Step 4: Pass to plan-analyzer
-const planAnalysis = await planAnalyzer({
-  taskName: taskName,
-  planContent: planContent,
-  notionContext: {
-    task_id: notionTaskId,
-    project_id: projectId,
-    priority: priority,
-    deadline: deadline
-  }
-});
-```
+3. **Pass to analysis-agent:**
+   - Task name + plan content + notion context
+   - Agent analyzes as normal
 
 **Status Values (IMPORTANT):**
 - Notion statuses are **case-sensitive with spaces**
@@ -221,48 +201,27 @@ If Notion API unavailable:
   - Log warning: "Notion API unavailable, falling back to local plan"
   - Read from local plan file (if provided)
   - Continue execution with available data
-  - Phase 8 skips Notion sync (sync_status: "failed")
+  - Phase 10 skips Notion sync (sync_status: "failed")
 ```
 
-### Phase 8: Syncing to Notion (docs-updater)
+### Phase 10: Syncing to Notion (project-manager-agent)
 
-**When Notion task provided:**
+**When Notion task used:**
 
-docs-updater receives `notion_task_id` from orchestrator and:
-
-```typescript
-// 1. Update task status in Notion
-await mcp__notion__notion-update-page({
-  data: {
-    page_id: notionTaskId,
-    command: "update_properties",
-    properties: {
-      "Status": "Done"  // Change from "In Progress" to "Done"
-    }
-  }
-});
-
-// 2. Add completion notes to task
-await mcp__notion__notion-update-page({
-  data: {
-    page_id: notionTaskId,
-    command: "insert_content_after",
-    selection_with_ellipsis: "## Notes...",
-    new_str: "\n\n## Completion Summary\n- Implementation complete\n- All acceptance criteria met\n- Build verified successfully"
-  }
-});
-
-// 3. Optionally create documentation page (complex features only)
-// See notion-integration skill for examples
-```
-
-**Orchestrator passes to docs-updater:**
+**Orchestrator passes:**
 ```yaml
 notion_context:
   task_id: "29284f14-76e0-8012-8708-abc123"
   task_url: "https://notion.so/29284f14-76e0-8012-8708-abc123"
   sync_required: true
 ```
+
+**Agent updates:**
+1. Task Status: "In Progress" → "Done"
+2. Add completion notes to task Notes
+3. Optionally create doc page (complex features)
+
+See `notion-integration` skill for MCP tool examples.
 
 ### State Tracking with Notion
 
@@ -333,21 +292,69 @@ Agency implementation workflows only process agency work.
 
 ## Phase Descriptions
 
-### Phase 0: Plan Analysis
+### Phase 1: Notion Discovery [AUTOMATIC]
 
-**Agent:** `plan-analyzer`
+**Orchestrator:** Direct (no agent)
+
+**Purpose:** Find relevant Notion tasks before starting implementation
+
+**When to run:**
+- ALWAYS (unless `--skip-notion` or `--notion-task-id` provided)
+- Runs automatically at workflow start
+
+**Process:**
+
+1. **Search Notion using MCP tool** for tasks matching plan-reference query
+   ```typescript
+   mcp__notion__notion-search({
+     query: plan-reference,  // e.g., "Google Calendar integration"
+     query_type: "internal"
+   })
+   ```
+   **CRITICAL:** Use `mcp__notion__notion-search` MCP tool, NOT Notion CLI or bash commands.
+
+2. **Fetch and filter** each result:
+   - Extract: Name, Status, Priority, Projects, Notes
+   - **Filter OUT Skills Projects:**
+     - Project Type = "🎓 Learning"
+     - Project has "📚 Skills Projects" relation
+
+3. **Present Agency tasks** to user with:
+   - Task ID, Name, Priority, Status
+   - Project name
+   - Notes preview (first 2 lines)
+   - Mark filtered tasks as [FILTERED - Skills Project]
+
+4. **User selects** task number OR `use-local` OR `stop`
+
+**Commands:**
+- `1`, `2`, etc. - Select task by number
+- `use-local` - Skip Notion, use local file
+- `stop` - Exit workflow
+
+**Skip When:**
+- `--skip-notion` flag provided
+- `--notion-task-id` provided (skip search, use direct ID)
+
+**Output:** `notion_task_id` (if selected) OR fallback to local
+
+---
+
+### Phase 2: Plan Analysis
+
+**Agent:** `analysis-agent` (uses plan-analysis skill)
 
 **Purpose:** Analyze plan and create optimized execution strategy
 
-**Input Sources (priority order):**
-1. **Notion task** (if `--notion-task-id` provided) - **PRIMARY**
-2. **Local plan file** (if path provided) - **FALLBACK**
+**Input Sources (from Phase 1):**
+1. **Notion task** (if selected in Phase 1) - **PRIMARY**
+2. **Local plan file** (if `use-local` chosen) - **FALLBACK**
 
-**When Notion task provided:**
-- Fetch task with `mcp__notion__notion-fetch`
+**When Notion task selected:**
+- Task already fetched in Phase 1
 - Extract: Name (title), Notes (plan content), Projects (context)
-- Check project for Skills Projects relation → filter out if present
-- Pass to plan-analyzer: "Analyze this Notion task: [Name]\n\n[Notes]"
+- Already filtered Skills Projects in Phase 1
+- Pass to analysis-agent: "Analyze this Notion task: [Name]\n\n[Notes]"
 
 **Analyzes:**
 - File dependencies (what must be created before what)
@@ -374,9 +381,9 @@ Agency implementation workflows only process agency work.
 
 ---
 
-### Phase 1: Database Setup [CRITICAL]
+### Phase 3: Database Setup [CRITICAL]
 
-**Agent:** `supabase-schema-specialist`
+**Agent:** `database-specialist` (uses schema-management, rls-policies, database-functions skills)
 
 **Purpose:** Create/modify database schema (migrations, RLS policies, functions)
 
@@ -401,9 +408,9 @@ Agency implementation workflows only process agency work.
 
 ---
 
-### Phase 2: Foundation ⚡⚡⚡ [PARALLEL]
+### Phase 4: Foundation ⚡⚡⚡ [PARALLEL]
 
-**Agent:** `feature-foundation-developer` (3 instances in parallel)
+**Agent:** `code-developer` (uses foundation-patterns skill, 3 instances in parallel)
 
 **Purpose:** Create foundational TypeScript files (types, queries, validation)
 
@@ -424,9 +431,9 @@ Agency implementation workflows only process agency work.
 
 ---
 
-### Phase 3a: Components - Base Component [SEQUENTIAL]
+### Phase 5a: Components - Base Component [SEQUENTIAL]
 
-**Agent:** `component-developer`
+**Agent:** `code-developer` (uses component-patterns skill)
 
 **Purpose:** Create base/leaf components (no dependencies on other feature components)
 
@@ -438,23 +445,23 @@ Agency implementation workflows only process agency work.
 **Output:** QuestionField.tsx ready for SurveyForm to use
 
 **Commands:**
-- `continue` - Proceed to Phase 3b (SurveyForm)
+- `continue` - Proceed to Phase 5b (SurveyForm)
 - `retry` - Recreate component
 - `details` - See full component code
 - `stop` - Exit workflow
 
 ---
 
-### Phase 3b: Components - Composite Component [SEQUENTIAL]
+### Phase 5b: Components - Composite Component [SEQUENTIAL]
 
-**Agent:** `component-developer`
+**Agent:** `code-developer` (uses component-patterns skill)
 
 **Purpose:** Create composite components (depend on base components)
 
 **Creates:**
 - SurveyForm.tsx (React Hook Form + Zod, uses QuestionField)
 
-**Why after 3a:** Imports QuestionField from Phase 3a
+**Why after 5a:** Imports QuestionField from Phase 5a
 
 **Output:** SurveyForm ready for routes
 
@@ -464,11 +471,11 @@ Agency implementation workflows only process agency work.
 - `details` - See full component code
 - `stop` - Exit workflow
 
-**Note:** If plan has multiple independent components, they can be parallel in 3a. But dependent components (like SurveyForm) must be sequential.
+**Note:** If plan has multiple independent components, they can be parallel in 5a. But dependent components (like SurveyForm) must be sequential.
 
 ---
 
-### Phase 3c: UI/UX Review [SEQUENTIAL]
+### Phase 5c: UI/UX Review [SEQUENTIAL]
 
 **Agent:** `ui-ux-designer`
 
@@ -482,25 +489,25 @@ Agency implementation workflows only process agency work.
 - Responsive design patterns (mobile-first)
 - UI states (loading, error, empty, disabled)
 
-**Why after 3b:** Components are functionally complete, ready for design review
+**Why after 5b:** Components are functionally complete, ready for design review
 
 **Output:** YAML report with P0/P1/P2 design issues and concrete recommendations
 
 **Commands:**
 - `continue` - Design approved, proceed to server actions
-- `fix` - Design issues found, component-developer fixes them
+- `fix` - Design issues found, code-developer fixes them
 - `details` - See full UI/UX review report
 - `stop` - Exit workflow
 
 **Skip When:** Components are purely functional with no UI (rare)
 
-**Note:** If P0 or P1 design issues found, component-developer should fix before Phase 4.
+**Note:** If P0 or P1 design issues found, code-developer should fix before Phase 6.
 
 ---
 
-### Phase 4: Server Actions [SEQUENTIAL]
+### Phase 6: Server Actions [SEQUENTIAL]
 
-**Agent:** `server-action-developer`
+**Agent:** `code-developer` (uses server-action-patterns skill)
 
 **Purpose:** Create Server Actions for data mutations
 
@@ -520,9 +527,9 @@ Agency implementation workflows only process agency work.
 
 ---
 
-### Phase 5: Routes [SEQUENTIAL]
+### Phase 7: Routes [SEQUENTIAL]
 
-**Agent:** `route-developer`
+**Agent:** `code-developer` (uses route-patterns skill)
 
 **Purpose:** Create Next.js routes (pages)
 
@@ -542,9 +549,9 @@ Agency implementation workflows only process agency work.
 
 ---
 
-### Phase 6: Implementation Verification
+### Phase 8: Implementation Verification
 
-**Agent:** `implementation-validator`
+**Agent:** `analysis-agent` (uses code-validation skill)
 
 **Purpose:** Verify implementation correctness before manual testing
 
@@ -574,7 +581,7 @@ Agency implementation workflows only process agency work.
 
 ---
 
-### Phase 7: Manual Testing [REQUIRED]
+### Phase 9: Manual Testing [REQUIRED]
 
 **Purpose:** User manually tests implemented features before documentation
 
@@ -751,14 +758,14 @@ Report: pass | check (see logs) | stop
 
 ---
 
-### Phase 8: Documentation [SEQUENTIAL]
+### Phase 10: Documentation [SEQUENTIAL]
 
-**Agent:** `docs-updater`
+**Agent:** `project-manager-agent` (uses documentation-patterns, notion-workflows, skill-maintenance skills)
 
 **Purpose:** Update documentation with progress and results
 
 **Input:**
-- Test results from Phase 7
+- Test results from Phase 9
 - **Notion task_id** (if Notion workflow) - **CRITICAL: Pass this to agent**
 
 **Updates:**
@@ -771,12 +778,12 @@ Report: pass | check (see logs) | stop
   - Create/update feature CLAUDE.md using `claude-md-guidelines` skill
   - Focus on project-specific oddities and WHY
   - Document critical mistakes made during implementation
-- Creates YAML summary for git-specialist
+- Creates YAML summary for project-manager-agent
 
 **Orchestrator must pass:**
 ```yaml
 notion_context:
-  task_id: "29284f14-76e0-8012-8708-abc123"  # From Phase 0
+  task_id: "29284f14-76e0-8012-8708-abc123"  # From Phase 1
   task_url: "https://notion.so/29284f14-76e0-8012-8708-abc123"
   sync_required: true
 ```
@@ -814,7 +821,7 @@ When to create/update CLAUDE.md:
 
 **Reference:** See `claude-md-guidelines` skill for complete writing guidelines.
 
-**Output:** Documentation updated (local + Notion + CLAUDE.md), summary ready for git-specialist
+**Output:** Documentation updated (local + Notion + CLAUDE.md), summary ready for project-manager-agent
 
 **Commands:**
 - `approve` - Approve documentation updates
@@ -823,7 +830,7 @@ When to create/update CLAUDE.md:
 
 ---
 
-### Phase 8a: CLAUDE.md Quality Review [MANDATORY]
+### Phase 10a: CLAUDE.md Quality Review [MANDATORY]
 
 **Orchestrator:** Direct (no agent)
 **Skills Used:** claude-md-guidelines, signal-vs-noise
@@ -831,7 +838,7 @@ When to create/update CLAUDE.md:
 **Purpose:** Ensure CLAUDE.md documents are signal-focused, project-specific, and high-quality before commit
 
 **When Applicable:**
-- CLAUDE.md files were created/updated in Phase 8
+- CLAUDE.md files were created/updated in Phase 10
 - Always run if new feature documentation added
 
 **Process:**
@@ -842,7 +849,7 @@ When to create/update CLAUDE.md:
    - Review content quality criteria
 
 2. **Review Each CLAUDE.md File**
-   - Read file created/updated in Phase 8
+   - Read file created/updated in Phase 10
    - Extract sections: Weird Parts, Critical Mistakes, Quick Reference
    - Check for impact numbers (bug frequencies, performance metrics)
 
@@ -883,18 +890,18 @@ When to create/update CLAUDE.md:
 **Output:** Quality-reviewed CLAUDE.md files ready for commit
 
 **Commands:**
-- `approve` - Quality approved, proceed to Phase 8b
+- `approve` - Quality approved, proceed to Phase 10b
 - `refine` - Apply recommendations and re-review
 - `skip` - Skip review (NOT recommended - bypasses quality gate)
 - `stop` - Exit workflow
 
-**Skip When:** No CLAUDE.md files were created/updated in Phase 8
+**Skip When:** No CLAUDE.md files were created/updated in Phase 10
 
 **Critical:** This phase is MANDATORY if CLAUDE.md files exist. Generic content wastes Claude's attention and violates signal-vs-noise philosophy.
 
 ---
 
-### Phase 8b: Skills Update Review [CONDITIONAL]
+### Phase 10b: Skills Update Review [CONDITIONAL]
 
 **Orchestrator:** Direct (no agent)
 **Skill Used:** skill-creator
@@ -913,7 +920,7 @@ When to create/update CLAUDE.md:
    - Review decision framework and 3-Question Filter
 
 2. **Review Implementation Outputs**
-   - Analyze Phases 1-7 results
+   - Analyze Phases 3-9 results
    - Identify patterns discovered:
      - Database: RLS anti-patterns, migration gotchas
      - Foundation: Type patterns, query patterns
@@ -956,7 +963,7 @@ When to create/update CLAUDE.md:
 **Output:** Updated skill files (if applicable)
 
 **Commands:**
-- `approve` - Skills updates approved, proceed to Phase 9
+- `approve` - Skills updates approved, proceed to Phase 11
 - `update [skill-name]` - Update specific skill
 - `skip` - No skills updates needed (most common - only update when significant patterns found)
 - `stop` - Exit workflow
@@ -982,13 +989,13 @@ When to create/update CLAUDE.md:
 
 ---
 
-### Phase 9: Git Operations [SEQUENTIAL]
+### Phase 11: Git Operations [SEQUENTIAL]
 
-**Agent:** `git-specialist`
+**Agent:** `project-manager-agent` (uses git-patterns skill)
 
 **Purpose:** Create commit for documentation changes, optionally clean history and push
 
-**Depends on:** Phase 8 (Documentation updated)
+**Depends on:** Phase 10 (Documentation updated)
 
 **Creates:**
 - Git commit with signal-focused message
@@ -998,7 +1005,7 @@ When to create/update CLAUDE.md:
 
 **Workflow:**
 1. Review staged changes (git status, git diff --staged)
-2. Analyze what was updated (from docs-updater summary)
+2. Analyze what was updated (from project-manager-agent summary)
 3. Create commit with high-level message
 4. (Optional) Clean pending commits if issues found
 5. Ask user about push
@@ -1019,115 +1026,451 @@ When to create/update CLAUDE.md:
 - Always ask before push (never auto-push)
 - Signal-focused commit messages (no footers, present tense)
 - User can skip this phase entirely
-- Build should already pass (verified in Phase 6)
+- Build should already pass (verified in Phase 8)
 
 ---
 
 ## Orchestrator Instructions
 
-You are the **Implement Phase Orchestrator**. Guide user through 10-phase implementation workflow with smart parallelization (Phase 0-10).
+You are the **Implement Phase Orchestrator**. Guide user through 12-phase implementation workflow with smart parallelization (Phase 1-12).
 
 ### Agent Mapping - MUST USE Task Tool
 
 **CRITICAL:** For EVERY phase, you MUST use the Task tool with the exact `subagent_type` specified below.
 
+**⚠️ ISOLATED CONTEXT:** Agents have NO access to previous conversation. You MUST pass ALL required information in the prompt:
+- Plan content or requirements
+- Previous phase outputs (file paths, decisions made)
+- Context from Phase 0 analysis
+- Any dependencies or constraints
+- Expected output format
+
 | Phase | Agent (subagent_type) | Tool Call Required |
 |-------|----------------------|-------------------|
-| **Phase 0** | `plan-analyzer` | ✅ REQUIRED |
-| **Phase 1** | `supabase-schema-specialist` | ✅ REQUIRED |
-| **Phase 2a** | `feature-foundation-developer` | ✅ REQUIRED (types.ts) |
-| **Phase 2b** | `feature-foundation-developer` | ✅ REQUIRED (queries.ts + validation.ts - 2x parallel) |
-| **Phase 3a** | `component-developer` | ✅ REQUIRED (base components) |
-| **Phase 3b** | `component-developer` | ✅ REQUIRED (composite components) |
-| **Phase 3c** | `ui-ux-designer` | ✅ REQUIRED (UI/UX review) |
-| **Phase 4** | `server-action-developer` | ✅ REQUIRED |
-| **Phase 5** | `route-developer` | ✅ REQUIRED |
-| **Phase 6** | `implementation-validator` | ✅ REQUIRED |
-| **Phase 7** | N/A (manual testing by user) | ❌ NO AGENT |
-| **Phase 8** | `docs-updater` | ✅ REQUIRED |
-| **Phase 8a** | N/A (orchestrator direct + skills) | ✅ REQUIRED (CLAUDE.md quality) |
-| **Phase 8b** | N/A (orchestrator direct + skill-creator) | ⚠️ CONDITIONAL (skills update) |
-| **Phase 9** | `git-specialist` | ✅ REQUIRED |
+| **Phase 1** | N/A (orchestrator direct) | ❌ NO AGENT (Notion search) |
+| **Phase 2** | `analysis-agent` | ✅ REQUIRED |
+| **Phase 3** | `database-specialist` | ✅ REQUIRED |
+| **Phase 4a** | `code-developer` | ✅ REQUIRED (types.ts) |
+| **Phase 4b** | `code-developer` | ✅ REQUIRED (queries.ts + validation.ts - 2x parallel) |
+| **Phase 5a** | `code-developer` | ✅ REQUIRED (base components) |
+| **Phase 5b** | `code-developer` | ✅ REQUIRED (composite components) |
+| **Phase 5c** | `ui-ux-designer` | ✅ REQUIRED (UI/UX review) |
+| **Phase 6** | `code-developer` | ✅ REQUIRED |
+| **Phase 7** | `code-developer` | ✅ REQUIRED |
+| **Phase 8** | `analysis-agent` | ✅ REQUIRED |
+| **Phase 9** | N/A (manual testing by user) | ❌ NO AGENT |
+| **Phase 10** | `project-manager-agent` | ✅ REQUIRED |
+| **Phase 10a** | N/A (orchestrator direct + skills) | ✅ REQUIRED (CLAUDE.md quality) |
+| **Phase 10b** | N/A (orchestrator direct + skill-creator) | ⚠️ CONDITIONAL (skills update) |
+| **Phase 11** | `project-manager-agent` | ✅ REQUIRED |
 
-**Example Task tool calls:**
+**Example Task tool calls with FULL CONTEXT:**
 ```typescript
-// Phase 0
-Task(subagent_type="plan-analyzer", description="Analyze Phase 2 plan", prompt="...")
+// Phase 2 - Pass COMPLETE plan
+Task(
+  subagent_type="analysis-agent",
+  description="Analyze implementation plan",
+  prompt=`Analyze this implementation plan and create execution strategy:
 
-// Phase 1
-Task(subagent_type="supabase-schema-specialist", description="Create database migration", prompt="...")
+PLAN CONTENT:
+${planContent}
 
-// Phase 2a
-Task(subagent_type="feature-foundation-developer", description="Create types.ts", prompt="...")
+TASK: Identify dependencies, parallelization opportunities, critical path, and execution order.
+OUTPUT: YAML with execution strategy.`
+)
 
-// Phase 2b (PARALLEL - single message, 2 Task calls)
-Task(subagent_type="feature-foundation-developer", description="Create queries.ts", prompt="...")
-Task(subagent_type="feature-foundation-developer", description="Create validation.ts", prompt="...")
+// Phase 3 - Pass plan + Phase 2 analysis
+Task(
+  subagent_type="database-specialist",
+  description="Create database migration",
+  prompt=`Create database migration based on plan requirements:
 
-// Phase 3a
-Task(subagent_type="component-developer", description="Create QuestionField component", prompt="...")
+PLAN REQUIREMENTS:
+- Add public RLS policy for survey_links
+- Allow anon users to SELECT active links
+- No infinite recursion (use helper function)
 
-// Phase 3b
-Task(subagent_type="component-developer", description="Create SurveyForm component", prompt="...")
+EXECUTION STRATEGY FROM PHASE 2:
+${phase2Output.strategy}
 
-// Phase 3c
-Task(subagent_type="ui-ux-designer", description="Review component UI/UX", prompt="...")
+DATABASE CONTEXT:
+- Table: survey_links
+- Columns: id, survey_id, token, is_active, expires_at
+- Need: Public access policy for anon role
 
-// Phase 4
-Task(subagent_type="server-action-developer", description="Create Server Actions", prompt="...")
+TASK: Create migration file with RLS policy.
+OUTPUT: YAML with migration file path, verification steps, type regeneration commands.`
+)
 
-// Phase 5
-Task(subagent_type="route-developer", description="Create page routes", prompt="...")
+// Phase 4a - Pass plan + database context
+Task(
+  subagent_type="code-developer",
+  description="Create types.ts",
+  prompt=`Create TypeScript types for survey feature:
 
-// Phase 6
-Task(subagent_type="implementation-validator", description="Verify implementation", prompt="...")
+PLAN REQUIREMENTS:
+- Survey with dynamic questions (7 types)
+- Questions: id, type, label, required, options
+- Survey link validation (expired, max submissions)
 
-// Phase 8
-Task(subagent_type="docs-updater", description="Update documentation", prompt="...")
+DATABASE SCHEMA (from Phase 3):
+- surveys table: id, title, description, questions (JSONB), status
+- survey_links table: id, survey_id, token, expires_at, max_submissions, submission_count
 
-// Phase 9
-Task(subagent_type="git-specialist", description="Create git commit", prompt="...")
+TASK: Create types.ts with:
+- Question type (7 question types enum)
+- SurveyData type
+- SurveyAnswers type
+- LinkValidation type
+
+OUTPUT: YAML with file path and exports.`
+)
+
+// Phase 4b (PARALLEL - single message, 2 Task calls with FULL CONTEXT)
+Task(
+  subagent_type="code-developer",
+  description="Create queries.ts",
+  prompt=`Create data fetching queries for survey feature:
+
+TYPES CREATED IN PHASE 2a:
+${phase2aOutput.exports}
+
+PLAN REQUIREMENTS:
+- Fetch survey by token with validation
+- Check: expired, max submissions, survey status
+
+APP CONTEXT:
+- App: apps/website (Website app)
+- Use: Server Supabase client (await createClient())
+- Query: survey_links with join to surveys
+
+TASK: Create queries.ts with getSurveyByToken(token) function.
+OUTPUT: YAML with file path, client_type, exports.`
+)
+Task(
+  subagent_type="code-developer",
+  description="Create validation.ts",
+  prompt=`Create Zod validation schemas for survey:
+
+TYPES CREATED IN PHASE 2a:
+${phase2aOutput.exports}
+
+PLAN REQUIREMENTS:
+- Dynamic schema based on questions array
+- Validation per question type (email, tel, checkbox array)
+- Optional vs required fields
+
+TASK: Create validation.ts with generateSurveySchema(questions) function.
+OUTPUT: YAML with file path, exports.`
+)
+
+// Phase 5a - Pass foundation context
+Task(
+  subagent_type="code-developer",
+  description="Create QuestionField",
+  prompt=`Create QuestionField component:
+
+FOUNDATION FILES CREATED:
+- types.ts: ${phase4aOutput.exports}
+- queries.ts: ${phase4bOutput.exports}
+- validation.ts: ${phase4bOutput.exports}
+
+PLAN REQUIREMENTS:
+- Render 7 question types (text, email, tel, textarea, select, radio, checkbox)
+- Use Controller for checkbox arrays (NOT register)
+- Display validation errors
+- Accessibility: labels, aria-required
+
+TASK: Create QuestionField.tsx component.
+OUTPUT: YAML with file path, uses_controller.`
+)
+
+// Phase 5b - Pass component dependencies
+Task(
+  subagent_type="code-developer",
+  description="Create SurveyForm",
+  prompt=`Create SurveyForm component:
+
+DEPENDENCIES CREATED:
+- QuestionField component: ${phase5aOutput.file}
+- Types: ${phase4aOutput.exports}
+- Queries: ${phase4bOutput.exports}
+- Validation: ${phase4bOutput.exports}
+
+PLAN REQUIREMENTS:
+- React Hook Form with dynamic Zod schema
+- Map questions array to QuestionField components
+- Submit via Server Action
+- Loading/error states
+- Success redirect
+
+TASK: Create SurveyForm.tsx component.
+OUTPUT: YAML with file path, dependencies.`
+)
+
+// Phase 5c - Pass component files to review
+Task(
+  subagent_type="ui-ux-designer",
+  description="Review component UI/UX",
+  prompt=`Review components for design system compliance and accessibility:
+
+COMPONENTS TO REVIEW:
+- ${phase5aOutput.file}
+- ${phase5bOutput.file}
+
+REVIEW CRITERIA:
+- shadcn/ui component usage (no custom buttons)
+- Theme tokens (no arbitrary colors)
+- Spacing scale (4px: 2, 4, 6, 8...)
+- WCAG 2.1 AA compliance
+- Mobile-first responsive
+- Interactive feedback (hover, focus)
+
+TASK: Audit components and classify issues (P0/P1/P2).
+OUTPUT: YAML with issues and fixes.`
+)
+
+// Phase 6 - Pass all foundation + component context
+Task(
+  subagent_type="code-developer",
+  description="Create Server Actions",
+  prompt=`Create Server Actions for survey submission:
+
+FOUNDATION CREATED:
+- Types: ${phase4aOutput.exports}
+- Queries: ${phase4bOutput.exports}
+- Validation: ${phase4bOutput.exports}
+
+COMPONENTS CREATED:
+- SurveyForm: ${phase5bOutput.file}
+
+PLAN REQUIREMENTS:
+- Server Action: submitSurveyResponse
+- Validate submission
+- Insert response to database
+- Increment submission_count (atomic function)
+- Structured return { success, error }
+
+TASK: Create actions.ts with submitSurveyResponse function.
+OUTPUT: YAML with file path, structured_return: true, revalidates_paths.`
+)
+
+// Phase 7 - Pass all previous outputs
+Task(
+  subagent_type="code-developer",
+  description="Create page routes",
+  prompt=`Create Next.js routes for survey feature:
+
+ALL CREATED FILES:
+- Types: ${phase4aOutput.file}
+- Queries: ${phase4bOutput.file}
+- Components: ${phase5bOutput.file}
+- Actions: ${phase6Output.file}
+
+PLAN REQUIREMENTS:
+- Route: /survey/[token]
+- Server Component fetches survey by token
+- Render SurveyForm with data
+- Error handling (expired, not found)
+- Success page after submission
+
+TASK: Create app/survey/[token]/page.tsx (ADR-005 compliant - minimal route).
+OUTPUT: YAML with route paths, adr_005_compliant: true.`
+)
+
+// Phase 8 - Pass ALL implementation files
+Task(
+  subagent_type="analysis-agent",
+  description="Verify implementation",
+  prompt=`Verify implementation correctness before manual testing:
+
+PLAN REQUIREMENTS:
+${planContent}
+
+FILES CREATED:
+- Database: ${phase3Output.migration_file}
+- Foundation: ${phase4Output.files}
+- Components: ${phase5Output.files}
+- Actions: ${phase6Output.file}
+- Routes: ${phase7Output.files}
+
+TASK: Analyze code for:
+- Business logic correctness (matches plan)
+- Common bugs (Controller for arrays, revalidatePath, structured returns)
+- Code quality (UI states, ADR-005, types)
+- Completeness
+
+OUTPUT: YAML with validation results, issues (P0/P1/P2), readiness status.`
+)
+
+// Phase 10 - Pass test results + context
+Task(
+  subagent_type="project-manager-agent",
+  description="Update documentation",
+  prompt=`Update documentation with implementation results:
+
+PLAN COMPLETED:
+${planContent}
+
+TEST RESULTS FROM PHASE 9:
+${phase9TestResults}
+
+FILES CREATED:
+${allFilesCreated}
+
+NOTION CONTEXT (if applicable):
+${notionContext}
+
+TASK: Update PROJECT_SPEC.yaml (mark complete, verify criteria), sync Notion (if task_id), update CLAUDE.md.
+OUTPUT: YAML with files updated, notion_synced status.`
+)
+
+// Phase 11 - Pass documentation changes
+Task(
+  subagent_type="project-manager-agent",
+  description="Create git commit",
+  prompt=`Create git commit for implementation:
+
+DOCUMENTATION UPDATES FROM PHASE 10:
+${phase10Output.summary}
+
+FILES CHANGED:
+${gitStatus}
+
+TASK: Create signal-focused commit message (concise, present tense, outcome-focused).
+OUTPUT: YAML with commit message, files staged.`
+)
 ```
+
+### Context Passing Pattern (CRITICAL)
+
+**Agents have isolated context** - they see ONLY what you pass in the prompt.
+
+**Pattern: Build context object, pass relevant parts to each agent**
+
+```typescript
+// Orchestrator maintains context object
+const context = {
+  plan: {
+    content: planContent,
+    requirements: extractedRequirements
+  },
+  phase1: {
+    notion_task_id: "2ed84f14-76e0-80c0-8da7-d574cdf2a4fe",
+    selected_task: {...}
+  },
+  phase2: {
+    strategy: "...",
+    dependencies: {...},
+    parallelization: {...}
+  },
+  phase3: {
+    migration_file: "supabase/migrations/...",
+    tables_modified: ["surveys", "survey_links"],
+    types_regenerated: true
+  },
+  phase4a: {
+    file: "apps/website/features/survey/types.ts",
+    exports: ["Question", "SurveyData", "LinkValidation"]
+  },
+  phase4b: {
+    files: ["queries.ts", "validation.ts"],
+    exports: {
+      queries: ["getSurveyByToken"],
+      validation: ["generateSurveySchema"]
+    }
+  },
+  // ... accumulate ALL phase outputs
+}
+
+// Phase 5a: Pass ONLY relevant context
+Task(
+  subagent_type="code-developer",
+  prompt=`Create QuestionField component:
+
+TYPES AVAILABLE (from Phase 4a):
+${context.phase4a.exports.join(", ")}
+
+VALIDATION AVAILABLE (from Phase 4b):
+${context.phase4b.exports.validation}
+
+PLAN REQUIREMENTS:
+${context.plan.requirements.questionField}
+
+TASK: Create QuestionField.tsx
+OUTPUT: YAML`
+)
+```
+
+**Why critical:** Agent sees NOTHING from conversation. No context = agent fails or hallucinates.
 
 ### Critical Instructions
 
-1. **Use Task tool for agents:** Launch agents using Task tool (NOT slash commands) - see Agent Mapping table above
-2. **Parallel execution:** Launch ALL parallel agents in SINGLE message (multiple Task calls)
-3. **Sequential execution (Interactive mode):** Wait for user approval before next phase
-4. **Automated mode (--auto flag):** Run all phases without waiting, only stop on P0 test failures
-5. **Context passing:** Pass plan analysis + previous outputs to each agent
-6. **State tracking:** Track currentPhase, completedPhases, skippedPhases, outputs, mode (interactive/auto), **notion_task_id**, **notion_sync_status**
+0. **🔴 NOTION-FIRST (NEW):** ALWAYS start with Phase 1 (Notion Discovery) unless:
+   - `--skip-notion` flag provided
+   - `--notion-task-id` provided (skip search, use directly)
+   - **Use `mcp__notion__notion-search` MCP tool** to search Notion for tasks matching plan-reference
+   - Filter out Skills Projects (Type = 🎓 Learning)
+   - Let user select from Agency tasks
+   - Only fall back to local files if user chooses `use-local`
+
+1. **⚠️ ISOLATED CONTEXT:** Agents have NO access to conversation history. MUST pass ALL context in prompt:
+   - Plan content (full text or requirements extract)
+   - Previous phase outputs (file paths, exports, decisions)
+   - Database schema (if relevant)
+   - Dependencies (what files agent can import)
+   - Expected output format (YAML structure)
+
+2. **Use Task tool for agents:** Launch agents using Task tool with correct `subagent_type` from Agent Mapping table
+
+3. **Parallel execution:** Launch ALL parallel agents in SINGLE message (multiple Task calls with full context each)
+
+4. **Sequential execution (Interactive mode):** Wait for user approval before next phase
+
+5. **Automated mode (--auto flag):** Run all phases without waiting, only stop on P0 test failures
+
+6. **State tracking:** Track currentPhase, completedPhases, outputs (store for context passing), notion_task_id, notion_sync_status
+
 7. **DO NOT just describe:** ACTUALLY INVOKE TOOLS - use Task tool with correct subagent_type
-8. **Handle failures:** If agent fails, offer retry/details/stop (or auto-retry in --auto mode)
-9. **P0 bugs block merge:** Test failures with P0 severity ALWAYS require user intervention (even in --auto)
-10. **Manual test checkpoints:** After phases with testable output, PAUSE and provide test instructions to user
-11. **Build verification:** After each code-generating phase, verify the build succeeds - catch TypeScript errors early
-12. **Implementation verification:** After Phase 5 (Routes), ALWAYS run Phase 6 (implementation-validator) to catch code issues before manual testing
-13. **NEVER skip Phase 7:** Phase 7 (Manual Testing) is REQUIRED - user must test before docs
-14. **Phase 8a mandatory** - Always review CLAUDE.md quality using claude-md-guidelines + signal-vs-noise skills
-15. **Phase 8b conditional** - Only update skills when significant project-specific patterns discovered
-16. **Content quality > line count** - Remove noise, keep signal (applies to both CLAUDE.md and skills)
-17. **Skill invocation pattern** - Use Skill tool or @skill-name syntax to invoke skills in orchestrator
-18. **ALWAYS use correct agent:** Reference Agent Mapping table - never guess or use wrong subagent_type
-19. **Notion Integration:**
-    - ALWAYS pass notion_task_id to docs-updater if present (Phase 8)
-    - ALWAYS check for Skills Projects in Phase 0 (filter out if present)
-    - NEVER proceed with Skills Projects tasks (Type = 🎓 Learning)
-    - ALWAYS fall back to local plan if Notion unavailable
-16. **Notion Status Values:** Use exact values: `"In Progress"`, `"Done"` (case-sensitive with spaces)
-17. **Notion MCP Reference:** See notion-integration skill for complete MCP patterns and examples
-18. **Skills Projects Filtering:** If project Type = "🎓 Learning" OR has `📚 Skills Projects` relation → ABORT with error message
+
+8. **Context accumulation:** Build context object with all phase outputs, pass relevant parts to each agent
+
+9. **Handle failures:** If agent fails, offer retry/details/stop (or auto-retry in --auto mode)
+
+10. **P0 bugs block merge:** Test failures with P0 severity ALWAYS require user intervention (even in --auto)
+
+11. **Build verification:** After each code-generating phase, verify build succeeds - catch TypeScript errors early
+
+12. **Implementation verification:** After Phase 7 (Routes), ALWAYS run Phase 8 (analysis-agent) to catch code issues before manual testing
+
+13. **NEVER skip Phase 9:** Phase 9 (Manual Testing) is REQUIRED - user must test before docs
+
+14. **Phase 10a mandatory** - Always review CLAUDE.md quality using claude-md-guidelines + signal-vs-noise skills
+
+15. **Phase 10b conditional** - Only update skills when significant project-specific patterns discovered
+
+16. **ALWAYS use correct agent:** Reference Agent Mapping table - never guess or use wrong subagent_type
+
+17. **Notion Integration:**
+    - **ALWAYS run Phase 1 (Notion Discovery) first** - this is NEW and CRITICAL
+    - **Use `mcp__notion__notion-search` MCP tool** - NOT Notion CLI or bash commands
+    - Search Notion before using local files
+    - Filter out Skills Projects in Phase 1 (Type = 🎓 Learning, "📚 Skills Projects" relation)
+    - NEVER proceed with Skills Projects tasks
+    - ALWAYS pass notion_task_id to project-manager-agent if present (Phase 10)
+    - ALWAYS fall back to local plan if Notion unavailable or user chooses `use-local`
+    - Use exact status values: `"In Progress"`, `"Done"` (case-sensitive with spaces)
 
 ### Build Verification Checkpoints
 
 **CRITICAL:** After every code-generating phase, run a build test to catch errors early.
 
 **When to build:**
-- **After Phase 2b (Foundation):** `npm run build:cms` - Verify types/queries compile
-- **After Phase 3b (Components):** `npm run build:cms` - Verify components compile
-- **After Phase 3c (UI/UX Review):** `npm run build:cms` (if design changes made) - Verify fixes compile
-- **After Phase 4 (Server Actions):** `npm run build:cms` - Verify actions compile
-- **After Phase 5 (Routes):** `npm run build` - Build BOTH apps (cms + website)
+- **After Phase 4b (Foundation):** `npm run build:cms` - Verify types/queries compile
+- **After Phase 5b (Components):** `npm run build:cms` - Verify components compile
+- **After Phase 5c (UI/UX Review):** `npm run build:cms` (if design changes made) - Verify fixes compile
+- **After Phase 6 (Server Actions):** `npm run build:cms` - Verify actions compile
+- **After Phase 7 (Routes):** `npm run build` - Build BOTH apps (cms + website)
 
 **Why build after each phase:**
 - ✅ Catch TypeScript errors immediately (not at end)
@@ -1167,7 +1510,7 @@ Running TypeScript...
 **Example build error handling:**
 
 ```markdown
-❌ Build Failed After Phase 3
+❌ Build Failed After Phase 5
 
 Error: Property 'label' does not exist on type 'Question'
 Location: apps/cms/features/responses/components/ResponseDetail.tsx:178
@@ -1183,9 +1526,9 @@ Retrying build...
 ### Manual Test Checkpoints
 
 **When to pause for manual testing:**
-- **After Phase 1 (Database):** If migration creates testable database changes
-- **After Phase 5 (Routes):** Always - routes make feature accessible for testing
-- **Phase 7 (Manual Testing):** Always required before documentation
+- **After Phase 3 (Database):** If migration creates testable database changes
+- **After Phase 7 (Routes):** Always - routes make feature accessible for testing
+- **Phase 9 (Manual Testing):** Always required before documentation
 
 **How to provide test instructions:**
 1. Identify what's testable (based on completed phases)
@@ -1194,7 +1537,7 @@ Retrying build...
 4. Provide SQL queries if database verification needed
 5. Wait for user response: `pass` | `fix-and-retry` | `stop`
 
-**Example checkpoint after Phase 1:**
+**Example checkpoint after Phase 3:**
 ```markdown
 🧪 **Manual Test Checkpoint - Database Migration**
 
@@ -1213,7 +1556,7 @@ The migration has been applied. Test the changes:
 Report: pass | fix | stop
 ```
 
-**Example checkpoint after Phase 5:**
+**Example checkpoint after Phase 7:**
 ```markdown
 🧪 **Manual Test Checkpoint - Feature Complete**
 
@@ -1238,7 +1581,7 @@ Report: pass | fix-and-retry | stop
 - Show phase complete message (for transparency)
 - Immediately proceed to next phase (no waiting)
 - **CRITICAL DECISIONS (ALWAYS pause and ask user):**
-  - ✋ **Manual test checkpoints** - "Phase 1/5/6 complete. Please test manually."
+  - ✋ **Manual test checkpoints** - "Phase 3/7/8 complete. Please test manually."
   - ✋ **P0 test failures** - "2 P0 bugs found. Fix now or stop?"
   - ✋ **Database migration failed (after retry)** - "Migration failed. Skip database changes or stop?"
   - ✋ **Agent failure (after retry)** - "Agent failed twice. Continue without this step or stop?"
@@ -1258,38 +1601,42 @@ Report: pass | fix-and-retry | stop
 {
   "mode": "interactive | automated",
   "planFile": "~/.claude/plans/example.md | null",
-  "notion_task_id": "29284f14-76e0-8012-8708-abc123",
-  "notion_task_url": "https://notion.so/29284f14-76e0-8012-8708-abc123",
+  "notion_task_id": "2ed84f14-76e0-80c0-8da7-d574cdf2a4fe",
+  "notion_task_url": "https://notion.so/2ed84f14-76e0-80c0-8da7-d574cdf2a4fe",
   "notion_sync_status": "pending | synced | failed",
-  "currentPhase": "8b",
-  "completedPhases": ["0", "1", "2a", "2b", "3a", "3b", "3c", "4", "5", "6", "7", "8", "8a"],
+  "currentPhase": "10b",
+  "completedPhases": ["1", "2", "3", "4a", "4b", "5a", "5b", "5c", "6", "7", "8", "9", "10", "10a"],
   "skippedPhases": [],
   "outputs": {
-    "phase0": {
+    "phase1": {
+      "notion_task_id": "2ed84f14-76e0-80c0-8da7-d574cdf2a4fe",
+      "selected_task": {...}
+    },
+    "phase2": {
       "strategy": "...",
       "notion_context": {
-        "task_id": "abc123",
-        "task_name": "Implement Redis caching",
-        "project": "Legal-Mind MVP",
+        "task_id": "2ed84f14-76e0-80c0-8da7-d574cdf2a4fe",
+        "task_name": "Calendar integration",
+        "project": "Legal Hub MVP",
         "priority": "🔴 Urgent",
         "deadline": "2026-01-25"
       }
     },
-    "phase1": { "migration": "...", "types_regenerated": true },
-    "phase2a": { "file": "types.ts" },
-    "phase2b": { "files": ["queries.ts", "validation.ts"] },
-    "phase8": {
-      "claude_md_files": ["apps/cms/features/survey/CLAUDE.md"],
+    "phase3": { "migration": "...", "types_regenerated": true },
+    "phase4a": { "file": "types.ts" },
+    "phase4b": { "files": ["queries.ts", "validation.ts"] },
+    "phase10": {
+      "claude_md_files": ["apps/cms/features/calendar/CLAUDE.md"],
       "project_spec_updated": true,
       "notion_synced": true
     },
-    "phase8a": {
+    "phase10a": {
       "quality_review_complete": true,
       "issues_found": 2,
       "issues_resolved": 2,
-      "files_refined": ["apps/cms/features/survey/CLAUDE.md"]
+      "files_refined": ["apps/cms/features/calendar/CLAUDE.md"]
     },
-    "phase8b": {
+    "phase10b": {
       "skills_reviewed": true,
       "patterns_found": 1,
       "skills_updated": ["supabase-patterns"]
@@ -1426,17 +1773,36 @@ Must fix before proceeding.
 
 **User starts:**
 ```bash
-/implement-phase Phase 2
+/implement-phase survey form
 ```
 
-**Phase 0:**
+**Phase 1:**
 ```markdown
-**Phase 0: Plan Analysis**
+**Phase 1: Notion Discovery**
 
-Analyzing Phase 2 plan from ~/.claude/plans/feature.md...
+Searching Notion for: "survey form"
+
+Found 2 tasks:
+
+1. [AAA-T-12] Survey Form Implementation (🔴 Urgent, In Progress)
+   Project: Legal Hub MVP
+
+2. [AAA-P-3] Phase 2 - Survey Form & Response Management (Not Started)
+   Project: Legal Hub MVP
+
+Select task: 1 | 2 | use-local | stop
 ```
 
-[Task tool call with subagent_type="plan-analyzer"]
+[User: 1]
+
+**Phase 2:**
+```markdown
+**Phase 2: Plan Analysis**
+
+Analyzing task AAA-T-12 from Notion...
+```
+
+[Task tool call with subagent_type="analysis-agent"]
 
 ```markdown
 **Analysis Complete** ✅
@@ -1445,21 +1811,21 @@ Complexity: medium
 Database changes: Yes (RLS policy needed)
 Parallel phases: Foundation (3 files), Components (2 files)
 
-**Next:** Phase 1 (Database Setup) [CRITICAL]
+**Next:** Phase 3 (Database Setup) [CRITICAL]
 
 **Commands:** `continue` | `adjust` | `stop`
 ```
 
 [User: continue]
 
-**Phase 1:**
+**Phase 3:**
 ```markdown
-**Phase 1: Database Setup** [CRITICAL]
+**Phase 3: Database Setup** [CRITICAL]
 
 Creating migration for public survey access RLS policy...
 ```
 
-[Task tool call with subagent_type="supabase-schema-specialist"]
+[Task tool call with subagent_type="database-specialist"]
 
 ```markdown
 **Database Setup Complete** ✅
@@ -1468,44 +1834,44 @@ Migration: 20251210120000_add_public_survey_policy.sql
 Types regenerated: ✅
 Verification: RLS policy active in Supabase
 
-**Next:** Phase 2 (Foundation) - 3 files in parallel ⚡⚡⚡
+**Next:** Phase 4 (Foundation) - 3 files in parallel ⚡⚡⚡
 
 **Commands:** `continue` | `details` | `stop`
 ```
 
 [User: continue]
 
-**Phase 2a:**
+**Phase 4a:**
 ```markdown
-**Phase 2a: Foundation - Types**
+**Phase 4a: Foundation - Types**
 
 Creating types.ts (needed by queries and validation)...
 ```
 
-[Task tool call with subagent_type="feature-foundation-developer"]
+[Task tool call with subagent_type="code-developer"]
 
 ```markdown
 **Types Complete** ✅
 
 Created: apps/website/features/survey/types.ts
 
-**Next:** Phase 2b (Queries + Validation) - parallel ⚡⚡⚡
+**Next:** Phase 4b (Queries + Validation) - parallel ⚡⚡⚡
 
 **Commands:** `continue` | `details` | `stop`
 ```
 
 [User: continue OR auto-proceed in --auto mode]
 
-**Phase 2b (Parallel):**
+**Phase 4b (Parallel):**
 ```markdown
-**Phase 2b: Foundation - Queries & Validation** ⚡⚡⚡
+**Phase 4b: Foundation - Queries & Validation** ⚡⚡⚡
 
 Launching 2 agents simultaneously:
 1. queries.ts - Data fetching with server client
 2. validation.ts - Dynamic Zod schemas
 ```
 
-[Single message, 2 Task tool calls with subagent_type="feature-foundation-developer"]
+[Single message, 2 Task tool calls with subagent_type="code-developer"]
 
 ```markdown
 **Foundation Complete** ✅
@@ -1514,58 +1880,58 @@ Created:
 - ✅ apps/website/features/survey/queries.ts
 - ✅ apps/website/features/survey/validation.ts
 
-**Next:** Phase 3a (QuestionField)
+**Next:** Phase 5a (QuestionField)
 
 **Commands:** `continue` | `details [file]` | `stop`
 ```
 
 [User: continue OR auto-proceed in --auto mode]
 
-**Phase 3a:**
+**Phase 5a:**
 ```markdown
-**Phase 3a: Components - Base Component**
+**Phase 5a: Components - Base Component**
 
 Creating QuestionField.tsx (needed by SurveyForm)...
 ```
 
-[Task tool call with subagent_type="component-developer"]
+[Task tool call with subagent_type="code-developer"]
 
 ```markdown
 **QuestionField Complete** ✅
 
 Created: QuestionField.tsx (7 question types with Controller)
 
-**Next:** Phase 3b (SurveyForm)
+**Next:** Phase 5b (SurveyForm)
 
 **Commands:** `continue` | `details` | `stop`
 ```
 
 [User: continue OR auto-proceed in --auto mode]
 
-**Phase 3b:**
+**Phase 5b:**
 ```markdown
-**Phase 3b: Components - Composite Component**
+**Phase 5b: Components - Composite Component**
 
 Creating SurveyForm.tsx (uses QuestionField)...
 ```
 
-[Task tool call with subagent_type="component-developer"]
+[Task tool call with subagent_type="code-developer"]
 
 ```markdown
 **SurveyForm Complete** ✅
 
 Created: SurveyForm.tsx (form + validation + submission)
 
-**Next:** Phase 3c (UI/UX Review)
+**Next:** Phase 5c (UI/UX Review)
 
 **Commands:** `continue` | `details` | `stop`
 ```
 
 [User: continue OR auto-proceed in --auto mode]
 
-**Phase 3c:**
+**Phase 5c:**
 ```markdown
-**Phase 3c: UI/UX Review**
+**Phase 5c: UI/UX Review**
 
 Reviewing component design and accessibility...
 ```
@@ -1586,23 +1952,23 @@ Recommendations:
 - Follow Tailwind spacing scale consistently
 - Ensure all interactive elements have visible focus indicators
 
-**Next:** Fix P1 issues or proceed to Phase 4 (Server Actions)?
+**Next:** Fix P1 issues or proceed to Phase 6 (Server Actions)?
 
 **Commands:** `fix` | `continue` | `details` | `stop`
 ```
 
 [User: continue - issues are minor OR auto-proceed in --auto mode]
 
-[Continues through Phase 4-5...]
+[Continues through Phase 6-7...]
 
-**Phase 6:**
+**Phase 8:**
 ```markdown
-**Phase 6: Implementation Verification**
+**Phase 8: Implementation Verification**
 
 Analyzing implementation against plan and CODE_PATTERNS...
 ```
 
-[Task tool call with subagent_type="implementation-validator"]
+[Task tool call with subagent_type="analysis-agent"]
 
 ```markdown
 **Implementation Verification Complete** ✅
@@ -1628,9 +1994,9 @@ Issues Found: 1 P1
 
 [User: pass - issue non-blocking, can test manually]
 
-**Phase 7:**
+**Phase 9:**
 ```markdown
-**Phase 7: Manual Testing** [REQUIRED]
+**Phase 9: Manual Testing** [REQUIRED]
 
 Please test the implementation manually:
 
@@ -1648,14 +2014,14 @@ Please test the implementation manually:
 
 [User: pass - all tests successful]
 
-**Phase 8:**
+**Phase 10:**
 ```markdown
-**Phase 8: Documentation**
+**Phase 10: Documentation**
 
 Updating documentation with implementation results...
 ```
 
-[Task tool call with subagent_type="docs-updater"]
+[Task tool call with subagent_type="project-manager-agent"]
 
 ```markdown
 **Documentation Updated** ✅
@@ -1668,16 +2034,16 @@ Summary:
 Phase 2 Complete: Client survey form with 7 question types
 Clients can now receive survey links and submit responses with validation.
 
-**Next:** Phase 8a (CLAUDE.md Quality Review)
+**Next:** Phase 10a (CLAUDE.md Quality Review)
 
 **Commands:** `continue` | `adjust` | `stop`
 ```
 
 [User: continue]
 
-**Phase 8a:**
+**Phase 10a:**
 ```markdown
-**Phase 8a: CLAUDE.md Quality Review** [MANDATORY]
+**Phase 10a: CLAUDE.md Quality Review** [MANDATORY]
 
 Loading quality review guidelines...
 - ✅ Loaded claude-md-guidelines skill
@@ -1713,16 +2079,16 @@ Loading quality review guidelines...
 
 CLAUDE.md now meets signal-vs-noise standards.
 
-**Next:** Phase 8b (Skills Update Review)
+**Next:** Phase 10b (Skills Update Review)
 
 **Commands:** `continue` | `stop`
 ```
 
 [User: continue]
 
-**Phase 8b:**
+**Phase 10b:**
 ```markdown
-**Phase 8b: Skills Update Review** [CONDITIONAL]
+**Phase 10b: Skills Update Review** [CONDITIONAL]
 
 Loading skill decision framework...
 - ✅ Loaded skill-creator skill
@@ -1740,7 +2106,7 @@ Loading skill decision framework...
    - SKIP: Not adding to skills
 
 **Recommendation:**
-Update `supabase-patterns` skill with RLS recursion anti-pattern discovered in Phase 1.
+Update `supabase-patterns` skill with RLS recursion anti-pattern discovered in Phase 3.
 
 **Proposed Addition:**
 ```yaml
@@ -1769,21 +2135,21 @@ Update `supabase-patterns` skill with RLS recursion anti-pattern discovered in P
 
 Updated: supabase-patterns
 
-**Next:** Phase 9 (Git Operations)
+**Next:** Phase 11 (Git Operations)
 
 **Commands:** `continue` | `stop`
 ```
 
 [User: continue]
 
-**Phase 9:**
+**Phase 11:**
 ```markdown
-**Phase 9: Git Operations**
+**Phase 11: Git Operations**
 
 Creating commit for documentation changes...
 ```
 
-[Task tool call with subagent_type="git-specialist"]
+[Task tool call with subagent_type="project-manager-agent"]
 
 ```markdown
 **Commit Created** ✅
@@ -1841,14 +2207,14 @@ Summary:
 
 **Foundation phase (always parallel):**
 ```markdown
-Phase 2: Launch 3x feature-foundation-developer
+Phase 4: Launch 3x code-developer
 → types.ts, queries.ts, validation.ts
 → Parallel execution for efficiency
 ```
 
 **Components phase (parallel if independent):**
 ```markdown
-Phase 3: Launch Nx component-developer
+Phase 5: Launch Nx code-developer
 → QuestionField, SurveyForm (if SurveyForm doesn't depend on QuestionField)
 → OR: Launch QuestionField → then SurveyForm (if dependent)
 ```
@@ -1857,7 +2223,7 @@ Phase 3: Launch Nx component-developer
 
 **Database phase blocks everything:**
 ```markdown
-Phase 1: Database [CRITICAL]
+Phase 3: Database [CRITICAL]
 → Must complete before Foundation
 → Foundation needs regenerated types
 → Everything depends on types
@@ -1871,7 +2237,7 @@ plan_analysis:
   testing_strategy:
     skip_if: "Automated tests handle validation"
 
-→ Orchestrator: "Skipping Phase 7 (Testing) - automated tests only"
+→ Orchestrator: "Skipping Phase 9 (Testing) - automated tests only"
 ```
 
 ---
@@ -1880,14 +2246,14 @@ plan_analysis:
 
 ### ❌ Don't: Sequential when could be parallel
 ```markdown
-Phase 2: Launch types.ts → wait → Launch queries.ts → wait → Launch validation.ts
+Phase 4: Launch types.ts → wait → Launch queries.ts → wait → Launch validation.ts
 # Inefficient! Should be parallel!
 ```
 
 ### ❌ Don't: Start components before foundation ready
 ```markdown
-Phase 2: Foundation starting...
-Phase 3: Components starting...  # Components need foundation!
+Phase 4: Foundation starting...
+Phase 5: Components starting...  # Components need foundation!
 ```
 
 ### ❌ Don't: Skip testing when there are P0 issues
@@ -1899,98 +2265,98 @@ User: continue to documentation
 
 ### ❌ Don't: Auto-proceed without user approval
 ```markdown
-Phase 3 complete → Phase 4 starts immediately
+Phase 5 complete → Phase 6 starts immediately
 # User loses control, can't review!
 ```
 
 ### ❌ Don't: Skip build verification
 ```markdown
-Phase 2b complete → Immediately launch Phase 3
+Phase 4b complete → Immediately launch Phase 5
 # NO! Must verify build succeeds first!
 ```
 
 ✅ **Correct:**
 ```markdown
-Phase 2b complete → npm run build:cms → Verify succeeds → Phase 3 starts
+Phase 4b complete → npm run build:cms → Verify succeeds → Phase 5 starts
 ```
 
 ### ❌ Don't: Skip manual testing checkpoints
 ```markdown
-Phase 5 complete → Immediately launch docs-updater
+Phase 7 complete → Immediately launch project-manager-agent
 # NO! User must test first!
 ```
 
 ✅ **Correct:**
 ```markdown
-Phase 5 complete → npm run build (both apps) → Phase 6 (implementation-validator) → Manual test checkpoint → User tests → Reports pass → Launch docs-updater
+Phase 7 complete → npm run build (both apps) → Phase 8 (analysis-agent) → Manual test checkpoint → User tests → Reports pass → Launch project-manager-agent
 ```
 
 ### ❌ Don't: Skip CLAUDE.md quality review
 ```markdown
-Phase 8 complete → Immediately launch git-specialist
-# NO! Must review CLAUDE.md quality first (Phase 8a)!
+Phase 10 complete → Immediately launch project-manager-agent
+# NO! Must review CLAUDE.md quality first (Phase 10a)!
 ```
 
 ✅ **Correct:**
 ```markdown
-Phase 8 complete → Phase 8a (CLAUDE.md quality review) → Apply signal-vs-noise → Phase 9 (Git)
+Phase 10 complete → Phase 10a (CLAUDE.md quality review) → Apply signal-vs-noise → Phase 11 (Git)
 ```
 
 ### ❌ Don't: Update skills without decision framework
 ```markdown
-Phase 8b: "Let me add this pattern to code-patterns"
+Phase 10b: "Let me add this pattern to code-patterns"
 # NO! Apply 3-Question Filter first: Project-specific? Timeless? Helps decisions?
 ```
 
 ✅ **Correct:**
 ```markdown
-Phase 8b: Invoke skill-creator → Apply 3-Question Filter → Update only if YES to all 3
+Phase 10b: Invoke skill-creator → Apply 3-Question Filter → Update only if YES to all 3
 ```
 
 ### ❌ Don't: Skip implementation verification
 ```markdown
-Phase 5 complete → Build succeeds → Immediately launch test-validator
+Phase 7 complete → Build succeeds → Immediately launch test-validator
 # NO! Must verify code correctness first!
 ```
 
 ✅ **Correct:**
 ```markdown
-Phase 5 complete → Build succeeds → Launch implementation-validator → Analyze code → Fix P0 issues → Launch test-validator
+Phase 7 complete → Build succeeds → Launch analysis-agent → Analyze code → Fix P0 issues → Launch test-validator
 ```
 
 ### ❌ Don't: Accumulate build errors
 ```markdown
-Phase 2b: Build fails - ignore it
-Phase 3: Build fails - continue anyway
-Phase 4: Build fails - deal with it later
+Phase 4b: Build fails - ignore it
+Phase 5: Build fails - continue anyway
+Phase 6: Build fails - deal with it later
 # NO! Now have 10+ errors to fix!
 ```
 
 ✅ **Correct:**
 ```markdown
-Phase 2b: Build fails → Agent fixes immediately → Rebuild verifies fix → Continue to Phase 3
-Phase 3: Build succeeds → Continue to Phase 4
-Phase 4: Build succeeds → Continue to Phase 5
+Phase 4b: Build fails → Agent fixes immediately → Rebuild verifies fix → Continue to Phase 5
+Phase 5: Build succeeds → Continue to Phase 6
+Phase 6: Build succeeds → Continue to Phase 7
 # Clean builds all the way!
 ```
 
 ### ❌ Don't: Use wrong agent or skip Task tool
 ```markdown
-Phase 2a: "Let me create types.ts manually"
-# NO! Must use Task tool with subagent_type="feature-foundation-developer"
+Phase 4a: "Let me create types.ts manually"
+# NO! Must use Task tool with subagent_type="code-developer"
 
-Phase 4: "Launching general-purpose agent..."
-# NO! Must use Task tool with subagent_type="server-action-developer"
+Phase 6: "Launching general-purpose agent..."
+# NO! Must use Task tool with subagent_type="code-developer"
 
-Phase 6: "I'll verify the code myself..."
-# NO! Must use Task tool with subagent_type="implementation-validator"
+Phase 8: "I'll verify the code myself..."
+# NO! Must use Task tool with subagent_type="analysis-agent"
 ```
 
 ✅ **Correct:**
 ```markdown
-Phase 2a: Task(subagent_type="feature-foundation-developer", description="Create types.ts", prompt="...")
-Phase 4: Task(subagent_type="server-action-developer", description="Create actions.ts", prompt="...")
-Phase 6: Task(subagent_type="implementation-validator", description="Verify implementation", prompt="...")
+Phase 4a: Task(subagent_type="code-developer", description="Create types.ts", prompt="...")
+Phase 6: Task(subagent_type="code-developer", description="Create actions.ts", prompt="...")
+Phase 8: Task(subagent_type="analysis-agent", description="Verify implementation", prompt="...")
 ```
 
 ---
@@ -2001,9 +2367,9 @@ Phase 6: Task(subagent_type="implementation-validator", description="Verify impl
 
 **Parallel Agent Execution:**
 - Create queries.ts + validation.ts simultaneously
-- Foundation agents (feature-foundation-developer) can run in parallel for independent files
+- Foundation agents (code-developer) can run in parallel for independent files
 - Saves ~15 minutes vs sequential execution
-- Example: Phase 2b can parallelize types.ts creation, but queries/validation depend on types
+- Example: Phase 4b can parallelize types.ts creation, but queries/validation depend on types
 
 **Specialized Agents:**
 - Each agent focused on one responsibility (types, queries, components, routes)
@@ -2036,7 +2402,7 @@ Phase 6: Task(subagent_type="implementation-validator", description="Verify impl
 
 **No UI Validation Before Merge:**
 - Problem: Styling changes merged without checklist verification
-- Solution: Add UI review checklist to Phase 6 (implementation-validator)
+- Solution: Add UI review checklist to Phase 8 (analysis-agent)
 - Check: shadcn/ui components, theme tokens, spacing scale, accessibility (WCAG 2.1 AA)
 
 ---

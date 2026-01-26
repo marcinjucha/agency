@@ -33,6 +33,8 @@ The 500-line guideline is a target, not a hard limit. If high-quality, signal-fo
 - **Keep together** if content is interconnected and needs context
 - **Split to Tier 3** if content is modular and self-contained
 
+**See:** `./signal-vs-noise-reference.md` for the complete 3-question filter and application examples.
+
 ## Decision Framework
 
 ### Should You Create a Skill?
@@ -594,6 +596,7 @@ wc -l .claude/skills/my-skill-name/SKILL.md
 ## Resources
 
 ### Internal (Tier 3 Resources)
+- `@signal-vs-noise-reference.md` - Signal vs Noise philosophy (3-question filter, what to include/exclude)
 - `@skills-guide.md` - Complete official guide to creating skills (moved from .claude/)
 - `@skill-template.md` - Copy-paste ready templates for all skill types
 - **Existing skills** - `.claude/skills/` directory for working examples

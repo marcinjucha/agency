@@ -34,24 +34,6 @@ description: >
   - "phrase 4"
   - "phrase 5"
 
-  <example>
-  user: "Can you review the architecture of my checkout feature?"
-  assistant: "I'll use the your-agent-name agent to [what agent will do]."
-  <commentary>Why this triggers the agent - explain the reasoning</commentary>
-  </example>
-
-  <example>
-  user: "This component has business logic in it, where should it go?"
-  assistant: "Let me use the your-agent-name agent to identify the issue and suggest proper placement."
-  <commentary>Specific pattern that matches agent's expertise</commentary>
-  </example>
-
-  <example>
-  user: "I need to [specific task]"
-  assistant: "I'll use the your-agent-name agent for [specific reason]."
-  <commentary>Common user request that maps to agent's domain</commentary>
-  </example>
-
 # Model: Which Claude model to use
 # Options: sonnet (default, balanced), opus (complex reasoning), haiku (fast), inherit (use parent)
 # Guidelines:
@@ -68,11 +50,13 @@ You are a [role] specializing in [domain]. Your mission is to [objective].
 ## 🎯 SIGNAL vs NOISE ([Agent Type] Edition)
 
 **Focus on SIGNAL:**
+
 - ✅ [What has high value for THIS agent's purpose]
 - ✅ [What other agents depend on OR what users need]
 - ✅ [What prevents real problems]
 
 **Avoid NOISE:**
+
 - ❌ [What's low value or obvious]
 - ❌ [What creates maintenance burden without value]
 - ❌ [What's theoretical or "just in case"]
@@ -82,12 +66,14 @@ You are a [role] specializing in [domain]. Your mission is to [objective].
 **Agent Category:** [Foundation | Implementation | Validation | Decision]
 
 **Approach Guide:**
+
 - **Foundation agents:** Comprehensive (output used by other agents for decisions)
 - **Implementation agents:** Focused (YAGNI - generate code needed NOW, not hypothetical)
 - **Validation agents:** Prioritized (P0 > P1 > P2, fix critical first)
 - **Decision agents:** Clear choice (single recommendation, not multiple options)
 
 **When in doubt:** "[Decision question specific to this agent's purpose]"
+
 - [Noise case] → Noise (skip it)
 - [Signal case] → Signal (include it)
 
@@ -96,6 +82,7 @@ You are a [role] specializing in [domain]. Your mission is to [objective].
 ## REFERENCE DOCUMENTATION
 
 **Always consult:**
+
 - @path/to/project/CLAUDE.md
 - @.claude/rules/relevant-rule.mdc
 - @path/to/examples/
@@ -105,6 +92,7 @@ You are a [role] specializing in [domain]. Your mission is to [objective].
 ## YOUR EXPERTISE
 
 You master:
+
 - Domain skill 1
 - Domain skill 2
 - Domain skill 3
@@ -112,6 +100,7 @@ You master:
 ## CRITICAL RULES (if applicable)
 
 ### 🚨 RULE 1: [Critical Pattern or Anti-Pattern]
+
 ```[language]
 ❌ WRONG - [What not to do]
 [bad example code]
@@ -121,6 +110,7 @@ You master:
 ```
 
 ### 🚨 RULE 2: [Another Critical Pattern]
+
 ```[language]
 ❌ WRONG
 [bad example]
@@ -144,6 +134,7 @@ You master:
    - NO → [Action C]
 
 **Quick Rules:**
+
 ```
 Scenario A → Action 1
 Scenario B → Action 2
@@ -157,6 +148,7 @@ Scenario C → Action 3
 **When to use:** [Conditions]
 
 **Implementation:**
+
 ```[language]
 // Example code showing pattern
 ```
@@ -168,6 +160,7 @@ Scenario C → Action 3
 **When to use:** [Conditions]
 
 **Implementation:**
+
 ```[language]
 // Example code
 ```
@@ -177,32 +170,38 @@ Scenario C → Action 3
 **For [task type], provide:**
 
 **✅ [Section 1 Name]**
+
 - What to include
 - Format requirements
 
 **⚠️ [Section 2 Name]**
 
 **CRITICAL** (must address):
+
 - Point 1
 - Point 2
 
 **MAJOR** (should address):
+
 - Point 1
 - Point 2
 
 **MINOR** (nice to have):
+
 - Point 1
 - Point 2
 
 **📝 [Section 3 Name]**
 
 For each item:
+
 1. **Problem**: What's wrong and why it matters
 2. **Impact**: What breaks/degrades
 3. **Fix**: High-level steps
 4. **Example**: Brief code direction (not full implementation)
 
 **🎯 SUMMARY**
+
 - Overall assessment
 - Key takeaways
 - Priority actions
@@ -216,6 +215,7 @@ For each item:
 ## CHECKLIST (for agent's internal validation)
 
 Before responding, verify:
+
 - [ ] Consulted reference documentation (@paths)
 - [ ] Applied critical rules
 - [ ] Followed decision trees
@@ -281,6 +281,7 @@ Aim for appropriate size based on complexity:
 Before finalizing your agent:
 
 **YAML Frontmatter:**
+
 - [ ] `name` is lowercase-with-dashes
 - [ ] `color` is set (consistent with similar agents)
 - [ ] `description` includes "**Use this agent PROACTIVELY**"
@@ -291,6 +292,7 @@ Before finalizing your agent:
 - [ ] `model` is appropriate (sonnet/opus/haiku)
 
 **System Prompt:**
+
 - [ ] Clear role definition
 - [ ] Expertise areas listed
 - [ ] Reference documentation with @paths
@@ -302,6 +304,7 @@ Before finalizing your agent:
 - [ ] Internal checklist for validation
 
 **Testing:**
+
 - [ ] Tested with trigger phrases
 - [ ] Verified proactive invocation works
 - [ ] Checked boundaries with negative examples
@@ -310,6 +313,7 @@ Before finalizing your agent:
 ## EXAMPLES FROM PRODUCTION AGENTS
 
 ### Example 1: ios-architect (Purple, 21.4k tokens)
+
 ```yaml
 name: ios-architect
 color: purple
@@ -334,6 +338,7 @@ model: sonnet
 ```
 
 ### Example 2: ios-testing-specialist (Green, 17.7k tokens)
+
 ```yaml
 name: ios-testing-specialist
 color: green
