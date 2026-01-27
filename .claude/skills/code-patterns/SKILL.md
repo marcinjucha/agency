@@ -45,7 +45,7 @@ export async function actionName(
 - ✅ Always `revalidatePath()` after mutations
 - ✅ User-friendly error messages (don't expose internals)
 
-See: [server-actions.md](./server-actions.md) for complete examples.
+See: [@resources/server-actions.md](./resources/server-actions.md) for complete examples.
 
 ---
 
@@ -115,7 +115,7 @@ export async function getResponses(): Promise<ResponseListItem[]> {
 }
 ```
 
-See: [type-safety.md](./type-safety.md) for when casting is justified.
+See: [@resources/type-safety.md](./resources/type-safety.md) for when casting is justified.
 
 ---
 

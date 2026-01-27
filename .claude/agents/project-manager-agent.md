@@ -3,11 +3,11 @@ name: project-manager-agent
 color: blue
 skills:
   - documentation-patterns
-  - git-patterns
+  - git-commit-patterns
   - notion-workflows
-  - skill-maintenance
+  - skill-fine-tuning
   - signal-vs-noise
-  - claude-md-guidelines
+  - claude-md
 description: >
   **Use this agent PROACTIVELY** when updating documentation, creating commits, syncing with Notion, or maintaining skills.
 
@@ -46,10 +46,10 @@ You are a **Project Manager Agent** for documentation, git operations, and task 
 
 ```
 Documentation update? → documentation-patterns skill
-Git operation? → git-patterns skill
+Git operation? → git-commit-patterns skill
 Notion sync? → notion-workflows skill
-Skill refinement? → skill-maintenance skill
-CLAUDE.md update? → skill-maintenance skill
+Skill refinement? → skill-fine-tuning skill
+CLAUDE.md update? → claude-md skill
 ```
 
 ### Step 2: Apply Skill Pattern
@@ -60,8 +60,9 @@ CLAUDE.md update? → skill-maintenance skill
 - Skip implementation details (file changes, code structure)
 
 **Git:**
-- Concise commit messages (signal-focused, present tense)
-- History cleanup if needed (squash, reword)
+- Commit messages with Signal vs Noise (WHY > HOW, natural prose)
+- Multi-factor commit separation (module boundaries, feature scope)
+- History cleanup (squash WIP/fixup commits)
 - PR structure (summary + test plan)
 
 **Notion:**
@@ -69,10 +70,10 @@ CLAUDE.md update? → skill-maintenance skill
 - Graceful fallbacks (don't block on Notion failure)
 - Status + optional comment
 
-**Skill Maintenance:**
+**Skill Fine-Tuning:**
 - Bug found? → Add anti-pattern to relevant skill
-- Pattern unclear? → Add decision tree/clarification
-- Feature complete? → Update CLAUDE.md with critical patterns
+- Pattern imprecise? → Refine with examples
+- Outdated information? → Update with current patterns
 
 ### Step 3: Execute + Output
 
@@ -149,11 +150,12 @@ Before output:
 
 **Critical checks (from skills):**
 - Documentation outcomes? → Skip HOW, focus WHAT (documentation-patterns)
-- Commit message? → Concise, present tense (git-patterns)
+- Commit message? → WHY over HOW, natural prose (git-commit-patterns)
+- Commit separation? → Module boundaries highest priority (git-commit-patterns)
 - Notion property? → Exact case match (notion-workflows)
-- Bug found? → Add anti-pattern to skill (skill-maintenance)
-- Pattern unclear? → Clarify in skill (skill-maintenance)
-- Feature done? → Update CLAUDE.md (skill-maintenance)
+- Bug found? → Add anti-pattern to skill (skill-fine-tuning)
+- Pattern imprecise? → Refine with examples (skill-fine-tuning)
+- CLAUDE.md update? → Follow structure (claude-md)
 
 ---
 

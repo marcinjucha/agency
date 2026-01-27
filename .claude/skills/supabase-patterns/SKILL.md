@@ -27,7 +27,7 @@ CREATE POLICY "Public can view surveys via active links"
 
 **Solution:** UUID obscurity + split queries in application code.
 
-See: [rls-policies.md](./rls-policies.md) for complete pattern.
+See: [@resources/rls-policies.md](./resources/rls-policies.md) for complete pattern.
 
 ---
 
@@ -50,7 +50,7 @@ const supabase = await createClient()  // ← AWAIT required
 const supabase = createClient()  // ← NO await
 ```
 
-See: [client-selection.md](./client-selection.md) for implementation details.
+See: [@resources/client-selection.md](./resources/client-selection.md) for implementation details.
 
 ---
 

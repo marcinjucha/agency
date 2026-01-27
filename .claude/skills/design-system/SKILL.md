@@ -132,7 +132,7 @@ text-sm text-muted-foreground // Small text
 />
 ```
 
-See: [shared-components.md](./shared-components.md) for complete API.
+See: [@resources/shared-components.md](./resources/shared-components.md) for complete API.
 
 ---
 

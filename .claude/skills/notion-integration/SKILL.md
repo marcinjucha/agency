@@ -70,7 +70,7 @@ const taskDetails = await mcp__notion__notion-fetch({
 });
 ```
 
-See: [mcp-examples.md](./mcp-examples.md) for complete examples.
+See: [@resources/mcp-examples.md](./resources/mcp-examples.md) for complete examples.
 
 ---
 
@@ -140,4 +140,4 @@ await mcp__notion__notion-update-page({
 - No Notes: Use PROJECT_SPEC.yaml acceptance criteria
 - Skills Project: Skip, log "Skills Project ignored"
 
-See: [database-schema.md](./database-schema.md) for full schema details.
+See: [@resources/database-schema.md](./resources/database-schema.md) for full schema details.

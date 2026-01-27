@@ -64,7 +64,7 @@ description: Architecture decisions for Legal-Mind monorepo. Use when understand
 - `lib/` → `features/`
 - `packages/` → `apps/`
 
-See: [app-features-separation.md](./app-features-separation.md) for full ADR-005.
+See: [@resources/app-features-separation.md](./resources/app-features-separation.md) for full ADR-005.
 
 ---
 
@@ -175,4 +175,4 @@ turbo build --filter=@legal-mind/cms
 npm run db:types
 ```
 
-See: [monorepo-structure.md](./monorepo-structure.md) for full ADR-001.
+See: [@resources/monorepo-structure.md](./resources/monorepo-structure.md) for full ADR-001.

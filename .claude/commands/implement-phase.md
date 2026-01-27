@@ -89,7 +89,7 @@ Systematically implement a planned feature/phase by orchestrating specialized ag
 - `notion-integration` - Notion MCP patterns (if --notion-task-id used)
 - `design-system` - UI/UX patterns for components
 - `signal-vs-noise` - Decision filter for documentation and commits
-- `claude-md-guidelines` - Guidelines for writing feature CLAUDE.md files
+- `claude-md` - Guidelines for writing feature CLAUDE.md files
 
 **Agents automatically load relevant skills based on their skills: field.**
 
@@ -141,7 +141,7 @@ Phase 10: Documentation (project-manager-agent)
     ↓ Syncs Notion task status (if applicable)
     ↓ User: approve | adjust | stop
 Phase 10a: CLAUDE.md Quality Review [MANDATORY]
-    ↓ (orchestrator + claude-md-guidelines skill + signal-vs-noise skill)
+    ↓ (orchestrator + claude-md skill + signal-vs-noise skill)
     ↓ REVIEW: Content quality, signal vs noise, project-specificity
     ↓ User: approve | refine | skip | stop
 Phase 10b: Skills Update Review [CONDITIONAL]
@@ -760,7 +760,7 @@ Report: pass | check (see logs) | stop
 
 ### Phase 10: Documentation [SEQUENTIAL]
 
-**Agent:** `project-manager-agent` (uses documentation-patterns, notion-workflows, skill-maintenance skills)
+**Agent:** `project-manager-agent` (uses documentation-patterns, notion-workflows, skill-fine-tuning skills)
 
 **Purpose:** Update documentation with progress and results
 
@@ -775,7 +775,7 @@ Report: pass | check (see logs) | stop
   - Add completion notes to task Notes
   - Optionally create doc page in Documentation database
 - **CLAUDE.md files** (if new feature or significant changes):
-  - Create/update feature CLAUDE.md using `claude-md-guidelines` skill
+  - Create/update feature CLAUDE.md using `claude-md` skill
   - Focus on project-specific oddities and WHY
   - Document critical mistakes made during implementation
 - Creates YAML summary for project-manager-agent
@@ -819,7 +819,7 @@ When to create/update CLAUDE.md:
 - [5-10 critical facts in bullet form]
 ```
 
-**Reference:** See `claude-md-guidelines` skill for complete writing guidelines.
+**Reference:** See `claude-md` skill for complete writing guidelines.
 
 **Output:** Documentation updated (local + Notion + CLAUDE.md), summary ready for project-manager-agent
 
@@ -833,7 +833,7 @@ When to create/update CLAUDE.md:
 ### Phase 10a: CLAUDE.md Quality Review [MANDATORY]
 
 **Orchestrator:** Direct (no agent)
-**Skills Used:** claude-md-guidelines, signal-vs-noise
+**Skills Used:** claude-md, signal-vs-noise
 
 **Purpose:** Ensure CLAUDE.md documents are signal-focused, project-specific, and high-quality before commit
 
@@ -844,7 +844,7 @@ When to create/update CLAUDE.md:
 **Process:**
 
 1. **Load Guidelines**
-   - Invoke `/claude-md-guidelines` skill
+   - Invoke `/claude-md` skill
    - Invoke `/signal-vs-noise` skill
    - Review content quality criteria
 
@@ -991,7 +991,7 @@ When to create/update CLAUDE.md:
 
 ### Phase 11: Git Operations [SEQUENTIAL]
 
-**Agent:** `project-manager-agent` (uses git-patterns skill)
+**Agent:** `project-manager-agent` (uses git-commit-patterns skill)
 
 **Purpose:** Create commit for documentation changes, optionally clean history and push
 
@@ -1445,7 +1445,7 @@ OUTPUT: YAML`
 
 13. **NEVER skip Phase 9:** Phase 9 (Manual Testing) is REQUIRED - user must test before docs
 
-14. **Phase 10a mandatory** - Always review CLAUDE.md quality using claude-md-guidelines + signal-vs-noise skills
+14. **Phase 10a mandatory** - Always review CLAUDE.md quality using claude-md + signal-vs-noise skills
 
 15. **Phase 10b conditional** - Only update skills when significant project-specific patterns discovered
 
@@ -2046,7 +2046,7 @@ Clients can now receive survey links and submit responses with validation.
 **Phase 10a: CLAUDE.md Quality Review** [MANDATORY]
 
 Loading quality review guidelines...
-- ✅ Loaded claude-md-guidelines skill
+- ✅ Loaded claude-md skill
 - ✅ Loaded signal-vs-noise skill
 
 **Reviewing:** apps/cms/features/survey/CLAUDE.md
