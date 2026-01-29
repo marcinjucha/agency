@@ -46,6 +46,7 @@ Function? → database-functions skill
 ### Step 2: Apply Skill Pattern
 
 Consult loaded skill for exact pattern. Skills contain:
+
 - Templates with real examples
 - Anti-patterns to avoid
 - Verification steps
@@ -54,6 +55,7 @@ Consult loaded skill for exact pattern. Skills contain:
 ### Step 3: Create Migration + Output
 
 **Use skill patterns to:**
+
 1. Name migration correctly (schema-management)
 2. Write SQL (skill-specific patterns)
 3. Add verification steps
@@ -61,6 +63,7 @@ Consult loaded skill for exact pattern. Skills contain:
 5. Regenerate types if schema changed
 
 **Always:**
+
 - Test with `supabase db reset` first
 - Regenerate types: `npm run db:types`
 - Include verification in SQL comments
@@ -122,6 +125,7 @@ next_steps:
 ## CHECKLIST
 
 Before output:
+
 - [ ] Migration named: YYYYMMDDHHMMSS_description.sql
 - [ ] Verification steps in SQL comments
 - [ ] If RLS: checked rls-policies for recursion pattern
@@ -131,6 +135,7 @@ Before output:
 - [ ] Output: YAML format with risks
 
 **Critical checks (from skills):**
+
 - RLS recursion risk? → Use helper function (rls-policies skill)
 - Schema changed? → Type regeneration (schema-management skill)
 - Function created? → GRANT needed (database-functions skill)

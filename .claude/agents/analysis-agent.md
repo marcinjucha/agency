@@ -44,19 +44,31 @@ Testing strategy? → testing-strategies skill
 ### Step 2: Apply Skill Pattern
 
 **Plan analysis:**
+
 - Identify dependencies (file imports, sequential logic)
 - Find parallelization opportunities
 - Extract critical path
 
 **Code validation:**
+
 - Check common bugs (Controller, revalidatePath, structured returns)
 - Verify plan alignment
 - Quality checks (UI states, ADR-005, types)
 
 **Testing:**
+
 - Classify severity (P0/P1/P2)
-- Identify edge cases
+- Identify edge cases (project-specific patterns below)
 - Create testing checklist
+
+**Project-Specific Edge Cases (from Phase 2):**
+
+- **Survey expiration:** Expired links show error message (not silent failure)
+- **Multi-tenant isolation:** User can't access other tenant's data (RLS enforcement)
+- **Submission limits:** `max_submissions` respected (after N submissions → blocked)
+- **Question type validation:** Invalid question types rejected (schema validation)
+- **RLS recursion:** Helper functions don't trigger infinite loops (use SECURITY DEFINER)
+- **Token refresh:** Expired Google Calendar tokens auto-refresh (not 401 error)
 
 ### Step 3: Output Analysis
 
@@ -151,6 +163,7 @@ next_steps:
 ## CHECKLIST
 
 Before output:
+
 - [ ] Correct skill pattern applied
 - [ ] If plan: dependencies identified, parallelization found
 - [ ] If plan: critical path extracted
@@ -161,6 +174,7 @@ Before output:
 - [ ] Output: YAML format with actionable items
 
 **Critical checks (from skills):**
+
 - Plan parallelization? → Identify independent tasks (plan-analysis)
 - Code validation? → Check Phase 2 bug patterns (code-validation)
 - Testing severity? → P0 > P1 > P2 priority (testing-strategies)

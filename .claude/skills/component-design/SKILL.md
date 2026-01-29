@@ -77,6 +77,7 @@ import {
   Select,
   Checkbox,
   Dialog,
+  AlertDialog,
   Alert,
   Badge,
   Tabs
@@ -88,6 +89,68 @@ import {
 - Accessibility built-in (ARIA attributes)
 - Less code (no custom CSS)
 - Maintained centrally (updates propagate)
+
+## Critical Pattern: Inline Styles for Transpiled Packages
+
+**Project-specific workaround: Tailwind v4 custom colors don't work in transpiled packages**
+
+```typescript
+// packages/ui/src/components/ui/button.tsx
+const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
+  ({ className, variant, size, asChild = false, style, onMouseEnter, onMouseLeave, ...props }, ref) => {
+    const Comp = asChild ? Slot : "button"
+    const [isHovered, setIsHovered] = React.useState(false)
+
+    // ✅ CORRECT - Inline styles for custom colors
+    const inlineStyle = variant === 'destructive' ? {
+      backgroundColor: isHovered ? '#b91c1c' : '#dc2626', // hover: red-700, normal: red-600
+      color: '#ffffff',
+      ...style
+    } : style
+
+    const handleMouseEnter = (e: React.MouseEvent<HTMLButtonElement>) => {
+      if (variant === 'destructive') setIsHovered(true)
+      onMouseEnter?.(e)
+    }
+
+    return (
+      <Comp
+        className={cn(buttonVariants({ variant, size, className }))}
+        ref={ref}
+        style={inlineStyle}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        {...props}
+      />
+    )
+  }
+)
+```
+
+**Why inline styles needed:**
+- Tailwind v4 custom colors (destructive, primary with opacity) don't transpile correctly in Next.js packages
+- Next.js transpiles packages on-demand → custom CSS variables undefined
+- Inline styles bypass Tailwind → work consistently
+
+**When to use inline styles:**
+1. Custom theme colors in transpiled packages (destructive variant, custom opacity)
+2. Interactive hover states for custom colors (manage with useState)
+3. Fixed positioning/layout that Tailwind can't express
+
+**When NOT to use inline styles:**
+1. Standard Tailwind utilities (spacing, borders, shadows)
+2. Theme tokens (background, foreground, muted) - these work
+3. Components NOT in packages/ (app-specific components use Tailwind normally)
+
+**Real usage in project:**
+- Button destructive variant (inline red colors)
+- Dialog/AlertDialog overlay (inline rgba background, positioning)
+- Components with complex z-index/positioning logic
+
+**Pattern applies to:**
+- packages/ui/src/components/ui/button.tsx
+- packages/ui/src/components/ui/dialog.tsx
+- packages/ui/src/components/ui/alert-dialog.tsx
 
 ## Spacing Scale (Tailwind)
 
@@ -195,6 +258,37 @@ import { Button } from '@legal-mind/ui'
 
 **Why wrong:** Visual inconsistency, harder to maintain spacing system.
 
+### ❌ Tailwind Custom Colors in Transpiled Packages
+
+**Problem:** Using Tailwind custom color classes in packages/ui components
+
+```typescript
+// ❌ WRONG - Custom colors in transpiled package
+// packages/ui/src/components/ui/button.tsx
+const buttonVariants = cva(
+  "...",
+  {
+    variants: {
+      variant: {
+        destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90"
+        // ^ Won't work - custom colors undefined during transpilation
+      }
+    }
+  }
+)
+
+// ✅ CORRECT - Inline styles for custom colors
+const inlineStyle = variant === 'destructive' ? {
+  backgroundColor: isHovered ? '#b91c1c' : '#dc2626',
+  color: '#ffffff',
+  ...style
+} : style
+```
+
+**Why wrong:** Next.js transpiles packages on-demand. Tailwind v4 custom colors (destructive, primary with opacity) are CSS variables defined in app globals.css, not available during package transpilation. Component renders with missing colors.
+
+**When discovered:** Phase 2 - Button destructive variant appeared unstyled after moving to packages/ui.
+
 ---
 
-**Key Lesson:** Use design system components, theme tokens, and spacing scale. Avoid custom CSS when system exists.
+**Key Lesson:** Use design system components, theme tokens, and spacing scale. Use inline styles for custom colors in transpiled packages.
