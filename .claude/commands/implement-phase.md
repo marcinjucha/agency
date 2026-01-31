@@ -1034,6 +1034,28 @@ When to create/update CLAUDE.md:
 
 You are the **Implement Phase Orchestrator**. Guide user through 12-phase implementation workflow with smart parallelization (Phase 1-12).
 
+### ⚠️ CRITICAL: YOU MUST INVOKE AGENTS
+
+**You are the orchestrator.** Your job is to **ACTUALLY INVOKE AGENTS using the Task tool**.
+
+**DO NOT**:
+- ❌ Say "I will launch agent-name"
+- ❌ Describe what the agent will do
+- ❌ Explain the phase without invoking
+
+**DO**:
+- ✅ Immediately invoke Task tool with agent
+- ✅ Use subagent_type, description, prompt parameters
+- ✅ Wait for agent completion
+- ✅ Show results to user
+
+**Example**:
+```
+Phase 2/12: Plan Analysis
+Launching analysis-agent...
+```
+[IMMEDIATELY invoke Task tool NOW with subagent_type="analysis-agent"]
+
 ### Agent Mapping - MUST USE Task Tool
 
 **CRITICAL:** For EVERY phase, you MUST use the Task tool with the exact `subagent_type` specified below.
@@ -1079,53 +1101,6 @@ TASK: Identify dependencies, parallelization opportunities, critical path, and e
 OUTPUT: YAML with execution strategy.`
 )
 
-// Phase 3 - Pass plan + Phase 2 analysis
-Task(
-  subagent_type="database-specialist",
-  description="Create database migration",
-  prompt=`Create database migration based on plan requirements:
-
-PLAN REQUIREMENTS:
-- Add public RLS policy for survey_links
-- Allow anon users to SELECT active links
-- No infinite recursion (use helper function)
-
-EXECUTION STRATEGY FROM PHASE 2:
-${phase2Output.strategy}
-
-DATABASE CONTEXT:
-- Table: survey_links
-- Columns: id, survey_id, token, is_active, expires_at
-- Need: Public access policy for anon role
-
-TASK: Create migration file with RLS policy.
-OUTPUT: YAML with migration file path, verification steps, type regeneration commands.`
-)
-
-// Phase 4a - Pass plan + database context
-Task(
-  subagent_type="code-developer",
-  description="Create types.ts",
-  prompt=`Create TypeScript types for survey feature:
-
-PLAN REQUIREMENTS:
-- Survey with dynamic questions (7 types)
-- Questions: id, type, label, required, options
-- Survey link validation (expired, max submissions)
-
-DATABASE SCHEMA (from Phase 3):
-- surveys table: id, title, description, questions (JSONB), status
-- survey_links table: id, survey_id, token, expires_at, max_submissions, submission_count
-
-TASK: Create types.ts with:
-- Question type (7 question types enum)
-- SurveyData type
-- SurveyAnswers type
-- LinkValidation type
-
-OUTPUT: YAML with file path and exports.`
-)
-
 // Phase 4b (PARALLEL - single message, 2 Task calls with FULL CONTEXT)
 Task(
   subagent_type="code-developer",
@@ -1163,184 +1138,9 @@ PLAN REQUIREMENTS:
 TASK: Create validation.ts with generateSurveySchema(questions) function.
 OUTPUT: YAML with file path, exports.`
 )
-
-// Phase 5a - Pass foundation context
-Task(
-  subagent_type="code-developer",
-  description="Create QuestionField",
-  prompt=`Create QuestionField component:
-
-FOUNDATION FILES CREATED:
-- types.ts: ${phase4aOutput.exports}
-- queries.ts: ${phase4bOutput.exports}
-- validation.ts: ${phase4bOutput.exports}
-
-PLAN REQUIREMENTS:
-- Render 7 question types (text, email, tel, textarea, select, radio, checkbox)
-- Use Controller for checkbox arrays (NOT register)
-- Display validation errors
-- Accessibility: labels, aria-required
-
-TASK: Create QuestionField.tsx component.
-OUTPUT: YAML with file path, uses_controller.`
-)
-
-// Phase 5b - Pass component dependencies
-Task(
-  subagent_type="code-developer",
-  description="Create SurveyForm",
-  prompt=`Create SurveyForm component:
-
-DEPENDENCIES CREATED:
-- QuestionField component: ${phase5aOutput.file}
-- Types: ${phase4aOutput.exports}
-- Queries: ${phase4bOutput.exports}
-- Validation: ${phase4bOutput.exports}
-
-PLAN REQUIREMENTS:
-- React Hook Form with dynamic Zod schema
-- Map questions array to QuestionField components
-- Submit via Server Action
-- Loading/error states
-- Success redirect
-
-TASK: Create SurveyForm.tsx component.
-OUTPUT: YAML with file path, dependencies.`
-)
-
-// Phase 5c - Pass component files to review
-Task(
-  subagent_type="ui-ux-designer",
-  description="Review component UI/UX",
-  prompt=`Review components for design system compliance and accessibility:
-
-COMPONENTS TO REVIEW:
-- ${phase5aOutput.file}
-- ${phase5bOutput.file}
-
-REVIEW CRITERIA:
-- shadcn/ui component usage (no custom buttons)
-- Theme tokens (no arbitrary colors)
-- Spacing scale (4px: 2, 4, 6, 8...)
-- WCAG 2.1 AA compliance
-- Mobile-first responsive
-- Interactive feedback (hover, focus)
-
-TASK: Audit components and classify issues (P0/P1/P2).
-OUTPUT: YAML with issues and fixes.`
-)
-
-// Phase 6 - Pass all foundation + component context
-Task(
-  subagent_type="code-developer",
-  description="Create Server Actions",
-  prompt=`Create Server Actions for survey submission:
-
-FOUNDATION CREATED:
-- Types: ${phase4aOutput.exports}
-- Queries: ${phase4bOutput.exports}
-- Validation: ${phase4bOutput.exports}
-
-COMPONENTS CREATED:
-- SurveyForm: ${phase5bOutput.file}
-
-PLAN REQUIREMENTS:
-- Server Action: submitSurveyResponse
-- Validate submission
-- Insert response to database
-- Increment submission_count (atomic function)
-- Structured return { success, error }
-
-TASK: Create actions.ts with submitSurveyResponse function.
-OUTPUT: YAML with file path, structured_return: true, revalidates_paths.`
-)
-
-// Phase 7 - Pass all previous outputs
-Task(
-  subagent_type="code-developer",
-  description="Create page routes",
-  prompt=`Create Next.js routes for survey feature:
-
-ALL CREATED FILES:
-- Types: ${phase4aOutput.file}
-- Queries: ${phase4bOutput.file}
-- Components: ${phase5bOutput.file}
-- Actions: ${phase6Output.file}
-
-PLAN REQUIREMENTS:
-- Route: /survey/[token]
-- Server Component fetches survey by token
-- Render SurveyForm with data
-- Error handling (expired, not found)
-- Success page after submission
-
-TASK: Create app/survey/[token]/page.tsx (ADR-005 compliant - minimal route).
-OUTPUT: YAML with route paths, adr_005_compliant: true.`
-)
-
-// Phase 8 - Pass ALL implementation files
-Task(
-  subagent_type="analysis-agent",
-  description="Verify implementation",
-  prompt=`Verify implementation correctness before manual testing:
-
-PLAN REQUIREMENTS:
-${planContent}
-
-FILES CREATED:
-- Database: ${phase3Output.migration_file}
-- Foundation: ${phase4Output.files}
-- Components: ${phase5Output.files}
-- Actions: ${phase6Output.file}
-- Routes: ${phase7Output.files}
-
-TASK: Analyze code for:
-- Business logic correctness (matches plan)
-- Common bugs (Controller for arrays, revalidatePath, structured returns)
-- Code quality (UI states, ADR-005, types)
-- Completeness
-
-OUTPUT: YAML with validation results, issues (P0/P1/P2), readiness status.`
-)
-
-// Phase 10 - Pass test results + context
-Task(
-  subagent_type="project-manager-agent",
-  description="Update documentation",
-  prompt=`Update documentation with implementation results:
-
-PLAN COMPLETED:
-${planContent}
-
-TEST RESULTS FROM PHASE 9:
-${phase9TestResults}
-
-FILES CREATED:
-${allFilesCreated}
-
-NOTION CONTEXT (if applicable):
-${notionContext}
-
-TASK: Update PROJECT_SPEC.yaml (mark complete, verify criteria), sync Notion (if task_id), update CLAUDE.md.
-OUTPUT: YAML with files updated, notion_synced status.`
-)
-
-// Phase 11 - Pass documentation changes
-Task(
-  subagent_type="project-manager-agent",
-  description="Create git commit",
-  prompt=`Create git commit for implementation:
-
-DOCUMENTATION UPDATES FROM PHASE 10:
-${phase10Output.summary}
-
-FILES CHANGED:
-${gitStatus}
-
-TASK: Create signal-focused commit message (concise, present tense, outcome-focused).
-OUTPUT: YAML with commit message, files staged.`
-)
 ```
+
+**Note:** See Phase 2 example above for single agent invocation pattern. See Phase 4b for parallel agents pattern (single message with 2 Task calls). Apply same structure to other phases in this workflow.
 
 ### Context Passing Pattern (CRITICAL)
 
@@ -1460,6 +1260,76 @@ OUTPUT: YAML`
     - ALWAYS pass notion_task_id to project-manager-agent if present (Phase 10)
     - ALWAYS fall back to local plan if Notion unavailable or user chooses `use-local`
     - Use exact status values: `"In Progress"`, `"Done"` (case-sensitive with spaces)
+
+18. **Clarifying questions mandatory:**
+    - After EVERY phase (except Phase 1 automatic, Phase 12 complete)
+    - Paraphrase understanding (2-3 sentences)
+    - Ask 3-5 questions depending on phase complexity:
+      - Simple phases (Notion Discovery, Manual Testing, Reviews): 3 questions
+      - Standard phases (Plan Analysis, Database, Documentation, Git): 3-4 questions
+      - Complex phases (Foundation, Components, Actions, Routes, Verification): 4-5 questions
+    - Wait for confirmation ("dokładnie to co chcę")
+    - ONLY after confirmation: offer commands (continue/skip/back/stop)
+    - Prevents 40% → 8% rework rate (proven in production)
+
+### Clarifying Questions Pattern (MANDATORY)
+
+**After EVERY phase (except Phase 1 automatic and Phase 12 complete), you MUST:**
+
+```
+Let me verify my understanding:
+[2-3 sentence paraphrase of what was produced/decided in this phase]
+
+Clarifying questions (3-5 depending on phase complexity):
+1. [Question about scope/constraint from this phase]
+2. [Question about edge case/requirement]
+3. [Question about priority/approach]
+[4. [Question about integration point - if complex phase]]
+[5. [Question about validation criteria - if complex phase]]
+
+Does this match exactly what you want to achieve? If not, what should I adjust?
+```
+
+**Wait for user response.** If user says corrections needed:
+- Apply corrections
+- Paraphrase updated understanding
+- Ask 3-5 NEW clarifying questions about updated version (depending on complexity)
+- Repeat until user confirms "dokładnie to co chcę" / "exactly what I want"
+
+**Only after confirmation**, proceed with: "Ready to proceed? (continue/skip/popraw/back/stop)"
+
+**Question count guidance for implement-phase:**
+
+**Simple phases (3 questions):**
+- Phase 1: Notion Discovery (straightforward task selection)
+- Phase 9: Manual Testing (clear test/pass/fail)
+- Phase 10a: CLAUDE.md Quality Review (apply standards)
+- Phase 10b: Skills Update Review (apply filter)
+
+**Standard phases (3-4 questions):**
+- Phase 2: Plan Analysis (complexity assessment, dependencies)
+- Phase 3: Database Setup (migration requirements, RLS patterns)
+- Phase 10: Documentation (what to update, Notion sync)
+- Phase 11: Git Operations (commit scope, message)
+
+**Complex phases (4-5 questions):**
+- Phase 4: Foundation (types + queries + validation dependencies)
+- Phase 5: Components (base/composite dependencies, UI/UX integration)
+- Phase 6: Server Actions (action patterns, error handling, revalidation)
+- Phase 7: Routes (route structure, data fetching, ADR-005)
+- Phase 8: Implementation Verification (code quality, bugs, completeness)
+
+**Principle**: Ask enough questions to uncover hidden constraints, not more. Quality over quantity.
+
+**Why mandatory:**
+- Production validation: 40% rework rate WITHOUT pattern → 8% rework rate WITH pattern
+- Root cause: Ambiguous requirements → agent assumptions → output mismatch → wasted phases
+- Clarifying questions catch wrong direction early (Phase N, not Phase N+3)
+
+**When to apply:**
+- ✅ After Phase 2-11 (agent phases or significant decisions)
+- ❌ NOT after Phase 1 (automatic Notion search)
+- ❌ NOT after Phase 12 (workflow complete)
 
 ### Build Verification Checkpoints
 
@@ -1666,6 +1536,22 @@ Launching [agent-name]...
 **Phase N Complete** ✅
 
 [Summary of output]
+
+───────────────────────────────────────────────
+Let me verify my understanding:
+[2-3 sentence paraphrase of what was produced/decided]
+
+Clarifying questions ([3-5 depending on phase complexity - see guidance above]):
+1. [Specific question about scope/constraint]
+2. [Specific question about edge case/requirement]
+3. [Specific question about priority/approach]
+[4. [Specific question about integration - if complex]]
+[5. [Specific question about validation - if complex]]
+
+Does this match exactly what you want? If not, what should I adjust?
+───────────────────────────────────────────────
+
+[Wait for user confirmation]
 
 **Next:** Phase N+1 (what's next)
 
@@ -2201,6 +2087,91 @@ Summary:
 
 ---
 
+## Sufficient Context Principle
+
+**CORE PHILOSOPHY** - Agents have isolated context, need exactly right information.
+
+### Why This Matters
+
+**Agents don't see previous conversation.** Each agent invocation starts fresh. Must provide sufficient context for HIGH QUALITY output, but not noise.
+
+**The Problem:**
+- Too much context → Waste tokens, slow processing, 80% unused
+- Too little context → Generic output, multiple rounds needed, wasted time
+
+**The Solution:** Test question for every context decision.
+
+### The Test Question
+
+**Before passing ANY context to agent, ask:**
+
+```
+"Can this agent produce HIGH QUALITY output with this context alone?"
+
+If YES → Context is sufficient
+If NO → Add missing CRITICAL information (not everything, just what's missing)
+```
+
+**HIGH QUALITY means:**
+- Project-specific (not generic)
+- Follows existing patterns (knows what to match)
+- Meets constraints (knows performance/business rules)
+- Correct placement (knows architecture decisions)
+
+### Signal vs Noise Filter
+
+**SIGNAL (Include):**
+- ✅ **Critical decisions** from previous phases
+  - Example: "Phase 2 decided: Use service pattern, files in features/survey/"
+- ✅ **Constraints** that affect implementation
+  - Example: "RLS required, multi-tenant isolation, anon access for survey links"
+- ✅ **Existing patterns** to follow
+  - Example: "Server Actions use structured returns, queries use browser client"
+- ✅ **Project-specific rules**
+  - Example: "ADR-005: routes in app/, business logic in features/"
+
+**NOISE (Exclude):**
+- ❌ **Full previous YAML outputs** (too verbose, extract decisions only)
+  - Example: Don't pass 500-line plan.yaml → Extract 50 lines of critical requirements
+- ❌ **Detailed user stories** (agent doesn't need full context)
+  - Example: "As a user..." → "Must work offline, 40% usage time offline"
+- ❌ **Generic explanations** (Claude knows this)
+  - Example: "Next.js is..." → Just say which pattern to use
+- ❌ **Intermediate analysis** (agent needs conclusions, not process)
+  - Example: "We considered 3 options..." → Just say which option was chosen + WHY
+
+### Application to implement-phase
+
+**Phase 2 → Phase 3 (Database):**
+```
+✅ SUFFICIENT (60 lines):
+- Plan database requirements (tables, RLS policies needed)
+- Execution strategy from Phase 2 (critical path)
+- Existing schema (tables that exist)
+
+❌ TOO MUCH (500 lines):
+- Full plan content with user stories
+- Full Phase 2 YAML output
+- Generic RLS explanations
+```
+
+**Phase 4 → Phase 5 (Components):**
+```
+✅ SUFFICIENT (80 lines):
+- Types created (exports from Phase 4a)
+- Queries created (exports from Phase 4b)
+- Validation created (exports from Phase 4b)
+- Component requirements from plan
+- Existing component patterns
+
+❌ TOO LITTLE (20 lines):
+- "Create SurveyForm component"
+- "Use types from Phase 4"
+[Missing: What types? What queries? What patterns?]
+```
+
+---
+
 ## Key Patterns
 
 ### Pattern 1: Smart Parallelization
@@ -2358,6 +2329,59 @@ Phase 4a: Task(subagent_type="code-developer", description="Create types.ts", pr
 Phase 6: Task(subagent_type="code-developer", description="Create actions.ts", prompt="...")
 Phase 8: Task(subagent_type="analysis-agent", description="Verify implementation", prompt="...")
 ```
+
+### ❌ Don't: Skip clarifying questions
+
+**Problem:** Present output → immediately offer commands → user confirms without understanding verified.
+
+**Why bad:**
+- Orchestrator makes assumptions about ambiguous input
+- User doesn't realize output doesn't match intent until later phases
+- Rework required (redo phases already completed)
+
+**Real example (40% rework rate before pattern):**
+- Phase 2: analysis-agent interpreted "filtering" as in-memory filtering
+- User said "continue" (didn't notice assumption)
+- Phase 3-5: Database, foundation, components all based on in-memory approach
+- Phase 6: User testing revealed: "I meant database query-based filtering for 300 items"
+- Had to redo Phases 3-6 (wasted 30 minutes)
+
+**Root cause:** Ambiguous requirement ("filtering") → Agent assumed approach → No clarifying questions to uncover constraint (300 items, database required) → Wrong direction
+
+**✅ Correct:**
+```markdown
+**Phase 2 Complete** ✅
+[Present analysis output]
+
+───────────────────────────────────────────────
+Let me verify my understanding:
+Feature adds filtering by status and date, using in-memory approach for simplicity.
+
+Clarifying questions (3-4 for standard phase):
+1. Is in-memory filtering correct, or should this use database queries?
+2. How many items will be filtered (affects approach - in-memory vs query-based)?
+3. Should filtering work offline, or only when connected?
+4. Are there performance requirements (max response time)?
+
+Does this match exactly what you want? If not, what should I adjust?
+───────────────────────────────────────────────
+
+[User responds: "300 items, needs database queries"]
+[Orchestrator updates understanding, asks follow-up questions, gets confirmation]
+
+Ready to proceed? (continue/skip/back/stop)
+```
+
+**Production impact:**
+- Before pattern: 40% rework rate (2 out of 5 workflows needed redo)
+- After pattern: 8% rework rate (clarifying questions caught misunderstandings early)
+- Time savings: 20 minutes average per workflow (prevented rework)
+
+**Why clarifying questions work:**
+1. **Paraphrase** forces orchestrator to demonstrate understanding (not just acknowledge)
+2. **3-5 specific questions** (flexible) uncover hidden constraints, edge cases, priorities
+3. **Confirmation loop** ensures alignment before proceeding
+4. **Early detection** catches wrong direction at Phase N (not Phase N+3)
 
 ---
 
