@@ -1,3 +1,5 @@
+'use client'
+
 import { SurveyList } from '@/features/surveys/components/SurveyList'
 import { Button } from '@legal-mind/ui'
 import Link from 'next/link'

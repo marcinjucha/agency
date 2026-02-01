@@ -58,8 +58,6 @@ export async function getValidAccessToken(
   refreshAccessToken: (refreshToken: string) => Promise<string>
 ): Promise<TokenResult> {
   try {
-    console.log('[TOKEN MANAGER] Getting valid access token for user:', userId)
-
     // 1. Fetch user's token from database
     const { data: user, error: fetchError } = await supabase
       .from('users')
@@ -79,23 +77,16 @@ export async function getValidAccessToken(
       return { error: 'No calendar connected' }
     }
 
-    console.log('[TOKEN MANAGER] Token found, expiry_date:', token.expiry_date)
-
     // 3. Check expiry with 5-minute buffer
     const nowMs = Date.now()
     const expiryDateMs = token.expiry_date
     const msUntilExpiry = expiryDateMs - nowMs
-    const secondsUntilExpiry = Math.floor(msUntilExpiry / 1000)
     const isExpired = msUntilExpiry < TOKEN_EXPIRY_BUFFER * 1000 // Convert buffer to ms
-
-    console.log('[TOKEN MANAGER] Expiry check: expires in', secondsUntilExpiry, 'seconds, buffer is', TOKEN_EXPIRY_BUFFER)
 
     // 4. If expired or expiring soon, refresh token
     if (isExpired) {
-      console.log('[TOKEN MANAGER] Token expired or expiring soon, refreshing...')
       try {
         const newAccessToken = await refreshAccessToken(token.refresh_token)
-        console.log('[TOKEN MANAGER] Token refreshed successfully, new token length:', newAccessToken.length)
 
         // Calculate new expiry (Google tokens expire in 1 hour = 3600000 ms)
         const newExpiryDate = Date.now() + 3600000 // +1 hour in milliseconds
@@ -120,7 +111,6 @@ export async function getValidAccessToken(
           return { error: 'Failed to save refreshed token' }
         }
 
-        console.log('[TOKEN MANAGER] Token updated in database, returning new token')
         return { accessToken: newAccessToken }
       } catch (refreshError) {
         const errorMsg = refreshError instanceof Error ? refreshError.message : String(refreshError)
@@ -130,7 +120,6 @@ export async function getValidAccessToken(
     }
 
     // 5. Token is fresh, return existing access token
-    console.log('[TOKEN MANAGER] Token is fresh, returning existing token')
     return { accessToken: token.access_token }
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error)

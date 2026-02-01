@@ -58,26 +58,12 @@ export async function createEvent(
   accessToken: string,
   eventData: CalendarEventInput
 ): Promise<string> {
-  console.log('[CREATE EVENT] Starting event creation with summary:', eventData.summary)
-  console.log('[CREATE EVENT] Access token length:', accessToken.length)
-  console.log('[CREATE EVENT] Mock mode:', useMockMode())
-
   if (useMockMode()) {
-    console.log('[CREATE EVENT] Using mock mode, returning mock event ID')
-    // Mock: Return a mock event ID
     return `mock_event_${Date.now()}`
   }
 
   try {
-    console.log('[CREATE EVENT] Getting calendar client...')
     const calendar = getCalendarClient(accessToken)
-
-    console.log('[CREATE EVENT] Calling calendar.events.insert with:', {
-      summary: eventData.summary,
-      description: eventData.description?.substring(0, 50) + '...',
-      start: eventData.start.dateTime,
-      end: eventData.end.dateTime,
-    })
 
     const response = await calendar.events.insert({
       calendarId: 'primary',
@@ -89,7 +75,6 @@ export async function createEvent(
       throw new Error('No event ID returned from Google Calendar')
     }
 
-    console.log('[CREATE EVENT] Event created successfully, event ID:', response.data.id)
     return response.data.id
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : 'Unknown error'

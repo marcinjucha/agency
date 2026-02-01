@@ -30,21 +30,6 @@ const bookingRequestSchema = z.object({
   notes: z.string().max(500).optional().default(''),
 })
 
-type BookingRequest = z.infer<typeof bookingRequestSchema>
-
-interface Appointment {
-  id: string
-  response_id: string
-  start_time: string
-  end_time: string
-  client_name: string
-  client_email: string
-  notes: string | null
-  status: string
-  google_calendar_event_id: string | null
-  created_at: string
-}
-
 /**
  * POST /api/calendar/book
  * Creates a new appointment after client books a time slot
@@ -77,9 +62,7 @@ export async function POST(request: NextRequest) {
   try {
     // Parse and validate request body
     const body = await request.json()
-    console.log('[BOOKING API] Received body:', JSON.stringify(body, null, 2))
     const validatedData = bookingRequestSchema.parse(body)
-    console.log('[BOOKING API] Validation passed')
 
     // Step 1: Validate survey exists and get lawyer info
     const { data: surveyLink, error: surveyError } = await supabase
@@ -193,9 +176,6 @@ export async function POST(request: NextRequest) {
         console.error('[BOOKING API] Failed to get access token:', tokenResult.error)
         // Graceful degradation: Save appointment even if calendar fails
       } else {
-        console.log('[BOOKING API] Token retrieved successfully, length:', tokenResult.accessToken?.length)
-        console.log('[BOOKING API] Token preview:', tokenResult.accessToken?.substring(0, 20) + '...')
-
         // Create event in Google Calendar
         try {
           const calendarEvent = {
