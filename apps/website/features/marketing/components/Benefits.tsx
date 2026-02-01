@@ -46,7 +46,7 @@ import { BENEFITS } from '../data/benefits'
  */
 export function Benefits() {
   return (
-    <section className="py-16 md:py-24 bg-white">
+    <section className="py-16 md:py-24 bg-card">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Heading */}
         <div className="mb-12 md:mb-16">

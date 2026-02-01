@@ -46,7 +46,7 @@ export function Navbar({ onDemoClick }: NavbarProps) {
     <>
       {/* Sticky Navbar */}
       <header
-        className={`fixed top-0 left-0 right-0 z-40 bg-white transition-shadow duration-300 ${
+        className={`fixed top-0 left-0 right-0 z-40 bg-card transition-shadow duration-300 ${
           isScrolled ? 'shadow-md' : 'shadow-sm'
         }`}
       >
@@ -117,7 +117,7 @@ export function Navbar({ onDemoClick }: NavbarProps) {
           {/* Mobile Menu Panel */}
           <div
             id="mobile-menu"
-            className="fixed top-0 right-0 h-full w-64 bg-white shadow-lg z-50 lg:hidden transform transition-transform duration-300 ease-out"
+            className="fixed top-0 right-0 h-full w-64 bg-card shadow-lg z-50 lg:hidden transform transition-transform duration-300 ease-out"
             style={{
               transform: isMenuOpen ? 'translateX(0)' : 'translateX(100%)'
             }}

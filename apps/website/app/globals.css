@@ -26,6 +26,8 @@
   --color-chart-3: hsl(197 37% 24%);
   --color-chart-4: hsl(43 74% 66%);
   --color-chart-5: hsl(27 87% 67%);
+  --color-success: hsl(142 76% 40%);
+  --color-success-foreground: hsl(0 0% 100%);
 
   --radius: 0.5rem;
 }

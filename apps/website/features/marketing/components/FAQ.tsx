@@ -28,7 +28,7 @@ export function FAQ() {
   }
 
   return (
-    <section className="py-16 md:py-24 px-4 sm:px-6 lg:px-8 bg-white">
+    <section className="py-16 md:py-24 px-4 sm:px-6 lg:px-8 bg-card">
       <div className="max-w-4xl mx-auto">
         {/* Section Heading */}
         <div className="text-center mb-12">

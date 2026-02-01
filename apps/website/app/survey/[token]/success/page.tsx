@@ -24,7 +24,7 @@ export default async function SuccessPage({ params, searchParams }: PageProps) {
           <Card className="p-8 text-center">
             <div className="mb-4">
               <svg
-                className="mx-auto h-16 w-16 text-green-500"
+                className="mx-auto h-16 w-16 text-success"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"

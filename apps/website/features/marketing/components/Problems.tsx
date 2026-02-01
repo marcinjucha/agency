@@ -15,7 +15,7 @@ import { ProblemCard } from './ProblemCard'
 
 export function Problems() {
   return (
-    <section className="py-16 px-4 sm:px-6 lg:px-8 bg-white">
+    <section className="py-16 px-4 sm:px-6 lg:px-8 bg-card">
       {/* Container */}
       <div className="max-w-7xl mx-auto">
         {/* Section Header */}
