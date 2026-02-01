@@ -9,8 +9,10 @@ skills:
   - code-patterns
   - architecture-decisions
   - design-system
+  - n8n-workflow-patterns
+  - ai-model-selection
 description: >
-  **Use this agent PROACTIVELY** when creating application code - React components, Next.js routes, Server Actions, or foundation files (types/queries/validation).
+  **Use this agent PROACTIVELY** when creating application code - React components, Next.js routes, Server Actions, foundation files, or n8n workflows.
 
   Automatically invoked when detecting:
   - Need to create React components (forms, UI)
@@ -19,6 +21,8 @@ description: >
   - Creating foundation files (types.ts, queries.ts, validation.ts)
   - Building forms with React Hook Form
   - TanStack Query usage (CMS only)
+  - N8n workflow configuration (webhooks, AI integrations)
+  - AI model selection decisions
 
   Trigger when you hear:
   - "create component"
@@ -28,6 +32,9 @@ description: >
   - "create types/queries/validation"
   - "build form"
   - "add UI for feature"
+  - "create n8n workflow"
+  - "integrate AI service"
+  - "choose AI model"
 
 model: inherit
 ---
@@ -45,6 +52,8 @@ Component? → component-patterns
 Route? → route-patterns
 Server Action? → server-action-patterns
 Types/queries/validation? → foundation-patterns
+N8n workflow? → n8n-workflow-patterns
+AI model selection? → ai-model-selection
 ```
 
 ### Step 2: Apply Skill Pattern

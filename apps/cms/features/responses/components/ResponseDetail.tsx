@@ -97,16 +97,6 @@ export function ResponseDetail({ responseId }: ResponseDetailProps) {
 
   return (
     <div className="space-y-6">
-      {/* Back Button */}
-      <div>
-        <Link href="/admin/responses">
-          <Button variant="ghost" className="text-gray-600 hover:text-gray-900">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Responses
-          </Button>
-        </Link>
-      </div>
-
       {/* Header Card - Metadata */}
       <Card className="p-6">
         <div className="flex items-start justify-between mb-4">

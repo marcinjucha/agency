@@ -41,34 +41,12 @@ export interface ButtonProps
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, style, onMouseEnter, onMouseLeave, ...props }, ref) => {
+  ({ className, variant, size, asChild = false, ...props }, ref) => {
     const Comp = asChild ? Slot : "button"
-    const [isHovered, setIsHovered] = React.useState(false)
-
-    // Inline styles for destructive variant (Tailwind v4 custom colors don't work in transpiled packages)
-    const inlineStyle = variant === 'destructive' ? {
-      backgroundColor: isHovered ? '#b91c1c' : '#dc2626', // hover: red-700, normal: red-600
-      color: '#ffffff',
-      ...style
-    } : style
-
-    const handleMouseEnter = (e: React.MouseEvent<HTMLButtonElement>) => {
-      if (variant === 'destructive') setIsHovered(true)
-      onMouseEnter?.(e)
-    }
-
-    const handleMouseLeave = (e: React.MouseEvent<HTMLButtonElement>) => {
-      if (variant === 'destructive') setIsHovered(false)
-      onMouseLeave?.(e)
-    }
-
     return (
       <Comp
         className={cn(buttonVariants({ variant, size, className }))}
         ref={ref}
-        style={inlineStyle}
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
         {...props}
       />
     )
