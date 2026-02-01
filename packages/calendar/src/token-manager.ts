@@ -7,8 +7,10 @@ import type { Database } from '@legal-mind/database'
 interface GoogleCalendarToken {
   access_token: string
   refresh_token: string
-  expires_at: number // Unix timestamp in seconds
+  expiry_date: number // Unix timestamp in milliseconds (from Google OAuth)
   scope: string
+  token_type?: string
+  email?: string
 }
 
 /**
@@ -56,6 +58,8 @@ export async function getValidAccessToken(
   refreshAccessToken: (refreshToken: string) => Promise<string>
 ): Promise<TokenResult> {
   try {
+    console.log('[TOKEN MANAGER] Getting valid access token for user:', userId)
+
     // 1. Fetch user's token from database
     const { data: user, error: fetchError } = await supabase
       .from('users')
@@ -64,27 +68,37 @@ export async function getValidAccessToken(
       .single()
 
     if (fetchError) {
+      console.error('[TOKEN MANAGER] Failed to fetch user token:', fetchError.message)
       return { error: 'Failed to fetch user token' }
     }
 
     // 2. Check if token exists
     const token = user?.google_calendar_token as GoogleCalendarToken | null
     if (!token || !token.access_token || !token.refresh_token) {
+      console.error('[TOKEN MANAGER] No calendar connected for user')
       return { error: 'No calendar connected' }
     }
 
+    console.log('[TOKEN MANAGER] Token found, expiry_date:', token.expiry_date)
+
     // 3. Check expiry with 5-minute buffer
-    const now = Math.floor(Date.now() / 1000) // Unix timestamp in seconds
-    const expiresAt = token.expires_at
-    const isExpired = expiresAt - now < TOKEN_EXPIRY_BUFFER
+    const nowMs = Date.now()
+    const expiryDateMs = token.expiry_date
+    const msUntilExpiry = expiryDateMs - nowMs
+    const secondsUntilExpiry = Math.floor(msUntilExpiry / 1000)
+    const isExpired = msUntilExpiry < TOKEN_EXPIRY_BUFFER * 1000 // Convert buffer to ms
+
+    console.log('[TOKEN MANAGER] Expiry check: expires in', secondsUntilExpiry, 'seconds, buffer is', TOKEN_EXPIRY_BUFFER)
 
     // 4. If expired or expiring soon, refresh token
     if (isExpired) {
+      console.log('[TOKEN MANAGER] Token expired or expiring soon, refreshing...')
       try {
         const newAccessToken = await refreshAccessToken(token.refresh_token)
+        console.log('[TOKEN MANAGER] Token refreshed successfully, new token length:', newAccessToken.length)
 
-        // Calculate new expiry (Google tokens expire in 1 hour)
-        const newExpiresAt = Math.floor(Date.now() / 1000) + 3600 // +1 hour
+        // Calculate new expiry (Google tokens expire in 1 hour = 3600000 ms)
+        const newExpiryDate = Date.now() + 3600000 // +1 hour in milliseconds
 
         // Update database with new token
         const { error: updateError } = await supabase
@@ -93,25 +107,34 @@ export async function getValidAccessToken(
             google_calendar_token: {
               access_token: newAccessToken,
               refresh_token: token.refresh_token, // Keep same refresh token
-              expires_at: newExpiresAt,
+              expiry_date: newExpiryDate,
               scope: token.scope,
+              token_type: token.token_type || 'Bearer',
+              email: token.email,
             },
           })
           .eq('id', userId)
 
         if (updateError) {
+          console.error('[TOKEN MANAGER] Failed to update token in database:', updateError.message)
           return { error: 'Failed to save refreshed token' }
         }
 
+        console.log('[TOKEN MANAGER] Token updated in database, returning new token')
         return { accessToken: newAccessToken }
       } catch (refreshError) {
+        const errorMsg = refreshError instanceof Error ? refreshError.message : String(refreshError)
+        console.error('[TOKEN MANAGER] Token refresh failed:', errorMsg)
         return { error: 'Token refresh failed' }
       }
     }
 
     // 5. Token is fresh, return existing access token
+    console.log('[TOKEN MANAGER] Token is fresh, returning existing token')
     return { accessToken: token.access_token }
   } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error)
+    console.error('[TOKEN MANAGER] Internal error:', errorMsg)
     return { error: 'Internal error fetching token' }
   }
 }

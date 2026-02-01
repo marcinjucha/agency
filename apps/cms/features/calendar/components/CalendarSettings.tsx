@@ -79,6 +79,7 @@ export function CalendarSettings() {
     setDisconnecting(true)
     try {
       const result = await disconnectGoogleCalendar()
+
       if (result.success) {
         setShowMessage({
           type: 'success',
@@ -156,6 +157,7 @@ export function CalendarSettings() {
           </div>
 
           <Button
+            type="button"
             variant="outline"
             onClick={handleDisconnectClick}
             disabled={disconnecting}
@@ -176,23 +178,27 @@ export function CalendarSettings() {
 
           {/* Disconnect Confirmation Dialog */}
           <Dialog open={showDisconnectDialog} onOpenChange={setShowDisconnectDialog}>
-            <DialogContent>
+            <DialogContent className="sm:max-w-md">
               <DialogHeader>
                 <DialogTitle>Disconnect Google Calendar?</DialogTitle>
                 <DialogDescription>
                   This will revoke Google Calendar access. You can reconnect at any time.
                 </DialogDescription>
               </DialogHeader>
-              <DialogFooter>
+              <DialogFooter className="flex gap-3 mt-6">
                 <Button
+                  type="button"
                   variant="outline"
                   onClick={() => setShowDisconnectDialog(false)}
+                  className="flex-1"
                 >
                   Cancel
                 </Button>
                 <Button
+                  type="button"
                   variant="destructive"
                   onClick={handleConfirmDisconnect}
+                  className="flex-1"
                 >
                   Disconnect
                 </Button>
@@ -205,7 +211,7 @@ export function CalendarSettings() {
           <p className="text-gray-700 mb-4">
             Click the button below to connect your Google Calendar account.
           </p>
-          <Button onClick={handleConnect} className="w-full sm:w-auto">
+          <Button type="button" onClick={handleConnect} className="w-full sm:w-auto">
             Connect Google Calendar
           </Button>
         </div>
