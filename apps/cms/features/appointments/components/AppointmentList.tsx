@@ -83,26 +83,26 @@ export function AppointmentList() {
     <Card className="overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full" aria-label="Appointments list">
-          <thead className="bg-gray-50 border-b border-gray-200">
+          <thead className="bg-muted border-b border-border">
             <tr>
-              <th scope="col" className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
+              <th scope="col" className="px-6 py-4 text-left text-sm font-semibold text-foreground">
                 Client Name
               </th>
-              <th scope="col" className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
+              <th scope="col" className="px-6 py-4 text-left text-sm font-semibold text-foreground">
                 Email
               </th>
-              <th scope="col" className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
+              <th scope="col" className="px-6 py-4 text-left text-sm font-semibold text-foreground">
                 Scheduled At
               </th>
-              <th scope="col" className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
+              <th scope="col" className="px-6 py-4 text-left text-sm font-semibold text-foreground">
                 Status
               </th>
-              <th scope="col" className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
+              <th scope="col" className="px-6 py-4 text-left text-sm font-semibold text-foreground">
                 Actions
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200">
+          <tbody className="divide-y divide-border">
             {/* Table Rows */}
             {appointments.map((appointment) => (
               <AppointmentRow
@@ -126,8 +126,8 @@ export function AppointmentList() {
       </div>
 
       {/* Footer with count */}
-      <div className="px-6 py-3 bg-gray-50 border-t border-gray-200">
-        <p className="text-xs text-gray-600">
+      <div className="px-6 py-3 bg-muted border-t border-border">
+        <p className="text-xs text-muted-foreground">
           Showing {appointments.length} {appointments.length === 1 ? 'appointment' : 'appointments'}
         </p>
       </div>
@@ -168,28 +168,28 @@ function AppointmentRow({
   // Determine if row is clickable (has response)
   const hasResponse = !!appointment.response?.id
   const rowClassName = hasResponse
-    ? 'hover:bg-gray-50 cursor-pointer transition-colors'
+    ? 'hover:bg-muted cursor-pointer transition-colors'
     : ''
 
   return (
     <tr onClick={hasResponse ? onRowClick : undefined} className={rowClassName}>
       {/* Client Name Column */}
       <td className="px-6 py-4">
-        <p className="text-sm font-medium text-gray-900 truncate" title={appointment.client_name}>
+        <p className="text-sm font-medium text-foreground truncate" title={appointment.client_name}>
           {appointment.client_name}
         </p>
       </td>
 
       {/* Email Column */}
       <td className="px-6 py-4">
-        <p className="text-sm text-gray-600 truncate" title={appointment.client_email}>
+        <p className="text-sm text-muted-foreground truncate" title={appointment.client_email}>
           {appointment.client_email}
         </p>
       </td>
 
       {/* Scheduled At Column */}
       <td className="px-6 py-4">
-        <p className="text-sm text-gray-600">
+        <p className="text-sm text-muted-foreground">
           {formatDateTime(appointment.start_time, appointment.end_time)}
         </p>
       </td>
@@ -214,13 +214,13 @@ function AppointmentRow({
                 e.stopPropagation()
                 onRowClick()
               }}
-              className="p-3 text-gray-400 hover:text-gray-600 transition-colors rounded-md hover:bg-gray-100"
+              className="p-3 text-muted-foreground hover:text-foreground transition-colors rounded-md hover:bg-muted"
               aria-label="View response details"
             >
               <ExternalLink className="h-5 w-5" />
             </button>
           ) : (
-            <span className="text-gray-300 text-sm">—</span>
+            <span className="text-muted-foreground text-sm">—</span>
           )}
         </div>
       </td>

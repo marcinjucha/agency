@@ -108,7 +108,7 @@ export function CalendarSettings() {
     <div className="space-y-4">
       <div>
         <h2 className="text-lg font-semibold">Google Calendar</h2>
-        <p className="text-sm text-gray-600 mt-1">
+        <p className="text-sm text-muted-foreground mt-1">
           Connect your Google Calendar to enable client booking
         </p>
       </div>
@@ -118,18 +118,18 @@ export function CalendarSettings() {
         <div
           className={`p-3 rounded-lg flex items-start gap-3 ${
             showMessage.type === 'success'
-              ? 'bg-green-50 border border-green-200'
-              : 'bg-red-50 border border-red-200'
+              ? 'bg-status-success/10 border border-status-success'
+              : 'bg-destructive/10 border border-destructive'
           }`}
         >
           {showMessage.type === 'success' ? (
-            <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+            <CheckCircle className="w-5 h-5 text-status-success-foreground flex-shrink-0 mt-0.5" />
           ) : (
-            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+            <AlertCircle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
           )}
           <p
             className={
-              showMessage.type === 'success' ? 'text-green-800' : 'text-red-800'
+              showMessage.type === 'success' ? 'text-status-success-foreground' : 'text-destructive'
             }
           >
             {showMessage.text}
@@ -140,16 +140,16 @@ export function CalendarSettings() {
       {/* Status */}
       {loading ? (
         <div className="flex items-center justify-center py-8">
-          <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+          <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
         </div>
       ) : status?.connected ? (
-        <div className="border border-green-200 bg-green-50 rounded-lg p-4">
+        <div className="border border-status-success bg-status-success/10 rounded-lg p-4">
           <div className="flex items-start justify-between">
             <div className="flex items-start gap-3">
-              <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+              <CheckCircle className="w-5 h-5 text-status-success-foreground flex-shrink-0 mt-0.5" />
               <div>
-                <p className="font-medium text-green-900">Connected</p>
-                <p className="text-sm text-green-700 mt-1">
+                <p className="font-medium text-status-success-foreground">Connected</p>
+                <p className="text-sm text-status-success-foreground mt-1">
                   Connected as <span className="font-semibold">{status.email}</span>
                 </p>
               </div>
@@ -207,8 +207,8 @@ export function CalendarSettings() {
           </Dialog>
         </div>
       ) : (
-        <div className="border border-gray-200 rounded-lg p-4">
-          <p className="text-gray-700 mb-4">
+        <div className="border border-border rounded-lg p-4">
+          <p className="text-foreground mb-4">
             Click the button below to connect your Google Calendar account.
           </p>
           <Button type="button" onClick={handleConnect} className="w-full sm:w-auto">

@@ -81,23 +81,23 @@ export function ResponseList() {
     <Card className="overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full" aria-label="Responses list">
-          <thead className="bg-gray-50 border-b border-gray-200">
+          <thead className="bg-muted border-b border-border">
             <tr>
-              <th scope="col" className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
+              <th scope="col" className="px-6 py-4 text-left text-sm font-semibold text-foreground">
                 Survey
               </th>
-              <th scope="col" className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
+              <th scope="col" className="px-6 py-4 text-left text-sm font-semibold text-foreground">
                 Submitted
               </th>
-              <th scope="col" className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
+              <th scope="col" className="px-6 py-4 text-left text-sm font-semibold text-foreground">
                 Status
               </th>
-              <th scope="col" className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
+              <th scope="col" className="px-6 py-4 text-left text-sm font-semibold text-foreground">
                 Actions
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200">
+          <tbody className="divide-y divide-border">
             {/* Table Rows */}
             {responses.map((response) => (
               <ResponseRow
@@ -116,8 +116,8 @@ export function ResponseList() {
       </div>
 
       {/* Footer with count */}
-      <div className="px-6 py-3 bg-gray-50 border-t border-gray-200">
-        <p className="text-xs text-gray-600">
+      <div className="px-6 py-3 bg-muted border-t border-border">
+        <p className="text-xs text-muted-foreground">
           Showing {responses.length} {responses.length === 1 ? 'response' : 'responses'}
         </p>
       </div>
@@ -169,18 +169,18 @@ function ResponseRow({
   return (
     <tr
       onClick={onRowClick}
-      className="hover:bg-gray-50 cursor-pointer transition-colors"
+      className="hover:bg-muted cursor-pointer transition-colors"
     >
       {/* Survey Title Column */}
       <td className="px-6 py-4">
-        <p className="text-sm font-medium text-gray-900 truncate" title={surveyTitle}>
+        <p className="text-sm font-medium text-foreground truncate" title={surveyTitle}>
           {truncatedTitle}
         </p>
       </td>
 
       {/* Submitted Date Column */}
       <td className="px-6 py-4">
-        <p className="text-sm text-gray-600">{formatDate(response.created_at)}</p>
+        <p className="text-sm text-muted-foreground">{formatDate(response.created_at)}</p>
       </td>
 
       {/* Status Column */}
@@ -202,7 +202,7 @@ function ResponseRow({
               e.stopPropagation()
               onRowClick()
             }}
-            className="p-3 text-gray-400 hover:text-gray-600 transition-colors rounded-md hover:bg-gray-100"
+            className="p-3 text-muted-foreground hover:text-foreground transition-colors rounded-md hover:bg-muted"
             aria-label="View response details"
           >
             <ArrowRight className="h-5 w-5" />

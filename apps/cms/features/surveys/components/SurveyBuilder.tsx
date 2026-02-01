@@ -85,15 +85,15 @@ export function SurveyBuilder({ survey }: SurveyBuilderProps) {
       <div className="mb-6">
         <Link
           href="/admin/surveys"
-          className="inline-flex items-center text-sm text-gray-600 hover:text-gray-900 mb-4"
+          className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-4"
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to Surveys
         </Link>
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Edit Survey</h1>
-            <p className="text-gray-600 mt-1">Design your client intake form</p>
+            <h1 className="text-3xl font-bold text-foreground">Edit Survey</h1>
+            <p className="text-muted-foreground mt-1">Design your client intake form</p>
           </div>
           <Button onClick={handleSave} disabled={loading}>
             <Save className="mr-2 h-4 w-4" />
@@ -103,7 +103,7 @@ export function SurveyBuilder({ survey }: SurveyBuilderProps) {
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-6">
+        <div className="bg-destructive/10 border border-destructive text-destructive px-4 py-3 rounded mb-6">
           {error}
         </div>
       )}
@@ -136,10 +136,10 @@ export function SurveyBuilder({ survey }: SurveyBuilderProps) {
               </div>
 
               <div className="pt-4 border-t">
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-muted-foreground">
                   <strong>{questions.length}</strong> question{questions.length !== 1 ? 's' : ''}
                 </p>
-                <p className="text-sm text-gray-500 mt-1">Status: {survey.status}</p>
+                <p className="text-sm text-muted-foreground mt-1">Status: {survey.status}</p>
               </div>
             </div>
           </Card>
@@ -160,7 +160,7 @@ export function SurveyBuilder({ survey }: SurveyBuilderProps) {
 
           {questions.length === 0 ? (
             <Card className="p-12 text-center">
-              <p className="text-gray-500 mb-4">No questions yet</p>
+              <p className="text-muted-foreground mb-4">No questions yet</p>
               <Button onClick={addQuestion}>
                 <Plus className="mr-2 h-4 w-4" />
                 Add Your First Question
@@ -171,10 +171,10 @@ export function SurveyBuilder({ survey }: SurveyBuilderProps) {
               {questions.map((question, index) => (
                 <Card key={question.id} className="p-6">
                   <div className="flex items-start justify-between mb-4">
-                    <span className="text-sm font-medium text-gray-500">Question {index + 1}</span>
+                    <span className="text-sm font-medium text-muted-foreground">Question {index + 1}</span>
                     <button
                       onClick={() => deleteQuestion(question.id)}
-                      className="p-3 text-red-600 hover:text-red-700 rounded-md hover:bg-red-50 transition-colors"
+                      className="p-3 text-destructive hover:text-destructive rounded-md hover:bg-destructive/10 transition-colors"
                       aria-label="Delete question"
                     >
                       <Trash2 className="h-4 w-4" />

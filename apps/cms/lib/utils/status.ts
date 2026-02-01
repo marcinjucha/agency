@@ -29,24 +29,24 @@ export type SurveyStatus = 'draft' | 'active' | 'archived' | null
  * - new: Blue (new submissions)
  * - qualified: Green (qualified leads)
  * - disqualified: Red (disqualified leads)
- * - contacted: Purple (contacted clients)
+ * - contacted: Blue (contacted clients)
  * - default: Gray (unknown/null)
  *
  * @param status - Response status from database
- * @returns Tailwind CSS classes string (e.g., "bg-blue-100 text-blue-800")
+ * @returns Tailwind CSS classes string (e.g., "bg-status-info text-status-info-foreground")
  */
 export function getResponseStatusColor(status: ResponseStatus): string {
   switch (status) {
     case 'new':
-      return 'bg-blue-100 text-blue-800'
+      return 'bg-status-info text-status-info-foreground'
     case 'qualified':
-      return 'bg-green-100 text-green-800'
+      return 'bg-status-success text-status-success-foreground'
     case 'disqualified':
-      return 'bg-red-100 text-red-800'
+      return 'bg-status-error text-status-error-foreground'
     case 'contacted':
-      return 'bg-purple-100 text-purple-800'
+      return 'bg-status-info text-status-info-foreground'
     default:
-      return 'bg-gray-100 text-gray-800'
+      return 'bg-status-neutral text-status-neutral-foreground'
   }
 }
 
@@ -61,20 +61,20 @@ export function getResponseStatusColor(status: ResponseStatus): string {
  * - default: Gray (unknown/null)
  *
  * @param status - Appointment status from database
- * @returns Tailwind CSS classes string (e.g., "bg-blue-100 text-blue-800")
+ * @returns Tailwind CSS classes string (e.g., "bg-status-info text-status-info-foreground")
  */
 export function getAppointmentStatusColor(status: AppointmentStatus): string {
   switch (status) {
     case 'scheduled':
-      return 'bg-blue-100 text-blue-800'
+      return 'bg-status-info text-status-info-foreground'
     case 'completed':
-      return 'bg-green-100 text-green-800'
+      return 'bg-status-success text-status-success-foreground'
     case 'cancelled':
-      return 'bg-red-100 text-red-800'
+      return 'bg-status-error text-status-error-foreground'
     case 'no_show':
-      return 'bg-gray-100 text-gray-800'
+      return 'bg-status-neutral text-status-neutral-foreground'
     default:
-      return 'bg-gray-100 text-gray-800'
+      return 'bg-status-neutral text-status-neutral-foreground'
   }
 }
 
@@ -83,22 +83,22 @@ export function getAppointmentStatusColor(status: AppointmentStatus): string {
  *
  * Color scheme:
  * - active: Green (published surveys)
- * - draft: Yellow (unpublished surveys)
+ * - draft: Warning (unpublished surveys)
  * - archived: Gray (archived surveys)
  * - default: Gray (unknown/null)
  *
  * @param status - Survey status from database
- * @returns Tailwind CSS classes string (e.g., "bg-green-100 text-green-700")
+ * @returns Tailwind CSS classes string (e.g., "bg-status-success text-status-success-foreground")
  */
 export function getSurveyStatusColor(status: SurveyStatus): string {
   switch (status) {
     case 'active':
-      return 'bg-green-100 text-green-700'
+      return 'bg-status-success text-status-success-foreground'
     case 'draft':
-      return 'bg-yellow-100 text-yellow-700'
+      return 'bg-status-warning text-status-warning-foreground'
     case 'archived':
-      return 'bg-gray-100 text-gray-700'
+      return 'bg-status-neutral text-status-neutral-foreground'
     default:
-      return 'bg-gray-100 text-gray-700'
+      return 'bg-status-neutral text-status-neutral-foreground'
   }
 }

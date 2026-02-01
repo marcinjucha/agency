@@ -29,33 +29,33 @@ export default async function DashboardPage() {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-gray-600 mt-2">Welcome back, {user.email}</p>
+        <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
+        <p className="text-muted-foreground mt-2">Welcome back, {user.email}</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-          <h3 className="text-gray-500 text-sm font-medium">Total Surveys</h3>
-          <p className="text-3xl font-bold text-gray-900 mt-2">{surveysCount || 0}</p>
-          <p className="text-gray-400 text-sm mt-1">Active forms</p>
+        <div className="bg-card p-6 rounded-lg shadow-sm border border-border">
+          <h3 className="text-muted-foreground text-sm font-medium">Total Surveys</h3>
+          <p className="text-3xl font-bold text-foreground mt-2">{surveysCount || 0}</p>
+          <p className="text-muted-foreground text-sm mt-1">Active forms</p>
         </div>
 
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-          <h3 className="text-gray-500 text-sm font-medium">Total Responses</h3>
-          <p className="text-3xl font-bold text-gray-900 mt-2">{responsesCount || 0}</p>
-          <p className="text-gray-400 text-sm mt-1">Client submissions</p>
+        <div className="bg-card p-6 rounded-lg shadow-sm border border-border">
+          <h3 className="text-muted-foreground text-sm font-medium">Total Responses</h3>
+          <p className="text-3xl font-bold text-foreground mt-2">{responsesCount || 0}</p>
+          <p className="text-muted-foreground text-sm mt-1">Client submissions</p>
         </div>
 
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-          <h3 className="text-gray-500 text-sm font-medium">Appointments</h3>
-          <p className="text-3xl font-bold text-gray-900 mt-2">{appointmentsCount || 0}</p>
-          <p className="text-gray-400 text-sm mt-1">Scheduled meetings</p>
+        <div className="bg-card p-6 rounded-lg shadow-sm border border-border">
+          <h3 className="text-muted-foreground text-sm font-medium">Appointments</h3>
+          <p className="text-3xl font-bold text-foreground mt-2">{appointmentsCount || 0}</p>
+          <p className="text-muted-foreground text-sm mt-1">Scheduled meetings</p>
         </div>
       </div>
 
-      <div className="mt-8 bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Getting Started</h2>
-        <div className="space-y-3 text-gray-600">
+      <div className="mt-8 bg-card p-6 rounded-lg shadow-sm border border-border">
+        <h2 className="text-xl font-semibold text-foreground mb-4">Getting Started</h2>
+        <div className="space-y-3 text-muted-foreground">
           <p>Welcome to Legal Mind CMS!</p>
           <p>
             1. Create your first survey in the <span className="font-semibold">Surveys</span> section

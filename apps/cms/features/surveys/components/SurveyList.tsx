@@ -47,11 +47,11 @@ export function SurveyList() {
           <Link href={`/admin/surveys/${survey.id}`}>
             <div className="flex items-start justify-between">
               <div className="flex-1 min-w-0">
-                <h3 className="text-lg font-semibold text-gray-900 truncate">{survey.title}</h3>
+                <h3 className="text-lg font-semibold text-foreground truncate">{survey.title}</h3>
                 {survey.description && (
-                  <p className="text-sm text-gray-600 mt-1 truncate">{survey.description}</p>
+                  <p className="text-sm text-muted-foreground mt-1 truncate">{survey.description}</p>
                 )}
-                <div className="flex items-center gap-4 mt-3 text-sm text-gray-500">
+                <div className="flex items-center gap-4 mt-3 text-sm text-muted-foreground">
                   <span className="flex items-center gap-1">
                     <FileText className="h-4 w-4" />
                     {Array.isArray(survey.questions) ? survey.questions.length : 0} questions

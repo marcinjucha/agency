@@ -90,14 +90,14 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded text-sm mb-4">
+        <div className="bg-destructive/10 border border-destructive text-destructive px-3 py-2 rounded text-sm mb-4">
           {error}
         </div>
       )}
 
       {/* Generate Link Form */}
       {showForm && (
-        <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+        <div className="mb-4 p-4 bg-muted rounded-lg border border-border">
           <div className="space-y-3">
             <div>
               <Label htmlFor="clientEmail" className="text-sm">
@@ -166,20 +166,20 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
 
       {/* Links List */}
       {isLoading ? (
-        <div className="py-8 text-center text-gray-500 text-sm">Loading links...</div>
+        <div className="py-8 text-center text-muted-foreground text-sm">Loading links...</div>
       ) : !links || links.length === 0 ? (
-        <div className="py-8 text-center text-gray-500 text-sm">
-          <LinkIcon className="mx-auto h-8 w-8 text-gray-400 mb-2" />
+        <div className="py-8 text-center text-muted-foreground text-sm">
+          <LinkIcon className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
           <p>No survey links yet</p>
           <p className="text-xs mt-1">Generate a link to share this survey</p>
         </div>
       ) : (
         <div className="space-y-3">
           {links.map((link) => (
-            <div key={link.id} className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+            <div key={link.id} className="p-3 bg-muted rounded-lg border border-border">
               {/* Token Display */}
               <div className="flex items-center gap-2 mb-2">
-                <code className="text-xs bg-white px-2 py-1 rounded border border-gray-200 flex-1 truncate">
+                <code className="text-xs bg-card px-2 py-1 rounded border border-border flex-1 truncate">
                   {link.token}
                 </code>
                 <Button
@@ -188,7 +188,7 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
                   onClick={() => copyToClipboard(link.token, link.id)}
                 >
                   {copiedLinkId === link.id ? (
-                    <Check className="h-4 w-4 text-green-600" />
+                    <Check className="h-4 w-4 text-status-success-foreground" />
                   ) : (
                     <Copy className="h-4 w-4" />
                   )}
@@ -202,12 +202,12 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
                     }
                   }}
                 >
-                  <Trash2 className="h-4 w-4 text-red-600" />
+                  <Trash2 className="h-4 w-4 text-destructive" />
                 </Button>
               </div>
 
               {/* Metadata */}
-              <div className="text-xs text-gray-600 space-y-1">
+              <div className="text-xs text-muted-foreground space-y-1">
                 {link.client_email && <div>Email: {link.client_email}</div>}
                 <div>
                   Expires: {link.expires_at ? format(parseISO(link.expires_at), 'PPp') : 'Never'}

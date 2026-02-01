@@ -34,20 +34,20 @@ export default function NewSurveyPage() {
       <div className="mb-6">
         <Link
           href="/admin/surveys"
-          className="inline-flex items-center text-sm text-gray-600 hover:text-gray-900 mb-4"
+          className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-4"
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to Surveys
         </Link>
-        <h1 className="text-3xl font-bold text-gray-900">Create New Survey</h1>
-        <p className="text-gray-600 mt-1">Set up a new client intake form</p>
+        <h1 className="text-3xl font-bold text-foreground">Create New Survey</h1>
+        <p className="text-muted-foreground mt-1">Set up a new client intake form</p>
       </div>
 
       <Card className="max-w-2xl">
         <div className="p-6">
           <form onSubmit={handleSubmit} className="space-y-6">
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+              <div className="bg-destructive/10 border border-destructive text-destructive px-4 py-3 rounded">
                 {error}
               </div>
             )}
@@ -63,7 +63,7 @@ export default function NewSurveyPage() {
                 required
                 autoFocus
               />
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-muted-foreground">
                 This will be shown to clients when they fill out the form
               </p>
             </div>
@@ -77,7 +77,7 @@ export default function NewSurveyPage() {
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
               />
-              <p className="text-sm text-gray-500">Optional description shown below the title</p>
+              <p className="text-sm text-muted-foreground">Optional description shown below the title</p>
             </div>
 
             <div className="flex gap-3">

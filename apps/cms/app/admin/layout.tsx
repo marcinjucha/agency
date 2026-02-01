@@ -11,7 +11,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         Skip to main content
       </a>
       <Sidebar />
-      <main id="main-content" tabIndex={-1} className="flex-1 overflow-y-auto bg-gray-50">
+      <main id="main-content" tabIndex={-1} className="flex-1 overflow-y-auto bg-background">
         <div className="p-8">{children}</div>
       </main>
     </div>
