@@ -1,5 +1,4 @@
-@import "tailwindcss";
-@import "@legal-mind/ui/styles.css";
+@import 'tailwindcss';
 
 /* Tailwind v4 @theme - light mode */
 @theme {
@@ -32,7 +31,7 @@
 }
 
 /* Dark mode override */
-@media (prefers-color-scheme: dark) {
+/* @media (prefers-color-scheme: dark) {
   @theme {
     --color-background: hsl(222.2 84% 4.9%);
     --color-foreground: hsl(210 40% 98%);
@@ -59,4 +58,4 @@
     --color-chart-4: hsl(280 65% 60%);
     --color-chart-5: hsl(340 75% 55%);
   }
-}
+} */
