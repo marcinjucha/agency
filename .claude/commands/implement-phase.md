@@ -130,9 +130,13 @@ Phase 6: Server Actions / API Routes (code-developer)
 Phase 7: Routes (code-developer)
     ↓ BUILD VERIFICATION: npm run build ← BOTH APPS MUST PASS
     ↓ User: continue | retry | stop
-Phase 8: Implementation Verification (analysis-agent)
-    ↓ STATIC CODE ANALYSIS - verify correctness, patterns, bugs
-    ↓ User: pass | fix | details | stop
+Phase 8: Implementation Verification (verification-specialist)
+    ↓ Requirements Coverage - all plan requirements implemented?
+    ↓ Common Bugs - Controller, revalidatePath, throws, client
+    ↓ Architectural Compliance - ADR-005, client selection, RLS patterns
+    ↓ Code Quality - UI states, types, completeness
+    ↓ Output: YAML verification report with risk levels
+    ↓ User: pass | fix-blocking | fix-warnings | details | stop
 Phase 9: Manual Testing [REQUIRED]
     ↓ User tests complete feature manually
     ↓ User: pass | fix-and-retry | stop
@@ -549,35 +553,107 @@ Agency implementation workflows only process agency work.
 
 ---
 
-### Phase 8: Implementation Verification
+### Phase 8: Implementation Verification [MANDATORY]
 
-**Agent:** `analysis-agent` (uses code-validation skill)
+**Agent**: `verification-specialist`
 
-**Purpose:** Verify implementation correctness before manual testing
+**Purpose**: Verify implementation correctness before manual testing (catches bugs early, saves testing time)
 
-**Analyzes:**
-- Business logic correctness (does code match requirements?)
-- Plan alignment (all planned features implemented?)
-- Code quality (follows CODE_PATTERNS.md?)
-- Bug detection (potential errors, missing error handling, edge cases)
-- Completeness (all required files created?)
-- Security (RLS, auth, tenant_id correct?)
+**When to invoke**: After Phase 7 (Routes) completes, before Phase 9 (Manual Testing)
 
-**Creates:**
-- YAML verification report with P0/P1/P2 issues
-- Suggestions for which agent to use for fixes
+**Sufficient context for quality**:
+```yaml
+Input needed:
+  - Plan content (requirements to verify against)
+  - Implementation scope (files changed - from git diff)
+  - Phase outputs (what was implemented in Phases 3-7)
 
-**Output:** Verification report with implementation status
+NOT needed:
+  - Generic pattern explanations (agent has skills loaded)
+  - Full previous YAML outputs (just list files created)
+  - User stories details (agent needs requirements, not stories)
+```
 
-**Commands:**
-- `pass` - Verification passed, proceed to manual testing
-- `fix` - Issues found, need to fix (agent will suggest which implementation agent to use)
-- `details` - Show full verification report
+**Prompt to agent**:
+```
+Verify implementation against plan and project patterns.
+
+PLAN REQUIREMENTS:
+[Extract functional requirements from plan - what should be implemented]
+
+IMPLEMENTATION SCOPE:
+[List files created/modified from Phases 3-7]
+- Database: [migration files from Phase 3]
+- Foundation: [types, queries, validation from Phase 4]
+- Components: [components from Phase 5]
+- Actions: [Server Actions from Phase 6]
+- Routes: [routes from Phase 7]
+
+Use skills (agent loads automatically):
+- code-validation (verification checklist)
+- component-patterns (React Hook Form patterns)
+- server-action-patterns (revalidatePath, structured returns)
+- route-patterns (ADR-005 compliance)
+- supabase-patterns (client selection, RLS)
+- architecture-decisions (ADR compliance)
+
+Verify 4 categories:
+1. Requirements Coverage - All plan features implemented?
+2. Common Bugs - Controller, revalidatePath, throws, client selection
+3. Architectural Compliance - ADR-005, RLS patterns
+4. Code Quality - UI states, types, error handling
+
+Output: YAML verification report with risk levels (CRITICAL/HIGH/MEDIUM/LOW)
+```
+
+**After agent**:
+```markdown
+**Phase 8 Complete** ✅
+
+Verification report:
+- Requirements Coverage: [X/Y implemented]
+- Common Bugs: [N issues found]
+- Architectural Compliance: [status]
+- Code Quality: [status]
+
+Blocking issues (CRITICAL/HIGH): [count]
+Warnings (MEDIUM): [count]
+
+[Show summary of blocking issues if any]
+
+───────────────────────────────────────────────
+Let me verify my understanding:
+[2-3 sentence paraphrase of verification findings]
+
+Clarifying questions (4-5 for complex verification phase):
+1. Are all blocking issues critical, or can some be deferred to post-merge?
+2. Should I fix MEDIUM warnings now, or proceed with blocking issues only?
+3. For [specific issue] - is the suggested fix correct for your use case?
+4. Are there additional patterns I should check that weren't in the plan?
+5. Should verification include [specific concern user mentioned]?
+
+Does this match what you expected? If not, what should I adjust?
+───────────────────────────────────────────────
+
+[Wait for confirmation]
+
+**Next**: Fix issues or proceed to Phase 9 (Manual Testing)
+
+**Commands**: `pass` | `fix-blocking` | `fix-warnings` | `details` | `stop`
+```
+
+**Output**: YAML verification report with findings categorized by risk level
+
+**Commands**:
+- `pass` - No blocking issues, proceed to manual testing
+- `fix-blocking` - Fix CRITICAL/HIGH issues (recommended if present)
+- `fix-warnings` - Fix MEDIUM issues (optional quality improvement)
+- `details` - Show full verification report with code snippets
 - `stop` - Exit workflow
 
-**Skip When:** Never (always verify implementation)
+**Skip When**: Never (always verify before manual testing)
 
-**Critical:** This phase catches code-level issues before manual testing saves time. Agent performs static analysis - no execution required.
+**Why mandatory**: Catches common bugs (Controller, revalidatePath, wrong client, missing requirements) before manual testing. Agent uses 9 verification skills to check patterns. Prevents wasting testing time on broken code.
 
 ---
 
@@ -1079,7 +1155,7 @@ Launching analysis-agent...
 | **Phase 5c** | `ui-ux-designer` | ✅ REQUIRED (UI/UX review) |
 | **Phase 6** | `code-developer` | ✅ REQUIRED |
 | **Phase 7** | `code-developer` | ✅ REQUIRED |
-| **Phase 8** | `analysis-agent` | ✅ REQUIRED |
+| **Phase 8** | `verification-specialist` | ✅ REQUIRED |
 | **Phase 9** | N/A (manual testing by user) | ❌ NO AGENT |
 | **Phase 10** | `project-manager-agent` | ✅ REQUIRED |
 | **Phase 10a** | N/A (orchestrator direct + skills) | ✅ REQUIRED (CLAUDE.md quality) |
@@ -1241,7 +1317,7 @@ OUTPUT: YAML`
 
 11. **Build verification:** After each code-generating phase, verify build succeeds - catch TypeScript errors early
 
-12. **Implementation verification:** After Phase 7 (Routes), ALWAYS run Phase 8 (analysis-agent) to catch code issues before manual testing
+12. **Implementation verification:** After Phase 7 (Routes), ALWAYS run Phase 8 (verification-specialist) to catch code issues before manual testing
 
 13. **NEVER skip Phase 9:** Phase 9 (Manual Testing) is REQUIRED - user must test before docs
 
@@ -1317,7 +1393,7 @@ Does this match exactly what you want to achieve? If not, what should I adjust?
 - Phase 5: Components (base/composite dependencies, UI/UX integration)
 - Phase 6: Server Actions (action patterns, error handling, revalidation)
 - Phase 7: Routes (route structure, data fetching, ADR-005)
-- Phase 8: Implementation Verification (code quality, bugs, completeness)
+- Phase 8: Implementation Verification (verification-specialist - requirements, bugs, architecture, quality)
 
 **Principle**: Ask enough questions to uncover hidden constraints, not more. Quality over quantity.
 
@@ -1851,10 +1927,10 @@ Recommendations:
 ```markdown
 **Phase 8: Implementation Verification**
 
-Analyzing implementation against plan and CODE_PATTERNS...
+Analyzing implementation for requirements, bugs, architecture, quality...
 ```
 
-[Task tool call with subagent_type="analysis-agent"]
+[Task tool call with subagent_type="verification-specialist"]
 
 ```markdown
 **Implementation Verification Complete** ✅
@@ -2259,7 +2335,7 @@ Phase 7 complete → Immediately launch project-manager-agent
 
 ✅ **Correct:**
 ```markdown
-Phase 7 complete → npm run build (both apps) → Phase 8 (analysis-agent) → Manual test checkpoint → User tests → Reports pass → Launch project-manager-agent
+Phase 7 complete → npm run build (both apps) → Phase 8 (verification-specialist) → Manual test checkpoint → User tests → Reports pass → Launch project-manager-agent
 ```
 
 ### ❌ Don't: Skip CLAUDE.md quality review
@@ -2320,14 +2396,14 @@ Phase 6: "Launching general-purpose agent..."
 # NO! Must use Task tool with subagent_type="code-developer"
 
 Phase 8: "I'll verify the code myself..."
-# NO! Must use Task tool with subagent_type="analysis-agent"
+# NO! Must use Task tool with subagent_type="verification-specialist"
 ```
 
 ✅ **Correct:**
 ```markdown
 Phase 4a: Task(subagent_type="code-developer", description="Create types.ts", prompt="...")
 Phase 6: Task(subagent_type="code-developer", description="Create actions.ts", prompt="...")
-Phase 8: Task(subagent_type="analysis-agent", description="Verify implementation", prompt="...")
+Phase 8: Task(subagent_type="verification-specialist", description="Verify implementation", prompt="...")
 ```
 
 ### ❌ Don't: Skip clarifying questions
@@ -2426,7 +2502,7 @@ Ready to proceed? (continue/skip/back/stop)
 
 **No UI Validation Before Merge:**
 - Problem: Styling changes merged without checklist verification
-- Solution: Add UI review checklist to Phase 8 (analysis-agent)
+- Solution: UI/UX review in Phase 5c (ui-ux-designer), verification in Phase 8 (verification-specialist)
 - Check: shadcn/ui components, theme tokens, spacing scale, accessibility (WCAG 2.1 AA)
 
 ---

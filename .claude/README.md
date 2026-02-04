@@ -28,221 +28,200 @@
 
 ---
 
-## 🤖 The 8 Specialized Agents
+## 🤖 The 6 Specialized Agents
 
 Each agent is an expert in their domain, following signal vs noise principles.
 
-### 1. plan-analyzer (Purple, Architect)
+### 1. analysis-agent (Purple, Strategy Specialist)
 
 **Purpose:** Analyzes implementation plans and creates optimized execution strategy
 
 **What it does:**
-- Reads plan from `~/.claude/plans/*.md` or `@docs/`
-- Builds dependency graph (what imports what)
-- Detects parallelization opportunities
-- Identifies critical steps (database, types)
-- Determines skip conditions
-- Outputs YAML execution strategy
+- Reads plan from `~/.claude/plans/` or user message
+- Applies plan-analysis skill to extract dependencies
+- Applies development-practices skill for execution approach
+- Outputs structured execution plan with phases and parallelization opportunities
 
 **Key expertise:**
-- TypeScript import dependency analysis
-- Parallel vs sequential determination
-- Risk assessment
+- Planning and execution strategy (not validation or testing)
+- Dependency analysis (file imports, sequential logic)
+- Parallelization detection (independent work)
+- Critical path determination
 
-**Output:** YAML with phases, dependencies, agents needed, risks
+**Critical rule:** Focus on PLANNING only - dependency extraction, parallelization opportunities, execution order
+
+**Output:** YAML execution plan with dependencies graph, phases, critical path, time estimates
 
 ---
 
-### 2. supabase-schema-specialist (Red, Infrastructure)
+### 2. database-specialist (Red, Database Infrastructure)
 
-**Purpose:** Handles all database schema changes
+**Purpose:** Handles all database schema changes - migrations, RLS policies, PostgreSQL functions
 
 **What it does:**
 - Creates migration files (`supabase/migrations/*.sql`)
-- Writes RLS policies (avoiding infinite recursion!)
+- Writes RLS policies (avoiding infinite recursion with helper functions!)
 - Creates PostgreSQL functions with GRANT permissions
 - Regenerates TypeScript types (`npm run db:types`)
-- Verifies migrations work
+- Tests migrations locally before push
 
 **Key expertise:**
-- PostgreSQL SQL syntax
-- RLS policies using `public.current_user_tenant_id()` (no subqueries!)
-- Multi-tenant isolation
-- Database functions (PL/pgSQL)
+- PostgreSQL schema changes (schema-management skill)
+- RLS policies with `public.current_user_tenant_id()` helper (rls-policies skill)
+- Database functions with SECURITY DEFINER (database-functions skill)
+- Multi-tenant isolation patterns
 
-**Critical rule:** NEVER use subqueries in RLS - always use helper function to avoid infinite recursion
+**Critical rule:** NEVER use subqueries in RLS policies - always use SECURITY DEFINER helper function to avoid infinite recursion (P0 crash risk)
 
-**Output:** Migration file created, types regenerated, verification steps
+**Output:** Migration file created, types regenerated, verification steps completed, risks documented
 
 ---
 
-### 3. feature-foundation-developer (Orange, Feature Developer)
+### 3. code-developer (Cyan, Application Developer)
 
-**Purpose:** Creates foundational TypeScript files (types, queries, validation)
+**Purpose:** Creates all application code - React components, Next.js routes, Server Actions, foundation files (types/queries/validation), n8n workflows
 
 **What it does:**
-- Creates `features/{feature}/types.ts` - TypeScript interfaces
-- Creates `features/{feature}/queries.ts` - Data fetching functions
-- Creates `features/{feature}/validation.ts` - Zod schemas (static or dynamic)
+- Creates components with React Hook Form (Controller for checkbox arrays!)
+- Creates Next.js routes following ADR-005 (minimal routes, logic in features/)
+- Creates Server Actions with structured returns and revalidatePath
+- Creates foundation files (types.ts, queries.ts, validation.ts)
+- Configures n8n workflows (webhooks, AI integrations)
+- Makes AI model selection decisions
 
 **Key expertise:**
-- Choosing correct Supabase client (server vs browser - has decision tree!)
-- Explicit TypeScript return types
-- Dynamic Zod schema generation
-- Error handling (throw vs return)
+- 9 loaded skills covering all patterns (component-patterns, route-patterns, server-action-patterns, foundation-patterns, code-patterns, architecture-decisions, design-system, n8n-workflow-patterns, ai-model-selection)
+- Supabase client selection decision tree (3 clients: createAnonClient for public, createClient for browser, await createClient for server)
+- React Hook Form Controller vs register decision (Controller for checkbox arrays, register for simple inputs)
+- TanStack Query CMS-only (NOT website)
 
 **Critical rule:**
-- CMS app → browser client (TanStack Query)
-- Website app → server client (Server Components)
+- Checkbox arrays → Controller (register breaks, data loss)
+- Server Actions → Structured return + revalidatePath + Server client (await createClient())
+- Routes → ADR-005 compliant (import from features/, minimal logic)
+- Foundation → Correct client selection (see 3-client decision tree)
 
-**Can work in parallel:** queries.ts + validation.ts (after types.ts exists)
-
-**Output:** 3 TypeScript files ready for components
-
----
-
-### 4. component-developer (Cyan, UI Specialist)
-
-**Purpose:** Builds React components with forms and state management
-
-**What it does:**
-- Creates React components in `features/{feature}/components/`
-- Integrates React Hook Form + Zod resolver
-- Uses TanStack Query (CMS only, NOT website)
-- Handles all UI states (loading, error, empty, success)
-- Implements accessibility (labels, aria-*)
-
-**Key expertise:**
-- React Hook Form with Controller (for checkbox arrays!)
-- TanStack Query patterns (CMS only)
-- Conditional rendering
-- shadcn/ui components from @legal-mind/ui
-
-**Critical rule:** Checkbox arrays MUST use Controller, NOT register
-
-**Output:** React components ready for routes
+**Output:** YAML with files created, dependencies, next steps. All code following skill patterns.
 
 ---
 
-### 5. server-action-developer (Orange, Feature Developer)
+### 4. ui-ux-designer (Cyan, Design Quality Specialist)
 
-**Purpose:** Creates Server Actions for database mutations
+**Purpose:** Reviews and improves UI/UX design - design system compliance, accessibility, visual quality
 
 **What it does:**
-- Creates `features/{feature}/actions.ts`
-- Writes Server Actions with `'use server'`
-- Handles authentication (getUser when needed)
-- Implements revalidatePath after mutations
-- Returns structured results `{ success, data?, error? }`
+- Audits components for design system compliance (no arbitrary colors, on-scale spacing)
+- Checks accessibility (labels, keyboard nav, contrast 4.5:1)
+- Reviews visual design (responsive, typography hierarchy, interactive states)
+- Classifies issues by severity (P0/P1/P2)
+- Provides fixes referencing skills
 
 **Key expertise:**
-- Server Supabase client (await createClient())
-- CRUD operations (INSERT, UPDATE, DELETE)
-- Cache revalidation
-- User-friendly error messages
+- shadcn/ui design system enforcement (component-design skill)
+- Accessibility patterns (htmlFor, aria-required, focus rings - accessibility skill)
+- Visual design (spacing scale 4px base, typography, responsive - visual-design skill)
+- Theme tokens (bg-primary, text-foreground, border)
 
-**Critical rule:** Always server client (NEVER browser), always revalidate
+**Critical rule:**
+- P0 issues break accessibility or core UX (keyboard trap, contrast fail) - MUST fix
+- Use shadcn/ui components (no custom buttons)
+- All interactive elements need hover/focus/disabled states
 
-**Output:** Server Actions ready for components to call
+**Output:** YAML review report with severity-classified issues (P0/P1/P2), fixes with skill references, overall rating
 
 ---
 
-### 6. route-developer (Orange, Feature Developer)
+### 5. verification-specialist (Purple, Code Quality Validator)
 
-**Purpose:** Creates Next.js routes (pages) following ADR-005
+**Purpose:** Pre-testing validation of implementations - catch bugs before manual testing to save time
 
 **What it does:**
-- Creates route files in `app/{route}/page.tsx`
-- Implements Server Components with minimal logic
-- Handles Next.js 15 async params
-- Imports components from features/
-- Renders error states
+- Reads changed files via git diff
+- Verifies requirements coverage from plan
+- Checks common bugs (Controller for checkboxes, revalidatePath, structured returns, correct client)
+- Validates architectural compliance (ADR-005, RLS patterns, client selection)
+- Checks code quality (UI states, explicit types, error handling)
+- Reports violations with risk levels (CRITICAL/HIGH/MEDIUM/LOW)
 
 **Key expertise:**
-- Next.js App Router
-- ADR-005 pattern (routing only, logic in features/)
-- Dynamic routes ([param])
-- Error handling (notFound, custom UI)
+- 9 preloaded verification skills (code-validation, component-patterns, server-action-patterns, route-patterns, supabase-patterns, rls-policies, architecture-decisions, code-patterns, testing-strategies)
+- Read-only validation (uses disallowedTools: Write, Edit)
+- Risk-based bug classification
+- Actionable feedback with file:line locations
 
-**Critical rule:** NO business logic in routes, NO TanStack Query (use direct await)
+**Critical rule:**
+- Focus on changed files only (git diff analysis)
+- Flag CRITICAL/HIGH before manual testing (prevents wasted testing time)
+- Provide fix suggestions with skill references
+- Read-only verification (no code modifications)
 
-**Output:** Route pages ready for testing
+**Output:** YAML verification report with requirements coverage, plan alignment, common bugs check, architecture compliance, code quality, blocking issues, warnings, pass/fail decision
 
 ---
 
-### 7. test-validator (Green, Testing Specialist)
+### 6. project-manager-agent (Blue, Documentation & Coordination)
 
-**Purpose:** Manual testing with systematic validation and bug reporting
-
-**What it does:**
-- Executes manual testing checklist from plan
-- Tests end-to-end user flows
-- Validates edge cases (expired links, limits, errors)
-- Classifies bugs by severity (P0/P1/P2)
-- Verifies data in database
-- Provides fix direction for failures
-
-**Key expertise:**
-- End-to-end flow testing
-- Bug severity classification
-- Database inspection
-- User experience evaluation
-
-**Critical rule:** P0 failures BLOCK merge - must fix before continuing
-
-**Output:** YAML test results with severity, location, fix direction
-
----
-
-### 8. docs-updater (Blue, Documentation)
-
-**Purpose:** Updates documentation and creates signal-focused commits
+**Purpose:** Updates documentation, creates commits, syncs with Notion, maintains skills
 
 **What it does:**
-- Updates `@docs/PROJECT_ROADMAP.md` (marks tasks [x], progress %)
-- Adds milestones to "Recent Milestones"
-- Creates git commits (concise, high-level, NO footers)
-- Uses conventional format (feat:, fix:, docs:)
-- Asks about push to remote
+- Updates PROJECT_ROADMAP.md, PROJECT_SPEC.yaml, CLAUDE.md (content only, not structure)
+- Creates git commits with signal-focused messages (WHY > HOW, natural prose)
+- Syncs task status to Notion (case-sensitive properties!)
+- Cleans git history (squash WIP commits)
+- Creates pull requests with summary + test plan
+- Refines skills when bugs found (adds anti-patterns)
 
 **Key expertise:**
-- Signal vs noise filtering for commits
-- Markdown documentation
-- Progress tracking
-- High-level summarization
+- Documentation patterns (outcome-focused, skip implementation details - documentation-patterns skill)
+- Git commit patterns (multi-factor separation, Signal vs Noise - git-commit-patterns skill)
+- Notion workflows (case-sensitive "Status", "Completion Date" - notion-workflows skill)
+- Skill fine-tuning (add anti-patterns, refine patterns - skill-fine-tuning skill)
+- CLAUDE.md maintenance (structure updates - claude-md skill)
 
-**Critical rule:** Commits are outcome-focused (what user can do), NOT implementation details. NO footers.
+**Critical rule:**
+- Documentation: outcomes-focused (what user can do), NOT implementation details
+- Commits: WHY > HOW, natural prose, Co-Authored-By line
+- Notion properties: exact case match ("Status" not "status", "Done" not "done")
+- Skills: add anti-patterns after bugs, refine imprecise patterns
 
-**Output:** Documentation updated, commit created locally
+**Output:** YAML with documentation updates, git operations, Notion sync status, next steps
 
 ---
 
 ## 🔄 Workflow: /implement-phase
 
-**What it does:** Orchestrates the 8 agents in optimal sequence with parallelization
+**What it does:** Orchestrates the 6 agents in optimal sequence with parallelization and Notion integration
 
 **Phases:**
 
 ```
-0. Plan Analysis         → plan-analyzer
-1. Database [CRITICAL]   → supabase-schema-specialist
-2a. Types                → feature-foundation-developer
-2b. Queries + Validation ⚡⚡⚡ → 2x feature-foundation-developer (parallel)
-3a. Base Components      → component-developer
-3b. Composite Components → component-developer
-4. Server Actions        → server-action-developer
-5. Routes                → route-developer
-6. Testing [CONDITIONAL] → test-validator
-7. Documentation         → docs-updater
+Phase 1: Notion Discovery [AUTOMATIC]   → orchestrator (searches Notion tasks)
+Phase 2: Plan Analysis                  → analysis-agent
+Phase 3: Database [CRITICAL]            → database-specialist
+Phase 4a: Foundation - Types            → code-developer
+Phase 4b: Foundation ⚡⚡⚡                  → 2x code-developer (queries + validation parallel)
+Phase 5a: Components - Base             → code-developer
+Phase 5b: Components - Composite        → code-developer
+Phase 5c: UI/UX Review                  → ui-ux-designer
+Phase 6: Server Actions / API Routes    → code-developer
+Phase 7: Routes                         → code-developer
+Phase 8: Implementation Verification    → verification-specialist
+Phase 9: Manual Testing [REQUIRED]      → user tests manually
+Phase 10: Documentation                 → project-manager-agent
+Phase 10a: CLAUDE.md Quality Review     → orchestrator + claude-md skill
+Phase 10b: Skills Update Review         → orchestrator + skill-creator skill
+Phase 11: Git Operations                → project-manager-agent
+Phase 12: Complete!
 ```
 
 **Key features:**
-- ✅ Smart dependency detection (types must be first, etc.)
+- ✅ Notion-first workflow (searches and syncs tasks automatically)
+- ✅ Smart dependency detection (types first, build verification after each phase)
 - ✅ Parallelization where safe (queries + validation simultaneously)
-- ✅ Two modes: Interactive (asks after each) vs Automated (only critical decisions)
-- ✅ Handles failures (auto-retry once, then ask user)
-- ✅ P0 bugs always stop for user decision
-- ✅ Signal-focused commits (no footers, concise, high-level)
+- ✅ Pre-testing verification (verification-specialist catches bugs before manual testing)
+- ✅ Two modes: Interactive (asks after each) vs Automated (--auto)
+- ✅ Build verification at critical points (npm run build:cms, npm run build)
+- ✅ P0/P1/P2 risk levels with blocking issues flagged
 
 **When to use:**
 - ✅ Have a completed plan ready
@@ -320,27 +299,28 @@ import { QuestionField } from './QuestionField'  // ← Import!
 
 ### Supabase Clients
 
-**feature-foundation-developer knows:**
-- CMS app + TanStack Query → Browser client (`createClient()` - NO await)
-- Website app + Server Component → Server client (`await createClient()`)
+**code-developer knows:**
+- Public forms (website) → Anonymous client (`createAnonClient()` - NO await, bypasses RLS)
+- CMS client components + TanStack Query → Browser client (`createClient()` - NO await)
+- Server Actions/Components → Server client (`await createClient()` - AWAIT required!)
 
 ### RLS Policies
 
-**supabase-schema-specialist knows:**
-- ❌ NEVER: `USING (tenant_id = (SELECT ... FROM users))` → infinite recursion!
-- ✅ ALWAYS: `USING (tenant_id = public.current_user_tenant_id())`
+**database-specialist knows:**
+- ❌ NEVER: `USING (tenant_id = (SELECT ... FROM users))` → infinite recursion crash!
+- ✅ ALWAYS: `USING (tenant_id = public.current_user_tenant_id())` → SECURITY DEFINER helper function
 
 ### React Hook Form
 
-**component-developer knows:**
-- ❌ NEVER: `{...register('field')}` for checkbox arrays
-- ✅ ALWAYS: `<Controller>` for checkbox arrays
+**code-developer knows:**
+- ❌ NEVER: `{...register('field')}` for checkbox arrays → silent data loss
+- ✅ ALWAYS: `<Controller>` for checkbox arrays → captures array values correctly
 
 ### ADR-005
 
-**route-developer knows:**
-- ❌ NEVER: Business logic in `app/` folder
-- ✅ ALWAYS: Import from `features/`, minimal routing logic
+**code-developer knows:**
+- ❌ NEVER: Business logic in `app/` routes
+- ✅ ALWAYS: Import from `features/`, minimal routing logic only
 
 ---
 
@@ -349,17 +329,16 @@ import { QuestionField } from './QuestionField'  // ← Import!
 ```
 .claude/
 ├── README.md                    # ← You are here (overview)
-├── agents/                      # 8 specialized agents
-│   ├── plan-analyzer.md
-│   ├── supabase-schema-specialist.md
-│   ├── feature-foundation-developer.md
-│   ├── component-developer.md
-│   ├── server-action-developer.md
-│   ├── route-developer.md
-│   ├── test-validator.md
-│   └── docs-updater.md
+├── agents/                      # 6 specialized agents
+│   ├── analysis-agent.md        # Planning & execution strategy
+│   ├── database-specialist.md   # Database migrations, RLS, functions
+│   ├── code-developer.md        # Components, routes, actions, foundation files
+│   ├── ui-ux-designer.md        # Design system compliance, accessibility
+│   ├── verification-specialist.md # Pre-testing validation, bug detection
+│   └── project-manager-agent.md # Documentation, commits, Notion sync, skills
 └── commands/
-    └── implement-phase.md       # Workflow orchestrator
+    ├── implement-phase.md       # Workflow orchestrator (12 phases)
+    └── manage-git.md            # Intelligent commit message generation
 
 docs/
 ├── PROJECT_ROADMAP.md           # What to build (phases, tasks)
@@ -464,32 +443,68 @@ Would you like me to push to remote? (yes/no)
 
 ---
 
+## 🛠️ Utility Workflows
+
+### /manage-git - Intelligent Commit Message Generation
+
+**Purpose:** Automatically generate high-quality conventional commit messages from staged changes
+
+**What it does:**
+1. Analyzes staged git changes + reads modified files
+2. Categorizes change type (feat, fix, refactor, etc.)
+3. Generates title + body focusing on WHY (not HOW)
+4. Shows message for user review (accept/edit/regenerate)
+5. Creates commit with approved message
+
+**Key features:**
+- ✅ Signal vs Noise (WHY > HOW, no implementation details)
+- ✅ Conventional commits format with ticket support
+- ✅ User checkpoint before committing (edit/regenerate loop)
+- ✅ Reads entire modified files for business context
+- ✅ Auto-decides body format (bullets vs paragraphs based on complexity)
+- ✅ NO footer by default (exception: BREAKING: for breaking changes)
+
+**When to use:**
+- ✅ Making commits and want message quality
+- ✅ Want WHY-focused messages (not file-by-file lists)
+- ✅ Need conventional commits format with business context
+
+**Quick start:**
+```bash
+git add <files>
+/manage-git
+# Review message → accept/edit/regenerate → commit
+```
+
+---
+
 ## 🎯 When to Use What
 
 | Scenario | Command | Mode |
 |----------|---------|------|
 | Start implementing Phase 2, want to review each step | `/implement-phase Phase 2` | Interactive |
 | Implement Phase 2, trust the automation | `/implement-phase Phase 2 --auto` | Automated |
-| Just want to analyze plan without executing | Use plan-analyzer agent directly | N/A |
-| Need to create single file (not full phase) | Use specific agent directly | N/A |
+| Make a commit with smart message generation | `/manage-git` | Interactive (user reviews message) |
+| Just want to analyze plan without executing | Use analysis-agent directly | N/A |
+| Need to create single file (not full phase) | Use specific agent directly (code-developer, database-specialist) | N/A |
 
 ---
 
 ## 🔧 Agent Color Convention
 
-- **Purple** - Architects/Planners (plan-analyzer)
-- **Red** - Infrastructure/Database (supabase-schema-specialist)
-- **Orange** - Feature Developers (foundation, server-action, route)
-- **Cyan** - UI Specialists (component-developer)
-- **Green** - Testing (test-validator)
-- **Blue** - Documentation (docs-updater)
+- **Purple** - Strategy & Quality (analysis-agent, verification-specialist)
+- **Red** - Infrastructure/Database (database-specialist)
+- **Cyan** - Development & Design (code-developer, ui-ux-designer)
+- **Blue** - Coordination (project-manager-agent)
 
 ---
 
 ## 📖 Further Reading
 
 - **How to use agents:** `@.claude/agents/{agent-name}.md` - Detailed agent documentation
-- **Workflow details:** `@.claude/commands/implement-phase.md` - Full workflow specification
+- **Workflow specs:**
+  - `@.claude/commands/implement-phase.md` - Feature implementation orchestrator
+  - `@.claude/commands/manage-git.md` - Intelligent commit message generation
 - **Code patterns:** `@docs/CODE_PATTERNS.md` - Implementation examples
 - **Project roadmap:** `@docs/PROJECT_ROADMAP.md` - What to build next
 - **Architecture:** `@docs/ARCHITECTURE.md` - Why decisions were made

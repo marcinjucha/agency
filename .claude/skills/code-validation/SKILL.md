@@ -16,6 +16,66 @@ Validate implementation correctness before manual testing: business logic matche
 - Plan alignment verification (matches requirements)
 - Common bug patterns (Phase 2 lessons)
 
+## Requirements Coverage
+
+**Purpose:** Verify all plan requirements implemented (catch missing functionality)
+
+**Why this matters:**
+- Phase 2: 3/5 implementations had missing validation checks → manual testing caught them
+- User reported "unlimited submissions" bug in production → validation check missing from Phase 3
+- Cost: 2 hours rework per missing requirement → validation step saves testing time
+
+**Risk levels for missing requirements:**
+- Missing functional requirement = HIGH (broken functionality)
+- Missing validation/constraint = CRITICAL (security, data integrity)
+- Missing edge case = MEDIUM (poor UX)
+
+**Example from Phase 2:**
+
+```yaml
+Plan: "Max submissions limit enforced"
+Code: Missing submission count check
+Impact: Users submitted 50+ times (plan said max 5)
+Risk: HIGH (business rule violated)
+```
+
+## Architectural Compliance
+
+**Purpose:** Catch project-specific architecture violations (ADRs)
+
+### ADR-005: Routes Minimal, Logic in Features
+
+**Why this rule exists:**
+- Phase 1: Supabase queries in routes → couldn't unit test without spinning up server
+- Phase 2: Refactored queries to features/ → testable, reusable
+- Decision: ADR-005 (routes minimal, logic in features/)
+
+**Risk if violated:** MEDIUM (harder to test, harder to maintain, violates ADR)
+
+**What to check:** Routes in `app/` should only import from `features/`, no direct Supabase/logic
+
+### Client Selection: 3 Types (Project-Specific)
+
+**Why 3 clients:**
+- Public forms: unauthenticated users → `createAnonClient()`
+- CMS client components: authenticated, browser → `createClient()` (no await)
+- Server Actions/Components: authenticated, server → `await createClient()`
+
+**Phase 2 mistake:** Used `createClient()` in public survey form → auth errors (user not logged in)
+
+**Risk if wrong:** HIGH (auth errors, permission failures, crashes)
+
+### RLS Infinite Recursion
+
+**Why this matters:**
+- Phase 1: Added `SELECT tenant_id FROM users WHERE id = auth.uid()` in RLS policy
+- Result: Infinite loop → PostgreSQL stack overflow → database crashed
+- Fix: Helper function with `SECURITY DEFINER` (runs with elevated privileges, no recursion)
+
+**Risk if violated:** CRITICAL (database crashes, production outage)
+
+**Check:** RLS policies should NOT have subqueries (use helper functions instead)
+
 ## Critical Patterns
 
 ### Business Logic Validation
