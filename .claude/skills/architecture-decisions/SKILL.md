@@ -159,6 +159,43 @@ Phase 3: CMS (Lawyer)
 
 ---
 
+## Background Processing: N8n vs Next.js API Routes
+
+**Decision:** Use n8n for survey AI analysis (not Next.js API route).
+
+**Why n8n:**
+- AI takes 5-8s → Vercel timeout risk (10s hobby, 60s pro)
+- User needs instant confirmation → fire-and-forget pattern
+- Retry logic built-in → handles network failures
+- Visual debugging → execution history + node outputs
+- Separate deployment → n8n crashes don't affect website
+
+**Why NOT Next.js API route:**
+- Blocks user request for 5-8s (bad UX)
+- No built-in retry (manual implementation)
+- Vercel function duration cost (per-second billing)
+
+**Pattern:**
+```
+Website API (200ms response)
+  ↓ fire-and-forget webhook
+N8n Workflow (5-8s background)
+  ↓ Claude API → Supabase
+CMS reads ai_qualification
+```
+
+**When to use n8n:**
+- ✅ AI processing (>2s execution)
+- ✅ External APIs with retry needed
+- ✅ Background jobs (email, scheduled tasks)
+
+**When to use Next.js API route:**
+- ✅ Fast operations (<1s)
+- ✅ Immediate response needed
+- ✅ Simple CRUD with Supabase
+
+---
+
 ## Turborepo Commands
 
 ```bash

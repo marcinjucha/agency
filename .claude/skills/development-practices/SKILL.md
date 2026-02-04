@@ -223,6 +223,43 @@ apps/cms/features/responses/queries.ts
 
 **Remember:** Duplication sometimes better than wrong abstraction.
 
+### External Service Integration (Fire-and-Forget)
+
+**Pattern:** Don't block user requests for long-running external operations.
+
+**When to use fire-and-forget:**
+- ✅ Operation takes >2s (AI, external API)
+- ✅ User doesn't need immediate result
+- ✅ Retry logic needed (network failures)
+
+**Implementation (Survey AI Analysis):**
+
+```typescript
+// apps/website/app/api/survey/submit/route.ts
+
+// 1. Save to database (fast, user needs confirmation)
+const response = await supabase.from('responses').insert({...})
+
+// 2. Trigger background processing (fire-and-forget)
+if (process.env.N8N_WEBHOOK_URL) {
+  fetch(process.env.N8N_WEBHOOK_URL, {
+    method: 'POST',
+    body: JSON.stringify({ responseId: response.id, ... })
+  }).catch(err => console.error('[N8N]:', err))
+  // NO await - user doesn't wait for AI (5-8s)
+}
+
+// 3. Return immediately
+return Response.json({ success: true })
+```
+
+**Why fire-and-forget:**
+- User gets instant feedback (200ms vs 5-8s)
+- Resilient (n8n retries on failure)
+- Scalable (n8n handles queue)
+
+**See:** `n8n-workflows` skill for full pattern.
+
 ---
 
 ## Comments & Logging
