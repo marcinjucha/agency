@@ -1,10 +1,10 @@
 # apps/cms/ - CMS Admin Panel
 
-Admin panel for law firms to manage surveys, responses, and appointments.
+Admin panel for service providers to manage surveys, responses, and appointments.
 
 ## Purpose
 
-Authenticated application for lawyers to:
+Authenticated application for service providers to:
 - Create and manage client intake surveys
 - View and analyze client responses
 - Manage appointments and calendar
@@ -15,7 +15,7 @@ Authenticated application for lawyers to:
 - **Framework:** Next.js 16 (App Router)
 - **State Management:** TanStack Query (server state)
 - **Forms:** React Hook Form + Zod
-- **UI:** shadcn/ui from @legal-mind/ui
+- **UI:** shadcn/ui from @agency/ui
 - **Auth:** Supabase Auth + Middleware
 - **Database:** Supabase (RLS-protected queries)
 
@@ -76,7 +76,7 @@ apps/cms/
 ├── next.config.ts           # Next.js configuration
 ├── tailwind.config.ts       # Tailwind CSS config
 ├── tsconfig.json            # TypeScript config
-└── package.json             # Dependencies (@legal-mind/cms)
+└── package.json             # Dependencies (@agency/cms)
 ```
 
 ## Folder Patterns (ADR-005)
@@ -208,8 +208,8 @@ npm run build:cms
 ## Deployment
 
 Auto-deploys to Vercel on push to `main`:
-- URL: https://legal-mind-cms.vercel.app
-- Build Command: `npx turbo run build --filter=@legal-mind/cms`
+- URL: https://agency-cms.vercel.app
+- Build Command: `npx turbo run build --filter=@agency/cms`
 - Output: `apps/cms/.next`
 
 ## Environment Variables

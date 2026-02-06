@@ -21,7 +21,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Button } from '@legal-mind/ui'
+import { Button } from '@agency/ui'
 import { ArrowRight, CheckCircle } from 'lucide-react'
 import { HeroGraphic } from './HeroGraphic'
 

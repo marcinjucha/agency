@@ -1,4 +1,4 @@
-# @legal-mind/calendar
+# @agency/calendar
 
 Google Calendar integration utilities for Legal-Mind applications.
 
@@ -26,8 +26,8 @@ packages/calendar/
 Already available in monorepo workspace:
 
 ```typescript
-import { getValidAccessToken } from '@legal-mind/calendar'
-import type { TokenResult } from '@legal-mind/calendar'
+import { getValidAccessToken } from '@agency/calendar'
+import type { TokenResult } from '@agency/calendar'
 ```
 
 ## Usage
@@ -37,7 +37,7 @@ import type { TokenResult } from '@legal-mind/calendar'
 ```typescript
 'use server'
 import { createClient } from '@/lib/supabase/server'
-import { getValidAccessToken } from '@legal-mind/calendar'
+import { getValidAccessToken } from '@agency/calendar'
 import { refreshAccessToken } from '@/lib/google-calendar/oauth'
 
 export async function bookAppointment(userId: string, slot: TimeSlot) {
@@ -68,7 +68,7 @@ export async function bookAppointment(userId: string, slot: TimeSlot) {
 'use client'
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
-import { getValidAccessToken } from '@legal-mind/calendar'
+import { getValidAccessToken } from '@agency/calendar'
 import { refreshAccessToken } from '@/lib/google-calendar/oauth'
 
 export function CalendarSlots() {

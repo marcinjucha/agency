@@ -2,7 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { getSurveys } from '../queries'
-import { Button, Card } from '@legal-mind/ui'
+import { Button, Card } from '@agency/ui'
 import Link from 'next/link'
 import { FileText, Plus } from 'lucide-react'
 import { getSurveyStatusColor, type SurveyStatus } from '@/lib/utils/status'

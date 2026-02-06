@@ -9,7 +9,7 @@ Use Turborepo-based monorepo with:
 ## Project Structure
 
 ```
-legal-mind/
+agency/
 ├── turbo.json
 ├── package.json
 │
@@ -56,8 +56,8 @@ npm run dev
 npm run build
 
 # Build specific app
-turbo build --filter=@legal-mind/website
-turbo build --filter=@legal-mind/cms
+turbo build --filter=@agency/website
+turbo build --filter=@agency/cms
 
 # Run tests
 npm run test
@@ -116,7 +116,7 @@ npm run lint
 ## Deployment
 
 Each app deploys separately to Vercel:
-- `apps/website` → `legal-mind-website.vercel.app`
-- `apps/cms` → `legal-mind-cms.vercel.app`
+- `apps/website` → `agency-website.vercel.app`
+- `apps/cms` → `agency-cms.vercel.app`
 
 Changes to CMS don't trigger website rebuild, and vice versa.

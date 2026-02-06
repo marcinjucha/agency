@@ -2,7 +2,7 @@
 
 import { useState, FormEvent } from 'react'
 import Link from 'next/link'
-import { Button, Input } from '@legal-mind/ui'
+import { Button, Input } from '@agency/ui'
 import {
   Github,
   Twitter,

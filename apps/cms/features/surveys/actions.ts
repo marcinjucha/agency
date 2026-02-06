@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
-import type { Tables, TablesInsert } from '@legal-mind/database'
+import type { Tables, TablesInsert } from '@agency/database'
 
 /**
  * Create a new survey

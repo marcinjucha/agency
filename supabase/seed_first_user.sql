@@ -1,4 +1,4 @@
--- Legal-Mind: Create First User for CMS Login
+-- AI Agency: Create First User for CMS Login
 -- Run this in Supabase SQL Editor: https://app.supabase.com/project/zsrpdslhnuwmzewwoexr/sql
 
 -- ==========================================

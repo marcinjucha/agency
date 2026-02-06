@@ -1,6 +1,6 @@
 'use client'
 
-import { Button, Card } from '@legal-mind/ui'
+import { Button, Card } from '@agency/ui'
 import { Check } from 'lucide-react'
 import type { PricingTier } from '../types'
 

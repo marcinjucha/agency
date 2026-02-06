@@ -272,7 +272,7 @@ features:
         2026-02-01: Phase 3 COMPLETE - All Code & Testing Done
 
         CREATED:
-        - Shared calendar package (@legal-mind/calendar)
+        - Shared calendar package (@agency/calendar)
         - Token manager with auto-refresh (5-minute buffer)
         - Real Google Calendar event creation
         - OAuth token refresh logic
@@ -307,7 +307,7 @@ features:
       status: "complete"
       why: "Centralized component library, consistent status colors, iconography"
       acceptance_criteria:
-        - "shadcn/ui components verified and exported from @legal-mind/ui"
+        - "shadcn/ui components verified and exported from @agency/ui"
         - "Centralized status color utilities"
         - "Lucide Icons for consistent iconography"
       dependencies:

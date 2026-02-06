@@ -7,7 +7,7 @@
 ```typescript
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
-import type { Database } from '@legal-mind/database'
+import type { Database } from '@agency/database'
 
 // ✅ ASYNC function - returns Promise
 export async function createClient() {
@@ -51,7 +51,7 @@ export async function myServerAction() {
 
 ```typescript
 import { createBrowserClient } from '@supabase/ssr'
-import type { Database } from '@legal-mind/database'
+import type { Database } from '@agency/database'
 
 // ✅ SYNC function - returns client directly
 export function createClient() {

@@ -27,7 +27,7 @@ packages/
 
 **Usage:**
 ```typescript
-import { Button, Card } from '@legal-mind/ui'
+import { Button, Card } from '@agency/ui'
 
 function MyComponent() {
   return (
@@ -56,7 +56,7 @@ function MyComponent() {
 
 **Usage:**
 ```typescript
-import type { Database, Tables } from '@legal-mind/database'
+import type { Database, Tables } from '@agency/database'
 
 type Survey = Tables<'surveys'>
 
@@ -87,7 +87,7 @@ supabase gen types typescript --linked > packages/database/src/types.ts
 
 **Usage:**
 ```typescript
-import { surveySchema } from '@legal-mind/validators'
+import { surveySchema } from '@agency/validators'
 
 // Validate survey structure
 const result = surveySchema.parse(data)
@@ -117,7 +117,7 @@ npx shadcn@latest add button
 echo "export { Button } from './components/ui/button'" >> src/index.ts
 
 # Use in apps
-import { Button } from '@legal-mind/ui'
+import { Button } from '@agency/ui'
 ```
 
 ### Creating a New Package
@@ -129,7 +129,7 @@ cd packages/new-package
 # Create package.json
 cat > package.json <<EOF
 {
-  "name": "@legal-mind/new-package",
+  "name": "@agency/new-package",
   "version": "0.1.0",
   "private": true,
   "main": "./src/index.ts",
@@ -161,9 +161,9 @@ Packages are **NOT pre-built**. They're transpiled on-demand by Next.js:
 ```typescript
 // next.config.ts (in apps)
 transpilePackages: [
-  '@legal-mind/ui',
-  '@legal-mind/database',
-  '@legal-mind/validators'
+  '@agency/ui',
+  '@agency/database',
+  '@agency/validators'
 ]
 ```
 
@@ -176,9 +176,9 @@ This means:
 
 **From apps:**
 ```typescript
-import { Button } from '@legal-mind/ui'
-import type { Database } from '@legal-mind/database'
-import { surveySchema } from '@legal-mind/validators'
+import { Button } from '@agency/ui'
+import type { Database } from '@agency/database'
+import { surveySchema } from '@agency/validators'
 ```
 
 **Within packages:**
@@ -206,7 +206,7 @@ import { cn } from '../lib/utils'
 **Add dependency to package:**
 ```bash
 # From root
-npm install react --workspace=@legal-mind/ui
+npm install react --workspace=@agency/ui
 
 # Or directly
 cd packages/ui

@@ -420,7 +420,7 @@ export async function updateAppointmentStatus(
 
 **Files to Modify:**
 - ✅ `apps/cms/features/appointments/components/AppointmentList.tsx`
-- ✅ Add confirmation Dialog (use existing shadcn/ui components from `@legal-mind/ui`)
+- ✅ Add confirmation Dialog (use existing shadcn/ui components from `@agency/ui`)
 
 ---
 

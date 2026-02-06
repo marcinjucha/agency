@@ -11,7 +11,7 @@ Analiza rzeczywistych implementacji Supabase w Legal-Mind z wyjaśnieniami każd
 ```typescript
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
-import type { Database } from '@legal-mind/database'
+import type { Database } from '@agency/database'
 
 export async function createClient() {
   const cookieStore = await cookies()
@@ -110,7 +110,7 @@ export async function createSurvey(data) {
 
 ```typescript
 import { createBrowserClient } from '@supabase/ssr'
-import type { Database } from '@legal-mind/database'
+import type { Database } from '@agency/database'
 
 export function createClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -316,7 +316,7 @@ This is the most complex pattern - anonymous user, service role key, RLS bypass.
 ```typescript
 import { NextRequest, NextResponse } from 'next/server'
 import { createAnonClient } from '@/lib/supabase/anon-server'
-import type { TablesInsert } from '@legal-mind/database'
+import type { TablesInsert } from '@agency/database'
 
 interface SubmitBody {
   linkId: string

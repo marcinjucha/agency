@@ -406,7 +406,7 @@ const queryClient = useQueryClient()
 
 ```typescript
 import { createClient } from '@/lib/supabase/client'
-import type { Tables } from '@legal-mind/database'
+import type { Tables } from '@agency/database'
 
 // Always return typed data
 export async function getSurveys(): Promise<Tables<'surveys'>[]> {
@@ -682,7 +682,7 @@ queryClient.isFetching()
 
 ```typescript
 import type { UseQueryResult, UseMutationResult } from '@tanstack/react-query'
-import type { Tables } from '@legal-mind/database'
+import type { Tables } from '@agency/database'
 
 // Query return type
 type SurveysQuery = UseQueryResult<Tables<'surveys'>[], Error>

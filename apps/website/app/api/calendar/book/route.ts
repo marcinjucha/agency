@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createClient } from '@supabase/supabase-js'
-import { getValidAccessToken, refreshAccessToken, createEvent } from '@legal-mind/calendar'
+import { getValidAccessToken, refreshAccessToken, createEvent } from '@agency/calendar'
 
 // Initialize Supabase client with service role key for server-side operations
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL

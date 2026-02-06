@@ -1,17 +1,17 @@
 ---
 name: design-system
-description: UI/UX design system for Legal-Mind. Use when creating components, styling, or reviewing accessibility.
+description: UI/UX design system for AI Agency. Use when creating components, styling, or reviewing accessibility.
 ---
 
 # Design System
 
-**Purpose:** UI/UX patterns for Legal-Mind applications.
+**Purpose:** UI/UX patterns for AI Agency applications.
 
 ---
 
 ## shadcn/ui Components
 
-**Location:** `@legal-mind/ui` (`packages/ui/`)
+**Location:** `@agency/ui` (`packages/ui/`)
 
 **Available Components:**
 - Button, Card, Badge, Input, Label

@@ -19,7 +19,7 @@ components:
 
     dependencies:
       external:
-        - "@legal-mind/ui (Button, Input)"
+        - "@agency/ui (Button, Input)"
         - "lucide-react (Github, Twitter, Linkedin, Facebook, Mail, ChevronRight)"
         - "react (useState, FormEvent)"
         - "next/link"
@@ -187,7 +187,7 @@ components:
       - "depends_on: React (hooks)"
       - "depends_on: Next.js (Link)"
       - "depends_on: Tailwind CSS (styling)"
-      - "depends_on: @legal-mind/ui (components)"
+      - "depends_on: @agency/ui (components)"
       - "depends_on: lucide-react (icons)"
       - "no_dependencies_on: external_apis"
       - "no_dependencies_on: state_managers"
@@ -267,7 +267,7 @@ accessibility:
 
 styling:
   framework: "Tailwind CSS 3.4+"
-  component_library: "shadcn/ui (@legal-mind/ui)"
+  component_library: "shadcn/ui (@agency/ui)"
   responsive_classes:
     - "grid-cols-2 (mobile)"
     - "md:grid-cols-4 (desktop)"

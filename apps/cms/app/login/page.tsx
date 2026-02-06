@@ -3,10 +3,10 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { Button } from '@legal-mind/ui'
-import { Input } from '@legal-mind/ui'
-import { Label } from '@legal-mind/ui'
-import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@legal-mind/ui'
+import { Button } from '@agency/ui'
+import { Input } from '@agency/ui'
+import { Label } from '@agency/ui'
+import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@agency/ui'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')

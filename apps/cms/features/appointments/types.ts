@@ -13,7 +13,7 @@
  * @module apps/cms/features/appointments/types
  */
 
-import type { Tables } from '@legal-mind/database'
+import type { Tables } from '@agency/database'
 
 /**
  * Appointment status values

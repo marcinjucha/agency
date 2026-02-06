@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
-import type { Database } from '@legal-mind/database'
+import type { Database } from '@agency/database'
 
 /**
  * Creates a service role Supabase client for public form submissions

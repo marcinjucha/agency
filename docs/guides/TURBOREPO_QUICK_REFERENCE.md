@@ -26,11 +26,11 @@ npx turbo init
   "engines": { "node": ">=18.0.0" },
   "scripts": {
     "dev": "turbo run dev",
-    "dev:website": "turbo run dev --filter=@legal-mind/website",
-    "dev:cms": "turbo run dev --filter=@legal-mind/cms",
+    "dev:website": "turbo run dev --filter=@agency/website",
+    "dev:cms": "turbo run dev --filter=@agency/cms",
     "build": "turbo run build",
-    "build:website": "turbo run build --filter=@legal-mind/website",
-    "build:cms": "turbo run build --filter=@legal-mind/cms",
+    "build:website": "turbo run build --filter=@agency/website",
+    "build:cms": "turbo run build --filter=@agency/cms",
     "lint": "turbo run lint",
     "test": "turbo run test",
     "clean": "turbo run clean",
@@ -83,7 +83,7 @@ cd packages/my-package
 # 2. Create package.json
 cat > package.json << 'EOF'
 {
-  "name": "@legal-mind/my-package",
+  "name": "@agency/my-package",
   "version": "0.1.0",
   "private": true,
   "main": "./src/index.ts",
@@ -122,17 +122,17 @@ npm install
 
 # 6. Update apps to use it
 # In apps/website/package.json and apps/cms/package.json:
-# Add: "@legal-mind/my-package": "*"
+# Add: "@agency/my-package": "*"
 
 # 7. Update next.config.ts in both apps:
-# Add to transpilePackages: ['@legal-mind/my-package']
+# Add to transpilePackages: ['@agency/my-package']
 ```
 
 ## App package.json Template (Next.js)
 
 ```json
 {
-  "name": "@legal-mind/website",
+  "name": "@agency/website",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -146,9 +146,9 @@ npm install
     "next": "16.0.7",
     "react": "19.2.0",
     "react-dom": "19.2.0",
-    "@legal-mind/ui": "*",
-    "@legal-mind/database": "*",
-    "@legal-mind/validators": "*"
+    "@agency/ui": "*",
+    "@agency/database": "*",
+    "@agency/validators": "*"
   }
 }
 ```
@@ -161,9 +161,9 @@ import type { NextConfig } from 'next'
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   transpilePackages: [
-    '@legal-mind/ui',
-    '@legal-mind/database',
-    '@legal-mind/validators'
+    '@agency/ui',
+    '@agency/database',
+    '@agency/validators'
     // Add new packages here!
   ],
 }
@@ -216,9 +216,9 @@ npm run lint                  # Lint all
 npm run format                # Format all files
 
 # Specific workspace operations
-turbo run dev --filter=@legal-mind/cms
-turbo run build --filter=@legal-mind/ui
-turbo run lint --filter=@legal-mind/*
+turbo run dev --filter=@agency/cms
+turbo run build --filter=@agency/ui
+turbo run lint --filter=@agency/*
 
 # Graph visualization
 turbo build --graph           # Creates graph.html
@@ -236,9 +236,9 @@ turbo run build --no-cache
 
 ```typescript
 // Anywhere (website or cms)
-import { Button } from '@legal-mind/ui'
-import type { Survey } from '@legal-mind/database'
-import { SurveySchema } from '@legal-mind/validators'
+import { Button } from '@agency/ui'
+import type { Survey } from '@agency/database'
+import { SurveySchema } from '@agency/validators'
 ```
 
 ### From Local Features (Path Alias)
@@ -283,8 +283,8 @@ export { cn } from './lib/utils'
   "dependencies": {
     "react": "19.2.0",
     "next": "16.0.7",
-    "@legal-mind/ui": "*",
-    "@legal-mind/database": "*"
+    "@agency/ui": "*",
+    "@agency/database": "*"
   }
 }
 ```
@@ -355,7 +355,7 @@ echo "export { Dialog } from './components/ui/dialog'" >> packages/ui/src/index.
 
 # 3. Use in app (no build needed!)
 # apps/cms/app/admin/page.tsx
-import { Dialog } from '@legal-mind/ui'
+import { Dialog } from '@agency/ui'
 ```
 
 ### To App Feature (CMS-specific)
@@ -377,17 +377,17 @@ import { ResponseList } from '@/features/responses/components/ResponseList'
 mkdir packages/my-utils
 
 # 2. Add to package.json files:
-# apps/website/package.json: "@legal-mind/my-utils": "*"
-# apps/cms/package.json: "@legal-mind/my-utils": "*"
+# apps/website/package.json: "@agency/my-utils": "*"
+# apps/cms/package.json: "@agency/my-utils": "*"
 
 # 3. Update next.config.ts in both:
-# transpilePackages: ['@legal-mind/my-utils']
+# transpilePackages: ['@agency/my-utils']
 
 # 4. Reinstall
 npm install
 
 # 5. Use anywhere
-import { myFunction } from '@legal-mind/my-utils'
+import { myFunction } from '@agency/my-utils'
 ```
 
 ## Debugging Checklist
@@ -395,12 +395,12 @@ import { myFunction } from '@legal-mind/my-utils'
 ```bash
 # Package not found?
 □ npm install (recreates symlinks)
-□ Check package.json has "name": "@legal-mind/xxx"
+□ Check package.json has "name": "@agency/xxx"
 □ Check root workspaces: ["apps/*", "packages/*"]
 □ Check next.config.ts transpilePackages
 
 # Build failing?
-□ turbo run build --filter=@legal-mind/cms --verbose
+□ turbo run build --filter=@agency/cms --verbose
 □ Check dependency order (^build in turbo.json)
 □ npm run clean (clear cache)
 □ npm install (reinstall)
@@ -416,7 +416,7 @@ import { myFunction } from '@legal-mind/my-utils'
 □ Check next.config.js transpilePackages correct
 
 # Vercel deploy failing?
-□ turbo run build --filter=@legal-mind/cms (test locally)
+□ turbo run build --filter=@agency/cms (test locally)
 □ Check env vars set in Vercel dashboard
 □ Check buildCommand in vercel.json correct
 ```

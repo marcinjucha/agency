@@ -7,7 +7,7 @@ description: Use when reviewing component design system compliance. Covers shadc
 
 ## Purpose
 
-Design system compliance: use shadcn/ui components from @legal-mind/ui, theme tokens from globals.css (not arbitrary colors), and avoid custom CSS when system components exist.
+Design system compliance: use shadcn/ui components from @agency/ui, theme tokens from globals.css (not arbitrary colors), and avoid custom CSS when system components exist.
 
 ## When to Use
 
@@ -60,7 +60,7 @@ border-input        /* Input borders */
 </button>
 
 // ✅ CORRECT - shadcn/ui Button
-import { Button } from '@legal-mind/ui'
+import { Button } from '@agency/ui'
 
 <Button>Click me</Button>
 <Button variant="outline">Secondary</Button>
@@ -81,7 +81,7 @@ import {
   Alert,
   Badge,
   Tabs
-} from '@legal-mind/ui'
+} from '@agency/ui'
 ```
 
 **Why use design system:**
@@ -186,7 +186,7 @@ mb-10     /* 40px - not in scale */
 | Violation | Fix |
 |-----------|-----|
 | `bg-blue-600` | `bg-primary` |
-| Custom button | `<Button>` from @legal-mind/ui |
+| Custom button | `<Button>` from @agency/ui |
 | `gap-5` | `gap-4` or `gap-6` (scale) |
 | `className="custom-css"` | Use design system component |
 
@@ -201,7 +201,7 @@ Violations found:
   ❌ Arbitrary spacing (gap-5, mb-7)
 
 Fixed:
-  ✅ <Button> from @legal-mind/ui
+  ✅ <Button> from @agency/ui
   ✅ Theme tokens (text-muted-foreground, border-border)
   ✅ Spacing scale (gap-4, mb-6)
 
@@ -221,7 +221,7 @@ Result: Consistent with design system, dark mode support
 </button>
 
 // ✅ CORRECT
-import { Button } from '@legal-mind/ui'
+import { Button } from '@agency/ui'
 <Button>Submit</Button>
 ```
 

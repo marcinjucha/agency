@@ -1,6 +1,6 @@
 'use client'
 
-import { Button } from '@legal-mind/ui'
+import { Button } from '@agency/ui'
 import Link from 'next/link'
 
 /**

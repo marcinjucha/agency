@@ -1,6 +1,6 @@
 'use client'
 
-import { Card, Button, cn } from '@legal-mind/ui'
+import { Card, Button, cn } from '@agency/ui'
 import { AlertCircle } from 'lucide-react'
 
 type ErrorStateProps = {

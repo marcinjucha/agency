@@ -2,7 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { getResponses } from '../queries'
-import { Card } from '@legal-mind/ui'
+import { Card } from '@agency/ui'
 import { useRouter } from 'next/navigation'
 import { ArrowRight, FileText } from 'lucide-react'
 import type { ResponseListItem, ResponseStatus } from '../types'

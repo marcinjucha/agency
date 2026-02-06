@@ -1,7 +1,7 @@
 'use client'
 
 import { SurveyList } from '@/features/surveys/components/SurveyList'
-import { Button } from '@legal-mind/ui'
+import { Button } from '@agency/ui'
 import Link from 'next/link'
 import { Plus } from 'lucide-react'
 

@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { handleCallback, revokeAccess } from '@/lib/google-calendar/oauth'
 import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
-import type { Tables } from '@legal-mind/database'
+import type { Tables } from '@agency/database'
 
 /**
  * GET /api/auth/google/callback

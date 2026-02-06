@@ -1,6 +1,6 @@
 ---
 name: n8n-workflows
-description: N8n workflow patterns for Legal-Mind. Use when implementing background AI processing that shouldn't block user requests.
+description: N8n workflow patterns for AI Agency. Use when implementing background AI processing that shouldn't block user requests.
 ---
 
 # N8n Workflows
@@ -97,7 +97,7 @@ N8N_WEBHOOK_URL=https://n8n.trustcode.pl/webhook/survey-analysis
 
 **Why:** Background workflow needs RLS bypass (no user context).
 
-**N8n credential:** Legal-Mind Supabase → service_role key
+**N8n credential:** AI Agency Supabase → service_role key
 
 ### Model: Claude Haiku (not Sonnet)
 
@@ -199,7 +199,7 @@ FROM responses WHERE id = '[RESPONSE_UUID]';
 
 **Credentials (n8n):**
 - Anthropic API (HTTP Header Auth: x-api-key)
-- Legal-Mind Supabase (service_role key)
+- AI Agency Supabase (service_role key)
 - GlitchTip (Sentry DSN - optional)
 
 **Cost:** ~$0.0008 per response (Haiku)

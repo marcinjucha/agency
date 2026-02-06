@@ -5,7 +5,7 @@ Public-facing marketing website and client survey forms.
 ## Purpose
 
 Public application for:
-- Marketing law firm services
+- Marketing agency services
 - Client survey form submission (via unique token links)
 - Calendar appointment booking
 - No authentication required
@@ -14,7 +14,7 @@ Public application for:
 
 - **Framework:** Next.js 16 (App Router)
 - **Forms:** React Hook Form + Zod
-- **UI:** shadcn/ui from @legal-mind/ui
+- **UI:** shadcn/ui from @agency/ui
 - **Database:** Supabase (public access via RLS)
 - **State:** No complex state management needed (simple forms)
 
@@ -70,7 +70,7 @@ apps/website/
 This app is completely public. No login, no middleware, no protected routes.
 
 ### Survey Flow
-1. Client receives email with link: `legalmind.pl/survey/abc123`
+1. Client receives email with link: `agency.com/survey/abc123`
 2. Clicks link → opens survey form
 3. Fills out form → submits
 4. Sees calendar → books appointment
@@ -183,7 +183,7 @@ npm run build:website
 
 ## Deployment
 
-Auto-deploys to: https://legal-mind-website.vercel.app
+Auto-deploys to: https://agency-website.vercel.app
 
 **Environment Variables (Vercel):**
 - `NEXT_PUBLIC_SUPABASE_URL`

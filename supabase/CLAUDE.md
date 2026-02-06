@@ -221,5 +221,5 @@ Already enabled in migration: `CREATE EXTENSION IF NOT EXISTS "pgcrypto";`
 ## Related Documentation
 
 - [Supabase Setup Guide](./README.md)
-- [Database Pattern](../adr/006-legal-mind-project-structure.md#5-database-access-pattern)
+- [Database Pattern](../adr/006-agency-project-structure.md#5-database-access-pattern)
 - [Migration Guide](../docs/ARCHITECTURE.md#database-schema)

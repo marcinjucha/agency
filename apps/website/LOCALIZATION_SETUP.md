@@ -30,7 +30,7 @@ This localization system requires the following files that have been created:
 cd /Users/marcinjucha/Prywatne/projects/legal-mind
 
 # Add next-intl to website app dependencies
-npm install next-intl --workspace=@legal-mind/website
+npm install next-intl --workspace=@agency/website
 ```
 
 ### Step 2: Update Next.js Configuration
@@ -248,7 +248,7 @@ As you build components, add new keys to both `messages/pl.json` and `messages/e
 
 **Solution**:
 ```bash
-npm install next-intl --workspace=@legal-mind/website
+npm install next-intl --workspace=@agency/website
 npm install
 ```
 

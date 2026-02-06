@@ -46,7 +46,7 @@ supabase db push
 
 ```typescript
 import { createClient } from '@/lib/supabase/client'
-import type { Tables } from '@legal-mind/database'
+import type { Tables } from '@agency/database'
 
 export async function getSurveys(): Promise<Tables<'surveys'>[]> {
   const supabase = createClient()
@@ -173,7 +173,7 @@ export function SurveyList() {
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
-import type { TablesInsert } from '@legal-mind/database'
+import type { TablesInsert } from '@agency/database'
 
 export async function createSurvey(
   formData: { title: string; description?: string }
@@ -595,7 +595,7 @@ const { data } = useQuery({
 ### Auto-generated from database
 
 ```typescript
-import type { Database, Tables, TablesInsert, TablesUpdate } from '@legal-mind/database'
+import type { Database, Tables, TablesInsert, TablesUpdate } from '@agency/database'
 
 // Read (existing row)
 type Survey = Tables<'surveys'>
@@ -610,7 +610,7 @@ type UpdateSurvey = TablesUpdate<'surveys'>
 ### In queries
 
 ```typescript
-import type { Tables } from '@legal-mind/database'
+import type { Tables } from '@agency/database'
 
 export async function getSurvey(id: string): Promise<Tables<'surveys'>> {
   // Full type safety!

@@ -161,8 +161,8 @@ files_created:
     explicit_return_types: true
 
 dependencies:
-  - '@legal-mind/ui'
-  - '@legal-mind/shared-types'
+  - '@agency/ui'
+  - '@agency/shared-types'
   - '../types'
 
 next_steps:

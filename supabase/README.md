@@ -134,7 +134,7 @@ npm run db:types
 # This creates/updates packages/database/src/types.ts
 ```
 
-Types are automatically imported in apps via `@legal-mind/database`.
+Types are automatically imported in apps via `@agency/database`.
 
 ## Troubleshooting
 

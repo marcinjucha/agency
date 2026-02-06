@@ -13,7 +13,7 @@
  * @module apps/website/features/marketing/components/BenefitCard
  */
 
-import { Card } from '@legal-mind/ui'
+import { Card } from '@agency/ui'
 import { getIcon } from '../lib/getIcon'
 import type { Benefit, IconName } from '../types'
 

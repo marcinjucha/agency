@@ -1,6 +1,6 @@
 'use client'
 
-import { Skeleton, cn } from '@legal-mind/ui'
+import { Skeleton, cn } from '@agency/ui'
 import { Loader2 } from 'lucide-react'
 
 type LoadingStateProps = {

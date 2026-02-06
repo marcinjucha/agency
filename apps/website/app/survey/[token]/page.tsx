@@ -16,7 +16,7 @@
 
 import { getSurveyByToken } from '@/features/survey/queries'
 import { SurveyForm } from '@/features/survey/components/SurveyForm'
-import { Card } from '@legal-mind/ui'
+import { Card } from '@agency/ui'
 
 interface PageProps {
   params: Promise<{

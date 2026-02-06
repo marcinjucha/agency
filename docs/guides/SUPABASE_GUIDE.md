@@ -403,7 +403,7 @@ VALUES ('auth-uuid', 'abc-uuid', 'admin@lawfirm.com', 'Alice', 'owner');
 ```typescript
 // features/surveys/queries.ts
 import { createClient } from '@/lib/supabase/client'
-import type { Tables } from '@legal-mind/database'
+import type { Tables } from '@agency/database'
 
 export async function getSurveys(): Promise<Tables<'surveys'>[]> {
   const supabase = createClient()

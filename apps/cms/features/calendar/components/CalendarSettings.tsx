@@ -9,7 +9,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@legal-mind/ui'
+} from '@agency/ui'
 import { getGoogleCalendarStatus, disconnectGoogleCalendar } from '../actions'
 import { AlertCircle, CheckCircle, Loader2, LogOut } from 'lucide-react'
 

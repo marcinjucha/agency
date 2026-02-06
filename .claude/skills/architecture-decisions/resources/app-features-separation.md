@@ -103,7 +103,7 @@ export default function SurveysPage() {
 // ✅ ALLOWED
 import { PageList } from '@/features/pages/components/PageList'  // app → features
 import { createClient } from '@/lib/supabase/server'              // features → lib
-import { Button } from '@legal-mind/ui'                           // features → packages
+import { Button } from '@agency/ui'                           // features → packages
 import { useLayoutBuilder } from '@/features/layout-builder/stores'  // features → features
 
 // ❌ FORBIDDEN

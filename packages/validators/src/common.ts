@@ -7,7 +7,7 @@
  * - Survey submission (Website)
  * - Response management (CMS)
  *
- * @module @legal-mind/validators/common
+ * @module @agency/validators/common
  */
 
 /**

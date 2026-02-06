@@ -1,5 +1,5 @@
 {
-  "name": "legal-mind",
+  "name": "agency",
   "version": "1.0.0",
   "private": true,
   "workspaces": [
@@ -13,10 +13,10 @@
     "lint": "turbo run lint",
     "clean": "turbo run clean",
     "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",
-    "dev:website": "turbo run dev --filter=@legal-mind/website",
-    "dev:cms": "turbo run dev --filter=@legal-mind/cms",
-    "build:website": "turbo run build --filter=@legal-mind/website",
-    "build:cms": "turbo run build --filter=@legal-mind/cms",
+    "dev:website": "turbo run dev --filter=@agency/website",
+    "dev:cms": "turbo run dev --filter=@agency/cms",
+    "build:website": "turbo run build --filter=@agency/website",
+    "build:cms": "turbo run build --filter=@agency/cms",
     "db:reset": "cd supabase && supabase db reset",
     "db:types": "supabase gen types typescript --local > packages/database/src/types.ts"
   },

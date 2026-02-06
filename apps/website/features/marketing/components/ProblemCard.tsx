@@ -7,7 +7,7 @@
  * @module apps/website/features/marketing/components/ProblemCard
  */
 
-import { Card } from '@legal-mind/ui'
+import { Card } from '@agency/ui'
 import type { Problem } from '../types'
 import { getIcon } from '../lib/getIcon'
 

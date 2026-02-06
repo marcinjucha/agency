@@ -25,7 +25,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import type { AvailableSlotsResponse, ErrorResponse, TimeSlot } from '@/features/calendar/types'
 import { parse, addHours, addMinutes } from 'date-fns'
 import { createClient } from '@supabase/supabase-js'
-import { getValidAccessToken, refreshAccessToken } from '@legal-mind/calendar'
+import { getValidAccessToken, refreshAccessToken } from '@agency/calendar'
 
 // Initialize Supabase client with service role key
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL

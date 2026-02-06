@@ -89,7 +89,7 @@ export type Question = {
 }
 
 // Step 4: Update imports
-// Both apps now: import { Question } from '@legal-mind/shared-types'
+// Both apps now: import { Question } from '@agency/shared-types'
 ```
 
 **Why start local:**

@@ -5,7 +5,7 @@ const withNextIntl = createNextIntlPlugin()
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
-  transpilePackages: ['@legal-mind/ui', '@legal-mind/database', '@legal-mind/validators', '@legal-mind/calendar'],
+  transpilePackages: ['@agency/ui', '@agency/database', '@agency/validators', '@agency/calendar'],
 
   images: {
     remotePatterns: [],

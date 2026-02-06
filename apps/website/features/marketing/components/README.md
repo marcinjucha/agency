@@ -205,7 +205,7 @@ All icons use lucide-react and are type-safe via `IconName` type:
 
 All components use:
 - **Framework:** Tailwind CSS
-- **Component Library:** shadcn/ui (@legal-mind/ui)
+- **Component Library:** shadcn/ui (@agency/ui)
 - **Icons:** lucide-react
 - **Colors:** Tailwind theme (primary, secondary, foreground, etc.)
 
@@ -444,7 +444,7 @@ When adding new components:
 1. Use `'use client'` directive if using React hooks
 2. Import types from `../types`
 3. Use Tailwind CSS for styling
-4. Use shadcn/ui components from `@legal-mind/ui`
+4. Use shadcn/ui components from `@agency/ui`
 5. Add JSDoc comments for documentation
 6. Follow existing naming conventions
 7. Test on mobile, tablet, and desktop

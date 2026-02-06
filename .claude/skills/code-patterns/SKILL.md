@@ -1,11 +1,11 @@
 ---
 name: code-patterns
-description: Application code patterns for Legal-Mind Next.js apps. Use when writing Server Actions, queries, components, or organizing features.
+description: Application code patterns for AI Agency Next.js apps. Use when writing Server Actions, queries, components, or organizing features.
 ---
 
 # Code Patterns
 
-**Purpose:** Application-level patterns for Legal-Mind Next.js applications.
+**Purpose:** Application-level patterns for AI Agency Next.js applications.
 
 ---
 
@@ -156,7 +156,7 @@ export function SurveyList() {
 
 ```typescript
 import { createClient } from '@/lib/supabase/client'  // Browser client
-import type { Tables } from '@legal-mind/database'
+import type { Tables } from '@agency/database'
 
 export async function getThings(): Promise<Tables<'things'>[]> {
   const supabase = createClient()  // NO await
@@ -253,11 +253,11 @@ const newQuestion: Question = {
 'use server'
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
-import type { TablesInsert } from '@legal-mind/database'
+import type { TablesInsert } from '@agency/database'
 
 // Queries (CMS)
 import { createClient } from '@/lib/supabase/client'
-import type { Tables } from '@legal-mind/database'
+import type { Tables } from '@agency/database'
 
 // Components (CMS)
 'use client'

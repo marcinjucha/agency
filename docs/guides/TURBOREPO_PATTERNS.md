@@ -11,8 +11,8 @@ Rzeczywiste problemy z monorepo które mogą się pojawić w Legal-Mind i jak je
 **Scenario:** Need a shared utilities package (helper functions used by both apps)
 
 ```
-Currently have: @legal-mind/ui, @legal-mind/database, @legal-mind/validators
-Need: @legal-mind/utils (for date helpers, string utils, etc)
+Currently have: @agency/ui, @agency/database, @agency/validators
+Need: @agency/utils (for date helpers, string utils, etc)
 ```
 
 ### The Solution: Step by Step
@@ -24,7 +24,7 @@ mkdir packages/utils
 # Step 2: Create package.json
 cat > packages/utils/package.json << 'EOF'
 {
-  "name": "@legal-mind/utils",
+  "name": "@agency/utils",
   "version": "0.1.0",
   "private": true,
   "main": "./src/index.ts",
@@ -78,18 +78,18 @@ npm install
 
 # Step 7: Update apps to use it
 # apps/website/package.json
-# Add: "@legal-mind/utils": "*"
+# Add: "@agency/utils": "*"
 
 # apps/cms/package.json
-# Add: "@legal-mind/utils": "*"
+# Add: "@agency/utils": "*"
 
 # Step 8: Update next.config.ts (IMPORTANT!)
 // apps/website/next.config.ts
 transpilePackages: [
-  '@legal-mind/ui',
-  '@legal-mind/database',
-  '@legal-mind/validators',
-  '@legal-mind/utils'  // ← Add this!
+  '@agency/ui',
+  '@agency/database',
+  '@agency/validators',
+  '@agency/utils'  // ← Add this!
 ]
 ```
 
@@ -99,18 +99,18 @@ transpilePackages: [
 Workspace resolution:
 1. npm install reads root package.json "workspaces"
 2. Finds packages/utils/package.json
-3. Reads "name": "@legal-mind/utils"
-4. Creates symlink: node_modules/@legal-mind/utils → packages/utils/src/
-5. Apps import @legal-mind/utils automatically resolves!
+3. Reads "name": "@agency/utils"
+4. Creates symlink: node_modules/@agency/utils → packages/utils/src/
+5. Apps import @agency/utils automatically resolves!
 
 TypeScript resolution:
-1. apps/cms imports '@legal-mind/utils'
-2. Finds node_modules/@legal-mind/utils/src/index.ts
+1. apps/cms imports '@agency/utils'
+2. Finds node_modules/@agency/utils/src/index.ts
 3. IDE shows types from packages/utils/src/
 
 Next.js transpilation:
-1. Website imports { formatDate } from '@legal-mind/utils'
-2. Next.js sees transpilePackages: [@legal-mind/utils]
+1. Website imports { formatDate } from '@agency/utils'
+2. Next.js sees transpilePackages: [@agency/utils]
 3. Transpiles at build time
 4. No need to pre-compile package!
 ```
@@ -156,12 +156,12 @@ packages/
 apps/website/
 ├─ features/surveys/
 │  └─ components/SurveyList.tsx
-│     └─ Uses <Table> from @legal-mind/ui
+│     └─ Uses <Table> from @agency/ui
 │
 apps/cms/
 ├─ features/surveys/
 │  └─ components/SurveyList.tsx
-│     └─ Uses <Table> + <Button> from @legal-mind/ui
+│     └─ Uses <Table> + <Button> from @agency/ui
 
 Each app:
 ├─ Own feature-specific components
@@ -288,13 +288,13 @@ If different versions of same package needed:
 ```typescript
 // apps/cms/package.json
 "dependencies": {
-  "@legal-mind/ui": "*",
-  "@legal-mind/database": "*"
+  "@agency/ui": "*",
+  "@agency/database": "*"
 }
 
 // If ui depends on database types:
 // packages/ui/src/components/Button.tsx
-import type { Survey } from '@legal-mind/database'
+import type { Survey } from '@agency/database'
 
 // Build order matters!
 // ❌ If cms builds before database → Missing types
@@ -370,15 +370,15 @@ npm run dev
 npm run dev:cms
 
 # Or direct turbo command:
-turbo run dev --filter=@legal-mind/cms
+turbo run dev --filter=@agency/cms
 
 # Result:
 # ├─ cms (port 3001) only
 # └─ Starts in ~15 seconds ✅
 
 # Also works for other commands:
-turbo run build --filter=@legal-mind/ui
-turbo run lint --filter=@legal-mind/*  # All packages
+turbo run build --filter=@agency/ui
+turbo run lint --filter=@agency/*  # All packages
 ```
 
 ### Create Shortcuts
@@ -388,10 +388,10 @@ turbo run lint --filter=@legal-mind/*  # All packages
 {
   "scripts": {
     "dev": "turbo run dev",
-    "dev:website": "turbo run dev --filter=@legal-mind/website",
-    "dev:cms": "turbo run dev --filter=@legal-mind/cms",
-    "build:website": "turbo run build --filter=@legal-mind/website",
-    "build:cms": "turbo run build --filter=@legal-mind/cms"
+    "dev:website": "turbo run dev --filter=@agency/website",
+    "dev:cms": "turbo run dev --filter=@agency/cms",
+    "build:website": "turbo run build --filter=@agency/website",
+    "build:cms": "turbo run build --filter=@agency/cms"
   }
 }
 
@@ -430,7 +430,7 @@ turbo build --graph
 # └─ Which one failed!
 
 # Or run specific app:
-turbo run build --filter=@legal-mind/cms
+turbo run build --filter=@agency/cms
 
 # Output clearer (only cms dependencies)
 ```
@@ -442,7 +442,7 @@ turbo run build --filter=@legal-mind/cms
 npm run build:cms
 
 # See verbose output:
-turbo run build --filter=@legal-mind/cms --verbose
+turbo run build --filter=@agency/cms --verbose
 
 # Output shows:
 # ├─ What's building
@@ -529,7 +529,7 @@ Benefits:
 }
 
 // But usually: Just use src/index.ts for packages
-// Apps import from @legal-mind/ui directly
+// Apps import from @agency/ui directly
 ```
 
 ---
@@ -668,13 +668,13 @@ But which app?
 ```json
 // vercel.json (root or per app)
 {
-  "buildCommand": "turbo run build --filter=@legal-mind/website",
+  "buildCommand": "turbo run build --filter=@agency/website",
   "outputDirectory": "apps/website/.next"
 }
 
 // Or:
 {
-  "buildCommand": "turbo run build --filter=@legal-mind/cms",
+  "buildCommand": "turbo run build --filter=@agency/cms",
   "outputDirectory": "apps/cms/.next"
 }
 
@@ -737,7 +737,7 @@ Result:
    └─ Ensure rebuilds
 
 7. Add to transpilePackages in next.config.ts
-   ├─ Every new @legal-mind/* package
+   ├─ Every new @agency/* package
    ├─ Forget this → TypeErrors!
    └─ Double-check on package creation
 

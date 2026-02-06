@@ -1,6 +1,6 @@
 import { ResponseDetail } from '@/features/responses/components/ResponseDetail'
 import Link from 'next/link'
-import { Button } from '@legal-mind/ui'
+import { Button } from '@agency/ui'
 import { ArrowLeft } from 'lucide-react'
 
 export const metadata = {

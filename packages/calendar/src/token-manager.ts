@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { Database } from '@legal-mind/database'
+import type { Database } from '@agency/database'
 
 /**
  * Google Calendar token structure stored in database

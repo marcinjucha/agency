@@ -1,11 +1,11 @@
 ---
 name: development-practices
-description: Legal-Mind development practices and decision frameworks. Use when making testing decisions, architecture choices, or performance optimizations.
+description: AI Agency development practices and decision frameworks. Use when making testing decisions, architecture choices, or performance optimizations.
 ---
 
 # Development Practices
 
-**Purpose:** Project-specific development practices and decision frameworks for Legal-Mind.
+**Purpose:** Project-specific development practices and decision frameworks for AI Agency.
 
 ---
 

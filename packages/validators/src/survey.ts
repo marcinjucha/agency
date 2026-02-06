@@ -5,7 +5,7 @@ import type { QuestionType } from './common'
  * Survey validation schema
  *
  * IMPORTANT: Question type values ('text', 'textarea', etc.) MUST match
- * the QuestionType from @legal-mind/validators/common
+ * the QuestionType from @agency/validators/common
  * If adding new question types, update QuestionType in common.ts FIRST,
  * then update this enum accordingly.
  */

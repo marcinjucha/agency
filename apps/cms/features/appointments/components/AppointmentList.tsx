@@ -2,7 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { getAppointments } from '../queries'
-import { Card } from '@legal-mind/ui'
+import { Card } from '@agency/ui'
 import { useRouter } from 'next/navigation'
 import { ExternalLink, CalendarCheck } from 'lucide-react'
 import { format } from 'date-fns'

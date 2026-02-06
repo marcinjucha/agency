@@ -10,7 +10,7 @@
 'use server'
 
 import { createAnonClient } from '@/lib/supabase/anon-server'
-import type { TablesInsert } from '@legal-mind/database'
+import type { TablesInsert } from '@agency/database'
 import type { SurveyAnswers, SubmissionResult } from './types'
 
 /**

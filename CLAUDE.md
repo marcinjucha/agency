@@ -1,4 +1,4 @@
-# Legal-Mind Project Overview
+# AI Agency Project Overview
 
 ## n8n Infrastructure
 
@@ -19,7 +19,7 @@
 **Usage:**
 - Reference for understanding n8n deployment architecture
 - AI can read this to help build workflows in n8n
-- Rarely modified during legal-mind development
+- Rarely modified during agency development
 - Changes typically made through n8n web UI, not in this repo
 
 **Key Files:**
@@ -31,9 +31,9 @@
 
 ### n8n-workflows (Workflow Definitions)
 
-**Location:** `n8n-workflows/` (in legal-mind root)
+**Location:** `n8n-workflows/` (in agency root)
 
-**Purpose:** Exported n8n workflow definitions used by legal-mind
+**Purpose:** Exported n8n workflow definitions used by agency
 
 **Pattern:** See `.claude/skills/n8n-workflows/SKILL.md` for workflow integration patterns
 
@@ -44,7 +44,7 @@
 ## Repository Structure
 
 ```
-legal-mind/
+agency/
 ├── infra/
 │   └── n8n-vps/          # Symlink to n8n infrastructure repo
 ├── n8n-workflows/         # Workflow definitions for background processing

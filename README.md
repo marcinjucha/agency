@@ -1,8 +1,8 @@
-# Legal-Mind
+# AI Agency
 
-> AI-Powered Legal Intake Platform for Law Firms
+> AI-Powered Agency Platform for Service Providers
 
-Legal-Mind is a SaaS platform that helps law firms automate client intake through AI-powered survey forms and intelligent calendar booking.
+AI Agency is a SaaS platform that helps service providers automate client intake through AI-powered survey forms and intelligent calendar booking.
 
 ## 🚀 Quick Start
 
@@ -45,7 +45,7 @@ npm run dev:cms       # CMS only
 ### 4. Open in VSCode
 
 ```bash
-code legal-mind.code-workspace
+code agency.code-workspace
 ```
 
 This opens a multi-root workspace with all packages visible in sidebar.
@@ -60,17 +60,17 @@ This opens a multi-root workspace with all packages visible in sidebar.
 - **`apps/cms`** - Admin panel for law firms
 
 **Shared packages:**
-- `@legal-mind/ui` - Component library (shadcn/ui)
-- `@legal-mind/database` - Supabase types and queries
-- `@legal-mind/validators` - Zod validation schemas
+- `@agency/ui` - Component library (shadcn/ui)
+- `@agency/database` - Supabase types and queries
+- `@agency/validators` - Zod validation schemas
 
 ---
 
 ## 🚢 Deployment
 
 **Live URLs:**
-- Website: https://legal-mind-website.vercel.app
-- CMS: https://legal-mind-cms.vercel.app/login
+- Website: https://agency-website.vercel.app
+- CMS: https://agency-cms.vercel.app/login
 
 **Auto-deployment:**
 Push to `main` branch → Vercel automatically deploys
@@ -97,7 +97,7 @@ vercel --cwd apps/cms --prod
 
 ## 📋 Features
 
-### For Law Firms (CMS)
+### For Service Providers (CMS)
 - ✅ Create custom intake surveys
 - ✅ Manage questions (7 types)
 - ✅ View responses with AI qualification
@@ -115,7 +115,7 @@ vercel --cwd apps/cms --prod
 ## 📁 Project Structure
 
 ```
-legal-mind/
+agency/
 ├── apps/
 │   ├── website/              # Public app (port 3000)
 │   │   ├── app/
@@ -197,7 +197,7 @@ See `supabase/seed_first_user.sql` for detailed instructions.
 - [Architecture](./docs/ARCHITECTURE.md) - System design overview
 - [Deployment](./docs/DEPLOYMENT.md) - Vercel setup guide
 - [Implementation Status](./docs/IMPLEMENTATION_STATUS.md) - Current progress
-- [ADR-006](./adr/006-legal-mind-project-structure.md) - Project patterns
+- [ADR-006](./adr/006-agency-project-structure.md) - Project patterns
 
 ---
 
@@ -246,15 +246,15 @@ npm run build  # Try again
 ## 🙋 Support
 
 **Live Apps:**
-- Website: https://legal-mind-website.vercel.app
-- CMS: https://legal-mind-cms.vercel.app
+- Website: https://agency-website.vercel.app
+- CMS: https://agency-cms.vercel.app
 
 **Supabase:**
 - Dashboard: https://app.supabase.com/project/zsrpdslhnuwmzewwoexr
 
 **Repository:**
-- GitLab: https://gitlab.com/friendly-coders/legal-mind
+- GitLab: https://gitlab.com/friendly-coders/agency
 
 ---
 
-**Built with ❤️ for law firms who want to modernize client intake**
+**Built with ❤️ for service providers who want to modernize client intake**

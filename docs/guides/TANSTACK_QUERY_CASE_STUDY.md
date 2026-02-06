@@ -432,7 +432,7 @@ export function SurveyLinks({ surveyId }: { surveyId: string }) {
 
 ```typescript
 import { createClient } from '@/lib/supabase/client'
-import type { Tables } from '@legal-mind/database'
+import type { Tables } from '@agency/database'
 
 // Simple, no caching complexity
 export async function getSurveys(): Promise<Tables<'surveys'>[]> {
@@ -496,7 +496,7 @@ if (error) throw error
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
-import type { TablesInsert } from '@legal-mind/database'
+import type { TablesInsert } from '@agency/database'
 
 export async function createSurvey(formData: {
   title: string

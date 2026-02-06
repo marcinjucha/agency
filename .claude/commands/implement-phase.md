@@ -244,7 +244,7 @@ See `notion-integration` skill for MCP tool examples.
       "notion_context": {
         "task_id": "abc123",
         "task_name": "Implement Redis caching",
-        "project": "Legal-Mind MVP",
+        "project": "AI Agency MVP",
         "priority": "🔴 Urgent"
       }
     }

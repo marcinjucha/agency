@@ -32,7 +32,7 @@ npm run dev
 npm run build:website
 
 # Or with Turbo
-npx turbo run build --filter=@legal-mind/website
+npx turbo run build --filter=@agency/website
 ```
 
 ## Environment Variables

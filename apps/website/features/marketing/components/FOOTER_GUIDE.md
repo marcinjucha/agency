@@ -310,7 +310,7 @@ const FOOTER_LINKS = {
 
 - **React** - Component framework (useState, FormEvent)
 - **Next.js** - Link component
-- **@legal-mind/ui** - Button and Input components from shadcn/ui
+- **@agency/ui** - Button and Input components from shadcn/ui
 - **lucide-react** - Icons (Github, Twitter, Linkedin, Facebook, Mail, ChevronRight)
 
 ## TypeScript Types
@@ -422,7 +422,7 @@ Ensure links have proper `href` attribute and `<Link>` component from Next.js is
 
 ### Newsletter Form Not Working
 
-1. Check that Input and Button components are imported from `@legal-mind/ui`
+1. Check that Input and Button components are imported from `@agency/ui`
 2. Verify email regex pattern: `/^[^\s@]+@[^\s@]+\.[^\s@]+$/`
 3. Check console for any errors
 

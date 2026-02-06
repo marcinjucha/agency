@@ -3,10 +3,10 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { updateSurvey } from '../actions'
-import { Button, Input, Label, Card, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Textarea, Checkbox } from '@legal-mind/ui'
+import { Button, Input, Label, Card, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Textarea, Checkbox } from '@agency/ui'
 import { ArrowLeft, Plus, Trash2, Save } from 'lucide-react'
 import Link from 'next/link'
-import type { Tables } from '@legal-mind/database'
+import type { Tables } from '@agency/database'
 import { SurveyLinks } from './SurveyLinks'
 
 type Question = {

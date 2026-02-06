@@ -1,6 +1,6 @@
 'use client'
 
-import { Card, CardContent } from '@legal-mind/ui'
+import { Card, CardContent } from '@agency/ui'
 import type { Testimonial } from '../types'
 
 type TestimonialCardProps = {

@@ -21,10 +21,10 @@ Analiza rzeczywistych implementacji Turborepo w Legal-Mind z wyjaśnieniami każ
     "lint": "turbo run lint",
     "clean": "turbo run clean",
     "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",
-    "dev:website": "turbo run dev --filter=@legal-mind/website",
-    "dev:cms": "turbo run dev --filter=@legal-mind/cms",
-    "build:website": "turbo run build --filter=@legal-mind/website",
-    "build:cms": "turbo run build --filter=@legal-mind/cms",
+    "dev:website": "turbo run dev --filter=@agency/website",
+    "dev:cms": "turbo run dev --filter=@agency/cms",
+    "build:website": "turbo run build --filter=@agency/website",
+    "build:cms": "turbo run build --filter=@agency/cms",
     "db:reset": "cd supabase && supabase db reset",
     "db:types": "supabase gen types typescript --local > packages/database/src/types.ts"
   },
@@ -55,7 +55,7 @@ Efekt npm install:
 ├─ Zbiera wszystkie dependencje
 ├─ Tworzy jeden node_modules/ w root
 ├─ Tworzy symlinki dla packages/
-│  └─ node_modules/@legal-mind/ui → packages/ui/src
+│  └─ node_modules/@agency/ui → packages/ui/src
 └─ Wszystko dzielone!
 
 Jeśli każdy miał swoje node_modules:
@@ -80,14 +80,14 @@ Z workspaces:
 ├─ apps/cms: next dev --port 3001
 └─ Oba działają jednocześnie
 
-"dev:cms": "turbo run dev --filter=@legal-mind/cms"
+"dev:cms": "turbo run dev --filter=@agency/cms"
 ├─ --filter: Tylko CMS
 ├─ Zależy: packages/ui, packages/database, packages/validators
 │  └─ Ale ci nie uruchamiają dev (nie mają dev task)
 ├─ Wynik: Tylko CMS dev process
 └─ Szybciej niż pełny dev!
 
-"build:website": "turbo run build --filter=@legal-mind/website"
+"build:website": "turbo run build --filter=@agency/website"
 ├─ Build tylko website
 ├─ Ale najpierw: build dependencies
 ├─ Pipeline: database → validators → ui → website
@@ -292,7 +292,7 @@ Why:
 
 ```json
 {
-  "name": "@legal-mind/website",
+  "name": "@agency/website",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -306,9 +306,9 @@ Why:
     "next": "16.0.7",
     "react": "19.2.0",
     "react-dom": "19.2.0",
-    "@legal-mind/ui": "*",
-    "@legal-mind/database": "*",
-    "@legal-mind/validators": "*"
+    "@agency/ui": "*",
+    "@agency/database": "*",
+    "@agency/validators": "*"
   }
 }
 ```
@@ -316,16 +316,16 @@ Why:
 ### Analiza
 
 ```
-"name": "@legal-mind/website"
+"name": "@agency/website"
 
 Oznacza:
 ├─ Workspace name (workspace identifier)
-├─ Import alias: @legal-mind/website
+├─ Import alias: @agency/website
 ├─ But NOT used (website is app, not package)
 ├─ Actually: apps use features/ directly
 └─ Only packages (ui, database) imported
 
-"@legal-mind/ui": "*"
+"@agency/ui": "*"
 
 Znaczenie:
 ├─ * = Any version (wildcard)
@@ -336,14 +336,14 @@ Znaczenie:
 └─ Without reinstall!
 
 Vs explicit version:
-❌ "@legal-mind/ui": "0.1.0"
+❌ "@agency/ui": "0.1.0"
 ├─ Fixed version
 ├─ Update package version
 ├─ But website still 0.1.0
 ├─ Must manually update
 └─ Error-prone
 
-✅ "@legal-mind/ui": "*"
+✅ "@agency/ui": "*"
 ├─ Always latest
 ├─ Update package.json version
 ├─ Workspace updates automatically
@@ -354,13 +354,13 @@ Vs explicit version:
 
 ## Case 4: Packages - Shared Code
 
-### @legal-mind/database package.json
+### @agency/database package.json
 
 **File:** `/Users/marcinjucha/Prywatne/projects/legal-mind/packages/database/package.json`
 
 ```json
 {
-  "name": "@legal-mind/database",
+  "name": "@agency/database",
   "version": "0.1.0",
   "private": true,
   "main": "./src/index.ts",
@@ -388,11 +388,11 @@ export type Survey = Tables<'surveys'>
 export type Response = Tables<'responses'>
 
 // Usage in apps:
-import type { Survey, Response } from '@legal-mind/database'
+import type { Survey, Response } from '@agency/database'
 
 // How it works:
-1. Website imports @legal-mind/database
-2. npm workspace: node_modules/@legal-mind/database → packages/database/src
+1. Website imports @agency/database
+2. npm workspace: node_modules/@agency/database → packages/database/src
 3. index.ts imports types
 4. Types available!
 5. NO build needed (Next.js transpiles on-demand)
@@ -455,10 +455,10 @@ import type { Survey, Response } from '@legal-mind/database'
 
 ```
 User runs: npm run build:website
-└─ turbo run build --filter=@legal-mind/website
+└─ turbo run build --filter=@agency/website
 
 Turborepo:
-1. Sees --filter=@legal-mind/website
+1. Sees --filter=@agency/website
 2. Determines dependencies:
    ├─ ui (imported in website/package.json)
    ├─ database (imported)
@@ -482,9 +482,9 @@ Turborepo:
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   transpilePackages: [
-    '@legal-mind/ui',
-    '@legal-mind/database',
-    '@legal-mind/validators'
+    '@agency/ui',
+    '@agency/database',
+    '@agency/validators'
   ],
 }
 ```
@@ -492,23 +492,23 @@ const nextConfig: NextConfig = {
 ### Co to robi
 
 ```
-transpilePackages: ['@legal-mind/ui', ...]
+transpilePackages: ['@agency/ui', ...]
 
 Oznacza:
-1. Website sees: import { Button } from '@legal-mind/ui'
+1. Website sees: import { Button } from '@agency/ui'
 2. Normalnie: Error! packages/ nie transpilowane
 3. Next.js setting: transpilePackages
-4. Next.js: Transpile @legal-mind/ui on-build
+4. Next.js: Transpile @agency/ui on-build
 5. Result: Works!
 
 Bez tego:
-❌ import { Button } from '@legal-mind/ui'
+❌ import { Button } from '@agency/ui'
 ❌ Error: Cannot find module
 ❌ Packages nie transpilowane
 ❌ Next.js doesn't know to include them
 
 Z tym:
-✅ import { Button } from '@legal-mind/ui'
+✅ import { Button } from '@agency/ui'
 ✅ Next.js sees in transpilePackages
 ✅ Includes package source in build
 ✅ Transpiles TypeScript
@@ -517,7 +517,7 @@ Z tym:
 Flow:
 1. npm run build:website
 2. Next.js starts build
-3. Sees import from @legal-mind/ui
+3. Sees import from @agency/ui
 4. Checks transpilePackages
 5. Found! Include it
 6. Transpiles packages/ui/src to JS
@@ -560,14 +560,14 @@ Process:
 5. Creates node_modules/:
    ├─ node_modules/react/
    ├─ node_modules/next/
-   ├─ node_modules/@legal-mind/ui/ ← Symlink!
-   ├─ node_modules/@legal-mind/database/ ← Symlink!
-   └─ node_modules/@legal-mind/validators/ ← Symlink!
+   ├─ node_modules/@agency/ui/ ← Symlink!
+   ├─ node_modules/@agency/database/ ← Symlink!
+   └─ node_modules/@agency/validators/ ← Symlink!
 
 6. Symlinks point to:
-   node_modules/@legal-mind/ui → ../../packages/ui/src
-   node_modules/@legal-mind/database → ../../packages/database/src
-   node_modules/@legal-mind/validators → ../../packages/validators/src
+   node_modules/@agency/ui → ../../packages/ui/src
+   node_modules/@agency/database → ../../packages/database/src
+   node_modules/@agency/validators → ../../packages/validators/src
 
 Result:
 ✅ One node_modules
@@ -580,11 +580,11 @@ Result:
 
 ```typescript
 // In apps/website/features/survey/page.tsx
-import { Button } from '@legal-mind/ui'
+import { Button } from '@agency/ui'
 
 Resolution:
-1. Module resolver: @legal-mind/ui
-2. Checks: node_modules/@legal-mind/ui
+1. Module resolver: @agency/ui
+2. Checks: node_modules/@agency/ui
 3. Finds symlink: → ../../packages/ui/src
 4. Reads: packages/ui/src/index.ts
 5. Exports: { Button, ... }
@@ -618,7 +618,7 @@ npm run build:website
 Behind scenes:
 1. Clone full monorepo
 2. npm install (installs all workspaces)
-3. turbo run build --filter=@legal-mind/website
+3. turbo run build --filter=@agency/website
 4. Turbo sees dependencies:
    ├─ Builds database
    ├─ Builds validators
@@ -683,7 +683,7 @@ Key insight:
    Result:
    ├─ Add: export { NewComponent }
    ├─ App code:
-   │  └─ import { NewComponent } from '@legal-mind/ui'
+   │  └─ import { NewComponent } from '@agency/ui'
    ├─ IDE shows autocomplete
    ├─ No build needed!
    ├─ Works immediately
@@ -739,7 +739,7 @@ Solution 1: No duplication
 
 Solution 2: Automatic sync
 ├─ Update packages/ui/
-├─ "@legal-mind/ui": "*"
+├─ "@agency/ui": "*"
 ├─ Both apps use latest immediately
 ├─ No version mismatch
 └─ Impossible to be out of sync!

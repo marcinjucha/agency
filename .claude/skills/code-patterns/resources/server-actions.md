@@ -7,7 +7,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
-import type { Tables, TablesInsert } from '@legal-mind/database'
+import type { Tables, TablesInsert } from '@agency/database'
 
 export async function actionName(
   input: InputType
@@ -38,7 +38,7 @@ export async function actionName(
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
-import type { Tables, TablesInsert } from '@legal-mind/database'
+import type { Tables, TablesInsert } from '@agency/database'
 
 export async function createSurvey(formData: {
   title: string

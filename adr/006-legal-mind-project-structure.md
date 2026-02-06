@@ -1,5 +1,7 @@
 # ADR-006: Legal-Mind Project Structure and Architecture Patterns
 
+> **Note:** This project was renamed to "agency" in February 2026. Historical references to "legal-mind" have been preserved in this ADR as historical context.
+
 **Status:** Accepted
 **Date:** 2025-12-05
 **Context:** Legal-Mind SaaS Platform - Multi-tenant legal intake system
@@ -101,7 +103,7 @@ We need to decide on:
 ### Architecture Overview
 
 ```
-legal-mind/
+agency/
 ├── apps/
 │   ├── website/          # PUBLIC: Marketing + Survey Forms
 │   └── cms/              # ADMIN: Management Panel
@@ -235,7 +237,7 @@ apps/{app-name}/
 
 **Our Shared Packages:**
 
-**@legal-mind/ui**
+**@agency/ui**
 ```typescript
 // Purpose: UI components used in both apps
 // Examples:
@@ -244,20 +246,20 @@ apps/{app-name}/
 - CalendarBooking component (shared logic)
 
 // Usage:
-import { Button, SurveyForm } from '@legal-mind/ui'
+import { Button, SurveyForm } from '@agency/ui'
 ```
 
-**@legal-mind/database**
+**@agency/database**
 ```typescript
 // Purpose: Single source of truth for DB types
 // Auto-generated from Supabase schema
 
 // Usage:
-import type { Database, Tables } from '@legal-mind/database'
+import type { Database, Tables } from '@agency/database'
 type Survey = Tables<'surveys'>
 ```
 
-**@legal-mind/validators**
+**@agency/validators**
 ```typescript
 // Purpose: Shared validation logic
 // Examples:
@@ -265,13 +267,13 @@ type Survey = Tables<'surveys'>
 - Used in: CMS (when creating), Website (when submitting), n8n (webhooks)
 
 // Usage:
-import { surveySchema } from '@legal-mind/validators'
+import { surveySchema } from '@agency/validators'
 ```
 
 **Anti-pattern:**
 ```typescript
-// ❌ Don't create @legal-mind/admin (too app-specific)
-// ❌ Don't create @legal-mind/utils (too generic)
+// ❌ Don't create @agency/admin (too app-specific)
+// ❌ Don't create @agency/utils (too generic)
 // ✅ Keep app-specific logic in apps/{app}/features/
 ```
 
@@ -390,8 +392,8 @@ const { data } = await supabase
 
 **Type-Safe Queries:**
 ```typescript
-// ✅ Always use Database type from @legal-mind/database
-import type { Database } from '@legal-mind/database'
+// ✅ Always use Database type from @agency/database
+import type { Database } from '@agency/database'
 
 const supabase = createClient<Database>()
 
@@ -520,14 +522,14 @@ import { SurveyList } from '@/features/surveys/components/SurveyList'
 import { Navbar } from '@/components/layout/Navbar'
 
 // Shared packages:
-import { Button } from '@legal-mind/ui'
-import type { Database } from '@legal-mind/database'
-import { surveySchema } from '@legal-mind/validators'
+import { Button } from '@agency/ui'
+import type { Database } from '@agency/database'
+import { surveySchema } from '@agency/validators'
 ```
 
 **Rules:**
 - `@/` for same-app imports (features, components, lib)
-- `@legal-mind/*` for cross-app imports (shared packages)
+- `@agency/*` for cross-app imports (shared packages)
 - Relative imports `./` only within same folder
 - No `../../../` (use aliases instead)
 
@@ -626,7 +628,7 @@ export async function POST(req: Request) {
 ```
 packages/{package-name}/
 ├── package.json
-│   ├── name: "@legal-mind/{package-name}"
+│   ├── name: "@agency/{package-name}"
 │   ├── main: "./src/index.ts"
 │   └── dependencies: { ... }
 │
@@ -640,7 +642,7 @@ packages/{package-name}/
 ```
 
 **Rules:**
-- Package name: `@legal-mind/{name}` (scoped)
+- Package name: `@agency/{name}` (scoped)
 - Main entry: `./src/index.ts` (not dist/)
 - Version: `*` in app dependencies (monorepo link)
 - Private: `"private": true` (not published to npm)
@@ -864,7 +866,7 @@ npx shadcn@latest add {component-name}
 echo "export * from './components/{component-name}'" >> src/index.ts
 
 # 3. Use in apps
-import { ComponentName } from '@legal-mind/ui'
+import { ComponentName } from '@agency/ui'
 ```
 
 ### Adding a New Database Table
@@ -904,7 +906,7 @@ const { data } = await supabase.from('{table_name}').select('*')
 
 import { useQuery } from '@tanstack/react-query'
 import { getSurveys } from '../queries'
-import { Button } from '@legal-mind/ui'
+import { Button } from '@agency/ui'
 import Link from 'next/link'
 
 export function SurveyList() {
@@ -1069,7 +1071,7 @@ When adding:
 │                                                      │
 │  IMPORTS                                            │
 │  ├─ Same app   → @/features/...                     │
-│  └─ Packages   → @legal-mind/ui                     │
+│  └─ Packages   → @agency/ui                         │
 └─────────────────────────────────────────────────────┘
 ```
 

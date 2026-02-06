@@ -61,7 +61,7 @@ export function SurveyList() {
 ### queries.ts
 ```typescript
 import { createClient } from '@/lib/supabase/client'
-import type { Tables } from '@legal-mind/database'
+import type { Tables } from '@agency/database'
 
 export async function getSurveys(): Promise<Tables<'surveys'>[]> {
   const supabase = createClient()

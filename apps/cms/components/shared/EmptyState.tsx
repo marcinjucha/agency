@@ -1,6 +1,6 @@
 'use client'
 
-import { Card, cn } from '@legal-mind/ui'
+import { Card, cn } from '@agency/ui'
 import { type LucideIcon } from 'lucide-react'
 
 type EmptyStateProps = {

@@ -5,7 +5,7 @@
  * All queries, validation schemas, and components import from this file.
  *
  * NOTE: Core question types (QuestionType, Question, SurveyAnswers) are imported
- * from @legal-mind/validators/common to ensure consistency across all features.
+ * from @agency/validators/common to ensure consistency across all features.
  *
  * @module apps/website/features/survey/types
  */
@@ -16,7 +16,7 @@ import type {
   SurveyAnswers,
   SurveyData,
   SurveyLinkData,
-} from '@legal-mind/validators'
+} from '@agency/validators'
 
 // Re-export shared types for convenience
 export type { Question, QuestionType, SurveyAnswers, SurveyData, SurveyLinkData }

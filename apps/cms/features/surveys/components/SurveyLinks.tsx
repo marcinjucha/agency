@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getSurveyLinks } from '../queries'
 import { generateSurveyLink, deleteSurveyLink } from '../actions'
-import { Button, Card, Input, Label } from '@legal-mind/ui'
+import { Button, Card, Input, Label } from '@agency/ui'
 import { Link as LinkIcon, Copy, Trash2, Plus, Check } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 

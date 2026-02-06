@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/client'
-import type { Tables } from '@legal-mind/database'
+import type { Tables } from '@agency/database'
 import type { ResponseListItem, ResponseWithRelations, ResponseSurveyLinkContext } from './types'
 
 /**

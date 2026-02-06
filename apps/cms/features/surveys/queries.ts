@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/client'
-import type { Tables } from '@legal-mind/database'
+import type { Tables } from '@agency/database'
 
 /**
  * Fetch all surveys for the current user's tenant

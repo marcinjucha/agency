@@ -35,7 +35,7 @@ npm run dev
 npm run build:cms
 
 # Or with Turbo
-npx turbo run build --filter=@legal-mind/cms
+npx turbo run build --filter=@agency/cms
 ```
 
 ## Environment Variables
@@ -86,7 +86,7 @@ See `/docs/DEPLOYMENT.md` for full instructions.
 - **Framework:** Next.js 16 (App Router)
 - **State Management:** TanStack Query (server state)
 - **Forms:** React Hook Form + Zod
-- **UI:** shadcn/ui components from @legal-mind/ui
+- **UI:** shadcn/ui components from @agency/ui
 - **Database:** Supabase (PostgreSQL + Auth)
 - **Auth:** Supabase Auth with middleware
 - **Styling:** Tailwind CSS

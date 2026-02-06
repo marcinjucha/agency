@@ -3,7 +3,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { getResponse } from '../queries'
 import type { ResponseWithRelations, QuestionAnswerPair } from '../types'
-import { Button, Card, Badge } from '@legal-mind/ui'
+import { Button, Card, Badge } from '@agency/ui'
 import Link from 'next/link'
 import { ArrowLeft, FileX } from 'lucide-react'
 import { getResponseStatusColor } from '@/lib/utils/status'

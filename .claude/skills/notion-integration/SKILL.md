@@ -1,11 +1,11 @@
 ---
 name: notion-integration
-description: Notion workspace integration for Legal-Mind. Use when working with Notion MCP tools, task status updates, or project tracking.
+description: Notion workspace integration for AI Agency. Use when working with Notion MCP tools, task status updates, or project tracking.
 ---
 
 # Notion Integration
 
-**Purpose:** Patterns for Notion MCP integration in Legal-Mind workflows.
+**Purpose:** Patterns for Notion MCP integration in AI Agency workflows.
 
 ---
 

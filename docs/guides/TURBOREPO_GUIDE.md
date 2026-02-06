@@ -132,8 +132,8 @@ Zamiast:
 ```
 Dependency graph:
 
-website → [@legal-mind/ui, @legal-mind/database, @legal-mind/validators]
-cms → [@legal-mind/ui, @legal-mind/database, @legal-mind/validators]
+website → [@agency/ui, @agency/database, @agency/validators]
+cms → [@agency/ui, @agency/database, @agency/validators]
 
 Packages nie zależą od app (One-way dependency!)
 
@@ -155,8 +155,8 @@ Aktualizacja pakietu automatycznie użyta w obu apkach
   "scripts": {
     "dev": "turbo run dev",
     "build": "turbo run build",
-    "dev:website": "turbo run dev --filter=@legal-mind/website",
-    "dev:cms": "turbo run dev --filter=@legal-mind/cms"
+    "dev:website": "turbo run dev --filter=@agency/website",
+    "dev:cms": "turbo run dev --filter=@agency/cms"
   },
   "packageManager": "npm@10.0.0"
 }
@@ -168,14 +168,14 @@ Aktualizacja pakietu automatycznie użyta w obu apkach
 "workspaces": ["apps/*", "packages/*"]
 
 Oznacza:
-├─ apps/website/package.json → @legal-mind/website
-├─ apps/cms/package.json → @legal-mind/cms
-├─ packages/ui/package.json → @legal-mind/ui
-├─ packages/database/package.json → @legal-mind/database
-└─ packages/validators/package.json → @legal-mind/validators
+├─ apps/website/package.json → @agency/website
+├─ apps/cms/package.json → @agency/cms
+├─ packages/ui/package.json → @agency/ui
+├─ packages/database/package.json → @agency/database
+└─ packages/validators/package.json → @agency/validators
 
 Każdy folder z package.json jest workspace-em
-Nazwa w "name" field to @legal-mind/XXX
+Nazwa w "name" field to @agency/XXX
 ```
 
 ### Turbo.json - Pipeline
@@ -236,20 +236,20 @@ Semantic:
 └─ "layout" → Task in this package with "build" dependency
 
 Example for CMS:
-turbo run build --filter=@legal-mind/cms
+turbo run build --filter=@agency/cms
 
 Executes:
-1. turbo run build --filter=@legal-mind/ui (dependency)
-2. turbo run build --filter=@legal-mind/database (dependency)
-3. turbo run build --filter=@legal-mind/validators (dependency)
-4. turbo run build --filter=@legal-mind/cms (the app itself)
+1. turbo run build --filter=@agency/ui (dependency)
+2. turbo run build --filter=@agency/database (dependency)
+3. turbo run build --filter=@agency/validators (dependency)
+4. turbo run build --filter=@agency/cms (the app itself)
 ```
 
 ---
 
 ## Packages & Apps
 
-### Shared Package: @legal-mind/ui
+### Shared Package: @agency/ui
 
 ```typescript
 // packages/ui/src/index.ts
@@ -259,7 +259,7 @@ export { Card, CardHeader, CardContent } from './components/ui/card'
 export { cn } from './lib/utils'
 
 // Usage in apps:
-import { Button } from '@legal-mind/ui'
+import { Button } from '@agency/ui'
 
 // No relative imports needed!
 ```
@@ -281,7 +281,7 @@ Versioning
 ├─ Can pin specific versions (if needed)
 ```
 
-### Shared Package: @legal-mind/database
+### Shared Package: @agency/database
 
 ```typescript
 // packages/database/src/types.ts
@@ -294,7 +294,7 @@ export type Appointment = Tables<'appointments'>
 export * from './types'
 
 // Usage in apps:
-import type { Survey, Response } from '@legal-mind/database'
+import type { Survey, Response } from '@agency/database'
 
 const survey: Survey = { id: '...', title: '...', ... }
 ```
@@ -316,7 +316,7 @@ Reduces duplication
 └─ One package.json for Supabase deps
 ```
 
-### Shared Package: @legal-mind/validators
+### Shared Package: @agency/validators
 
 ```typescript
 // packages/validators/src/survey.ts
@@ -334,7 +334,7 @@ export const SurveySchema = z.object({
 })
 
 // Usage in apps:
-import { SurveySchema } from '@legal-mind/validators'
+import { SurveySchema } from '@agency/validators'
 
 const validated = SurveySchema.parse(data)
 ```
@@ -361,9 +361,9 @@ Type safety
 
 ```typescript
 // In apps/website or apps/cms
-import { Button } from '@legal-mind/ui'
-import type { Survey } from '@legal-mind/database'
-import { SurveySchema } from '@legal-mind/validators'
+import { Button } from '@agency/ui'
+import type { Survey } from '@agency/database'
+import { SurveySchema } from '@agency/validators'
 ```
 
 ### Import Pattern 2: Path Aliases
@@ -408,15 +408,15 @@ apps/cms/
 Import resolution order:
 
 1. Local folder (features/surveys/)
-2. node_modules/@legal-mind/ui → packages/ui/src/
+2. node_modules/@agency/ui → packages/ui/src/
 3. node_modules/react → root/node_modules/react
 4. Alias paths (@/*)
 
 Example:
-import { Button } from '@legal-mind/ui'
+import { Button } from '@agency/ui'
 
 Resolves to:
-root/node_modules/@legal-mind/ui/src/index.ts
+root/node_modules/@agency/ui/src/index.ts
   ↓
 packages/ui/src/index.ts (via npm workspace)
 ```
@@ -450,7 +450,7 @@ Result:
 npm run dev:cms
 
 What happens:
-1. turbo run dev --filter=@legal-mind/cms
+1. turbo run dev --filter=@agency/cms
 2. Only CMS Next.js process starts (port 3001)
 3. Website not running (faster startup)
 
@@ -523,7 +523,7 @@ Website Deployment:
 1. Git push to main
 2. Vercel detected change in apps/website/
 3. Vercel runs: npm run build:website
-   └─ turbo run build --filter=@legal-mind/website
+   └─ turbo run build --filter=@agency/website
 4. Dependencies built automatically
 5. .next/ uploaded to Vercel
 6. Deployed to legal-mind-website.vercel.app
@@ -532,7 +532,7 @@ CMS Deployment:
 1. Git push to main
 2. Vercel detected change in apps/cms/
 3. Vercel runs: npm run build:cms
-   └─ turbo run build --filter=@legal-mind/cms
+   └─ turbo run build --filter=@agency/cms
 4. Dependencies built automatically
 5. .next/ uploaded to Vercel
 6. Deployed to legal-mind-cms.vercel.app
@@ -566,7 +566,7 @@ Benefits:
 1. Create packages/ui/src/components/ui/new-component.tsx
 2. Export in packages/ui/src/index.ts
 3. In apps/cms/...
-   import { NewComponent } from '@legal-mind/ui'
+   import { NewComponent } from '@agency/ui'
    // IDE autocomplete works!
 4. No build step needed (npm run dev transpiles)
 ```
@@ -658,11 +658,11 @@ Turbo Remote Caching (optional)
 ### Problem: Dependency Not Found
 
 ```typescript
-// ❌ ERROR: Cannot find module '@legal-mind/ui'
+// ❌ ERROR: Cannot find module '@agency/ui'
 
 // Solution 1: Verify workspace name
 // packages/ui/package.json
-"name": "@legal-mind/ui"  // Must be exact!
+"name": "@agency/ui"  // Must be exact!
 
 // Solution 2: Check root package.json
 "workspaces": ["apps/*", "packages/*"]  // Must include packages!
@@ -674,13 +674,13 @@ npm install  // Recreates node_modules symlinks
 ### Problem: TypeScript Can't Find Types
 
 ```typescript
-// ❌ ERROR: Cannot find module '@legal-mind/database'
+// ❌ ERROR: Cannot find module '@agency/database'
 
 // Solution: Check next.config.ts
 transpilePackages: [
-  '@legal-mind/ui',
-  '@legal-mind/database',
-  '@legal-mind/validators'
+  '@agency/ui',
+  '@agency/database',
+  '@agency/validators'
 ]  // All packages must be listed!
 ```
 
@@ -699,7 +699,7 @@ npm run build
 # CI must provide all listed env vars
 
 # Solution 3: Check filtered build
-turbo run build --filter=@legal-mind/cms
+turbo run build --filter=@agency/cms
 # If fails, the app has issue
 ```
 
@@ -746,7 +746,7 @@ apps/cms → import from packages/ui (one-way only!)
 ```
 □ All shared code in packages/, not apps/
 □ packages/ don't depend on apps/ (one-way)
-□ Import via @legal-mind/XXX (not relative)
+□ Import via @agency/XXX (not relative)
 □ Next.js transpilePackages updated when adding package
 □ Environment variables in turbo.json globalEnv
 □ Build outputs defined in turbo.json
@@ -779,8 +779,8 @@ npm run lint                  # Lint all
 npm run db:types            # Update database types
 
 # Specific workspace
-turbo run build --filter=@legal-mind/ui
-turbo run dev --filter=@legal-mind/cms
+turbo run build --filter=@agency/ui
+turbo run dev --filter=@agency/cms
 ```
 
 ---

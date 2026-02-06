@@ -30,7 +30,7 @@ Tailwind v4 uses CSS-based configuration with `@theme` directive for color defin
 ### apps/*/app/globals.css
 ```css
 @import "tailwindcss";
-@import "@legal-mind/ui/styles.css";
+@import "@agency/ui/styles.css";
 
 @theme {
   --color-primary: hsl(...);
@@ -148,8 +148,8 @@ npm run dev:cms
 npm run dev:website
 
 # Production
-npm run build --workspace=@legal-mind/cms
-npm run build --workspace=@legal-mind/website
+npm run build --workspace=@agency/cms
+npm run build --workspace=@agency/website
 ```
 
 Cache is automatically managed. Clear with:
@@ -161,7 +161,7 @@ rm -rf apps/*/next
 
 ### Button Variants
 ```tsx
-// From @legal-mind/ui
+// From @agency/ui
 <Button variant="primary">Primary</Button>
 <Button variant="destructive" className="...">Delete</Button>
 ```

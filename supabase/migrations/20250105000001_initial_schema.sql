@@ -1,4 +1,4 @@
--- Legal-Mind Initial Database Schema
+-- AI Agency Initial Database Schema
 -- Creates tables for multi-tenant SaaS platform for law firms
 
 -- Enable pgcrypto extension for gen_random_uuid()

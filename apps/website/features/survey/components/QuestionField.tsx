@@ -15,7 +15,7 @@
 'use client'
 
 import { Control, Controller, UseFormRegister } from 'react-hook-form'
-import { Input, Label } from '@legal-mind/ui'
+import { Input, Label } from '@agency/ui'
 import type { Question, SurveyAnswers } from '../types'
 
 interface QuestionFieldProps {

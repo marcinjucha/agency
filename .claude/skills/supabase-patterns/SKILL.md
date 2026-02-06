@@ -1,11 +1,11 @@
 ---
 name: supabase-patterns
-description: Supabase database patterns for Legal-Mind. Use when working with RLS policies, Supabase clients, migrations, or type regeneration.
+description: Supabase database patterns for AI Agency. Use when working with RLS policies, Supabase clients, migrations, or type regeneration.
 ---
 
 # Supabase Patterns
 
-**Purpose:** Database patterns specific to Legal-Mind multi-tenant architecture.
+**Purpose:** Database patterns specific to AI Agency multi-tenant architecture.
 
 ---
 
@@ -107,7 +107,7 @@ npm run db:types
 
 **Usage:**
 ```typescript
-import type { Tables, TablesInsert } from '@legal-mind/database'
+import type { Tables, TablesInsert } from '@agency/database'
 
 // SELECT result
 type Survey = Tables<'surveys'>

@@ -109,7 +109,7 @@ import { CalendarCheck } from 'lucide-react'
 
 ```typescript
 import { FileText, Plus } from 'lucide-react'
-import { Button } from '@legal-mind/ui'
+import { Button } from '@agency/ui'
 import Link from 'next/link'
 
 <EmptyState

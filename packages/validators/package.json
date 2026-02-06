@@ -1,5 +1,5 @@
 {
-  "name": "@legal-mind/validators",
+  "name": "@agency/validators",
   "version": "0.1.0",
   "private": true,
   "main": "./src/index.ts",

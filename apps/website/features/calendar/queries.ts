@@ -10,7 +10,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
-import type { Tables, Database } from '@legal-mind/database'
+import type { Tables, Database } from '@agency/database'
 
 /**
  * Get survey with associated lawyer information

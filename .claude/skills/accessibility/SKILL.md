@@ -205,7 +205,7 @@ Result: WCAG 2.1 AA compliant, keyboard navigable
 
 // ✅ CORRECT
 <button onClick={handleClick}>Click me</button>
-// Or <Button> from @legal-mind/ui
+// Or <Button> from @agency/ui
 ```
 
 **Why wrong:** Not focusable, no keyboard activation.

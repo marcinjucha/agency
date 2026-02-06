@@ -1,6 +1,6 @@
 # apps/ - Applications Directory
 
-This directory contains the two Next.js applications that make up Legal-Mind.
+This directory contains the two Next.js applications that make up AI Agency.
 
 ## Structure
 
@@ -24,7 +24,7 @@ apps/
 - No authentication required
 
 **Port:** 3000 (development)
-**URL:** https://legal-mind-website.vercel.app (production)
+**URL:** https://agency-website.vercel.app (production)
 
 **When to add code here:**
 - Public-facing pages (anyone can access)
@@ -33,9 +33,9 @@ apps/
 - Landing pages
 
 ### apps/cms/
-**Purpose:** Admin panel for law firms
+**Purpose:** Admin panel for service providers
 
-**Users:** Lawyers, law firm staff (authenticated)
+**Users:** Service providers, staff (authenticated)
 
 **Key Features:**
 - Authentication (login/logout)
@@ -45,7 +45,7 @@ apps/
 - Dashboard analytics
 
 **Port:** 3001 (development)
-**URL:** https://legal-mind-cms.vercel.app (production)
+**URL:** https://agency-cms.vercel.app (production)
 
 **When to add code here:**
 - Admin-only features
@@ -88,5 +88,5 @@ Each app deploys independently to Vercel:
 
 ## Related Documentation
 
-- [ADR-006: Project Structure](../adr/006-legal-mind-project-structure.md)
+- [ADR-006: Project Structure](../adr/006-agency-project-structure.md)
 - [Architecture Overview](../docs/ARCHITECTURE.md)

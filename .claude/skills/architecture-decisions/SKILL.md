@@ -1,11 +1,11 @@
 ---
 name: architecture-decisions
-description: Architecture decisions for Legal-Mind monorepo. Use when understanding project structure, app separation, or cross-cutting concerns.
+description: Architecture decisions for AI Agency monorepo. Use when understanding project structure, app separation, or cross-cutting concerns.
 ---
 
 # Architecture Decisions
 
-**Purpose:** Key architectural decisions and patterns for Legal-Mind monorepo.
+**Purpose:** Key architectural decisions and patterns for AI Agency monorepo.
 
 ---
 
@@ -26,7 +26,7 @@ description: Architecture decisions for Legal-Mind monorepo. Use when understand
 - Independent deployments (CMS change doesn't rebuild website)
 - Different security requirements
 - Different performance characteristics
-- Ready for subdomain split (`app.legalmind.pl`)
+- Ready for subdomain split (`app.agency.com`)
 
 ---
 
@@ -34,9 +34,9 @@ description: Architecture decisions for Legal-Mind monorepo. Use when understand
 
 | Package | Purpose | Impact |
 |---------|---------|--------|
-| `@legal-mind/ui` | shadcn/ui components | UI changes affect both apps |
-| `@legal-mind/database` | Supabase types | Schema change → `npm run db:types` → both apps |
-| `@legal-mind/validators` | Zod schemas | Validation changes affect both apps |
+| `@agency/ui` | shadcn/ui components | UI changes affect both apps |
+| `@agency/database` | Supabase types | Schema change → `npm run db:types` → both apps |
+| `@agency/validators` | Zod schemas | Validation changes affect both apps |
 
 ---
 
@@ -205,8 +205,8 @@ npm run dev
 # CMS: http://localhost:3001
 
 # Build specific app
-turbo build --filter=@legal-mind/website
-turbo build --filter=@legal-mind/cms
+turbo build --filter=@agency/website
+turbo build --filter=@agency/cms
 
 # Regenerate database types
 npm run db:types

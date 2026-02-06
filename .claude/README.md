@@ -1,4 +1,4 @@
-# Legal-Mind Claude Automation
+# AI Agency Claude Automation
 
 > **TL;DR:** Smart workflow system that implements planned features automatically using 8 specialized agents. Run `/implement-phase Phase 2` to execute implementation plan with dependency management, parallelization, and testing.
 

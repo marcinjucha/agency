@@ -11,13 +11,13 @@
  * - Response status tracking
  *
  * NOTE: Shared question types (QuestionType, Question, SurveyAnswers, ResponseStatus)
- * are imported from @legal-mind/validators/common to ensure consistency across
+ * are imported from @agency/validators/common to ensure consistency across
  * survey creation, submission, and response management.
  *
  * @module apps/cms/features/responses/types
  */
 
-import type { Tables } from '@legal-mind/database'
+import type { Tables } from '@agency/database'
 import type {
   Question,
   QuestionType,
@@ -25,7 +25,7 @@ import type {
   SurveyAnswers,
   SurveyData,
   SurveyLinkData,
-} from '@legal-mind/validators'
+} from '@agency/validators'
 
 // Re-export shared types so consumers only import from this file
 export type { Question, QuestionType, ResponseStatus, SurveyAnswers, SurveyData, SurveyLinkData }
@@ -94,7 +94,7 @@ export interface ResponseWithRelations {
    * Values are:
    * - string: for text, textarea, email, tel, select, radio
    * - string[]: for checkbox (multiple selections)
-   * Type matches SurveyAnswers from @legal-mind/validators
+   * Type matches SurveyAnswers from @agency/validators
    */
   answers: SurveyAnswers
   /** AI qualification metadata (null until Phase 5 analysis runs) */

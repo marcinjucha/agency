@@ -7,7 +7,7 @@
  * @module apps/website/features/marketing/components/FeatureCard
  */
 
-import { Card, Badge } from '@legal-mind/ui'
+import { Card, Badge } from '@agency/ui'
 import type { Feature } from '../types'
 import { getIcon } from '../lib/getIcon'
 

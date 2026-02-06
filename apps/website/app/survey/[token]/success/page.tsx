@@ -1,4 +1,4 @@
-import { Card } from '@legal-mind/ui'
+import { Card } from '@agency/ui'
 import { CalendarBooking } from '@/features/survey/components/CalendarBooking'
 
 interface PageProps {

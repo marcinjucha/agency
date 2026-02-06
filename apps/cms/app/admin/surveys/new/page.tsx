@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createSurvey } from '@/features/surveys/actions'
-import { Button, Input, Label, Card } from '@legal-mind/ui'
+import { Button, Input, Label, Card } from '@agency/ui'
 import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 
