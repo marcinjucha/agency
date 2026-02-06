@@ -1,5 +1,19 @@
 # ADR-005: App vs Features Separation (Hybrid Approach)
 
+---
+**⚠️ ARCHIVED - Historical Reference Only**
+
+This ADR is from the **Multi-tenant CMS project** (pre-Agency) and is kept for historical context.
+
+**Why archived:**
+- Written for different project (CMS Panel + Tenant Frontends)
+- Agency uses similar patterns but simpler implementation
+- Pattern now documented in ADR-006 Section 2
+- Concepts valuable, examples not directly applicable
+
+**Current ADRs:** See [/docs/adr/](.) for Agency architecture decisions.
+---
+
 **Status:** Accepted
 **Date:** 2025-01-22
 **Decision Makers:** Architecture Team

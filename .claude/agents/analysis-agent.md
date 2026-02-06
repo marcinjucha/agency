@@ -1,6 +1,5 @@
 ---
 name: analysis-agent
-color: purple
 skills:
   - plan-analysis
   - development-practices

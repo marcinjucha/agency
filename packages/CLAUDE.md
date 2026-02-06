@@ -217,5 +217,5 @@ npm install react
 
 ## Related Documentation
 
-- [ADR-006: Shared Code Pattern](../adr/006-legal-mind-project-structure.md#3-shared-code-pattern)
+- [ADR-006: Shared Code Pattern](../docs/adr/006-agency-project-structure.md#3-shared-code-pattern)
 - [Architecture](../docs/ARCHITECTURE.md)

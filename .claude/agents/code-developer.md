@@ -9,8 +9,7 @@ skills:
   - code-patterns
   - architecture-decisions
   - design-system
-  - n8n-workflow-patterns
-  - ai-model-selection
+  - n8n-workflows
 description: >
   **Use this agent PROACTIVELY** when creating application code - React components, Next.js routes, Server Actions, foundation files, or n8n workflows.
 
@@ -22,7 +21,6 @@ description: >
   - Building forms with React Hook Form
   - TanStack Query usage (CMS only)
   - N8n workflow configuration (webhooks, AI integrations)
-  - AI model selection decisions
 
   Trigger when you hear:
   - "create component"
@@ -34,7 +32,6 @@ description: >
   - "add UI for feature"
   - "create n8n workflow"
   - "integrate AI service"
-  - "choose AI model"
 
 model: inherit
 ---
@@ -52,86 +49,30 @@ Component? → component-patterns
 Route? → route-patterns
 Server Action? → server-action-patterns
 Types/queries/validation? → foundation-patterns
-N8n workflow? → n8n-workflow-patterns
-AI model selection? → ai-model-selection
+N8n workflow? → n8n-workflows
 ```
 
 ### Step 2: Apply Skill Pattern
 
 Consult loaded skill for specific patterns:
 
-- Checkbox arrays? → component-patterns (Controller)
+- Checkbox arrays? → component-patterns (Controller vs register)
 - ADR-005 compliance? → route-patterns (minimal route)
 - Return type? → server-action-patterns (structured)
-- Client selection? → foundation-patterns (Browser vs Server)
+- Client selection? → supabase-patterns (anon/browser/server)
 
-#### Critical: Supabase Client Selection
-
-**Three distinct clients - choose based on context:**
-
-1. **`createAnonClient()`** - Service role (bypasses RLS)
-   - **Location:** `apps/website/lib/supabase/anon-server.ts`
-   - **Use:** Public survey submissions ONLY
-   - **WHY:** No auth context, needs to write to DB without RLS
-   - **Import:** `import { createAnonClient } from '@/lib/supabase/anon-server'`
-   - **Usage:** `const supabase = createAnonClient()` // No await
-
-2. **`createClient()`** - Browser client
-   - **Location:** `apps/cms/lib/supabase/client.ts` (also `website/lib/supabase/client.ts`)
-   - **Use:** CMS client components with TanStack Query
-   - **WHY:** Browser context, user authenticated via cookies
-   - **Import:** `import { createClient } from '@/lib/supabase/client'`
-   - **Usage:** `const supabase = createClient()` // No await
-
-3. **`await createClient()`** - Server client
-   - **Location:** `apps/cms/lib/supabase/server.ts` (also `website/lib/supabase/server.ts`)
-   - **Use:** Server Components, Server Actions, API routes
-   - **WHY:** Server context, needs to read cookies for auth
-   - **Import:** `import { createClient } from '@/lib/supabase/server'`
-   - **Usage:** `const supabase = await createClient()` // AWAIT required!
-
-**Decision criteria:**
-- Public form submission (website) → `createAnonClient()`
-- Client component (CMS) → `createClient()` (no await)
-- Server Action/Component → `await createClient()`
-
-**Anti-pattern:** Using `createClient()` in Server Action (missing await) → auth context undefined, queries fail
-
-#### Critical: Controller vs register Decision
-
-**When to use Controller:**
-
-1. **Checkbox arrays** → Controller (register breaks)
-   - **WHY:** Phase 2 bug - checkbox arrays failed with register
-   - **Pattern:** Multiple checkboxes, array value `name="options"`
-
-2. **Multi-select** → Controller (same reason)
-
-3. **Date picker** → Controller (complex component)
-
-**When to use register:**
-
-- Text/email/number/textarea → register (simpler)
-- Single checkbox → register (not array)
-- Radio buttons → register (not array)
-
-**Decision criteria:**
-- Does field produce array value? → Controller
-- Is component complex (date picker)? → Controller
-- Otherwise → register
-
-**Anti-pattern:** Using register for checkbox arrays → silent failure, values not captured
+**See preloaded skills for detailed decision trees and anti-patterns.**
 
 ### Step 3: Create Code + Output
 
 Use skill patterns to generate code.
 
-**Critical checks:**
+**Critical checks (use preloaded skills):**
 
-- Component: Controller for arrays (see decision tree above), TanStack Query CMS-only, 4 UI states
-- Route: Import from features/, async params
-- Server Action: Structured return, revalidatePath, Server client (`await createClient()`)
-- Foundation: Correct client (see 3-client decision tree above), explicit types, shared types if needed
+- Component: component-patterns (Controller for arrays, 4 UI states)
+- Route: route-patterns (ADR-005 compliance)
+- Server Action: server-action-patterns (structured return, revalidatePath)
+- Foundation: supabase-patterns (client selection), code-patterns (explicit types)
 
 ---
 
@@ -187,10 +128,10 @@ Before output:
 
 **Critical (from skills):**
 
-- Checkbox arrays? → Controller, not register (component-patterns)
+- Checkbox arrays? → Controller (component-patterns)
 - Server Action? → Structured return (server-action-patterns)
 - Route logic? → Move to features/ (route-patterns)
-- Client choice? → Check context (foundation-patterns)
+- Client choice? → Check context (supabase-patterns)
 
 ---
 

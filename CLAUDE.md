@@ -57,9 +57,56 @@ agency/
 
 ---
 
+## Command Quality Standards (Feb 2026)
+
+**Audit Findings:** Commands audited for structure compliance and content quality (signal vs noise).
+
+### Critical Issues Fixed
+
+**implement-phase command:**
+- ❌ **Invented metrics removed** (confirmed by user as fabricated):
+  - "40% → 8% rework rate" - NO SOURCE
+  - "20 minutes average time savings" - NO SOURCE
+  - "Saves ~15 minutes vs sequential" - NO SOURCE
+  - **Action taken:** Deleted entirely (user preference)
+- ❌ **AI-known content reduced:** "Sufficient Context Principle" section 83 lines → 15 lines (82% reduction)
+  - Removed: Generic explanations of agent isolation (Claude already knows)
+  - Kept: Test question, signal/noise filter, project-specific guidance
+
+**manage-git command:**
+- ⚠️ **Structure issues identified** (not yet fixed):
+  - Missing "Clarifying Questions Pattern" section (completely absent)
+  - Phase 0 not inline (performs agent-like complexity analysis)
+  - Commands offered without confirmation loops
+  - Missing Phase Execution Pattern section
+
+### Quality Standards Applied
+
+**Signal vs Noise for Commands:**
+1. **NO invented metrics** - If no real data exists, don't fabricate statistics
+2. **Minimal AI-known content** - Claude understands agent isolation, framework basics
+3. **Project-specific focus** - Document project decisions, not generic patterns
+4. **WHY over HOW** - Include production context for critical decisions
+
+**Compliance Scoring:**
+- `implement-phase`: 7/9 structure compliance → CRITICAL content issues fixed ✅
+- `manage-git`: 3/9 structure compliance → Needs refactoring ⚠️
+
+**Next Actions:**
+- Fix manage-git structure (45 min CRITICAL work remaining)
+- Add production WHY context (requires user input - real incidents)
+
+---
+
 ## Quick Reference
 
 **When working with n8n:**
 1. Infrastructure questions → Check `infra/n8n-vps/`
 2. Workflow patterns → Check `.claude/skills/n8n-workflows/SKILL.md`
 3. Background processing → n8n handles async AI operations (see docs)
+
+**When auditing commands:**
+1. Check for invented metrics (require source attribution)
+2. Apply signal-vs-noise filter (remove AI-known content)
+3. Verify structure compliance (9 required sections from command-creation skill)
+4. Add production WHY context (not just WHAT)

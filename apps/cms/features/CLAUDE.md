@@ -225,5 +225,5 @@ export async function getSurveys() {
 
 ## Related Documentation
 
-- [ADR-005: App vs Features Separation](../../../adr/005-app-vs-features-separation.md)
-- [ADR-006: Component Organization](../../../adr/006-legal-mind-project-structure.md#7-component-organization-pattern)
+- [ADR-005: App vs Features Separation](../../../docs/adr/ARCHIVED-005-app-vs-features-separation.md)
+- [ADR-006: Component Organization](../../../docs/adr/006-agency-project-structure.md#7-component-organization-pattern)

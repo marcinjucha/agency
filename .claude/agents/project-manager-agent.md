@@ -69,17 +69,9 @@ CLAUDE.md update? → claude-md skill
 
 **Notion:**
 
-- Case-sensitive properties (exact match!)
+- Case-sensitive properties (see notion-workflows skill for exact names)
 - Graceful fallbacks (don't block on Notion failure)
 - Status + optional comment
-
-**Notion Property Names (Case-Sensitive):**
-
-- `Status` (capital S) - Values: "To Do", "In Progress", "Done"
-- `Completion Date` (both capitals) - Format: YYYY-MM-DD
-- `Priority` (capital P) - Values: "High", "Medium", "Low"
-- **WHY case matters:** Notion MCP tools fail silently on case mismatch (Phase 2 bug)
-- **Anti-pattern:** Using "status" (lowercase) → update fails silently, no error shown
 
 **Skill Fine-Tuning:**
 

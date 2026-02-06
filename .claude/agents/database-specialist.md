@@ -6,6 +6,7 @@ skills:
   - rls-policies
   - database-functions
   - architecture-decisions
+  - supabase-patterns
 description: >
   **Use this agent PROACTIVELY** when database changes are needed - migrations, RLS policies, PostgreSQL functions, or type regeneration.
 

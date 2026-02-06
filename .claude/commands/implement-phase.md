@@ -1346,7 +1346,6 @@ OUTPUT: YAML`
       - Complex phases (Foundation, Components, Actions, Routes, Verification): 4-5 questions
     - Wait for confirmation ("dokładnie to co chcę")
     - ONLY after confirmation: offer commands (continue/skip/back/stop)
-    - Prevents 40% → 8% rework rate (proven in production)
 
 ### Clarifying Questions Pattern (MANDATORY)
 
@@ -1398,9 +1397,8 @@ Does this match exactly what you want to achieve? If not, what should I adjust?
 **Principle**: Ask enough questions to uncover hidden constraints, not more. Quality over quantity.
 
 **Why mandatory:**
-- Production validation: 40% rework rate WITHOUT pattern → 8% rework rate WITH pattern
-- Root cause: Ambiguous requirements → agent assumptions → output mismatch → wasted phases
 - Clarifying questions catch wrong direction early (Phase N, not Phase N+3)
+- Prevents ambiguous requirements → agent assumptions → output mismatch → wasted phases
 
 **When to apply:**
 - ✅ After Phase 2-11 (agent phases or significant decisions)
@@ -2165,86 +2163,24 @@ Summary:
 
 ## Sufficient Context Principle
 
-**CORE PHILOSOPHY** - Agents have isolated context, need exactly right information.
-
-### Why This Matters
-
-**Agents don't see previous conversation.** Each agent invocation starts fresh. Must provide sufficient context for HIGH QUALITY output, but not noise.
-
-**The Problem:**
-- Too much context → Waste tokens, slow processing, 80% unused
-- Too little context → Generic output, multiple rounds needed, wasted time
-
-**The Solution:** Test question for every context decision.
-
-### The Test Question
-
-**Before passing ANY context to agent, ask:**
+**Test question before passing context to agents:**
 
 ```
 "Can this agent produce HIGH QUALITY output with this context alone?"
 
 If YES → Context is sufficient
-If NO → Add missing CRITICAL information (not everything, just what's missing)
+If NO → Add missing CRITICAL information (not everything)
 ```
-
-**HIGH QUALITY means:**
-- Project-specific (not generic)
-- Follows existing patterns (knows what to match)
-- Meets constraints (knows performance/business rules)
-- Correct placement (knows architecture decisions)
-
-### Signal vs Noise Filter
 
 **SIGNAL (Include):**
-- ✅ **Critical decisions** from previous phases
-  - Example: "Phase 2 decided: Use service pattern, files in features/survey/"
-- ✅ **Constraints** that affect implementation
-  - Example: "RLS required, multi-tenant isolation, anon access for survey links"
-- ✅ **Existing patterns** to follow
-  - Example: "Server Actions use structured returns, queries use browser client"
-- ✅ **Project-specific rules**
-  - Example: "ADR-005: routes in app/, business logic in features/"
+- ✅ Critical decisions from previous phases ("Phase 2: Use service pattern, files in features/survey/")
+- ✅ Constraints affecting implementation ("RLS required, multi-tenant isolation")
+- ✅ Project-specific rules ("ADR-005: routes in app/, business logic in features/")
 
 **NOISE (Exclude):**
-- ❌ **Full previous YAML outputs** (too verbose, extract decisions only)
-  - Example: Don't pass 500-line plan.yaml → Extract 50 lines of critical requirements
-- ❌ **Detailed user stories** (agent doesn't need full context)
-  - Example: "As a user..." → "Must work offline, 40% usage time offline"
-- ❌ **Generic explanations** (Claude knows this)
-  - Example: "Next.js is..." → Just say which pattern to use
-- ❌ **Intermediate analysis** (agent needs conclusions, not process)
-  - Example: "We considered 3 options..." → Just say which option was chosen + WHY
-
-### Application to implement-phase
-
-**Phase 2 → Phase 3 (Database):**
-```
-✅ SUFFICIENT (60 lines):
-- Plan database requirements (tables, RLS policies needed)
-- Execution strategy from Phase 2 (critical path)
-- Existing schema (tables that exist)
-
-❌ TOO MUCH (500 lines):
-- Full plan content with user stories
-- Full Phase 2 YAML output
-- Generic RLS explanations
-```
-
-**Phase 4 → Phase 5 (Components):**
-```
-✅ SUFFICIENT (80 lines):
-- Types created (exports from Phase 4a)
-- Queries created (exports from Phase 4b)
-- Validation created (exports from Phase 4b)
-- Component requirements from plan
-- Existing component patterns
-
-❌ TOO LITTLE (20 lines):
-- "Create SurveyForm component"
-- "Use types from Phase 4"
-[Missing: What types? What queries? What patterns?]
-```
+- ❌ Full previous YAML outputs (extract decisions only: 500 lines → 50 lines)
+- ❌ Generic explanations (Claude knows framework basics)
+- ❌ Intermediate analysis (conclusions only, not process)
 
 ---
 
@@ -2415,7 +2351,7 @@ Phase 8: Task(subagent_type="verification-specialist", description="Verify imple
 - User doesn't realize output doesn't match intent until later phases
 - Rework required (redo phases already completed)
 
-**Real example (40% rework rate before pattern):**
+**Real example:**
 - Phase 2: analysis-agent interpreted "filtering" as in-memory filtering
 - User said "continue" (didn't notice assumption)
 - Phase 3-5: Database, foundation, components all based on in-memory approach
@@ -2448,11 +2384,6 @@ Does this match exactly what you want? If not, what should I adjust?
 Ready to proceed? (continue/skip/back/stop)
 ```
 
-**Production impact:**
-- Before pattern: 40% rework rate (2 out of 5 workflows needed redo)
-- After pattern: 8% rework rate (clarifying questions caught misunderstandings early)
-- Time savings: 20 minutes average per workflow (prevented rework)
-
 **Why clarifying questions work:**
 1. **Paraphrase** forces orchestrator to demonstrate understanding (not just acknowledge)
 2. **3-5 specific questions** (flexible) uncover hidden constraints, edge cases, priorities
@@ -2468,7 +2399,6 @@ Ready to proceed? (continue/skip/back/stop)
 **Parallel Agent Execution:**
 - Create queries.ts + validation.ts simultaneously
 - Foundation agents (code-developer) can run in parallel for independent files
-- Saves ~15 minutes vs sequential execution
 - Example: Phase 4b can parallelize types.ts creation, but queries/validation depend on types
 
 **Specialized Agents:**

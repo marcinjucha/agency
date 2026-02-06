@@ -53,6 +53,86 @@ Generate high-quality conventional commit messages from staged git changes. Anal
 3. **Phase 2 is only user checkpoint** - User accepts/edits/regenerates here
 4. **Abort if nothing staged** - Stop workflow gracefully
 5. **Minimal interaction** - Streamlined flow, no unnecessary questions
+6. **Clarifying questions after Phase 1** - Paraphrase message + 3 questions + confirmation (see pattern below)
+
+---
+
+## Clarifying Questions Pattern (REQUIRED)
+
+**After Phase 1 (message generated), ALWAYS:**
+
+```
+Let me verify my understanding:
+[2-3 sentence paraphrase of generated commit message - title + key points from body]
+
+Clarifying questions:
+1. Does the commit title accurately reflect the main change?
+2. Are the key decisions/impacts in the body clear and complete?
+3. Should I adjust the message tone/length/focus?
+
+Does this match your intent? If not, what should I adjust?
+```
+
+**Wait for user response.** If corrections needed:
+- Apply corrections to message
+- Paraphrase updated message
+- Ask 3 NEW questions about updated version
+- Repeat until user confirms
+
+**Only after confirmation**, offer Phase 2 commands: "Ready to proceed? (accept/edit/regenerate/cancel)"
+
+**Why this pattern:**
+Git commits are permanent history. Questions catch:
+- Wrong focus (implementation details vs business impact)
+- Missing context (WHY not explained)
+- Incorrect categorization (feat vs fix vs refactor)
+
+**Example:**
+
+```
+Let me verify my understanding:
+Generated commit message: "refactor: consolidate agents (8→6)"
+Body explains reduction in context bloat and addition of verification-specialist for catching bugs early.
+
+Clarifying questions:
+1. Title says "refactor" - should this be "feat" since verification-specialist is new functionality?
+2. Body mentions "context bloat" - is this the most important benefit or should I focus on bug detection?
+3. Should I mention specific agents removed or keep it high-level?
+
+Does this match your intent?
+```
+
+---
+
+## Phase Execution Pattern
+
+**Each phase follows this pattern:**
+
+```
+═══════════════════════════════════════════════
+Phase N/M: [Phase Name]
+═══════════════════════════════════════════════
+
+[Execute phase actions]
+
+[If agent phase:]
+  ↓
+  [Apply Clarifying Questions Pattern]
+  ↓
+  [Wait for confirmation]
+
+Ready to proceed? (continue/back/stop)
+```
+
+**Phase Types:**
+
+**Inline Phases (no agent):**
+- Phase 0: Quick status check (staged changes? yes/no)
+- Phase 2: User review/edit loop (accept/edit/regenerate/cancel)
+- Phase 3: Execute commit (git commit + show result)
+
+**Agent Phase:**
+- Phase 1: Message generation (project-manager-agent + clarifying questions)
 
 ---
 
@@ -60,7 +140,7 @@ Generate high-quality conventional commit messages from staged git changes. Anal
 
 ### Phase 0: Context Analysis (Inline)
 
-**Actions:**
+**Quick status check only - no analysis.**
 
 1. Check staged changes:
 ```bash
@@ -68,7 +148,7 @@ git status
 git diff --cached --stat
 ```
 
-2. If nothing staged, stop:
+2. **If nothing staged**, stop workflow:
 ```
 No staged changes detected. Please stage files first:
   git add <file>...
@@ -77,19 +157,24 @@ No staged changes detected. Please stage files first:
 Then run /manage-git again.
 ```
 
-3. If changes staged, continue:
-- Categorize change type: feat / fix / refactor / test / docs / chore / perf
-- Categorize change complexity: SIMPLE or COMPLEX
-  - **SIMPLE:** 1-3 files, single concern, single decision (example: fix typo, add one feature flag, rename variable)
-  - **COMPLEX:** 4+ files, multiple concerns, multiple architecture decisions (example: refactor structure, add new agent, enhance workflow)
-- Extract ticket from branch: `git branch --show-current`
-- Get recent commits for style: `git log --oneline -5`
+3. **If changes staged**, proceed directly to Phase 1.
 
-**Proceed to Phase 1. Pass complexity categorization to agent.**
+**Note:** Complexity categorization, ticket extraction, commit style analysis happens in Phase 1 (agent context). Phase 0 is just a gate: staged changes? yes/no.
 
 ---
 
 ### Phase 1: Message Generation (Agent)
+
+**Before invoking agent, orchestrator gathers context:**
+
+1. Get git diff: `git diff --cached`
+2. Read modified files entirely (not just diff sections)
+3. Categorize change type: feat / fix / refactor / test / docs / chore / perf
+4. Categorize complexity:
+   - **SIMPLE:** 1-3 files, single concern, single decision
+   - **COMPLEX:** 4+ files, multiple concerns, multiple architecture decisions
+5. Extract ticket from branch: `git branch --show-current`
+6. Get recent commits for style: `git log --oneline -5`
 
 **Agent:** project-manager-agent
 
@@ -99,7 +184,8 @@ Then run /manage-git again.
 Input needed:
   - Git diff output (staged changes: git diff --cached)
   - Modified file contents (read each file entirely)
-  - Change categorization (type from Phase 0)
+  - Change categorization (type: feat/fix/refactor/...)
+  - Complexity categorization (SIMPLE or COMPLEX)
   - Ticket number (extracted from branch, or "none")
   - Recent commit style (git log --oneline -5)
 
@@ -161,7 +247,27 @@ Output: Full commit message (title + body)
 - Each paragraph = 1 key decision + business impact
 ```
 
-**Proceed to Phase 2.**
+**After agent completes, apply Clarifying Questions Pattern:**
+
+```
+Let me verify my understanding:
+[2-3 sentence paraphrase of generated commit message - title + key points from body]
+
+Clarifying questions:
+1. Does the commit title accurately reflect the main change?
+2. Are the key decisions/impacts in the body clear and complete?
+3. Should I adjust the message tone/length/focus?
+
+Does this match your intent? If not, what should I adjust?
+```
+
+**Wait for user response.** If corrections needed:
+- Apply corrections to message
+- Show updated message
+- Ask 3 NEW questions about updated version
+- Repeat until user confirms
+
+**Only after confirmation, proceed to Phase 2.**
 
 ---
 

@@ -1,10 +1,10 @@
-# ADR-006: Legal-Mind Project Structure and Architecture Patterns
+# ADR-006: Agency Project Structure and Architecture Patterns
 
-> **Note:** This project was renamed to "agency" in February 2026. Historical references to "legal-mind" have been preserved in this ADR as historical context.
+> **Note:** This project was renamed from "legal-mind" to "agency" in February 2026.
 
 **Status:** Accepted
-**Date:** 2025-12-05
-**Context:** Legal-Mind SaaS Platform - Multi-tenant legal intake system
+**Date:** 2025-12-05 (Last Updated: 2026-02-06)
+**Context:** Agency SaaS Platform - Multi-tenant legal intake system
 **Deciders:** Marcin Jucha
 
 ---
@@ -1012,9 +1012,9 @@ features/{feature}/__tests__/
 
 ## Related ADRs
 
-- [ADR-001: Monorepo Structure](./001-monorepo-structure.md) - Original Turborepo decision (from multi-tenant CMS)
-- [ADR-005: App vs Features Separation](./005-app-vs-features-separation.md) - Folder organization pattern
-- [ADR-006: Legal-Mind Project Structure](./006-legal-mind-project-structure.md) - This document
+- [ARCHIVED-001: Monorepo Structure](./ARCHIVED-001-monorepo-structure.md) - Historical reference from Multi-tenant CMS project
+- [ARCHIVED-005: App vs Features Separation](./ARCHIVED-005-app-vs-features-separation.md) - Pattern now in ADR-006 Section 2, from Multi-tenant CMS project
+- [ADR-007: N8n Background Processing](./007-n8n-background-processing.md) - AI workflow automation
 
 ---
 

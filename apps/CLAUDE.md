@@ -88,5 +88,5 @@ Each app deploys independently to Vercel:
 
 ## Related Documentation
 
-- [ADR-006: Project Structure](../adr/006-agency-project-structure.md)
+- [ADR-006: Project Structure](../docs/adr/006-agency-project-structure.md)
 - [Architecture Overview](../docs/ARCHITECTURE.md)

@@ -49,42 +49,9 @@ Visual design (spacing, typography, responsive)? → visual-design skill
 - Check shadcn/ui usage (no custom buttons)
 - Verify theme tokens (no arbitrary colors)
 - Check spacing scale (4px base)
+- Verify interactive states (hover/focus/disabled)
 
-**Project Design System Values:**
-
-**Spacing Scale (4px base):**
-
-- `gap-2` = 8px
-- `gap-4` = 16px (most common)
-- `gap-6` = 24px
-- `gap-8` = 32px
-- `p-4` = 16px padding
-- `mt-6` = 24px margin-top
-
-**Typography:**
-
-- `text-sm` = 14px (secondary text)
-- `text-base` = 16px (body text)
-- `text-lg` = 18px (emphasized)
-- `text-xl` = 20px (headings)
-- `text-4xl` = 36px (page titles)
-
-**Theme Tokens (from globals.css):**
-
-- `bg-primary` - Primary brand color
-- `bg-muted` - Secondary background
-- `text-foreground` - Primary text
-- `text-muted-foreground` - Secondary text
-- `border` - Border color
-- `ring` - Focus ring color
-
-**Interactive States:**
-
-- `hover:` - All interactive elements must have hover state
-- `focus:ring-2` - Keyboard focus visible
-- `disabled:opacity-50` - Disabled state clear
-- `data-[state=loading]:` - Loading indicators
-- Error states use `destructive` variant
+**See design-system skill for complete values (spacing, typography, theme tokens, states).**
 
 **Accessibility:**
 

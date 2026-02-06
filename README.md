@@ -197,7 +197,18 @@ See `supabase/seed_first_user.sql` for detailed instructions.
 - [Architecture](./docs/ARCHITECTURE.md) - System design overview
 - [Deployment](./docs/DEPLOYMENT.md) - Vercel setup guide
 - [Implementation Status](./docs/IMPLEMENTATION_STATUS.md) - Current progress
-- [ADR-006](./adr/006-agency-project-structure.md) - Project patterns
+
+### Architecture Decisions
+
+See [/docs/adr/](./docs/adr/) for all Architecture Decision Records:
+
+**Active ADRs:**
+- [ADR-006: Agency Project Structure](./docs/adr/006-agency-project-structure.md) - Monorepo, features/, state management, database patterns
+- [ADR-007: N8n Background Processing](./docs/adr/007-n8n-background-processing.md) - AI workflow automation, queue mode, Claude Haiku
+
+**Historical Reference:**
+- [ARCHIVED-001: Monorepo Structure](./docs/adr/ARCHIVED-001-monorepo-structure.md) - Turborepo patterns from Multi-tenant CMS
+- [ARCHIVED-005: App vs Features](./docs/adr/ARCHIVED-005-app-vs-features-separation.md) - Folder structure pattern (now in ADR-006 Section 2)
 
 ---
 

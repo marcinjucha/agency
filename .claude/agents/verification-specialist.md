@@ -94,126 +94,32 @@ Risk if missing: HIGH (broken functionality)
 
 **Critical patterns to check:**
 
-1. **Controller for checkboxes** (not register):
+See preloaded skills for detailed patterns:
+- **component-patterns** - Controller for checkboxes (register breaks with arrays)
+- **server-action-patterns** - Structured returns (no throws), revalidatePath
+- **supabase-patterns** - Client selection (anon/browser/server)
 
-   ```tsx
-   ❌ <input {...register('checkbox')} />  // Data loss bug
-   ✅ <Controller name="checkbox" control={control} />
-   ```
-
-   Risk: HIGH (data loss on form submit)
-
-2. **revalidatePath after mutations**:
-
-   ```tsx
-   ❌ export async function updateSurvey() { await db.update(...) }
-   ✅ export async function updateSurvey() {
-        await db.update(...)
-        revalidatePath('/admin/surveys')
-      }
-   ```
-
-   Risk: HIGH (stale cache, users see old data)
-
-3. **Structured returns (no throws)**:
-
-   ```tsx
-   ❌ export async function submitSurvey() { throw new Error() }
-   ✅ export async function submitSurvey() {
-        return { success: false, error: 'Message' }
-      }
-   ```
-
-   Risk: CRITICAL (app crashes on error)
-
-4. **Correct Supabase client**:
-   ```tsx
-   Public forms → createAnonClient()
-   CMS client components → createClient() (no await)
-   Server Actions → await createClient()
-   ```
-   Risk: HIGH (auth/permission errors)
+Risk levels: CRITICAL (throws), HIGH (data loss, stale cache, wrong client)
 
 #### 2.3 Architectural Compliance
 
-**ADR-005: Routes minimal, logic in features/**
+**Check against preloaded skills:**
 
-Check `app/` routes:
+- **route-patterns** - ADR-005: Routes minimal, logic in features/
+- **supabase-patterns** - Client selection (anon/browser/server)
+- **rls-policies** - No subqueries (infinite recursion), use helper functions
 
-```tsx
-❌ app/admin/surveys/page.tsx:
-   const surveys = await supabase.from('surveys').select()  // Logic in route
-
-✅ app/admin/surveys/page.tsx:
-   const surveys = await getSurveys()  // Import from features/
-```
-
-Risk: MEDIUM (architecture violation, harder to test)
-
-**Client Selection Decision Tree:**
-
-```
-Context?
-├─ Public form (unauthenticated) → createAnonClient()
-├─ CMS client component (auth required) → createClient()
-└─ Server Action/Component → await createClient()
-```
-
-**RLS Patterns:**
-
-Check policies for:
-
-- [ ] No subqueries in policies (infinite recursion)
-- [ ] Helper functions with SECURITY DEFINER
-- [ ] tenant_id isolation enforced
-
-```sql
-❌ CREATE POLICY bad_policy AS (
-     SELECT tenant_id FROM users WHERE id = auth.uid()
-   );  // Infinite recursion
-
-✅ CREATE POLICY good_policy AS (
-     auth.uid() IN (SELECT user_id FROM get_user_tenants())
-   );  // Helper function
-```
-
-Risk: CRITICAL (infinite loops crash DB)
+Risk levels: CRITICAL (RLS infinite recursion), MEDIUM (ADR violations)
 
 #### 2.4 Code Quality
 
-**UI States (all 4 required):**
+**Check against preloaded skills:**
 
-- [ ] Loading state (Skeleton, Spinner)
-- [ ] Error state (error message, retry button)
-- [ ] Empty state (helpful message, CTA)
-- [ ] Success state (data display)
+- **component-patterns** - UI States (loading/error/empty/success)
+- **code-patterns** - Types explicit (not inferred), error handling graceful
+- **code-validation** - Completeness (no TODOs, imports resolve)
 
-**Types explicit (not inferred):**
-
-```tsx
-❌ const surveys = await getSurveys()  // Inferred
-✅ const surveys: Survey[] = await getSurveys()  // Explicit
-```
-
-Risk: MEDIUM (type safety, refactoring issues)
-
-**Error handling graceful:**
-
-```tsx
-❌ catch (error) { console.error(error) }  // Silent failure
-✅ catch (error) {
-     return { success: false, error: 'Failed to load surveys' }
-   }
-```
-
-Risk: HIGH (poor UX, debugging difficulty)
-
-**Completeness:**
-
-- [ ] All planned files created
-- [ ] No TODO comments left
-- [ ] No commented-out code
-- [ ] All imports resolve
+Risk levels: HIGH (poor error handling), MEDIUM (type safety)
 
 ### Step 3: Report Violations
 
