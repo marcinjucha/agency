@@ -17,22 +17,14 @@ ADR-005 architectural rule: app/ for routing ONLY, features/ for business logic.
 
 ## Critical Pattern: ADR-005 Separation
 
-### The Rule
+**Rule:** app/ = routing ONLY, features/ = business logic
 
-```
-app/              → Routing ONLY (imports from features/)
-features/         → Business logic (components, actions, queries)
-```
-
-**Why this exists:**
-- Previous approach: logic in app/ → hard to reuse, deep nesting
-- New approach: logic in features/ → reusable, clear ownership
-- ADR-005 decision: Hybrid (Next.js routing + feature separation)
+**Why (ADR-005):** Previous approach mixed logic in app/ → hard to reuse. New: logic in features/ → reusable, clear ownership.
 
 ### Minimal Route Pattern
 
 ```typescript
-// ✅ CORRECT: app/admin/surveys/page.tsx
+// ✅: app/admin/surveys/page.tsx
 import { SurveyList } from '@/features/surveys/components/SurveyList'
 
 export default function SurveysPage() {
@@ -47,7 +39,6 @@ export default function SurveysPage() {
 ```
 
 ```typescript
-// ❌ WRONG: Logic in route
 export default async function SurveysPage() {
   const supabase = await createClient()
   const { data } = await supabase.from('surveys').select('*')
@@ -67,25 +58,14 @@ export default async function SurveysPage() {
 
 ### Next.js 15 Async Params
 
-**Project-specific requirement:**
+**Pattern:** params is Promise, must await
 
 ```typescript
-// ❌ WRONG - Next.js 14 style
-export default function Page({ params }: { params: { token: string } }) {
-  const token = params.token  // Breaks in Next.js 15!
-}
-
-// ✅ CORRECT - Next.js 15
-type PageProps = {
-  params: Promise<{ token: string }>
-}
-
-export default async function Page({ params }: PageProps) {
+// ✅ - Next.js 15
+export default async function Page({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params  // AWAIT required
 }
 ```
-
-**Why:** Next.js 15 changed params to Promise (async rendering optimization)
 
 ## Quick Reference
 

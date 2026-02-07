@@ -19,7 +19,7 @@ if (isExpired) {
 }
 ```
 
-**Impact:** Prevents ~40% of "token expired" errors that occurred without buffer.
+**Impact:** Significantly reduces "token expired" errors by refreshing before expiry.
 
 ### Dependency Injection for refreshAccessToken
 
@@ -88,7 +88,7 @@ console.log('[TOKEN MANAGER] Token expired, refreshing...')
 console.log('[BOOKING API] Token retrieved, length:', token.length)
 ```
 
-**Impact:** Reduced debug time from 20+ minutes to <5 minutes.
+**Impact:** Significantly reduced debug time by making token flow visible.
 
 ### Not Testing with Real OAuth Tokens
 

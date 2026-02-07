@@ -5,7 +5,9 @@ description: AI Agency development practices and decision frameworks. Use when m
 
 # Development Practices
 
-**Purpose:** Project-specific development practices and decision frameworks for AI Agency.
+## Purpose
+
+Project-specific development practices and decision frameworks for AI Agency.
 
 ---
 
@@ -39,35 +41,6 @@ test('expired survey link shows error to client', async () => {
 })
 ```
 
-### ❌ Skip These Tests
-
-```typescript
-// Obvious property (fails Q2, Q3)
-test('survey has title', () => {
-  const survey = { title: 'Test' }
-  expect(survey.title).toBe('Test')
-})
-
-// Implementation detail (fails Q1)
-test('getSurveys calls supabase.from', async () => {
-  const spy = vi.spyOn(supabase, 'from')
-  await getSurveys()
-  expect(spy).toHaveBeenCalledWith('surveys')
-})
-```
-
-### Testing ROI Comparison
-
-**Comprehensive approach:**
-- 20 tests, 95% coverage
-- 3 catch real bugs, 17 test obvious code
-- Time: 150 min
-
-**Signal-first approach:**
-- 5 tests, 65% coverage
-- 5 catch real bugs, 0 test obvious code
-- Time: 50 min
-- **Result: Catch MORE bugs in LESS time (3x ROI)**
 
 ---
 
@@ -79,68 +52,15 @@ test('getSurveys calls supabase.from', async () => {
 
 **Database N+1 Queries (30%):**
 
-```typescript
-// ❌ P0 ISSUE - 100 queries
-for (const survey of surveys) {
-  const links = await supabase
-    .from('survey_links')
-    .select('*')
-    .eq('survey_id', survey.id)  // Separate query per survey!
-}
-// Impact: 1s → 10s
-
-// ✅ FIX - 1 query with join
-const { data } = await supabase
-  .from('surveys')
-  .select(`
-    *,
-    survey_links(*)
-  `)
-// Impact: 10s → 100ms (100x faster)
-```
+Avoid separate queries per item. Use joins to fetch related data in one query.
 
 **Large Data Serialization (30%):**
 
-```typescript
-// ❌ P0 ISSUE - Serialize huge objects
-export async function getResponses() {
-  const { data } = await supabase
-    .from('responses')
-    .select('*')  // Returns all JSONB data!
-  return data  // 5MB JSON serialized to client
-}
-// Impact: 5s load time
-
-// ✅ FIX - Select only needed fields
-export async function getResponses() {
-  const { data } = await supabase
-    .from('responses')
-    .select('id, status, created_at, survey_links(survey_id)')
-  return data  // 50KB
-}
-// Impact: 5s → 500ms (10x faster)
-```
+Select only needed fields, not `SELECT *`. Reduces payload size and improves load time.
 
 **Missing TanStack Query Cache (10%):**
 
-```typescript
-// ❌ P0 ISSUE - No caching (CMS app)
-function SurveyList() {
-  const [surveys, setSurveys] = useState([])
-  useEffect(() => {
-    getSurveys().then(setSurveys)  // Fetches every render!
-  }, [])
-}
-
-// ✅ FIX - TanStack Query
-function SurveyList() {
-  const { data: surveys } = useQuery({
-    queryKey: ['surveys'],
-    queryFn: getSurveys,
-    staleTime: 5 * 60 * 1000  // Cache 5 min
-  })
-}
-```
+Use TanStack Query in CMS app for automatic caching and request deduplication.
 
 ### P1 - Engineering Quality (20% of time)
 - Unnecessary re-renders
@@ -207,22 +127,6 @@ apps/cms/features/surveys/actions.ts
 apps/cms/features/responses/queries.ts
 ```
 
-### Abstractions: Wait for 2+ Uses
-
-**Don't abstract until concrete second use:**
-
-```typescript
-// Feature 1: Survey filtering
-// ❌ DON'T create generic FilterService<T>
-// (Don't know pattern yet)
-
-// Feature 2: Response filtering
-// ✅ NOW create FilterService<T>
-// (Pattern is clear)
-```
-
-**Remember:** Duplication sometimes better than wrong abstraction.
-
 ### External Service Integration (Fire-and-Forget)
 
 **Pattern:** Don't block user requests for long-running external operations.
@@ -262,191 +166,18 @@ return Response.json({ success: true })
 
 ---
 
-## Comments & Logging
+## Monorepo Structure (ADR-005)
 
-### Comments: Only WHY (Never WHAT)
-
-**✅ Good Comments:**
-
-```typescript
-// Split query to avoid RLS infinite recursion
-// Anon queries surveys → RLS checks survey_links → Database loop
-const { data: link } = await supabase
-  .from('survey_links')
-  .select('*')
-  .eq('token', token)
-  .single()
-
-// Revalidate after mutation to bust Next.js cache
-// Without this, list shows stale data until manual refresh
-revalidatePath('/admin/surveys')
-
-// Max 100 submissions per link to prevent abuse
-// Based on typical law firm intake (10-50 clients/month)
-const MAX_SUBMISSIONS = 100
-```
-
-**❌ Bad Comments:**
-
-```typescript
-// Fetch surveys
-const surveys = await getSurveys()
-
-// Set loading to true
-setIsLoading(true)
-
-// Loop through surveys
-surveys.forEach((survey) => console.log(survey.title))
-```
-
-### Logging: Errors + Milestones Only
-
-**✅ Good Logging:**
-
-```typescript
-console.info(`Survey created: surveyId=${id}, tenantId=${tenantId}`)
-console.error(`Form submission failed: linkToken=${token}, error=${error.message}`)
-console.info(`Link generated: surveyId=${surveyId}, expiresAt=${expiresAt}`)
-```
-
-**❌ Bad Logging:**
-
-```typescript
-console.debug('Entering getSurveys()')
-console.debug('Fetching from supabase')
-console.debug(`x = ${x}, y = ${y}`)
-console.debug('Exiting getSurveys()')
-```
-
-**Why bad:** Buries errors in noise, obvious from execution flow.
-
----
-
-## Monorepo Structure
-
-```
-legal-mind/
-├── apps/
-│   ├── website/           # Public app (no auth)
-│   │   ├── app/          # Next.js routes
-│   │   ├── features/     # Feature logic (ADR-005)
-│   │   └── lib/          # App utilities
-│   │
-│   └── cms/              # Admin app (auth required)
-│       ├── app/          # Next.js routes
-│       ├── features/     # Feature logic (ADR-005)
-│       └── lib/          # App utilities
-│
-├── packages/
-│   ├── ui/               # Shared shadcn/ui components
-│   ├── database/         # Supabase types
-│   └── validators/       # Zod schemas
-│
-└── supabase/
-    └── migrations/       # Database schema
-```
-
----
-
-## Feature Structure (ADR-005)
-
-**Rule:** `app/` = Routing, `features/` = Logic
+**Rule:** `app/` = Routing ONLY, `features/` = Logic
 
 ```
 apps/cms/features/surveys/
-├── components/
-│   ├── SurveyList.tsx       # List view
-│   ├── SurveyBuilder.tsx    # Edit form
-│   └── SurveyLinks.tsx      # Link management
-├── actions.ts               # Server Actions (create, update, delete)
-├── queries.ts               # Data fetching (read)
-├── types.ts                 # TypeScript types (optional)
-└── validation.ts            # Zod schemas (optional)
+├── components/          # UI
+├── actions.ts          # Server Actions
+└── queries.ts          # Data fetching
 ```
 
-**Route Structure:**
-
-```
-apps/cms/app/admin/surveys/
-├── page.tsx                 # List page (imports SurveyList)
-├── new/page.tsx            # Create page
-└── [id]/page.tsx           # Edit page
-```
-
-**Example Route (minimal code):**
-
-```typescript
-// apps/cms/app/admin/surveys/page.tsx
-import { SurveyList } from '@/features/surveys/components/SurveyList'
-
-export default function SurveysPage() {
-  return (
-    <div>
-      <h1>Surveys</h1>
-      <SurveyList />
-    </div>
-  )
-}
-```
-
-**Key Points:**
-- ✅ `app/` folder = routing ONLY (minimal code)
-- ✅ `features/` folder = business logic
-- ✅ Group by feature, not by type
-
----
-
-## Decision Flowcharts
-
-### Should I Write This Test?
-
-```
-Q1: Business outcome? ──NO→ SKIP
-    ↓ YES
-Q2: Production risk? ──NO→ SKIP
-    ↓ YES
-Q3: Non-trivial logic? ──NO→ SKIP
-    ↓ YES
-WRITE TEST
-```
-
-### Which Layers Does Feature Need?
-
-```
-Where is it used?
-├─ Both apps (CMS + Website) → Shared package
-└─ One app → App feature folder
-
-Complex algorithm?
-├─ YES → Add service layer
-└─ NO → Actions + Queries enough
-
-Result: 2-4 layers (not always 4)
-```
-
-### Should I Optimize This?
-
-```
-Measure impact
-    ↓
-P0 (database, serialization, cache)? ──YES→ FIX NOW
-    ↓ NO
-P1 (re-renders, RSC)? ──YES→ FIX IF TIME
-    ↓ NO
-P2 (minor tweaks)? ──YES→ SKIP
-```
-
-### Where Should Code Live?
-
-```
-Used by 2+ apps NOW?
-├─ YES → Shared package (packages/*)
-│         export from index.ts
-└─ NO → App feature folder (apps/*/features/)
-          internal, not exported
-
-When 2nd app needs it → Move to shared package
-```
+**Why:** Enables code reuse, prevents mixing concerns
 
 ---
 

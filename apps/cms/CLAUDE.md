@@ -83,20 +83,11 @@ apps/cms/
 
 ### app/ - Routing Only
 ```typescript
-// ✅ GOOD: Minimal logic, imports from features/
+// Minimal logic, imports from features/
 import { SurveyList } from '@/features/surveys/components/SurveyList'
 
 export default function SurveysPage() {
   return <SurveyList />
-}
-```
-
-```typescript
-// ❌ BAD: Business logic mixed in
-export default function SurveysPage() {
-  const [surveys, setSurveys] = useState([])
-  useEffect(() => { /* fetch logic */ }, [])
-  return <div>{/* rendering */}</div>
 }
 ```
 

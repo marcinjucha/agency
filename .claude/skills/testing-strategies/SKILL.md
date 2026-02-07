@@ -20,70 +20,22 @@ Manual testing strategy: P0/P1/P2 severity classification, edge case patterns, h
 
 ### P0/P1/P2 Severity Classification
 
-**Project standard:**
-
 ```yaml
-P0 (Critical - blocks core functionality):
-  - Feature completely broken
-  - Data loss or corruption
-  - Security vulnerability
-  - Crashes entire app
-  Example: Survey submission fails → users can't submit
-
-P1 (Important - degrades UX significantly):
-  - Feature partially broken
-  - Major UX degradation
-  - Error messages unclear
-  Example: Checkbox arrays store only last value → data incomplete
-
-P2 (Minor - cosmetic or edge case):
-  - Visual inconsistency
-  - Minor UX improvement
-  - Rare edge case
-  Example: Loading spinner color slightly off
+P0 (Critical): Feature broken, data loss, crashes
+P1 (Important): Partial breakage, major UX degradation
+P2 (Minor): Cosmetic, rare edge case
 ```
-
-**Why classification matters:** Prioritize fixes (P0 first, P2 optional)
 
 ### Edge Case Patterns
 
-**Common edge cases to test:**
+**Common edge cases:**
+- Validation: Empty input, max length, invalid format
+- State: Loading, error, empty, success
+- Time: Expired links, future/past dates
+- Limits: Max reached, rate limiting
+- Permissions: Wrong tenant, public vs private
 
-```yaml
-Validation:
-  - Empty input (required fields)
-  - Max length exceeded
-  - Invalid format (email, phone)
-  - Special characters
-
-State:
-  - Loading state
-  - Error state
-  - Empty state (no data)
-  - Success state
-
-Time:
-  - Expired links
-  - Future dates
-  - Past dates
-  - Timezone edge cases
-
-Limits:
-  - Max submissions reached
-  - Rate limiting
-  - Database constraints
-
-Permissions:
-  - Unauthenticated access
-  - Wrong tenant access
-  - Public vs private data
-```
-
-**From Phase 2 Survey:**
-- Expired survey links ✅ Tested
-- Max submissions reached ✅ Tested
-- Invalid question types ✅ Tested
-- Empty question arrays ⚠️ Missed (caused P1 bug)
+**Phase 2 example:** Empty question arrays ⚠️ Missed (caused P1 bug)
 
 ### Holistic Testing Approach
 
@@ -158,83 +110,7 @@ npm run dev
 ## Real Project Examples
 
 **Phase 2 Survey Testing:**
+- ✅ P0: Submission works, validation, multi-tenant isolation
+- ✅ P1: Expired links, max submissions, checkbox arrays
+- ⚠️ Missed: Empty questions array (caused P1 bug)
 
-```yaml
-P0 Tests:
-  ✅ Survey submission works
-  ✅ Validation prevents invalid data
-  ✅ Multi-tenant isolation (lawyer A can't see lawyer B's surveys)
-
-P1 Tests:
-  ✅ Expired links show error message
-  ✅ Max submissions enforced
-  ✅ Checkbox arrays store multiple values
-  ⚠️ Empty questions array (missed - caused P1 bug)
-
-P2 Tests:
-  ✅ Loading states present
-  ⚠️ Empty state design (skipped - acceptable)
-
-Result: 90% P0/P1 coverage, caught critical bugs before production
-```
-
-**Bug caught:** Checkbox register (P1) - would've been data loss in production
-
-## Anti-Patterns
-
-### ❌ Testing Trivial Cases
-
-**Problem:** Wasting time on obvious scenarios
-
-```yaml
-# ❌ NOISE: Testing obvious behavior
-- Test: Input field accepts text
-- Test: Button is clickable
-- Test: Text displays correctly
-
-# ✅ SIGNAL: Testing business logic
-- Test: Expired link shows error
-- Test: Max submissions enforced
-- Test: Multi-tenant data isolated
-```
-
-**Why wrong:** Time wasted on trivial cases instead of edge cases
-
-### ❌ Missing Edge Cases
-
-**Problem:** Only testing happy path
-
-```yaml
-# ❌ WRONG: Only happy path
-Test 1: Submit valid survey → Success ✅
-[End of testing]
-
-# ✅ CORRECT: Happy + edge cases
-Test 1: Submit valid survey → Success ✅
-Test 2: Submit with expired link → Error message ✅
-Test 3: Submit when max reached → Error message ✅
-Test 4: Submit without required fields → Validation error ✅
-Test 5: Submit as wrong tenant → 403 error ✅
-```
-
-**Why wrong:** Edge cases cause P0/P1 bugs in production
-
-### ❌ No Severity Classification
-
-**Problem:** Fixing P2 bugs before P0
-
-```yaml
-# ❌ WRONG: No priority
-Bug 1: Button color off → Fixed first
-Bug 2: Survey submission broken → Fixed later (P0!)
-
-# ✅ CORRECT: Severity-based
-Bug 1: Survey submission broken (P0) → Fix immediately
-Bug 2: Button color off (P2) → Fix later or skip
-```
-
-**Why wrong:** P0 bugs block users, must be fixed first
-
----
-
-**Key Lesson:** Classify severity (P0 > P1 > P2), test edge cases, skip trivial scenarios (signal vs noise).

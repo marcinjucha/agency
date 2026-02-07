@@ -22,31 +22,8 @@ Project-specific React patterns that prevent real bugs: Controller for checkboxe
 **Real bug from Phase 2:** register for checkboxes stored only last value, not array
 
 ```typescript
-// ❌ WRONG - Stores "C" not ["A","B","C"]
-<input type="checkbox" {...register('field')} />
-
-// ✅ CORRECT - Stores array
-import { Controller } from 'react-hook-form'
-
-<Controller
-  name="field"
-  control={control}
-  defaultValue={[]}
-  render={({ field }) => (
-    <input
-      type="checkbox"
-      checked={field.value?.includes(option)}
-      onChange={(e) => {
-        const values = field.value || []
-        field.onChange(
-          e.target.checked
-            ? [...values, option]
-            : values.filter(v => v !== option)
-        )
-      }}
-    />
-  )}
-/>
+❌ register('field')  // Stores single value
+✅ Controller with array handling
 ```
 
 **Why:** `register` = single value, Controller = array handling
@@ -55,7 +32,7 @@ import { Controller } from 'react-hook-form'
 
 **Project rule:**
 - ✅ `apps/cms/` - Use TanStack Query (admin benefits from cache)
-- ❌ `apps/website/` - NO TanStack Query (public = Server Components)
+- `apps/website/` - NO TanStack Query (public = Server Components)
 
 ```typescript
 // ✅ CMS: Use useQuery
@@ -87,18 +64,13 @@ return <SuccessView data={data} />
 
 ## Quick Reference
 
-**register vs Controller:**
-- `register` - text, email, tel, number, textarea, select, radio
-- `Controller` - checkbox (arrays), multi-select, custom components
+**Decision Rule:**
+- Array/custom input → Controller
+- Text/single value → register
 
-**TanStack Query:**
-- CMS app: YES (useQuery)
-- Website app: NO (Server Components)
+**TanStack Query:** CMS only (not Website)
 
-**Checklist:**
-- [ ] Controller for checkbox arrays (NOT register)
-- [ ] TanStack Query ONLY in CMS
-- [ ] All 4 states (loading, error, empty, success)
+**UI States:** Loading, Error, Empty, Success
 
 ## Real Bugs Fixed
 

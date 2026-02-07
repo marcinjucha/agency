@@ -100,8 +100,6 @@ fetch(process.env.N8N_WEBHOOK_URL, {
 - GPT-4: $300/month
 - **Savings: $292/month**
 
-**Quality difference:** Haiku scores correlate 95% with GPT-4 scores in Polish legal domain testing (n=50 samples).
-
 **Why not hybrid?** Original plan: GPT-4 for quick analysis, Claude for summaries. Testing showed Haiku alone sufficient for both → simplified to single model.
 
 ## Critical Mistakes We Made
@@ -126,7 +124,7 @@ environment:
 2. Worker picks job from Redis queue → executes workflow → updates database
 3. User never waits for AI analysis
 
-**Impact:** Response time improved from 5-8s → <200ms (40x faster perceived performance).
+**Impact:** Response time improved from 5-8s → <200ms (perceived as instant).
 
 **Time wasted:** 2 hours debugging "slow webhooks" before discovering queue mode.
 

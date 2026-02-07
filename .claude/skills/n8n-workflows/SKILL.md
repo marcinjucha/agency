@@ -5,7 +5,9 @@ description: N8n workflow patterns for AI Agency. Use when implementing backgrou
 
 # N8n Workflows
 
-**Purpose:** Background AI processing for survey responses (Claude Haiku + Supabase).
+## Purpose
+
+Background AI processing for survey responses (Claude Haiku + Supabase).
 
 ---
 
@@ -47,16 +49,9 @@ description: N8n workflow patterns for AI Agency. Use when implementing backgrou
 }
 ```
 
-**Why weighted 30/30/25/15:**
-- Urgency (30%): Triage priority (deadlines, statute of limitations)
-- Value (30%): Economic priority (revenue potential)
-- Success (25%): Resource allocation (winnable cases first)
-- Complexity (15%): Least important (complex ≠ valuable)
+**Why weighted 30/30/25/15:** Urgency/Value highest (triage + economics), Success next (winnability), Complexity lowest
 
-**Why JSONB (not separate tables):**
-- Schema evolution without migrations (add confidence_score later)
-- Atomic updates (single UPDATE, no transactions)
-- GIN indexable for fast queries
+**Why JSONB:** Schema evolution without migrations, atomic updates
 
 ---
 
@@ -101,13 +96,9 @@ N8N_WEBHOOK_URL=https://n8n.trustcode.pl/webhook/survey-analysis
 
 ### Model: Claude Haiku (not Sonnet)
 
-**Why:** Simple 0-10 scoring task.
+**Why Haiku:** Simple 0-10 scoring, cheaper than Sonnet
 
-**Cost:** $0.0008 per response (Haiku) vs $0.015 (Sonnet) = 19x cheaper
-
-**Quality:** ±0.5 score variance (acceptable for triage).
-
-**Use Sonnet when:** Complex reasoning, narrative generation, high-stakes decisions.
+**Use Sonnet when:** Complex reasoning, narrative generation
 
 ### Node Configuration
 
@@ -201,9 +192,5 @@ FROM responses WHERE id = '[RESPONSE_UUID]';
 - Anthropic API (HTTP Header Auth: x-api-key)
 - AI Agency Supabase (service_role key)
 - GlitchTip (Sentry DSN - optional)
-
-**Cost:** ~$0.0008 per response (Haiku)
-
-**Performance:** 5-8s execution, >95% success rate
 
 **Documentation:** `n8n-workflows/` directory (SETUP_GUIDE.md, TROUBLESHOOTING.md)

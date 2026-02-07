@@ -5,23 +5,15 @@ description: Supabase database patterns for AI Agency. Use when working with RLS
 
 # Supabase Patterns
 
-**Purpose:** Database patterns specific to AI Agency multi-tenant architecture.
+## Purpose
+
+Database patterns specific to AI Agency multi-tenant architecture.
 
 ---
 
 ## RLS Policy Rule (CRITICAL)
 
 **Never use subqueries in RLS policies** - causes infinite recursion.
-
-```sql
--- ❌ WRONG: Infinite recursion
-CREATE POLICY "Public can view surveys via active links"
-  ON surveys FOR SELECT TO anon
-  USING (
-    id IN (SELECT survey_id FROM survey_links WHERE is_active = true)
-  );
--- Error: infinite recursion detected in policy for relation "surveys"
-```
 
 **Why:** Anon queries surveys → RLS checks survey_links → Database recursion loop
 
@@ -41,14 +33,6 @@ See: [@resources/rls-policies.md](./resources/rls-policies.md) for complete patt
 | Query function (browser) | Browser | `@/lib/supabase/client` | ❌ No |
 
 **Most common mistake:** Using wrong client or forgetting `await` on server client.
-
-```typescript
-// Server Action
-const supabase = await createClient()  // ← AWAIT required
-
-// Client Component
-const supabase = createClient()  // ← NO await
-```
 
 See: [@resources/client-selection.md](./resources/client-selection.md) for implementation details.
 
@@ -96,87 +80,30 @@ RESET ROLE;
 
 ## Type Regeneration
 
-**After schema changes:**
-
-```bash
-npm run db:types
-# → supabase gen types typescript --linked > packages/database/src/types.ts
-```
-
-**NEVER manually edit** `packages/database/src/types.ts`!
-
-**Usage:**
-```typescript
-import type { Tables, TablesInsert } from '@agency/database'
-
-// SELECT result
-type Survey = Tables<'surveys'>
-
-// INSERT data
-const newSurvey: TablesInsert<'surveys'> = {...}
-
-// UPDATE data
-const updates: Partial<Pick<Tables<'surveys'>, 'title' | 'status'>> = {...}
-```
+**After schema changes:** `npm run db:types` (regenerates `packages/database/src/types.ts`)
 
 ---
 
 ## Public Write Pattern (Service Role)
 
-**When:** Public endpoint needs to write data with tenant_id from database.
+**When:** Public endpoint writes with tenant_id from database
 
-**Problem:** Next.js Server Actions don't have HTTP request context → Supabase SDK can't apply anon role correctly → RLS blocks insert even with correct policy.
-
-**Solution:** Use service role key (bypasses RLS).
+**Solution:** Service role bypasses RLS
 
 ```typescript
-// ✅ Safe for public submissions
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
-const supabase = createClient(supabaseUrl, supabaseServiceKey)
-
-// tenant_id comes from database query (NOT user input)
+const supabase = createClient(url, process.env.SUPABASE_SERVICE_ROLE_KEY!)
+// tenant_id from database (YOU control it)
 const { data: survey } = await supabase.from('surveys').select('tenant_id').eq('id', surveyId).single()
-
-await supabase.from('responses').insert({
-  survey_id: surveyId,
-  tenant_id: survey.tenant_id,  // ← From database, safe
-  answers: data.answers
-})
+await supabase.from('responses').insert({ tenant_id: survey.tenant_id, ... })
 ```
 
-**When is service role safe:**
-- ✅ INSERT operations only
-- ✅ tenant_id fetched from database (YOU control it)
-- ✅ Public endpoint (anyone can submit)
-
-**When is service role DANGEROUS:**
-- ❌ NEVER when user controls tenant_id
-- ❌ NEVER for UPDATE/DELETE without validation
-- ❌ NEVER for authenticated operations (use SSR client)
-
-**Key principle:** Service role is safe when YOU control tenant_id, not the user.
+**Safe when:** INSERT only + tenant_id from database (not user input)
 
 ---
 
 ## Migration Best Practices
 
-**Problem:** Multiple migrations for same bugfix clutters history.
-
-**Anti-pattern:**
-```
-20251210143628_add_public_survey_access.sql
-20251210145536_drop_surveys_rls_policy.sql
-20251210150000_add_survey_links_anon_policy.sql
-20251210151000_enable_rls_survey_links.sql
-20251210152000_fix_surveys_rls_recursion.sql
-20251210153000_allow_anon_read_surveys.sql
-```
-
-**Prevention:**
-- ✅ Test migrations locally FIRST with `SET ROLE anon`
-- ✅ Squash if fixing same issue multiple times
-- ✅ Use migration repair to mark old migrations as reverted
+See: **schema-management** skill for migration workflow, testing, type regeneration
 
 ---
 

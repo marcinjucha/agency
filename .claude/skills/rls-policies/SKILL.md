@@ -33,7 +33,7 @@ CREATE POLICY "Users can view own tenant surveys"
   );
 
 -- Error: "infinite recursion detected in policy for relation surveys"
--- PostgreSQL crashed, 100% of SELECT queries failed
+-- PostgreSQL crashed, queries failed
 ```
 
 **Why it crashed:**
@@ -146,33 +146,13 @@ CREATE POLICY "Public can submit responses"
 
 ### Pattern 3: UUID Obscurity (No Policy Needed)
 
-**Alternative to RLS for some cases:**
+**Alternative to RLS:** NO anon policy, rely on UUID secrecy
 
-```sql
--- Instead of RLS policy:
-CREATE POLICY "Public can view surveys via links"
-  ON surveys FOR SELECT TO anon
-  USING (id IN (SELECT survey_id FROM survey_links));
+**Security model:** Anon needs exact UUID (from survey_links which has RLS)
 
--- Use UUID obscurity:
--- NO RLS POLICY ON surveys FOR anon!
+**When to use:** UUID primary keys, data not sensitive if UUID leaked
 
--- Security model:
--- - Anon can read surveys ONLY if they know the UUID
--- - UUIDs only exposed through survey_links (which has RLS)
--- - survey_links.token is public, but survey_links.survey_id (UUID) is not shown
--- - To get survey, anon needs exact UUID (impossible to guess)
-```
-
-**When to use:**
-- UUID primary keys (impossibly hard to guess)
-- Data not sensitive if UUID leaked
-- Simpler than complex RLS policies
-
-**From Phase 2:**
-- Surveys table has no anon policy
-- Security: anon needs UUID from survey_links (which has RLS)
-- Avoids infinite recursion risk entirely
+**Phase 2:** Surveys table has no anon policy, avoids infinite recursion risk
 
 ### Pattern 4: Testing RLS Policies
 
@@ -204,105 +184,13 @@ RESET ROLE;
 - [ ] No "infinite recursion" errors
 - [ ] INSERT/UPDATE/DELETE policies also tested
 
-## Anti-Patterns (Critical Mistakes)
-
-### ❌ Mistake 1: Subquery in RLS Policy (Infinite Recursion)
-
-**Problem:** Already covered above - crashes PostgreSQL
-
-**Always use:** `public.current_user_tenant_id()` helper function
-
-### ❌ Mistake 2: Forgetting `TO anon` Clause
-
-```sql
--- ❌ WRONG: Policy applies to authenticated only (default)
-CREATE POLICY "Public can view surveys"
-  ON surveys FOR SELECT
-  USING (status = 'active');
-
--- Anon users still can't access! Policy doesn't apply to them.
-
--- ✅ CORRECT: Explicit TO anon
-CREATE POLICY "Public can view surveys"
-  ON surveys FOR SELECT TO anon
-  USING (status = 'active');
-```
-
-### ❌ Mistake 3: Not Testing with SET ROLE
-
-```sql
--- ❌ WRONG: Testing as superuser
-SELECT * FROM surveys;  -- Always works (bypasses RLS)
-
--- ✅ CORRECT: Test as actual role
-SET ROLE anon;
-SELECT * FROM surveys;  -- Tests actual RLS policy
-RESET ROLE;
-```
-
-### ❌ Mistake 4: Complex Multi-Table Checks
-
-```sql
--- ❌ WRONG: Multiple subqueries (recursion risk)
-CREATE POLICY "Users can view related data"
-  ON table_a FOR SELECT
-  USING (
-    id IN (
-      SELECT table_a_id FROM table_b
-      WHERE user_id = (
-        SELECT id FROM users WHERE auth.uid() = id
-      )
-    )
-  );
-
--- ✅ CORRECT: Split queries in application code
--- 1. Query table_b with user filter
--- 2. Get table_a_ids
--- 3. Query table_a with id filter
--- RLS policies stay simple, recursion impossible
-```
-
 ## Real Project Examples
 
-### Example 1: Survey Multi-Tenant Policy
+**Survey multi-tenant:** `tenant_id = public.current_user_tenant_id()`
 
-```sql
--- surveys table: Lawyers manage their tenant's surveys
-CREATE POLICY "Users manage own tenant surveys"
-  ON surveys FOR ALL
-  USING (tenant_id = public.current_user_tenant_id())
-  WITH CHECK (tenant_id = public.current_user_tenant_id());
+**Public survey access:** survey_links has RLS, surveys uses UUID obscurity
 
--- Helper function already exists (prevents recursion)
-```
-
-### Example 2: Public Survey Access via Links
-
-```sql
--- survey_links table: Anon can view links, submit responses
-CREATE POLICY "Public can view survey links"
-  ON survey_links FOR SELECT TO anon
-  USING (is_active = true);
-
--- surveys table: No anon policy (UUID obscurity)
--- Anon gets survey via application code:
--- 1. Query survey_links by token (anon can do this)
--- 2. Get survey_id (UUID)
--- 3. Query surveys by UUID (anon can do this - no RLS blocks it)
--- 4. Security: anon needs exact UUID (only from survey_links)
-```
-
-### Example 3: Response Submission
-
-```sql
--- responses table: Anon can INSERT new responses
-CREATE POLICY "Public can submit responses"
-  ON responses FOR INSERT TO anon
-  WITH CHECK (status = 'new');
-
--- Note: tenant_id comes from survey (application fetches it)
--- RLS doesn't validate tenant_id on INSERT (application responsibility)
-```
+**Response submission:** Anon can INSERT with `status = 'new'`
 
 ## Quick Reference
 

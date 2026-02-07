@@ -18,16 +18,10 @@ Accessibility compliance: WCAG 2.1 AA standards (4.5:1 contrast, keyboard naviga
 
 ## Critical Pattern: Semantic HTML + ARIA
 
-**Pattern: Form accessibility**
+**Pattern: Form accessibility (use shadcn/ui Label + Input)**
 
 ```typescript
-// ❌ WRONG - Missing labels, no ARIA
-<div>
-  <input type="text" />
-  <button>Submit</button>
-</div>
-
-// ✅ CORRECT - Semantic + ARIA
+// ✅ - Semantic + ARIA
 <form>
   <Label htmlFor="name">Name *</Label>
   <Input
@@ -47,70 +41,39 @@ Accessibility compliance: WCAG 2.1 AA standards (4.5:1 contrast, keyboard naviga
 </form>
 ```
 
-**Why critical:**
-- Labels: Screen readers announce field purpose
-- aria-required: Indicates required fields
-- aria-invalid: Announces validation errors
-- aria-describedby: Links error to input
-- role="alert": Screen reader announces error immediately
-
 ## Keyboard Navigation
 
-**Pattern: All interactive elements focusable**
+**Pattern: Use semantic elements (auto-focusable)**
 
 ```typescript
-// ❌ WRONG - div onClick (not keyboard accessible)
+// ❌ - div not keyboard accessible
 <div onClick={handleClick}>Click me</div>
 
-// ✅ CORRECT - button (keyboard accessible)
+// ✅ - button (keyboard accessible)
 <button onClick={handleClick}>Click me</button>
-
-// For custom interactive elements:
-<div
-  role="button"
-  tabIndex={0}
-  onClick={handleClick}
-  onKeyDown={(e) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      handleClick()
-    }
-  }}
->
-  Custom interactive
-</div>
 ```
 
 **Keyboard checklist:**
 ```yaml
-- [ ] Tab reaches all interactive elements
-- [ ] Enter/Space activates buttons
-- [ ] Escape closes modals/dialogs
-- [ ] Arrow keys navigate lists (optional)
-- [ ] Focus visible (outline or custom style)
+- [ ] Tab reaches interactive elements
+- [ ] Enter/Space activates
+- [ ] Escape closes modals
+- [ ] Focus visible
 - [ ] No focus traps
 ```
 
-## Color Contrast (WCAG AA)
+## Color Contrast
 
-**Minimum ratios:**
-```
-Normal text: 4.5:1
-Large text (18px+): 3:1
-UI components: 3:1
-```
-
-**Pattern: Use theme tokens (auto-compliant)**
+**Pattern: Use theme tokens (auto-compliant WCAG AA 4.5:1)**
 
 ```typescript
-// ✅ CORRECT - Theme tokens (tested for contrast)
-className="text-foreground bg-background"        /* High contrast */
-className="text-muted-foreground bg-muted"       /* Readable contrast */
+// ✅ Theme tokens (4.5:1 compliant)
+className="text-foreground bg-background"
+className="text-muted-foreground bg-muted"
 
-// ❌ WRONG - Arbitrary colors (may fail contrast)
-className="text-gray-400 bg-gray-100"  /* Might be <4.5:1 */
+// ❌ Arbitrary colors (not guaranteed compliant)
+className="text-gray-400 bg-gray-100"
 ```
-
-**Why theme tokens:** Pre-tested for WCAG AA compliance.
 
 ## Quick Reference
 
@@ -146,27 +109,16 @@ Contrast:
   - [ ] Use theme tokens (auto-compliant)
 ```
 
-**Common ARIA attributes:**
-
-```typescript
-aria-label="Close dialog"          /* Icon-only buttons */
-aria-required="true"                /* Required fields */
-aria-invalid={!!errors.field}       /* Validation errors */
-aria-describedby="field-error"      /* Link error to field */
-aria-live="polite"                  /* Announce changes */
-role="alert"                        /* Error announcements */
-```
-
 ## Real Project Example
 
 **Phase 2 Survey Form Accessibility:**
 
 ```yaml
 Violations found:
-  ❌ Question labels missing htmlFor
-  ❌ Required fields no aria-required
-  ❌ Error messages no role="alert"
-  ❌ Custom checkboxes not keyboard accessible
+  - Question labels missing htmlFor
+  - Required fields no aria-required
+  - Error messages no role="alert"
+  - Custom checkboxes not keyboard accessible
 
 Fixed:
   ✅ <Label htmlFor={question.id}>
@@ -176,53 +128,6 @@ Fixed:
 
 Result: WCAG 2.1 AA compliant, keyboard navigable
 ```
-
-## Anti-Patterns
-
-### ❌ Missing Labels
-
-**Problem:** Inputs without labels
-
-```typescript
-// ❌ WRONG
-<input type="text" placeholder="Name" />
-
-// ✅ CORRECT
-<Label htmlFor="name">Name</Label>
-<Input id="name" type="text" />
-```
-
-**Why wrong:** Screen readers can't announce field purpose.
-
-### ❌ div onClick (Not Keyboard Accessible)
-
-**Problem:** Non-semantic interactive elements
-
-```typescript
-// ❌ WRONG
-<div onClick={handleClick}>Click me</div>
-// Keyboard users can't activate!
-
-// ✅ CORRECT
-<button onClick={handleClick}>Click me</button>
-// Or <Button> from @agency/ui
-```
-
-**Why wrong:** Not focusable, no keyboard activation.
-
-### ❌ Low Contrast Text
-
-**Problem:** Using colors with insufficient contrast
-
-```typescript
-// ❌ WRONG - Gray on gray (may be <4.5:1)
-<p className="text-gray-400">Important text</p>
-
-// ✅ CORRECT - Theme token (tested contrast)
-<p className="text-muted-foreground">Important text</p>
-```
-
-**Why wrong:** Fails WCAG AA, hard to read for low vision users.
 
 ---
 

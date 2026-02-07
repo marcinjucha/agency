@@ -20,38 +20,16 @@ Foundation file patterns: types.ts (domain types), queries.ts (data fetching), v
 
 ### Browser vs Server Client Decision
 
-**Context matters:**
+**Key differences:**
 
-```typescript
-// CMS app - Browser client (TanStack Query)
-// apps/cms/features/surveys/queries.ts
-import { createClient } from '@/lib/supabase/client'  // Browser
+| Client | Await? | Context | App |
+|--------|--------|---------|-----|
+| Browser | NO | TanStack Query | CMS |
+| Server | YES | Server Components | Website |
 
-export async function getSurveys(): Promise<Tables<'surveys'>[]> {
-  const supabase = createClient()  // NO await
-  const { data } = await supabase.from('surveys').select('*')
-  if (error) throw error  // TanStack Query catches
-  return data || []
-}
+**Decision:** Client Component (useQuery)? → Browser. Server Component (page.tsx)? → Server.
 
-// Website app - Server client (Server Components)
-// apps/website/features/survey/queries.ts
-import { createClient } from '@/lib/supabase/server'  // Server
-
-export async function getSurveyByToken(token: string) {
-  const supabase = await createClient()  // AWAIT required
-  const { data } = await supabase.from('survey_links').select('*')
-  return data
-}
-```
-
-**Decision tree:**
-- Called from Client Component (useQuery)? → Browser client
-- Called from Server Component (page.tsx)? → Server client
-- CMS app? → Usually Browser (TanStack Query)
-- Website app? → Usually Server (Server Components)
-
-**Why matters:** Wrong client = auth errors, wrong context
+**Why matters:** Wrong client = auth errors
 
 ### Shared Types Strategy
 
@@ -92,69 +70,15 @@ export type Question = {
 // Both apps now: import { Question } from '@agency/shared-types'
 ```
 
-**Why start local:**
-- Don't prematurely create shared types
-- Move when actually shared (YAGNI)
-- Easier to refactor local types first
+**Why start local:** Move when actually shared (YAGNI)
 
 ### Dynamic Zod Schemas
 
-**Use case:** Validation rules depend on data (survey questions)
+**Use case:** Validation rules depend on data (survey questions from database)
 
-```typescript
-// apps/website/features/survey/validation.ts
-import { z } from 'zod'
-import type { Question } from './types'
+**Why dynamic:** Survey questions change per survey → static schema impossible
 
-export function generateSurveySchema(questions: Question[]) {
-  const shape: Record<string, z.ZodTypeAny> = {}
-
-  questions.forEach((question) => {
-    let fieldSchema: z.ZodTypeAny
-
-    switch (question.type) {
-      case 'email':
-        fieldSchema = z.string().email('Valid email required')
-        break
-      case 'checkbox':
-        fieldSchema = z.array(z.string()).min(1, 'Select at least one')
-        break
-      default:
-        fieldSchema = z.string().min(1, 'Required')
-    }
-
-    // Optional fields
-    if (!question.required) {
-      fieldSchema = fieldSchema.optional()
-    }
-
-    shape[question.id] = fieldSchema
-  })
-
-  return z.object(shape)
-}
-```
-
-**Why dynamic:**
-- Survey questions defined in database (not hardcoded)
-- Each survey has different questions → different validation
-- Static schema impossible
-
-### Explicit Return Types
-
-```typescript
-// ❌ WRONG - Inferred
-export async function getSurveys() {
-  // TanStack Query can't infer properly
-}
-
-// ✅ CORRECT - Explicit
-export async function getSurveys(): Promise<Tables<'surveys'>[]> {
-  // Type clear for TanStack Query
-}
-```
-
-**Why:** TanStack Query needs explicit types for proper inference
+**Pattern:** Loop questions, build `Record<string, z.ZodTypeAny>`, return `z.object(shape)`
 
 ## Quick Reference
 

@@ -124,27 +124,11 @@ export default function SurveysPage() {
 - ✅ **Maintainable:** Clear separation of concerns
 - ✅ **Scalable:** Easy to add new features
 
-**Comparison:**
-
-```typescript
-// ❌ BAD: Logic in app/
-app/admin/surveys/page.tsx:
-  - 200 lines of code
-  - Fetching, state, rendering, validation all mixed
-
-// ✅ GOOD: Logic in features/
-app/admin/surveys/page.tsx:
-  - 10 lines of code (just imports and layout)
-
-features/surveys/components/SurveyList.tsx:
-  - 80 lines (component logic)
-
-features/surveys/queries.ts:
-  - 40 lines (data fetching)
-
-features/surveys/actions.ts:
-  - 70 lines (mutations)
-```
+**Pattern Result:**
+- app/admin/surveys/page.tsx: 10 lines (just imports and layout)
+- features/surveys/components/SurveyList.tsx: 80 lines (component logic)
+- features/surveys/queries.ts: 40 lines (data fetching)
+- features/surveys/actions.ts: 70 lines (mutations)
 
 ## File Naming
 
@@ -212,14 +196,8 @@ const { data } = useQuery({
 Always use explicit return types:
 
 ```typescript
-// ✅ GOOD
 export async function getSurveys(): Promise<Tables<'surveys'>[]> {
-  // ...
-}
-
-// ❌ BAD (TanStack Query can't infer types)
-export async function getSurveys() {
-  // ...
+  // TanStack Query requires explicit return types for type inference
 }
 ```
 

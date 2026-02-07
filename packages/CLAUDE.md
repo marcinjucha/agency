@@ -190,16 +190,16 @@ import { cn } from '../lib/utils'
 ## When to Create a Package
 
 **Create package if:**
-- ✅ Used in 2+ apps
-- ✅ Has clear API boundary
-- ✅ Changes infrequently
-- ✅ Benefits from centralization
+- Used in 2+ apps
+- Has clear API boundary
+- Changes infrequently
+- Benefits from centralization
 
-**Don't create package if:**
-- ❌ Used in only 1 app (keep in app)
-- ❌ Too app-specific
-- ❌ Changes frequently with app
-- ❌ Would create circular dependencies
+**Keep in app if:**
+- Used in only 1 app
+- Too app-specific
+- Changes frequently with app
+- Would create circular dependencies
 
 ## Dependencies
 

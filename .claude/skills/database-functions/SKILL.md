@@ -58,34 +58,15 @@ GRANT EXECUTE ON FUNCTION increment_submission_count(UUID) TO authenticated;
 **Use case:** Helper function for RLS policies (prevents infinite recursion)
 
 ```sql
--- Helper for RLS policies
-CREATE OR REPLACE FUNCTION public.current_user_tenant_id()
-RETURNS uuid
-LANGUAGE sql
-STABLE
-SECURITY DEFINER
+CREATE FUNCTION public.current_user_tenant_id()
+RETURNS uuid LANGUAGE sql STABLE SECURITY DEFINER
 SET search_path = public
-AS $$
-  SELECT tenant_id FROM users WHERE id = auth.uid();
-$$;
-
--- GRANT not needed (used by policies, not directly by users)
-
--- Used in RLS policy:
-CREATE POLICY "Users view own tenant"
-  ON surveys FOR SELECT
-  USING (tenant_id = public.current_user_tenant_id());
+AS $$ SELECT tenant_id FROM users WHERE id = auth.uid(); $$;
 ```
 
-**Key attributes:**
-- `SECURITY DEFINER` - Bypasses RLS when executing (prevents recursion)
-- `STABLE` - Caches result within transaction (performance)
-- `SET search_path = public` - Security: prevents schema hijacking
-- `LANGUAGE sql` - Simple SQL query (faster than plpgsql)
-
 **Why SECURITY DEFINER critical:**
-- Without it: RLS policy queries users → users RLS policy triggers → infinite recursion
-- With it: Function bypasses RLS → queries users directly → returns result → no recursion
+- Without it: Policy queries users → triggers RLS → infinite recursion → crash
+- With it: Bypasses RLS → queries directly → no recursion
 
 ### Pattern 3: Validation Function
 
@@ -243,195 +224,15 @@ await updateSubmissionCount(linkId, current + 1);
 
 **Decision: Use function** (atomic operation critical)
 
-## Anti-Patterns (Critical Mistakes)
-
-### ❌ Mistake 1: Forgetting GRANT Permissions
-
-```sql
--- ❌ WRONG: Function created but not accessible
-CREATE FUNCTION do_something() RETURNS VOID AS $$ ... $$;
--- Anon users can't execute!
-
--- ✅ CORRECT: Grant to roles that need it
-GRANT EXECUTE ON FUNCTION do_something() TO anon;
-GRANT EXECUTE ON FUNCTION do_something() TO authenticated;
-```
-
-**How to check permissions:**
-```sql
--- See function permissions
-\df+ do_something
--- Or query pg_catalog
-SELECT * FROM pg_proc WHERE proname = 'do_something';
-```
-
-### ❌ Mistake 2: Not Using SECURITY DEFINER for RLS Helpers
-
-```sql
--- ❌ WRONG: Will cause infinite recursion
-CREATE FUNCTION current_user_tenant_id() ...
--- No SECURITY DEFINER!
-
--- ✅ CORRECT: Bypass RLS when executing
-CREATE FUNCTION current_user_tenant_id() ...
-SECURITY DEFINER
-```
-
-### ❌ Mistake 3: Using VOLATILE When STABLE Possible
-
-```sql
--- ❌ WRONG: Recomputes on every call
-CREATE FUNCTION current_user_tenant_id()
-RETURNS uuid
-LANGUAGE sql
-VOLATILE  -- Default if not specified
-AS $$ SELECT tenant_id FROM users WHERE id = auth.uid(); $$;
-
--- ✅ CORRECT: Caches within transaction
-CREATE FUNCTION current_user_tenant_id()
-RETURNS uuid
-LANGUAGE sql
-STABLE  -- Cache result
-AS $$ SELECT tenant_id FROM users WHERE id = auth.uid(); $$;
-```
-
-**Function volatility:**
-- `VOLATILE` - Result can change within transaction (default, safest, slowest)
-- `STABLE` - Result same within transaction (cache it)
-- `IMMUTABLE` - Result always same (max optimization)
-
-### ❌ Mistake 4: Complex Business Logic in Functions
-
-```sql
--- ❌ WRONG: 200 lines of PL/pgSQL business logic
-CREATE FUNCTION process_survey_submission(...) ...
-BEGIN
-  -- Validate 20 things
-  -- Call external APIs (can't do this!)
-  -- Send emails (can't do this!)
-  -- Complex state machine
-  -- ...
-END;
-
--- ✅ CORRECT: Keep functions simple, logic in app
--- Function: Just increment counter
-CREATE FUNCTION increment_submission_count(...) ...
-
--- Application: Business logic
-async function processSurveySubmission() {
-  // Validate
-  // Save to DB
-  await incrementSubmissionCount(linkId);  // Call function
-  // Send email
-  // Webhook call
-}
-```
-
 ## Quick Reference
 
-**Function syntax:**
+**Decision Rule:**
+- Atomic/RLS helper → Function
+- Business logic → Application
 
-```sql
-CREATE [OR REPLACE] FUNCTION function_name(param_type)
-RETURNS return_type
-LANGUAGE plpgsql | sql
-[STABLE | IMMUTABLE | VOLATILE]
-[SECURITY DEFINER | SECURITY INVOKER]
-[SET search_path = public]
-AS $$
-  -- Function body
-$$;
-```
+**Critical:** GRANT permissions to anon/authenticated
 
-**Common return types:**
-
-```sql
-RETURNS VOID              -- No return value
-RETURNS uuid              -- Single value
-RETURNS TABLE(...)        -- Result set
-RETURNS TRIGGER           -- For trigger functions
-RETURNS SETOF table_name  -- Multiple rows
-```
-
-**Grant syntax:**
-
-```sql
-GRANT EXECUTE ON FUNCTION function_name(param_types) TO role;
-
--- Common roles:
-TO anon           -- Anonymous users
-TO authenticated  -- Logged-in users
-TO public         -- All users (anon + authenticated)
-```
-
-**Function management:**
-
-```sql
--- List functions
-\df [schema.]function_name
-
--- Drop function
-DROP FUNCTION [IF EXISTS] function_name(param_types);
-
--- Alter function
-ALTER FUNCTION function_name(param_types) RENAME TO new_name;
-```
-
-**Testing functions:**
-
-```sql
--- Test as anon
-SET ROLE anon;
-SELECT function_name(params);
-RESET ROLE;
-
--- Test with transaction rollback
-BEGIN;
-SELECT function_name(params);
--- Check results
-ROLLBACK;  -- Undo changes
-```
-
-## Real Project Examples
-
-### Example 1: Increment Submission Count
-
-```sql
--- From Phase 2 implementation
-CREATE FUNCTION increment_submission_count(link_id UUID)
-RETURNS VOID
-LANGUAGE plpgsql
-AS $$
-BEGIN
-  UPDATE survey_links
-  SET submission_count = submission_count + 1
-  WHERE id = link_id;
-END;
-$$;
-
-GRANT EXECUTE ON FUNCTION increment_submission_count(UUID) TO anon;
-
--- Used in Server Action:
-await supabase.rpc('increment_submission_count', { link_id: linkId });
-```
-
-### Example 2: Current User Tenant Helper
-
-```sql
--- Used by ALL RLS policies
-CREATE FUNCTION public.current_user_tenant_id()
-RETURNS uuid
-LANGUAGE sql
-STABLE
-SECURITY DEFINER
-SET search_path = public
-AS $$
-  SELECT tenant_id FROM users WHERE id = auth.uid();
-$$;
-
--- Used in policies:
-USING (tenant_id = public.current_user_tenant_id())
-```
+**SECURITY DEFINER:** For RLS helpers (prevents recursion)
 
 ## Integration with Other Skills
 

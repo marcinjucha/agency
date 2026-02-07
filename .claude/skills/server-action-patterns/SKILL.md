@@ -20,116 +20,63 @@ Server Action patterns: structured return type `{ success, data?, error? }`, rev
 
 ### Structured Return Type
 
-**Project requirement:**
+**Pattern:** `{ success, data?, error? }`
 
 ```typescript
-// ✅ CORRECT - Structured result
+// ✅
 export async function createSurvey(
   data: CreateSurveyInput
 ): Promise<{ success: boolean; surveyId?: string; error?: string }> {
   try {
-    // ...
     return { success: true, surveyId: survey.id }
-  } catch (error) {
-    return { success: false, error: 'Failed to create survey' }
+  } catch {
+    return { success: false, error: 'Failed' }
   }
-}
-
-// ❌ WRONG - Throws errors
-export async function createSurvey(data: CreateSurveyInput) {
-  const result = await supabase.from('surveys').insert(data)
-  if (result.error) throw new Error(result.error.message)  // Crashes middleware!
-  return result.data
 }
 ```
 
-**Why structured:**
-- Throwing errors in Server Actions crashes Next.js middleware
-- Type-safe error handling in components
-- Consistent interface across all actions
+**Why:** Throwing errors crashes Next.js middleware (Phase 2 bug)
 
 ### Server Client (await required)
 
 ```typescript
-// ❌ WRONG - Browser client
-'use server'
-import { createClient } from '@/lib/supabase/client'
-
-const supabase = createClient()  // Wrong client!
-
-// ✅ CORRECT - Server client
+// ✅
 'use server'
 import { createClient } from '@/lib/supabase/server'
-
-const supabase = await createClient()  // AWAIT required!
+const supabase = await createClient()  // AWAIT required
 ```
-
-**Why:** Server Actions run on server, need server client (cookies access)
 
 ### revalidatePath After Mutations
 
-**Critical for cache:**
-
 ```typescript
-'use server'
 import { revalidatePath } from 'next/cache'
 
-export async function updateSurvey(id: string, data: UpdateData) {
-  const supabase = await createClient()
-  const { error } = await supabase.from('surveys').update(data).eq('id', id)
-
-  if (error) return { success: false, error: error.message }
-
-  // CRITICAL: Clear cache
-  revalidatePath('/admin/surveys')
-  revalidatePath(`/admin/surveys/${id}`)
-
-  return { success: true }
-}
+revalidatePath('/admin/surveys')
 ```
 
-**Why:** Next.js caches pages. Without revalidate, users see stale data.
+**Why:** Next.js caches → without revalidate, stale data
 
 ## Quick Reference
 
-**Server Action template:**
+**Template:**
 
 ```typescript
 'use server'
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 
-export async function actionName(
-  input: InputType
-): Promise<{ success: boolean; data?: DataType; error?: string }> {
+export async function actionName(input: InputType): Promise<{ success: boolean; data?: DataType; error?: string }> {
   try {
     const supabase = await createClient()
-
-    // Auth check (if needed)
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return { success: false, error: 'Not authenticated' }
-
-    // Database operation
     const { data, error } = await supabase.from('table').insert(input)
     if (error) return { success: false, error: error.message }
-
-    // Revalidate
     revalidatePath('/path')
-
     return { success: true, data }
-  } catch (error) {
-    return { success: false, error: 'Internal error' }
+  } catch {
+    return { success: false, error: 'Error' }
   }
 }
 ```
-
-**Checklist:**
-- [ ] 'use server' directive
-- [ ] Server client (await createClient())
-- [ ] Structured return { success, data?, error? }
-- [ ] revalidatePath after mutation
-- [ ] Try-catch wrapper
-- [ ] User-friendly error messages
 
 ## Real Bug Fixed
 

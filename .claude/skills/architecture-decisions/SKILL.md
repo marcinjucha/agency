@@ -5,7 +5,9 @@ description: Architecture decisions for AI Agency monorepo. Use when understandi
 
 # Architecture Decisions
 
-**Purpose:** Key architectural decisions and patterns for AI Agency monorepo.
+## Purpose
+
+Key architectural decisions and patterns for AI Agency monorepo.
 
 ---
 
@@ -40,29 +42,19 @@ description: Architecture decisions for AI Agency monorepo. Use when understandi
 
 ---
 
-## Import Rules
-
-```
-┌─────────────┐
-│   app/      │  ← Routes (imports from features/)
-├─────────────┤
-│  features/  │  ← Business logic (imports from lib/ + packages/)
-├─────────────┤
-│   lib/      │  ← Utilities (imports from packages/)
-├─────────────┤
-│  packages/  │  ← Shared code (no app-specific imports)
-└─────────────┘
-```
+## Import Rules (ADR-005)
 
 **Allowed:**
-- `app/` → `features/`
+- `app/` → `features/` (routes import business logic)
 - `features/` → `lib/`, `packages/`, other `features/`
 - `lib/` → `packages/`
 
 **Forbidden:**
-- `features/` → `app/`
-- `lib/` → `features/`
-- `packages/` → `apps/`
+- `features/` → `app/` (business logic can't depend on routes)
+- `lib/` → `features/` (utilities can't depend on features)
+- `packages/` → `apps/` (shared code can't depend on specific apps)
+
+**Why:** Enforces layered architecture, enables code reuse, prevents circular dependencies.
 
 See: [@resources/app-features-separation.md](./resources/app-features-separation.md) for full ADR-005.
 
@@ -104,38 +96,13 @@ export default function SurveysPage() {
 
 ## Change Impact Map
 
-### Database Schema Change
-
-```
-1. supabase/migrations/YYYY_new_field.sql
-2. npm run db:types
-   ↓
-3. packages/database/src/types.ts (auto-updated)
-   ↓
-4. apps/cms/ + apps/website/ (both affected)
-```
-
-### UI Component Change
-
-```
-1. packages/ui/src/components/button.tsx
-   ↓
-2. Both apps automatically get update
-   ↓
-3. Test in both apps
-```
-
-### New Question Type
-
-```
-1. packages/validators/src/survey.ts
-   ↓
-2. apps/cms/features/surveys/ (add UI)
-   ↓
-3. apps/website/features/survey/ (render)
-   ↓
-4. Test: CMS create → Website render
-```
+| Change | Impact | Action |
+|--------|--------|--------|
+| Database schema | Both apps | `supabase/migrations/` → `npm run db:types` → verify both apps |
+| UI component | Both apps | `packages/ui/` → test in both apps |
+| Validator | Both apps | `packages/validators/` → update CMS + Website features |
+| CMS feature | CMS only | `apps/cms/features/` → test CMS |
+| Website feature | Website only | `apps/website/features/` → test Website |
 
 ---
 
@@ -195,21 +162,5 @@ CMS reads ai_qualification
 - ✅ Simple CRUD with Supabase
 
 ---
-
-## Turborepo Commands
-
-```bash
-# Start all apps
-npm run dev
-# Website: http://localhost:3000
-# CMS: http://localhost:3001
-
-# Build specific app
-turbo build --filter=@agency/website
-turbo build --filter=@agency/cms
-
-# Regenerate database types
-npm run db:types
-```
 
 See: [@resources/monorepo-structure.md](./resources/monorepo-structure.md) for full ADR-001.

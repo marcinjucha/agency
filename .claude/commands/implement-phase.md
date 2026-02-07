@@ -69,14 +69,9 @@ Systematically implement a planned feature/phase by orchestrating specialized ag
 **Type:** Development (Implementation)
 
 **Signal vs Noise for This Workflow:**
-- **Signal (what we focus on):** Working code that meets plan requirements, passing tests, updated documentation
-- **Noise (what we skip):** Over-optimization, hypothetical features, perfect code (YAGNI applies)
+- **Signal:** Working code that meets plan requirements, passing tests, updated documentation
+- **Noise:** Over-optimization, hypothetical features, perfect code (YAGNI applies)
 - **Principle:** "Build what's needed NOW, build it correctly, document it clearly"
-
-**Agent Orchestration:**
-- **Parallel phases:** Foundation (queries+validation AFTER types), Components (RARELY - usually dependent) ⚡⚡⚡
-- **Sequential phases:** Database → Types → Queries/Validation → QuestionField → SurveyForm → Actions → Routes → Testing → Docs
-- **Conditional phases:** Testing (can skip if plan says manual-only), Database (skip if no schema changes)
 
 ---
 
@@ -172,27 +167,20 @@ Phase 12: Complete!
 
 ### Overview
 
-When Notion task is used, the workflow integrates with Notion:
+When Notion task is used:
 - **Phase 1:** Searches and presents Notion tasks (unless --notion-task-id provided)
 - **Phase 2:** Analyzes selected task (Name, Notes, Projects context)
 - **Phases 3-9:** Execute normally (using Notes as plan content)
 - **Phase 10:** project-manager-agent syncs status to "Done" and adds completion notes
-- **Phase 11:** project-manager-agent creates commit
 
 ### Phase 1-2: Reading from Notion (orchestrator + analysis-agent)
 
-**When Notion task selected:**
+**Extract plan from task:**
+- Plan content: Notes property
+- Task name: Name property
+- Context: Priority, Deadline, Projects
 
-1. **Extract plan from task:**
-   - Plan content: Notes property
-   - Task name: Name property
-   - Context: Priority, Deadline, Projects
-
-2. **Skills Projects already filtered** in Phase 1
-
-3. **Pass to analysis-agent:**
-   - Task name + plan content + notion context
-   - Agent analyzes as normal
+**Skills Projects already filtered** in Phase 1
 
 **Status Values (IMPORTANT):**
 - Notion statuses are **case-sensitive with spaces**
@@ -210,8 +198,6 @@ If Notion API unavailable:
 
 ### Phase 10: Syncing to Notion (project-manager-agent)
 
-**When Notion task used:**
-
 **Orchestrator passes:**
 ```yaml
 notion_context:
@@ -227,70 +213,21 @@ notion_context:
 
 See `notion-integration` skill for MCP tool examples.
 
-### State Tracking with Notion
-
-```json
-{
-  "mode": "interactive | automated",
-  "planFile": "~/.claude/plans/example.md | null",
-  "notion_task_id": "29284f14-76e0-8012-8708-abc123",
-  "notion_task_url": "https://notion.so/29284f14-76e0-8012-8708-abc123",
-  "notion_sync_status": "pending | synced | failed",
-  "currentPhase": "2a",
-  "completedPhases": ["0", "1", "2a"],
-  "outputs": {
-    "phase0": {
-      "strategy": "...",
-      "notion_context": {
-        "task_id": "abc123",
-        "task_name": "Implement Redis caching",
-        "project": "AI Agency MVP",
-        "priority": "🔴 Urgent"
-      }
-    }
-  }
-}
-```
-
 ### Error Handling
 
 **Notion API Unavailable:**
-```markdown
-⚠️ Notion API unavailable
-
-Falling back to local plan file (if provided)
-
-Phase 0-7: Execute using local data
-Phase 8: Skip Notion sync (status: failed)
-
-Output includes: notion_sync_status: "failed"
-```
+- Fall back to local plan file (if provided)
+- Phase 10: Skip Notion sync (status: failed)
+- Output includes: notion_sync_status: "failed"
 
 **Task Not Found:**
-```markdown
-❌ Notion task not found
-
-Task ID: 29284f14-76e0-8012-abc123
-
-Verify:
-- Task ID is correct (UUID format)
-- Task exists in Agency Tasks database
-- Notion MCP connection is active
-
-**Commands:** `retry` | `use-local` | `stop`
-```
+- Verify: Task ID is correct (UUID format), Task exists in Agency Tasks database
+- Commands: `retry` | `use-local` | `stop`
 
 **Skills Project Detected:**
-```markdown
-⚠️ Skills Project detected
-
-This task is linked to a Skills Project (Type: 🎓 Learning).
-Agency implementation workflows only process agency work.
-
-**Reason:** Personal learning projects should not trigger automated agents.
-
-**Commands:** `select-different-task` | `stop`
-```
+- Warning: This task is linked to a Skills Project (Type: 🎓 Learning)
+- Agency implementation workflows only process agency work
+- Commands: `select-different-task` | `stop`
 
 ---
 
@@ -683,10 +620,15 @@ Does this match what you expected? If not, what should I adjust?
 
 **Step 1: Add console.log to API endpoints/Server Actions**
 
-Before starting dev servers, add logging to all new/modified API routes:
+Key logging points:
+- ✅ Request body received (before validation)
+- ✅ Validation passed/failed (with Zod errors)
+- ✅ Database query results
+- ✅ External API responses
+- ✅ All errors (with context)
 
+**Example:**
 ```typescript
-// Example: API Route logging pattern
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
@@ -694,8 +636,6 @@ export async function POST(request: NextRequest) {
 
     const validatedData = schema.parse(body)
     console.log('[API_NAME] Validation passed')
-
-    // ... business logic ...
 
     const result = await someOperation()
     console.log('[API_NAME] Result:', result)
@@ -712,23 +652,14 @@ export async function POST(request: NextRequest) {
 }
 ```
 
-**Key logging points:**
-- ✅ Request body received (before validation)
-- ✅ Validation passed/failed (with Zod errors)
-- ✅ Database query results
-- ✅ External API responses
-- ✅ All errors (with context)
-
-**Step 2: Start dev servers in background with log capture**
+**Step 2: Start dev servers with log capture**
 
 ```bash
-# Kill any existing processes
+# Kill existing processes
 pkill -9 node; pkill -9 next
 
-# Start website with log capture
+# Start with log capture
 npm run dev:website > /tmp/dev-website.log 2>&1 &
-
-# Start CMS with log capture (if needed)
 npm run dev:cms > /tmp/dev-cms.log 2>&1 &
 
 # Wait for servers to start
@@ -741,16 +672,11 @@ curl -s http://localhost:3001 > /dev/null && echo "✅ CMS ready"
 
 **Step 3: Monitor logs during testing**
 
-While user tests, you can check logs on demand:
-
 ```bash
-# Check recent website logs
+# Check recent logs
 tail -50 /tmp/dev-website.log
 
-# Check recent CMS logs
-tail -50 /tmp/dev-cms.log
-
-# Follow logs in real-time (if needed)
+# Follow logs in real-time
 tail -f /tmp/dev-website.log
 
 # Search for specific API calls
@@ -762,64 +688,7 @@ grep -i "error\|failed\|invalid" /tmp/dev-website.log
 
 **Step 4: User reports result, you check logs**
 
-```markdown
-User: "I see error: Invalid request body"
-
-Assistant checks:
-tail -100 /tmp/dev-website.log | grep -A 15 "API_NAME"
-
-Log shows:
-[API_NAME] Received body: { "field": "value" }
-[API_NAME] Validation failed: [{ path: "field", message: "..." }]
-
-→ Immediately see exact problem and fix it
-```
-
----
-
-**Example test instructions with logging:**
-```
-📋 Manual Testing - Survey Submission
-
-**Setup (Assistant does this):**
-1. Add debug logging to API endpoints:
-   - apps/website/app/api/survey/submit/route.ts
-   - Add console.log for: body received, validation, database results
-
-2. Start dev servers in background:
-   pkill -9 node
-   npm run dev:website > /tmp/dev-website.log 2>&1 &
-   npm run dev:cms > /tmp/dev-cms.log 2>&1 &
-   sleep 8
-
-3. Verify servers ready:
-   ✅ http://localhost:3000
-   ✅ http://localhost:3001
-
-**User Testing:**
-1. Generate survey link (CMS):
-   - Login at http://localhost:3001/login
-   - Go to Surveys → Open survey → Generate Link
-   - Copy link to clipboard
-
-2. Submit survey (Website):
-   - Open link in incognito tab
-   - Fill out all required fields
-   - Click Submit
-
-3. Verify success:
-   ✅ Redirect to success page
-   ✅ Check Supabase: responses table has new row
-   ✅ Check tenant_id is populated
-
-**If error occurs:**
-- User reports the error message
-- Assistant checks: tail -100 /tmp/dev-website.log
-- Logs show exact problem (request body, validation error, database error)
-- Fix immediately with context
-
-Report: pass | check (see logs) | stop
-```
+When user reports error → Check logs → Immediately see exact problem and fix it.
 
 **Commands:**
 - `pass` - Tests passed, proceed to documentation
@@ -1162,7 +1031,7 @@ Launching analysis-agent...
 | **Phase 10b** | N/A (orchestrator direct + skill-creator) | ⚠️ CONDITIONAL (skills update) |
 | **Phase 11** | `project-manager-agent` | ✅ REQUIRED |
 
-**Example Task tool calls with FULL CONTEXT:**
+**Example Task tool call with FULL CONTEXT:**
 ```typescript
 // Phase 2 - Pass COMPLETE plan
 Task(
@@ -1176,107 +1045,15 @@ ${planContent}
 TASK: Identify dependencies, parallelization opportunities, critical path, and execution order.
 OUTPUT: YAML with execution strategy.`
 )
-
-// Phase 4b (PARALLEL - single message, 2 Task calls with FULL CONTEXT)
-Task(
-  subagent_type="code-developer",
-  description="Create queries.ts",
-  prompt=`Create data fetching queries for survey feature:
-
-TYPES CREATED IN PHASE 2a:
-${phase2aOutput.exports}
-
-PLAN REQUIREMENTS:
-- Fetch survey by token with validation
-- Check: expired, max submissions, survey status
-
-APP CONTEXT:
-- App: apps/website (Website app)
-- Use: Server Supabase client (await createClient())
-- Query: survey_links with join to surveys
-
-TASK: Create queries.ts with getSurveyByToken(token) function.
-OUTPUT: YAML with file path, client_type, exports.`
-)
-Task(
-  subagent_type="code-developer",
-  description="Create validation.ts",
-  prompt=`Create Zod validation schemas for survey:
-
-TYPES CREATED IN PHASE 2a:
-${phase2aOutput.exports}
-
-PLAN REQUIREMENTS:
-- Dynamic schema based on questions array
-- Validation per question type (email, tel, checkbox array)
-- Optional vs required fields
-
-TASK: Create validation.ts with generateSurveySchema(questions) function.
-OUTPUT: YAML with file path, exports.`
-)
 ```
 
-**Note:** See Phase 2 example above for single agent invocation pattern. See Phase 4b for parallel agents pattern (single message with 2 Task calls). Apply same structure to other phases in this workflow.
+**Parallel agents:** Single message with multiple Task calls (e.g., Phase 4b: queries.ts + validation.ts simultaneously)
 
 ### Context Passing Pattern (CRITICAL)
 
 **Agents have isolated context** - they see ONLY what you pass in the prompt.
 
-**Pattern: Build context object, pass relevant parts to each agent**
-
-```typescript
-// Orchestrator maintains context object
-const context = {
-  plan: {
-    content: planContent,
-    requirements: extractedRequirements
-  },
-  phase1: {
-    notion_task_id: "2ed84f14-76e0-80c0-8da7-d574cdf2a4fe",
-    selected_task: {...}
-  },
-  phase2: {
-    strategy: "...",
-    dependencies: {...},
-    parallelization: {...}
-  },
-  phase3: {
-    migration_file: "supabase/migrations/...",
-    tables_modified: ["surveys", "survey_links"],
-    types_regenerated: true
-  },
-  phase4a: {
-    file: "apps/website/features/survey/types.ts",
-    exports: ["Question", "SurveyData", "LinkValidation"]
-  },
-  phase4b: {
-    files: ["queries.ts", "validation.ts"],
-    exports: {
-      queries: ["getSurveyByToken"],
-      validation: ["generateSurveySchema"]
-    }
-  },
-  // ... accumulate ALL phase outputs
-}
-
-// Phase 5a: Pass ONLY relevant context
-Task(
-  subagent_type="code-developer",
-  prompt=`Create QuestionField component:
-
-TYPES AVAILABLE (from Phase 4a):
-${context.phase4a.exports.join(", ")}
-
-VALIDATION AVAILABLE (from Phase 4b):
-${context.phase4b.exports.validation}
-
-PLAN REQUIREMENTS:
-${context.plan.requirements.questionField}
-
-TASK: Create QuestionField.tsx
-OUTPUT: YAML`
-)
-```
+**Pattern:** Build context object, accumulate ALL phase outputs, pass relevant parts to each agent.
 
 **Why critical:** Agent sees NOTHING from conversation. No context = agent fails or hallucinates.
 
@@ -1778,49 +1555,7 @@ Parallel phases: Foundation (3 files), Components (2 files)
 
 [User: continue]
 
-**Phase 3:**
-```markdown
-**Phase 3: Database Setup** [CRITICAL]
-
-Creating migration for public survey access RLS policy...
-```
-
-[Task tool call with subagent_type="database-specialist"]
-
-```markdown
-**Database Setup Complete** ✅
-
-Migration: 20251210120000_add_public_survey_policy.sql
-Types regenerated: ✅
-Verification: RLS policy active in Supabase
-
-**Next:** Phase 4 (Foundation) - 3 files in parallel ⚡⚡⚡
-
-**Commands:** `continue` | `details` | `stop`
-```
-
-[User: continue]
-
-**Phase 4a:**
-```markdown
-**Phase 4a: Foundation - Types**
-
-Creating types.ts (needed by queries and validation)...
-```
-
-[Task tool call with subagent_type="code-developer"]
-
-```markdown
-**Types Complete** ✅
-
-Created: apps/website/features/survey/types.ts
-
-**Next:** Phase 4b (Queries + Validation) - parallel ⚡⚡⚡
-
-**Commands:** `continue` | `details` | `stop`
-```
-
-[User: continue OR auto-proceed in --auto mode]
+**Phase 3-7:** [Condensed - follow same pattern as Phase 2 for sequential execution]
 
 **Phase 4b (Parallel):**
 ```markdown
@@ -1847,79 +1582,6 @@ Created:
 
 [User: continue OR auto-proceed in --auto mode]
 
-**Phase 5a:**
-```markdown
-**Phase 5a: Components - Base Component**
-
-Creating QuestionField.tsx (needed by SurveyForm)...
-```
-
-[Task tool call with subagent_type="code-developer"]
-
-```markdown
-**QuestionField Complete** ✅
-
-Created: QuestionField.tsx (7 question types with Controller)
-
-**Next:** Phase 5b (SurveyForm)
-
-**Commands:** `continue` | `details` | `stop`
-```
-
-[User: continue OR auto-proceed in --auto mode]
-
-**Phase 5b:**
-```markdown
-**Phase 5b: Components - Composite Component**
-
-Creating SurveyForm.tsx (uses QuestionField)...
-```
-
-[Task tool call with subagent_type="code-developer"]
-
-```markdown
-**SurveyForm Complete** ✅
-
-Created: SurveyForm.tsx (form + validation + submission)
-
-**Next:** Phase 5c (UI/UX Review)
-
-**Commands:** `continue` | `details` | `stop`
-```
-
-[User: continue OR auto-proceed in --auto mode]
-
-**Phase 5c:**
-```markdown
-**Phase 5c: UI/UX Review**
-
-Reviewing component design and accessibility...
-```
-
-[Task tool call with subagent_type="ui-ux-designer"]
-
-```markdown
-**UI/UX Review Complete** ✅
-
-Overall Rating: Good
-Issues Found: 2 P1 (spacing inconsistencies, missing focus states)
-
-**P1 Issues:**
-- Inconsistent spacing: Use gap-6 instead of gap-5
-- Missing focus states: Add focus:ring-2 to interactive elements
-
-Recommendations:
-- Follow Tailwind spacing scale consistently
-- Ensure all interactive elements have visible focus indicators
-
-**Next:** Fix P1 issues or proceed to Phase 6 (Server Actions)?
-
-**Commands:** `fix` | `continue` | `details` | `stop`
-```
-
-[User: continue - issues are minor OR auto-proceed in --auto mode]
-
-[Continues through Phase 6-7...]
 
 **Phase 8:**
 ```markdown
@@ -1974,190 +1636,17 @@ Please test the implementation manually:
 
 [User: pass - all tests successful]
 
-**Phase 10:**
-```markdown
-**Phase 10: Documentation**
+**Phase 9:** [Manual testing checkpoint - same pattern as Phase 8]
 
-Updating documentation with implementation results...
-```
+**Phase 10:** [Documentation update - project-manager-agent updates PROJECT_SPEC.yaml, Notion task]
 
-[Task tool call with subagent_type="project-manager-agent"]
+**Phase 10a:** [CLAUDE.md quality review - orchestrator applies claude-md + signal-vs-noise skills directly]
 
-```markdown
-**Documentation Updated** ✅
+**Phase 10b:** [Skills update review - orchestrator applies skill-creator decision framework]
 
-Files modified:
-- docs/PROJECT_SPEC.yaml: Marked Phase 2 features complete, verified acceptance criteria
-- docs/PROJECT_ROADMAP.md: Updated progress to 100%, added milestone
+**Phase 11:** [Git operations - project-manager-agent creates commit, optional push]
 
-Summary:
-Phase 2 Complete: Client survey form with 7 question types
-Clients can now receive survey links and submit responses with validation.
-
-**Next:** Phase 10a (CLAUDE.md Quality Review)
-
-**Commands:** `continue` | `adjust` | `stop`
-```
-
-[User: continue]
-
-**Phase 10a:**
-```markdown
-**Phase 10a: CLAUDE.md Quality Review** [MANDATORY]
-
-Loading quality review guidelines...
-- ✅ Loaded claude-md skill
-- ✅ Loaded signal-vs-noise skill
-
-**Reviewing:** apps/cms/features/survey/CLAUDE.md
-
-**Analysis:**
-- Sections found: Weird Parts (2), Critical Mistakes (1), Quick Reference (8 items)
-- Impact numbers: 1 (40% validation errors before fix)
-
-**Signal-vs-Noise Check:**
-✅ Weird Part #1: Dynamic Zod schema generation (project-specific + WHY explained)
-✅ Weird Part #2: Split Query Pattern for RLS (project-specific + WHY explained)
-⚠️ Critical Mistake: Generic explanation about React Hook Form (Claude knows this)
-
-**Recommendations:**
-1. Remove generic React Hook Form explanation (lines 34-42)
-2. Enhance "40% validation errors" with context (what caused it?)
-
-**Commands:** `approve` | `refine` | `skip` | `stop`
-```
-
-[User: refine]
-
-```markdown
-**Refining CLAUDE.md...**
-
-- ❌ Removed lines 34-42 (generic React Hook Form explanation)
-- ✅ Enhanced validation error section with root cause context
-
-**Quality Review Complete** ✅
-
-CLAUDE.md now meets signal-vs-noise standards.
-
-**Next:** Phase 10b (Skills Update Review)
-
-**Commands:** `continue` | `stop`
-```
-
-[User: continue]
-
-**Phase 10b:**
-```markdown
-**Phase 10b: Skills Update Review** [CONDITIONAL]
-
-Loading skill decision framework...
-- ✅ Loaded skill-creator skill
-
-**Reviewing implementation for new patterns...**
-
-**Patterns Discovered:**
-1. RLS infinite recursion when using subqueries in policies (supabase-patterns)
-   - Project-specific? ✅ (specific to our multi-tenant setup)
-   - Timeless? ✅ (PostgreSQL RLS limitation)
-   - Helps decisions? ✅ (prevents production bugs)
-
-2. React Hook Form with dynamic fields (code-patterns)
-   - Project-specific? ❌ (generic pattern)
-   - SKIP: Not adding to skills
-
-**Recommendation:**
-Update `supabase-patterns` skill with RLS recursion anti-pattern discovered in Phase 3.
-
-**Proposed Addition:**
-```yaml
-## RLS Anti-Pattern: Subqueries in Policies
-
-**Problem:** Using subqueries in RLS policies causes infinite recursion
-**Impact:** 100% of SELECT queries fail with "infinite recursion" error
-**Solution:** Use Split Query Pattern (fetch in application, filter in memory)
-
-[Example code showing anti-pattern and fix]
-```
-
-**Commands:** `approve` | `update supabase-patterns` | `skip` | `stop`
-```
-
-[User: approve]
-
-```markdown
-**Updating supabase-patterns skill...**
-
-- ✅ Added RLS Anti-Pattern section (lines 98-112)
-- ✅ Included example from actual bug fix
-- ✅ Signal-vs-noise validated (project-specific + timeless)
-
-**Skills Update Complete** ✅
-
-Updated: supabase-patterns
-
-**Next:** Phase 11 (Git Operations)
-
-**Commands:** `continue` | `stop`
-```
-
-[User: continue]
-
-**Phase 11:**
-```markdown
-**Phase 11: Git Operations**
-
-Creating commit for documentation changes...
-```
-
-[Task tool call with subagent_type="project-manager-agent"]
-
-```markdown
-**Commit Created** ✅
-
-Commit message:
-feat: add client survey form with 7 question types
-
-Clients can now receive survey links and submit responses.
-Form validates inputs (email, phone, required fields) and
-saves to database with multi-tenant isolation.
-
-**Next:** Would you like to push to remote?
-
-**Commands:** `push` | `pr` | `skip` | `stop`
-```
-
-[User: push]
-
-```markdown
-**Pushing to remote...**
-
-✅ Pushed to origin/main
-
-**All Phases Complete!** ✅
-```
-
-**Final:**
-```markdown
-**All Phases Complete!** ✅
-
-Summary:
-- Database: RLS policy added ✅
-- Foundation: 3 files created ✅
-- Components: 2 components built ✅
-- Server Actions: actions.ts created ✅
-- Routes: 2 pages created ✅
-- Implementation Verification: Code analyzed, 1 P1 issue (non-blocking) ✅
-- Testing: All tests passed ✅
-- Documentation: PROJECT_ROADMAP.md + PROJECT_SPEC.yaml updated ✅
-- Git: Committed + pushed to remote ✅
-
-**Commit:** `feat: add client survey form with 7 question types`
-**Branch:** main (pushed)
-
-**Commands:**
-- `summary` - Show detailed summary
-- `pr` - Create pull request (if needed)
-```
+**Phase 12: Complete**
 
 ---
 
@@ -2189,251 +1678,71 @@ If NO → Add missing CRITICAL information (not everything)
 ### Pattern 1: Smart Parallelization
 
 **Foundation phase (always parallel):**
-```markdown
-Phase 4: Launch 3x code-developer
-→ types.ts, queries.ts, validation.ts
-→ Parallel execution for efficiency
-```
+- Phase 4: Launch types.ts, queries.ts, validation.ts simultaneously
 
 **Components phase (parallel if independent):**
-```markdown
-Phase 5: Launch Nx code-developer
-→ QuestionField, SurveyForm (if SurveyForm doesn't depend on QuestionField)
-→ OR: Launch QuestionField → then SurveyForm (if dependent)
-```
+- Phase 5: Launch base components first, then dependent composites
 
 ### Pattern 2: Critical Phase Blocking
 
 **Database phase blocks everything:**
-```markdown
-Phase 3: Database [CRITICAL]
-→ Must complete before Foundation
-→ Foundation needs regenerated types
-→ Everything depends on types
-```
+- Phase 3 must complete before Foundation
+- Foundation needs regenerated types
+- Everything depends on types
 
 ### Pattern 3: Conditional Skipping
 
 **Skip testing if automated only:**
-```yaml
-plan_analysis:
-  testing_strategy:
-    skip_if: "Automated tests handle validation"
-
-→ Orchestrator: "Skipping Phase 9 (Testing) - automated tests only"
-```
+- If plan specifies automated tests only, skip Phase 9
 
 ---
 
 ## Anti-Patterns (Avoid These)
 
-### ❌ Don't: Sequential when could be parallel
-```markdown
-Phase 4: Launch types.ts → wait → Launch queries.ts → wait → Launch validation.ts
-# Inefficient! Should be parallel!
-```
+### ❌ Skip clarifying questions
+**Problem:** Present output → immediately offer commands → user confirms without understanding verified
+**Fix:** Always paraphrase + ask 3-5 questions + wait for confirmation before offering commands
 
-### ❌ Don't: Start components before foundation ready
-```markdown
-Phase 4: Foundation starting...
-Phase 5: Components starting...  # Components need foundation!
-```
+### ❌ Skip build verification
+**Problem:** Phase 4b complete → Immediately launch Phase 5
+**Fix:** Phase 4b complete → npm run build:cms → Verify succeeds → Phase 5 starts
 
-### ❌ Don't: Skip testing when there are P0 issues
-```markdown
-Testing: 2 P0 failures found
-User: continue to documentation
-# NO! Fix P0 first!
-```
+### ❌ Skip testing with P0 issues
+**Problem:** Testing: 2 P0 failures found → User: continue to documentation
+**Fix:** Fix P0 first, never proceed with blocking issues
 
-### ❌ Don't: Auto-proceed without user approval
-```markdown
-Phase 5 complete → Phase 6 starts immediately
-# User loses control, can't review!
-```
-
-### ❌ Don't: Skip build verification
-```markdown
-Phase 4b complete → Immediately launch Phase 5
-# NO! Must verify build succeeds first!
-```
-
-✅ **Correct:**
-```markdown
-Phase 4b complete → npm run build:cms → Verify succeeds → Phase 5 starts
-```
-
-### ❌ Don't: Skip manual testing checkpoints
-```markdown
-Phase 7 complete → Immediately launch project-manager-agent
-# NO! User must test first!
-```
-
-✅ **Correct:**
-```markdown
-Phase 7 complete → npm run build (both apps) → Phase 8 (verification-specialist) → Manual test checkpoint → User tests → Reports pass → Launch project-manager-agent
-```
-
-### ❌ Don't: Skip CLAUDE.md quality review
-```markdown
-Phase 10 complete → Immediately launch project-manager-agent
-# NO! Must review CLAUDE.md quality first (Phase 10a)!
-```
-
-✅ **Correct:**
-```markdown
-Phase 10 complete → Phase 10a (CLAUDE.md quality review) → Apply signal-vs-noise → Phase 11 (Git)
-```
-
-### ❌ Don't: Update skills without decision framework
-```markdown
-Phase 10b: "Let me add this pattern to code-patterns"
-# NO! Apply 3-Question Filter first: Project-specific? Timeless? Helps decisions?
-```
-
-✅ **Correct:**
-```markdown
-Phase 10b: Invoke skill-creator → Apply 3-Question Filter → Update only if YES to all 3
-```
-
-### ❌ Don't: Skip implementation verification
-```markdown
-Phase 7 complete → Build succeeds → Immediately launch test-validator
-# NO! Must verify code correctness first!
-```
-
-✅ **Correct:**
-```markdown
-Phase 7 complete → Build succeeds → Launch analysis-agent → Analyze code → Fix P0 issues → Launch test-validator
-```
-
-### ❌ Don't: Accumulate build errors
-```markdown
-Phase 4b: Build fails - ignore it
-Phase 5: Build fails - continue anyway
-Phase 6: Build fails - deal with it later
-# NO! Now have 10+ errors to fix!
-```
-
-✅ **Correct:**
-```markdown
-Phase 4b: Build fails → Agent fixes immediately → Rebuild verifies fix → Continue to Phase 5
-Phase 5: Build succeeds → Continue to Phase 6
-Phase 6: Build succeeds → Continue to Phase 7
-# Clean builds all the way!
-```
-
-### ❌ Don't: Use wrong agent or skip Task tool
-```markdown
-Phase 4a: "Let me create types.ts manually"
-# NO! Must use Task tool with subagent_type="code-developer"
-
-Phase 6: "Launching general-purpose agent..."
-# NO! Must use Task tool with subagent_type="code-developer"
-
-Phase 8: "I'll verify the code myself..."
-# NO! Must use Task tool with subagent_type="verification-specialist"
-```
-
-✅ **Correct:**
-```markdown
-Phase 4a: Task(subagent_type="code-developer", description="Create types.ts", prompt="...")
-Phase 6: Task(subagent_type="code-developer", description="Create actions.ts", prompt="...")
-Phase 8: Task(subagent_type="verification-specialist", description="Verify implementation", prompt="...")
-```
-
-### ❌ Don't: Skip clarifying questions
-
-**Problem:** Present output → immediately offer commands → user confirms without understanding verified.
-
-**Why bad:**
-- Orchestrator makes assumptions about ambiguous input
-- User doesn't realize output doesn't match intent until later phases
-- Rework required (redo phases already completed)
-
-**Real example:**
-- Phase 2: analysis-agent interpreted "filtering" as in-memory filtering
-- User said "continue" (didn't notice assumption)
-- Phase 3-5: Database, foundation, components all based on in-memory approach
-- Phase 6: User testing revealed: "I meant database query-based filtering for 300 items"
-- Had to redo Phases 3-6 (wasted 30 minutes)
-
-**Root cause:** Ambiguous requirement ("filtering") → Agent assumed approach → No clarifying questions to uncover constraint (300 items, database required) → Wrong direction
-
-**✅ Correct:**
-```markdown
-**Phase 2 Complete** ✅
-[Present analysis output]
-
-───────────────────────────────────────────────
-Let me verify my understanding:
-Feature adds filtering by status and date, using in-memory approach for simplicity.
-
-Clarifying questions (3-4 for standard phase):
-1. Is in-memory filtering correct, or should this use database queries?
-2. How many items will be filtered (affects approach - in-memory vs query-based)?
-3. Should filtering work offline, or only when connected?
-4. Are there performance requirements (max response time)?
-
-Does this match exactly what you want? If not, what should I adjust?
-───────────────────────────────────────────────
-
-[User responds: "300 items, needs database queries"]
-[Orchestrator updates understanding, asks follow-up questions, gets confirmation]
-
-Ready to proceed? (continue/skip/back/stop)
-```
-
-**Why clarifying questions work:**
-1. **Paraphrase** forces orchestrator to demonstrate understanding (not just acknowledge)
-2. **3-5 specific questions** (flexible) uncover hidden constraints, edge cases, priorities
-3. **Confirmation loop** ensures alignment before proceeding
-4. **Early detection** catches wrong direction at Phase N (not Phase N+3)
 
 ---
 
-## Workflow Insights (Lessons from Real Implementation)
+## Workflow Insights
 
 ### ✅ What Works Well
 
 **Parallel Agent Execution:**
 - Create queries.ts + validation.ts simultaneously
-- Foundation agents (code-developer) can run in parallel for independent files
-- Example: Phase 4b can parallelize types.ts creation, but queries/validation depend on types
+- Foundation agents can run in parallel for independent files
 
 **Specialized Agents:**
 - Each agent focused on one responsibility (types, queries, components, routes)
-- Clear boundaries prevent scope creep
 - Type-first approach: Create types.ts before implementation
-- Agents know their domain patterns (no generic explanations needed)
-
-**Browser DevTools for Debugging:**
-- Console reveals exact error messages (RLS errors, validation failures)
-- Faster than adding/removing debug logs in code
-- Network tab shows API request/response details
-- Use console.error in Server Actions for production debugging
 
 ### 🚨 Critical Anti-Patterns to Avoid
 
 **Field Name Mismatches Between Apps:**
 - Problem: CMS uses `label`, Website expects `question` → blank forms
 - Solution: Create shared types in `packages/shared-types/` for cross-app domain objects
-- Check: Does this type exist in both CMS and Website? → If yes, extract to shared package
 
 **Debug Logs in Production Code:**
-- Problem: 11+ `console.log` statements left after debugging
+- Problem: Multiple `console.log` statements left after debugging
 - Solution: Use browser DevTools instead, only keep `console.error` in Server Actions
-- Review code before commit to remove debug statements
 
 **Multiple Migrations for Same Bugfix:**
-- Problem: 6 migrations created while debugging single RLS issue
+- Problem: Multiple migrations created while debugging single issue
 - Solution: Test migrations locally first with `SET ROLE anon`, squash if fixing same issue
-- Use migration repair to mark old migrations as reverted
 
 **No UI Validation Before Merge:**
 - Problem: Styling changes merged without checklist verification
 - Solution: UI/UX review in Phase 5c (ui-ux-designer), verification in Phase 8 (verification-specialist)
-- Check: shadcn/ui components, theme tokens, spacing scale, accessibility (WCAG 2.1 AA)
 
 ---
 

@@ -99,132 +99,64 @@ Result: Matches plan ✅
 
 ### Common Bug Patterns (Phase 2)
 
-**Pattern 1: Controller vs register**
+**Problem/Fix format:**
 
 ```typescript
-// ❌ BUG: Checkbox with register
+// ❌ PROBLEM: Checkbox with register
 <input type="checkbox" {...register('field')} />
-// Stores only last value!
+// IMPACT: Stores only last value (not array)
+// ✅ FIX: Use Controller
 
-// ✅ CORRECT: Controller
-<Controller name="field" control={control} ... />
-```
-
-**Pattern 2: Missing revalidatePath**
-
-```typescript
-// ❌ BUG: No revalidatePath
+// ❌ PROBLEM: Missing revalidatePath
 export async function updateSurvey(id: string, data: any) {
   await supabase.from('surveys').update(data).eq('id', id)
   return { success: true }
-  // Cache stale!
 }
+// IMPACT: Stale cache, UI shows old data
+// ✅ FIX: Add revalidatePath('/admin/surveys')
 
-// ✅ CORRECT: revalidatePath
-export async function updateSurvey(id: string, data: any) {
-  await supabase.from('surveys').update(data).eq('id', id)
-  revalidatePath('/admin/surveys')  // Clear cache
-  return { success: true }
-}
-```
-
-**Pattern 3: Throwing errors in Server Actions**
-
-```typescript
-// ❌ BUG: Throwing crashes middleware
+// ❌ PROBLEM: Throwing errors in Server Actions
 export async function createSurvey(data: any) {
-  if (error) throw new Error('Failed')  // Crashes!
+  if (error) throw new Error('Failed')
 }
+// IMPACT: Crashes middleware
+// ✅ FIX: Return { success: false, error: 'Failed' }
 
-// ✅ CORRECT: Structured return
-export async function createSurvey(data: any) {
-  if (error) return { success: false, error: 'Failed' }
-}
-```
-
-**Pattern 4: Wrong Supabase client**
-
-```typescript
-// ❌ BUG: Browser client in Server Action
+// ❌ PROBLEM: Browser client in Server Action
 'use server'
 import { createClient } from '@/lib/supabase/client'
-const supabase = createClient()  // Wrong context!
-
-// ✅ CORRECT: Server client
-'use server'
-import { createClient } from '@/lib/supabase/server'
-const supabase = await createClient()  // Correct
+const supabase = createClient()
+// IMPACT: Wrong context, auth fails
+// ✅ FIX: Use '@/lib/supabase/server' + await createClient()
 ```
 
-### Code Quality Checks
-
-**Project-specific quality standards:**
-
-```yaml
-Components:
-  - [ ] All 4 UI states (loading, error, empty, success)
-  - [ ] Controller for checkbox arrays
-  - [ ] TanStack Query CMS-only
-  - [ ] Error boundaries present
-
-Routes:
-  - [ ] Minimal (just import + render)
-  - [ ] ADR-005 compliant (imports from features/)
-  - [ ] Async params (await params)
-
-Server Actions:
-  - [ ] Structured return { success, data?, error? }
-  - [ ] revalidatePath after mutations
-  - [ ] Server client (await createClient())
-  - [ ] Try-catch wrapper
-
-Foundation:
-  - [ ] Explicit return types
-  - [ ] Correct client (Browser/Server)
-  - [ ] Shared types if needed
-```
 
 ## Quick Reference
 
 **Validation checklist:**
 
 ```yaml
-Step 1: Plan Alignment
+Plan Alignment:
   - [ ] All requirements implemented
-  - [ ] No extra features (YAGNI)
-  - [ ] Edge cases handled (from plan)
+  - [ ] No extra features
+  - [ ] Edge cases handled
 
-Step 2: Common Bugs
+Common Bugs (Phase 2):
   - [ ] Controller for checkboxes (not register)
   - [ ] revalidatePath in actions
   - [ ] Structured returns (not throws)
   - [ ] Correct Supabase client
 
-Step 3: Code Quality
-  - [ ] All UI states present
-  - [ ] ADR-005 compliant (routes minimal)
-  - [ ] Error handling graceful
+Architecture:
+  - [ ] Routes minimal (ADR-005)
+  - [ ] All UI states (loading, error, empty, success)
   - [ ] Types explicit
+  - [ ] No RLS subqueries
 
-Step 4: Completeness
-  - [ ] All files created (types, queries, actions, components, routes)
+Completeness:
+  - [ ] All files created
   - [ ] Imports correct
-  - [ ] No TODOs or placeholders
-```
-
-**Commands:**
-
-```bash
-# Check for common bugs
-grep -r "register.*checkbox" .  # Should use Controller
-grep -r "throw new Error" apps/*/features/*/actions.ts  # Should return error
-grep -r "createClient()" -A 1 apps/*/features/*/actions.ts | grep -v "await"  # Should await
-
-# Check imports
-grep -r "from '@/app" apps/*/features/  # Should not import from app/
-
-# Check types
-grep -r "Promise<any>" apps/*/features/  # Should have explicit types
+  - [ ] No TODOs
 ```
 
 ## Real Project Validation
@@ -258,47 +190,3 @@ Completeness:
 Result: Ready for manual testing (2 minor issues noted)
 ```
 
-## Anti-Patterns
-
-### ❌ Skipping Validation
-
-**Problem:** Going straight to manual testing with broken code
-
-```yaml
-# ❌ WRONG: No pre-test validation
-1. Finish coding
-2. Start manual testing
-3. Find bugs (checkbox broken, cache stale, errors thrown)
-4. Fix bugs
-5. Re-test
-
-# ✅ CORRECT: Validate first
-1. Finish coding
-2. Run validation checklist
-3. Fix common bugs (before testing!)
-4. Manual testing (smooth)
-```
-
-**Why wrong:** Wastes testing time on preventable bugs
-
-### ❌ Not Checking Plan Alignment
-
-**Problem:** Code works but doesn't match requirements
-
-```yaml
-# ❌ WRONG: Code works, but...
-Code: Survey never expires (no expiration check)
-Plan: "Surveys should expire after 7 days"
-Result: Feature incomplete!
-
-# ✅ CORRECT: Verify against plan
-Code: expires_at checked, error shown
-Plan: "Surveys should expire after 7 days"
-Result: Matches requirement ✅
-```
-
-**Why wrong:** Passes tests but fails requirements
-
----
-
-**Key Lesson:** Validate before testing (saves time), check common bugs (Phase 2 patterns), verify plan alignment (meets requirements).

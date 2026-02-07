@@ -21,7 +21,6 @@ Notion task sync patterns: MCP tool usage (case-sensitive!), status updates, gra
 **Notion MCP API is case-sensitive - exact match required**
 
 ```typescript
-// ❌ WRONG - Silent failure
 await mcp.notion.updatePage({
   page_id: "123",
   command: "update_properties",
@@ -30,7 +29,7 @@ await mcp.notion.updatePage({
   }
 })
 
-// ✅ CORRECT - Exact match
+// ✅ - Exact match
 await mcp.notion.updatePage({
   page_id: "123",
   command: "update_properties",
@@ -51,58 +50,16 @@ await mcp.notion.updatePage({
 
 **Pattern: Update + Comment**
 
-```typescript
-// Step 1: Update status
-await mcp.notion.updatePage({
-  page_id: task_id,
-  command: "update_properties",
-  properties: {
-    "Status": "Done",  // Case-sensitive!
-    "Completion Date": new Date().toISOString().split('T')[0]
-  }
-})
+1. Update status (machine-readable)
+2. Add comment (human context)
 
-// Step 2: Add context comment (optional)
-await mcp.notion.createComment({
-  parent: { page_id: task_id },
-  rich_text: [{
-    type: "text",
-    text: {
-      content: "Survey submission feature complete. Clients can now submit responses."
-    }
-  }]
-})
-```
-
-**Why two steps:** Status update = machine-readable, comment = human context
+**Why two steps:** Status for filtering, comment for details
 
 ## Graceful Fallback Pattern
 
-**Pattern: Handle Notion unavailable**
+**Pattern:** Try/catch Notion updates, log warning on failure, don't throw
 
-```typescript
-async function syncNotionTask(task_id: string, status: string) {
-  if (!task_id) {
-    console.log("No Notion task_id, skipping sync")
-    return
-  }
-
-  try {
-    await mcp.notion.updatePage({
-      page_id: task_id,
-      command: "update_properties",
-      properties: { "Status": status }
-    })
-    console.log(`✅ Notion task ${task_id} updated`)
-  } catch (error) {
-    console.warn(`⚠️ Notion sync failed: ${error.message}`)
-    console.warn("Continuing without Notion sync (not critical)")
-    // Don't throw - Notion failure shouldn't block docs update
-  }
-}
-```
-
-**Why graceful:** Notion unavailable shouldn't block entire workflow
+**Why graceful:** Notion unavailable shouldn't block workflow
 
 ## Quick Reference
 
@@ -152,105 +109,7 @@ mcp.notion.search({
 
 ## Real Project Example
 
-**Phase 2 Survey Task Sync:**
+**Phase 2 Survey Task Sync:** Fetch to verify property names → Update with exact case → Add comment
 
-```typescript
-// Fetch to verify property names
-const page = await mcp.notion.fetch({ id: "task-id" })
-// Response shows: "Status" (capital S), "Completion Date" (capital C, D)
+**Result:** Task marked Done in Notion with context
 
-// Update with exact case
-await mcp.notion.updatePage({
-  page_id: "task-id",
-  command: "update_properties",
-  properties: {
-    "Status": "Done",  // Exact match
-    "Completion Date": "2025-01-26"
-  }
-})
-
-// Add context
-await mcp.notion.createComment({
-  parent: { page_id: "task-id" },
-  rich_text: [{
-    type: "text",
-    text: {
-      content: "Survey feature deployed. 7 question types working, validation enforced."
-    }
-  }]
-})
-
-// Result: ✅ Task marked Done in Notion with context comment
-```
-
-## Anti-Patterns
-
-### ❌ Case-Insensitive Updates
-
-**Problem:** Using lowercase property names
-
-```typescript
-// ❌ WRONG
-properties: {
-  "status": "done",          // Wrong case
-  "completion date": "..."   // Wrong case
-}
-
-// Result: Silent failure, task not updated
-
-// ✅ CORRECT
-properties: {
-  "Status": "Done",              // Exact match
-  "Completion Date": "2025-01-26"  // Exact match
-}
-```
-
-**Why wrong:** Notion API case-sensitive, no error thrown (silent fail)
-
-### ❌ Notion Failure Blocks Workflow
-
-**Problem:** Throwing error when Notion unavailable
-
-```typescript
-// ❌ WRONG
-await syncNotionTask(task_id)  // Throws if Notion unavailable
-// Entire docs update blocked!
-
-// ✅ CORRECT
-try {
-  await syncNotionTask(task_id)
-} catch (error) {
-  console.warn("Notion sync failed, continuing")
-  // Docs update continues
-}
-```
-
-**Why wrong:** Notion is supplementary. Docs update should proceed even if Notion fails.
-
-### ❌ Missing task_id Check
-
-**Problem:** Attempting sync without task_id
-
-```typescript
-// ❌ WRONG
-await mcp.notion.updatePage({
-  page_id: undefined,  // Crashes!
-  properties: { "Status": "Done" }
-})
-
-// ✅ CORRECT
-if (task_id) {
-  await mcp.notion.updatePage({
-    page_id: task_id,
-    properties: { "Status": "Done" }
-  })
-} else {
-  console.log("No Notion task_id, skipping sync")
-}
-```
-
-**Why wrong:** Not all tasks have Notion IDs (some local-only)
-
----
-
-**Key Lesson:** Notion API is case-sensitive (exact match required). Handle failures gracefully (don't block workflow).
