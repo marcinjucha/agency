@@ -384,13 +384,13 @@ features:
       status: "complete"
       why: "Automated client qualification to prioritize high-value leads"
       acceptance_criteria:
-        - "Webhook triggered on form submission"
-          verified: false  # Website integration not implemented yet
-        - "AI analyzes responses and stores results in responses.ai_qualification"
+        - criterion: "Webhook triggered on form submission"
+          verified: true  # Fire-and-forget in apps/website/features/survey/submit.ts:62
+        - criterion: "AI analyzes responses and stores results in responses.ai_qualification"
           verified: true  # Workflow tested, works correctly
-        - "7-node workflow with error handling"
-          verified: true
-        - "Retry logic for API failures (3 retries, 5s delay)"
+        - criterion: "8-node workflow with error handling"
+          verified: true  # Modified from 7 to 8 nodes (added Fetch Response node)
+        - criterion: "Retry logic for API failures (3 retries, 5s delay)"
           verified: true
       tech_decisions:
         - decision: "Claude Haiku 4.5 for AI analysis (not GPT-4)"
@@ -401,54 +401,42 @@ features:
           rationale: "Flexible schema evolution, can add new fields without migrations, atomic updates"
         - decision: "Fire-and-forget webhook pattern"
           rationale: "Don't block user requests, workflow runs async in background, retry on failure"
+        - decision: "Simplified webhook input (responseId only)"
+          rationale: "Fetch remaining data via SQL JOIN, reduces payload size, prevents data duplication"
       dependencies:
         - feature: "n8n Infrastructure"
         - feature: "Form Submission"
       notes: |
-        2026-02-05: AI Qualification Workflow COMPLETE
+        2026-02-11: Workflow Simplified & Tested Successfully
 
-        WORKFLOW DEFINITION:
-        - File: n8n-workflows/survey-analysis-workflow.json
-        - Nodes: 7 (Webhook → Supabase → Transform → Claude → Parse → Update → Error)
-        - Webhook: POST /webhook/survey-analysis
-        - Model: claude-haiku-4-5-20250710
-        - Cost: ~$0.0008 per analysis
-        - Execution time: 5-8 seconds
-
-        WORKFLOW LOGIC:
-        1. Webhook receives: responseId, surveyId, tenant_id, answers
-        2. Fetch survey from Supabase (questions array)
-        3. Transform: Build Q&A pairs for AI context
-        4. Claude analyzes: 4 scores (0-10) + summary + recommendation
-        5. Parse JSON response
-        6. Update responses.ai_qualification (JSONB)
-        7. On error: Log to GlitchTip (Sentry node)
-
-        AI OUTPUT STRUCTURE:
-        {
-          urgency_score: 0-10,
-          complexity_score: 0-10,
-          value_score: 0-10,
-          success_probability: 0-10,
-          overall_score: weighted_average,
-          summary: "1-2 sentences",
-          recommendation: "QUALIFIED | DISQUALIFIED | NEEDS_MORE_INFO",
-          notes_for_lawyer: ["point 1", "point 2", "point 3"]
-        }
-
-        DOCUMENTATION:
-        - 10 files, 112KB total
-        - INDEX.md (navigation)
-        - SETUP_GUIDE.md (2-3h deployment)
-        - TEST_COMMANDS.md (8 test cases)
-        - TROUBLESHOOTING.md (15+ error patterns)
-        - WORKFLOW_DIAGRAM.md (14 Mermaid diagrams)
+        MODIFICATIONS:
+        - Simplified webhook input: 4 parameters → 1 parameter (responseId only)
+        - Added Node 2 (Fetch Response): SQL JOIN responses + survey_links tables
+        - Updated Transform node to use database-fetched data instead of webhook payload
+        - Updated Parse node to strip markdown from Claude response
+        - All existing error handling and retry logic maintained
 
         TESTING:
-        - Tested locally with curl commands
-        - All 8 test cases documented
-        - SQL verification queries provided
-        - Ready for production import
+        - Test case: Jan Kowalski (high-value divorce case)
+        - responseId: c3d4e5f6-a7b8-9012-cdef-333333333333
+        - Result: ai_qualification populated correctly
+        - Status changed: new → qualified
+        - Execution time: ~6 seconds
+        - All nodes executed successfully, no errors
+
+        WORKFLOW STRUCTURE (8 nodes):
+        1. Webhook (responseId only)
+        2. Fetch Response (NEW - SQL JOIN responses + survey_links)
+        3. Fetch Survey (modified to use Node 2 output)
+        4. Transform Q&A (modified data sources)
+        5. Claude Haiku API (unchanged)
+        6. Parse Output (added markdown stripping)
+        7. Update Response (unchanged)
+        8. Response (returns full qualification object)
+
+        READY FOR:
+        - Production testing with real survey submissions
+        - Email notifications (Phase 5 - pending)
 
     - name: "Email Notifications"
       status: "pending"
@@ -563,7 +551,7 @@ status_summary:
   phase_2: "✅ Complete (100%) - Client Survey Form & Response Management"
   phase_3: "✅ Complete (100%) - Calendar Integration FINISHED"
   phase_4: "✅ Complete (100%) - UI/UX Improvements"
-  phase_5: "🟡 In Progress (75%) - n8n Infrastructure, AI Workflow, Monitoring DONE | Email Notifications PENDING"
+  phase_5: "🟡 In Progress (75%) - n8n Infrastructure, AI Workflow, Website Integration, Monitoring DONE | Email Notifications PENDING"
   phase_6: "🔮 Future (0%) - Marketing & Polish"
 
 critical_path:
@@ -571,6 +559,6 @@ critical_path:
   - "Phase 2 Form Submission & Response Management (✅ COMPLETE)"
   - "Phase 3 Calendar Integration (✅ COMPLETE)"
   - "Phase 4 UI/UX Improvements (✅ COMPLETE)"
-  - "Phase 5 n8n & AI Analysis (🟡 75% COMPLETE - Infrastructure + Workflow DONE, Website integration + Email notifications PENDING)"
+  - "Phase 5 n8n & AI Analysis (🟡 75% COMPLETE - Infrastructure + Workflow + Website Integration DONE, Email Notifications PENDING)"
   - "Phase 5 n8n & AI Analysis (📋 NEXT)"
   - "Phase 6 Marketing & Production"
