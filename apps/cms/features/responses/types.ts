@@ -17,7 +17,6 @@
  * @module apps/cms/features/responses/types
  */
 
-import type { Tables } from '@agency/database'
 import type {
   Question,
   QuestionType,
@@ -45,20 +44,18 @@ export interface ResponseSurveyLinkContext {
 }
 
 
-/**
- * AI qualification metadata
- * Placeholder for Phase 5 AI analysis results
- * Currently stored as JSONB null, will contain AI scores and analysis
- *
- * @example
- * const qualification: AIQualification = {
- *   score: 0.85,
- *   reasoning: "Client meets initial criteria",
- *   timestamp: "2025-12-12T10:30:00Z"
- * }
- */
 export interface AIQualification {
-  [key: string]: any
+  model: string
+  summary: string
+  version: string
+  analyzed_at: string
+  value_score: number
+  overall_score: number
+  urgency_score: number
+  recommendation: 'QUALIFIED' | 'DISQUALIFIED' | 'NEEDS_MORE_INFO'
+  complexity_score: number
+  notes_for_lawyer: string[]
+  success_probability: number
 }
 
 /**

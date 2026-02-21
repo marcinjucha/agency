@@ -1,0 +1,82 @@
+import { createAnonClient } from '@/lib/supabase/anon-server'
+import type { TablesInsert } from '@agency/database'
+import type { SurveyAnswers } from './types'
+
+interface SubmitResponseParams {
+  linkId: string
+  surveyId: string
+  answers: SurveyAnswers
+}
+
+export interface SubmitResponseResult {
+  success: boolean
+  error?: string
+  responseId?: string
+  linkId?: string
+  httpStatus?: number
+}
+
+export async function submitResponse({
+  linkId,
+  surveyId,
+  answers,
+}: SubmitResponseParams): Promise<SubmitResponseResult> {
+  const supabase = createAnonClient()
+
+  // Step 1: Get tenant_id from surveys table
+  const { data: survey, error: surveyError } = await supabase
+    .from('surveys')
+    .select('tenant_id')
+    .eq('id', surveyId)
+    .single()
+
+  if (surveyError || !survey) {
+    console.error('Failed to fetch survey tenant_id:', surveyError)
+    return { success: false, error: 'Survey not found. Please try again.', httpStatus: 404 }
+  }
+
+  const surveyData = survey as { tenant_id: string }
+
+  // Step 2: Insert response into responses table
+  const responseData: TablesInsert<'responses'> = {
+    survey_link_id: linkId,
+    answers: answers as unknown as TablesInsert<'responses'>['answers'],
+    tenant_id: surveyData.tenant_id,
+    ai_qualification: null,
+    status: 'new',
+  }
+
+  const { data: response, error: insertError } = await supabase
+    .from('responses')
+    .insert(responseData)
+    .select('id')
+    .single()
+
+  if (insertError || !response) {
+    console.error('Failed to insert response:', insertError)
+    return { success: false, error: 'Failed to save your response. Please try again.', httpStatus: 400 }
+  }
+
+  const { id: responseId } = response as { id: string }
+
+  // Trigger n8n AI analysis (fire-and-forget)
+  if (process.env.N8N_WEBHOOK_URL) {
+    fetch(process.env.N8N_WEBHOOK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ responseId }),
+    }).catch(err => console.error('[N8N] AI analysis webhook failed:', err))
+  }
+
+  // Step 3: Increment submission count using database function (non-critical)
+  const { error: incrementError } = await supabase.rpc(
+    'increment_submission_count',
+    { link_id: linkId }
+  )
+
+  if (incrementError) {
+    console.error('Failed to increment submission count:', incrementError)
+  }
+
+  return { success: true, responseId, linkId }
+}

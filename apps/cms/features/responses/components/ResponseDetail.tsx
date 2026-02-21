@@ -5,7 +5,7 @@ import { getResponse } from '../queries'
 import type { ResponseWithRelations, QuestionAnswerPair } from '../types'
 import { Button, Card, Badge } from '@agency/ui'
 import Link from 'next/link'
-import { ArrowLeft, FileX } from 'lucide-react'
+import { ArrowLeft, FileX, Loader2 } from 'lucide-react'
 import { getResponseStatusColor } from '@/lib/utils/status'
 import { LoadingState, ErrorState, EmptyState } from '@/components/shared'
 
@@ -35,6 +35,11 @@ export function ResponseDetail({ responseId }: ResponseDetailProps) {
     queryKey: ['response', responseId],
     queryFn: () => getResponse(responseId),
     enabled: !!responseId,
+    refetchInterval: (query) => {
+      if (query.state.data?.ai_qualification) return false
+      if (query.state.dataUpdateCount > 6) return false
+      return 10000
+    },
   })
 
   // Loading state
@@ -188,21 +193,62 @@ export function ResponseDetail({ responseId }: ResponseDetailProps) {
         </Card>
       )}
 
-      {/* AI Qualification Section - Phase 5 Placeholder */}
-      <Card className="p-6 bg-status-info border-status-info">
-        <h2 className="text-lg font-semibold text-foreground mb-4">AI Qualification Analysis</h2>
-        <div className="text-center py-8">
-          <div className="inline-flex items-center justify-center h-12 w-12 rounded-full bg-status-info mb-4">
-            <svg className="h-6 w-6 text-status-info-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5h.01M15 9h.01" />
-            </svg>
+      {/* AI Qualification Section */}
+      <Card className="p-6">
+        <h2 className="text-lg font-semibold text-foreground mb-4">AI Analysis</h2>
+        {!response.ai_qualification ? (
+          <div className="flex items-center gap-2 text-muted-foreground py-4">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <p className="text-sm">Analyzing response...</p>
           </div>
-          <p className="text-foreground font-semibold mb-2">Coming in Phase 5</p>
-          <p className="text-muted-foreground text-sm">
-            AI-powered qualification analysis will appear here once configured.
-            This will include scoring, recommendations, and insights about the applicant.
-          </p>
-        </div>
+        ) : (
+          <div className="space-y-6">
+            {/* Recommendation + Scores */}
+            <div className="flex flex-wrap items-center gap-4">
+              <Badge
+                className={`px-3 py-1 rounded-full text-sm font-medium ${
+                  response.ai_qualification.recommendation === 'QUALIFIED'
+                    ? 'bg-green-100 text-green-800'
+                    : response.ai_qualification.recommendation === 'DISQUALIFIED'
+                      ? 'bg-red-100 text-red-800'
+                      : 'bg-yellow-100 text-yellow-800'
+                }`}
+              >
+                {response.ai_qualification.recommendation}
+              </Badge>
+              <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+                <span>Overall: <strong className="text-foreground">{response.ai_qualification.overall_score}/10</strong></span>
+                <span>Urgency: <strong className="text-foreground">{response.ai_qualification.urgency_score}/10</strong></span>
+                <span>Value: <strong className="text-foreground">{response.ai_qualification.value_score}/10</strong></span>
+                <span>Complexity: <strong className="text-foreground">{response.ai_qualification.complexity_score}/10</strong></span>
+                <span>Success: <strong className="text-foreground">{response.ai_qualification.success_probability}/10</strong></span>
+              </div>
+            </div>
+
+            {/* Summary */}
+            <div>
+              <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">Summary</p>
+              <p className="text-sm text-foreground">{response.ai_qualification.summary}</p>
+            </div>
+
+            {/* Notes for lawyer */}
+            {response.ai_qualification.notes_for_lawyer.length > 0 && (
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">Notes for Lawyer</p>
+                <ul className="list-disc list-inside space-y-2">
+                  {response.ai_qualification.notes_for_lawyer.map((note, i) => (
+                    <li key={i} className="text-sm text-foreground">{note}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Meta */}
+            <div className="pt-4 border-t border-border text-xs text-muted-foreground">
+              Analyzed {new Date(response.ai_qualification.analyzed_at).toLocaleString('pl-PL')} · {response.ai_qualification.model}
+            </div>
+          </div>
+        )}
       </Card>
 
       {/* Actions Footer - Placeholder */}
