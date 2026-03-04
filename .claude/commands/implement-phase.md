@@ -77,18 +77,7 @@ Systematically implement a planned feature/phase by orchestrating specialized ag
 
 ## Reference Documentation
 
-**Skills (loaded automatically via agent skills: field):**
-- `supabase-patterns` - Database patterns (RLS, clients, migrations)
-- `code-patterns` - Application patterns (Server Actions, types, TanStack Query)
-- `architecture-decisions` - Monorepo structure, app/features separation
-- `notion-integration` - Notion MCP patterns (if --notion-task-id used)
-- `design-system` - UI/UX patterns for components
-- `signal-vs-noise` - Decision filter for documentation and commits
-- `claude-md` - Guidelines for writing feature CLAUDE.md files
-
-**Agents automatically load relevant skills based on their skills: field.**
-
-**Note:** Skills are domain knowledge loaded on-demand. Commands orchestrate workflow. Agents execute specialized tasks.
+**Skills loaded automatically** via each agent's `skills:` field. Domain knowledge lives in skills, not in this command.
 
 ---
 
@@ -126,10 +115,7 @@ Phase 7: Routes (code-developer)
     ↓ BUILD VERIFICATION: npm run build ← BOTH APPS MUST PASS
     ↓ User: continue | retry | stop
 Phase 8: Implementation Verification (verification-specialist)
-    ↓ Requirements Coverage - all plan requirements implemented?
-    ↓ Common Bugs - Controller, revalidatePath, throws, client
-    ↓ Architectural Compliance - ADR-005, client selection, RLS patterns
-    ↓ Code Quality - UI states, types, completeness
+    ↓ Verifies implementation against plan and loaded skills
     ↓ Output: YAML verification report with risk levels
     ↓ User: pass | fix-blocking | fix-warnings | details | stop
 Phase 9: Manual Testing [REQUIRED]
@@ -163,7 +149,7 @@ Phase 12: Complete!
 
 ## NOTION INTEGRATION WORKFLOW
 
-**Reference:** See notion-integration skill for complete MCP examples and patterns
+**Reference:** Agent loads Notion MCP patterns via skill keywords in prompt
 
 ### Overview
 
@@ -211,7 +197,7 @@ notion_context:
 2. Add completion notes to task Notes
 3. Optionally create doc page (complex features)
 
-See `notion-integration` skill for MCP tool examples.
+Agent handles Notion MCP operations using loaded skill patterns.
 
 ### Error Handling
 
@@ -283,7 +269,7 @@ See `notion-integration` skill for MCP tool examples.
 
 ### Phase 2: Plan Analysis
 
-**Agent:** `analysis-agent` (uses plan-analysis skill)
+**Agent:** `analysis-agent`
 
 **Purpose:** Analyze plan and create optimized execution strategy
 
@@ -324,16 +310,11 @@ See `notion-integration` skill for MCP tool examples.
 
 ### Phase 3: Database Setup [CRITICAL]
 
-**Agent:** `database-specialist` (uses schema-management, rls-policies, database-functions skills)
+**Agent:** `database-specialist`
 
 **Purpose:** Create/modify database schema (migrations, RLS policies, functions)
 
-**Creates:**
-- Migration files (supabase/migrations/*.sql)
-- RLS policies (avoiding infinite recursion)
-- PostgreSQL functions
-- GRANT permissions
-- Regenerates types (`npm run db:types`)
+**Creates:** Database schema artifacts (migrations, policies, functions) using loaded skills.
 
 **Output:** Migration file, types regenerated, verification steps
 
@@ -351,18 +332,15 @@ See `notion-integration` skill for MCP tool examples.
 
 ### Phase 4: Foundation ⚡⚡⚡ [PARALLEL]
 
-**Agent:** `code-developer` (uses foundation-patterns skill, 3 instances in parallel)
+**Agent:** `code-developer` (3 instances in parallel)
 
 **Purpose:** Create foundational TypeScript files (types, queries, validation)
 
-**Creates:**
-- `types.ts` - TypeScript interfaces/types
-- `queries.ts` - Data fetching functions (browser client)
-- `validation.ts` - Zod schemas (static or dynamic)
+**Creates:** Foundation TypeScript files (types, queries, validation) using loaded skills.
 
 **Why parallel:** These 3 files are independent - no dependencies between them
 
-**Output:** 3 TypeScript files ready for components to use
+**Output:** Foundation files ready for components to use
 
 **Commands:**
 - `continue` - Proceed to components
@@ -374,19 +352,18 @@ See `notion-integration` skill for MCP tool examples.
 
 ### Phase 5a: Components - Base Component [SEQUENTIAL]
 
-**Agent:** `code-developer` (uses component-patterns skill)
+**Agent:** `code-developer`
 
 **Purpose:** Create base/leaf components (no dependencies on other feature components)
 
-**Creates:**
-- QuestionField.tsx (conditional rendering, used by SurveyForm)
+**Creates:** Base/leaf components (no dependencies on other feature components)
 
-**Why first:** SurveyForm imports QuestionField
+**Why first:** Composite components import base components
 
-**Output:** QuestionField.tsx ready for SurveyForm to use
+**Output:** Base components ready for composite components to use
 
 **Commands:**
-- `continue` - Proceed to Phase 5b (SurveyForm)
+- `continue` - Proceed to Phase 5b (composite components)
 - `retry` - Recreate component
 - `details` - See full component code
 - `stop` - Exit workflow
@@ -395,16 +372,15 @@ See `notion-integration` skill for MCP tool examples.
 
 ### Phase 5b: Components - Composite Component [SEQUENTIAL]
 
-**Agent:** `code-developer` (uses component-patterns skill)
+**Agent:** `code-developer`
 
 **Purpose:** Create composite components (depend on base components)
 
-**Creates:**
-- SurveyForm.tsx (React Hook Form + Zod, uses QuestionField)
+**Creates:** Composite components (depend on base components from Phase 5a)
 
-**Why after 5a:** Imports QuestionField from Phase 5a
+**Why after 5a:** Imports base components from Phase 5a
 
-**Output:** SurveyForm ready for routes
+**Output:** Composite components ready for routes
 
 **Commands:**
 - `continue` - Proceed to server actions
@@ -412,7 +388,7 @@ See `notion-integration` skill for MCP tool examples.
 - `details` - See full component code
 - `stop` - Exit workflow
 
-**Note:** If plan has multiple independent components, they can be parallel in 5a. But dependent components (like SurveyForm) must be sequential.
+**Note:** If plan has multiple independent components, they can be parallel in 5a. But dependent components must be sequential.
 
 ---
 
@@ -422,17 +398,11 @@ See `notion-integration` skill for MCP tool examples.
 
 **Purpose:** Review components for design excellence, accessibility, and visual polish
 
-**Reviews:**
-- shadcn/ui component usage and design system compliance
-- Tailwind spacing consistency (4px scale)
-- Visual hierarchy and typography
-- Accessibility (WCAG 2.1 AA compliance)
-- Responsive design patterns (mobile-first)
-- UI states (loading, error, empty, disabled)
+**Reviews:** Design quality, accessibility, and visual polish using loaded skills.
 
 **Why after 5b:** Components are functionally complete, ready for design review
 
-**Output:** YAML report with P0/P1/P2 design issues and concrete recommendations
+**Output:** YAML report with design issues by severity and concrete recommendations
 
 **Commands:**
 - `continue` - Design approved, proceed to server actions
@@ -442,21 +412,17 @@ See `notion-integration` skill for MCP tool examples.
 
 **Skip When:** Components are purely functional with no UI (rare)
 
-**Note:** If P0 or P1 design issues found, code-developer should fix before Phase 6.
+**Note:** If critical design issues found, code-developer should fix before Phase 6.
 
 ---
 
 ### Phase 6: Server Actions [SEQUENTIAL]
 
-**Agent:** `code-developer` (uses server-action-patterns skill)
+**Agent:** `code-developer`
 
 **Purpose:** Create Server Actions for data mutations
 
-**Creates:**
-- `actions.ts` with CRUD operations
-- Authentication handling
-- revalidatePath() calls
-- Structured return types
+**Creates:** Server Actions for data mutations using loaded skills.
 
 **Output:** Server Actions ready for components to call
 
@@ -470,7 +436,7 @@ See `notion-integration` skill for MCP tool examples.
 
 ### Phase 7: Routes [SEQUENTIAL]
 
-**Agent:** `code-developer` (uses route-patterns skill)
+**Agent:** `code-developer`
 
 **Purpose:** Create Next.js routes (pages)
 
@@ -513,34 +479,22 @@ NOT needed:
 
 **Prompt to agent**:
 ```
-Verify implementation against plan and project patterns.
+Verify implementation against plan requirements.
 
 PLAN REQUIREMENTS:
 [Extract functional requirements from plan - what should be implemented]
 
 IMPLEMENTATION SCOPE:
 [List files created/modified from Phases 3-7]
-- Database: [migration files from Phase 3]
-- Foundation: [types, queries, validation from Phase 4]
-- Components: [components from Phase 5]
-- Actions: [Server Actions from Phase 6]
-- Routes: [routes from Phase 7]
+- Database: [migration files - check RLS policies, migrations, Supabase client selection]
+- Foundation: [types, queries, validation - check structured Server Action returns, async params]
+- Components: [components - check React components, accessibility, Controller patterns, UI states]
+- Actions: [Server Actions - check app/features separation, import rules]
+- Routes: [routes - check monorepo structure, ADR-005 compliance]
 
-Use skills (agent loads automatically):
-- code-validation (verification checklist)
-- component-patterns (React Hook Form patterns)
-- server-action-patterns (revalidatePath, structured returns)
-- route-patterns (ADR-005 compliance)
-- supabase-patterns (client selection, RLS)
-- architecture-decisions (ADR compliance)
+Check for: severity classification, Phase 2 bugs, testing decisions.
 
-Verify 4 categories:
-1. Requirements Coverage - All plan features implemented?
-2. Common Bugs - Controller, revalidatePath, throws, client selection
-3. Architectural Compliance - ADR-005, RLS patterns
-4. Code Quality - UI states, types, error handling
-
-Output: YAML verification report with risk levels (CRITICAL/HIGH/MEDIUM/LOW)
+Output: YAML verification report with risk levels
 ```
 
 **After agent**:
@@ -590,7 +544,7 @@ Does this match what you expected? If not, what should I adjust?
 
 **Skip When**: Never (always verify before manual testing)
 
-**Why mandatory**: Catches common bugs (Controller, revalidatePath, wrong client, missing requirements) before manual testing. Agent uses 9 verification skills to check patterns. Prevents wasting testing time on broken code.
+**Why mandatory**: Catches implementation bugs before manual testing. Prevents wasting testing time on broken code.
 
 ---
 
@@ -616,96 +570,28 @@ Does this match what you expected? If not, what should I adjust?
 
 ### Debug Logging for Manual Tests [CRITICAL]
 
-**ALWAYS add debug logging before manual testing** - this accelerates debugging by 10x when issues occur.
+**ALWAYS add debug logging before manual testing** — accelerates debugging when issues occur.
 
-**Step 1: Add console.log to API endpoints/Server Actions**
-
-Key logging points:
-- ✅ Request body received (before validation)
-- ✅ Validation passed/failed (with Zod errors)
-- ✅ Database query results
-- ✅ External API responses
-- ✅ All errors (with context)
-
-**Example:**
-```typescript
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json()
-    console.log('[API_NAME] Received body:', JSON.stringify(body, null, 2))
-
-    const validatedData = schema.parse(body)
-    console.log('[API_NAME] Validation passed')
-
-    const result = await someOperation()
-    console.log('[API_NAME] Result:', result)
-
-    return NextResponse.json({ success: true, data: result })
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      console.error('[API_NAME] Validation failed:', error.errors)
-      return NextResponse.json({ error: 'Validation failed' }, { status: 400 })
-    }
-    console.error('[API_NAME] Error:', error)
-    return NextResponse.json({ error: 'Internal error' }, { status: 500 })
-  }
-}
-```
-
-**Step 2: Start dev servers with log capture**
-
-```bash
-# Kill existing processes
-pkill -9 node; pkill -9 next
-
-# Start with log capture
-npm run dev:website > /tmp/dev-website.log 2>&1 &
-npm run dev:cms > /tmp/dev-cms.log 2>&1 &
-
-# Wait for servers to start
-sleep 8
-
-# Verify servers are running
-curl -s http://localhost:3000 > /dev/null && echo "✅ Website ready"
-curl -s http://localhost:3001 > /dev/null && echo "✅ CMS ready"
-```
-
-**Step 3: Monitor logs during testing**
-
-```bash
-# Check recent logs
-tail -50 /tmp/dev-website.log
-
-# Follow logs in real-time
-tail -f /tmp/dev-website.log
-
-# Search for specific API calls
-grep -A 10 "API_NAME" /tmp/dev-website.log
-
-# Search for errors
-grep -i "error\|failed\|invalid" /tmp/dev-website.log
-```
-
-**Step 4: User reports result, you check logs**
-
-When user reports error → Check logs → Immediately see exact problem and fix it.
+1. Add `console.log` to API endpoints/Server Actions (request body, validation, results, errors)
+2. Start dev servers with log capture to `/tmp/`
+3. Monitor logs during testing (`tail -f`, `grep` for errors)
+4. When user reports error → check logs → fix
 
 **Commands:**
 - `pass` - Tests passed, proceed to documentation
 - `check` - User saw error, check logs to debug
 - `fix-and-retry` - Found bugs, fix them and test again
-- `stop` - Exit workflow (fix bugs manually later)
+- `stop` - Exit workflow
 
 **Critical:**
 - NEVER proceed to documentation without passing manual tests
 - ALWAYS add debug logging before starting manual tests
-- ALWAYS capture logs to /tmp/ for easy inspection
 
 ---
 
 ### Phase 10: Documentation [SEQUENTIAL]
 
-**Agent:** `project-manager-agent` (uses documentation-patterns, notion-workflows, skill-fine-tuning skills)
+**Agent:** `project-manager-agent`
 
 **Purpose:** Update documentation with progress and results
 
@@ -720,9 +606,7 @@ When user reports error → Check logs → Immediately see exact problem and fix
   - Add completion notes to task Notes
   - Optionally create doc page in Documentation database
 - **CLAUDE.md files** (if new feature or significant changes):
-  - Create/update feature CLAUDE.md using `claude-md` skill
-  - Focus on project-specific oddities and WHY
-  - Document critical mistakes made during implementation
+  - Create/update feature CLAUDE.md (project-specific oddities, critical mistakes, WHY context)
 - Creates YAML summary for project-manager-agent
 
 **Orchestrator must pass:**
@@ -733,38 +617,7 @@ notion_context:
   sync_required: true
 ```
 
-**CLAUDE.md Update Guidelines:**
-
-When to create/update CLAUDE.md:
-- ✅ New feature implemented (create feature CLAUDE.md)
-- ✅ Significant architectural changes (update existing CLAUDE.md)
-- ✅ Critical mistakes discovered during implementation
-- ❌ Trivial bug fixes (no CLAUDE.md needed)
-- ❌ Generic patterns Claude already knows
-
-**What to include in CLAUDE.md:**
-```markdown
-# [Feature Name] - Quick Orientation
-
-[1-2 sentence description]
-
-## The Weird Parts
-
-### [Project-Specific Oddity]
-**Why**: [Real problem we hit]
-[Minimal code example if needed]
-
-## Critical Mistakes We Made
-
-### [Thing We Tried That Failed]
-**Problem**: [What broke]
-**Fix**: [What we do now]
-
-## Quick Reference
-- [5-10 critical facts in bullet form]
-```
-
-**Reference:** See `claude-md` skill for complete writing guidelines.
+**CLAUDE.md Updates:** Create/update for new features or significant changes; skip for trivial fixes.
 
 **Output:** Documentation updated (local + Notion + CLAUDE.md), summary ready for project-manager-agent
 
@@ -788,49 +641,11 @@ When to create/update CLAUDE.md:
 
 **Process:**
 
-1. **Load Guidelines**
-   - Invoke `/claude-md` skill
-   - Invoke `/signal-vs-noise` skill
-   - Review content quality criteria
-
-2. **Review Each CLAUDE.md File**
-   - Read file created/updated in Phase 10
-   - Extract sections: Weird Parts, Critical Mistakes, Quick Reference
-   - Check for impact numbers (bug frequencies, performance metrics)
-
-3. **Apply Signal-vs-Noise Filter**
-
-   **3-Question Test:**
-   - ✅ Actionable? (Can reader use this info to avoid bugs/save time?)
-   - ✅ Impactful? (Prevents significant problems?)
-   - ✅ Non-obvious? (Not generic patterns Claude already knows?)
-
-   **Remove Noise:**
-   - ❌ CUT: Generic Clean Architecture explanations
-   - ❌ CUT: Obvious framework usage (what a Server Action is)
-   - ❌ CUT: HOW explanations without WHY
-   - ❌ CUT: "Best practices" without project-specific context
-
-   **Keep Signal:**
-   - ✅ KEEP: Project-specific oddities + WHY we do them
-   - ✅ KEEP: Real mistakes made during implementation + context
-   - ✅ KEEP: Impact numbers (40% error rate, 200MB leak)
-   - ✅ KEEP: Non-obvious patterns specific to this codebase
-
-4. **Verify Assumptions**
-   - Did implementation match documented WHY explanations?
-   - Are there new weird parts discovered during implementation?
-   - Are critical mistakes documented with enough context?
-
-5. **Discuss with User**
-   - Present quality assessment
-   - Highlight sections that need refinement
-   - Confirm understanding of WHY patterns exist
-
-6. **Update if Needed**
-   - Apply recommendations using Edit tool
-   - Remove noise, enhance signal
-   - Ensure content quality > line count
+1. **Load skills** — claude-md and signal-vs-noise for quality criteria
+2. **Review each CLAUDE.md** created/updated in Phase 10
+3. **Apply signal-vs-noise filter** from loaded skill
+4. **Discuss with user** — present assessment, confirm understanding
+5. **Update if needed** — remove noise, enhance signal
 
 **Output:** Quality-reviewed CLAUDE.md files ready for commit
 
@@ -860,50 +675,11 @@ When to create/update CLAUDE.md:
 
 **Process:**
 
-1. **Load Skill Framework**
-   - Invoke `/skill-creator` skill
-   - Review decision framework and 3-Question Filter
-
-2. **Review Implementation Outputs**
-   - Analyze Phases 3-9 results
-   - Identify patterns discovered:
-     - Database: RLS anti-patterns, migration gotchas
-     - Foundation: Type patterns, query patterns
-     - Components: UI patterns, form handling
-     - Server Actions: Error handling patterns
-     - Routes: Data fetching patterns
-   - Note mistakes made and lessons learned
-
-3. **Apply skill-creator 3-Question Filter**
-
-   For each potential pattern:
-   - ✅ **Project-specific?** (Not generic framework knowledge)
-   - ✅ **Timeless?** (Will be relevant 6+ months from now)
-   - ✅ **Helps decisions?** (Prevents bugs, saves time, resolves ambiguity)
-
-   **If NO to any:** Don't create/update skill (noise)
-   **If YES to all:** Proceed with update
-
-4. **Identify Affected Skills**
-
-   Which skill should be updated?
-   - `supabase-patterns` - RLS, migrations, type patterns
-   - `code-patterns` - Server Actions, queries, components
-   - `architecture-decisions` - Cross-app patterns, shared types
-   - `development-practices` - Testing, performance
-   - `design-system` - UI components, accessibility
-
-5. **Propose Updates**
-   - Present findings to user
-   - Explain rationale for each update
-   - Show specific sections to add/modify
-   - Highlight impact (how this prevents future bugs)
-
-6. **Update Skills if Approved**
-   - Use Edit tool to update skill files
-   - Follow skill-creator template format
-   - Maintain signal-vs-noise quality
-   - Ensure content is project-specific + timeless
+1. **Load skill-creator** — review decision framework and 3-Question Filter
+2. **Review implementation outputs** from Phases 3-9 for new patterns
+3. **Apply 3-Question Filter** — project-specific? timeless? helps decisions?
+4. **Propose updates** to affected skills with rationale
+5. **Update if approved** — follow skill-creator template format
 
 **Output:** Updated skill files (if applicable)
 
@@ -920,23 +696,11 @@ When to create/update CLAUDE.md:
 
 **Critical:** Don't create skill noise. Only update skills when implementation revealed truly project-specific, timeless, decision-helpful patterns.
 
-**Example Scenarios:**
-
-**Update Needed:**
-- Discovered RLS infinite recursion pattern → Update `supabase-patterns`
-- Found critical bug in Server Action error handling → Update `code-patterns`
-- Made mistake with shared types → Update `architecture-decisions`
-
-**No Update Needed:**
-- Generic React patterns → Claude already knows
-- Standard Next.js routing → Not project-specific
-- Obvious validation logic → Not helpful
-
 ---
 
 ### Phase 11: Git Operations [SEQUENTIAL]
 
-**Agent:** `project-manager-agent` (uses git-commit-patterns skill)
+**Agent:** `project-manager-agent`
 
 **Purpose:** Create commit for documentation changes, optionally clean history and push
 
@@ -1168,7 +932,7 @@ Does this match exactly what you want to achieve? If not, what should I adjust?
 - Phase 4: Foundation (types + queries + validation dependencies)
 - Phase 5: Components (base/composite dependencies, UI/UX integration)
 - Phase 6: Server Actions (action patterns, error handling, revalidation)
-- Phase 7: Routes (route structure, data fetching, ADR-005)
+- Phase 7: Routes (route structure, data fetching, architectural compliance)
 - Phase 8: Implementation Verification (verification-specialist - requirements, bugs, architecture, quality)
 
 **Principle**: Ask enough questions to uncover hidden constraints, not more. Quality over quantity.
@@ -1258,37 +1022,7 @@ Retrying build...
 4. Provide SQL queries if database verification needed
 5. Wait for user response: `pass` | `fix-and-retry` | `stop`
 
-**Example checkpoint after Phase 3:**
-```markdown
-🧪 **Manual Test Checkpoint - Database Migration**
-
-The migration has been applied. Test the changes:
-
-1. Go to Supabase Dashboard → SQL Editor
-2. Run: SELECT * FROM pg_policies WHERE tablename = 'responses';
-3. Verify: Policy "Anyone can create responses" exists with TO anon
-
-4. Test RLS policy:
-   SET ROLE anon;
-   INSERT INTO responses (survey_link_id, tenant_id, answers, status)
-   VALUES ('[link-id]', '[tenant-id]', '{"test": "data"}'::jsonb, 'new');
-   -- Should succeed
-
-Report: pass | fix | stop
-```
-
-**Example checkpoint after Phase 7:**
-```markdown
-🧪 **Manual Test Checkpoint - Feature Complete**
-
-All code is written. Test the complete feature:
-
-1. Start apps: npm run dev:cms && npm run dev:website
-2. [Step-by-step user flow based on acceptance criteria]
-3. Verify: [Expected outcomes]
-
-Report: pass | fix-and-retry | stop
-```
+**Checkpoint format:** Derive test instructions from plan's acceptance criteria. Include what to test, how to test, what to verify. Orchestrator composes these per-plan — no hardcoded examples.
 
 ### Mode Handling
 
@@ -1360,7 +1094,7 @@ Report: pass | fix-and-retry | stop
     "phase10b": {
       "skills_reviewed": true,
       "patterns_found": 1,
-      "skills_updated": ["supabase-patterns"]
+      "skills_updated": ["database-patterns"]
     }
   },
   "testResults": null,
@@ -1563,7 +1297,7 @@ Parallel phases: Foundation (3 files), Components (2 files)
 
 Launching 2 agents simultaneously:
 1. queries.ts - Data fetching with server client
-2. validation.ts - Dynamic Zod schemas
+2. validation.ts - Validation schemas
 ```
 
 [Single message, 2 Task tool calls with subagent_type="code-developer"]
@@ -1575,7 +1309,7 @@ Created:
 - ✅ apps/website/features/survey/queries.ts
 - ✅ apps/website/features/survey/validation.ts
 
-**Next:** Phase 5a (QuestionField)
+**Next:** Phase 5a (Base Components)
 
 **Commands:** `continue` | `details [file]` | `stop`
 ```
@@ -1662,14 +1396,14 @@ If NO → Add missing CRITICAL information (not everything)
 ```
 
 **SIGNAL (Include):**
-- ✅ Critical decisions from previous phases ("Phase 2: Use service pattern, files in features/survey/")
-- ✅ Constraints affecting implementation ("RLS required, multi-tenant isolation")
-- ✅ Project-specific rules ("ADR-005: routes in app/, business logic in features/")
+- ✅ Critical decisions from previous phases (architecture choices, file locations)
+- ✅ Constraints affecting implementation (security, isolation requirements)
+- ✅ Keywords matching relevant skill descriptions (triggers correct skill loading)
 
 **NOISE (Exclude):**
 - ❌ Full previous YAML outputs (extract decisions only: 500 lines → 50 lines)
 - ❌ Generic explanations (Claude knows framework basics)
-- ❌ Intermediate analysis (conclusions only, not process)
+- ❌ Explicit skill names (use descriptive keywords instead — skills load via keyword matching)
 
 ---
 
@@ -1711,38 +1445,6 @@ If NO → Add missing CRITICAL information (not everything)
 **Problem:** Testing: 2 P0 failures found → User: continue to documentation
 **Fix:** Fix P0 first, never proceed with blocking issues
 
-
----
-
-## Workflow Insights
-
-### ✅ What Works Well
-
-**Parallel Agent Execution:**
-- Create queries.ts + validation.ts simultaneously
-- Foundation agents can run in parallel for independent files
-
-**Specialized Agents:**
-- Each agent focused on one responsibility (types, queries, components, routes)
-- Type-first approach: Create types.ts before implementation
-
-### 🚨 Critical Anti-Patterns to Avoid
-
-**Field Name Mismatches Between Apps:**
-- Problem: CMS uses `label`, Website expects `question` → blank forms
-- Solution: Create shared types in `packages/shared-types/` for cross-app domain objects
-
-**Debug Logs in Production Code:**
-- Problem: Multiple `console.log` statements left after debugging
-- Solution: Use browser DevTools instead, only keep `console.error` in Server Actions
-
-**Multiple Migrations for Same Bugfix:**
-- Problem: Multiple migrations created while debugging single issue
-- Solution: Test migrations locally first with `SET ROLE anon`, squash if fixing same issue
-
-**No UI Validation Before Merge:**
-- Problem: Styling changes merged without checklist verification
-- Solution: UI/UX review in Phase 5c (ui-ux-designer), verification in Phase 8 (verification-specialist)
 
 ---
 

@@ -1,29 +1,29 @@
 ---
 name: ui-ux-designer
-color: cyan
+color: orange
 skills:
-  - component-design
-  - accessibility
-  - visual-design
-  - design-system
-  - development-practices
+  - ui-components
+  - development-workflow
 description: >
   **Use this agent PROACTIVELY** when reviewing or improving UI/UX design of components.
 
   Automatically invoked when detecting:
   - Components with inconsistent styling (arbitrary colors, off-scale spacing)
-  - Missing accessibility (no labels, keyboard nav broken)
+  - Missing accessibility (WCAG 2.1 AA, no labels, keyboard nav broken)
   - Incorrect shadcn/ui usage (custom buttons instead of design system)
-  - Non-responsive design (mobile broken)
-  - Missing interactive feedback (no hover/focus states)
+  - Controller for checkbox arrays (React Hook Form pattern)
+  - TanStack Query CMS-only usage
+  - Severity classification P0/P1/P2
 
   Trigger when you hear:
   - "review the design"
   - "improve the UI"
   - "check accessibility"
+  - "WCAG 2.1 AA"
   - "is this following design system"
-  - "fix mobile layout"
-  - "add hover states"
+  - "Controller for checkbox arrays"
+  - "TanStack Query CMS-only"
+  - "severity P0/P1/P2"
 
 model: inherit
 ---
@@ -42,10 +42,9 @@ When invoked:
 
 Before output:
 
-- [ ] Component audited (design, a11y, visual)
-- [ ] Issues classified (P0 > P1 > P2)
-- [ ] Fixes reference skills (component-design, accessibility, visual-design)
-- [ ] P0 identified (accessibility/UX blockers)
+- [ ] Component audited against loaded skills
+- [ ] Issues classified by severity (per skill)
+- [ ] Fixes reference skill patterns
 - [ ] Output: YAML format with severity
 
 ## Output Format
@@ -59,7 +58,7 @@ ui_ux_review:
     p0_critical: # Breaks accessibility/UX
       - issue: 'Missing labels on inputs'
         location: 'file:line'
-        skill: 'accessibility'
+        skill: 'ui-components'
         fix: |
           <Label htmlFor="field">Field Name</Label>
           <Input id="field" ... />
@@ -67,14 +66,14 @@ ui_ux_review:
     p1_important: # Degrades UX
       - issue: 'Not mobile responsive'
         location: 'file:line'
-        skill: 'visual-design'
+        skill: 'ui-components'
         fix: |
           className="grid-cols-1 sm:grid-cols-2"
 
     p2_minor: # Nice-to-have
       - issue: 'Spacing off-scale (gap-5)'
         location: 'file:line'
-        skill: 'component-design'
+        skill: 'ui-components'
         fix: |
           className="gap-4"  // On-scale
 
@@ -88,8 +87,3 @@ ui_ux_review:
     - 'Fix P1 issues (UX degradation)'
     - 'P2 optional (minor polish)'
 ```
-
-**Severity:**
-- P0: Breaks accessibility or core UX (keyboard trap, contrast fail)
-- P1: Degrades UX significantly (missing states, poor mobile)
-- P2: Minor polish (spacing consistency, minor improvements)

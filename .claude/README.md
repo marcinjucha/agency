@@ -38,8 +38,8 @@ Each agent is an expert in their domain, following signal vs noise principles.
 
 **What it does:**
 - Reads plan from `~/.claude/plans/` or user message
-- Applies plan-analysis skill to extract dependencies
-- Applies development-practices skill for execution approach
+- Applies development-workflow skill to extract dependencies
+- Applies development-workflow skill for execution approach
 - Outputs structured execution plan with phases and parallelization opportunities
 
 **Key expertise:**
@@ -66,9 +66,9 @@ Each agent is an expert in their domain, following signal vs noise principles.
 - Tests migrations locally before push
 
 **Key expertise:**
-- PostgreSQL schema changes (schema-management skill)
-- RLS policies with `public.current_user_tenant_id()` helper (rls-policies skill)
-- Database functions with SECURITY DEFINER (database-functions skill)
+- PostgreSQL schema changes (database-patterns skill)
+- RLS policies with `public.current_user_tenant_id()` helper (database-patterns skill)
+- Database functions with SECURITY DEFINER (database-patterns skill)
 - Multi-tenant isolation patterns
 
 **Critical rule:** NEVER use subqueries in RLS policies - always use SECURITY DEFINER helper function to avoid infinite recursion (P0 crash risk)
@@ -90,8 +90,8 @@ Each agent is an expert in their domain, following signal vs noise principles.
 - Makes AI model selection decisions
 
 **Key expertise:**
-- 9 loaded skills covering all patterns (component-patterns, route-patterns, server-action-patterns, foundation-patterns, code-patterns, architecture-decisions, design-system, n8n-workflow-patterns, ai-model-selection)
-- Supabase client selection decision tree (3 clients: createAnonClient for public, createClient for browser, await createClient for server)
+- 9 loaded skills covering all patterns (nextjs-patterns, ui-components, architecture, n8n-patterns)
+- Supabase client selection decision tree (3 clients: createClient() browser (no await), await createClient() server, createAnonClient() anon-server for public submissions)
 - React Hook Form Controller vs register decision (Controller for checkbox arrays, register for simple inputs)
 - TanStack Query CMS-only (NOT website)
 
@@ -117,9 +117,9 @@ Each agent is an expert in their domain, following signal vs noise principles.
 - Provides fixes referencing skills
 
 **Key expertise:**
-- shadcn/ui design system enforcement (component-design skill)
+- shadcn/ui design system enforcement (ui-components skill)
 - Accessibility patterns (htmlFor, aria-required, focus rings - accessibility skill)
-- Visual design (spacing scale 4px base, typography, responsive - visual-design skill)
+- Visual design (spacing scale 4px base, typography, responsive - ui-components skill)
 - Theme tokens (bg-primary, text-foreground, border)
 
 **Critical rule:**
@@ -144,7 +144,7 @@ Each agent is an expert in their domain, following signal vs noise principles.
 - Reports violations with risk levels (CRITICAL/HIGH/MEDIUM/LOW)
 
 **Key expertise:**
-- 9 preloaded verification skills (code-validation, component-patterns, server-action-patterns, route-patterns, supabase-patterns, rls-policies, architecture-decisions, code-patterns, testing-strategies)
+- 9 preloaded verification skills (database-patterns, nextjs-patterns, ui-components, architecture, development-workflow)
 - Read-only validation (uses disallowedTools: Write, Edit)
 - Risk-based bug classification
 - Actionable feedback with file:line locations
@@ -172,9 +172,9 @@ Each agent is an expert in their domain, following signal vs noise principles.
 - Refines skills when bugs found (adds anti-patterns)
 
 **Key expertise:**
-- Documentation patterns (outcome-focused, skip implementation details - documentation-patterns skill)
+- Documentation patterns (outcome-focused, skip implementation details - development-workflow skill)
 - Git commit patterns (multi-factor separation, Signal vs Noise - git-commit-patterns skill)
-- Notion workflows (case-sensitive "Status", "Completion Date" - notion-workflows skill)
+- Notion workflows (case-sensitive "Status", "Completion Date" - notion-patterns skill)
 - Skill fine-tuning (add anti-patterns, refine patterns - skill-fine-tuning skill)
 - CLAUDE.md maintenance (structure updates - claude-md skill)
 
@@ -300,7 +300,7 @@ import { QuestionField } from './QuestionField'  // ← Import!
 ### Supabase Clients
 
 **code-developer knows:**
-- Public forms (website) → Anonymous client (`createAnonClient()` - NO await, bypasses RLS)
+- Public submissions (website) → Anon Server client (`createAnonClient()` from `@/lib/supabase/anon-server` — service role, bypasses RLS, safe for INSERT-only with tenant_id from DB)
 - CMS client components + TanStack Query → Browser client (`createClient()` - NO await)
 - Server Actions/Components → Server client (`await createClient()` - AWAIT required!)
 

@@ -75,6 +75,40 @@ export async function getSurveys() {
 
 ---
 
+## Anon Server Client (for Public Submissions)
+
+**File:** `apps/website/lib/supabase/anon-server.ts`
+
+```typescript
+import { createClient } from '@supabase/supabase-js'
+import type { Database } from '@agency/database'
+
+// Service role client — bypasses RLS
+// SAFE for: public survey submissions (INSERT only, tenant_id from DB)
+// DO NOT use for: reading data, CMS operations
+export function createAnonClient() {
+  return createClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } }
+  )
+}
+```
+
+**Usage:**
+```typescript
+import { createAnonClient } from '@/lib/supabase/anon-server'
+
+export async function submitSurvey(data: SubmissionData) {
+  const supabase = createAnonClient()  // ← NO await, sync
+  // tenant_id MUST come from DB, never from user input
+  const { data: survey } = await supabase.from('surveys').select('tenant_id').eq('id', surveyId).single()
+  await supabase.from('responses').insert({ tenant_id: survey.tenant_id, ... })
+}
+```
+
+---
+
 ## Decision Table
 
 | Context | Client | Import From | Async? |
@@ -83,6 +117,7 @@ export async function getSurveys() {
 | Server Action (`'use server'`) | Server | `@/lib/supabase/server` | ✅ Yes (`await`) |
 | Client Component (`'use client'`) | Browser | `@/lib/supabase/client` | ❌ No |
 | Query function (called from browser) | Browser | `@/lib/supabase/client` | ❌ No |
+| Public submission (website) | Anon Server | `@/lib/supabase/anon-server` | ❌ No |
 
 ---
 
@@ -124,7 +159,7 @@ import { createClient } from '@/lib/supabase/server'
 
 ---
 
-## Why Two Clients?
+## Why Three Clients?
 
 **Server Client:**
 - Has access to cookies for auth
@@ -137,3 +172,9 @@ import { createClient } from '@/lib/supabase/server'
 - Uses browser storage for auth
 - Works with TanStack Query
 - Used in Client Components and query functions
+
+**Anon Server Client:**
+- Service role key (bypasses RLS)
+- For public endpoints where no user auth exists
+- Safe only for INSERT-only operations with `tenant_id` from DB
+- Lives only in website app (`apps/website/lib/supabase/anon-server.ts`)

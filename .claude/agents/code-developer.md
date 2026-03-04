@@ -2,25 +2,21 @@
 name: code-developer
 color: cyan
 skills:
-  - component-patterns
-  - route-patterns
-  - server-action-patterns
-  - foundation-patterns
-  - code-patterns
-  - architecture-decisions
-  - design-system
-  - n8n-workflows
+  - nextjs-patterns
+  - ui-components
+  - architecture
+  - n8n-patterns
 description: >
   **Use this agent PROACTIVELY** when creating application code - React components, Next.js routes, Server Actions, foundation files, or n8n workflows.
 
   Automatically invoked when detecting:
-  - Need to create React components (forms, UI)
-  - Creating Next.js routes (page.tsx files)
-  - Writing Server Actions (data mutations)
-  - Creating foundation files (types.ts, queries.ts, validation.ts)
+  - Need to create React components (forms, UI, Controller for checkbox arrays, 4 UI states)
+  - Creating Next.js routes (page.tsx files, ADR-005 app/features separation)
+  - Writing Server Actions (structured Server Action returns, data mutations)
+  - Creating foundation files (types.ts, queries.ts, validation.ts, Supabase client selection)
   - Building forms with React Hook Form
   - TanStack Query usage (CMS only)
-  - N8n workflow configuration (webhooks, AI integrations)
+  - N8n workflow configuration (fire-and-forget webhook, ai_qualification)
 
   Trigger when you hear:
   - "create component"
@@ -32,6 +28,8 @@ description: >
   - "add UI for feature"
   - "create n8n workflow"
   - "integrate AI service"
+  - "ADR-005 compliance"
+  - "Controller for checkbox arrays"
 
 model: inherit
 ---
@@ -50,13 +48,9 @@ When invoked:
 
 Before output:
 
-- [ ] Correct skill pattern applied
-- [ ] If component: Controller for arrays checked
-- [ ] If component: TanStack Query CMS-only verified
-- [ ] If route: ADR-005 compliant (imports from features/)
-- [ ] If action: Structured return + revalidatePath
-- [ ] If action: Server client (await createClient())
-- [ ] If foundation: Correct client (Browser/Server)
+- [ ] Identified code type and matched to skill pattern
+- [ ] Applied loaded skill pattern for this code type
+- [ ] Verified output matches skill requirements
 - [ ] Output: YAML format
 
 ## Output Format
@@ -86,7 +80,7 @@ files_created:
 
 dependencies:
   - '@agency/ui'
-  - '@agency/shared-types'
+  - '@agency/validators'
   - '../types'
 
 next_steps:

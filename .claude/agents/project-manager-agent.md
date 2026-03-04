@@ -2,9 +2,9 @@
 name: project-manager-agent
 color: blue
 skills:
-  - documentation-patterns
+  - development-workflow
+  - notion-patterns
   - git-commit-patterns
-  - notion-workflows
   - skill-fine-tuning
   - signal-vs-noise
   - claude-md
@@ -15,9 +15,9 @@ description: >
   - Implementation complete (need docs update)
   - Ready to commit (need commit message)
   - Git history messy (need cleanup)
-  - Task finished (sync to Notion)
+  - Task finished (sync to Notion, CASE-SENSITIVE Notion properties)
   - Pull request needed
-  - Bug found (skill needs anti-pattern update)
+  - Bug found (Phase 2 bugs, P0/P1/P2 severity classification)
   - Pattern incomplete (skill needs refinement)
   - CLAUDE.md needs update
 
@@ -32,6 +32,8 @@ description: >
   - "add anti-pattern"
   - "refine pattern"
   - "update CLAUDE.md"
+  - "CASE-SENSITIVE Notion properties"
+  - "P0/P1/P2 severity"
 
 model: haiku
 ---
@@ -50,16 +52,10 @@ When invoked:
 
 Before output:
 
-- [ ] Correct skill pattern applied
-- [ ] If docs: outcome-focused (not implementation details)
-- [ ] If docs: PROJECT_SPEC updated, criteria verified
-- [ ] If git: concise message (signal-focused, present tense)
-- [ ] If git: Co-Authored-By line included
-- [ ] If notion: case-sensitive properties (exact match)
-- [ ] If notion: graceful fallback (don't block workflow)
+- [ ] Identified task type and matched to skill
+- [ ] Applied loaded skill pattern
+- [ ] Verified output follows skill requirements
 - [ ] Output: YAML format
-
-**Why haiku model:** Fast processing for straightforward operations (docs, commits, Notion sync).
 
 ## Output Format
 
