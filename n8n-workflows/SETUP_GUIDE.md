@@ -55,7 +55,7 @@ Before starting, gather these credentials:
 1. In Credentials page, click "Add Credential"
 2. Search for "Supabase"
 3. Configure:
-   - **Credential Name:** `Legal-Mind Supabase`
+   - **Credential Name:** `Halo-Efekt Supabase`
    - **Host:** `[YOUR_PROJECT_ID].supabase.co` (from Prerequisites)
    - **Service Role Secret:** `[YOUR_SERVICE_ROLE_KEY]` (from Prerequisites)
 4. Click "Test" to verify connection
@@ -66,7 +66,7 @@ Before starting, gather these credentials:
 1. In Credentials page, click "Add Credential"
 2. Search for "Sentry"
 3. Configure:
-   - **Credential Name:** `GlitchTip Legal-Mind`
+   - **Credential Name:** `GlitchTip Halo-Efekt`
    - **DSN:** `https://bed6a207b979467bbb60e51d25995111@glitchtip.trustcode.pl/1`
 4. Click "Save"
 
@@ -89,7 +89,7 @@ The imported workflow has placeholder credential IDs. You need to reconnect them
 
 1. **Supabase - Fetch Survey** node:
    - Click the node
-   - In "Credential" dropdown, select `Legal-Mind Supabase`
+   - In "Credential" dropdown, select `Halo-Efekt Supabase`
 
 2. **Claude Haiku Analysis** node:
    - Click the node
@@ -100,11 +100,11 @@ The imported workflow has placeholder credential IDs. You need to reconnect them
 
 3. **Supabase - Update Response** node:
    - Click the node
-   - In "Credential" dropdown, select `Legal-Mind Supabase`
+   - In "Credential" dropdown, select `Halo-Efekt Supabase`
 
 4. **Sentry - Error Log** node:
    - Click the node
-   - In "Credential" dropdown, select `GlitchTip Legal-Mind`
+   - In "Credential" dropdown, select `GlitchTip Halo-Efekt`
 
 ### 2.3 Save Workflow
 
@@ -329,7 +329,7 @@ FROM responses;
 **Solutions:**
 1. Verify you're using **service_role** key (not anon key)
 2. Check Supabase host format: `xxx.supabase.co` (no `https://` prefix)
-3. Test credential: Credentials → Legal-Mind Supabase → Test
+3. Test credential: Credentials → Halo-Efekt Supabase → Test
 4. Check Supabase project is active (not paused)
 
 ---

@@ -1,6 +1,6 @@
 # Supabase Database
 
-This directory contains Supabase configuration and database migrations for Legal-Mind.
+This directory contains Supabase configuration and database migrations for Halo-Efekt.
 
 ## Setup
 
@@ -86,7 +86,7 @@ All tables use RLS policies to enforce multi-tenant isolation:
 - Users can only access data from their own tenant
 - Survey links are publicly accessible (for client forms)
 - Responses and appointments can be created by anyone (anonymous clients)
-- Only authenticated users (lawyers) can view/manage responses
+- Only authenticated users can view/manage responses
 
 ### Indexes
 

@@ -1,13 +1,13 @@
-# TanStack Query Deep Dive - Legal-Mind Implementation
+# TanStack Query Deep Dive - Halo-Efekt Implementation
 
-Praktyczny przewodnik zrozumienia TanStack Query na bazie rzeczywistego kodu Legal-Mind.
+Praktyczny przewodnik zrozumienia TanStack Query na bazie rzeczywistego kodu Halo-Efekt.
 
 ---
 
 ## Spis treści
 
 1. [Co to jest TanStack Query?](#co-to-jest-tanstack-query)
-2. [Setup w Legal-Mind](#setup-w-legal-mind)
+2. [Setup w Halo-Efekt](#setup-w-halo-efekt)
 3. [Architektura & Koncepty](#architektura--koncepty)
 4. [useQuery (Czytanie danych)](#usequery-czytanie-danych)
 5. [useMutation (Pisanie danych)](#usemutation-pisanie-danych)
@@ -45,10 +45,10 @@ Problems it solves:
 ✅ Built-in error handling
 ```
 
-### Why Legal-Mind uses it
+### Why Halo-Efekt uses it
 
 ```
-Legal-Mind has TWO apps:
+Halo-Efekt has TWO apps:
 
 CMS (Admin) ─────────────→ TanStack Query ✅
 ├─ Complex data flows
@@ -64,7 +64,7 @@ Website (Public) ────────→ NO TanStack Query ❌
 
 ---
 
-## Setup w Legal-Mind
+## Setup w Halo-Efekt
 
 ### Installation
 
@@ -146,7 +146,7 @@ retry: 1
 refetchOnWindowFocus: false
 ├─ When user tabs back to app → don't auto-refetch
 ├─ Default is true (can waste requests)
-├─ Legal-Mind disabled for better UX
+├─ Halo-Efekt disabled for better UX
 ```
 
 ---
@@ -466,7 +466,7 @@ export function CreateSurveyForm() {
 }
 ```
 
-### Real Legal-Mind Example
+### Real Halo-Efekt Example
 
 ```typescript
 // apps/cms/features/surveys/components/SurveyLinks.tsx

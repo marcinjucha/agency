@@ -1,11 +1,11 @@
-# Legal Mind - CMS App
+# Halo Efekt - CMS App
 
 Admin panel for law firms to manage surveys, responses, and appointments.
 
 ## URLs
 
 - **Development:** http://localhost:3001
-- **Production:** https://legal-mind-cms.vercel.app (or custom domain)
+- **Production:** https://halo-efekt-cms.vercel.app (or custom domain)
 
 ## Features
 

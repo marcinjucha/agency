@@ -1,6 +1,6 @@
 # Turborepo Patterns - Real-World Solutions
 
-Rzeczywiste problemy z monorepo które mogą się pojawić w Legal-Mind i jak je rozwiązywać.
+Rzeczywiste problemy z monorepo które mogą się pojawić w Halo-Efekt i jak je rozwiązywać.
 
 ---
 
@@ -706,7 +706,7 @@ Result:
 
 ---
 
-## Lessons Learned from Legal-Mind
+## Lessons Learned from Halo-Efekt
 
 ```
 1. One-way dependencies only (packages ← apps)

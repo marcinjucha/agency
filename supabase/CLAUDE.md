@@ -35,7 +35,7 @@ supabase/
 - Stores Google Calendar OAuth tokens
 
 **surveys** - Survey templates
-- Created by lawyers
+- Created by users
 - Contains questions as JSONB
 - Has status: draft, active, archived
 - Belongs to tenant (RLS enforced)
@@ -54,7 +54,7 @@ supabase/
 
 **appointments** - Scheduled meetings
 - Links to response (optional)
-- Has lawyer_id (which lawyer)
+- Has user_id (which user)
 - Has start/end time
 - Syncs with Google Calendar (google_calendar_event_id)
 - Has status: scheduled, completed, cancelled

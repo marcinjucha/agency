@@ -1,6 +1,6 @@
-# Supabase Case Study - Legal-Mind Real Code Analysis
+# Supabase Case Study - Halo-Efekt Real Code Analysis
 
-Analiza rzeczywistych implementacji Supabase w Legal-Mind z wyjaśnieniami każdej linii.
+Analiza rzeczywistych implementacji Supabase w Halo-Efekt z wyjaśnieniami każdej linii.
 
 ---
 

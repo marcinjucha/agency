@@ -1,6 +1,6 @@
 # Marketing Components
 
-This directory contains reusable UI components for the Legal Hub marketing website.
+This directory contains reusable UI components for the Halo Efekt marketing website.
 
 ## Components Overview
 
@@ -124,7 +124,7 @@ Reusable card component for displaying individual workflow steps.
 ---
 
 ### HowItWorks.tsx
-Complete section component showing the 6-step Legal Hub workflow.
+Complete section component showing the 6-step Halo Efekt workflow.
 
 **6-Step Workflow:**
 1. Lawyer creates intake form
@@ -275,7 +275,7 @@ export default function HomePage() {
 ---
 
 ### Footer.tsx
-Professional footer component for the Legal Hub landing page.
+Professional footer component for the Halo Efekt landing page.
 
 **Features:**
 - Multiple columns with organized links:

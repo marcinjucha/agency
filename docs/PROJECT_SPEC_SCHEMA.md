@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document defines the structure of `PROJECT_SPEC.yaml`, a machine-readable specification for the Legal-Mind project designed to help AI assistants understand:
+This document defines the structure of `PROJECT_SPEC.yaml`, a machine-readable specification for the Halo-Efekt project designed to help AI assistants understand:
 - What features to build
 - Acceptance criteria for each feature
 - Dependencies between features

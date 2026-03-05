@@ -1,6 +1,6 @@
-# Supabase Deep Dive - Legal-Mind Implementation
+# Supabase Deep Dive - Halo-Efekt Implementation
 
-Praktyczny przewodnik zrozumienia Supabase na bazie rzeczywistego kodu Legal-Mind.
+Praktyczny przewodnik zrozumienia Supabase na bazie rzeczywistego kodu Halo-Efekt.
 
 ---
 
@@ -95,7 +95,7 @@ https://zsrpdslhnuwmzewwoexr.supabase.co
 
 ## Authentication & Sessions
 
-### Jak to działa w Legal-Mind (CMS)
+### Jak to działa w Halo-Efekt (CMS)
 
 #### 1. Login
 
@@ -211,7 +211,7 @@ auth.role()        // Zwraca: 'authenticated' lub 'anon'
 auth.email()       // Zwraca: email użytkownika
 ```
 
-### Jak działa w Legal-Mind
+### Jak działa w Halo-Efekt
 
 #### Problem: Multi-tenant security
 

@@ -54,7 +54,7 @@ Save
 n8n UI → Settings → Credentials → Add Credential
 Search: "Supabase"
 Configure:
-  Name: Legal-Mind Supabase
+  Name: Halo-Efekt Supabase
   Host: [PROJECT_ID].supabase.co
   Service Role Secret: [YOUR_SERVICE_ROLE_KEY]
 Test → Save
@@ -66,7 +66,7 @@ Test → Save
 n8n UI → Settings → Credentials → Add Credential
 Search: "Sentry"
 Configure:
-  Name: GlitchTip Legal-Mind
+  Name: GlitchTip Halo-Efekt
   DSN: https://bed6a207b979467bbb60e51d25995111@glitchtip.trustcode.pl/1
 Save
 ```
@@ -90,7 +90,7 @@ For each node, select the credential you created:
 
 **Supabase - Fetch Survey:**
 ```
-Click node → Credential dropdown → Legal-Mind Supabase
+Click node → Credential dropdown → Halo-Efekt Supabase
 ```
 
 **Claude Haiku Analysis:**
@@ -103,12 +103,12 @@ Verify headers:
 
 **Supabase - Update Response:**
 ```
-Click node → Credential dropdown → Legal-Mind Supabase
+Click node → Credential dropdown → Halo-Efekt Supabase
 ```
 
 **Sentry - Error Log:**
 ```
-Click node → Credential dropdown → GlitchTip Legal-Mind
+Click node → Credential dropdown → GlitchTip Halo-Efekt
 ```
 
 ### 2.3 Save & Activate

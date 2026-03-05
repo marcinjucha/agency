@@ -2,7 +2,7 @@
 
 ## Overview
 
-The `Footer.tsx` component is a professional, responsive footer for the Legal Hub landing page with dark styling, organized link sections, newsletter signup, and social media integration.
+The `Footer.tsx` component is a professional, responsive footer for the Halo Efekt landing page with dark styling, organized link sections, newsletter signup, and social media integration.
 
 ## Features
 
@@ -13,7 +13,7 @@ The `Footer.tsx` component is a professional, responsive footer for the Legal Hu
   - Resources (Documentation, API, Support, Community)
 
 - **Branding section** at top with:
-  - Logo/brand name (Legal Hub)
+  - Logo/brand name (Halo Efekt)
   - Company tagline (1-2 sentences)
   - Social media links (GitHub, Twitter, LinkedIn, Facebook)
 
@@ -136,7 +136,7 @@ Update the brand name, tagline, and tagline text:
 
 ```typescript
 // In Footer component <h2> tag
-<h2 className="text-2xl font-bold text-white">Legal Hub</h2>
+<h2 className="text-2xl font-bold text-white">Halo Efekt</h2>
 
 // Update tagline in <p> tag
 <p className="text-gray-400 text-sm mt-2 leading-relaxed">
@@ -402,7 +402,7 @@ describe('Footer', () => {
 
   it('renders copyright notice', () => {
     render(<Footer />)
-    expect(screen.getByText('© 2025 Legal Hub. All rights reserved.')).toBeInTheDocument()
+    expect(screen.getByText('© 2025 Halo Efekt. All rights reserved.')).toBeInTheDocument()
   })
 })
 ```
@@ -441,7 +441,7 @@ Ensure responsive Tailwind classes are working:
 
 ## License
 
-Part of Legal Hub project. All rights reserved 2025.
+Part of Halo Efekt project. All rights reserved 2025.
 
 ## Questions?
 

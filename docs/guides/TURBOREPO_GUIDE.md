@@ -1,13 +1,13 @@
-# Turborepo Deep Dive - Legal-Mind Implementation
+# Turborepo Deep Dive - Halo-Efekt Implementation
 
-Praktyczny przewodnik zrozumienia Turborepo i monorepo na bazie rzeczywistego kodu Legal-Mind.
+Praktyczny przewodnik zrozumienia Turborepo i monorepo na bazie rzeczywistego kodu Halo-Efekt.
 
 ---
 
 ## Spis treści
 
 1. [Co to jest Turborepo?](#co-to-jest-turborepo)
-2. [Architektura Legal-Mind](#architektura-legal-mind)
+2. [Architektura Halo-Efekt](#architektura-halo-efekt)
 3. [Workspace Structure](#workspace-structure)
 4. [Task Pipeline](#task-pipeline)
 5. [Packages & Apps](#packages--apps)
@@ -46,7 +46,7 @@ Problemy:
 ### Rozwiązanie: Turborepo
 
 ```
-Legal-Mind Structure:
+Halo-Efekt Structure:
 ├─ root/
 │  ├─ package.json (Workspace definicja)
 │  ├─ turbo.json (Pipeline)
@@ -87,7 +87,7 @@ Zamiast:
 
 ---
 
-## Architektura Legal-Mind
+## Architektura Halo-Efekt
 
 ### Diagram
 
@@ -148,7 +148,7 @@ Aktualizacja pakietu automatycznie użyta w obu apkach
 
 ```json
 {
-  "name": "legal-mind",
+  "name": "halo-efekt",
   "version": "1.0.0",
   "private": true,
   "workspaces": ["apps/*", "packages/*"],
@@ -526,7 +526,7 @@ Website Deployment:
    └─ turbo run build --filter=@agency/website
 4. Dependencies built automatically
 5. .next/ uploaded to Vercel
-6. Deployed to legal-mind-website.vercel.app
+6. Deployed to halo-efekt-website.vercel.app
 
 CMS Deployment:
 1. Git push to main
@@ -535,7 +535,7 @@ CMS Deployment:
    └─ turbo run build --filter=@agency/cms
 4. Dependencies built automatically
 5. .next/ uploaded to Vercel
-6. Deployed to legal-mind-cms.vercel.app
+6. Deployed to halo-efekt-cms.vercel.app
 
 Benefits:
 ✅ Only changed app redeployed

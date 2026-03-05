@@ -1,10 +1,10 @@
-# Product Charter: Legal Hub - AI Client Intake & Legal Workflow Automation Platform
+# Product Charter: Halo Efekt - AI Client Intake & Legal Workflow Automation Platform
 
 ---
 
 ## 1. Offer Summary
 
-**Nazwa produktu:** Legal Hub - AI Client Intake & Legal Workflow Automation
+**Nazwa produktu:** Halo Efekt - AI Client Intake & Legal Workflow Automation
 
 **Co to jest:** Inteligentny system do automatyzacji pozyskiwania klientów i kwalifikacji spraw dla polskich kancelarii prawnych. Platforma łączy smart surveys, AI-powered case qualification, oraz automatyczne booking w jednym narzędziu. Przyszłość: rozszerzenie o legal research i case strategy (Phase 4+).
 
@@ -108,7 +108,7 @@
 
 ## 3. Product Evolution: From Intake to Complete Legal Workflow
 
-Legal Hub startuje jako Client Intake Automation (Phase 1-3), bo to najszybsza droga do ROI dla kancelarii. Po udanym wdrożeniu intake automation, rozszerzamy platformę o Legal Research & Case Strategy (Phase 4+), tworząc complete legal workflow automation.
+Halo Efekt startuje jako Client Intake Automation (Phase 1-3), bo to najszybsza droga do ROI dla kancelarii. Po udanym wdrożeniu intake automation, rozszerzamy platformę o Legal Research & Case Strategy (Phase 4+), tworząc complete legal workflow automation.
 
 **Phase 1-3:** Acquisition engine (client intake, qualification, booking)
 **Phase 4+:** Delivery engine (legal research, case strategy, precedents)
@@ -129,7 +129,7 @@ Legal Hub startuje jako Client Intake Automation (Phase 1-3), bo to najszybsza d
 - Preview mode przed publikacją
 
 ✅ **Public Survey Forms**
-- Unique shareable links: legalhub.pl/survey/abc123
+- Unique shareable links: haloefekt.pl/survey/abc123
 - Anonymous access (no login required)
 - Client-side validation (real-time error messages)
 - Mobile-responsive forms
@@ -325,7 +325,7 @@ Legal Hub startuje jako Client Intake Automation (Phase 1-3), bo to najszybsza d
 4. *"Przestań tracić high-value leadów. Automatyczny intake dla polskich kancelarii."*
 
 **Subheadline:**
-*"Legal Hub to inteligentna platforma do automatyzacji pozyskiwania klientów dla polskich kancelarii. Smart surveys, AI qualification, automatyczny booking. Skróć intake z 5 dni na 15 minut. Nie przegap już żadnego leadu."*
+*"Halo Efekt to inteligentna platforma do automatyzacji pozyskiwania klientów dla polskich kancelarii. Smart surveys, AI qualification, automatyczny booking. Skróć intake z 5 dni na 15 minut. Nie przegap już żadnego leadu."*
 
 ---
 
@@ -335,23 +335,23 @@ Legal Hub startuje jako Client Intake Automation (Phase 1-3), bo to najszybsza d
 
 ✅ **Dobra odpowiedź:**
 
-*"To świetna obserwacja - nie wszyscy klienci lubią formularze. Legal Hub nie zastępuje telefonu - uzupełnia go.*
+*"To świetna obserwacja - nie wszyscy klienci lubią formularze. Halo Efekt nie zastępuje telefonu - uzupełnia go.*
 
 *W praktyce:*
 - *60-70% klientów WOLI formularze (especially młodsze pokolenie, 25-45 lat)*
 - *Dlaczego? Bo mogą wypełnić o 22:00 wieczorem w domu, nie muszą dzwonić w godzinach pracy*
 - *30-40% nadal dzwoni - i to OK! Ale tych którzy chcą form, już nie tracisz*
 
-*Co się dzieje teraz bez Legal Hub:*
+*Co się dzieje teraz bez Halo Efekt:*
 - *Młody klient (35 lat) chce wysłać info o sprawie → nie ma formularza → dzwoni → nie odbierasz → idzie do konkurencji*
-- *Z Legal Hub: wysyła form o 22:00 → dostaje auto-reply "Dziękujemy, odezwiemy się jutro" → nie ucieka*
+- *Z Halo Efekt: wysyła form o 22:00 → dostaje auto-reply "Dziękujemy, odezwiemy się jutro" → nie ucieka*
 
 *Przykład klienta (litigation firm, Warszawa):*
-- *Przed Legal Hub: 20 leadów/miesiąc (tylko telefon)*
-- *Po Legal Hub: 35 leadów/miesiąc (20 telefon + 15 online form)*
+- *Przed Halo Efekt: 20 leadów/miesiąc (tylko telefon)*
+- *Po Halo Efekt: 35 leadów/miesiąc (20 telefon + 15 online form)*
 - *+75% więcej leadów bez dodatkowej reklamy - po prostu nowy kanał*
 
-*Legal Hub to dodatkowy kanał, nie replacement. Więcej kanałów = więcej klientów."*
+*Halo Efekt to dodatkowy kanał, nie replacement. Więcej kanałów = więcej klientów."*
 
 ---
 
@@ -393,7 +393,7 @@ Legal Hub startuje jako Client Intake Automation (Phase 1-3), bo to najszybsza d
 
 ✅ **Dobra odpowiedź:**
 
-*"Świetnie! Calendly to dobre narzędzie. Legal Hub robi więcej niż booking - to complete intake system.*
+*"Świetnie! Calendly to dobre narzędzie. Halo Efekt robi więcej niż booking - to complete intake system.*
 
 *Co Calendly daje:*
 - ✅ Klient wybiera slot
@@ -405,7 +405,7 @@ Legal Hub startuje jako Client Intake Automation (Phase 1-3), bo to najszybsza d
 - ❌ Integration z case management (responses w jednym miejscu)
 - ❌ Polish legal-specific features (case type classification)
 
-*Legal Hub = Calendly + TypeForm + AI Qualification + CMS w jednym*
+*Halo Efekt = Calendly + TypeForm + AI Qualification + CMS w jednym*
 
 *Porównanie workflow:*
 
@@ -415,16 +415,16 @@ Legal Hub startuje jako Client Intake Automation (Phase 1-3), bo to najszybsza d
 3. Prawnik idzie na spotkanie "blind" (nie wie nic o sprawie)
 4. 30 min spotkania = 20 min zbieranie info + 10 min rozmowa
 
-**Legal Hub workflow:**
+**Halo Efekt workflow:**
 1. Klient wypełnia intake form (case facts)
 2. AI generuje qualification summary
 3. Prawnik czyta summary (5 min) → decyduje czy umówić
 4. Jeśli TAK: klient wybiera slot (like Calendly)
 5. 30 min spotkania = 5 min confirm facts + 25 min strategy discussion
 
-*Net effect: Calendly books meetings. Legal Hub qualifies cases AND books meetings.*
+*Net effect: Calendly books meetings. Halo Efekt qualifies cases AND books meetings.*
 
-*Cena: Legal Hub 400-1,500 PLN/m (zależy od tier) - podobnie jak Calendly Premium + TypeForm + Zapier AI automation. Ale wszystko w jednym, legal-specific."*
+*Cena: Halo Efekt 400-1,500 PLN/m (zależy od tier) - podobnie jak Calendly Premium + TypeForm + Zapier AI automation. Ale wszystko w jednym, legal-specific."*
 
 ---
 
@@ -434,7 +434,7 @@ Legal Hub startuje jako Client Intake Automation (Phase 1-3), bo to najszybsza d
 
 *"Rozumiem obawy o koszt - spójrzmy na ROI:*
 
-**Koszt Legal Hub (Tier 1):**
+**Koszt Halo Efekt (Tier 1):**
 - Setup: 1,500 PLN (one-time)
 - Monthly: 400 PLN/m
 - Year 1 total: 6,300 PLN
@@ -443,7 +443,7 @@ Legal Hub startuje jako Client Intake Automation (Phase 1-3), bo to najszybsza d
 
 1. **Lead conversion improvement:**
    - Currently: 20 leadów/m × 50% conversion (10 lost) = 10 klientów
-   - With Legal Hub: 20 leadów × 80% conversion (better response time) = 16 klientów
+   - With Halo Efekt: 20 leadów × 80% conversion (better response time) = 16 klientów
    - +6 klientów/m × avg case value 8,000 PLN = 48,000 PLN/m revenue
    - Annual: +576,000 PLN revenue
 
@@ -455,7 +455,7 @@ Legal Hub startuje jako Client Intake Automation (Phase 1-3), bo to najszybsza d
 
 3. **Time saved on booking:**
    - Asystentka: 2h/dzień umawianie spotkań = 40h/m
-   - Legal Hub reduces to 10h/m (still some manual work)
+   - Halo Efekt reduces to 10h/m (still some manual work)
    - = 30h/m saved × 80 PLN/h = 2,400 PLN/m
    - Annual: 28,800 PLN saved
 
@@ -516,7 +516,7 @@ Legal Hub startuje jako Client Intake Automation (Phase 1-3), bo to najszybsza d
 
 2. **Law Firm Consulting Groups**
    - Companies like BMI, Praktyka Prawnika
-   - Pitch: "Recommend Legal Hub to your clients, get referral fee"
+   - Pitch: "Recommend Halo Efekt to your clients, get referral fee"
    - Deal: 20-25% of Year 1 MRR per referred client
 
 3. **Legal Marketing Agencies**
@@ -659,7 +659,7 @@ Legal Hub startuje jako Client Intake Automation (Phase 1-3), bo to najszybsza d
 **Customer Success:**
 - Time-to-first-value (target: 2-3 days - first form submission received)
 - Feature adoption (% using surveys + calendar + AI qualification)
-- Lead-to-consultation conversion improvement (target: +30-50% vs pre-Legal Hub)
+- Lead-to-consultation conversion improvement (target: +30-50% vs pre-Halo Efekt)
 - NPS (target: >55)
 - Churn (target: <10% annual)
 
@@ -695,7 +695,7 @@ Legal Hub startuje jako Client Intake Automation (Phase 1-3), bo to najszybsza d
 - ✅ Confidence scoring: Only show cases with >80% confidence match
 - ✅ Red flag system: "This case might be distinguishable - see notes"
 - ✅ Human-in-loop: Always require lawyer approval
-- ✅ Liability waiver: Clear that LegalHub is research assistant, not legal advice
+- ✅ Liability waiver: Clear that HaloEfekt is research assistant, not legal advice
 - ✅ Continuous testing: Monthly accuracy audits
 
 ---
@@ -813,7 +813,7 @@ Legal Hub startuje jako Client Intake Automation (Phase 1-3), bo to najszybsza d
 
 ## 15. Podsumowanie
 
-**Legal Hub** to inteligentna platforma do automatyzacji pozyskiwania klientów dla polskich kancelarii prawnych, z przyszłą ekspansją na legal research.
+**Halo Efekt** to inteligentna platforma do automatyzacji pozyskiwania klientów dla polskich kancelarii prawnych, z przyszłą ekspansją na legal research.
 
 **Phase 1-3:** Automatyzacja client intake (surveys, calendar, AI qualification)
 **Phase 4+:** Legal research & case strategy (Lex integration, precedent analysis)

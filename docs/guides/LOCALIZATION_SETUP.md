@@ -1,6 +1,6 @@
 # Localization Setup - Installation & Configuration
 
-Complete setup guide for next-intl localization in Legal Hub website.
+Complete setup guide for next-intl localization in Halo Efekt website.
 
 ## Files Created
 
@@ -27,7 +27,7 @@ This localization system requires the following files that have been created:
 ### Step 1: Install next-intl Package
 
 ```bash
-cd /Users/marcinjucha/Prywatne/projects/legal-mind
+cd /Users/marcinjucha/Prywatne/projects/halo-efekt
 
 # Add next-intl to website app dependencies
 npm install next-intl --workspace=@agency/website

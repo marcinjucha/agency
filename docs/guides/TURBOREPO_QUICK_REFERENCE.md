@@ -7,7 +7,7 @@ Szybkie komendy i snippety do kopiowania.
 ## Installation & Setup
 
 ```bash
-# Already done in Legal-Mind, but for reference:
+# Already done in Halo-Efekt, but for reference:
 npm install -D turbo
 
 # Initialize (creates turbo.json)
@@ -18,7 +18,7 @@ npx turbo init
 
 ```json
 {
-  "name": "legal-mind",
+  "name": "halo-efekt",
   "version": "1.0.0",
   "private": true,
   "workspaces": ["apps/*", "packages/*"],

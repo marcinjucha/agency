@@ -1,6 +1,6 @@
 # Localization Quick Start
 
-Quick reference for using translations in Legal Hub.
+Quick reference for using translations in Halo Efekt.
 
 ## TL;DR - Use Translations in 30 Seconds
 

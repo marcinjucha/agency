@@ -1,17 +1,17 @@
 # ADR-006: Agency Project Structure and Architecture Patterns
 
-> **Note:** This project was renamed from "legal-mind" to "agency" in February 2026.
+> **Note:** This project was renamed from "halo-efekt" to "agency" in February 2026.
 
 **Status:** Accepted
 **Date:** 2025-12-05 (Last Updated: 2026-02-06)
-**Context:** Agency SaaS Platform - Multi-tenant legal intake system
+**Context:** Agency SaaS Platform - Multi-tenant business automation platform
 **Deciders:** Marcin Jucha
 
 ---
 
 ## Context and Problem Statement
 
-Legal-Mind requires a scalable, maintainable architecture that supports:
+Halo-Efekt requires a scalable, maintainable architecture that supports:
 - Multi-tenant SaaS for law firms
 - Two distinct user-facing applications (public website + admin CMS)
 - Shared business logic and UI components
@@ -356,7 +356,7 @@ const onSubmit = async (data) => {
 **Installation (when needed):**
 ```bash
 # Add to apps/cms/package.json
-npm install zustand --workspace=@legal-mind/cms
+npm install zustand --workspace=@halo-efekt/cms
 ```
 
 **Rationale:**
@@ -786,7 +786,7 @@ const { data: surveys } = await supabase
 
 **Trigger:** If any of these occur:
 - Website traffic >> CMS traffic (need separate scaling)
-- Survey forms need different domain (survey.legalmind.pl)
+- Survey forms need different domain (survey.haloefekt.pl)
 - Team > 5 developers (need more isolation)
 
 **How to split:**
@@ -798,9 +798,9 @@ cp -r apps/website apps/survey
 # Remove (marketing) routes
 
 # Update deployments
-# website: legalmind.pl
-# survey: survey.legalmind.pl
-# cms: app.legalmind.pl
+# website: haloefekt.pl
+# survey: survey.haloefekt.pl
+# cms: app.haloefekt.pl
 ```
 
 ---
@@ -1022,7 +1022,7 @@ features/{feature}/__tests__/
 
 ### Differences from Multi-Tenant CMS Project
 
-Legal-Mind is simpler:
+Halo-Efekt is simpler:
 - **2 apps** (not 3+) - Website + CMS (not multiple tenant frontends)
 - **No plugin system** - Straightforward SaaS
 - **Simpler state** - TanStack Query only in CMS (not everywhere)
@@ -1042,7 +1042,7 @@ When adding:
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│  LEGAL-MIND ARCHITECTURE CHEAT SHEET                │
+│  HALO-EFEKT ARCHITECTURE CHEAT SHEET                │
 ├─────────────────────────────────────────────────────┤
 │  APPS                                               │
 │  ├─ website/  → Public (no auth)                    │

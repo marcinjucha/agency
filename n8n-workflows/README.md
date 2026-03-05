@@ -1,6 +1,6 @@
-# N8n Workflows for Legal-Mind
+# N8n Workflows for Halo-Efekt
 
-This directory contains n8n workflow definitions for automating business processes in Legal-Mind.
+This directory contains n8n workflow definitions for automating business processes in Halo-Efekt.
 
 ---
 
@@ -239,12 +239,12 @@ All credentials are stored in n8n (not in code):
    - Value: `sk-ant-...`
    - Used in: Survey Analysis workflow
 
-2. **Legal-Mind Supabase** (Supabase credential)
+2. **Halo-Efekt Supabase** (Supabase credential)
    - Host: `[project].supabase.co`
    - Service Role Key: `eyJhb...`
    - Used in: All workflows with database access
 
-3. **GlitchTip Legal-Mind** (Sentry credential)
+3. **GlitchTip Halo-Efekt** (Sentry credential)
    - DSN: `https://...@glitchtip.trustcode.pl/1`
    - Used in: Error logging nodes
 

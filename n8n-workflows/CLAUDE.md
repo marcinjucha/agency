@@ -53,7 +53,7 @@ npm install @sentry/node
 **Code:**
 ```typescript
 // Supabase node configuration
-Credential: "Legal-Mind Supabase"
+Credential: "Halo-Efekt Supabase"
 Host: "[project].supabase.co"
 Key: SERVICE_ROLE_KEY  // ← Not anon key!
 ```
@@ -236,11 +236,11 @@ N8N_ENCRYPTION_KEY=[generated]         # openssl rand -hex 32
    - Header: `x-api-key`
    - Value: `sk-ant-...`
 
-2. **Legal-Mind Supabase** (Supabase credential)
+2. **Halo-Efekt Supabase** (Supabase credential)
    - Host: `[project].supabase.co`
    - Key: Service Role Key (NOT anon)
 
-3. **GlitchTip Legal-Mind** (Sentry credential)
+3. **GlitchTip Halo-Efekt** (Sentry credential)
    - DSN: `https://[key]@glitchtip.trustcode.pl/1`
 
 **Testing Commands:**

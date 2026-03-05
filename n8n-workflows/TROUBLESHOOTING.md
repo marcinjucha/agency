@@ -217,7 +217,7 @@ Option 3: Increase max_tokens
 - Incorrect host format
 
 **Debug:**
-1. Check credential in n8n: Settings → Credentials → Legal-Mind Supabase
+1. Check credential in n8n: Settings → Credentials → Halo-Efekt Supabase
 2. Verify key format: should be long JWT starting with `eyJhbG...`
 3. Check host format: `xxx.supabase.co` (no `https://`)
 
@@ -292,7 +292,7 @@ if (!questions || questions.length === 0) {
 
 **Debug:**
 1. Check n8n workflow editor: red line from previous node to Sentry?
-2. Check credential: Settings → Credentials → GlitchTip Legal-Mind
+2. Check credential: Settings → Credentials → GlitchTip Halo-Efekt
 3. Force an error (invalid survey UUID) and check if Sentry fires
 
 **Fix:**

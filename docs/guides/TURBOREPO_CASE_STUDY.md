@@ -1,16 +1,16 @@
-# Turborepo Case Study - Legal-Mind Real Code Analysis
+# Turborepo Case Study - Halo-Efekt Real Code Analysis
 
-Analiza rzeczywistych implementacji Turborepo w Legal-Mind z wyjaśnieniami każdej linii.
+Analiza rzeczywistych implementacji Turborepo w Halo-Efekt z wyjaśnieniami każdej linii.
 
 ---
 
 ## Case 1: Root package.json - Workspace Definition
 
-**File:** `/Users/marcinjucha/Prywatne/projects/legal-mind/package.json`
+**File:** `/Users/marcinjucha/Prywatne/projects/halo-efekt/package.json`
 
 ```json
 {
-  "name": "legal-mind",
+  "name": "halo-efekt",
   "version": "1.0.0",
   "private": true,
   "workspaces": ["apps/*", "packages/*"],
@@ -111,7 +111,7 @@ Oznacza:
 
 ## Case 2: turbo.json - Pipeline Configuration
 
-**File:** `/Users/marcinjucha/Prywatne/projects/legal-mind/turbo.json`
+**File:** `/Users/marcinjucha/Prywatne/projects/halo-efekt/turbo.json`
 
 ```json
 {
@@ -288,7 +288,7 @@ Why:
 
 ### Website package.json
 
-**File:** `/Users/marcinjucha/Prywatne/projects/legal-mind/apps/website/package.json`
+**File:** `/Users/marcinjucha/Prywatne/projects/halo-efekt/apps/website/package.json`
 
 ```json
 {
@@ -356,7 +356,7 @@ Vs explicit version:
 
 ### @agency/database package.json
 
-**File:** `/Users/marcinjucha/Prywatne/projects/legal-mind/packages/database/package.json`
+**File:** `/Users/marcinjucha/Prywatne/projects/halo-efekt/packages/database/package.json`
 
 ```json
 {
@@ -476,7 +476,7 @@ Turborepo:
 
 ## Case 6: Next.js Transpilation Magic
 
-**File:** `/Users/marcinjucha/Prywatne/projects/legal-mind/apps/website/next.config.ts`
+**File:** `/Users/marcinjucha/Prywatne/projects/halo-efekt/apps/website/next.config.ts`
 
 ```typescript
 const nextConfig: NextConfig = {
@@ -692,7 +692,7 @@ Key insight:
 
 ---
 
-## Case 10: Why Legal-Mind Structure Works
+## Case 10: Why Halo-Efekt Structure Works
 
 ### Before Monorepo (Separate Repos)
 
@@ -727,7 +727,7 @@ Problem 4: Atomic changes impossible
 └─ Need careful coordination
 ```
 
-### After Monorepo (Legal-Mind)
+### After Monorepo (Halo-Efekt)
 
 ```
 Solution 1: No duplication
@@ -768,7 +768,7 @@ Result:
 
 ---
 
-## Summary: Why Turborepo is Perfect for Legal-Mind
+## Summary: Why Turborepo is Perfect for Halo-Efekt
 
 ```
 Two apps + Shared code:

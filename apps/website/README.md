@@ -1,11 +1,11 @@
-# Legal Mind - Website App
+# Halo Efekt - Website App
 
 Public-facing marketing website and client survey forms.
 
 ## URLs
 
 - **Development:** http://localhost:3000
-- **Production:** https://legal-mind-website.vercel.app (or custom domain)
+- **Production:** https://halo-efekt-website.vercel.app (or custom domain)
 
 ## Features
 

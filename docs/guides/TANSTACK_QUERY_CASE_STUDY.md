@@ -1,6 +1,6 @@
-# TanStack Query Case Study - Legal-Mind Real Code Analysis
+# TanStack Query Case Study - Halo-Efekt Real Code Analysis
 
-Analiza rzeczywistych implementacji TanStack Query w Legal-Mind z wyjaśnieniami każdej linii.
+Analiza rzeczywistych implementacji TanStack Query w Halo-Efekt z wyjaśnieniami każdej linii.
 
 ---
 
@@ -60,7 +60,7 @@ staleTime: 1000 * 60 * 5
 ├─ Data still shown (no flash)
 └─ Marked for potential background refetch
 
-Use case for Legal-Mind:
+Use case for Halo-Efekt:
 ├─ Surveys don't change frequently
 ├─ 5 min stale time good balance
 ├─ User can see data immediately
@@ -97,7 +97,7 @@ refetchOnWindowFocus: false
 ├─ User tabs back (window gets focus)
 ├─ TanStack Query auto-refetches all queries!
 ├─ Problem: Wastes bandwidth, annoying
-├─ Legal-Mind disabled: Better UX
+├─ Halo-Efekt disabled: Better UX
 ```
 
 ### Integration in Layout
@@ -562,7 +562,7 @@ export async function createSurvey(formData: {
 ### Cache Invalidation Strategy
 
 ```
-Two-cache system in Legal-Mind:
+Two-cache system in Halo-Efekt:
 
 1. Next.js Cache (Server-side)
    ├─ Data cached on server
@@ -621,7 +621,7 @@ export async function createSurvey(data) {
   return { success: bool, surveyId?, error? }  // Never throws
 }
 
-Legal-Mind uses pattern 2: Safer, easier to handle in mutations
+Halo-Efekt uses pattern 2: Safer, easier to handle in mutations
 ```
 
 ---

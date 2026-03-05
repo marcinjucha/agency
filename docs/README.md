@@ -1,8 +1,8 @@
-# Legal-Mind Documentation
+# Halo-Efekt Documentation
 
 > **Central hub for project architecture and technical decisions**
 
-Welcome to Legal-Mind documentation. This directory contains architecture, design patterns, and technical context.
+Welcome to Halo-Efekt documentation. This directory contains architecture, design patterns, and technical context.
 
 **For task tracking and roadmap:** See [Notion workspace](https://notion.so) (Agency Projects & Tasks)
 
@@ -214,7 +214,7 @@ Reference guides for learning (12 files in `guides/` directory):
 ### Tools
 - [Vercel Dashboard](https://vercel.com/dashboard)
 - [Supabase Dashboard](https://app.supabase.com/project/zsrpdslhnuwmzewwoexr)
-- [GitLab Repository](https://gitlab.com/friendly-coders/legal-mind)
+- [GitLab Repository](https://gitlab.com/friendly-coders/halo-efekt)
 
 ---
 

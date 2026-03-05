@@ -1,6 +1,6 @@
 # @agency/calendar
 
-Google Calendar integration utilities for Legal-Mind applications.
+Google Calendar integration utilities for Halo-Efekt applications.
 
 ## Purpose
 

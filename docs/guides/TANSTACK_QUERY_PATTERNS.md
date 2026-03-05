@@ -1,6 +1,6 @@
 # TanStack Query Patterns - Real-World Solutions
 
-Rzeczywiste problemy z TanStack Query które mogą się pojawić w Legal-Mind i jak je rozwiązywać.
+Rzeczywiste problemy z TanStack Query które mogą się pojawić w Halo-Efekt i jak je rozwiązywać.
 
 ---
 
@@ -111,7 +111,7 @@ const handleCreateAndDelete = async () => {
 ### The Solution 2: Disable UI During Mutation
 
 ```typescript
-// Most common in Legal-Mind
+// Most common in Halo-Efekt
 
 <button
   onClick={() => generateMutation.mutate()}
@@ -216,7 +216,7 @@ const [queryClient] = useState(
 ### The Solution: Disable Refetch on Window Focus
 
 ```typescript
-// Already done in Legal-Mind!
+// Already done in Halo-Efekt!
 const [queryClient] = useState(
   () =>
     new QueryClient({
@@ -717,7 +717,7 @@ describe('SurveyList', () => {
 
 ---
 
-## Real Legal-Mind Timeline
+## Real Halo-Efekt Timeline
 
 ```
 Current Status (Phase 2 - Dec 12):

@@ -253,7 +253,7 @@ describe('Footer Component', () => {
 
   it('renders copyright notice', () => {
     render(<Footer />)
-    expect(screen.getByText('© 2025 Legal Hub. All rights reserved.')).toBeInTheDocument()
+    expect(screen.getByText('© 2025 Halo Efekt. All rights reserved.')).toBeInTheDocument()
   })
 
   it('renders social media links', () => {

@@ -1,6 +1,6 @@
 # Supabase RLS Patterns - Real-World Solutions
 
-Rzeczywiste problemy RLS które napotykałeś w Legal-Mind i jak je rozwiązywać.
+Rzeczywiste problemy RLS które napotykałeś w Halo-Efekt i jak je rozwiązywać.
 
 ---
 
@@ -650,7 +650,7 @@ supabase db push
 
 ---
 
-## Real Legal-Mind Timeline
+## Real Halo-Efekt Timeline
 
 ```
 Week 1 (Dec 10):
