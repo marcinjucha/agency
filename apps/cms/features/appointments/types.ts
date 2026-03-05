@@ -49,7 +49,7 @@ export interface AppointmentResponseContext {
  * const appointment: AppointmentWithResponse = {
  *   id: "a-123",
  *   tenant_id: "t-789",
- *   lawyer_id: "u-456",
+ *   user_id: "u-456",
  *   response_id: "r-123",
  *   start_time: "2026-01-20T10:00:00Z",
  *   end_time: "2026-01-20T11:00:00Z",
@@ -82,7 +82,7 @@ export type AppointmentWithResponse = Tables<'appointments'> & {
  * const item: AppointmentListItem = {
  *   id: "a-123",
  *   tenant_id: "t-789",
- *   lawyer_id: "u-456",
+ *   user_id: "u-456",
  *   response_id: "r-123",
  *   start_time: "2026-01-20T10:00:00Z",
  *   end_time: "2026-01-20T11:00:00Z",
@@ -115,7 +115,7 @@ export type AppointmentListItem = Tables<'appointments'> & {
  *
  * @example
  * const filters: AppointmentFilters = {
- *   lawyerId: "u-456",
+ *   userId: "u-456",
  *   status: "scheduled",
  *   dateFrom: "2026-01-01",
  *   dateTo: "2026-01-31"
@@ -123,7 +123,7 @@ export type AppointmentListItem = Tables<'appointments'> & {
  */
 export interface AppointmentFilters {
   /** Filter by lawyer ID */
-  lawyerId?: string
+  userId?: string
   /** Filter by appointment status */
   status?: AppointmentStatus
   /** Filter appointments from date (ISO 8601) */

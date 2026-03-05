@@ -47,7 +47,7 @@ export type Database = {
           end_time: string
           google_calendar_event_id: string | null
           id: string
-          lawyer_id: string
+          user_id: string
           notes: string | null
           response_id: string | null
           start_time: string
@@ -62,7 +62,7 @@ export type Database = {
           end_time: string
           google_calendar_event_id?: string | null
           id?: string
-          lawyer_id: string
+          user_id: string
           notes?: string | null
           response_id?: string | null
           start_time: string
@@ -77,7 +77,7 @@ export type Database = {
           end_time?: string
           google_calendar_event_id?: string | null
           id?: string
-          lawyer_id?: string
+          user_id?: string
           notes?: string | null
           response_id?: string | null
           start_time?: string
@@ -87,8 +87,8 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "appointments_lawyer_id_fkey"
-            columns: ["lawyer_id"]
+            foreignKeyName: "appointments_user_id_fkey"
+            columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]

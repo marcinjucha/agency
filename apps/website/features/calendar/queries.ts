@@ -60,25 +60,25 @@ export async function getSurveyWithLawyer(surveyId: string): Promise<{
  * Queries: users table → get google_calendar_token
  * Includes RLS filtering by tenant_id (automatic via policies)
  *
- * @param lawyerId - UUID of the lawyer (user)
+ * @param userId - UUID of the user
  * @param tenantId - UUID of the tenant for RLS verification
  * @returns Object with Google Calendar token (or null if not connected)
  * @throws Error if user not found
  */
 export async function getLawyerCalendarToken(
-  lawyerId: string,
+  userId: string,
   tenantId: string
 ): Promise<{
   token: any | null
 }> {
   const supabase = await createClient()
 
-  console.log('[CALENDAR] Getting token for lawyerId:', lawyerId, 'tenantId:', tenantId)
+  console.log('[CALENDAR] Getting token for userId:', userId, 'tenantId:', tenantId)
 
   const { data: user, error } = await supabase
     .from('users')
     .select('google_calendar_token, tenant_id')
-    .eq('id', lawyerId)
+    .eq('id', userId)
     .eq('tenant_id', tenantId)
     .maybeSingle()
 
@@ -90,7 +90,7 @@ export async function getLawyerCalendarToken(
   }
 
   if (!user) {
-    console.error('[CALENDAR] User not found for lawyerId:', lawyerId, 'tenantId:', tenantId)
+    console.error('[CALENDAR] User not found for userId:', userId, 'tenantId:', tenantId)
     throw new Error('Lawyer not found')
   }
 
@@ -114,16 +114,16 @@ export async function getLawyerCalendarToken(
  *
  * SECURITY NOTE: Service role bypasses RLS, which is SAFE here because:
  * - Only used for public calendar slot viewing (no sensitive data modification)
- * - lawyerId and tenantId are fetched from survey (not user-provided)
+ * - userId and tenantId are fetched from survey (not user-provided)
  * - Only returns calendar token, no other user data
  *
- * @param lawyerId - UUID of the lawyer (user)
+ * @param userId - UUID of the user
  * @param tenantId - UUID of the tenant for verification
  * @returns Object with Google Calendar token (or null if not connected)
  * @throws Error if user not found
  */
 export async function getLawyerCalendarTokenPublic(
-  lawyerId: string,
+  userId: string,
   tenantId: string
 ): Promise<{
   token: any | null
@@ -146,12 +146,12 @@ export async function getLawyerCalendarTokenPublic(
     },
   })
 
-  console.log('[CALENDAR] Getting token for lawyerId:', lawyerId, 'tenantId:', tenantId)
+  console.log('[CALENDAR] Getting token for userId:', userId, 'tenantId:', tenantId)
 
   const { data: user, error } = await supabase
     .from('users')
     .select('google_calendar_token, tenant_id')
-    .eq('id', lawyerId)
+    .eq('id', userId)
     .eq('tenant_id', tenantId)
     .maybeSingle()
 
@@ -163,7 +163,7 @@ export async function getLawyerCalendarTokenPublic(
   }
 
   if (!user) {
-    console.error('[CALENDAR] User not found for lawyerId:', lawyerId, 'tenantId:', tenantId)
+    console.error('[CALENDAR] User not found for userId:', userId, 'tenantId:', tenantId)
     throw new Error('Lawyer not found')
   }
 

@@ -6,7 +6,7 @@
  * Uses TanStack Query pattern with explicit return types.
  *
  * Authentication: Required for all queries (throws if not authenticated)
- * Authorization: RLS filters by tenant_id, queries filter by lawyer_id
+ * Authorization: RLS filters by tenant_id, queries filter by user_id
  * Client Type: Browser client (used with TanStack Query in components)
  *
  * @module apps/cms/features/appointments/queries
@@ -63,7 +63,7 @@ function transformToListItem(data: SupabaseAppointmentRow): AppointmentListItem 
   return {
     id: data.id,
     tenant_id: data.tenant_id,
-    lawyer_id: data.lawyer_id,
+    user_id: data.user_id,
     response_id: data.response_id,
     start_time: data.start_time,
     end_time: data.end_time,
@@ -85,7 +85,7 @@ function transformToListItem(data: SupabaseAppointmentRow): AppointmentListItem 
  * Includes optional joined response data for context
  *
  * Authentication: Required - throws if no user session
- * Authorization: Filtered by lawyer_id = current user's ID
+ * Authorization: Filtered by user_id = current user's ID
  * Sorting: start_time ASC (upcoming appointments first)
  *
  * @returns Array of appointments with computed duration and response context
@@ -125,7 +125,7 @@ export async function getAppointments(): Promise<AppointmentListItem[]> {
       response:responses(id, status, created_at)
     `
     )
-    .eq('lawyer_id', user.id)
+    .eq('user_id', user.id)
     .order('start_time', { ascending: true })
 
   if (error) throw error
@@ -139,7 +139,7 @@ export async function getAppointments(): Promise<AppointmentListItem[]> {
  * Includes joined response data if available
  *
  * Authentication: Required - throws if no user session
- * Authorization: Must be owned by current lawyer (lawyer_id check)
+ * Authorization: Must be owned by current user (user_id check)
  * Security: Prevents access to other lawyers' appointments
  *
  * @param id - Appointment UUID
@@ -177,7 +177,7 @@ export async function getAppointmentById(id: string): Promise<AppointmentWithRes
     `
     )
     .eq('id', id)
-    .eq('lawyer_id', user.id) // Security: only own appointments
+    .eq('user_id', user.id) // Security: only own appointments
     .maybeSingle()
 
   if (error) throw error
@@ -204,7 +204,7 @@ export async function getAppointmentById(id: string): Promise<AppointmentWithRes
  * Used for dashboard statistics and analytics
  *
  * Authentication: Required - throws if no user session
- * Authorization: Filtered by lawyer_id = current user's ID
+ * Authorization: Filtered by user_id = current user's ID
  *
  * @returns Total appointment count for current lawyer
  * @throws Error if not authenticated
@@ -230,7 +230,7 @@ export async function getAppointmentCount(): Promise<number> {
   const { count, error } = await supabase
     .from('appointments')
     .select('*', { count: 'exact', head: true })
-    .eq('lawyer_id', user.id)
+    .eq('user_id', user.id)
 
   if (error) throw error
   return count || 0
@@ -241,7 +241,7 @@ export async function getAppointmentCount(): Promise<number> {
  * Used for dashboard statistics (scheduled, completed, cancelled counts)
  *
  * Authentication: Required - throws if no user session
- * Authorization: Filtered by lawyer_id = current user's ID
+ * Authorization: Filtered by user_id = current user's ID
  *
  * @param status - Appointment status to count
  * @returns Count of appointments with the specified status
@@ -269,7 +269,7 @@ export async function getAppointmentCountByStatus(status: string): Promise<numbe
   const { count, error } = await supabase
     .from('appointments')
     .select('*', { count: 'exact', head: true })
-    .eq('lawyer_id', user.id)
+    .eq('user_id', user.id)
     .eq('status', status)
 
   if (error) throw error

@@ -63,7 +63,7 @@ WHERE u.email = 'admin@testfirm.com';
 -- NOW YOU CAN LOGIN!
 -- ==========================================
 
--- Go to: https://legal-mind-cms.vercel.app/login
+-- Go to: https://halo-efekt-cms.vercel.app/login
 -- Email: admin@testfirm.com
 -- Password: YourSecurePassword123
 

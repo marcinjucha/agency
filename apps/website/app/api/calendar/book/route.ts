@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
       created_by: string
       tenant_id: string
     }
-    const lawyerId = survey.created_by
+    const userId = survey.created_by
     const tenantId = survey.tenant_id
 
     // Step 2: Validate response exists and belongs to this survey
@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
     const { data: existingAppointments, error: conflictError } = await supabase
       .from('appointments')
       .select('id, start_time, end_time')
-      .eq('lawyer_id', lawyerId)
+      .eq('user_id', userId)
       .eq('status', 'scheduled')
 
     if (conflictError) {
@@ -140,7 +140,7 @@ export async function POST(request: NextRequest) {
       .from('appointments')
       .insert({
         response_id: validatedData.responseId,
-        lawyer_id: lawyerId,
+        user_id: userId,
         tenant_id: tenantId,
         start_time: validatedData.startTime,
         end_time: validatedData.endTime,
