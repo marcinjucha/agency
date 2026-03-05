@@ -29,7 +29,7 @@ export function Sidebar() {
   return (
     <aside className="w-64 bg-gray-900 text-white flex flex-col h-screen">
       <div className="p-6">
-        <h1 className="text-xl font-bold">Legal Mind</h1>
+        <h1 className="text-xl font-bold">Halo Efekt</h1>
         <p className="text-gray-400 text-sm mt-1">Admin Panel</p>
       </div>
 

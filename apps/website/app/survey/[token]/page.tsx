@@ -81,13 +81,13 @@ export async function generateMetadata({ params }: PageProps) {
 
   if (!result.isValid || !result.data) {
     return {
-      title: 'Survey Unavailable - Legal Mind',
+      title: 'Survey Unavailable - Halo Efekt',
       description: 'This survey is no longer available.',
     }
   }
 
   return {
-    title: `${result.data.survey.title} - Legal Mind`,
+    title: `${result.data.survey.title} - Halo Efekt`,
     description:
       result.data.survey.description ||
       'Complete this survey to provide your information.',

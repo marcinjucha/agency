@@ -1,7 +1,7 @@
 import { ResponseList } from '@/features/responses/components/ResponseList'
 
 export const metadata = {
-  title: 'Client Responses | Legal-Mind CMS',
+  title: 'Client Responses | Halo-Efekt CMS',
   description: 'View and manage client survey responses',
 }
 

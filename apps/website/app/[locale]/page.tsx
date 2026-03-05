@@ -12,7 +12,7 @@ import { FinalCTA } from '@/features/marketing/components/FinalCTA'
 import { Footer } from '@/features/marketing/components/Footer'
 
 export const metadata: Metadata = {
-  title: 'Legal Hub - Zautomatyzuj przyjmowanie klientów',
+  title: 'Halo Efekt - Zautomatyzuj przyjmowanie klientów',
   description:
     'Oszczędzaj czas, zwiększ konwersję klientów. Automatyczna kwalifikacja, integracja z kalendarzem, zarządzanie odpowiedziami.',
   keywords: [
@@ -23,7 +23,7 @@ export const metadata: Metadata = {
     'surveys dla prawników'
   ],
   openGraph: {
-    title: 'Legal Hub - Zautomatyzuj przyjmowanie klientów',
+    title: 'Halo Efekt - Zautomatyzuj przyjmowanie klientów',
     description:
       'Oszczędzaj czas, zwiększ konwersję klientów. Automatyczna kwalifikacja, integracja z kalendarzem, zarządzanie odpowiedziami.',
     type: 'website',
@@ -33,13 +33,13 @@ export const metadata: Metadata = {
         url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'Legal Hub'
+        alt: 'Halo Efekt'
       }
     ]
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Legal Hub - Zautomatyzuj przyjmowanie klientów',
+    title: 'Halo Efekt - Zautomatyzuj przyjmowanie klientów',
     description:
       'Oszczędzaj czas, zwiększ konwersję klientów. Automatyczna kwalifikacja, integracja z kalendarzem, zarządzanie odpowiedziami.'
   }

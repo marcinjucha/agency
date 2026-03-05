@@ -67,7 +67,7 @@ export function FinalCTA() {
             <Button
               size="lg"
               className="w-full bg-background text-primary hover:bg-primary/5 font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
-              aria-label="Zarezerwuj demo Legal Hub - otwiera formularz rezerwacji"
+              aria-label="Zarezerwuj demo Halo Efekt - otwiera formularz rezerwacji"
             >
               Zarezerwuj demo
             </Button>
@@ -79,7 +79,7 @@ export function FinalCTA() {
               variant="outline"
               size="lg"
               className="w-full border-2 border-primary-foreground text-primary-foreground hover:bg-primary/80 font-semibold transition-all duration-200"
-              aria-label="Dowiedz się więcej o Legal Hub - przechodzi do strony o nas"
+              aria-label="Dowiedz się więcej o Halo Efekt - przechodzi do strony o nas"
             >
               Dowiedz się więcej
             </Button>

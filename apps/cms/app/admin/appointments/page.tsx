@@ -1,7 +1,7 @@
 import { AppointmentList } from '@/features/appointments/components/AppointmentList'
 
 export const metadata = {
-  title: 'Appointments | Legal-Mind CMS',
+  title: 'Appointments | Halo-Efekt CMS',
   description: 'View and manage client appointments',
 }
 

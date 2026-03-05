@@ -39,7 +39,7 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-muted">
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="space-y-1 pb-6">
-          <CardTitle className="text-3xl font-bold text-center">Legal Mind CMS</CardTitle>
+          <CardTitle className="text-3xl font-bold text-center">Halo Efekt CMS</CardTitle>
           <CardDescription className="text-center">Sign in to your account</CardDescription>
         </CardHeader>
         <CardContent>

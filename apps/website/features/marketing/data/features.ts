@@ -1,8 +1,8 @@
 /**
- * Legal Hub Features Data
+ * Halo Efekt Features Data
  *
  * Static data for the Features section on the marketing website.
- * Contains 6 core features that power the Legal Hub intake automation platform.
+ * Contains 6 core features that power the Halo Efekt intake automation platform.
  *
  * @module apps/website/features/marketing/data/features
  */
@@ -10,7 +10,7 @@
 import type { Feature } from '../types'
 
 /**
- * FEATURES array - 6 core capabilities of Legal Hub
+ * FEATURES array - 6 core capabilities of Halo Efekt
  *
  * Features are displayed on the marketing homepage to communicate
  * the platform's key functionality to prospective law firms.
@@ -38,7 +38,7 @@ export const FEATURES: Feature[] = [
     icon: 'zap',
     name: 'Shareable Public Links',
     description:
-      'Clients receive unique links like legalhub.pl/survey/abc123. Anonymous access, client-side validation, mobile-responsive, auto-save drafts.',
+      'Clients receive unique links like haloefekt.pl/survey/abc123. Anonymous access, client-side validation, mobile-responsive, auto-save drafts.',
     isComingSoon: false,
   },
   {

@@ -4,7 +4,7 @@ import { StepCard } from './StepCard'
 import type { Step, IconName } from '../types'
 
 /**
- * Legal Hub "How It Works" Workflow - 6 steps
+ * Halo Efekt "How It Works" Workflow - 6 steps
  * Based on Product-Idea.md: Phase 1 Client Intake Automation
  *
  * Flow:
@@ -29,7 +29,7 @@ const WORKFLOW_STEPS: Array<Step & { icon: IconName }> = [
     number: 2,
     title: 'Generuje unikalny link',
     description:
-      'System generuje unikalny link do formularza (np. legalhub.pl/survey/abc123), gotowy do wysłania klientom e-mailem.',
+      'System generuje unikalny link do formularza (np. haloefekt.pl/survey/abc123), gotowy do wysłania klientom e-mailem.',
     icon: 'target',
   },
   {
@@ -69,7 +69,7 @@ const WORKFLOW_STEPS: Array<Step & { icon: IconName }> = [
 /**
  * HowItWorks Component
  *
- * Section component rendering the complete 6-step Legal Hub workflow.
+ * Section component rendering the complete 6-step Halo Efekt workflow.
  * Features:
  * - Vertical flow on mobile, horizontal on desktop
  * - Visual connecting arrows/lines between steps

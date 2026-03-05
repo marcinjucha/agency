@@ -4,7 +4,7 @@ import { Button } from '@agency/ui'
 import { ArrowLeft } from 'lucide-react'
 
 export const metadata = {
-  title: 'Response Details | Legal-Mind CMS',
+  title: 'Response Details | Halo-Efekt CMS',
   description: 'View detailed client response information',
 }
 

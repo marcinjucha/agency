@@ -57,7 +57,7 @@ export function Navbar({ onDemoClick }: NavbarProps) {
               href="/"
               className="flex items-center gap-2 text-2xl font-bold text-foreground hover:text-primary transition-colors"
             >
-              <span>Legal Hub</span>
+              <span>Halo Efekt</span>
             </Link>
 
             {/* Desktop Navigation Links */}

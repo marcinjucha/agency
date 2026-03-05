@@ -1,7 +1,7 @@
 /**
  * Marketing Feature Type Definitions
  *
- * Foundation types for the Legal Hub landing page.
+ * Foundation types for the Halo Efekt landing page.
  * All marketing components, data files, and queries import from this file.
  *
  * Contains interfaces for:

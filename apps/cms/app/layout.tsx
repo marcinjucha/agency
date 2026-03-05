@@ -7,8 +7,8 @@ import { Providers } from './providers'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Legal Mind CMS - Admin Panel',
-  description: 'AI-Powered Legal Intake Platform for Law Firms',
+  title: 'Halo Efekt CMS - Admin Panel',
+  description: 'AI-Powered Business Automation Platform',
 }
 
 export default function RootLayout({

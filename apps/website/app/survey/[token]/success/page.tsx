@@ -72,7 +72,7 @@ export default async function SuccessPage({ params, searchParams }: PageProps) {
 // Generate metadata for SEO
 export function generateMetadata() {
   return {
-    title: 'Survey Submitted - Legal Mind',
+    title: 'Survey Submitted - Halo Efekt',
     description: 'Your survey has been submitted successfully.'
   }
 }

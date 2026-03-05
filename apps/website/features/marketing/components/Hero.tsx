@@ -73,7 +73,7 @@ export function Hero() {
 
               {/* Description */}
               <p className="text-lg text-muted-foreground leading-relaxed mb-8">
-                Legal Hub to inteligentna platforma automatyzacji pozyskiwania klientów dla polskich kancelarii prawnych.
+                Halo Efekt to inteligentna platforma automatyzacji pozyskiwania klientów dla polskich kancelarii prawnych.
                 Smart surveys, AI kwalifikacja spraw, i automatyczne umawianie spotkań w jednym miejscu.
                 Skróć proces intake z 5 dni na 15 minut i nie przegap już żadnego high-value leadu.
               </p>

@@ -1,7 +1,7 @@
 /**
- * Benefits Data for Legal Hub Landing Page
+ * Benefits Data for Halo Efekt Landing Page
  *
- * Six quantifiable benefits that showcase the value proposition of Legal Hub.
+ * Six quantifiable benefits that showcase the value proposition of Halo Efekt.
  * Each benefit includes a metric, headline, explanation, and supporting text.
  *
  * Data sourced from Product-Idea.md § 6. Marketing Angle / Positioning
@@ -12,7 +12,7 @@
 import type { Benefit } from '../types'
 
 /**
- * Benefits array for the Legal Hub landing page
+ * Benefits array for the Halo Efekt landing page
  *
  * Each benefit represents a key value proposition for law firms:
  * 1. Speed - 3x faster client intake (5 days → 15 minutes)

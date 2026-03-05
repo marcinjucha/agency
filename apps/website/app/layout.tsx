@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Legal Hub - Automatyzacja Client Intake",
+  title: "Halo Efekt - Automatyzacja Client Intake",
   description: "Smart surveys, AI qualification, i instant booking dla polskich kancelarii",
 };
 

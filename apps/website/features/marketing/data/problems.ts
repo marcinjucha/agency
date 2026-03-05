@@ -1,7 +1,7 @@
 /**
- * Legal Hub Marketing - Problems Section Data
+ * Halo Efekt Marketing - Problems Section Data
  *
- * This file contains the problems that Legal Hub solves for Polish law firms.
+ * This file contains the problems that Halo Efekt solves for Polish law firms.
  * Each problem represents a pain point that drives the need for client intake automation.
  *
  * Source: Product-Idea.md - Section 2 (Key Pain Points)

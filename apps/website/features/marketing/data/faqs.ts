@@ -1,5 +1,5 @@
 /**
- * FAQ Data for Legal Hub Landing Page
+ * FAQ Data for Halo Efekt Landing Page
  *
  * Contains 8 frequently asked questions addressing common objections
  * from the Product-Idea.md objection handling section.
@@ -21,7 +21,7 @@ export const FAQS: FAQ[] = [
     id: 'faq-1',
     question: 'Klienci wolą dzwonić, nie wypełniać formularze online',
     answer:
-      'To świetna obserwacja. Legal Hub nie zastępuje telefonu - uzupełnia go. W praktyce: 60-70% klientów WOLI formularze (mogą wypełnić o 22:00), 30-40% nadal dzwoni - i to OK! Przykład: litigation firm Warszawa → 20 leadów/m → 35 leadów/m (+75%) po Legal Hub. Dodatkowy kanał = więcej klientów.'
+      'To świetna obserwacja. Halo Efekt nie zastępuje telefonu - uzupełnia go. W praktyce: 60-70% klientów WOLI formularze (mogą wypełnić o 22:00), 30-40% nadal dzwoni - i to OK! Przykład: litigation firm Warszawa → 20 leadów/m → 35 leadów/m (+75%) po Halo Efekt. Dodatkowy kanał = więcej klientów.'
   },
   {
     id: 'faq-2',
@@ -33,7 +33,7 @@ export const FAQS: FAQ[] = [
     id: 'faq-3',
     question: 'Mamy już Calendly lub inny system do umawiania spotkań',
     answer:
-      'Świetnie! Calendly to dobre narzędzie. Legal Hub robi więcej niż booking - to complete intake system. Calendly = booking, Legal Hub = Calendly + TypeForm + AI Qualification + CMS w jednym. Jeśli już masz Calendly, Legal Hub go uzupełnia i zmienia Twój workflow.'
+      'Świetnie! Calendly to dobre narzędzie. Halo Efekt robi więcej niż booking - to complete intake system. Calendly = booking, Halo Efekt = Calendly + TypeForm + AI Qualification + CMS w jednym. Jeśli już masz Calendly, Halo Efekt go uzupełnia i zmienia Twój workflow.'
   },
   {
     id: 'faq-4',
@@ -57,7 +57,7 @@ export const FAQS: FAQ[] = [
     id: 'faq-7',
     question: 'Jak szybko mogę zacząć?',
     answer:
-      'Instalacja: 15 minut. Onboarding call: 30 minut. Pierwszy lead via Legal Hub: ten sam dzień. Setup fee covers: customization, integration, training.'
+      'Instalacja: 15 minut. Onboarding call: 30 minut. Pierwszy lead via Halo Efekt: ten sam dzień. Setup fee covers: customization, integration, training.'
   },
   {
     id: 'faq-8',

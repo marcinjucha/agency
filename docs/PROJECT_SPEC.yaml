@@ -1,6 +1,6 @@
 project:
-  name: "Legal-Mind"
-  description: "SaaS platform for Polish law firms to streamline client intake through smart surveys, calendar booking, and AI qualification"
+  name: "Halo-Efekt"
+  description: "SaaS platform for businesses to streamline client intake through smart surveys, calendar booking, and AI qualification — built by Halo Efekt"
   version: "2.0.0"
   status: "in-progress"
   last_updated: "2026-01-21"
@@ -11,7 +11,7 @@ project:
 # - Notion Projects: Feature-level context and dependencies
 
 architecture:
-  overview: "Monorepo with two Next.js apps (CMS for lawyers, Website for clients), shared packages for UI/database/validation"
+  overview: "Monorepo with two Next.js apps (CMS for business users, Website for clients), shared packages for UI/database/validation"
 
   tech_stack:
     monorepo:
@@ -102,9 +102,9 @@ features:
 
     - name: "Authentication System"
       status: "complete"
-      why: "Secure lawyer access to CMS, session management for protected routes"
+      why: "Secure user access to CMS, session management for protected routes"
       acceptance_criteria:
-        - "Lawyers can register/login with email/password"
+        - "Users can register/login with email/password"
         - "Middleware protects /admin routes from unauthenticated users"
         - "Sessions persist in cookies, survive page reload"
       dependencies:
@@ -127,7 +127,7 @@ features:
 
     - name: "CMS Admin Layout"
       status: "complete"
-      why: "Navigation hub for lawyers, dashboard for real-time stats"
+      why: "Navigation hub for business users, dashboard for real-time stats"
       acceptance_criteria:
         - "Responsive sidebar navigation"
         - "Dashboard shows real-time stats (surveys, responses, appointments)"
@@ -137,9 +137,9 @@ features:
 
     - name: "Survey Builder"
       status: "complete"
-      why: "Empower lawyers to create custom surveys without code"
+      why: "Empower users to create custom surveys without code"
       acceptance_criteria:
-        - "Lawyers can create surveys with 7 question types (text, textarea, email, tel, select, radio, checkbox)"
+        - "Users can create surveys with 7 question types (text, textarea, email, tel, select, radio, checkbox)"
         - "Questions persist to database on save"
         - "Survey list shows all surveys for tenant"
       tech_decisions:
@@ -208,11 +208,11 @@ features:
 
     - name: "Response Management UI (CMS)"
       status: "complete"
-      why: "Lawyers view submitted responses, prepare for AI qualification (Phase 5)"
+      why: "Users view submitted responses, prepare for AI qualification (Phase 5)"
       acceptance_criteria:
         - "Response list with submission date, status, survey title"
         - "Response detail shows question-answer pairs"
-        - "RLS ensures lawyers only see their tenant's responses"
+        - "RLS ensures users only see their tenant's responses"
       dependencies:
         - feature: "Form Submission"
         - feature: "Authentication"
@@ -220,9 +220,9 @@ features:
   phase_3_calendar:
     - name: "Google Calendar OAuth"
       status: "complete"
-      why: "Connect lawyer's calendar for availability and booking"
+      why: "Connect user's calendar for availability and booking"
       acceptance_criteria:
-        - "Lawyers can connect/disconnect Google Calendar"
+        - "Users can connect/disconnect Google Calendar"
         - "OAuth refresh token stored securely"
       tech_decisions:
         - decision: "Mocked OAuth for MVP"
@@ -232,7 +232,7 @@ features:
 
     - name: "Available Slots API"
       status: "complete"
-      why: "Calculate lawyer's availability with buffer time, prevent double-booking"
+      why: "Calculate user's availability with buffer time, prevent double-booking"
       acceptance_criteria:
         - "API returns available time slots respecting working hours"
         - "15-minute buffer between appointments"
@@ -440,10 +440,10 @@ features:
 
     - name: "Email Notifications"
       status: "pending"
-      why: "Automated confirmation emails, lawyer digests"
+      why: "Automated confirmation emails, user digests"
       acceptance_criteria:
         - "Client receives form submission confirmation"
-        - "Lawyer receives daily digest of new responses"
+        - "User receives daily digest of new responses"
       dependencies:
         - feature: "n8n Infrastructure"
 
@@ -513,9 +513,9 @@ features:
 
     - name: "CMS Settings & Admin Panel"
       status: "pending"
-      why: "Law firm profile management, team administration"
+      why: "Business profile management, team administration"
       acceptance_criteria:
-        - "Law firm can edit company profile"
+        - "Business can edit company profile"
         - "Admin can manage team members"
       dependencies:
         - feature: "Authentication"

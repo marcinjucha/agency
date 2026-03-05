@@ -1,7 +1,7 @@
 /**
  * Problems Section Component
  *
- * Displays all problems/pain points that Legal Hub solves.
+ * Displays all problems/pain points that Halo Efekt solves.
  * Renders problems in a responsive grid layout:
  * - 1 column on mobile
  * - 2 columns on tablet

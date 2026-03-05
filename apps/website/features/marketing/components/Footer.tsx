@@ -15,7 +15,7 @@ import {
 /**
  * Footer Component
  *
- * Professional footer for the Legal Hub landing page with:
+ * Professional footer for the Halo Efekt landing page with:
  * - Multiple columns of organized links
  * - Logo and company description
  * - Social media links
@@ -209,7 +209,7 @@ export function Footer() {
             {/* Brand Section */}
             <div>
               <div className="mb-4">
-                <h2 className="text-2xl font-bold text-foreground">Legal Hub</h2>
+                <h2 className="text-2xl font-bold text-foreground">Halo Efekt</h2>
                 <p className="text-muted-foreground text-sm mt-2 leading-relaxed">
                   Empower your law practice with AI-driven client qualification.
                   Streamline intake, qualify leads, and focus on winning cases.
@@ -258,7 +258,7 @@ export function Footer() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <p className="text-muted-foreground text-sm text-center sm:text-left">
-              © 2025 Legal Hub. All rights reserved.
+              © 2025 Halo Efekt. All rights reserved.
             </p>
 
             {/* Footer Meta Links */}

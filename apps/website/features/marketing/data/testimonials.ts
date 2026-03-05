@@ -1,7 +1,7 @@
 /**
  * Testimonials Data
  *
- * Customer testimonials for the Legal Hub landing page.
+ * Customer testimonials for the Halo Efekt landing page.
  * These are placeholder testimonials that will be populated with real customer data
  * during the beta testing phase.
  *
