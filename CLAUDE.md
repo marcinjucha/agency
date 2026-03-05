@@ -98,7 +98,23 @@ agency/
 
 ---
 
+## Notion Integration
+
+**This project uses Agency Database (NOT Private Dashboard).**
+
+- Agency Projects: `collection://29284f14-76e0-802f-a1de-000b357345a9`
+- Agency Tasks: `collection://29284f14-76e0-8062-a18d-000bfce0cf23`
+
+See `Prywatne/.claude/CLAUDE.md` for full schema and routing rules.
+
+---
+
 ## Quick Reference
+
+**When working with Notion:**
+1. ALWAYS use Agency Database for this project
+2. Properties are CASE-SENSITIVE (silent failure if wrong case)
+3. See `.claude/skills/notion-patterns/SKILL.md` for patterns
 
 **When working with n8n:**
 1. Infrastructure questions → Check `infra/n8n-vps/`

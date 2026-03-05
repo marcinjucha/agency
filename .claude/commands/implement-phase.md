@@ -1072,7 +1072,7 @@ Retrying build...
       "notion_context": {
         "task_id": "2ed84f14-76e0-80c0-8da7-d574cdf2a4fe",
         "task_name": "Calendar integration",
-        "project": "Legal Hub MVP",
+        "project": "Halo Efekt MVP",
         "priority": "🔴 Urgent",
         "deadline": "2026-01-25"
       }
@@ -1256,10 +1256,10 @@ Searching Notion for: "survey form"
 Found 2 tasks:
 
 1. [AAA-T-12] Survey Form Implementation (🔴 Urgent, In Progress)
-   Project: Legal Hub MVP
+   Project: Halo Efekt MVP
 
 2. [AAA-P-3] Phase 2 - Survey Form & Response Management (Not Started)
-   Project: Legal Hub MVP
+   Project: Halo Efekt MVP
 
 Select task: 1 | 2 | use-local | stop
 ```
