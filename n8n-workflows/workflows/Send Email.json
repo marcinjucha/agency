@@ -1,0 +1,103 @@
+{
+  "name": "Send Email",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "a1b2c3d4-1111-4aaa-bbbb-000000000001",
+      "name": "Start",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [256, 464]
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "email_configs",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "tenant_id",
+              "keyValue": "={{ $json.tenant_id }}"
+            }
+          ]
+        }
+      },
+      "id": "a1b2c3d4-1111-4aaa-bbbb-000000000002",
+      "name": "Fetch Email Config",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [464, 464],
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "f048XNg2A6zhwlWZ",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const Sentry = require('@sentry/node');\nconst https = require('https');\n\nconst input = $('Start').first().json;\nconst { to, subject, html, tenant_id } = input;\nconst inputFrom = input.from;\n\nif (!to || !subject || !html) {\n  throw new Error(`[Send Email] Missing required fields: to=${!!to}, subject=${!!subject}, html=${!!html}`);\n}\n\nconst configItems = $('Fetch Email Config').all();\nconst config = configItems.length > 0 && configItems[0].json?.id ? configItems[0].json : null;\n\nlet apiKey, fromAddress, provider;\n\nif (config && config.is_active) {\n  provider = config.provider;\n  apiKey = config.api_key;\n  fromAddress = inputFrom || (config.from_name ? `${config.from_name} <${config.from_email}>` : config.from_email);\n} else {\n  provider = 'resend';\n  apiKey = 're_hnLgw1AZ_F35kBpnkpjuSrG7PUBaDpWnK';\n  fromAddress = inputFrom || 'Halo Efekt <noreply@haloefekt.pl>';\n  Sentry.captureMessage(`[Send Email] No active email config for tenant ${tenant_id}, using default`, 'warning');\n  await Sentry.flush(2000);\n}\n\nif (provider !== 'resend') {\n  throw new Error(`[Send Email] Unsupported provider: ${provider}. Only 'resend' is supported.`);\n}\n\nconst recipients = Array.isArray(to) ? to : [to];\nconst postData = JSON.stringify({ from: fromAddress, to: recipients, subject, html });\n\nconst result = await new Promise((resolve, reject) => {\n  const req = https.request({\n    hostname: 'api.resend.com',\n    path: '/emails',\n    method: 'POST',\n    headers: {\n      'Authorization': `Bearer ${apiKey}`,\n      'Content-Type': 'application/json',\n      'Content-Length': Buffer.byteLength(postData)\n    }\n  }, (res) => {\n    let body = '';\n    res.on('data', (chunk) => body += chunk);\n    res.on('end', () => {\n      try {\n        const parsed = JSON.parse(body);\n        if (res.statusCode >= 400) {\n          reject(new Error(`[Send Email] ${provider} error: ${JSON.stringify(parsed)}`));\n        } else {\n          resolve(parsed);\n        }\n      } catch (e) {\n        reject(new Error(`[Send Email] Parse error: ${body}`));\n      }\n    });\n  });\n  req.on('error', reject);\n  req.write(postData);\n  req.end();\n});\n\nreturn { id: result.id, to: recipients, subject, provider };\n"
+      },
+      "id": "a1b2c3d4-1111-4aaa-bbbb-000000000003",
+      "name": "Send Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [688, 464]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": []
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [912, 464],
+      "id": "a1b2c3d4-1111-4aaa-bbbb-000000000004",
+      "name": "Return"
+    }
+  ],
+  "pinData": {
+    "Start": [
+      {
+        "json": {
+          "to": "test@example.com",
+          "subject": "Test email",
+          "html": "<p>Hello world</p>",
+          "tenant_id": "00000000-0000-0000-0000-000000000000"
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Start": {
+      "main": [
+        [{ "node": "Fetch Email Config", "type": "main", "index": 0 }]
+      ]
+    },
+    "Fetch Email Config": {
+      "main": [
+        [{ "node": "Send Email", "type": "main", "index": 0 }]
+      ]
+    },
+    "Send Email": {
+      "main": [
+        [{ "node": "Return", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "meta": {
+    "instanceId": "b46d0b13d69880a2fec430102877b55af4e44991549a68a3e78cd50a4dc1a09e"
+  },
+  "tags": []
+}

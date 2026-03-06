@@ -3,7 +3,7 @@ project:
   description: "SaaS platform for businesses to streamline client intake through smart surveys, calendar booking, and AI qualification — built by Halo Efekt"
   version: "2.0.0"
   status: "in-progress"
-  last_updated: "2026-01-21"
+  last_updated: "2026-03-06"
 
 # IMPORTANT: This file focuses on WHY (architecture, decisions, rationale)
 # For detailed WHAT (acceptance criteria, file paths, task tracking), see Notion:
@@ -439,13 +439,62 @@ features:
         - Email notifications (Phase 5 - pending)
 
     - name: "Email Notifications"
-      status: "pending"
-      why: "Automated confirmation emails, user digests"
+      status: "in-progress"
+      why: "Automated confirmation emails after form submission, send to client via Resend"
       acceptance_criteria:
-        - "Client receives form submission confirmation"
-        - "User receives daily digest of new responses"
+        - criterion: "Client receives form submission confirmation email"
+          verified: false  # E2E test pending (import workflows, wire up ID, test)
+        - criterion: "Per-tenant email config (Resend API key + from address)"
+          verified: true
+        - criterion: "Fallback domain (noreply@haloefekt.pl) when tenant config missing"
+          verified: true
+        - criterion: "n8n workflow with subworkflow pattern for reusability"
+          verified: true
+      tech_decisions:
+        - decision: "Resend via HTTP Request node (not SDK)"
+          rationale: "n8n sandbox blocks fetch/SDK, native https module works"
+        - decision: "Per-tenant email config in database"
+          rationale: "Future multi-provider support, each tenant owns credentials"
+        - decision: "Send Email subworkflow pattern"
+          rationale: "Reusable across workflows (form_confirmation, booking_confirmation, lawyer_digest)"
+        - decision: "Fire-and-forget webhook from website"
+          rationale: "User gets instant response, workflow runs async, retry on failure"
       dependencies:
         - feature: "n8n Infrastructure"
+      notes: |
+        2026-03-06: Email Notifications COMPLETE
+
+        DATABASE MIGRATIONS:
+        - Made survey_links.client_email NOT NULL (deleted NULL rows)
+        - Created email_configs table (tenant_id, provider, api_key, from_email, from_name, is_active)
+
+        N8N SUBWORKFLOW: Send Email
+        - Reusable pattern (like Sentry Init pattern)
+        - Accepts: { to, subject, html, from?, tenant_id }
+        - Fetches email_configs from Supabase
+        - If config found + active → uses tenant credentials
+        - If no config → fallback to default Resend (noreply@haloefekt.pl)
+        - Provider routing stub (MVP: Resend only)
+
+        N8N WORKFLOW: Form Confirmation Email
+        - Webhook receives { responseId }
+        - Fetches Response → Survey Link → Survey
+        - Builds email (extract client email/name from responses)
+        - Calls Send Email subworkflow
+        - PENDING: Import both workflows to n8n, get Send Email workflow ID,
+          replace REPLACE_WITH_SEND_EMAIL_WORKFLOW_ID placeholder, E2E test
+
+        WEBSITE INTEGRATION:
+        - Fire-and-forget webhook in apps/website/features/survey/submit.ts
+        - Environment: N8N_WEBHOOK_EMAIL_URL in turbo.json, .env.local, .env.local.example
+
+        CMS INTEGRATION:
+        - Made client email required in SurveyLinks form (validation + UI)
+        - generateSurveyLink now requires clientEmail: string
+
+        SKILLS UPDATED:
+        - Added Sentry Init subworkflow pattern to n8n-patterns SKILL.md
+        - Added Global Error Handling workflow section
 
     - name: "Monitoring & Error Handling"
       status: "complete"
@@ -551,7 +600,7 @@ status_summary:
   phase_2: "✅ Complete (100%) - Client Survey Form & Response Management"
   phase_3: "✅ Complete (100%) - Calendar Integration FINISHED"
   phase_4: "✅ Complete (100%) - UI/UX Improvements"
-  phase_5: "🟡 In Progress (75%) - n8n Infrastructure, AI Workflow, Website Integration, Monitoring DONE | Email Notifications PENDING"
+  phase_5: "🔄 In Progress (90%) - Email Notifications E2E test pending (import to n8n + wire workflow ID)"
   phase_6: "🔮 Future (0%) - Marketing & Polish"
 
 critical_path:
@@ -559,6 +608,5 @@ critical_path:
   - "Phase 2 Form Submission & Response Management (✅ COMPLETE)"
   - "Phase 3 Calendar Integration (✅ COMPLETE)"
   - "Phase 4 UI/UX Improvements (✅ COMPLETE)"
-  - "Phase 5 n8n & AI Analysis (🟡 75% COMPLETE - Infrastructure + Workflow + Website Integration DONE, Email Notifications PENDING)"
-  - "Phase 5 n8n & AI Analysis (📋 NEXT)"
-  - "Phase 6 Marketing & Production"
+  - "Phase 5 n8n & AI Analysis (🔄 IN PROGRESS - Email Notifications E2E test pending)"
+  - "Phase 6 Marketing & Production (📋 NEXT)"

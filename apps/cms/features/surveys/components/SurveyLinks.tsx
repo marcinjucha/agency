@@ -33,7 +33,7 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
   const generateMutation = useMutation({
     mutationFn: () =>
       generateSurveyLink(surveyId, {
-        clientEmail: formData.clientEmail || undefined,
+        clientEmail: formData.clientEmail,
         expiresAt: formData.expiresAt || undefined,
         maxSubmissions: formData.maxSubmissions ? parseInt(formData.maxSubmissions) : null,
       }),
@@ -101,11 +101,12 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
           <div className="space-y-3">
             <div>
               <Label htmlFor="clientEmail" className="text-sm">
-                Client Email (optional)
+                Client Email <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="clientEmail"
                 type="email"
+                required
                 value={formData.clientEmail}
                 onChange={(e) => setFormData({ ...formData, clientEmail: e.target.value })}
                 placeholder="client@example.com"
@@ -143,7 +144,13 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
 
             <div className="flex gap-2 pt-2">
               <Button
-                onClick={() => generateMutation.mutate()}
+                onClick={() => {
+                  if (!formData.clientEmail) {
+                    setError('Client email is required')
+                    return
+                  }
+                  generateMutation.mutate()
+                }}
                 disabled={generateMutation.isPending}
                 size="sm"
               >

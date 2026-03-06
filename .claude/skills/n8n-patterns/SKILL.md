@@ -94,6 +94,50 @@ No `await` — user gets instant response, n8n processes independently.
 
 ---
 
+## Global Error Handling Workflow
+
+**File:** `n8n-workflows/workflows/Error Handling.json` (n8n ID: `pEvMbZGHKOsqaHmK`, active)
+
+n8n's built-in error workflow feature — catches crashes from ALL other workflows automatically.
+
+**Why this matters for new workflows:** Do NOT add inline error handlers to individual workflows. The global Error Handling workflow already captures everything and sends to GlitchTip with full context (workflow name, node, execution URL, stack trace).
+
+**How it works:**
+- Uses `n8n-nodes-base.errorTrigger` — fires when any workflow fails
+- Sends to GlitchTip with: workflow name, failing node, execution URL, full stack trace
+- Activated via n8n: **Settings → Error Workflow → select "Error Handling"**
+
+**Exception — this workflow initializes Sentry inline** (not via Sentry Init subworkflow). It runs independently without prior context, so `Sentry.init()` is required directly in its Code node.
+
+---
+
+## Sentry Init Subworkflow Pattern
+
+**File:** `n8n-workflows/workflows/Sentry Init.json`
+
+Reusable subworkflow (`executeWorkflowTrigger`) that calls `Sentry.init()` once per execution.
+
+**Why subworkflow:** `Sentry.init()` must be called once per process. Calling it in every Code node causes duplicate initialization warnings and wastes resources.
+
+**Pattern:**
+1. Add `Execute Workflow` node at start of workflow → calls `Sentry Init`
+2. In ALL subsequent Code nodes: `require('@sentry/node')` only — **NO `Sentry.init()` call**
+
+```javascript
+// ✅ Correct — after Sentry Init subworkflow ran
+const Sentry = require('@sentry/node');
+Sentry.addBreadcrumb({ message: '...', level: 'info' });
+Sentry.captureException(new Error('...'));
+
+// ❌ Wrong — do NOT repeat init in Code nodes
+const Sentry = require('@sentry/node');
+Sentry.init({ dsn: '...' }); // ← remove this
+```
+
+**DSN:** `https://65d16a394a93442fb661943d33474b60@glitchtip.trustcode.pl/1`
+
+---
+
 ## Error Handling
 
 **Graceful degradation — preserve raw_response for debugging:**

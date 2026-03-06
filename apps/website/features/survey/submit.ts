@@ -68,6 +68,15 @@ export async function submitResponse({
     }).catch(err => console.error('[N8N] AI analysis webhook failed:', err))
   }
 
+  // Trigger n8n form confirmation email (fire-and-forget)
+  if (process.env.N8N_WEBHOOK_EMAIL_URL) {
+    fetch(process.env.N8N_WEBHOOK_EMAIL_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ responseId }),
+    }).catch(err => console.error('[N8N] Email confirmation webhook failed:', err))
+  }
+
   // Step 3: Increment submission count using database function (non-critical)
   const { error: incrementError } = await supabase.rpc(
     'increment_submission_count',

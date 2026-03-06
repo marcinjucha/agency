@@ -1,0 +1,94 @@
+{
+  "name": "Error Handling",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        -480,
+        -64
+      ],
+      "id": "6bb5a019-1f73-4b4e-83e8-e684957e0e03",
+      "name": "Error Trigger",
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const Sentry = require('@sentry/node');\n\n// Inicjalizuj Sentry (raz na workflow)\nSentry.init({\n  dsn: 'https://65d16a394a93442fb661943d33474b60@glitchtip.trustcode.pl/1',\n  environment: 'production',\n  tracesSampleRate: 1.0,\n  sendDefaultPii: true,\n  enableLogs: true\n});\n\n// Extract error data - POPRAWIONA STRUKTURA\nconst errorData = $input.all()[0]?.json;\nconst execution = errorData?.execution;\nconst workflow = errorData?.workflow;\nconst error = execution?.error;\nconst executionContext = execution?.executionContext;\n\nconsole.log('Raw input:', JSON.stringify($input.all(), null, 2));\n\n// Set up context\nSentry.setUser({\n  id: executionContext?.source || 'system',\n  username: executionContext?.source,\n});\n\n// Add comprehensive tags\nSentry.setTag('workflow_id', workflow?.id);\nSentry.setTag('workflow_name', workflow?.name);\nSentry.setTag('execution_id', execution?.id);\nSentry.setTag('execution_mode', execution?.mode);\nSentry.setTag('last_node', execution?.lastNodeExecuted);\nSentry.setTag('trigger_type', executionContext?.triggerNode?.type);\nSentry.setTag('error_line', error?.lineNumber);\n\n// Set context for more details\nSentry.setContext('workflow', {\n  id: workflow?.id,\n  name: workflow?.name,\n});\n\nSentry.setContext('execution', {\n  id: execution?.id,\n  url: execution?.url,\n  mode: execution?.mode,\n  lastNodeExecuted: execution?.lastNodeExecuted,\n  establishedAt: executionContext?.establishedAt,\n});\n\nSentry.setContext('trigger', {\n  source: executionContext?.source,\n  nodeName: executionContext?.triggerNode?.name,\n  nodeType: executionContext?.triggerNode?.type,\n});\n\n// Add breadcrumbs - execution flow\nSentry.addBreadcrumb({\n  category: 'workflow',\n  message: `Workflow \"${workflow?.name}\" started`,\n  level: 'info',\n  data: {\n    workflow_id: workflow?.id,\n    trigger: executionContext?.triggerNode?.name,\n  },\n});\n\nSentry.addBreadcrumb({\n  category: 'execution',\n  message: `Failed at node: ${execution?.lastNodeExecuted}`,\n  level: 'error',\n  data: {\n    execution_id: execution?.id,\n    execution_url: execution?.url,\n    line_number: error?.lineNumber,\n  },\n});\n\n// Create descriptive error message\nconst errorMessage = `[${workflow?.name}] ${error?.message || 'Unknown error'} at node \"${execution?.lastNodeExecuted}\"`;\n\n// Capture the exception with full context\nSentry.captureException(new Error(errorMessage), {\n  level: error?.level || 'error',\n  extra: {\n    // Error details\n    error_name: error?.name,\n    error_description: error?.description,\n    error_line: error?.lineNumber,\n    full_stack: error?.stack,\n    \n    // Execution details\n    execution_id: execution?.id,\n    execution_url: execution?.url,\n    execution_mode: execution?.mode,\n    last_node_executed: execution?.lastNodeExecuted,\n    \n    // Workflow context\n    workflow_id: workflow?.id,\n    workflow_name: workflow?.name,\n    \n    // Trigger context\n    trigger_source: executionContext?.source,\n    trigger_node: executionContext?.triggerNode?.name,\n    trigger_type: executionContext?.triggerNode?.type,\n    established_at: executionContext?.establishedAt,\n    \n    // Raw data for debugging\n    raw_error_data: errorData,\n  },\n  fingerprint: [\n    workflow?.id,\n    execution?.lastNodeExecuted,\n    error?.message?.split('[')[0]?.trim(), // Group similar errors together\n  ],\n});\n\n// WAŻNE: Flush zapewnia że event zostanie wysłany przed zakończeniem funkcji\nawait Sentry.flush(2000);\n\nreturn {\n  success: true,\n  message: 'Error tracked in GlitchTip',\n  sentry_context: {\n    workflow: workflow?.name,\n    node: execution?.lastNodeExecuted,\n    execution_url: execution?.url,\n    error_message: errorMessage,\n  },\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -208,
+        -64
+      ],
+      "id": "da4f5d7f-596f-47f1-8db2-cece556387cf",
+      "name": "Send to GlitchTip"
+    }
+  ],
+  "pinData": {
+    "Error Trigger": [
+      {
+        "json": {
+          "execution": {
+            "id": "135",
+            "url": "http://localhost:5678/workflow/jTU4vAtxadyhTe4r/executions/135",
+            "error": {
+              "level": "error",
+              "tags": {},
+              "description": null,
+              "lineNumber": 14,
+              "message": "FUCK [line 14]",
+              "stack": "Error: FUCK\n    at VmCodeWrapper (evalmachine.<anonymous>:14:7)\n    at evalmachine.<anonymous>:114:2\n    at Script.runInContext (node:vm:149:12)\n    at runInContext (node:vm:301:6)\n    at result (/usr/local/lib/node_modules/n8n/node_modules/.pnpm/@n8n+task-runner@file+packages+@n8n+task-runner_@opentelemetry+api@1.9.0_@opentelemetry_eb51b38615a039445701c88b088f88d0/node_modules/@n8n/task-runner/dist/js-task-runner/js-task-runner.js:185:61)\n    at new Promise (<anonymous>)\n    at JsTaskRunner.runForAllItems (/usr/local/lib/node_modules/n8n/node_modules/.pnpm/@n8n+task-runner@file+packages+@n8n+task-runner_@opentelemetry+api@1.9.0_@opentelemetry_eb51b38615a039445701c88b088f88d0/node_modules/@n8n/task-runner/dist/js-task-runner/js-task-runner.js:178:34)\n    at JsTaskRunner.executeTask (/usr/local/lib/node_modules/n8n/node_modules/.pnpm/@n8n+task-runner@file+packages+@n8n+task-runner_@opentelemetry+api@1.9.0_@opentelemetry_eb51b38615a039445701c88b088f88d0/node_modules/@n8n/task-runner/dist/js-task-runner/js-task-runner.js:128:26)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async Object.waitingForSettings (/usr/local/lib/node_modules/n8n/node_modules/.pnpm/@n8n+task-runner@file+packages+@n8n+task-runner_@opentelemetry+api@1.9.0_@opentelemetry_eb51b38615a039445701c88b088f88d0/node_modules/@n8n/task-runner/dist/task-runner.js:256:17)"
+            },
+            "lastNodeExecuted": "Transform Q&A Data",
+            "mode": "webhook",
+            "executionContext": {
+              "version": 1,
+              "establishedAt": 1770885056527,
+              "source": "webhook",
+              "triggerNode": {
+                "name": "Webhook",
+                "type": "n8n-nodes-base.webhook"
+              }
+            }
+          },
+          "workflow": {
+            "id": "jTU4vAtxadyhTe4r",
+            "name": "Survey Response AI Analysis"
+          }
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Send to GlitchTip",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send to GlitchTip": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "8fd4dae1-bd33-44bc-a4c4-9be100bfc2f3",
+  "meta": {
+    "instanceId": "b46d0b13d69880a2fec430102877b55af4e44991549a68a3e78cd50a4dc1a09e"
+  },
+  "id": "pEvMbZGHKOsqaHmK",
+  "tags": []
+}

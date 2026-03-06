@@ -1,0 +1,204 @@
+{
+  "name": "Form Confirmation Email",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "form-confirmation-email",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "b55df4b4-78ab-4e78-98b0-a10f4d46ac1c",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [112, 464],
+      "webhookId": "form-confirmation-email"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "kXK1WDkFCo7AsBSs",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/kXK1WDkFCo7AsBSs",
+          "cachedResultName": "Sentry Init"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [320, 464],
+      "id": "64bd78a8-03dc-4911-8813-f69aeaee6859",
+      "name": "Call 'Sentry Init'"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "responses",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "keyValue": "={{ $json.responseId }}"
+            }
+          ]
+        }
+      },
+      "id": "fc504b7b-43c8-4f73-8f43-835f46fe471b",
+      "name": "Fetch Response",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [544, 464],
+      "credentials": {
+        "supabaseApi": {
+          "id": "f048XNg2A6zhwlWZ",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "survey_links",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "keyValue": "={{ $json.survey_link_id }}"
+            }
+          ]
+        }
+      },
+      "id": "eb32f418-7533-4a62-8285-8228dd4ec9f2",
+      "name": "Fetch Survey Link",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [768, 464],
+      "credentials": {
+        "supabaseApi": {
+          "id": "f048XNg2A6zhwlWZ",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "surveys",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "keyValue": "={{ $json.survey_id }}"
+            }
+          ]
+        }
+      },
+      "id": "1062546c-82dc-436b-a681-f830a82b6829",
+      "name": "Fetch Survey",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [992, 464],
+      "credentials": {
+        "supabaseApi": {
+          "id": "f048XNg2A6zhwlWZ",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $('Fetch Response').first().json;\nconst surveyLink = $('Fetch Survey Link').first().json;\nconst survey = $('Fetch Survey').first().json;\n\nconst clientEmail = surveyLink.client_email;\nif (!clientEmail) {\n  throw new Error(`[Email] No client_email for response ${response.id}`);\n}\n\nconst answers = response.answers || {};\nconst questions = survey.questions || [];\nlet clientName = 'Szanowna Pani / Szanowny Panie';\n\nconst textQuestions = questions\n  .filter(q => q.type === 'text')\n  .sort((a, b) => (a.order || 0) - (b.order || 0));\n\nfor (const q of textQuestions) {\n  const answer = answers[q.id];\n  if (answer && typeof answer === 'string' && answer.trim()) {\n    clientName = answer.trim();\n    break;\n  }\n}\n\nconst subject = `Dziękujemy za wypełnienie formularza - ${survey.title}`;\n\nconst html = `<!DOCTYPE html>\\n<html lang=\\\"pl\\\">\\n<head><meta charset=\\\"UTF-8\\\"><meta name=\\\"viewport\\\" content=\\\"width=device-width, initial-scale=1.0\\\"></head>\\n<body style=\\\"font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;color:#333;background:#fff\\\">\\n  <div style=\\\"border-bottom:3px solid #1a1a2e;padding-bottom:16px;margin-bottom:24px\\\">\\n    <h2 style=\\\"color:#1a1a2e;margin:0\\\">Potwierdzenie otrzymania formularza</h2>\\n  </div>\\n  <p>Szanowny/a <strong>${clientName}</strong>,</p>\\n  <p>Dziękujemy za wypełnienie formularza <strong>${survey.title}</strong>.</p>\\n  <p>Otrzymaliśmy Twoje zgłoszenie i wkrótce się z Tobą skontaktujemy, aby omówić dalsze kroki.</p>\\n  <br>\\n  <p style=\\\"color:#999;font-size:12px\\\">Wiadomość wysłana automatycznie. Prosimy nie odpowiadać na ten email.</p>\\n</body>\\n</html>`;\n\nreturn {\n  to: clientEmail,\n  subject,\n  html,\n  tenant_id: response.tenant_id\n};\n"
+      },
+      "id": "30946950-6563-4a3e-8b3e-22288decaedb",
+      "name": "Build Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1216, 464]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_SEND_EMAIL_WORKFLOW_ID",
+          "mode": "list",
+          "cachedResultName": "Send Email"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [1440, 464],
+      "id": "c3d4e5f6-2222-4bbb-cccc-000000000001",
+      "name": "Call 'Send Email'"
+    }
+  ],
+  "pinData": {
+    "Webhook": [
+      {
+        "json": {
+          "responseId": "064e41be-eb7b-442f-b45b-df1b773f29ec"
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Webhook": {
+      "main": [
+        [{ "node": "Call 'Sentry Init'", "type": "main", "index": 0 }]
+      ]
+    },
+    "Call 'Sentry Init'": {
+      "main": [
+        [{ "node": "Fetch Response", "type": "main", "index": 0 }]
+      ]
+    },
+    "Fetch Response": {
+      "main": [
+        [{ "node": "Fetch Survey Link", "type": "main", "index": 0 }]
+      ]
+    },
+    "Fetch Survey Link": {
+      "main": [
+        [{ "node": "Fetch Survey", "type": "main", "index": 0 }]
+      ]
+    },
+    "Fetch Survey": {
+      "main": [
+        [{ "node": "Build Email", "type": "main", "index": 0 }]
+      ]
+    },
+    "Build Email": {
+      "main": [
+        [{ "node": "Call 'Send Email'", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "meta": {
+    "instanceId": "b46d0b13d69880a2fec430102877b55af4e44991549a68a3e78cd50a4dc1a09e"
+  },
+  "id": "49So2RTy205GFKC0HR4Kr",
+  "tags": []
+}
