@@ -109,6 +109,20 @@ See `Prywatne/.claude/CLAUDE.md` for full schema and routing rules.
 
 ---
 
+## Skills Reference
+
+| Skill | Path | When to use |
+|-------|------|-------------|
+| **architecture** | `.claude/skills/architecture/SKILL.md` | Monorepo structure, app/features separation (ADR-005), import rules, CMS↔Website communication, N8n vs Next.js API routes |
+| **database-patterns** | `.claude/skills/database-patterns/SKILL.md` | Supabase RLS policies, PostgreSQL functions, migrations, type regeneration, client selection (server vs browser). Avoids RLS infinite recursion |
+| **development-workflow** | `.claude/skills/development-workflow/SKILL.md` | Testing decisions (3-Question Rule), severity classification (P0/P1/P2), implementation validation, PROJECT_SPEC.yaml updates |
+| **n8n-patterns** | `.claude/skills/n8n-patterns/SKILL.md` | N8n background processing — fire-and-forget webhooks, ai_qualification JSONB, credential selection, Sentry Init subworkflow pattern |
+| **nextjs-patterns** | `.claude/skills/nextjs-patterns/SKILL.md` | Next.js routes, Server Actions (structured returns, no throws), foundation files (types/queries/validation), async params, correct Supabase client |
+| **notion-patterns** | `.claude/skills/notion-patterns/SKILL.md` | Notion MCP tools — task status updates, project tracking. Properties are CASE-SENSITIVE. Contains Agency database IDs and filter rules |
+| **ui-components** | `.claude/skills/ui-components/SKILL.md` | React components, shadcn/ui design system, WCAG 2.1 AA accessibility, responsive design. Controller for checkbox arrays, TanStack Query CMS-only, 4 UI states |
+
+---
+
 ## Quick Reference
 
 **When working with Notion:**
