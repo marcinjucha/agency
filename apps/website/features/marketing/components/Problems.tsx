@@ -1,43 +1,50 @@
-/**
- * Problems Section Component
- *
- * Displays all problems/pain points that Halo Efekt solves.
- * Renders problems in a responsive grid layout:
- * - 1 column on mobile
- * - 2 columns on tablet
- * - 3 columns on desktop
- *
- * @module apps/website/features/marketing/components/Problems
- */
+import { getTranslations } from 'next-intl/server'
+import { FileSpreadsheet, Mail, RefreshCw, UserX } from 'lucide-react'
 
-import { PROBLEMS } from '../data/problems'
-import { ProblemCard } from './ProblemCard'
+const PROBLEM_ICONS = [RefreshCw, FileSpreadsheet, Mail, UserX]
 
-export function Problems() {
+export async function Problems() {
+  const t = await getTranslations('problems')
+
+  const items = [t('item1'), t('item2'), t('item3'), t('item4')]
+
   return (
-    <section className="py-16 px-4 sm:px-6 lg:px-8 bg-card">
-      {/* Container */}
-      <div className="max-w-7xl mx-auto">
-        {/* Section Header */}
-        <div className="text-center mb-12">
-          <h2 className="text-3xl sm:text-4xl lg:text-4xl font-bold text-foreground mb-4">
-            Problemy, które rozwiązujemy
-          </h2>
-          <p className="text-base sm:text-lg text-muted-foreground max-w-2xl mx-auto">
-            Te wyzwania dotykają każdą małą kancelarię. Tradycyjne procesy kosztują Cię czas, pieniądze i klientów.
-          </p>
+    <section className="py-16 md:py-24 bg-muted/50">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Title */}
+        <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-8">
+          {t('title')}
+        </h2>
+
+        {/* Opening Stat */}
+        <p className="text-xl text-foreground font-medium leading-relaxed mb-10">
+          {t('stat')}
+        </p>
+
+        {/* Pain Points List */}
+        <div className="space-y-4 mb-10">
+          {items.map((text, i) => {
+            const Icon = PROBLEM_ICONS[i]
+            return (
+              <div key={i} className="flex items-start gap-4">
+                <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-destructive/10 flex items-center justify-center mt-0.5">
+                  <Icon className="w-5 h-5 text-destructive" />
+                </div>
+                <p className="text-lg text-foreground">{text}</p>
+              </div>
+            )
+          })}
         </div>
 
-        {/* Problems Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {PROBLEMS.map((problem, index) => (
-            <ProblemCard
-              key={problem.id}
-              problem={problem}
-              number={index + 1}
-            />
-          ))}
-        </div>
+        {/* Framing */}
+        <p className="text-lg text-foreground font-medium leading-relaxed mb-6">
+          {t('framing')}
+        </p>
+
+        {/* Closing Hook */}
+        <p className="text-xl text-muted-foreground italic leading-relaxed">
+          {t('hook')}
+        </p>
       </div>
     </section>
   )

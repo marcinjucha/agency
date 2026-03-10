@@ -2,30 +2,29 @@ import { Metadata } from 'next'
 import { Navbar } from '@/features/marketing/components/Navbar'
 import { Hero } from '@/features/marketing/components/Hero'
 import { Problems } from '@/features/marketing/components/Problems'
+import { Guarantee } from '@/features/marketing/components/Guarantee'
+import { RiskReversal } from '@/features/marketing/components/RiskReversal'
 import { Benefits } from '@/features/marketing/components/Benefits'
-import { Features } from '@/features/marketing/components/Features'
-import { HowItWorks } from '@/features/marketing/components/HowItWorks'
-import { Pricing } from '@/features/marketing/components/Pricing'
-import { Testimonials } from '@/features/marketing/components/Testimonials'
-import { FAQ } from '@/features/marketing/components/FAQ'
+import { Qualification } from '@/features/marketing/components/Qualification'
 import { FinalCTA } from '@/features/marketing/components/FinalCTA'
 import { Footer } from '@/features/marketing/components/Footer'
 
 export const metadata: Metadata = {
-  title: 'Halo Efekt - Zautomatyzuj przyjmowanie klientów',
+  title: 'Halo Efekt — Automatyzacja procesów biznesowych',
   description:
-    'Oszczędzaj czas, zwiększ konwersję klientów. Automatyczna kwalifikacja, integracja z kalendarzem, zarządzanie odpowiedziami.',
+    'Automatyzujemy procesy operacyjne w firmach zatrudniających od kilku do 100 osób. Średnia oszczędność: 150 000 zł rocznie. Twoje ryzyko: 0%.',
   keywords: [
-    'automatyzacja kancelarii',
-    'intake klientów',
-    'AI kwalifikacja spraw',
-    'calendar booking',
-    'surveys dla prawników'
+    'automatyzacja procesów',
+    'automatyzacja biznesu',
+    'AI dla firm',
+    'optymalizacja procesów',
+    'redukcja kosztów operacyjnych',
+    'automatyzacja pracy',
   ],
   openGraph: {
-    title: 'Halo Efekt - Zautomatyzuj przyjmowanie klientów',
+    title: 'Halo Efekt — Automatyzacja procesów biznesowych',
     description:
-      'Oszczędzaj czas, zwiększ konwersję klientów. Automatyczna kwalifikacja, integracja z kalendarzem, zarządzanie odpowiedziami.',
+      'Automatyzujemy procesy operacyjne w firmach i zwiększamy ich dochód bez zatrudniania nowych ludzi.',
     type: 'website',
     locale: 'pl_PL',
     images: [
@@ -33,16 +32,16 @@ export const metadata: Metadata = {
         url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'Halo Efekt'
-      }
-    ]
+        alt: 'Halo Efekt',
+      },
+    ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Halo Efekt - Zautomatyzuj przyjmowanie klientów',
+    title: 'Halo Efekt — Automatyzacja procesów biznesowych',
     description:
-      'Oszczędzaj czas, zwiększ konwersję klientów. Automatyczna kwalifikacja, integracja z kalendarzem, zarządzanie odpowiedziami.'
-  }
+      'Automatyzujemy procesy operacyjne w firmach i zwiększamy ich dochód bez zatrudniania nowych ludzi.',
+  },
 }
 
 export default function HomePage() {
@@ -52,12 +51,10 @@ export default function HomePage() {
       <main className="w-full">
         <Hero />
         <Problems />
+        <Guarantee />
+        <RiskReversal />
         <Benefits />
-        <Features />
-        <HowItWorks />
-        <Pricing />
-        <Testimonials />
-        <FAQ />
+        <Qualification />
         <FinalCTA />
       </main>
       <Footer />

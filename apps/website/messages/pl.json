@@ -1,78 +1,83 @@
 {
   "nav": {
-    "solutions": "Rozwiązania",
-    "pricing": "Cennik",
-    "about": "O nas",
-    "contact": "Kontakt",
-    "demo": "Zacznij demo"
+    "cta": "Umów rozmowę"
   },
   "hero": {
-    "headline": "5 dni → 15 minut. Automatyczny client intake dla polskich kancelarii.",
-    "subheading": "Smart surveys + AI kwalifikacja + instant booking = 40% więcej klientów",
-    "ctaPrimary": "Zacznij demo",
-    "ctaSecondary": "Dowiedz się więcej"
+    "metric1Value": "150 000 zł",
+    "metric1Label": "średnia roczna oszczędność",
+    "metric2Value": "0%",
+    "metric2Label": "Twoje ryzyko",
+    "qualifier1": "Jeśli masz firmę, którą chcesz rozwijać,",
+    "qualifier2": "Zatrudniasz pracowników",
+    "qualifier3": "Czujesz, że powinieneś więcej zarabiać, ale coś Ci umyka",
+    "qualifier4": "Słyszałeś o AI, rozwoju technologii, ale zastanawiasz się — Jak to niby ma u Ciebie zadziałać?",
+    "badNews": "to mamy złą wiadomość. Jesteś jak większość.",
+    "goodNews": "Mamy też dobrą. Prawdopodobnie możemy Ci pomóc. Bez ryzyka, że zapłacisz za coś, co nie będzie działać.",
+    "valueProp": "Automatyzujemy procesy operacyjne w firmach zatrudniających od kilku do 100 osób i zwiększamy ich dochód bez zatrudniania nowych ludzi.",
+    "guarantee": "Jeśli nie zobaczymy u Ciebie realnego potencjału oszczędności — nie zaczniemy współpracy, a Ty nic nie płacisz.",
+    "cta": "Umów bezpłatną rozmowę"
   },
   "problems": {
-    "title": "Jakie problemy rozwiązuje Halo Efekt?"
+    "title": "Gdzie uciekają pieniądze?",
+    "stat": "W większości firm 20–60% czasu pracy jest marnowane na czynności, które można zautomatyzować.",
+    "item1": "Ręczne przepisywanie danych między systemami",
+    "item2": "Raporty tworzone w Excelu",
+    "item3": "Powtarzalne maile",
+    "item4": "Procesy zależne od jednej osoby",
+    "framing": "To nie są 'drobne zadania'. To stały koszt, który rośnie wraz z firmą i bezpośrednio obniża marżę.",
+    "hook": "Im szybciej rośniesz, tym większy chaos operacyjny i tym mniej kontrolujesz — brzmi znajomo?"
+  },
+  "guarantee": {
+    "headline": "Nie wdrażamy AI dla efektu.",
+    "headline2": "Wdrażamy je, żebyś zarabiał od pierwszego dnia.",
+    "badge": "Dajemy gwarancję — nie zarobisz, nie płacisz.",
+    "description": "Nie sprzedajemy narzędzi ani technologii, która u innych działa, a u Ciebie nie. Projektujemy system, który działa w Twoim modelu biznesowym i przynosi mierzalny efekt finansowy.",
+    "step1": "Analizujemy jeden konkretny proces",
+    "step2": "Upraszczamy go",
+    "step3": "Automatyzujemy",
+    "step4": "Mierzymy realną oszczędność czasu i kosztów",
+    "proof": "Firmy zatrudniające kilku pracowników, które wdrażają z nami automatyzację, redukują koszty operacyjne średnio o 180 000 zł rocznie w ciągu pierwszych 8–12 miesięcy."
+  },
+  "riskReversal": {
+    "title": "Dlaczego Twoje ryzyko wynosi 0%?",
+    "step1Label": "Krok 1",
+    "step1Text": "Zaczynamy od bezpłatnej analizy jednego procesu operacyjnego. Tu Ci mówimy, czy możemy Ci pomóc. Na tym etapie nic nie płacisz.",
+    "step2Label": "Krok 2",
+    "step2Text": "Pokazujemy, gdzie realnie uciekają pieniądze i jaki jest potencjał oszczędności. Tu sam decydujesz, czy oferowane przez nas rozwiązania są dla Ciebie korzystne. Na tym etapie wiesz, ile szacunkowo zarobisz.",
+    "closing": "Jeśli nie jesteśmy w stanie wygenerować mierzalnej wartości — nie podejmujemy współpracy.",
+    "bold": "Nie sprzedajemy wdrożeń!",
+    "transparency": "Sprzedajemy wynik finansowy, który sam obliczysz. Wszystko transparentne. Bez niedomówień."
   },
   "benefits": {
-    "title": "Co zyskujesz z Halo Efekt?"
+    "title": "Co zyskujesz?",
+    "item1": "Ten sam zespół",
+    "item2": "Niższe koszty operacyjne",
+    "item3": "Wyższą marżę",
+    "item4": "Większą kontrolę nad procesami",
+    "item5": "Możliwość skalowania firmy bez zwiększania zatrudnienia i kosztów",
+    "item6": "Kontrolę nad swoim biznesem",
+    "closing": "Automatyzacja nie zastępuje ludzi, ale zastąpi nudną, powtarzalną pracę."
   },
-  "features": {
-    "title": "Jak działa Halo Efekt?",
-    "comingSoon": "Wkrótce"
-  },
-  "howItWorks": {
-    "title": "Jak wygląda workflow klienta?",
-    "step1": {
-      "title": "Klient dostaje email",
-      "description": "Z linkiem do formularza"
-    },
-    "step2": {
-      "title": "Wypełnia formularz",
-      "description": "5 minut"
-    },
-    "step3": {
-      "title": "AI analizuje",
-      "description": "Natychmiast"
-    },
-    "step4": {
-      "title": "Ty przeglądasź",
-      "description": "5 minut"
-    },
-    "step5": {
-      "title": "Klient rezerwuje",
-      "description": "2 minuty"
-    },
-    "step6": {
-      "title": "Potwierdzenie",
-      "description": "Natychmiast"
-    }
-  },
-  "pricing": {
-    "title": "Przejrzyste ceny dla każdej kancelarii",
-    "setup": "Setup",
-    "monthly": "/miesiąc",
-    "bestFor": "Najlepiej dla",
-    "features": "Możliwości",
-    "selectPlan": "Wybierz plan"
-  },
-  "testimonials": {
-    "title": "Co mówią nasze klienty?"
-  },
-  "faq": {
-    "title": "Najczęściej zadawane pytania"
+  "qualification": {
+    "title": "Czy się kwalifikujesz?",
+    "item1": "Zatrudniasz do 100 osób",
+    "item2": "Chcesz rozwijać firmę, ale masz obawy, bo czujesz rosnący chaos i brak kontroli",
+    "item3": "Masz powtarzalne procesy administracyjne, sprzedażowe lub raportowe",
+    "item4": "Nie chcesz budować osobnego działu IT",
+    "item5": "Chcesz zwiększyć zysk bez zatrudniania dodatkowych ludzi i zwiększania kosztów",
+    "separator": "oraz",
+    "techItem": "Jeśli Twoja firma działa w oparciu o maile, dokumenty, CRM i powtarzalne zadania, sprzedaż przez handlowców, to masz realny potencjał automatyzacji."
   },
   "cta": {
-    "headline": "Gotów do automatyzacji client intake?",
-    "description": "Dołącz do rosnącej listy polskich kancelarii które używają Halo Efekt",
-    "button": "Zacznij demo (to darmowe)",
-    "subtext": "Instalacja: 15 minut • Onboarding: Przez nasz zespół • Brak kart kredytowych"
+    "headline": "Ten sam zespół. Większa skala. Wyższy wynik finansowy.",
+    "description": "Jeśli ludzie w Twojej firmie są stale zajęci i nie mają czasu na rozwój — problemem nie jest zespół. Problemem jest brak narzędzi, z których korzystają inne firmy i rosną.",
+    "button": "Umów bezpłatną rozmowę",
+    "subtext": "Sprawdź, ile realnie możesz odzyskać w ciągu najbliższych 12 miesięcy"
   },
   "footer": {
-    "copyright": "© 2026 Halo Efekt. Wszelkie prawa zastrzeżone.",
+    "description": "Automatyzujemy procesy operacyjne w firmach i zwiększamy ich dochód bez zatrudniania nowych ludzi.",
     "privacy": "Polityka prywatności",
-    "terms": "Warunki użytkowania",
-    "contact": "Kontakt"
+    "terms": "Regulamin",
+    "copyright": "© 2026 Halo Efekt. Wszelkie prawa zastrzeżone."
   }
 }
