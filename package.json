@@ -23,7 +23,7 @@
   "devDependencies": {
     "@turbo/gen": "^2.0.0",
     "prettier": "^3.0.0",
-    "turbo": "^2.0.0"
+    "turbo": "^2.8.16"
   },
   "packageManager": "npm@10.0.0",
   "engines": {
