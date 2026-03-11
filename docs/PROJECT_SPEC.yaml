@@ -438,18 +438,24 @@ features:
         - Production testing with real survey submissions
         - Email notifications (Phase 5 - pending)
 
-    - name: "Email Notifications"
+    - name: "Email Notifications + Template Management"
       status: "in-progress"
-      why: "Automated confirmation emails after form submission, send to client via Resend"
+      why: "Automated confirmation emails after form submission, with per-tenant CMS template management"
       acceptance_criteria:
         - criterion: "Client receives form submission confirmation email"
-          verified: false  # E2E test pending (import workflows, wire up ID, test)
+          verified: false  # E2E test pending (import workflows to n8n, wire IDs, test full flow)
         - criterion: "Per-tenant email config (Resend API key + from address)"
           verified: true
         - criterion: "Fallback domain (noreply@haloefekt.pl) when tenant config missing"
           verified: true
         - criterion: "n8n workflow with subworkflow pattern for reusability"
           verified: true
+        - criterion: "CMS block editor for email templates with live preview"
+          verified: true
+        - criterion: "email_templates table with RLS and default seed per tenant"
+          verified: true
+        - criterion: "n8n fetches html_body from DB instead of hardcoded HTML"
+          verified: false  # Depends on E2E test
       tech_decisions:
         - decision: "Resend via HTTP Request node (not SDK)"
           rationale: "n8n sandbox blocks fetch/SDK, native https module works"
@@ -600,7 +606,7 @@ status_summary:
   phase_2: "✅ Complete (100%) - Client Survey Form & Response Management"
   phase_3: "✅ Complete (100%) - Calendar Integration FINISHED"
   phase_4: "✅ Complete (100%) - UI/UX Improvements"
-  phase_5: "🔄 In Progress (90%) - Email Notifications E2E test pending (import to n8n + wire workflow ID)"
+  phase_5: "🔄 In Progress (95%) - Email Notifications E2E test pending, CMS Template Management done"
   phase_6: "🔮 Future (0%) - Marketing & Polish"
 
 critical_path:
@@ -608,5 +614,5 @@ critical_path:
   - "Phase 2 Form Submission & Response Management (✅ COMPLETE)"
   - "Phase 3 Calendar Integration (✅ COMPLETE)"
   - "Phase 4 UI/UX Improvements (✅ COMPLETE)"
-  - "Phase 5 n8n & AI Analysis (🔄 IN PROGRESS - Email Notifications E2E test pending)"
+  - "Phase 5 n8n & AI Analysis (🔄 IN PROGRESS - E2E test pending)"
   - "Phase 6 Marketing & Production (📋 NEXT)"

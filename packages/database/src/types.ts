@@ -109,6 +109,36 @@ export type Database = {
           },
         ]
       }
+      docforge_licenses: {
+        Row: {
+          client_name: string | null
+          created_at: string | null
+          email: string | null
+          expires_at: string | null
+          id: string
+          is_active: boolean | null
+          key: string
+        }
+        Insert: {
+          client_name?: string | null
+          created_at?: string | null
+          email?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          key: string
+        }
+        Update: {
+          client_name?: string | null
+          created_at?: string | null
+          email?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          key?: string
+        }
+        Relationships: []
+      }
       email_configs: {
         Row: {
           api_key: string
@@ -148,6 +178,50 @@ export type Database = {
             foreignKeyName: "email_configs_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_templates: {
+        Row: {
+          blocks: Json
+          created_at: string
+          html_body: string | null
+          id: string
+          is_active: boolean
+          subject: string
+          tenant_id: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          blocks?: Json
+          created_at?: string
+          html_body?: string | null
+          id?: string
+          is_active?: boolean
+          subject?: string
+          tenant_id: string
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          blocks?: Json
+          created_at?: string
+          html_body?: string | null
+          id?: string
+          is_active?: boolean
+          subject?: string
+          tenant_id?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_templates_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
@@ -377,6 +451,7 @@ export type Database = {
         Args: { link_id: string }
         Returns: undefined
       }
+      verify_docforge_license: { Args: { license_key: string }; Returns: Json }
     }
     Enums: {
       [_ in never]: never

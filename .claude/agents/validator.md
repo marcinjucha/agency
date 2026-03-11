@@ -1,1 +1,0 @@
-/Users/marcinjucha/Prywatne/projects/claude-dev/agents/validator.md

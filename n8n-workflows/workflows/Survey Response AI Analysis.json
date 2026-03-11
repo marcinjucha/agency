@@ -208,16 +208,31 @@
     },
     {
       "parameters": {
-        "jsCode": "const Sentry = require('@sentry/node');\nSentry.init({\n  dsn: 'https://65d16a394a93442fb661943d33474b60@glitchtip.trustcode.pl/1',\n  environment: 'production',\n  tracesSampleRate: 1.0,\n  sendDefaultPii: true,\n  enableLogs: true,\n  initialScope: {\n    tags: {\n      workflow: 'survey-analysis',\n      node: 'transform-qa'\n    }\n  }\n})\n\nreturn $input.all()"
+        "workflowId": {
+          "__rl": true,
+          "value": "kXK1WDkFCo7AsBSs",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/kXK1WDkFCo7AsBSs",
+          "cachedResultName": "Sentry Init"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
       },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
       "position": [
         464,
         -352
       ],
-      "id": "aa7e7286-17f9-4a95-998e-078656231d84",
-      "name": "Setup Sentry"
+      "name": "Call Sentry Init",
+      "id": "4f2542ab-c7b9-4c27-9431-82d8db2419d0"
     }
   ],
   "pinData": {
@@ -256,7 +271,7 @@
       "main": [
         [
           {
-            "node": "Setup Sentry",
+            "node": "Call Sentry Init",
             "type": "main",
             "index": 0
           }
@@ -329,7 +344,7 @@
         ]
       ]
     },
-    "Setup Sentry": {
+    "Call Sentry Init": {
       "main": [
         [
           {
@@ -350,7 +365,7 @@
     "binaryMode": "separate",
     "availableInMCP": false
   },
-  "versionId": "3940c087-f3b2-4145-8af8-3fdd92d320ce",
+  "versionId": "3cdc6d47-ccdc-42f5-966b-45d9c9d683e7",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "b46d0b13d69880a2fec430102877b55af4e44991549a68a3e78cd50a4dc1a09e"

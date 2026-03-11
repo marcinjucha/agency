@@ -2,7 +2,7 @@ import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
-  transpilePackages: ['@agency/ui', '@agency/database', '@agency/validators', '@agency/calendar'],
+  transpilePackages: ['@agency/ui', '@agency/database', '@agency/validators', '@agency/calendar', '@agency/email'],
 
   images: {
     remotePatterns: [

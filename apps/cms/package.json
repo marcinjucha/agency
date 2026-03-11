@@ -12,6 +12,7 @@
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
     "@agency/database": "*",
+    "@agency/email": "*",
     "@agency/ui": "*",
     "@agency/validators": "*",
     "@supabase/ssr": "^0.5.0",

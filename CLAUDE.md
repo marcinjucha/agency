@@ -35,7 +35,7 @@
 
 **Purpose:** Exported n8n workflow definitions used by agency
 
-**Pattern:** See `.claude/skills/n8n-workflows/SKILL.md` for workflow integration patterns
+**Pattern:** See `.claude/skills/n8n-patterns/SKILL.md` for workflow integration patterns
 
 **Reference:** Background processing decisions and patterns documented in project docs
 
@@ -132,7 +132,7 @@ See `Prywatne/.claude/CLAUDE.md` for full schema and routing rules.
 
 **When working with n8n:**
 1. Infrastructure questions → Check `infra/n8n-vps/`
-2. Workflow patterns → Check `.claude/skills/n8n-workflows/SKILL.md`
+2. Workflow patterns → Check `.claude/skills/n8n-patterns/SKILL.md`
 3. Background processing → n8n handles async AI operations (see docs)
 
 **When auditing commands:**
