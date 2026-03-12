@@ -1,13 +1,15 @@
 'use client'
 
+import { useState, useEffect, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getResponse } from '../queries'
 import type { ResponseWithRelations, QuestionAnswerPair } from '../types'
 import { Button, Card, Badge } from '@agency/ui'
 import Link from 'next/link'
-import { ArrowLeft, FileX, Loader2 } from 'lucide-react'
+import { ArrowLeft, FileX, Loader2, AlertTriangle } from 'lucide-react'
 import { getResponseStatusColor } from '@/lib/utils/status'
 import { LoadingState, ErrorState, EmptyState } from '@/components/shared'
+import { triggerAiAnalysis } from '../actions'
 
 type ResponseDetailProps = {
   responseId: string
@@ -30,17 +32,45 @@ type ResponseDetailProps = {
  * @example
  * <ResponseDetail responseId="r-123" />
  */
+const MAX_RETRIES = 3
+const POLLS_PER_ATTEMPT = 3
+
 export function ResponseDetail({ responseId }: ResponseDetailProps) {
+  const [retryAttempt, setRetryAttempt] = useState(0)
+  const [aiPhase, setAiPhase] = useState<'polling' | 'failed'>('polling')
   const { data: response, isLoading, error } = useQuery({
     queryKey: ['response', responseId],
     queryFn: () => getResponse(responseId),
     enabled: !!responseId,
     refetchInterval: (query) => {
       if (query.state.data?.ai_qualification) return false
-      if (query.state.dataUpdateCount > 6) return false
+      if (aiPhase === 'failed') return false
       return 10000
     },
   })
+
+  useEffect(() => {
+    if (response?.ai_qualification || aiPhase === 'failed') return
+
+    const interval = setInterval(() => {
+      setRetryAttempt((prev) => {
+        if (prev >= MAX_RETRIES) {
+          setAiPhase('failed')
+          return prev
+        }
+        triggerAiAnalysis(responseId)
+        return prev + 1
+      })
+    }, POLLS_PER_ATTEMPT * 10000)
+
+    return () => clearInterval(interval)
+  }, [retryAttempt, aiPhase, response?.ai_qualification, responseId])
+
+  const handleManualRetry = async () => {
+    setRetryAttempt(0)
+    setAiPhase('polling')
+    await triggerAiAnalysis(responseId)
+  }
 
   // Loading state
   if (isLoading) {
@@ -197,10 +227,31 @@ export function ResponseDetail({ responseId }: ResponseDetailProps) {
       <Card className="p-6">
         <h2 className="text-lg font-semibold text-foreground mb-4">AI Analysis</h2>
         {!response.ai_qualification ? (
-          <div className="flex items-center gap-2 text-muted-foreground py-4">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            <p className="text-sm">Analyzing response...</p>
-          </div>
+          aiPhase === 'failed' ? (
+            <div className="flex flex-col gap-3 py-4">
+              <div className="flex items-center gap-2 text-orange-500">
+                <AlertTriangle className="h-4 w-4" />
+                <p className="text-sm">Analysis unavailable</p>
+              </div>
+              <Button
+                variant="outline"
+                onClick={handleManualRetry}
+                disabled={aiPhase !== 'failed'}
+                className="w-fit"
+              >
+                Retry Analysis
+              </Button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 text-muted-foreground py-4">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <p className="text-sm">
+                {retryAttempt === 0
+                  ? 'Analyzing response...'
+                  : `Retrying analysis... (${retryAttempt}/${MAX_RETRIES})`}
+              </p>
+            </div>
+          )
         ) : (
           <div className="space-y-6">
             {/* Recommendation + Scores */}

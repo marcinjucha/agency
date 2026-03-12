@@ -189,7 +189,6 @@ Auto-deploys to: https://agency-website.vercel.app
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `N8N_WEBHOOK_URL`
-- `HOST_URL`
 
 ## Related Files
 

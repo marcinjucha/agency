@@ -105,8 +105,6 @@ agency/
 - Agency Projects: `collection://29284f14-76e0-802f-a1de-000b357345a9`
 - Agency Tasks: `collection://29284f14-76e0-8062-a18d-000bfce0cf23`
 
-See `Prywatne/.claude/CLAUDE.md` for full schema and routing rules.
-
 ---
 
 ## Skills Reference

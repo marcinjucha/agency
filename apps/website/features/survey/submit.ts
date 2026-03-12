@@ -60,8 +60,8 @@ export async function submitResponse({
   const { id: responseId } = response as { id: string }
 
   // Trigger n8n AI analysis (fire-and-forget)
-  if (process.env.N8N_WEBHOOK_URL) {
-    fetch(process.env.N8N_WEBHOOK_URL, {
+  if (process.env.N8N_WEBHOOK_SURVEY_ANALYSIS_URL) {
+    fetch(process.env.N8N_WEBHOOK_SURVEY_ANALYSIS_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ responseId }),
@@ -69,8 +69,8 @@ export async function submitResponse({
   }
 
   // Trigger n8n form confirmation email (fire-and-forget)
-  if (process.env.N8N_WEBHOOK_EMAIL_URL) {
-    fetch(process.env.N8N_WEBHOOK_EMAIL_URL, {
+  if (process.env.N8N_WEBHOOK_FORM_CONFIRM_EMAIL_URL) {
+    fetch(process.env.N8N_WEBHOOK_FORM_CONFIRM_EMAIL_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ responseId }),
