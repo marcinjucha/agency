@@ -3,7 +3,7 @@
   "nodes": [
     {
       "parameters": {
-        "jsCode": "const Sentry = require('@sentry/node');\nSentry.init({\n  dsn: 'https://65d16a394a93442fb661943d33474b60@glitchtip.trustcode.pl/1',\n  environment: 'production',\n  tracesSampleRate: 1.0,\n  sendDefaultPii: true,\n  enableLogs: true,\n  initialScope: {\n    tags: {\n      workflow: 'survey-analysis',\n      node: 'transform-qa'\n    }\n  }\n})\n\nreturn $input.all()"
+        "jsCode": "const Sentry = require('@sentry/node');\n\nif (!Sentry.getClient()) {\n  try {\n    Sentry.init({\n      dsn: 'https://65d16a394a93442fb661943d33474b60@glitchtip.trustcode.pl/1',\n      environment: 'production',\n      tracesSampleRate: 1.0,\n      sendDefaultPii: true,\n      enableLogs: true,\n      initialScope: {\n        tags: {\n          workflow: 'survey-analysis',\n          node: 'transform-qa'\n        }\n      }\n    })\n  } catch (e) {\n    // Sentry init failed silently\n  }\n}\n\nreturn $input.all()"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -83,7 +83,7 @@
     "executionOrder": "v1",
     "availableInMCP": false
   },
-  "versionId": "022417f9-c063-4711-aebc-15c7c2c47974",
+  "versionId": "d954578d-a875-4122-8a6a-cb9a8173634b",
   "meta": {
     "instanceId": "b46d0b13d69880a2fec430102877b55af4e44991549a68a3e78cd50a4dc1a09e"
   },

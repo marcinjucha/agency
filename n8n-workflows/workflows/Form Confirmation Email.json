@@ -8,13 +8,13 @@
         "responseMode": "lastNode",
         "options": {}
       },
-      "id": "71e5a652-c9f2-4ea8-b571-c8ad05f24580",
+      "id": "3ce3983e-b4b5-456a-824f-4218f3cce1b1",
       "name": "Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1.1,
       "position": [
-        -384,
-        400
+        3008,
+        720
       ],
       "webhookId": "form-confirmation-email"
     },
@@ -40,10 +40,10 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.3,
       "position": [
-        -176,
-        400
+        3232,
+        720
       ],
-      "id": "73b464fc-959c-4f5b-9a22-3315d10cba86",
+      "id": "7eb65372-ed67-4526-b0a8-f5b2d330228d",
       "name": "Call 'Sentry Init'"
     },
     {
@@ -54,18 +54,18 @@
           "conditions": [
             {
               "keyName": "id",
-              "keyValue": "={{ $json.responseId }}"
+              "keyValue": "={{ $json.body.responseId }}"
             }
           ]
         }
       },
-      "id": "360709cc-deed-42ec-a76d-b02a36e462ad",
+      "id": "5a164292-6566-4e29-aa3a-21eba516f31c",
       "name": "Fetch Response",
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        48,
-        400
+        3456,
+        720
       ],
       "credentials": {
         "supabaseApi": {
@@ -87,13 +87,13 @@
           ]
         }
       },
-      "id": "a6662c05-5176-4078-8092-63f619908cc0",
+      "id": "7a8ba2b5-002e-44f9-b9d0-66d1084f7631",
       "name": "Fetch Survey Link",
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        272,
-        400
+        3680,
+        720
       ],
       "credentials": {
         "supabaseApi": {
@@ -115,13 +115,13 @@
           ]
         }
       },
-      "id": "d025babb-b134-4ca5-a8e5-c5e5203ffe8f",
+      "id": "8e919ad3-30c0-45b1-aeb9-942350ddc7c1",
       "name": "Fetch Survey",
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        496,
-        400
+        3904,
+        720
       ],
       "credentials": {
         "supabaseApi": {
@@ -134,31 +134,34 @@
       "parameters": {
         "operation": "getAll",
         "tableId": "email_templates",
+        "limit": 1,
         "filters": {
           "conditions": [
             {
               "keyName": "tenant_id",
+              "condition": "eq",
               "keyValue": "={{ $('Fetch Response').first().json.tenant_id }}"
             },
             {
               "keyName": "type",
+              "condition": "eq",
               "keyValue": "form_confirmation"
             },
             {
               "keyName": "is_active",
+              "condition": "eq",
               "keyValue": true
             }
           ]
-        },
-        "limit": 1
+        }
       },
-      "id": "9d5a7d45-7a50-4e39-b14a-f377f3b3d448",
+      "id": "ae6e6120-0748-4bf1-bc3c-db04f5bb7a6c",
       "name": "Fetch Email Template",
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        720,
-        400
+        4128,
+        720
       ],
       "alwaysOutputData": true,
       "credentials": {
@@ -170,15 +173,44 @@
     },
     {
       "parameters": {
-        "jsCode": "const response = $('Fetch Response').first().json;\nconst surveyLink = $('Fetch Survey Link').first().json;\nconst survey = $('Fetch Survey').first().json;\n\nconst clientEmail = surveyLink.client_email;\nif (!clientEmail) {\n  throw new Error(`[Email] No client_email for response ${response.id}`);\n}\n\n// Extract client name from text answers\nconst answers = response.answers || {};\nconst questions = survey.questions || [];\nlet clientName = 'Szanowna Pani / Szanowny Panie';\n\nconst textQuestions = questions\n  .filter(q => q.type === 'text')\n  .sort((a, b) => (a.order || 0) - (b.order || 0));\n\nfor (const q of textQuestions) {\n  const answer = answers[q.id];\n  if (answer && typeof answer === 'string' && answer.trim()) {\n    clientName = answer.trim();\n    break;\n  }\n}\n\n// Use template from DB if available, fall back to hardcoded\nconst templateItems = $('Fetch Email Template').all();\nconst template = templateItems.length > 0 && templateItems[0].json?.id ? templateItems[0].json : null;\n\nlet subject, html;\n\nif (template && template.html_body) {\n  // Use DB template with variable substitution\n  subject = (template.subject || 'Dziękujemy za wypełnienie formularza')\n    .replace(/\\{\\{surveyTitle\\}\\}/g, survey.title)\n    .replace(/\\{\\{clientName\\}\\}/g, clientName)\n    .replace(/\\{\\{companyName\\}\\}/g, survey.title); // fallback\n\n  html = template.html_body\n    .replace(/\\{\\{clientName\\}\\}/g, clientName)\n    .replace(/\\{\\{surveyTitle\\}\\}/g, survey.title)\n    .replace(/\\{\\{companyName\\}\\}/g, survey.title); // fallback until tenant name fetched\n} else {\n  // Fallback: hardcoded HTML\n  subject = `Dziękujemy za wypełnienie formularza - ${survey.title}`;\n  html = `<!DOCTYPE html>\\n<html lang=\\\"pl\\\">\\n<head><meta charset=\\\"UTF-8\\\"></head>\\n<body style=\\\"font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;color:#333\\\">\\n  <div style=\\\"border-bottom:3px solid #1a1a2e;padding-bottom:16px;margin-bottom:24px\\\">\\n    <h2 style=\\\"color:#1a1a2e;margin:0\\\">Potwierdzenie otrzymania formularza</h2>\\n  </div>\\n  <p>Szanowny/a <strong>${clientName}</strong>,</p>\\n  <p>Dziękujemy za wypełnienie formularza <strong>${survey.title}</strong>.</p>\\n  <p>Otrzymaliśmy Twoje zgłoszenie i wkrótce się z Tobą skontaktujemy.</p>\\n  <br>\\n  <p style=\\\"color:#999;font-size:12px\\\">Wiadomość wysłana automatycznie. Prosimy nie odpowiadać na ten email.</p>\\n</body>\\n</html>`;\n}\n\nreturn {\n  to: clientEmail,\n  subject,\n  html,\n  tenant_id: response.tenant_id\n};\n"
+        "operation": "get",
+        "tableId": "tenants",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "keyValue": "={{ $('Fetch Response').first().json.tenant_id }}"
+            }
+          ]
+        }
       },
-      "id": "3240a973-f5c3-4c53-81d8-7738ca3e1100",
+      "id": "ddbb160b-dbc4-41ff-8894-929f8a851a74",
+      "name": "Fetch Tenant",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        4352,
+        720
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "f048XNg2A6zhwlWZ",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $('Fetch Response').first().json;\nconst surveyLink = $('Fetch Survey Link').first().json;\nconst survey = $('Fetch Survey').first().json;\n\nconst clientEmail = surveyLink.client_email;\nif (!clientEmail) {\n  throw new Error(`[Email] No client_email for response ${response.id}`);\n}\n\n// Extract client name from first text answer\nconst answers = response.answers || {};\nconst questions = survey.questions || [];\nlet clientName = 'Nieznany klient';\n\nconst textQuestions = questions\n  .filter(q => q.type === 'text')\n  .sort((a, b) => (a.order || 0) - (b.order || 0));\n\nfor (const q of textQuestions) {\n  const answer = answers[q.id];\n  if (answer && typeof answer === 'string' && answer.trim()) {\n    clientName = answer.trim();\n    break;\n  }\n}\n\n// Tenant name for {{companyName}}\nconst tenantItems = $('Fetch Tenant').all();\nconst tenantName = tenantItems.length > 0 && tenantItems[0].json?.name\n  ? tenantItems[0].json.name\n  : survey.title;\n\nconst cmsBaseUrl = 'https://cms.haloefekt.pl';\nconst responseUrl = `${cmsBaseUrl}/admin/responses/${response.id}`;\n\n// Use DB template if available, fall back to hardcoded\nconst templateItems = $('Fetch Email Template').all();\nconst template = templateItems.length > 0 && templateItems[0].json?.id\n  ? templateItems[0].json : null;\n\nlet subject, html;\n\nconst replacePlaceholders = (text) => text\n  .replace(/\\{\\{clientName\\}\\}/g, clientName)\n  .replace(/\\{\\{surveyTitle\\}\\}/g, survey.title)\n  .replace(/\\{\\{companyName\\}\\}/g, tenantName)\n  .replace(/\\{\\{responseUrl\\}\\}/g, responseUrl);\n\nif (template && template.html_body) {\n  subject = replacePlaceholders(template.subject || 'Nowe zgłoszenie - {{surveyTitle}}');\n  html = replacePlaceholders(template.html_body);\n} else {\n  subject = `Nowe zgłoszenie - ${survey.title}`;\n  html = `<!DOCTYPE html>\\n<html lang=\"pl\">\\n<head><meta charset=\"UTF-8\"></head>\\n<body style=\"font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;color:#333\">\\n  <div style=\"background:#1a1a2e;color:#fff;padding:24px 32px;border-radius:8px 8px 0 0\">\\n    <h2 style=\"margin:0\">${tenantName}</h2>\\n  </div>\\n  <div style=\"padding:24px 32px\">\\n    <p>Otrzymałeś nowe zgłoszenie z formularza <strong>${survey.title}</strong>.</p>\\n    <p>Klient: <strong>${clientName}</strong></p>\\n    <div style=\"text-align:center;padding:16px 0\">\\n      <a href=\"${responseUrl}\" style=\"background:#1a1a2e;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:bold;display:inline-block\">Zobacz zgłoszenie</a>\\n    </div>\\n  </div>\\n  <hr style=\"border:none;border-top:1px solid #e5e7eb;margin:0\">\\n  <p style=\"color:#999;font-size:12px;padding:16px 32px\">Wiadomość wygenerowana automatycznie przez system Halo Efekt.</p>\\n</body>\\n</html>`;\n}\n\nreturn {\n  to: clientEmail,\n  subject,\n  html,\n  tenant_id: response.tenant_id\n};\n"
+      },
+      "id": "e1c33c1c-e1dc-47f4-819c-e48901061196",
       "name": "Build Email",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        944,
-        400
+        4576,
+        720
       ]
     },
     {
@@ -203,22 +235,14 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.3,
       "position": [
-        1168,
-        400
+        4800,
+        720
       ],
-      "id": "53df1cfe-a5d7-4e5c-ab28-c5a95f947abc",
+      "id": "8229d073-e2f8-4aef-bfb8-a44974ba7d16",
       "name": "Call 'Send Email'"
     }
   ],
-  "pinData": {
-    "Webhook": [
-      {
-        "json": {
-          "responseId": "064e41be-eb7b-442f-b45b-df1b773f29ec"
-        }
-      }
-    ]
-  },
+  "pinData": {},
   "connections": {
     "Webhook": {
       "main": [
@@ -279,6 +303,17 @@
       "main": [
         [
           {
+            "node": "Fetch Tenant",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Tenant": {
+      "main": [
+        [
+          {
             "node": "Build Email",
             "type": "main",
             "index": 0
@@ -302,9 +337,12 @@
   "settings": {
     "executionOrder": "v1",
     "binaryMode": "separate",
-    "availableInMCP": false
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "executionTimeout": -1
   },
-  "versionId": "286b1228-1ae3-41df-a0fa-7708aeb4f57b",
+  "versionId": "f36bf901-b6c4-4c3f-b7cd-94c666b7fecb",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "b46d0b13d69880a2fec430102877b55af4e44991549a68a3e78cd50a4dc1a09e"

@@ -1,5 +1,7 @@
 # AI Agency Project Overview
 
+> **Always load @MEMORY.md at the start of every session.** It contains project-specific feedback, domain concepts, and preferences extracted from previous conversations that are essential for correct behavior.
+
 ## n8n Infrastructure
 
 ### n8n-vps (Infrastructure)

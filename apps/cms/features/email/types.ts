@@ -23,5 +23,6 @@ export const TEMPLATE_VARIABLES: Record<EmailTemplateType, { name: string; descr
     { name: '{{clientName}}', description: 'Imię klienta (z odpowiedzi)' },
     { name: '{{surveyTitle}}', description: 'Tytuł ankiety' },
     { name: '{{companyName}}', description: 'Nazwa firmy (z profilu tenanta)' },
+    { name: '{{responseUrl}}', description: 'Link do zgłoszenia w panelu CMS' },
   ],
 }

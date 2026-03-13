@@ -56,7 +56,15 @@ export const DEFAULT_BLOCKS: Block[] = [
   {
     id: 'default-text',
     type: 'text',
-    content: 'Szanowny/a <strong>{{clientName}}</strong>,<br/><br/>Dziękujemy za wypełnienie formularza <strong>{{surveyTitle}}</strong>.<br/><br/>Otrzymaliśmy Twoje zgłoszenie i wkrótce się z Tobą skontaktujemy.',
+    content: 'Otrzymałeś nowe zgłoszenie z formularza <strong>{{surveyTitle}}</strong>.<br/><br/>Klient: <strong>{{clientName}}</strong>',
+  },
+  {
+    id: 'default-cta',
+    type: 'cta',
+    label: 'Zobacz zgłoszenie',
+    url: '{{responseUrl}}',
+    backgroundColor: '#1a1a2e',
+    textColor: '#ffffff',
   },
   {
     id: 'default-divider',
@@ -66,6 +74,6 @@ export const DEFAULT_BLOCKS: Block[] = [
   {
     id: 'default-footer',
     type: 'footer',
-    text: 'Wiadomość wysłana automatycznie. Prosimy nie odpowiadać na ten email.',
+    text: 'Wiadomość wygenerowana automatycznie przez system Halo Efekt.',
   },
 ]
