@@ -23,7 +23,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import type { AvailableSlotsResponse, ErrorResponse, TimeSlot } from '@/features/calendar/types'
-import { parse, addHours, addMinutes } from 'date-fns'
+import { parse, addMinutes } from 'date-fns'
 import { createClient } from '@supabase/supabase-js'
 import { getValidAccessToken, refreshAccessToken, getEvents } from '@agency/calendar'
 import type { CalendarEvent } from '@agency/calendar'
@@ -45,10 +45,42 @@ if (!supabaseKey) {
 const supabase = createClient(supabaseUrl, supabaseKey)
 
 const TIMEZONE = 'Europe/Warsaw'
-const WORK_START_HOUR = 9 // 9 AM
-const WORK_END_HOUR = 17 // 5 PM
-const SLOT_DURATION_MINUTES = 60
-const BUFFER_MINUTES = 15
+
+// CALENDAR SETTINGS DEFAULTS (fallback when no DB row)
+const DEFAULT_WORK_START_HOUR = 9
+const DEFAULT_WORK_END_HOUR = 17
+const DEFAULT_SLOT_DURATION_MINUTES = 60
+const DEFAULT_BUFFER_MINUTES = 15
+
+// Simple in-memory cache: userId → { settings, cachedAt }
+const calendarSettingsCache = new Map<string, {
+  settings: { work_start_hour: number; work_end_hour: number; slot_duration_minutes: number; buffer_minutes: number }
+  cachedAt: number
+}>()
+const CACHE_TTL_MS = 5 * 60 * 1000 // 5 minutes
+
+async function getCalendarSettingsForUser(userId: string) {
+  const cached = calendarSettingsCache.get(userId)
+  if (cached && Date.now() - cached.cachedAt < CACHE_TTL_MS) {
+    return cached.settings
+  }
+
+  const { data } = await supabase
+    .from('calendar_settings')
+    .select('work_start_hour, work_end_hour, slot_duration_minutes, buffer_minutes')
+    .eq('user_id', userId)
+    .single()
+
+  const settings = data ?? {
+    work_start_hour: DEFAULT_WORK_START_HOUR,
+    work_end_hour: DEFAULT_WORK_END_HOUR,
+    slot_duration_minutes: DEFAULT_SLOT_DURATION_MINUTES,
+    buffer_minutes: DEFAULT_BUFFER_MINUTES,
+  }
+
+  calendarSettingsCache.set(userId, { settings, cachedAt: Date.now() })
+  return settings
+}
 
 /**
  * Get current UTC offset for Warsaw timezone
@@ -123,11 +155,12 @@ function isSlotAvailable(
   busyEvents: Array<{
     start: { dateTime: string }
     end: { dateTime: string }
-  }>
+  }>,
+  bufferMinutes: number
 ): boolean {
   // Add buffer time after and before the slot
-  const slotStartWithBuffer = addMinutes(slotStart, -BUFFER_MINUTES)
-  const slotEndWithBuffer = addMinutes(slotEnd, BUFFER_MINUTES)
+  const slotStartWithBuffer = addMinutes(slotStart, -bufferMinutes)
+  const slotEndWithBuffer = addMinutes(slotEnd, bufferMinutes)
 
   for (const event of busyEvents) {
     const eventStart = new Date(event.start.dateTime)
@@ -159,14 +192,18 @@ function calculateAvailableSlots(
   busyEvents: Array<{
     start: { dateTime: string }
     end: { dateTime: string }
-  }>
+  }>,
+  workStartHour: number,
+  workEndHour: number,
+  slotDurationMinutes: number,
+  bufferMinutes: number
 ): TimeSlot[] {
   const slots: TimeSlot[] = []
 
   // Get UTC offset for this date
   const tzOffset = getWarsawUTCOffset(date)
 
-  // Create work start/end times (9 AM - 5 PM Warsaw time)
+  // Create work start/end times in Warsaw timezone
   // We use UTC dates and then adjust by timezone offset
   const formatter = new Intl.DateTimeFormat('en-US', {
     timeZone: TIMEZONE,
@@ -182,36 +219,36 @@ function calculateAvailableSlots(
     dateObj[type] = value
   })
 
-  // Create UTC date for the start of the work day (9 AM Warsaw time)
+  // Create UTC date for the start of the work day (Warsaw time)
   const workStartUTC = new Date(
     Date.UTC(
       parseInt(dateObj.year),
       parseInt(dateObj.month) - 1,
       parseInt(dateObj.day),
-      WORK_START_HOUR - tzOffset,
+      workStartHour - tzOffset,
       0,
       0
     )
   )
 
-  // Create UTC date for the end of the work day (5 PM Warsaw time)
+  // Create UTC date for the end of the work day (Warsaw time)
   const workEndUTC = new Date(
     Date.UTC(
       parseInt(dateObj.year),
       parseInt(dateObj.month) - 1,
       parseInt(dateObj.day),
-      WORK_END_HOUR - tzOffset,
+      workEndHour - tzOffset,
       0,
       0
     )
   )
 
-  // Loop through the working day in 60-minute increments
+  // Loop through the working day in slot-duration increments
   let currentTime = new Date(workStartUTC)
 
   while (currentTime < workEndUTC) {
     const slotStart = currentTime
-    const slotEnd = addHours(slotStart, 1)
+    const slotEnd = addMinutes(slotStart, slotDurationMinutes)
 
     // Check if slot would extend past work end time
     if (slotEnd > workEndUTC) {
@@ -219,7 +256,7 @@ function calculateAvailableSlots(
     }
 
     // Check availability (with buffer)
-    if (isSlotAvailable(slotStart, slotEnd, busyEvents)) {
+    if (isSlotAvailable(slotStart, slotEnd, busyEvents, bufferMinutes)) {
       // Format times as UTC ISO strings (Zod requires Z format)
       slots.push({
         start: slotStart.toISOString(),
@@ -227,8 +264,8 @@ function calculateAvailableSlots(
       })
     }
 
-    // Move to next slot (60 min appointment + 15 min buffer)
-    currentTime = addMinutes(currentTime, SLOT_DURATION_MINUTES + BUFFER_MINUTES)
+    // Move to next slot (appointment duration + buffer)
+    currentTime = addMinutes(currentTime, slotDurationMinutes + bufferMinutes)
   }
 
   return slots
@@ -325,10 +362,20 @@ export async function GET(request: NextRequest): Promise<
       busyEvents = []
     }
 
-    // Step 5: Calculate available slots
-    const availableSlots = calculateAvailableSlots(requestedDate, busyEvents)
+    // Step 5: Load per-user calendar settings (with in-memory cache)
+    const calSettings = await getCalendarSettingsForUser(surveyData.user_id)
 
-    // Step 6: Return response
+    // Step 6: Calculate available slots
+    const availableSlots = calculateAvailableSlots(
+      requestedDate,
+      busyEvents,
+      calSettings.work_start_hour,
+      calSettings.work_end_hour,
+      calSettings.slot_duration_minutes,
+      calSettings.buffer_minutes
+    )
+
+    // Step 7: Return response
     const response: AvailableSlotsResponse = {
       slots: availableSlots,
       date: dateStr,

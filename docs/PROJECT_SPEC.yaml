@@ -290,6 +290,22 @@ features:
         - All commented code removed
         - Unused types cleaned up (BookingRequest, Appointment interfaces)
 
+        2026-03-17: Calendar Bug Fixes + Settings COMPLETE (AAA-T-44, AAA-T-45, AAA-T-25)
+
+        BUG FIXES (AAA-T-44, AAA-T-45):
+        - getEvents() added to @agency/calendar shared package (was returning mock [])
+        - slots/route.ts now uses real Google Calendar API via getEvents()
+        - getResponsesByLink/getResponsesBySurvey fixed (wrong select shape using transformToListItem())
+        - no_show status added to appointments CHECK constraint
+        - 6x console.log removed from calendar/queries.ts
+
+        CALENDAR SETTINGS (AAA-T-25):
+        - calendar_settings table created (per-user: work_start_hour, work_end_hour, slot_duration_minutes, buffer_minutes)
+        - CMS settings page: CalendarTokenStatus component shows refresh token expiry
+        - CalendarSettingsForm: users edit working hours and slot configuration
+        - Slots API reads from calendar_settings DB with 5-min in-memory cache per userId
+        - All 4 tasks updated to Done in Notion
+
   phase_4_uiux:
     - name: "Accessibility Critical Path"
       status: "complete"

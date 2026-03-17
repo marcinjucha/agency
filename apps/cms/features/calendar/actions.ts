@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { revokeAccess } from '@/lib/google-calendar/oauth'
 import { revalidatePath } from 'next/cache'
 import type { GoogleCalendarToken } from '@/lib/google-calendar/oauth'
+import type { CalendarSettingsFormValues } from './types'
 
 /**
  * Get Google Calendar connection status
@@ -119,5 +120,96 @@ export async function disconnectGoogleCalendar(): Promise<{
   } catch (error) {
     console.error('Error disconnecting calendar:', error)
     return { success: false, error: 'Failed to disconnect calendar' }
+  }
+}
+
+/**
+ * Upsert calendar settings for the current user.
+ * Conflict target: user_id (one settings row per user).
+ */
+export async function updateCalendarSettings(
+  data: CalendarSettingsFormValues
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const supabase = await createClient()
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      return { success: false, error: 'Not authenticated' }
+    }
+
+    const { error } = await supabase
+      .from('calendar_settings')
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .upsert({ user_id: user.id, ...data } as any, { onConflict: 'user_id' })
+
+    if (error) {
+      return { success: false, error: error.message }
+    }
+
+    revalidatePath('/admin/settings')
+    return { success: true }
+  } catch (error) {
+    console.error('Error updating calendar settings:', error)
+    return { success: false, error: 'Failed to update calendar settings' }
+  }
+}
+
+/**
+ * Returns the Google Calendar token connection status for the current user.
+ * connected  = valid token with refresh_token and future expiry
+ * expired    = token exists but expired or missing refresh_token
+ * disconnected = no token stored
+ */
+export async function getCalendarTokenStatus(): Promise<{
+  status: 'connected' | 'expired' | 'disconnected'
+  expiresAt: string | null
+  hasRefreshToken: boolean
+}> {
+  try {
+    const supabase = await createClient()
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      return { status: 'disconnected', expiresAt: null, hasRefreshToken: false }
+    }
+
+    const { data: userData, error } = await supabase
+      .from('users')
+      .select('google_calendar_token')
+      .eq('id', user.id)
+      .maybeSingle()
+
+    if (error) {
+      return { status: 'disconnected', expiresAt: null, hasRefreshToken: false }
+    }
+
+    const tokenData = (userData as any)?.google_calendar_token
+
+    if (!tokenData) {
+      return { status: 'disconnected', expiresAt: null, hasRefreshToken: false }
+    }
+
+    const token = tokenData as GoogleCalendarToken
+    const hasRefreshToken = !!token.refresh_token
+    const expiresAt = token.expiry_date
+      ? new Date(token.expiry_date).toISOString()
+      : null
+    const isExpired = !expiresAt || new Date(expiresAt) <= new Date()
+
+    if (!hasRefreshToken || isExpired) {
+      return { status: 'expired', expiresAt, hasRefreshToken }
+    }
+
+    return { status: 'connected', expiresAt, hasRefreshToken }
+  } catch (error) {
+    console.error('Error fetching calendar token status:', error)
+    return { status: 'disconnected', expiresAt: null, hasRefreshToken: false }
   }
 }
