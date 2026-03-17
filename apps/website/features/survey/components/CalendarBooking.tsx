@@ -128,9 +128,6 @@ function SuccessMessage({
         </div>
       </div>
 
-      <p className="text-muted-foreground">
-        A confirmation email has been sent to your inbox.
-      </p>
     </div>
   )
 }
