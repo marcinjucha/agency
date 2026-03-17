@@ -203,7 +203,9 @@ export async function getCalendarTokenStatus(): Promise<{
       : null
     const isExpired = !expiresAt || new Date(expiresAt) <= new Date()
 
-    if (!hasRefreshToken || isExpired) {
+    // Connected = has refresh_token (access token expiry is normal, auto-refreshable)
+    // Expired = token exists but no refresh_token (needs reconnect)
+    if (!hasRefreshToken) {
       return { status: 'expired', expiresAt, hasRefreshToken }
     }
 
