@@ -46,7 +46,7 @@ export async function getResponses(): Promise<ResponseListItem[]> {
     .from('responses')
     .select(`
       *,
-      survey_links(id, token, client_email, survey_id, surveys(id, title))
+      survey_links(id, token, notification_email, survey_id, surveys(id, title))
     `)
     .order('created_at', { ascending: false })
 
@@ -137,7 +137,7 @@ export async function getResponsesByLink(surveyLinkId: string): Promise<Response
     .from('responses')
     .select(`
       *,
-      survey_links(id, token, client_email, survey_id, surveys(id, title))
+      survey_links(id, token, notification_email, survey_id, surveys(id, title))
     `)
     .eq('survey_link_id', surveyLinkId)
     .order('created_at', { ascending: false })
@@ -162,7 +162,7 @@ export async function getResponsesBySurvey(surveyId: string): Promise<ResponseLi
     .from('responses')
     .select(`
       *,
-      survey_links!inner(id, token, client_email, survey_id, surveys(id, title))
+      survey_links!inner(id, token, notification_email, survey_id, surveys(id, title))
     `)
     .eq('survey_links.survey_id', surveyId)
     .order('created_at', { ascending: false })

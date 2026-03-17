@@ -1,5 +1,8 @@
 @import 'tailwindcss';
 
+/* Scan UI package for Tailwind classes used in shadcn/ui components */
+@source "../../../packages/ui/src/**/*.tsx";
+
 /* Tailwind v4 @theme - light mode */
 @theme {
   --color-background: hsl(0 0% 100%);

@@ -293,34 +293,34 @@ export type Database = {
       }
       survey_links: {
         Row: {
-          client_email: string
           created_at: string | null
           expires_at: string | null
           id: string
           is_active: boolean
           max_submissions: number | null
+          notification_email: string
           submission_count: number | null
           survey_id: string
           token: string
         }
         Insert: {
-          client_email: string
           created_at?: string | null
           expires_at?: string | null
           id?: string
           is_active?: boolean
           max_submissions?: number | null
+          notification_email: string
           submission_count?: number | null
           survey_id: string
           token: string
         }
         Update: {
-          client_email?: string
           created_at?: string | null
           expires_at?: string | null
           id?: string
           is_active?: boolean
           max_submissions?: number | null
+          notification_email?: string
           submission_count?: number | null
           survey_id?: string
           token?: string

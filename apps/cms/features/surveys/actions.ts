@@ -117,7 +117,7 @@ export async function deleteSurvey(id: string): Promise<{ success: boolean; erro
 export async function generateSurveyLink(
   surveyId: string,
   options: {
-    clientEmail: string
+    notificationEmail: string
     expiresAt?: string // ISO date string
     maxSubmissions?: number | null
   }
@@ -143,7 +143,7 @@ export async function generateSurveyLink(
     const linkData: TablesInsert<'survey_links'> = {
       survey_id: surveyId,
       token,
-      client_email: options.clientEmail,
+      notification_email: options.notificationEmail,
       expires_at: options.expiresAt || null,
       max_submissions: options.maxSubmissions ?? null, // null = unlimited
       submission_count: 0,

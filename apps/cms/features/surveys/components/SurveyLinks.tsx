@@ -18,7 +18,7 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
   const [copiedLinkId, setCopiedLinkId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [formData, setFormData] = useState({
-    clientEmail: '',
+    notificationEmail: '',
     expiresAt: '',
     maxSubmissions: '',
   })
@@ -33,7 +33,7 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
   const generateMutation = useMutation({
     mutationFn: () =>
       generateSurveyLink(surveyId, {
-        clientEmail: formData.clientEmail,
+        notificationEmail: formData.notificationEmail,
         expiresAt: formData.expiresAt || undefined,
         maxSubmissions: formData.maxSubmissions ? parseInt(formData.maxSubmissions) : null,
       }),
@@ -41,7 +41,7 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
       if (result.success) {
         queryClient.invalidateQueries({ queryKey: ['survey-links', surveyId] })
         setShowForm(false)
-        setFormData({ clientEmail: '', expiresAt: '', maxSubmissions: '' })
+        setFormData({ notificationEmail: '', expiresAt: '', maxSubmissions: '' })
         setError(null)
       } else {
         setError(result.error || 'Failed to generate link')
@@ -100,16 +100,16 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
         <div className="mb-4 p-4 bg-muted rounded-lg border border-border">
           <div className="space-y-3">
             <div>
-              <Label htmlFor="clientEmail" className="text-sm">
-                Client Email <span className="text-destructive">*</span>
+              <Label htmlFor="notificationEmail" className="text-sm">
+                Notification Email <span className="text-destructive">*</span>
               </Label>
               <Input
-                id="clientEmail"
+                id="notificationEmail"
                 type="email"
                 required
-                value={formData.clientEmail}
-                onChange={(e) => setFormData({ ...formData, clientEmail: e.target.value })}
-                placeholder="client@example.com"
+                value={formData.notificationEmail}
+                onChange={(e) => setFormData({ ...formData, notificationEmail: e.target.value })}
+                placeholder="kancelaria@example.com"
                 className="mt-1"
               />
             </div>
@@ -145,8 +145,8 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
             <div className="flex gap-2 pt-2">
               <Button
                 onClick={() => {
-                  if (!formData.clientEmail) {
-                    setError('Client email is required')
+                  if (!formData.notificationEmail) {
+                    setError('Notification email is required')
                     return
                   }
                   generateMutation.mutate()
@@ -215,7 +215,7 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
 
               {/* Metadata */}
               <div className="text-xs text-muted-foreground space-y-1">
-                {link.client_email && <div>Email: {link.client_email}</div>}
+                {link.notification_email && <div>Email: {link.notification_email}</div>}
                 <div>
                   Expires: {link.expires_at ? format(parseISO(link.expires_at), 'PPp') : 'Never'}
                 </div>

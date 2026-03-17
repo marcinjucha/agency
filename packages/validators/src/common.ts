@@ -106,8 +106,8 @@ export interface SurveyLinkData {
   /** Foreign key to surveys table */
   survey_id: string
 
-  /** Optional client email for tracking */
-  client_email: string | null
+  /** Notification email for law firm alerts */
+  notification_email: string | null
 
   /** Optional expiration timestamp (ISO 8601) */
   expires_at: string | null
