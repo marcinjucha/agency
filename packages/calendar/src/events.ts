@@ -1,6 +1,18 @@
 import { google, calendar_v3 } from 'googleapis'
 
 /**
+ * Calendar event returned from the Google Calendar API
+ * Shape is compatible with isSlotAvailable() checks on start.dateTime / end.dateTime
+ */
+export interface CalendarEvent {
+  id: string
+  summary: string
+  start: { dateTime: string }
+  end: { dateTime: string }
+  description?: string | null
+}
+
+/**
  * Calendar event structure for creating events
  */
 export interface CalendarEventInput {
@@ -32,6 +44,51 @@ function getCalendarClient(accessToken: string): calendar_v3.Calendar {
   auth.setCredentials({ access_token: accessToken })
 
   return google.calendar({ version: 'v3', auth }) as calendar_v3.Calendar
+}
+
+/**
+ * Fetch calendar events for a date range
+ * Returns all events from the primary calendar — used by isSlotAvailable() to detect busy slots
+ *
+ * @param accessToken - Valid Google Calendar access token
+ * @param startTime - Range start (Date or ISO string)
+ * @param endTime - Range end (Date or ISO string)
+ * @returns Array of calendar events with start/end dateTime strings
+ */
+export async function getEvents(
+  accessToken: string,
+  startTime: Date | string,
+  endTime: Date | string
+): Promise<CalendarEvent[]> {
+  if (useMockMode()) {
+    return []
+  }
+
+  const toIso = (t: Date | string) => (t instanceof Date ? t.toISOString() : t)
+
+  try {
+    const calendar = getCalendarClient(accessToken)
+
+    const response = await calendar.events.list({
+      calendarId: 'primary',
+      timeMin: toIso(startTime),
+      timeMax: toIso(endTime),
+      singleEvents: true,
+      orderBy: 'startTime',
+    })
+
+    return (response.data.items || []).map((event) => ({
+      id: event.id || '',
+      summary: event.summary || '',
+      start: { dateTime: event.start?.dateTime || '' },
+      end: { dateTime: event.end?.dateTime || '' },
+      description: event.description,
+    }))
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : 'Unknown error'
+    console.error('[GET EVENTS] Failed to fetch calendar events:', errorMsg)
+    throw new Error(`Failed to fetch calendar events: ${errorMsg}`)
+  }
 }
 
 /**

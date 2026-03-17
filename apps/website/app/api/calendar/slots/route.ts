@@ -25,7 +25,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import type { AvailableSlotsResponse, ErrorResponse, TimeSlot } from '@/features/calendar/types'
 import { parse, addHours, addMinutes } from 'date-fns'
 import { createClient } from '@supabase/supabase-js'
-import { getValidAccessToken, refreshAccessToken } from '@agency/calendar'
+import { getValidAccessToken, refreshAccessToken, getEvents } from '@agency/calendar'
+import type { CalendarEvent } from '@agency/calendar'
 
 // Initialize Supabase client with service role key
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -233,25 +234,6 @@ function calculateAvailableSlots(
   return slots
 }
 
-/**
- * Mock function to get calendar events
- * In production, this would call Google Calendar API
- * Currently returns empty array (no busy slots)
- */
-async function getCalendarEvents(
-  _accessToken: string,
-  _dateStart: Date,
-  _dateEnd: Date
-): Promise<
-  Array<{
-    start: { dateTime: string }
-    end: { dateTime: string }
-  }>
-> {
-  // Mock: Return empty array (no busy events)
-  // Real implementation would fetch from Google Calendar API
-  return []
-}
 
 export async function GET(request: NextRequest): Promise<
   NextResponse<AvailableSlotsResponse | ErrorResponse>
@@ -309,8 +291,6 @@ export async function GET(request: NextRequest): Promise<
       tenant_id: survey.tenant_id
     }
 
-    console.log('[SLOTS API] Survey data:', surveyData)
-
     // Step 3: Get valid access token with auto-refresh
     const tokenResult = await getValidAccessToken(
       surveyData.user_id,
@@ -330,10 +310,7 @@ export async function GET(request: NextRequest): Promise<
     const accessToken = tokenResult.accessToken!
 
     // Step 4: Get busy events from calendar
-    let busyEvents: Array<{
-      start: { dateTime: string }
-      end: { dateTime: string }
-    }> = []
+    let busyEvents: CalendarEvent[] = []
 
     try {
       // Get start and end of day
@@ -341,7 +318,7 @@ export async function GET(request: NextRequest): Promise<
       const dayStartUTC = new Date(requestedDate.getFullYear(), requestedDate.getMonth(), requestedDate.getDate(), -tzOffset, 0, 0)
       const dayEndUTC = new Date(requestedDate.getFullYear(), requestedDate.getMonth(), requestedDate.getDate(), 24 - tzOffset, 0, 0)
 
-      busyEvents = await getCalendarEvents(accessToken, dayStartUTC, dayEndUTC)
+      busyEvents = await getEvents(accessToken, dayStartUTC, dayEndUTC)
     } catch (error) {
       console.error('[SLOTS API] Error fetching calendar events:', error)
       // Don't fail - just return all slots available if calendar fetch fails
@@ -358,7 +335,6 @@ export async function GET(request: NextRequest): Promise<
       timezone: TIMEZONE,
     }
 
-    console.log('[SLOTS API] Returning slots:', JSON.stringify(response.slots.slice(0, 2), null, 2))
     return NextResponse.json(response)
   } catch (error) {
     console.error('Unexpected error in slots API:', error)

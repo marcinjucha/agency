@@ -1,0 +1,1 @@
+/Users/marcinjucha/Prywatne/projects/claude-dev/CLAUDE.md

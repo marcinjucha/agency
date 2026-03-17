@@ -1,5 +1,5 @@
 export { getValidAccessToken } from './token-manager'
 export type { TokenResult } from './token-manager'
 export { refreshAccessToken } from './oauth'
-export { createEvent } from './events'
-export type { CalendarEventInput } from './events'
+export { createEvent, getEvents } from './events'
+export type { CalendarEventInput, CalendarEvent } from './events'

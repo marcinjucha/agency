@@ -73,16 +73,12 @@ export async function getLawyerCalendarToken(
 }> {
   const supabase = await createClient()
 
-  console.log('[CALENDAR] Getting token for userId:', userId, 'tenantId:', tenantId)
-
   const { data: user, error } = await supabase
     .from('users')
     .select('google_calendar_token, tenant_id')
     .eq('id', userId)
     .eq('tenant_id', tenantId)
     .maybeSingle()
-
-  console.log('[CALENDAR] Query result:', { user, error })
 
   if (error) {
     console.error('[CALENDAR] Query error:', error)
@@ -98,8 +94,6 @@ export async function getLawyerCalendarToken(
     Tables<'users'>,
     'google_calendar_token' | 'tenant_id'
   >
-
-  console.log('[CALENDAR] User found, token:', typedUser.google_calendar_token ? 'present' : 'null')
 
   return {
     token: typedUser.google_calendar_token,
@@ -146,16 +140,12 @@ export async function getLawyerCalendarTokenPublic(
     },
   })
 
-  console.log('[CALENDAR] Getting token for userId:', userId, 'tenantId:', tenantId)
-
   const { data: user, error } = await supabase
     .from('users')
     .select('google_calendar_token, tenant_id')
     .eq('id', userId)
     .eq('tenant_id', tenantId)
     .maybeSingle()
-
-  console.log('[CALENDAR] Query result:', { user, error })
 
   if (error) {
     console.error('[CALENDAR] Query error:', error)
@@ -171,8 +161,6 @@ export async function getLawyerCalendarTokenPublic(
     Tables<'users'>,
     'google_calendar_token' | 'tenant_id'
   >
-
-  console.log('[CALENDAR] User found, token:', typedUser.google_calendar_token ? 'present' : 'null')
 
   return {
     token: typedUser.google_calendar_token,
