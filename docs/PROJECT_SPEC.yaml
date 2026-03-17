@@ -3,7 +3,7 @@ project:
   description: "SaaS platform for businesses to streamline client intake through smart surveys, calendar booking, and AI qualification — built by Halo Efekt"
   version: "2.0.0"
   status: "in-progress"
-  last_updated: "2026-03-06"
+  last_updated: "2026-03-17"
 
 # IMPORTANT: This file focuses on WHY (architecture, decisions, rationale)
 # For detailed WHAT (acceptance criteria, file paths, task tracking), see Notion:
@@ -575,12 +575,69 @@ features:
         - Database performance (connections, queries/sec)
 
   phase_6_marketing:
+    - name: "Landing Page CMS"
+      status: "in-progress"
+      why: "Allow business users to edit marketing website sections via block editor, no code deployment needed"
+      acceptance_criteria:
+        - criterion: "9 block types (navbar, hero, problems, guarantee, riskReversal, benefits, qualification, cta, footer)"
+          verified: true
+        - criterion: "Block editor in CMS with live preview"
+          verified: true
+        - criterion: "Database schema: landing_pages table with blocks JSONB"
+          verified: true
+        - criterion: "RLS: only owner role can mutate, anon SELECT published only"
+          verified: true
+        - criterion: "Website homepage fetches from database, falls back to DEFAULT_BLOCKS"
+          verified: true
+        - criterion: "All 9 marketing components refactored to accept block props"
+          verified: true
+        - criterion: "ISR revalidate=3600 for performance"
+          verified: true
+      tech_decisions:
+        - decision: "Shared landing page (no tenant_id)"
+          rationale: "haloefekt.pl is company marketing page, not per-tenant customization"
+        - decision: "9 block types with BLOCK_TYPE_LABELS"
+          rationale: "Covers all marketing sections (hero, problems, benefits, CTA, footer)"
+        - decision: "CMS queries use browser client"
+          rationale: "TanStack Query runs in client context for real-time updates"
+        - decision: "current_user_role() SECURITY DEFINER function"
+          rationale: "Avoid RLS recursion when checking ownership for mutations"
+        - decision: "next-intl removed from marketing components"
+          rationale: "PL-only for now, extend later if multi-language needed"
+      dependencies: []
+      notes: |
+        2026-03-17: Landing Page CMS COMPLETE (AAA-T-46)
+
+        DATABASE:
+        - landing_pages table (slug, blocks JSONB, seo_metadata, is_published)
+        - current_user_role() SECURITY DEFINER for RLS policies
+        - RLS: owner role can UPDATE/DELETE, anon SELECT published only
+
+        CMS IMPLEMENTATION:
+        - apps/cms/features/landing/ (queries.ts, validation.ts, actions.ts)
+        - components: BlockFieldEditor.tsx, LandingPageEditor.tsx
+        - Admin route: /admin/landing-page
+        - Sidebar navigation: Landing Page item added
+
+        WEBSITE IMPLEMENTATION:
+        - apps/website/features/marketing/queries.ts (getPublicLandingPage)
+        - All 9 components refactored (navbar, hero, problems, guarantee, riskReversal, benefits, qualification, cta, footer)
+        - app/[locale]/page.tsx reads from DB, falls back to DEFAULT_BLOCKS
+        - ISR: revalidate=3600
+
+        CODE QUALITY:
+        - Build passes for both CMS + Website
+        - Zod validation for all block types
+        - BLOCK_TYPE_LABELS for UI display
+        - (supabase as any).update() workaround for Supabase JS v2.95.2 type bug
+
     - name: "Marketing Website"
       status: "pending"
       why: "Public-facing pages for customer acquisition"
       acceptance_criteria:
         - "Homepage, pricing, about, contact pages"
-      dependencies: []
+      dependencies:
+        - feature: "Landing Page CMS"
 
     - name: "CMS Settings & Admin Panel"
       status: "pending"
@@ -623,7 +680,7 @@ status_summary:
   phase_3: "✅ Complete (100%) - Calendar Integration FINISHED"
   phase_4: "✅ Complete (100%) - UI/UX Improvements"
   phase_5: "✅ Complete (100%) - Email Notifications E2E tested"
-  phase_6: "🔮 Future (0%) - Marketing & Polish"
+  phase_6: "🚀 In Progress (25%) - Landing Page CMS complete, Marketing & Polish in progress"
 
 critical_path:
   - "Phase 1 Foundation (✅ COMPLETE)"

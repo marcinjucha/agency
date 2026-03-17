@@ -1,9 +1,7 @@
-import { getTranslations } from 'next-intl/server'
 import { Shield } from 'lucide-react'
+import type { RiskReversalBlock } from '@agency/database'
 
-export async function RiskReversal() {
-  const t = await getTranslations('riskReversal')
-
+export function RiskReversal({ title, step1Label, step1Text, step2Label, step2Text, closing, bold, transparency }: RiskReversalBlock) {
   return (
     <section className="py-16 md:py-24 bg-muted/50">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -13,7 +11,7 @@ export async function RiskReversal() {
             <Shield className="w-6 h-6 text-primary" />
           </div>
           <h2 className="text-3xl md:text-4xl font-bold text-foreground">
-            {t('title')}
+            {title}
           </h2>
         </div>
 
@@ -25,10 +23,10 @@ export async function RiskReversal() {
               1
             </div>
             <p className="text-sm font-bold text-primary uppercase tracking-wider mb-2">
-              {t('step1Label')}
+              {step1Label}
             </p>
             <p className="text-lg text-foreground leading-relaxed">
-              {t('step1Text')}
+              {step1Text}
             </p>
           </div>
 
@@ -38,10 +36,10 @@ export async function RiskReversal() {
               2
             </div>
             <p className="text-sm font-bold text-primary uppercase tracking-wider mb-2">
-              {t('step2Label')}
+              {step2Label}
             </p>
             <p className="text-lg text-foreground leading-relaxed">
-              {t('step2Text')}
+              {step2Text}
             </p>
           </div>
         </div>
@@ -49,13 +47,13 @@ export async function RiskReversal() {
         {/* Closing Statements */}
         <div className="bg-background rounded-xl p-6 md:p-8 space-y-4">
           <p className="text-lg text-foreground leading-relaxed">
-            {t('closing')}
+            {closing}
           </p>
           <p className="text-xl font-bold text-foreground">
-            {t('bold')}
+            {bold}
           </p>
           <p className="text-lg text-muted-foreground leading-relaxed">
-            {t('transparency')}
+            {transparency}
           </p>
         </div>
       </div>

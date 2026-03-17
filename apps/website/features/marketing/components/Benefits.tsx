@@ -1,24 +1,13 @@
-import { getTranslations } from 'next-intl/server'
 import { Check } from 'lucide-react'
+import type { BenefitsBlock } from '@agency/database'
 
-export async function Benefits() {
-  const t = await getTranslations('benefits')
-
-  const items = [
-    t('item1'),
-    t('item2'),
-    t('item3'),
-    t('item4'),
-    t('item5'),
-    t('item6'),
-  ]
-
+export function Benefits({ title, items, closing }: BenefitsBlock) {
   return (
     <section className="py-16 md:py-24 bg-background">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Title */}
         <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-10">
-          {t('title')}
+          {title}
         </h2>
 
         {/* Benefits Grid */}
@@ -35,7 +24,7 @@ export async function Benefits() {
 
         {/* Closing Statement */}
         <p className="text-lg text-muted-foreground leading-relaxed italic">
-          {t('closing')}
+          {closing}
         </p>
       </div>
     </section>

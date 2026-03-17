@@ -8,6 +8,22 @@ import { Benefits } from '@/features/marketing/components/Benefits'
 import { Qualification } from '@/features/marketing/components/Qualification'
 import { FinalCTA } from '@/features/marketing/components/FinalCTA'
 import { Footer } from '@/features/marketing/components/Footer'
+import { getPublicLandingPage } from '@/features/marketing/queries'
+import {
+  DEFAULT_BLOCKS,
+  type LandingBlock,
+  type NavbarBlock,
+  type HeroBlock,
+  type ProblemsBlock,
+  type GuaranteeBlock,
+  type RiskReversalBlock,
+  type BenefitsBlock,
+  type QualificationBlock,
+  type CtaBlock,
+  type FooterBlock,
+} from '@agency/database'
+
+export const revalidate = 3600
 
 export const metadata: Metadata = {
   title: 'Halo Efekt — Automatyzacja procesów biznesowych',
@@ -44,20 +60,37 @@ export const metadata: Metadata = {
   },
 }
 
-export default function HomePage() {
+function findBlock<T extends LandingBlock>(blocks: LandingBlock[], type: T['type']): T | undefined {
+  return blocks.find((b) => b.type === type) as T | undefined
+}
+
+export default async function HomePage() {
+  const page = await getPublicLandingPage()
+  const blocks = page?.blocks?.length ? page.blocks : DEFAULT_BLOCKS
+
+  const navbar = findBlock<NavbarBlock>(blocks, 'navbar') ?? (DEFAULT_BLOCKS.find((b) => b.type === 'navbar') as NavbarBlock)
+  const hero = findBlock<HeroBlock>(blocks, 'hero') ?? (DEFAULT_BLOCKS.find((b) => b.type === 'hero') as HeroBlock)
+  const problems = findBlock<ProblemsBlock>(blocks, 'problems') ?? (DEFAULT_BLOCKS.find((b) => b.type === 'problems') as ProblemsBlock)
+  const guarantee = findBlock<GuaranteeBlock>(blocks, 'guarantee') ?? (DEFAULT_BLOCKS.find((b) => b.type === 'guarantee') as GuaranteeBlock)
+  const riskReversal = findBlock<RiskReversalBlock>(blocks, 'riskReversal') ?? (DEFAULT_BLOCKS.find((b) => b.type === 'riskReversal') as RiskReversalBlock)
+  const benefits = findBlock<BenefitsBlock>(blocks, 'benefits') ?? (DEFAULT_BLOCKS.find((b) => b.type === 'benefits') as BenefitsBlock)
+  const qualification = findBlock<QualificationBlock>(blocks, 'qualification') ?? (DEFAULT_BLOCKS.find((b) => b.type === 'qualification') as QualificationBlock)
+  const cta = findBlock<CtaBlock>(blocks, 'cta') ?? (DEFAULT_BLOCKS.find((b) => b.type === 'cta') as CtaBlock)
+  const footer = findBlock<FooterBlock>(blocks, 'footer') ?? (DEFAULT_BLOCKS.find((b) => b.type === 'footer') as FooterBlock)
+
   return (
     <>
-      <Navbar />
+      <Navbar {...navbar} />
       <main className="w-full">
-        <Hero />
-        <Problems />
-        <Guarantee />
-        <RiskReversal />
-        <Benefits />
-        <Qualification />
-        <FinalCTA />
+        <Hero {...hero} />
+        <Problems {...problems} />
+        <Guarantee {...guarantee} />
+        <RiskReversal {...riskReversal} />
+        <Benefits {...benefits} />
+        <Qualification {...qualification} />
+        <FinalCTA {...cta} />
       </main>
-      <Footer />
+      <Footer {...footer} />
     </>
   )
 }

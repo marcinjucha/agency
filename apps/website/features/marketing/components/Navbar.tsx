@@ -1,13 +1,11 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useTranslations } from 'next-intl'
 import { Menu, X } from 'lucide-react'
 import { Button } from '@agency/ui'
-import { Link } from '@/i18n.config'
+import type { NavbarBlock } from '@agency/database'
 
-export function Navbar() {
-  const t = useTranslations('nav')
+export function Navbar({ ctaText, ctaHref }: NavbarBlock) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isScrolled, setIsScrolled] = useState(false)
 
@@ -26,21 +24,21 @@ export function Navbar() {
       >
         <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
-            <Link
+            <a
               href="/"
               className="text-xl font-bold text-foreground hover:text-primary transition-colors"
             >
               Halo Efekt
-            </Link>
+            </a>
 
             {/* Desktop CTA */}
             <div className="hidden sm:flex">
-              <a href="#contact">
+              <a href={ctaHref}>
                 <Button
                   size="sm"
                   className="bg-primary hover:bg-primary/90 text-primary-foreground"
                 >
-                  {t('cta')}
+                  {ctaText}
                 </Button>
               </a>
             </div>
@@ -77,9 +75,9 @@ export function Navbar() {
               </button>
             </div>
             <div className="px-6 py-4">
-              <a href="#contact" onClick={() => setIsMenuOpen(false)}>
+              <a href={ctaHref} onClick={() => setIsMenuOpen(false)}>
                 <Button className="bg-primary hover:bg-primary/90 text-primary-foreground w-full">
-                  {t('cta')}
+                  {ctaText}
                 </Button>
               </a>
             </div>

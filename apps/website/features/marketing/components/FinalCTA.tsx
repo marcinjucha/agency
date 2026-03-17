@@ -1,9 +1,7 @@
-import { getTranslations } from 'next-intl/server'
 import { ArrowRight } from 'lucide-react'
+import type { CtaBlock } from '@agency/database'
 
-export async function FinalCTA() {
-  const t = await getTranslations('cta')
-
+export function FinalCTA({ headline, description, button, subtext }: CtaBlock) {
   return (
     <section
       id="contact"
@@ -19,12 +17,12 @@ export async function FinalCTA() {
       <div className="relative z-10 max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
         {/* Headline */}
         <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-primary-foreground mb-6 leading-tight">
-          {t('headline')}
+          {headline}
         </h2>
 
         {/* Description */}
         <p className="text-lg md:text-xl text-primary-foreground/80 mb-10 max-w-2xl mx-auto leading-relaxed">
-          {t('description')}
+          {description}
         </p>
 
         {/* CTA Button */}
@@ -32,13 +30,13 @@ export async function FinalCTA() {
           href="#contact"
           className="inline-flex items-center gap-3 bg-background text-foreground hover:bg-background/90 rounded-full px-10 py-5 text-lg font-semibold shadow-xl hover:shadow-2xl transition-all duration-200 group"
         >
-          {t('button')}
+          {button}
           <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
         </a>
 
         {/* Subtext */}
         <p className="text-primary-foreground/70 text-sm md:text-base mt-8">
-          {t('subtext')}
+          {subtext}
         </p>
       </div>
     </section>

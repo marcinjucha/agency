@@ -1,23 +1,13 @@
-import { getTranslations } from 'next-intl/server'
 import { CheckCircle, Zap } from 'lucide-react'
+import type { QualificationBlock } from '@agency/database'
 
-export async function Qualification() {
-  const t = await getTranslations('qualification')
-
-  const items = [
-    t('item1'),
-    t('item2'),
-    t('item3'),
-    t('item4'),
-    t('item5'),
-  ]
-
+export function Qualification({ title, items, separator, techItem }: QualificationBlock) {
   return (
     <section className="py-16 md:py-24 bg-muted/50">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Title */}
         <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-10">
-          {t('title')}
+          {title}
         </h2>
 
         {/* Checklist */}
@@ -32,14 +22,14 @@ export async function Qualification() {
 
         {/* Separator */}
         <p className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-6">
-          {t('separator')}
+          {separator}
         </p>
 
         {/* Tech Qualification */}
         <div className="flex items-start gap-4 p-6 rounded-xl bg-primary/5 border border-primary/10">
           <Zap className="w-6 h-6 text-primary flex-shrink-0 mt-0.5" />
           <p className="text-lg text-foreground leading-relaxed font-medium">
-            {t('techItem')}
+            {techItem}
           </p>
         </div>
       </div>

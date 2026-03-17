@@ -1,30 +1,26 @@
-import { getTranslations } from 'next-intl/server'
 import { FileSpreadsheet, Mail, RefreshCw, UserX } from 'lucide-react'
+import type { ProblemsBlock } from '@agency/database'
 
 const PROBLEM_ICONS = [RefreshCw, FileSpreadsheet, Mail, UserX]
 
-export async function Problems() {
-  const t = await getTranslations('problems')
-
-  const items = [t('item1'), t('item2'), t('item3'), t('item4')]
-
+export function Problems({ title, stat, items, framing, hook }: ProblemsBlock) {
   return (
     <section className="py-16 md:py-24 bg-muted/50">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Title */}
         <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-8">
-          {t('title')}
+          {title}
         </h2>
 
         {/* Opening Stat */}
         <p className="text-xl text-foreground font-medium leading-relaxed mb-10">
-          {t('stat')}
+          {stat}
         </p>
 
         {/* Pain Points List */}
         <div className="space-y-4 mb-10">
           {items.map((text, i) => {
-            const Icon = PROBLEM_ICONS[i]
+            const Icon = PROBLEM_ICONS[i % PROBLEM_ICONS.length]
             return (
               <div key={i} className="flex items-start gap-4">
                 <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-destructive/10 flex items-center justify-center mt-0.5">
@@ -38,12 +34,12 @@ export async function Problems() {
 
         {/* Framing */}
         <p className="text-lg text-foreground font-medium leading-relaxed mb-6">
-          {t('framing')}
+          {framing}
         </p>
 
         {/* Closing Hook */}
         <p className="text-xl text-muted-foreground italic leading-relaxed">
-          {t('hook')}
+          {hook}
         </p>
       </div>
     </section>
