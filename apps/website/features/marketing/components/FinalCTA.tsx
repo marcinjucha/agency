@@ -1,43 +1,52 @@
 import { ArrowRight } from 'lucide-react'
 import type { CtaBlock } from '@agency/database'
+import { ScrollReveal } from './ScrollReveal'
 
 export function FinalCTA({ headline, description, button, subtext }: CtaBlock) {
   return (
     <section
       id="contact"
-      className="py-16 md:py-24 lg:py-32 bg-gradient-to-br from-primary to-primary/90 relative overflow-hidden"
+      className="relative py-24 md:py-32 lg:py-40 bg-background overflow-hidden"
       aria-label="Sekcja kontaktowa"
     >
-      {/* Decorative elements */}
-      <div className="absolute inset-0 opacity-10">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-primary-foreground rounded-full blur-3xl translate-x-1/2 -translate-y-1/2" />
-        <div className="absolute bottom-0 left-0 w-80 h-80 bg-primary-foreground rounded-full blur-3xl -translate-x-1/2 translate-y-1/2" />
+      {/* Prominent gradient background */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] rounded-full bg-primary/10 blur-[150px] -translate-y-1/2 animate-glow-pulse" />
+        <div className="absolute bottom-0 left-0 w-[500px] h-[500px] rounded-full bg-primary/5 blur-[120px] translate-y-1/3 -translate-x-1/4" />
+        <div className="absolute bottom-0 right-0 w-[400px] h-[400px] rounded-full bg-primary/5 blur-[100px] translate-y-1/3 translate-x-1/4" />
       </div>
 
-      <div className="relative z-10 max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-        {/* Headline */}
-        <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-primary-foreground mb-6 leading-tight">
-          {headline}
-        </h2>
+      {/* Gradient divider */}
+      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
 
-        {/* Description */}
-        <p className="text-lg md:text-xl text-primary-foreground/80 mb-10 max-w-2xl mx-auto leading-relaxed">
-          {description}
-        </p>
+      <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+        <ScrollReveal>
+          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-6 leading-tight tracking-tight max-w-3xl mx-auto">
+            {headline}
+          </h2>
+        </ScrollReveal>
 
-        {/* CTA Button */}
-        <a
-          href="#contact"
-          className="inline-flex items-center gap-3 bg-background text-foreground hover:bg-background/90 rounded-full px-10 py-5 text-lg font-semibold shadow-xl hover:shadow-2xl transition-all duration-200 group"
-        >
-          {button}
-          <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
-        </a>
+        <ScrollReveal delay={100}>
+          <p className="text-base md:text-lg text-muted-foreground mb-12 max-w-2xl mx-auto leading-relaxed">
+            {description}
+          </p>
+        </ScrollReveal>
 
-        {/* Subtext */}
-        <p className="text-primary-foreground/70 text-sm md:text-base mt-8">
-          {subtext}
-        </p>
+        <ScrollReveal delay={200}>
+          <a
+            href="#contact"
+            className="inline-flex items-center gap-3 bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl px-10 py-5 text-lg font-semibold shadow-2xl shadow-primary/30 hover:shadow-primary/50 hover:scale-[1.02] transition-all duration-300 group"
+          >
+            {button}
+            <ArrowRight className="w-5 h-5 transition-transform duration-300 group-hover:translate-x-1" />
+          </a>
+        </ScrollReveal>
+
+        <ScrollReveal delay={300}>
+          <p className="text-muted-foreground/60 text-sm mt-8">
+            {subtext}
+          </p>
+        </ScrollReveal>
       </div>
     </section>
   )

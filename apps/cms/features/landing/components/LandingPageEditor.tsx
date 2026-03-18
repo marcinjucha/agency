@@ -177,14 +177,33 @@ export function LandingPageEditor() {
   }
 
   if (isLoading) {
-    return <p className="text-muted-foreground text-sm">Ładowanie…</p>
+    return (
+      <div className="flex flex-col gap-6 animate-pulse">
+        <div className="space-y-3">
+          <div className="h-3 w-12 rounded bg-muted" />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="h-10 rounded-lg bg-muted" />
+            <div className="h-10 rounded-lg bg-muted" />
+          </div>
+          <div className="h-10 rounded-lg bg-muted" />
+        </div>
+        <div className="space-y-3">
+          <div className="h-3 w-16 rounded bg-muted" />
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="h-14 rounded-lg bg-muted" />
+          ))}
+        </div>
+      </div>
+    )
   }
 
   if (error) {
     return (
-      <p className="text-sm text-destructive">
-        Nie udało się załadować strony. Odśwież i spróbuj ponownie.
-      </p>
+      <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-4">
+        <p className="text-sm text-destructive font-medium">
+          Nie udalo sie zaladowac strony. Odswiez i sprobuj ponownie.
+        </p>
+      </div>
     )
   }
 
@@ -229,16 +248,26 @@ export function LandingPageEditor() {
         <p className="text-xs font-semibold uppercase text-muted-foreground tracking-wide">Sekcje</p>
         <div className="flex flex-col gap-2">
           {activeBlocks.map((block, index) => (
-            <div key={index} className="border border-border rounded-md">
+            <div
+              key={index}
+              className={`border rounded-lg transition-colors ${
+                expandedIndex === index
+                  ? 'border-primary/30 bg-primary/5'
+                  : 'border-border hover:border-border/80'
+              }`}
+            >
               {/* Block header row */}
               <div className="flex items-center gap-2 px-4 py-3">
-                <span className="flex-1 text-sm font-medium">
+                <span className="text-xs font-semibold text-muted-foreground tabular-nums w-6">
+                  {index + 1}.
+                </span>
+                <span className="flex-1 text-sm font-medium text-foreground">
                   {BLOCK_TYPE_LABELS[block.type]}
                 </span>
                 <Button
                   variant="ghost"
                   size="sm"
-                  aria-label="Przesuń w górę"
+                  aria-label="Przesun w gore"
                   disabled={index === 0}
                   onClick={() => moveBlock(index, 'up')}
                 >
@@ -247,7 +276,7 @@ export function LandingPageEditor() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  aria-label="Przesuń w dół"
+                  aria-label="Przesun w dol"
                   disabled={index === activeBlocks.length - 1}
                   onClick={() => moveBlock(index, 'down')}
                 >
@@ -256,16 +285,16 @@ export function LandingPageEditor() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  aria-label="Usuń sekcję"
+                  aria-label="Usun sekcje"
                   onClick={() => deleteBlock(index)}
                   className="text-destructive hover:text-destructive"
                 >
-                  Usuń
+                  Usun
                 </Button>
                 <Button
                   variant="ghost"
                   size="sm"
-                  aria-label={expandedIndex === index ? 'Zwiń' : 'Rozwiń'}
+                  aria-label={expandedIndex === index ? 'Zwin' : 'Rozwin'}
                   onClick={() => setExpandedIndex((prev) => (prev === index ? null : index))}
                 >
                   {expandedIndex === index ? '▲' : '▼'}
@@ -274,7 +303,7 @@ export function LandingPageEditor() {
 
               {/* Block editor (expanded) */}
               {expandedIndex === index && (
-                <div className="border-t border-border px-4 py-4">
+                <div className="border-t border-border/50 px-4 py-4">
                   <BlockFieldEditor
                     block={block}
                     onChange={(updated) => updateBlock(index, updated)}
@@ -311,27 +340,53 @@ export function LandingPageEditor() {
       </div>
 
       {/* Publish toggle + save */}
-      <div className="flex items-center gap-4 pt-2 border-t border-border">
-        <label className="flex items-center gap-2 cursor-pointer select-none">
-          <input
-            type="checkbox"
-            checked={activePublished}
-            onChange={(e) => setIsPublished(e.target.checked)}
-            className="h-4 w-4 accent-primary"
-            aria-label="Publikuj stronę"
-          />
-          <span className="text-sm">Publikuj stronę</span>
+      <div className="flex items-center justify-between gap-4 pt-4 border-t border-border">
+        <label className="flex items-center gap-3 cursor-pointer select-none">
+          <div
+            role="switch"
+            aria-checked={activePublished}
+            aria-label="Publikuj strone"
+            tabIndex={0}
+            onClick={() => setIsPublished(!activePublished)}
+            onKeyDown={(e) => {
+              if (e.key === ' ' || e.key === 'Enter') {
+                e.preventDefault()
+                setIsPublished(!activePublished)
+              }
+            }}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${
+              activePublished ? 'bg-primary' : 'bg-muted'
+            }`}
+          >
+            <span
+              className={`inline-block h-4 w-4 rounded-full bg-background shadow-sm transition-transform ${
+                activePublished ? 'translate-x-6' : 'translate-x-1'
+              }`}
+            />
+          </div>
+          <span className="text-sm font-medium text-foreground">
+            {activePublished ? 'Opublikowana' : 'Szkic'}
+          </span>
         </label>
 
-        <Button onClick={handleSave} disabled={saveState === 'saving' || !page}>
-          {saveLabel[saveState]}
-        </Button>
-
-        {saveState === 'error' && (
-          <p className="text-sm text-destructive">
-            Nie udało się zapisać. Spróbuj ponownie.
-          </p>
-        )}
+        <div className="flex items-center gap-3">
+          {saveState === 'error' && (
+            <p className="text-sm text-destructive">
+              Nie udalo sie zapisac.
+            </p>
+          )}
+          <Button
+            onClick={handleSave}
+            disabled={saveState === 'saving' || !page}
+            className={
+              saveState === 'saved'
+                ? 'bg-primary/80'
+                : undefined
+            }
+          >
+            {saveLabel[saveState]}
+          </Button>
+        </div>
       </div>
     </div>
   )

@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, FileText, Inbox, CalendarCheck, Calendar, Settings, LogOut, Mail, Globe } from 'lucide-react'
+import { LayoutDashboard, FileText, Inbox, CalendarCheck, Calendar, Settings, LogOut, Mail, Globe, Newspaper } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 
@@ -14,6 +14,7 @@ const menuItems = [
   { href: '/admin/calendar', label: 'Calendar', icon: Calendar },
   { href: '/admin/email-templates', label: 'Email Templates', icon: Mail },
   { href: '/admin/landing-page', label: 'Landing Page', icon: Globe },
+  { href: '/admin/blog', label: 'Blog', icon: Newspaper },
   { href: '/admin/settings', label: 'Settings', icon: Settings },
 ]
 
@@ -29,13 +30,13 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="w-64 bg-gray-900 text-white flex flex-col h-screen">
+    <aside className="w-64 bg-card border-r border-border flex flex-col h-screen">
       <div className="p-6">
-        <h1 className="text-xl font-bold">Halo Efekt</h1>
-        <p className="text-gray-400 text-sm mt-1">Admin Panel</p>
+        <h1 className="text-xl font-bold text-foreground">Halo Efekt</h1>
+        <p className="text-muted-foreground text-sm mt-1">Admin Panel</p>
       </div>
 
-      <nav className="flex-1 px-4">
+      <nav className="flex-1 px-3 space-y-1">
         {menuItems.map((item) => {
           const Icon = item.icon
           const isActive = pathname === item.href
@@ -44,26 +45,26 @@ export function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex items-center gap-3 px-4 py-3 rounded-lg mb-2 transition-colors ${
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                 isActive
-                  ? 'bg-blue-600 text-white'
-                  : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
               }`}
             >
-              <Icon size={20} />
+              <Icon size={18} />
               <span>{item.label}</span>
             </Link>
           )
         })}
       </nav>
 
-      <div className="p-4 border-t border-gray-800">
+      <div className="p-3 border-t border-border">
         <button
           onClick={handleLogout}
-          className="flex items-center gap-3 px-4 py-3 rounded-lg w-full text-gray-300 hover:bg-gray-800 hover:text-white transition-colors"
+          className="flex items-center gap-3 px-3 py-2.5 rounded-lg w-full text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
         >
-          <LogOut size={20} />
-          <span>Logout</span>
+          <LogOut size={18} />
+          <span>Wyloguj</span>
         </button>
       </div>
     </aside>

@@ -1,14 +1,16 @@
 import type { NextConfig } from 'next'
-import createNextIntlPlugin from 'next-intl/plugin'
-
-const withNextIntl = createNextIntlPlugin()
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   transpilePackages: ['@agency/ui', '@agency/database', '@agency/validators', '@agency/calendar'],
 
   images: {
-    remotePatterns: [],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'legal-mind-bucket.s3.eu-central-1.amazonaws.com',
+      },
+    ],
   },
 
   env: {
@@ -17,4 +19,4 @@ const nextConfig: NextConfig = {
   },
 }
 
-export default withNextIntl(nextConfig)
+export default nextConfig
