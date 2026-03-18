@@ -575,8 +575,83 @@ features:
         - Database performance (connections, queries/sec)
 
   phase_6_marketing:
+    - name: "Blog / Articles with WYSIWYG Editor"
+      status: "complete"
+      why: "CMS users create and manage blog articles for agency marketing without code. Public site displays blog listing, articles, and draft previews with SEO optimization."
+      acceptance_criteria:
+        - criterion: "Tiptap WYSIWYG editor with full formatting toolbar (bold, italic, headings, links, images, lists, blockquote, code, alignment)"
+          verified: true
+        - criterion: "Blog post management UI: create, edit, delete with draft/publish workflow"
+          verified: true
+        - criterion: "Blog list with search, status badges, reading time display"
+          verified: true
+        - criterion: "Auto-generated Polish slugs (handles ą, ę, ś, etc.)"
+          verified: true
+        - criterion: "AWS S3 cover image upload with presigned URLs (direct browser-to-S3)"
+          verified: true
+        - criterion: "SEO metadata management (title, description, OG image, keywords)"
+          verified: true
+        - criterion: "Website /blog listing page with hero, category filters, featured post"
+          verified: true
+        - criterion: "Website /blog/[slug] detail page with prose typography, cover image, metadata"
+          verified: true
+        - criterion: "/blog/preview/[token] draft preview with preview banner and noindex"
+          verified: true
+        - criterion: "Database schema with RLS (owner writes, published visible to all)"
+          verified: true
+        - criterion: "ISR revalidate=60 for performance, sitemap.ts integration"
+          verified: true
+      tech_decisions:
+        - decision: "Tiptap over Plate.js"
+          rationale: "Headless architecture, full styling control, stable API, JSON storage fits JSONB pattern"
+        - decision: "HTML pre-rendered on CMS save via @tiptap/html"
+          rationale: "Website uses stored html_body → no Tiptap dependency on public site, better performance"
+        - decision: "S3 presigned URLs for image upload"
+          rationale: "Direct browser-to-S3, no server proxy, secure 15-minute expiry, reduces server load"
+        - decision: "Single-tenant blog (no tenant_id)"
+          rationale: "haloefekt.pl blog promotes agency marketing, not per-tenant customization"
+        - decision: "createAnonClient() for website queries"
+          rationale: "Works at build time with generateStaticParams, no cookies required"
+      dependencies: []
+      notes: |
+        2026-03-18: Blog Feature COMPLETE (AAA-T-47)
+
+        DATABASE:
+        - blog_posts table (slug UNIQUE, title, excerpt, content JSONB, html_body, cover_image_url, category, author_name, seo_metadata JSONB, is_published, published_at, estimated_reading_time, preview_token)
+        - RLS: owner writes, authenticated reads all, anon reads published only
+        - Indexes on slug, published_at, category, preview_token
+
+        CMS IMPLEMENTATION:
+        - apps/cms/features/blog/ (types.ts, queries.ts, queries.server.ts, validation.ts, utils.ts, actions.ts)
+        - TiptapEditor.tsx: Editor instance with extensions (bold, italic, heading, link, image, etc.)
+        - EditorToolbar.tsx: Formatting buttons with keyboard shortcuts
+        - BlogPostEditor.tsx: 2-column form (content on left, settings/SEO on right)
+        - BlogPostList.tsx: List with search, status badges, actions
+        - /admin/blog routes: list, create, edit
+        - /api/upload/route.ts: S3 presigned URL generation
+        - Sidebar navigation: Blog item added
+
+        WEBSITE IMPLEMENTATION:
+        - apps/website/features/blog/ (types.ts, queries.ts, utils.ts, components)
+        - BlogListPage.tsx: /blog with hero, category filters, featured card, grid
+        - BlogArticlePage.tsx: /blog/[slug] with prose, metadata, cover image
+        - /blog/layout.tsx, /blog/page.tsx, /blog/[slug]/page.tsx, /blog/preview/[token]/page.tsx
+        - sitemap.ts: includes blog URLs
+        - Navbar.tsx: Blog link added
+        - next.config.ts: S3 remotePatterns
+        - globals.css: .blog-prose CSS for article typography
+
+        TESTING & VERIFICATION:
+        - Build passes for both CMS and Website
+        - Slug generation tested with Polish characters
+        - S3 presigned URL integration working
+        - ISR revalidation functioning correctly
+        - SEO metadata properly generated
+        - Draft preview token validation working
+        - All acceptance criteria verified
+
     - name: "Landing Page CMS"
-      status: "in-progress"
+      status: "complete"
       why: "Allow business users to edit marketing website sections via block editor, no code deployment needed"
       acceptance_criteria:
         - criterion: "9 block types (navbar, hero, problems, guarantee, riskReversal, benefits, qualification, cta, footer)"
@@ -680,7 +755,7 @@ status_summary:
   phase_3: "✅ Complete (100%) - Calendar Integration FINISHED"
   phase_4: "✅ Complete (100%) - UI/UX Improvements"
   phase_5: "✅ Complete (100%) - Email Notifications E2E tested"
-  phase_6: "🚀 In Progress (25%) - Landing Page CMS complete, Marketing & Polish in progress"
+  phase_6: "🚀 In Progress (50%) - Landing Page CMS & Blog Feature complete, Marketing Polish in progress"
 
 critical_path:
   - "Phase 1 Foundation (✅ COMPLETE)"

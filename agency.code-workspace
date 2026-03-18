@@ -9,6 +9,9 @@
     {
       "path": "../claude-dev",
     },
+    {
+      "path": "../../../Scandit/claude",
+    },
   ],
   "settings": {
     "typescript.tsdk": "node_modules/typescript/lib",

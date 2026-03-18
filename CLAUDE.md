@@ -128,6 +128,7 @@ agency/
 | **nextjs-patterns**      | `.claude/skills/nextjs-patterns/SKILL.md`      | Next.js routes, Server Actions (structured returns, no throws), foundation files (types/queries/validation), async params, correct Supabase client            |
 | **notion-patterns**      | `.claude/skills/notion-patterns/SKILL.md`      | Notion MCP tools — task status updates, project tracking. Properties are CASE-SENSITIVE. Contains Agency database IDs and filter rules                        |
 | **ui-components**        | `.claude/skills/ui-components/SKILL.md`        | React components, shadcn/ui design system, WCAG 2.1 AA accessibility, responsive design. Controller for checkbox arrays, TanStack Query CMS-only, 4 UI states |
+| **ui-design**            | `.claude/skills/ui-design/SKILL.md`            | Visual design decisions — layout choice, color strategy, spacing, typography, animations. Dark/moody tonality (Linear/Vercel aesthetic), decision frameworks when stuck, quality gates before shipping UI |
 
 ---
 

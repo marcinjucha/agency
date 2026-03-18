@@ -47,8 +47,42 @@
 - `apps/cms/features/email/types.ts` — added `{{responseUrl}}` to TEMPLATE_VARIABLES
 - `supabase/migrations/20260313000000_fix_form_confirmation_template.sql` — seed migration
 
+## Blog Feature — COMPLETED (2026-03-18)
+
+**Scope:** Blog CMS (WYSIWYG Tiptap editor) + public website listing/detail + S3 image upload + draft preview
+
+**Key decisions:**
+- Single-tenant (no tenant_id) — blog promotes the agency, same pattern as `landing_pages`
+- Tiptap editor (not Plate.js) — headless, full Tailwind/shadcn control, JSON storage (JSONB)
+- HTML pre-rendered on CMS save (`html_body` column) — website uses SSR with stored HTML, no Tiptap on website
+- S3 upload: bucket `legal-mind-bucket`, region `eu-central-1`, folder `haloefekt/blog/`, presigned URLs
+- Draft preview via `preview_token` (UUID) — service role client bypasses RLS
+- Navbar rendered per-page (not in layout) — blog pages have own `app/blog/layout.tsx` with Navbar+Footer
+
+**Files created:**
+- Migration: `supabase/migrations/20260318000000_create_blog_posts.sql`
+- CMS: `features/blog/` (types, queries, queries.server, validation, utils, actions, components/)
+- Website: `features/blog/` (types, queries, utils, components/), `app/blog/layout.tsx`
+- Routes: `/admin/blog`, `/admin/blog/new`, `/admin/blog/[id]`, `/blog`, `/blog/[slug]`, `/blog/preview/[token]`
+
 ## Feedback & Corrections
 
+- **validator-agent misses P2 architecture violations** — Phase 8 catches functional bugs (P0/P1) but not code organization issues: wrong file placement, code duplication, missing theme tokens. These require a separate architecture audit with explicit ADR-005 checklist. (2026-03-18)
+- **"trustcode.pl" → user meant AWS bucket only** — When user mentioned adding trustcode.pl to remotePatterns in context of AWS, they meant the S3 bucket hostname only, not a wildcard *.trustcode.pl domain. (2026-03-18)
+
+## Bugs Found
+
+- **Tiptap SSR hydration error** — `useEditor` without `immediatelyRender: false` causes hydration mismatch in Next.js. Fix: add `immediatelyRender: false` to `useEditor` options. (2026-03-18)
+- **Tiptap extensions in Server Actions** — "Cannot access textAlign on the server" error. Tiptap extensions (TextAlign, StarterKit etc.) contain client references and cannot be imported in `'use server'` files. Fix: generate HTML on the client side (in component), pass `html_body` + `estimated_reading_time` as plain values to the server action. (2026-03-18)
+- **Non-async exports in `'use server'` files** — All exported functions from a `'use server'` file must be async. Non-async helpers cause build error "Server Actions must be async functions". Fix: move helpers to a separate `utils.ts` file without `'use server'`. (2026-03-18)
+- **`generateStaticParams` with cookie-based Supabase client** — `cookies()` called outside request scope at build time. `generateStaticParams` runs at build time, so `createClient()` (which uses cookies) fails. Fix: use `createAnonClient()` (service role, no cookies) for all website blog queries. (2026-03-18)
+- **React Hook Form `setValue` + `handleSubmit` race condition** — Calling `setValue('is_published', x)` then immediately `handleSubmit(onSave)()` may read stale form value. Fix: pass the value as a parameter to `onSave` directly instead of relying on form state flush. (2026-03-18)
+- **SEO metadata field name mismatch** — CMS stored `seo_metadata.ogImage` (camelCase) but website type had `og_image_url` (snake_case). OG image never resolved. Fix: align both to `ogImage`. (2026-03-18)
+
 ## Domain Concepts
+
+- **AWS S3 for media uploads** — Bucket: `legal-mind-bucket`, region: `eu-central-1`, folder: `haloefekt/blog/`. Credentials stored as `BUCKET_ACCESS_KEY` + `BUCKET_SECRET_KEY` in `apps/cms/.env.local`. Same bucket holds n8n backups — new uploads go into separate folder. S3 bucket policy allows public GET; CORS must allow PUT from CMS domains for presigned upload to work. (2026-03-18)
+- **`validation.ts` = Zod schemas only** — Utility functions (slug generation, date formatting, reading time) belong in `utils.ts`, not `validation.ts`. Validator caught this as architecture violation during audit. (2026-03-18)
+- **CMS query file split pattern** — When a feature needs both browser-client queries (for TanStack Query in components) and server-client queries (for SSR route pages), split into `queries.ts` (browser) and `queries.server.ts` (server). Mixing both in one file causes module boundary errors. (2026-03-18)
 
 ## Preferences
