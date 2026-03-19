@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { blogPostSchema, type BlogPostFormData } from './validation'
 import { toBlogPost, type BlogPost } from './types'
+import { parseContent } from './utils'
 
 // --- Server Actions ---
 
@@ -24,7 +25,7 @@ export async function createBlogPost(
       title: parsed.data.title,
       slug: parsed.data.slug,
       excerpt: parsed.data.excerpt || null,
-      content: parsed.data.content,
+      content: parseContent(parsed.data.content),
       html_body: data.html_body || null,
       cover_image_url: parsed.data.cover_image_url || null,
       category: parsed.data.category || null,
@@ -66,7 +67,6 @@ export async function updateBlogPost(
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return { success: false, error: 'Nie zalogowany' }
 
-    // Fetch existing post to check published_at
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: existing, error: fetchError } = await (supabase as any)
       .from('blog_posts')
@@ -76,14 +76,13 @@ export async function updateBlogPost(
 
     if (fetchError) throw new Error(fetchError.message)
 
-    // Set published_at only on first publish
     const shouldSetPublishedAt = parsed.data.is_published && !existing.published_at
 
     const updatePayload = {
       title: parsed.data.title,
       slug: parsed.data.slug,
       excerpt: parsed.data.excerpt || null,
-      content: parsed.data.content,
+      content: parseContent(parsed.data.content),
       html_body: data.html_body || null,
       cover_image_url: parsed.data.cover_image_url || null,
       category: parsed.data.category || null,

@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import type { Editor } from '@tiptap/react'
 import { Button, Input } from '@agency/ui'
 import {
@@ -21,6 +21,7 @@ import {
   Minus,
   Link,
   Image,
+  Globe,
   Undo2,
   Redo2,
   X,
@@ -29,9 +30,10 @@ import {
 
 interface EditorToolbarProps {
   editor: Editor | null
+  onImageUpload?: (file: File) => Promise<string>
 }
 
-export function EditorToolbar({ editor }: EditorToolbarProps) {
+export function EditorToolbar({ editor, onImageUpload }: EditorToolbarProps) {
   const [linkInput, setLinkInput] = useState<{ visible: boolean; url: string }>({
     visible: false,
     url: '',
@@ -40,6 +42,7 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
     visible: false,
     url: '',
   })
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const applyLink = useCallback(() => {
     if (!editor || !linkInput.url) return
@@ -62,6 +65,22 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
     editor.chain().focus().setImage({ src: imageInput.url }).run()
     setImageInput({ visible: false, url: '' })
   }, [editor, imageInput.url])
+
+  const handleFileSelect = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0]
+      if (!file || !editor || !onImageUpload) return
+      // Reset input so re-selecting the same file triggers onChange
+      e.target.value = ''
+      try {
+        const url = await onImageUpload(file)
+        editor.chain().focus().setImage({ src: url }).run()
+      } catch {
+        // Error handled by parent (TiptapEditor upload state)
+      }
+    },
+    [editor, onImageUpload]
+  )
 
   if (!editor) return null
 
@@ -218,12 +237,22 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
           </ToolbarButton>
           <ToolbarButton
             onClick={() => {
+              setLinkInput({ visible: false, url: '' })
+              setImageInput({ visible: false, url: '' })
+              fileInputRef.current?.click()
+            }}
+            title="Wstaw obraz (upload)"
+          >
+            <Image className="h-4 w-4" />
+          </ToolbarButton>
+          <ToolbarButton
+            onClick={() => {
               setImageInput({ visible: !imageInput.visible, url: '' })
               setLinkInput({ visible: false, url: '' })
             }}
-            title="Obraz"
+            title="Wstaw obraz z URL"
           >
-            <Image className="h-4 w-4" />
+            <Globe className="h-4 w-4" />
           </ToolbarButton>
         </ToolbarGroup>
 
@@ -318,6 +347,15 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
           </Button>
         </div>
       )}
+
+      {/* Hidden file input for image upload */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleFileSelect}
+      />
     </div>
   )
 }
@@ -354,6 +392,7 @@ function ToolbarButton({ onClick, active, disabled, title, children }: ToolbarBu
       onClick={onClick}
       disabled={disabled}
       title={title}
+      aria-label={title}
     >
       {children}
     </Button>

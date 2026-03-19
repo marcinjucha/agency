@@ -3,7 +3,7 @@ project:
   description: "SaaS platform for businesses to streamline client intake through smart surveys, calendar booking, and AI qualification — built by Halo Efekt"
   version: "2.0.0"
   status: "in-progress"
-  last_updated: "2026-03-17"
+  last_updated: "2026-03-19"
 
 # IMPORTANT: This file focuses on WHY (architecture, decisions, rationale)
 # For detailed WHAT (acceptance criteria, file paths, task tracking), see Notion:
@@ -649,6 +649,30 @@ features:
         - SEO metadata properly generated
         - Draft preview token validation working
         - All acceptance criteria verified
+
+        2026-03-19: Post-Launch Improvements
+
+        NEW FEATURES:
+        - Creatable category combobox (shadcn Popover + Command/cmdk)
+        - Tiptap S3 image upload: drag-drop, paste, toolbar file picker (5MB limit)
+        - Sticky editor toolbar with overflow-clip + top offset
+        - BubbleMenu: floating formatting toolbar on text selection
+        - Custom blog 404 page (not-found.tsx) with "Wróć do bloga" link
+        - Website blog images centered (.blog-prose img)
+
+        BUG FIXES:
+        - Preview link 404: window.location.origin → NEXT_PUBLIC_WEBSITE_URL
+        - Images lost after save: JSON.stringify content before Server Action (Flight protocol strips attrs)
+
+        SECURITY FIXES:
+        - S3 upload API: ALLOWED_FOLDERS allowlist + path traversal prevention
+        - S3 upload API: ALLOWED_CONTENT_TYPES server-side validation
+
+        CODE QUALITY:
+        - Shared uploadImageToS3() in utils.ts (was duplicated in 2 components)
+        - parseContent() moved from actions.ts to utils.ts (non-async in 'use server' fragile)
+        - aria-label on all icon-only toolbar buttons (WCAG 2.1 AA)
+        - New packages/ui components: Popover, Command (cmdk v1.1.1)
 
     - name: "Landing Page CMS"
       status: "complete"

@@ -6,6 +6,49 @@ import Underline from '@tiptap/extension-underline'
 import TextAlign from '@tiptap/extension-text-align'
 import type { TiptapContent } from './types'
 
+// --- S3 upload helper (shared by cover image + inline image upload) ---
+
+const MAX_UPLOAD_SIZE = 5 * 1024 * 1024 // 5MB
+
+export async function uploadImageToS3(file: File, folder = 'haloefekt/blog'): Promise<string> {
+  if (file.size > MAX_UPLOAD_SIZE) {
+    throw new Error('Plik jest za duzy. Maksymalny rozmiar to 5MB.')
+  }
+  if (!file.type.startsWith('image/')) {
+    throw new Error('Dozwolone sa tylko pliki graficzne.')
+  }
+
+  const res = await fetch('/api/upload', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ fileName: file.name, contentType: file.type, folder }),
+  })
+  if (!res.ok) throw new Error('Nie udalo sie wygenerowac URL do uploadu')
+  const { uploadUrl, fileUrl } = await res.json()
+
+  const uploadRes = await fetch(uploadUrl, {
+    method: 'PUT',
+    headers: { 'Content-Type': file.type },
+    body: file,
+  })
+  if (!uploadRes.ok) throw new Error('Upload nie powiodl sie')
+
+  return fileUrl
+}
+
+// --- Content parsing (for Server Action JSON.stringify round-trip) ---
+
+export function parseContent(content: unknown): unknown {
+  if (typeof content === 'string') {
+    try {
+      return JSON.parse(content)
+    } catch {
+      return content
+    }
+  }
+  return content
+}
+
 const tiptapExtensions = [
   StarterKit,
   Link,

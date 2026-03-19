@@ -27,10 +27,11 @@ import {
 } from '@agency/ui'
 import { blogPostSchema, type BlogPostFormData } from '../validation'
 import { createBlogPost, updateBlogPost, deleteBlogPost } from '../actions'
-import { generateHtmlFromContent, calculateReadingTime, generateSlug } from '../utils'
+import { generateHtmlFromContent, calculateReadingTime, generateSlug, uploadImageToS3 } from '../utils'
 import { blogKeys } from '../queries'
 import type { BlogPost, TiptapContent } from '../types'
 import { TiptapEditor } from './TiptapEditor'
+import { CategoryCombobox } from './CategoryCombobox'
 
 // --- Types ---
 
@@ -157,6 +158,8 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
 
     const payload = {
       ...(publishOverride !== undefined ? { ...data, is_published: publishOverride } : data),
+      // Stringify content to preserve attrs (React Server Action serialization strips them)
+      content: JSON.stringify(data.content),
       html_body,
       estimated_reading_time,
     }
@@ -216,28 +219,7 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
     setErrorMessage(null)
 
     try {
-      const res = await fetch('/api/upload', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fileName: file.name,
-          contentType: file.type,
-          folder: 'haloefekt/blog',
-        }),
-      })
-
-      if (!res.ok) throw new Error('Nie udalo sie wygenerowac URL do uploadu')
-
-      const { uploadUrl, fileUrl } = await res.json()
-
-      const uploadRes = await fetch(uploadUrl, {
-        method: 'PUT',
-        headers: { 'Content-Type': file.type },
-        body: file,
-      })
-
-      if (!uploadRes.ok) throw new Error('Upload nie powiodl sie')
-
+      const fileUrl = await uploadImageToS3(file)
       setValue('cover_image_url', fileUrl)
       setCoverPreview(fileUrl)
     } catch (err) {
@@ -403,14 +385,16 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
               <CardContent className="space-y-4">
                 {/* Category */}
                 <div className="space-y-1.5">
-                  <Label htmlFor="category" className="text-xs">
-                    Kategoria
-                  </Label>
-                  <Input
-                    id="category"
-                    {...register('category')}
-                    placeholder="np. Marketing, AI"
-                    className="h-8 text-sm"
+                  <Label className="text-xs">Kategoria</Label>
+                  <Controller
+                    name="category"
+                    control={control}
+                    render={({ field }) => (
+                      <CategoryCombobox
+                        value={field.value ?? ''}
+                        onChange={field.onChange}
+                      />
+                    )}
                   />
                 </div>
 
@@ -639,7 +623,7 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
                       size="sm"
                       className="h-auto p-0 text-xs text-primary"
                       onClick={() => {
-                        const url = `${window.location.origin}/blog/preview/${blogPost.preview_token}`
+                        const url = `${process.env.NEXT_PUBLIC_WEBSITE_URL || ''}/blog/preview/${blogPost.preview_token}`
                         navigator.clipboard.writeText(url)
                       }}
                     >

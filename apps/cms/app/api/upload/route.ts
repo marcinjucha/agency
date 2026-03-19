@@ -8,6 +8,9 @@ const BUCKET = 'legal-mind-bucket'
 const REGION = 'eu-central-1'
 const DEFAULT_FOLDER = 'haloefekt/blog'
 
+const ALLOWED_FOLDERS = ['haloefekt/blog']
+const ALLOWED_CONTENT_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml', 'image/avif']
+
 function getS3Client() {
   return new S3Client({
     region: REGION,
@@ -40,7 +43,22 @@ export async function POST(request: Request) {
       )
     }
 
-    const key = `${folder}/${Date.now()}-${randomUUID()}-${fileName}`
+    if (!ALLOWED_CONTENT_TYPES.includes(contentType)) {
+      return NextResponse.json(
+        { error: 'Niedozwolony typ pliku. Dozwolone: JPEG, PNG, GIF, WebP, SVG, AVIF.' },
+        { status: 400 }
+      )
+    }
+
+    const sanitizedFolder = folder.replace(/\.\./g, '').replace(/^\/+/, '')
+    if (!ALLOWED_FOLDERS.some((allowed) => sanitizedFolder.startsWith(allowed))) {
+      return NextResponse.json(
+        { error: 'Niedozwolony folder docelowy.' },
+        { status: 400 }
+      )
+    }
+
+    const key = `${sanitizedFolder}/${Date.now()}-${randomUUID()}-${fileName}`
 
     const s3 = getS3Client()
     const command = new PutObjectCommand({

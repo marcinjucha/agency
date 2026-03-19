@@ -47,3 +47,18 @@ export {
 export { Textarea } from './components/ui/textarea'
 export { Checkbox } from './components/ui/checkbox'
 export { Skeleton } from './components/ui/skeleton'
+export {
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+  PopoverAnchor,
+} from './components/ui/popover'
+export {
+  Command,
+  CommandInput,
+  CommandList,
+  CommandEmpty,
+  CommandGroup,
+  CommandItem,
+  CommandSeparator,
+} from './components/ui/command'
