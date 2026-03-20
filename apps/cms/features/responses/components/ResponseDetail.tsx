@@ -259,10 +259,10 @@ export function ResponseDetail({ responseId }: ResponseDetailProps) {
               <Badge
                 className={`px-3 py-1 rounded-full text-sm font-medium ${
                   response.ai_qualification.recommendation === 'QUALIFIED'
-                    ? 'bg-green-100 text-green-800'
+                    ? 'bg-success/15 text-success'
                     : response.ai_qualification.recommendation === 'DISQUALIFIED'
-                      ? 'bg-red-100 text-red-800'
-                      : 'bg-yellow-100 text-yellow-800'
+                      ? 'bg-destructive/15 text-red-400'
+                      : 'bg-yellow-500/15 text-yellow-400'
                 }`}
               >
                 {response.ai_qualification.recommendation}

@@ -17,7 +17,7 @@ export async function CalendarTokenStatus() {
       <div className="flex flex-col sm:flex-row sm:items-center gap-4">
         {status === 'connected' && (
           <>
-            <Badge className="bg-green-100 text-green-800 border-green-200 w-fit">
+            <Badge className="bg-success/15 text-success border-success/30 w-fit">
               Połączony ✓
             </Badge>
             {expiresAt && (
@@ -39,7 +39,7 @@ export async function CalendarTokenStatus() {
 
         {status === 'expired' && (
           <>
-            <Badge className="bg-amber-100 text-amber-800 border-amber-200 w-fit">
+            <Badge className="bg-yellow-500/15 text-yellow-400 border-yellow-500/30 w-fit">
               Wygasł ⚠
             </Badge>
             <Button asChild variant="outline" className="w-full sm:w-auto">
@@ -50,7 +50,7 @@ export async function CalendarTokenStatus() {
 
         {status === 'disconnected' && (
           <>
-            <Badge className="bg-red-100 text-red-800 border-red-200 w-fit">
+            <Badge className="bg-destructive/15 text-red-400 border-destructive/30 w-fit">
               Niepołączony
             </Badge>
             <Button asChild className="w-full sm:w-auto">

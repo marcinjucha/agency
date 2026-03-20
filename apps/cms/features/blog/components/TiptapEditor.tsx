@@ -213,7 +213,7 @@ export function TiptapEditor({
         .tiptap-editor-content p.is-editor-empty:first-child::before {
           content: attr(data-placeholder);
           float: left;
-          color: var(--muted-foreground, #a1a1aa);
+          color: var(--color-muted-foreground, #52525b);
           opacity: 0.5;
           pointer-events: none;
           height: 0;
@@ -224,7 +224,7 @@ export function TiptapEditor({
         .tiptap-editor-content {
           font-size: 1.0625rem;
           line-height: 1.75;
-          color: var(--foreground);
+          color: var(--color-foreground);
         }
 
         /* Headings */
@@ -266,7 +266,7 @@ export function TiptapEditor({
 
         /* Links */
         .tiptap-editor-content a {
-          color: var(--primary);
+          color: var(--color-primary);
           text-decoration: underline;
           text-underline-offset: 3px;
           transition: opacity 0.15s;
@@ -299,16 +299,16 @@ export function TiptapEditor({
 
         /* Blockquote */
         .tiptap-editor-content blockquote {
-          border-left: 3px solid var(--border);
+          border-left: 3px solid var(--color-border);
           padding-left: 1.25rem;
           margin: 1.5rem 0;
           font-style: italic;
-          color: var(--muted-foreground);
+          color: var(--color-muted-foreground);
         }
 
         /* Code blocks */
         .tiptap-editor-content pre {
-          background: var(--muted, #f4f4f5);
+          background: var(--color-muted, #27272a);
           border-radius: 0.5rem;
           padding: 1rem 1.25rem;
           margin: 1.5rem 0;
@@ -327,7 +327,7 @@ export function TiptapEditor({
 
         /* Inline code */
         .tiptap-editor-content code {
-          background: var(--muted, #f4f4f5);
+          background: var(--color-muted, #27272a);
           border-radius: 0.25rem;
           padding: 0.125rem 0.375rem;
           font-size: 0.875em;
@@ -337,7 +337,7 @@ export function TiptapEditor({
         /* Horizontal rule */
         .tiptap-editor-content hr {
           border: none;
-          border-top: 1px solid var(--border);
+          border-top: 1px solid var(--color-border);
           margin: 2rem 0;
         }
 
