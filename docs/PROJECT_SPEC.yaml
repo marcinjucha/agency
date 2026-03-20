@@ -3,7 +3,7 @@ project:
   description: "SaaS platform for businesses to streamline client intake through smart surveys, calendar booking, and AI qualification — built by Halo Efekt"
   version: "2.0.0"
   status: "in-progress"
-  last_updated: "2026-03-19"
+  last_updated: "2026-03-20"
 
 # IMPORTANT: This file focuses on WHY (architecture, decisions, rationale)
 # For detailed WHAT (acceptance criteria, file paths, task tracking), see Notion:
@@ -678,7 +678,7 @@ features:
       status: "complete"
       why: "Allow business users to edit marketing website sections via block editor, no code deployment needed"
       acceptance_criteria:
-        - criterion: "9 block types (navbar, hero, problems, guarantee, riskReversal, benefits, qualification, cta, footer)"
+        - criterion: "7 block types (navbar, hero, identification, problems, process, results, cta, footer)"
           verified: true
         - criterion: "Block editor in CMS with live preview"
           verified: true
@@ -688,15 +688,15 @@ features:
           verified: true
         - criterion: "Website homepage fetches from database, falls back to DEFAULT_BLOCKS"
           verified: true
-        - criterion: "All 9 marketing components refactored to accept block props"
+        - criterion: "All 7 marketing components accept block props"
           verified: true
         - criterion: "ISR revalidate=3600 for performance"
           verified: true
       tech_decisions:
         - decision: "Shared landing page (no tenant_id)"
           rationale: "haloefekt.pl is company marketing page, not per-tenant customization"
-        - decision: "9 block types with BLOCK_TYPE_LABELS"
-          rationale: "Covers all marketing sections (hero, problems, benefits, CTA, footer)"
+        - decision: "7 block types with BLOCK_TYPE_LABELS (redesigned from 9)"
+          rationale: "Merged overlapping sections for stronger messaging: Guarantee+RiskReversal→Process, Benefits+Qualification→Results, new Identification"
         - decision: "CMS queries use browser client"
           rationale: "TanStack Query runs in client context for real-time updates"
         - decision: "current_user_role() SECURITY DEFINER function"
@@ -706,29 +706,42 @@ features:
       dependencies: []
       notes: |
         2026-03-17: Landing Page CMS COMPLETE (AAA-T-46)
+        2026-03-20: Landing Page REDESIGN COMPLETE (AAA-T-72)
 
-        DATABASE:
+        REDESIGN (2026-03-20):
+        - 9 sections → 7 sections for stronger messaging
+        - Merged: Guarantee + RiskReversal → Process (timeline + zero-risk box)
+        - Merged: Benefits + Qualification → Results (metrics + outcomes + reframed qualification)
+        - New: Identification section (empathy "mirror" — qualifiers moved from Hero)
+        - Hero simplified: 8 content blocks → 3 elements above fold
+        - Deleted: Guarantee.tsx, RiskReversal.tsx, Benefits.tsx, Qualification.tsx
+        - Created: Identification.tsx, Process.tsx, Results.tsx
+        - Block schema updated (new types, removed legacy)
+        - CMS BlockFieldEditor + validation aligned with new schema
+
+        ORIGINAL (2026-03-17):
         - landing_pages table (slug, blocks JSONB, seo_metadata, is_published)
-        - current_user_role() SECURITY DEFINER for RLS policies
-        - RLS: owner role can UPDATE/DELETE, anon SELECT published only
+        - CMS: features/landing/ (queries, validation, actions, components)
+        - Website: all components accept block props, DB fetch with DEFAULT_BLOCKS fallback
 
-        CMS IMPLEMENTATION:
-        - apps/cms/features/landing/ (queries.ts, validation.ts, actions.ts)
-        - components: BlockFieldEditor.tsx, LandingPageEditor.tsx
-        - Admin route: /admin/landing-page
-        - Sidebar navigation: Landing Page item added
-
-        WEBSITE IMPLEMENTATION:
-        - apps/website/features/marketing/queries.ts (getPublicLandingPage)
-        - All 9 components refactored (navbar, hero, problems, guarantee, riskReversal, benefits, qualification, cta, footer)
-        - app/[locale]/page.tsx reads from DB, falls back to DEFAULT_BLOCKS
-        - ISR: revalidate=3600
-
-        CODE QUALITY:
-        - Build passes for both CMS + Website
-        - Zod validation for all block types
-        - BLOCK_TYPE_LABELS for UI display
-        - (supabase as any).update() workaround for Supabase JS v2.95.2 type bug
+    - name: "CMS Dark + Orange Theme"
+      status: "complete"
+      why: "Align CMS admin panel with website's dark + orange (#EA580C) aesthetic for brand consistency"
+      acceptance_criteria:
+        - criterion: "Theme variables swapped: dark background, orange primary, dark-mode status colors"
+          verified: true
+        - criterion: "Badge colors readable on dark bg (success, warning, destructive)"
+          verified: true
+        - criterion: "TiptapEditor inline CSS uses correct Tailwind v4 variable prefix"
+          verified: true
+        - criterion: "Dialog, buttons, headings all visible with proper contrast"
+          verified: true
+      tech_decisions:
+        - decision: "className='dark' on <html> + bg-background text-foreground on <body>"
+          rationale: "Both required — dark class activates shadcn dark: variants, body classes set base color cascade"
+        - decision: "Brighter destructive color in CMS (hsl 0 72% 51%) vs website (hsl 0 63% 31%)"
+          rationale: "CMS uses text-destructive frequently (delete buttons, error states) — needs higher lightness for text readability on dark bg"
+      dependencies: []
 
     - name: "CTA → Survey Flow Integration"
       status: "pending"
@@ -886,7 +899,7 @@ status_summary:
   phase_3: "✅ Complete (100%) - Calendar Integration FINISHED"
   phase_4: "✅ Complete (100%) - UI/UX Improvements"
   phase_5: "✅ Complete (100%) - Email Notifications E2E tested"
-  phase_6: "🚀 In Progress (70%) - Blog & Landing Page CMS complete, CTA integration + Legal/SEO pending"
+  phase_6: "🚀 In Progress (80%) - Blog, Landing Page CMS, Redesign, Dark Theme complete. CTA integration + Legal/SEO pending"
   phase_7: "📋 Planned - Intake pipeline, Roles & Permissions, Booking emails"
   phase_8: "📋 Planned - Plausible Analytics on VPS"
   phase_future: "📝 Backlog - Multi-language, CRM integrations, Newsletter, Reporting, Onboarding"
