@@ -5,11 +5,10 @@ import type {
   LandingBlock,
   NavbarBlock,
   HeroBlock,
+  IdentificationBlock,
   ProblemsBlock,
-  GuaranteeBlock,
-  RiskReversalBlock,
-  BenefitsBlock,
-  QualificationBlock,
+  ProcessBlock,
+  ResultsBlock,
   CtaBlock,
   FooterBlock,
 } from '@agency/database'
@@ -25,16 +24,14 @@ export function BlockFieldEditor({ block, onChange }: BlockFieldEditorProps) {
       return <NavbarEditor block={block} onChange={onChange} />
     case 'hero':
       return <HeroEditor block={block} onChange={onChange} />
+    case 'identification':
+      return <IdentificationEditor block={block} onChange={onChange} />
     case 'problems':
       return <ProblemsEditor block={block} onChange={onChange} />
-    case 'guarantee':
-      return <GuaranteeEditor block={block} onChange={onChange} />
-    case 'riskReversal':
-      return <RiskReversalEditor block={block} onChange={onChange} />
-    case 'benefits':
-      return <BenefitsEditor block={block} onChange={onChange} />
-    case 'qualification':
-      return <QualificationEditor block={block} onChange={onChange} />
+    case 'process':
+      return <ProcessEditor block={block} onChange={onChange} />
+    case 'results':
+      return <ResultsEditor block={block} onChange={onChange} />
     case 'cta':
       return <CtaEditor block={block} onChange={onChange} />
     case 'footer':
@@ -91,6 +88,70 @@ function StringArrayField({ label, items, onChange }: StringArrayFieldProps) {
   )
 }
 
+// --- Object array helpers ---
+
+interface ObjectArrayFieldProps<T> {
+  label: string
+  items: T[]
+  fields: { key: keyof T; label: string; multiline?: boolean }[]
+  onChange: (updated: T[]) => void
+  emptyItem: T
+}
+
+function ObjectArrayField<T extends Record<string, string>>({
+  label,
+  items,
+  fields,
+  onChange,
+  emptyItem,
+}: ObjectArrayFieldProps<T>) {
+  return (
+    <div className="space-y-1">
+      <Label>{label}</Label>
+      <div className="space-y-3">
+        {items.map((item, i) => (
+          <div key={i} className="space-y-2 rounded-lg border border-border/50 p-3">
+            {fields.map((field) => (
+              <Field key={String(field.key)} label={field.label}>
+                {field.multiline ? (
+                  <Textarea
+                    rows={2}
+                    value={item[field.key]}
+                    onChange={(e) => {
+                      const next = [...items]
+                      next[i] = { ...next[i], [field.key]: e.target.value }
+                      onChange(next)
+                    }}
+                  />
+                ) : (
+                  <Input
+                    value={item[field.key]}
+                    onChange={(e) => {
+                      const next = [...items]
+                      next[i] = { ...next[i], [field.key]: e.target.value }
+                      onChange(next)
+                    }}
+                  />
+                )}
+              </Field>
+            ))}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onChange(items.filter((_, j) => j !== i))}
+            >
+              Usuń
+            </Button>
+          </div>
+        ))}
+        <Button variant="outline" size="sm" onClick={() => onChange([...items, emptyItem])}>
+          + Dodaj
+        </Button>
+      </div>
+    </div>
+  )
+}
+
 // --- Block editors ---
 
 function NavbarEditor({ block, onChange }: { block: NavbarBlock; onChange: (b: LandingBlock) => void }) {
@@ -109,37 +170,43 @@ function NavbarEditor({ block, onChange }: { block: NavbarBlock; onChange: (b: L
 function HeroEditor({ block, onChange }: { block: HeroBlock; onChange: (b: LandingBlock) => void }) {
   return (
     <div className="space-y-3">
-      <Field label="Metryka 1 — wartość">
-        <Input value={block.metric1Value} onChange={(e) => onChange({ ...block, metric1Value: e.target.value })} />
+      <Field label="Nagłówek">
+        <Input value={block.headline} onChange={(e) => onChange({ ...block, headline: e.target.value })} />
       </Field>
-      <Field label="Metryka 1 — etykieta">
-        <Input value={block.metric1Label} onChange={(e) => onChange({ ...block, metric1Label: e.target.value })} />
+      <Field label="Podtytuł">
+        <Textarea rows={2} value={block.subheadline} onChange={(e) => onChange({ ...block, subheadline: e.target.value })} />
       </Field>
-      <Field label="Metryka 2 — wartość">
-        <Input value={block.metric2Value} onChange={(e) => onChange({ ...block, metric2Value: e.target.value })} />
+      <Field label="CTA — tekst">
+        <Input value={block.cta.text} onChange={(e) => onChange({ ...block, cta: { ...block.cta, text: e.target.value } })} />
       </Field>
-      <Field label="Metryka 2 — etykieta">
-        <Input value={block.metric2Label} onChange={(e) => onChange({ ...block, metric2Label: e.target.value })} />
+      <Field label="CTA — link">
+        <Input value={block.cta.href} onChange={(e) => onChange({ ...block, cta: { ...block.cta, href: e.target.value } })} />
       </Field>
-      <StringArrayField
-        label="Kwalifikatory"
-        items={block.qualifiers}
-        onChange={(qualifiers) => onChange({ ...block, qualifiers })}
+      <Field label="Linia zaufania">
+        <Input value={block.trustLine} onChange={(e) => onChange({ ...block, trustLine: e.target.value })} />
+      </Field>
+    </div>
+  )
+}
+
+function IdentificationEditor({ block, onChange }: { block: IdentificationBlock; onChange: (b: LandingBlock) => void }) {
+  return (
+    <div className="space-y-3">
+      <Field label="Nagłówek (eyebrow)">
+        <Input value={block.eyebrow} onChange={(e) => onChange({ ...block, eyebrow: e.target.value })} />
+      </Field>
+      <ObjectArrayField
+        label="Elementy"
+        items={block.items}
+        fields={[
+          { key: 'icon', label: 'Ikona (nazwa Lucide)' },
+          { key: 'text', label: 'Tekst' },
+        ]}
+        onChange={(items) => onChange({ ...block, items })}
+        emptyItem={{ icon: '', text: '' }}
       />
-      <Field label="Zła wiadomość">
-        <Input value={block.badNews} onChange={(e) => onChange({ ...block, badNews: e.target.value })} />
-      </Field>
-      <Field label="Dobra wiadomość">
-        <Textarea rows={3} value={block.goodNews} onChange={(e) => onChange({ ...block, goodNews: e.target.value })} />
-      </Field>
-      <Field label="Propozycja wartości">
-        <Textarea rows={3} value={block.valueProp} onChange={(e) => onChange({ ...block, valueProp: e.target.value })} />
-      </Field>
-      <Field label="Gwarancja">
-        <Textarea rows={3} value={block.guarantee} onChange={(e) => onChange({ ...block, guarantee: e.target.value })} />
-      </Field>
-      <Field label="Tekst CTA">
-        <Input value={block.cta} onChange={(e) => onChange({ ...block, cta: e.target.value })} />
+      <Field label="Przejście">
+        <Textarea rows={2} value={block.transition} onChange={(e) => onChange({ ...block, transition: e.target.value })} />
       </Field>
     </div>
   )
@@ -159,17 +226,11 @@ function ProblemsEditor({ block, onChange }: { block: ProblemsBlock; onChange: (
         items={block.items}
         onChange={(items) => onChange({ ...block, items })}
       />
-      <Field label="Kontekstualizacja">
-        <Textarea rows={3} value={block.framing} onChange={(e) => onChange({ ...block, framing: e.target.value })} />
-      </Field>
-      <Field label="Haczyk">
-        <Textarea rows={3} value={block.hook} onChange={(e) => onChange({ ...block, hook: e.target.value })} />
-      </Field>
     </div>
   )
 }
 
-function GuaranteeEditor({ block, onChange }: { block: GuaranteeBlock; onChange: (b: LandingBlock) => void }) {
+function ProcessEditor({ block, onChange }: { block: ProcessBlock; onChange: (b: LandingBlock) => void }) {
   return (
     <div className="space-y-3">
       <Field label="Odznaka">
@@ -181,87 +242,64 @@ function GuaranteeEditor({ block, onChange }: { block: GuaranteeBlock; onChange:
       <Field label="Nagłówek 2">
         <Input value={block.headline2} onChange={(e) => onChange({ ...block, headline2: e.target.value })} />
       </Field>
-      <Field label="Opis">
-        <Textarea rows={3} value={block.description} onChange={(e) => onChange({ ...block, description: e.target.value })} />
-      </Field>
-      <StringArrayField
+      <ObjectArrayField
         label="Kroki"
         items={block.steps}
+        fields={[
+          { key: 'icon', label: 'Ikona (nazwa Lucide)' },
+          { key: 'label', label: 'Etykieta' },
+          { key: 'text', label: 'Opis', multiline: true },
+        ]}
         onChange={(steps) => onChange({ ...block, steps })}
+        emptyItem={{ icon: '', label: '', text: '' }}
       />
+      <Field label="Tytuł ryzyka">
+        <Input value={block.riskTitle} onChange={(e) => onChange({ ...block, riskTitle: e.target.value })} />
+      </Field>
+      <Field label="Opis ryzyka">
+        <Textarea rows={3} value={block.riskDescription} onChange={(e) => onChange({ ...block, riskDescription: e.target.value })} />
+      </Field>
       <Field label="Dowód">
-        <Textarea rows={3} value={block.proof} onChange={(e) => onChange({ ...block, proof: e.target.value })} />
+        <Textarea rows={2} value={block.proof} onChange={(e) => onChange({ ...block, proof: e.target.value })} />
       </Field>
     </div>
   )
 }
 
-function RiskReversalEditor({ block, onChange }: { block: RiskReversalBlock; onChange: (b: LandingBlock) => void }) {
+function ResultsEditor({ block, onChange }: { block: ResultsBlock; onChange: (b: LandingBlock) => void }) {
   return (
     <div className="space-y-3">
       <Field label="Tytuł">
         <Input value={block.title} onChange={(e) => onChange({ ...block, title: e.target.value })} />
       </Field>
-      <Field label="Krok 1 — etykieta">
-        <Input value={block.step1Label} onChange={(e) => onChange({ ...block, step1Label: e.target.value })} />
-      </Field>
-      <Field label="Krok 1 — treść">
-        <Textarea rows={3} value={block.step1Text} onChange={(e) => onChange({ ...block, step1Text: e.target.value })} />
-      </Field>
-      <Field label="Krok 2 — etykieta">
-        <Input value={block.step2Label} onChange={(e) => onChange({ ...block, step2Label: e.target.value })} />
-      </Field>
-      <Field label="Krok 2 — treść">
-        <Textarea rows={3} value={block.step2Text} onChange={(e) => onChange({ ...block, step2Text: e.target.value })} />
-      </Field>
-      <Field label="Podsumowanie">
-        <Textarea rows={2} value={block.closing} onChange={(e) => onChange({ ...block, closing: e.target.value })} />
-      </Field>
-      <Field label="Wyróżnienie">
-        <Input value={block.bold} onChange={(e) => onChange({ ...block, bold: e.target.value })} />
-      </Field>
-      <Field label="Transparentność">
-        <Textarea rows={3} value={block.transparency} onChange={(e) => onChange({ ...block, transparency: e.target.value })} />
-      </Field>
-    </div>
-  )
-}
-
-function BenefitsEditor({ block, onChange }: { block: BenefitsBlock; onChange: (b: LandingBlock) => void }) {
-  return (
-    <div className="space-y-3">
-      <Field label="Tytuł">
-        <Input value={block.title} onChange={(e) => onChange({ ...block, title: e.target.value })} />
+      <ObjectArrayField
+        label="Metryki"
+        items={block.metrics}
+        fields={[
+          { key: 'value', label: 'Wartość' },
+          { key: 'label', label: 'Etykieta' },
+        ]}
+        onChange={(metrics) => onChange({ ...block, metrics })}
+        emptyItem={{ value: '', label: '' }}
+      />
+      <ObjectArrayField
+        label="Rezultaty"
+        items={block.outcomes}
+        fields={[
+          { key: 'title', label: 'Tytuł' },
+          { key: 'detail', label: 'Szczegóły', multiline: true },
+        ]}
+        onChange={(outcomes) => onChange({ ...block, outcomes })}
+        emptyItem={{ title: '', detail: '' }}
+      />
+      <Field label="Tytuł kwalifikacji">
+        <Input value={block.qualificationTitle} onChange={(e) => onChange({ ...block, qualificationTitle: e.target.value })} />
       </Field>
       <StringArrayField
-        label="Korzyści"
-        items={block.items}
-        onChange={(items) => onChange({ ...block, items })}
+        label="Kryteria kwalifikacji"
+        items={block.qualificationItems}
+        onChange={(qualificationItems) => onChange({ ...block, qualificationItems })}
       />
-      <Field label="Podsumowanie">
-        <Textarea rows={2} value={block.closing} onChange={(e) => onChange({ ...block, closing: e.target.value })} />
-      </Field>
-    </div>
-  )
-}
-
-function QualificationEditor({ block, onChange }: { block: QualificationBlock; onChange: (b: LandingBlock) => void }) {
-  return (
-    <div className="space-y-3">
-      <Field label="Tytuł">
-        <Input value={block.title} onChange={(e) => onChange({ ...block, title: e.target.value })} />
-      </Field>
-      <StringArrayField
-        label="Kryteria"
-        items={block.items}
-        onChange={(items) => onChange({ ...block, items })}
-      />
-      <Field label="Separator">
-        <Input value={block.separator} onChange={(e) => onChange({ ...block, separator: e.target.value })} />
-      </Field>
-      <Field label="Element techniczny">
-        <Textarea rows={2} value={block.techItem} onChange={(e) => onChange({ ...block, techItem: e.target.value })} />
-      </Field>
     </div>
   )
 }
@@ -275,11 +313,14 @@ function CtaEditor({ block, onChange }: { block: CtaBlock; onChange: (b: Landing
       <Field label="Opis">
         <Textarea rows={3} value={block.description} onChange={(e) => onChange({ ...block, description: e.target.value })} />
       </Field>
-      <Field label="Tekst przycisku">
-        <Input value={block.button} onChange={(e) => onChange({ ...block, button: e.target.value })} />
+      <Field label="Przycisk — tekst">
+        <Input value={block.button.text} onChange={(e) => onChange({ ...block, button: { ...block.button, text: e.target.value } })} />
       </Field>
-      <Field label="Podpis">
-        <Input value={block.subtext} onChange={(e) => onChange({ ...block, subtext: e.target.value })} />
+      <Field label="Przycisk — link">
+        <Input value={block.button.href} onChange={(e) => onChange({ ...block, button: { ...block.button, href: e.target.value } })} />
+      </Field>
+      <Field label="Linia zaufania">
+        <Input value={block.trustLine} onChange={(e) => onChange({ ...block, trustLine: e.target.value })} />
       </Field>
     </div>
   )

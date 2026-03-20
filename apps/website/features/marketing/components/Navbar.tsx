@@ -8,7 +8,7 @@ import { Button } from '@agency/ui'
 import type { NavbarBlock } from '@agency/database'
 
 const NAV_LINKS = [
-  { href: '/', label: 'Strona glowna' },
+  { href: '/', label: 'Strona główna' },
   { href: '/blog', label: 'Blog' },
 ] as const
 
@@ -90,7 +90,7 @@ export function Navbar({ ctaText, ctaHref }: NavbarBlock) {
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
               className="sm:hidden p-2 text-muted-foreground hover:text-foreground transition-colors duration-200 rounded-lg hover:bg-accent/40"
-              aria-label={isMenuOpen ? 'Zamknij menu' : 'Otworz menu'}
+              aria-label={isMenuOpen ? 'Zamknij menu' : 'Otwórz menu'}
               aria-expanded={isMenuOpen}
             >
               {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}

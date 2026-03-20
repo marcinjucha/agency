@@ -5,14 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Button } from '@agency/ui'
 import { Input } from '@agency/ui'
 import { Label } from '@agency/ui'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@agency/ui'
-import type { LandingBlock, LandingBlockType } from '@agency/database'
+import type { LandingBlock } from '@agency/database'
 import { DEFAULT_BLOCKS, BLOCK_TYPE_LABELS } from '@agency/database'
 import { getLandingPage } from '../queries'
 import type { SeoMetadata } from '../queries'
@@ -20,59 +13,6 @@ import { BlockFieldEditor } from './BlockFieldEditor'
 import { updateLandingPage } from '../actions'
 
 type SaveState = 'idle' | 'saving' | 'saved' | 'error'
-
-function createEmptyBlock(type: LandingBlockType): LandingBlock {
-  switch (type) {
-    case 'navbar':
-      return { type: 'navbar', ctaText: '', ctaHref: '' }
-    case 'hero':
-      return {
-        type: 'hero',
-        metric1Value: '',
-        metric1Label: '',
-        metric2Value: '',
-        metric2Label: '',
-        qualifiers: [],
-        badNews: '',
-        goodNews: '',
-        valueProp: '',
-        guarantee: '',
-        cta: '',
-      }
-    case 'problems':
-      return { type: 'problems', title: '', stat: '', items: [], framing: '', hook: '' }
-    case 'guarantee':
-      return {
-        type: 'guarantee',
-        badge: '',
-        headline: '',
-        headline2: '',
-        description: '',
-        steps: [],
-        proof: '',
-      }
-    case 'riskReversal':
-      return {
-        type: 'riskReversal',
-        title: '',
-        step1Label: '',
-        step1Text: '',
-        step2Label: '',
-        step2Text: '',
-        closing: '',
-        bold: '',
-        transparency: '',
-      }
-    case 'benefits':
-      return { type: 'benefits', title: '', items: [], closing: '' }
-    case 'qualification':
-      return { type: 'qualification', title: '', items: [], separator: '', techItem: '' }
-    case 'cta':
-      return { type: 'cta', headline: '', description: '', button: '', subtext: '' }
-    case 'footer':
-      return { type: 'footer', description: '', privacy: '', terms: '', copyright: '' }
-  }
-}
 
 export function LandingPageEditor() {
   const queryClient = useQueryClient()
@@ -85,7 +25,6 @@ export function LandingPageEditor() {
   const [seo, setSeo] = useState<SeoMetadata>({ title: '', description: '', ogImage: '' })
   const [isPublished, setIsPublished] = useState(false)
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null)
-  const [addBlockType, setAddBlockType] = useState<LandingBlockType | ''>('')
   const [saveState, setSaveState] = useState<SaveState>('idle')
 
   // Initialise local state from fetched data (once, on first load)
@@ -108,43 +47,6 @@ export function LandingPageEditor() {
       next[index] = updated
       return next
     })
-  }
-
-  function moveBlock(index: number, direction: 'up' | 'down') {
-    setBlocks((prev) => {
-      const next = [...(prev ?? activeBlocks)]
-      const target = direction === 'up' ? index - 1 : index + 1
-      ;[next[index], next[target]] = [next[target], next[index]]
-      return next
-    })
-    setExpandedIndex((prev) => {
-      if (prev === index) return direction === 'up' ? index - 1 : index + 1
-      if (direction === 'up' && prev === index - 1) return index
-      if (direction === 'down' && prev === index + 1) return index
-      return prev
-    })
-  }
-
-  function deleteBlock(index: number) {
-    setBlocks((prev) => {
-      const next = [...(prev ?? activeBlocks)]
-      next.splice(index, 1)
-      return next
-    })
-    setExpandedIndex((prev) => {
-      if (prev === index) return null
-      if (prev !== null && prev > index) return prev - 1
-      return prev
-    })
-  }
-
-  function addBlock() {
-    if (!addBlockType) return
-    const newBlock = createEmptyBlock(addBlockType)
-    const newIndex = activeBlocks.length
-    setBlocks((prev) => [...(prev ?? activeBlocks), newBlock])
-    setExpandedIndex(newIndex)
-    setAddBlockType('')
   }
 
   async function handleSave() {
@@ -201,7 +103,7 @@ export function LandingPageEditor() {
     return (
       <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-4">
         <p className="text-sm text-destructive font-medium">
-          Nie udalo sie zaladowac strony. Odswiez i sprobuj ponownie.
+          Nie udało się załadować strony. Odśwież i spróbuj ponownie.
         </p>
       </div>
     )
@@ -267,34 +169,8 @@ export function LandingPageEditor() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  aria-label="Przesun w gore"
-                  disabled={index === 0}
-                  onClick={() => moveBlock(index, 'up')}
-                >
-                  ↑
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  aria-label="Przesun w dol"
-                  disabled={index === activeBlocks.length - 1}
-                  onClick={() => moveBlock(index, 'down')}
-                >
-                  ↓
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  aria-label="Usun sekcje"
-                  onClick={() => deleteBlock(index)}
-                  className="text-destructive hover:text-destructive"
-                >
-                  Usun
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  aria-label={expandedIndex === index ? 'Zwin' : 'Rozwin'}
+                  className="text-muted-foreground hover:text-foreground"
+                  aria-label={expandedIndex === index ? 'Zwiń' : 'Rozwiń'}
                   onClick={() => setExpandedIndex((prev) => (prev === index ? null : index))}
                 >
                   {expandedIndex === index ? '▲' : '▼'}
@@ -315,37 +191,13 @@ export function LandingPageEditor() {
         </div>
       </section>
 
-      {/* Add block */}
-      <div className="flex items-center gap-3">
-        <Select
-          value={addBlockType}
-          onValueChange={(val) => setAddBlockType(val as LandingBlockType)}
-        >
-          <SelectTrigger className="w-56" aria-label="Wybierz typ sekcji">
-            <SelectValue placeholder="Wybierz typ sekcji" />
-          </SelectTrigger>
-          <SelectContent>
-            {(Object.entries(BLOCK_TYPE_LABELS) as [LandingBlockType, string][]).map(
-              ([type, label]) => (
-                <SelectItem key={type} value={type}>
-                  {label}
-                </SelectItem>
-              )
-            )}
-          </SelectContent>
-        </Select>
-        <Button variant="outline" onClick={addBlock} disabled={!addBlockType}>
-          Dodaj sekcję
-        </Button>
-      </div>
-
       {/* Publish toggle + save */}
       <div className="flex items-center justify-between gap-4 pt-4 border-t border-border">
         <label className="flex items-center gap-3 cursor-pointer select-none">
           <div
             role="switch"
             aria-checked={activePublished}
-            aria-label="Publikuj strone"
+            aria-label="Publikuj stronę"
             tabIndex={0}
             onClick={() => setIsPublished(!activePublished)}
             onKeyDown={(e) => {
@@ -372,7 +224,7 @@ export function LandingPageEditor() {
         <div className="flex items-center gap-3">
           {saveState === 'error' && (
             <p className="text-sm text-destructive">
-              Nie udalo sie zapisac.
+              Nie udało się zapisać.
             </p>
           )}
           <Button

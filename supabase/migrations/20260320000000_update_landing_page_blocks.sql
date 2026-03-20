@@ -1,0 +1,92 @@
+-- Update landing page blocks to new 7-section schema (AAA-T-72)
+-- Old: 9 sections (navbar, hero, problems, guarantee, riskReversal, benefits, qualification, cta, footer)
+-- New: 7 sections (navbar, hero, identification, problems, process, results, cta, footer)
+
+UPDATE landing_pages
+SET blocks = '[
+  {
+    "type": "navbar",
+    "ctaText": "Umów rozmowę",
+    "ctaHref": "#cta"
+  },
+  {
+    "type": "hero",
+    "headline": "Automatyzujemy procesy. Zwiększamy zysk.",
+    "subheadline": "Dla firm od 5 do 100 osób. Średnia oszczędność: do 150 000 zł rocznie.",
+    "cta": { "text": "Umów bezpłatną rozmowę", "href": "#contact" },
+    "trustLine": "Jeśli nie znajdziemy potencjału oszczędności — nic nie płacisz."
+  },
+  {
+    "type": "identification",
+    "eyebrow": "Czy to brzmi znajomo?",
+    "items": [
+      { "icon": "TrendingUp", "text": "Czujesz, że powinieneś więcej zarabiać, ale coś Ci umyka" },
+      { "icon": "AlertTriangle", "text": "Rośniesz, ale chaos operacyjny rośnie szybciej" },
+      { "icon": "Brain", "text": "Słyszałeś o AI, ale nie wiesz, jak to ma u Ciebie zadziałać" },
+      { "icon": "User", "text": "Procesy zależą od jednej osoby — i to Ciebie" }
+    ],
+    "transition": "Mamy złą wiadomość: jesteś jak większość. Mamy też dobrą: możemy Ci pomóc."
+  },
+  {
+    "type": "problems",
+    "title": "Gdzie uciekają pieniądze?",
+    "stat": "W większości firm 20–60% czasu pracy jest marnowane na czynności, które można zautomatyzować.",
+    "items": [
+      "Ręczne przepisywanie danych między systemami",
+      "Raporty tworzone w Excelu",
+      "Powtarzalne maile",
+      "Procesy zależne od jednej osoby"
+    ]
+  },
+  {
+    "type": "process",
+    "badge": "Dajemy gwarancję — nie zarobisz, nie płacisz.",
+    "headline": "Nie wdrażamy AI dla efektu.",
+    "headline2": "Wdrażamy je, żebyś zarabiał od pierwszego dnia.",
+    "steps": [
+      { "icon": "Search", "label": "Analizujemy", "text": "Mapujemy Twoje procesy i szukamy miejsc, gdzie tracisz pieniądze." },
+      { "icon": "Scissors", "label": "Upraszczamy", "text": "Usuwamy zbędne kroki, zanim cokolwiek automatyzujemy." },
+      { "icon": "Zap", "label": "Automatyzujemy", "text": "Wdrażamy rozwiązania AI tam, gdzie przyniosą największy zwrot." },
+      { "icon": "BarChart3", "label": "Mierzymy", "text": "Monitorujemy wyniki i optymalizujemy na bieżąco." }
+    ],
+    "riskTitle": "Twoje ryzyko: 0%",
+    "riskDescription": "Jeśli w ciągu pierwszych 90 dni nie zobaczysz mierzalnych oszczędności — zwracamy 100% inwestycji. Bez pytań, bez gwiazdek.",
+    "proof": "Firmy wdrażające z nami automatyzację redukują koszty operacyjne średnio o 30%."
+  },
+  {
+    "type": "results",
+    "title": "Konkretne rezultaty, nie obietnice",
+    "metrics": [
+      { "value": "do 150 000 zł", "label": "rocznych oszczędności" },
+      { "value": "0%", "label": "ryzyko" },
+      { "value": "90 dni", "label": "do pierwszych wyników" }
+    ],
+    "outcomes": [
+      { "title": "Niższe koszty operacyjne", "detail": "Automatyzacja powtarzalnych procesów redukuje potrzebę ręcznej pracy." },
+      { "title": "Skalowanie bez zatrudniania", "detail": "Rośnij szybciej bez proporcjonalnego wzrostu zespołu." },
+      { "title": "Pełna kontrola nad procesami", "detail": "Przejrzyste dashboardy i alerty zamiast chaosu w arkuszach." }
+    ],
+    "qualificationTitle": "Pracujemy z firmami, które:",
+    "qualificationItems": [
+      "Zatrudniają 5–100 osób",
+      "Mają powtarzalne procesy (administracja, sprzedaż, raporty)",
+      "Chcą rosnąć bez budowania działu IT"
+    ]
+  },
+  {
+    "type": "cta",
+    "headline": "Gotowy na zmianę?",
+    "description": "Umów bezpłatną rozmowę i sprawdź, ile możesz zaoszczędzić.",
+    "button": { "text": "Zacznij teraz", "href": "#contact" },
+    "trustLine": "Bezpłatna analiza. Bez zobowiązań."
+  },
+  {
+    "type": "footer",
+    "description": "Automatyzujemy procesy operacyjne w firmach i zwiększamy ich dochód bez zatrudniania nowych ludzi.",
+    "privacy": "Polityka prywatności",
+    "terms": "Regulamin",
+    "copyright": "© 2026 Halo Efekt. Wszelkie prawa zastrzeżone."
+  }
+]'::jsonb,
+    updated_at = now()
+WHERE is_published = true;

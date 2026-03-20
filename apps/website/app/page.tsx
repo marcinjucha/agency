@@ -1,11 +1,10 @@
 import { Metadata } from 'next'
 import { Navbar } from '@/features/marketing/components/Navbar'
 import { Hero } from '@/features/marketing/components/Hero'
+import { Identification } from '@/features/marketing/components/Identification'
 import { Problems } from '@/features/marketing/components/Problems'
-import { Guarantee } from '@/features/marketing/components/Guarantee'
-import { RiskReversal } from '@/features/marketing/components/RiskReversal'
-import { Benefits } from '@/features/marketing/components/Benefits'
-import { Qualification } from '@/features/marketing/components/Qualification'
+import { Process } from '@/features/marketing/components/Process'
+import { Results } from '@/features/marketing/components/Results'
 import { FinalCTA } from '@/features/marketing/components/FinalCTA'
 import { Footer } from '@/features/marketing/components/Footer'
 import { getPublicLandingPage } from '@/features/marketing/queries'
@@ -14,11 +13,10 @@ import {
   type LandingBlock,
   type NavbarBlock,
   type HeroBlock,
+  type IdentificationBlock,
   type ProblemsBlock,
-  type GuaranteeBlock,
-  type RiskReversalBlock,
-  type BenefitsBlock,
-  type QualificationBlock,
+  type ProcessBlock,
+  type ResultsBlock,
   type CtaBlock,
   type FooterBlock,
 } from '@agency/database'
@@ -64,17 +62,22 @@ function findBlock<T extends LandingBlock>(blocks: LandingBlock[], type: T['type
   return blocks.find((b) => b.type === type) as T | undefined
 }
 
+function hasNewBlockTypes(blocks: LandingBlock[]): boolean {
+  const requiredTypes = ['identification', 'process', 'results']
+  return requiredTypes.every((type) => blocks.some((b) => b.type === type))
+}
+
 export default async function HomePage() {
   const page = await getPublicLandingPage()
-  const blocks = page?.blocks?.length ? page.blocks : DEFAULT_BLOCKS
+  const rawBlocks = page?.blocks?.length ? page.blocks : DEFAULT_BLOCKS
+  const blocks = hasNewBlockTypes(rawBlocks) ? rawBlocks : DEFAULT_BLOCKS
 
   const navbar = findBlock<NavbarBlock>(blocks, 'navbar') ?? (DEFAULT_BLOCKS.find((b) => b.type === 'navbar') as NavbarBlock)
   const hero = findBlock<HeroBlock>(blocks, 'hero') ?? (DEFAULT_BLOCKS.find((b) => b.type === 'hero') as HeroBlock)
+  const identification = findBlock<IdentificationBlock>(blocks, 'identification') ?? (DEFAULT_BLOCKS.find((b) => b.type === 'identification') as IdentificationBlock)
   const problems = findBlock<ProblemsBlock>(blocks, 'problems') ?? (DEFAULT_BLOCKS.find((b) => b.type === 'problems') as ProblemsBlock)
-  const guarantee = findBlock<GuaranteeBlock>(blocks, 'guarantee') ?? (DEFAULT_BLOCKS.find((b) => b.type === 'guarantee') as GuaranteeBlock)
-  const riskReversal = findBlock<RiskReversalBlock>(blocks, 'riskReversal') ?? (DEFAULT_BLOCKS.find((b) => b.type === 'riskReversal') as RiskReversalBlock)
-  const benefits = findBlock<BenefitsBlock>(blocks, 'benefits') ?? (DEFAULT_BLOCKS.find((b) => b.type === 'benefits') as BenefitsBlock)
-  const qualification = findBlock<QualificationBlock>(blocks, 'qualification') ?? (DEFAULT_BLOCKS.find((b) => b.type === 'qualification') as QualificationBlock)
+  const process = findBlock<ProcessBlock>(blocks, 'process') ?? (DEFAULT_BLOCKS.find((b) => b.type === 'process') as ProcessBlock)
+  const results = findBlock<ResultsBlock>(blocks, 'results') ?? (DEFAULT_BLOCKS.find((b) => b.type === 'results') as ResultsBlock)
   const cta = findBlock<CtaBlock>(blocks, 'cta') ?? (DEFAULT_BLOCKS.find((b) => b.type === 'cta') as CtaBlock)
   const footer = findBlock<FooterBlock>(blocks, 'footer') ?? (DEFAULT_BLOCKS.find((b) => b.type === 'footer') as FooterBlock)
 
@@ -83,11 +86,10 @@ export default async function HomePage() {
       <Navbar {...navbar} />
       <main className="w-full">
         <Hero {...hero} />
+        <Identification {...identification} />
         <Problems {...problems} />
-        <Guarantee {...guarantee} />
-        <RiskReversal {...riskReversal} />
-        <Benefits {...benefits} />
-        <Qualification {...qualification} />
+        <Process {...process} />
+        <Results {...results} />
         <FinalCTA {...cta} />
       </main>
       <Footer {...footer} />

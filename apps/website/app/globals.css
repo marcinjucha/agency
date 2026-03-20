@@ -11,19 +11,19 @@
   --color-card-foreground: hsl(213 31% 91%);
   --color-popover: hsl(224 71% 4%);
   --color-popover-foreground: hsl(213 31% 91%);
-  --color-primary: hsl(217.2 91.2% 59.8%);
-  --color-primary-foreground: hsl(222.2 47.4% 11.2%);
+  --color-primary: hsl(24.6 95% 53.1%);
+  --color-primary-foreground: hsl(0 0% 100%);
   --color-secondary: hsl(222.2 47.4% 11.2%);
   --color-secondary-foreground: hsl(210 40% 98%);
   --color-muted: hsl(223 47% 11%);
   --color-muted-foreground: hsl(215.4 16.3% 56.9%);
-  --color-accent: hsl(216 34% 17%);
+  --color-accent: hsl(24.6 60% 14%);
   --color-accent-foreground: hsl(210 40% 98%);
   --color-destructive: hsl(0 63% 31%);
   --color-destructive-foreground: hsl(210 40% 98%);
   --color-border: hsl(216 34% 17%);
   --color-input: hsl(216 34% 17%);
-  --color-ring: hsl(224.3 76.3% 48%);
+  --color-ring: hsl(24.6 95% 53.1%);
   --color-chart-1: hsl(220 70% 50%);
   --color-chart-2: hsl(160 60% 45%);
   --color-chart-3: hsl(30 80% 55%);
@@ -243,12 +243,12 @@
   -webkit-text-fill-color: transparent;
 }
 
-/* Glass card surface */
+/* Glass card surface — uses theme border token */
 .glass-card {
-  background: hsl(216 34% 17% / 0.5);
+  background: color-mix(in srgb, var(--color-border) 50%, transparent);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid hsl(216 34% 17% / 0.8);
+  border: 1px solid color-mix(in srgb, var(--color-border) 80%, transparent);
 }
 
 /* Navbar floating pill — gradient bottom border via mask */
@@ -266,9 +266,9 @@
   background: linear-gradient(
     90deg,
     transparent,
-    hsl(217.2 91.2% 59.8% / 0.4),
-    hsl(217.2 91.2% 59.8% / 0.6),
-    hsl(217.2 91.2% 59.8% / 0.4),
+    color-mix(in srgb, var(--color-primary) 40%, transparent),
+    color-mix(in srgb, var(--color-primary) 60%, transparent),
+    color-mix(in srgb, var(--color-primary) 40%, transparent),
     transparent
   );
 }
@@ -276,14 +276,14 @@
 /* CTA glow effect */
 .cta-glow {
   box-shadow:
-    0 0 20px hsl(217.2 91.2% 59.8% / 0.3),
-    0 0 40px hsl(217.2 91.2% 59.8% / 0.1);
+    0 0 20px color-mix(in srgb, var(--color-primary) 30%, transparent),
+    0 0 40px color-mix(in srgb, var(--color-primary) 10%, transparent);
 }
 
 .cta-glow:hover {
   box-shadow:
-    0 0 24px hsl(217.2 91.2% 59.8% / 0.4),
-    0 0 48px hsl(217.2 91.2% 59.8% / 0.15);
+    0 0 24px color-mix(in srgb, var(--color-primary) 40%, transparent),
+    0 0 48px color-mix(in srgb, var(--color-primary) 15%, transparent);
 }
 
 /* Nav link animated underline */

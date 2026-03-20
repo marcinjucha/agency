@@ -8,16 +8,17 @@ export type NavbarBlock = {
 
 export type HeroBlock = {
   type: 'hero'
-  metric1Value: string
-  metric1Label: string
-  metric2Value: string
-  metric2Label: string
-  qualifiers: string[]
-  badNews: string
-  goodNews: string
-  valueProp: string
-  guarantee: string
-  cta: string
+  headline: string
+  subheadline: string
+  cta: { text: string; href: string }
+  trustLine: string
+}
+
+export type IdentificationBlock = {
+  type: 'identification'
+  eyebrow: string
+  items: { icon: string; text: string }[]
+  transition: string
 }
 
 export type ProblemsBlock = {
@@ -25,53 +26,34 @@ export type ProblemsBlock = {
   title: string
   stat: string
   items: string[]
-  framing: string
-  hook: string
 }
 
-export type GuaranteeBlock = {
-  type: 'guarantee'
+export type ProcessBlock = {
+  type: 'process'
   badge: string
   headline: string
   headline2: string
-  description: string
-  steps: string[]
+  steps: { icon: string; label: string; text: string }[]
+  riskTitle: string
+  riskDescription: string
   proof: string
 }
 
-export type RiskReversalBlock = {
-  type: 'riskReversal'
+export type ResultsBlock = {
+  type: 'results'
   title: string
-  step1Label: string
-  step1Text: string
-  step2Label: string
-  step2Text: string
-  closing: string
-  bold: string
-  transparency: string
-}
-
-export type BenefitsBlock = {
-  type: 'benefits'
-  title: string
-  items: string[]
-  closing: string
-}
-
-export type QualificationBlock = {
-  type: 'qualification'
-  title: string
-  items: string[]
-  separator: string
-  techItem: string
+  metrics: { value: string; label: string }[]
+  outcomes: { title: string; detail: string }[]
+  qualificationTitle: string
+  qualificationItems: string[]
 }
 
 export type CtaBlock = {
   type: 'cta'
   headline: string
   description: string
-  button: string
-  subtext: string
+  button: { text: string; href: string }
+  trustLine: string
 }
 
 export type FooterBlock = {
@@ -85,11 +67,10 @@ export type FooterBlock = {
 export type LandingBlock =
   | NavbarBlock
   | HeroBlock
+  | IdentificationBlock
   | ProblemsBlock
-  | GuaranteeBlock
-  | RiskReversalBlock
-  | BenefitsBlock
-  | QualificationBlock
+  | ProcessBlock
+  | ResultsBlock
   | CtaBlock
   | FooterBlock
 
@@ -100,11 +81,10 @@ export type LandingPage = Omit<Tables<'landing_pages'>, 'blocks'> & { blocks: La
 export const BLOCK_TYPE_LABELS: Record<LandingBlockType, string> = {
   navbar: 'Nawigacja',
   hero: 'Sekcja Hero',
+  identification: 'Identyfikacja',
   problems: 'Problemy',
-  guarantee: 'Gwarancja',
-  riskReversal: 'Odwrócenie ryzyka',
-  benefits: 'Korzyści',
-  qualification: 'Kwalifikacja',
+  process: 'Proces',
+  results: 'Rezultaty',
   cta: 'Wezwanie do działania',
   footer: 'Stopka',
 }
@@ -117,24 +97,21 @@ export const DEFAULT_BLOCKS: LandingBlock[] = [
   },
   {
     type: 'hero',
-    metric1Value: '150 000 zł',
-    metric1Label: 'średnia roczna oszczędność',
-    metric2Value: '0%',
-    metric2Label: 'Twoje ryzyko',
-    qualifiers: [
-      'Jeśli masz firmę, którą chcesz rozwijać,',
-      'Zatrudniasz pracowników',
-      'Czujesz, że powinieneś więcej zarabiać, ale coś Ci umyka',
-      'Słyszałeś o AI, rozwoju technologii, ale zastanawiasz się — Jak to niby ma u Ciebie zadziałać?',
+    headline: 'Automatyzujemy procesy. Zwiększamy zysk.',
+    subheadline: 'Dla firm od 5 do 100 osób. Średnia oszczędność: do 150 000 zł rocznie.',
+    cta: { text: 'Umów bezpłatną rozmowę', href: '#contact' },
+    trustLine: 'Jeśli nie znajdziemy potencjału oszczędności — nic nie płacisz.',
+  },
+  {
+    type: 'identification',
+    eyebrow: 'Czy to brzmi znajomo?',
+    items: [
+      { icon: 'TrendingUp', text: 'Czujesz, że powinieneś więcej zarabiać, ale coś Ci umyka' },
+      { icon: 'AlertTriangle', text: 'Rośniesz, ale chaos operacyjny rośnie szybciej' },
+      { icon: 'Brain', text: 'Słyszałeś o AI, ale nie wiesz, jak to ma u Ciebie zadziałać' },
+      { icon: 'User', text: 'Procesy zależą od jednej osoby — i to Ciebie' },
     ],
-    badNews: 'to mamy złą wiadomość. Jesteś jak większość.',
-    goodNews:
-      'Mamy też dobrą. Prawdopodobnie możemy Ci pomóc. Bez ryzyka, że zapłacisz za coś, co nie będzie działać.',
-    valueProp:
-      'Automatyzujemy procesy operacyjne w firmach zatrudniających od kilku do 100 osób i zwiększamy ich dochód bez zatrudniania nowych ludzi.',
-    guarantee:
-      'Jeśli nie zobaczymy u Ciebie realnego potencjału oszczędności — nie zaczniemy współpracy, a Ty nic nie płacisz.',
-    cta: 'Umów bezpłatną rozmowę',
+    transition: 'Mamy złą wiadomość: jesteś jak większość. Mamy też dobrą: możemy Ci pomóc.',
   },
   {
     type: 'problems',
@@ -146,69 +123,48 @@ export const DEFAULT_BLOCKS: LandingBlock[] = [
       'Powtarzalne maile',
       'Procesy zależne od jednej osoby',
     ],
-    framing:
-      'To nie są \'drobne zadania\'. To stały koszt, który rośnie wraz z firmą i bezpośrednio obniża marżę.',
-    hook: 'Im szybciej rośniesz, tym większy chaos operacyjny i tym mniej kontrolujesz — brzmi znajomo?',
   },
   {
-    type: 'guarantee',
+    type: 'process',
     badge: 'Dajemy gwarancję — nie zarobisz, nie płacisz.',
     headline: 'Nie wdrażamy AI dla efektu.',
     headline2: 'Wdrażamy je, żebyś zarabiał od pierwszego dnia.',
-    description: 'Nie sprzedajemy narzędzi ani technologii...',
     steps: [
-      'Analizujemy jeden konkretny proces',
-      'Upraszczamy go',
-      'Automatyzujemy',
-      'Mierzymy realną oszczędność czasu i kosztów',
+      { icon: 'Search', label: 'Analizujemy', text: 'Mapujemy Twoje procesy i szukamy miejsc, gdzie tracisz pieniądze.' },
+      { icon: 'Scissors', label: 'Upraszczamy', text: 'Usuwamy zbędne kroki, zanim cokolwiek automatyzujemy.' },
+      { icon: 'Zap', label: 'Automatyzujemy', text: 'Wdrażamy rozwiązania AI tam, gdzie przyniosą największy zwrot.' },
+      { icon: 'BarChart3', label: 'Mierzymy', text: 'Monitorujemy wyniki i optymalizujemy na bieżąco.' },
     ],
-    proof: 'Firmy zatrudniające kilku pracowników, które wdrażają z nami automatyzację, redukują koszty operacyjne średnio o 180 000 zł rocznie w ciągu pierwszych 8–12 miesięcy.',
+    riskTitle: 'Twoje ryzyko: 0%',
+    riskDescription: 'Jeśli w ciągu pierwszych 90 dni nie zobaczysz mierzalnych oszczędności — zwracamy 100% inwestycji. Bez pytań, bez gwiazdek.',
+    proof: 'Firmy wdrażające z nami automatyzację redukują koszty operacyjne średnio o 30%.',
   },
   {
-    type: 'riskReversal',
-    title: 'Dlaczego Twoje ryzyko wynosi 0%?',
-    step1Label: 'Krok 1',
-    step1Text: 'Zaczynamy od bezpłatnej analizy...',
-    step2Label: 'Krok 2',
-    step2Text: 'Pokazujemy, gdzie realnie uciekają pieniądze...',
-    closing: 'Jeśli nie jesteśmy w stanie wygenerować mierzalnej wartości — nie podejmujemy współpracy.',
-    bold: 'Nie sprzedajemy wdrożeń!',
-    transparency:
-      'Sprzedajemy wynik finansowy, który sam obliczysz. Wszystko transparentne. Bez niedomówień.',
-  },
-  {
-    type: 'benefits',
-    title: 'Co zyskujesz?',
-    items: [
-      'Ten sam zespół',
-      'Niższe koszty operacyjne',
-      'Wyższą marżę',
-      'Większą kontrolę nad procesami',
-      'Możliwość skalowania firmy bez zwiększania zatrudnienia i kosztów',
-      'Kontrolę nad swoim biznesem',
+    type: 'results',
+    title: 'Konkretne rezultaty, nie obietnice',
+    metrics: [
+      { value: 'do 150 000 zł', label: 'rocznych oszczędności' },
+      { value: '0%', label: 'ryzyko' },
+      { value: '90 dni', label: 'do pierwszych wyników' },
     ],
-    closing: 'Automatyzacja nie zastępuje ludzi, ale zastąpi nudną, powtarzalną pracę.',
-  },
-  {
-    type: 'qualification',
-    title: 'Czy się kwalifikujesz?',
-    items: [
-      'Zatrudniasz do 100 osób',
-      'Chcesz rozwijać firmę, ale masz obawy...',
-      'Masz powtarzalne procesy administracyjne, sprzedażowe lub raportowe',
-      'Nie chcesz budować osobnego działu IT',
-      'Chcesz zwiększyć zysk bez zatrudniania dodatkowych ludzi i zwiększania kosztów',
+    outcomes: [
+      { title: 'Niższe koszty operacyjne', detail: 'Automatyzacja powtarzalnych procesów redukuje potrzebę ręcznej pracy.' },
+      { title: 'Skalowanie bez zatrudniania', detail: 'Rośnij szybciej bez proporcjonalnego wzrostu zespołu.' },
+      { title: 'Pełna kontrola nad procesami', detail: 'Przejrzyste dashboardy i alerty zamiast chaosu w arkuszach.' },
     ],
-    separator: 'oraz',
-    techItem:
-      'Jeśli Twoja firma działa w oparciu o maile, dokumenty, CRM i powtarzalne zadania...',
+    qualificationTitle: 'Pracujemy z firmami, które:',
+    qualificationItems: [
+      'Zatrudniają 5–100 osób',
+      'Mają powtarzalne procesy (administracja, sprzedaż, raporty)',
+      'Chcą rosnąć bez budowania działu IT',
+    ],
   },
   {
     type: 'cta',
-    headline: 'Ten sam zespół. Większa skala. Wyższy wynik finansowy.',
-    description: 'Jeśli ludzie w Twojej firmie są stale zajęci...',
-    button: 'Umów bezpłatną rozmowę',
-    subtext: 'Sprawdź, ile realnie możesz odzyskać w ciągu najbliższych 12 miesięcy',
+    headline: 'Gotowy na zmianę?',
+    description: 'Umów bezpłatną rozmowę i sprawdź, ile możesz zaoszczędzić.',
+    button: { text: 'Zacznij teraz', href: '#contact' },
+    trustLine: 'Bezpłatna analiza. Bez zobowiązań.',
   },
   {
     type: 'footer',

@@ -8,16 +8,25 @@ export const navbarBlockSchema = z.object({
 
 export const heroBlockSchema = z.object({
   type: z.literal('hero'),
-  metric1Value: z.string(),
-  metric1Label: z.string(),
-  metric2Value: z.string(),
-  metric2Label: z.string(),
-  qualifiers: z.array(z.string()),
-  badNews: z.string(),
-  goodNews: z.string(),
-  valueProp: z.string(),
-  guarantee: z.string(),
-  cta: z.string(),
+  headline: z.string(),
+  subheadline: z.string(),
+  cta: z.object({
+    text: z.string(),
+    href: z.string(),
+  }),
+  trustLine: z.string(),
+})
+
+export const identificationBlockSchema = z.object({
+  type: z.literal('identification'),
+  eyebrow: z.string(),
+  items: z.array(
+    z.object({
+      icon: z.string(),
+      text: z.string(),
+    })
+  ),
+  transition: z.string(),
 })
 
 export const problemsBlockSchema = z.object({
@@ -25,53 +34,53 @@ export const problemsBlockSchema = z.object({
   title: z.string(),
   stat: z.string(),
   items: z.array(z.string()),
-  framing: z.string(),
-  hook: z.string(),
 })
 
-export const guaranteeBlockSchema = z.object({
-  type: z.literal('guarantee'),
+export const processBlockSchema = z.object({
+  type: z.literal('process'),
   badge: z.string(),
   headline: z.string(),
   headline2: z.string(),
-  description: z.string(),
-  steps: z.array(z.string()),
+  steps: z.array(
+    z.object({
+      icon: z.string(),
+      label: z.string(),
+      text: z.string(),
+    })
+  ),
+  riskTitle: z.string(),
+  riskDescription: z.string(),
   proof: z.string(),
 })
 
-export const riskReversalBlockSchema = z.object({
-  type: z.literal('riskReversal'),
+export const resultsBlockSchema = z.object({
+  type: z.literal('results'),
   title: z.string(),
-  step1Label: z.string(),
-  step1Text: z.string(),
-  step2Label: z.string(),
-  step2Text: z.string(),
-  closing: z.string(),
-  bold: z.string(),
-  transparency: z.string(),
-})
-
-export const benefitsBlockSchema = z.object({
-  type: z.literal('benefits'),
-  title: z.string(),
-  items: z.array(z.string()),
-  closing: z.string(),
-})
-
-export const qualificationBlockSchema = z.object({
-  type: z.literal('qualification'),
-  title: z.string(),
-  items: z.array(z.string()),
-  separator: z.string(),
-  techItem: z.string(),
+  metrics: z.array(
+    z.object({
+      value: z.string(),
+      label: z.string(),
+    })
+  ),
+  outcomes: z.array(
+    z.object({
+      title: z.string(),
+      detail: z.string(),
+    })
+  ),
+  qualificationTitle: z.string(),
+  qualificationItems: z.array(z.string()),
 })
 
 export const ctaBlockSchema = z.object({
   type: z.literal('cta'),
   headline: z.string(),
   description: z.string(),
-  button: z.string(),
-  subtext: z.string(),
+  button: z.object({
+    text: z.string(),
+    href: z.string(),
+  }),
+  trustLine: z.string(),
 })
 
 export const footerBlockSchema = z.object({
@@ -85,11 +94,10 @@ export const footerBlockSchema = z.object({
 export const landingBlockSchema = z.discriminatedUnion('type', [
   navbarBlockSchema,
   heroBlockSchema,
+  identificationBlockSchema,
   problemsBlockSchema,
-  guaranteeBlockSchema,
-  riskReversalBlockSchema,
-  benefitsBlockSchema,
-  qualificationBlockSchema,
+  processBlockSchema,
+  resultsBlockSchema,
   ctaBlockSchema,
   footerBlockSchema,
 ])

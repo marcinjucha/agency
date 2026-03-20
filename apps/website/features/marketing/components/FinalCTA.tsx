@@ -1,15 +1,15 @@
-import { ArrowRight } from 'lucide-react'
+import { ArrowRight, Shield } from 'lucide-react'
 import type { CtaBlock } from '@agency/database'
 import { ScrollReveal } from './ScrollReveal'
 
-export function FinalCTA({ headline, description, button, subtext }: CtaBlock) {
+export function FinalCTA({ headline, description, button, trustLine }: CtaBlock) {
   return (
     <section
       id="contact"
-      className="relative py-24 md:py-32 lg:py-40 bg-background overflow-hidden"
+      className="relative py-24 md:py-32 lg:py-40 bg-background overflow-hidden noise-overlay"
       aria-label="Sekcja kontaktowa"
     >
-      {/* Prominent gradient background */}
+      {/* Ambient glow orbs */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] rounded-full bg-primary/10 blur-[150px] -translate-y-1/2 animate-glow-pulse" />
         <div className="absolute bottom-0 left-0 w-[500px] h-[500px] rounded-full bg-primary/5 blur-[120px] translate-y-1/3 -translate-x-1/4" />
@@ -34,18 +34,21 @@ export function FinalCTA({ headline, description, button, subtext }: CtaBlock) {
 
         <ScrollReveal delay={200}>
           <a
-            href="#contact"
-            className="inline-flex items-center gap-3 bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl px-10 py-5 text-lg font-semibold shadow-2xl shadow-primary/30 hover:shadow-primary/50 hover:scale-[1.02] transition-all duration-300 group"
+            href={button.href}
+            className="inline-flex items-center gap-3 bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl px-10 py-5 text-lg font-semibold shadow-2xl shadow-primary/30 hover:shadow-primary/50 hover:scale-[1.02] transition-all duration-300 group cta-glow"
           >
-            {button}
+            {button.text}
             <ArrowRight className="w-5 h-5 transition-transform duration-300 group-hover:translate-x-1" />
           </a>
         </ScrollReveal>
 
         <ScrollReveal delay={300}>
-          <p className="text-muted-foreground/60 text-sm mt-8">
-            {subtext}
-          </p>
+          <div className="flex items-center justify-center gap-2 mt-8">
+            <Shield className="w-4 h-4 text-muted-foreground/60" />
+            <p className="text-muted-foreground/60 text-sm">
+              {trustLine}
+            </p>
+          </div>
         </ScrollReveal>
       </div>
     </section>

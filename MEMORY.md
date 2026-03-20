@@ -1,4 +1,20 @@
-# Project Memory: Halo Efekt (Email Notifications Phase 2)
+# Project Memory: Halo Efekt
+
+## Roadmap & Planning (2026-03-20)
+
+**Sprint 1 (current):** CTA → Survey flow + Regulamin/RODO/Cookies
+**Sprint 2:** Plausible Analytics + SEO + Roles & Permissions + Lead Pipeline Kanban
+**Sprint 3:** Email booking_confirmation + booking_reminder + T-5 Response Status
+**Backlog:** Multi-language, CRM/Slack integrations, Reporting, Onboarding, Newsletter, booking_cancellation
+
+**Key decisions:**
+- No pricing page — individual client approach, "umów się na rozmowę" instead
+- Contact form = reuse existing survey+calendar flow (no new backend code)
+- Kanban board consolidates with response list (responses ARE leads)
+- Roles: super_admin/admin/member + granular feature permissions per user
+- Plausible self-hosted on VPS (privacy-friendly, no cookies)
+- New Notion project: "Halo Efekt - VPS Infrastructure" for server-side services
+- Priority order: marketing (acquire clients) → intake/permissions (manage clients) → CMS polish
 
 ## Email Notifications — Phase 1 DONE, Phase 2 COMPLETED (2026-03-13)
 
@@ -112,5 +128,31 @@
 - **S3 upload API missing server-side content type validation** — Client-side `file.type.startsWith('image/')` check is bypassable. Fix: added `ALLOWED_CONTENT_TYPES` allowlist check in API route before generating presigned URL. (2026-03-19)
 - **`notFound()` on missing blog slug shows generic 404** — Next.js `notFound()` in `app/blog/[slug]/page.tsx` without a local `not-found.tsx` shows the root 404 page with no way back to blog. Fix: add `app/blog/[slug]/not-found.tsx` with "Wróć do bloga" link. (2026-03-19)
 - **Non-async helper in `'use server'` file** — `parseContent()` was a non-async function inside `actions.ts` (`'use server'`). Works currently because it's not exported, but fragile. Fix: moved to `utils.ts` and imported. (2026-03-19)
+
+## Landing Page Redesign — Audit Findings (2026-03-20)
+
+**Scope:** Full design audit → redesign plan. 9 sekcji → 7 sekcji. Plan w Notion AAA-T-72.
+
+**Structural changes planned:**
+- Merge `Guarantee.tsx` + `RiskReversal.tsx` → `Process.tsx` (timeline + zero-risk box)
+- Merge `Benefits.tsx` + `Qualification.tsx` → `Results.tsx` (metric strip + outcomes + reframed qualification)
+- New `Identification.tsx` section (qualifiers moved from Hero)
+- Hero simplified: 8 content blocks → 3 elements above fold (headline + subheadline + CTA)
+
+**Block schema changes planned (packages/database/src/landing-blocks.ts):**
+- New: `IdentificationBlock`, `ProcessBlock`, `ResultsBlock`
+- Modified: `HeroBlock` (simplified), `CtaBlock` (added trustLine)
+- Removed: `GuaranteeBlock`, `RiskReversalBlock`, `BenefitsBlock`, `QualificationBlock`
+
+## Bugs Found (2026-03-20 — Landing Page Audit)
+
+- **FinalCTA `href="#contact"` points to itself** — Section has `id="contact"` and button `href="#contact"` — clicking CTA scrolls nowhere. Same for Hero CTA. Fix: point to real survey/booking URL (AAA-T-57). (2026-03-20)
+- **Navbar missing Polish diacritics** — NAV_LINKS has `'Strona glowna'` (should be `'Strona główna'`), aria-labels `'Otworz menu'` (should be `'Otwórz menu'`). Screen readers pronounce incorrectly. (2026-03-20)
+- **Ambient glow orbs overused** — 5 sekcji (Hero, Guarantee, RiskReversal, Benefits, FinalCTA) ma orby. Dilutes premium feel. Keep only in Hero + FinalCTA. (2026-03-20)
+
+## Domain Concepts (Landing Page)
+
+- **Positioning docs already exist** — `.claude/docs/agency/` has 5 complete docs (Oferta, Strategia, Positioning-Broad, Brand-Guide, Sales-Playbook). AAA-T-71 (Pozycjonowanie) deliverables are effectively done — just needs review/approval before closing. (2026-03-20)
+- **Landing page CTA destination** — Currently all CTAs point to `#contact` (dead). Plan: AAA-T-57 creates contact survey + generates a survey_link URL → that URL goes into all 3 CTA locations (Navbar, Hero, FinalCTA). (2026-03-20)
 
 ## Preferences

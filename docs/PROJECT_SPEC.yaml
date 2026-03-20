@@ -730,31 +730,138 @@ features:
         - BLOCK_TYPE_LABELS for UI display
         - (supabase as any).update() workaround for Supabase JS v2.95.2 type bug
 
-    - name: "Marketing Website"
+    - name: "CTA → Survey Flow Integration"
       status: "pending"
-      why: "Public-facing pages for customer acquisition"
+      why: "Connect landing page CTA to existing survey+calendar flow for lead acquisition"
       acceptance_criteria:
-        - "Homepage, pricing, about, contact pages"
+        - "Contact survey created (imię, firma, email, telefon, opis potrzeby)"
+        - "CTA button on landing page opens survey flow"
+        - "After survey completion → calendar booking"
+        - "Reuses existing survey+calendar infrastructure"
+      dependencies:
+        - feature: "Landing Page CMS"
+        - feature: "Survey Link Generation"
+        - feature: "Calendar Booking UI"
+
+    - name: "Regulamin, Polityka Prywatności, Cookie Banner"
+      status: "pending"
+      why: "RODO compliance required before analytics and lead collection go live"
+      acceptance_criteria:
+        - "/regulamin and /polityka-prywatnosci pages on website"
+        - "Cookie consent banner on all pages (RODO compliant)"
+        - "Legal text sourced/drafted"
       dependencies:
         - feature: "Landing Page CMS"
 
-    - name: "CMS Settings & Admin Panel"
+    - name: "SEO Foundations"
       status: "pending"
-      why: "Business profile management, team administration"
+      why: "Ensure marketing content is discoverable and shareable"
       acceptance_criteria:
-        - "Business can edit company profile"
-        - "Admin can manage team members"
+        - "Open Graph + Twitter Card meta tags on all pages"
+        - "Structured data (Organization, Article for blog)"
+        - "sitemap.xml verified, robots.txt configured"
+        - "Lighthouse SEO score >90"
       dependencies:
-        - feature: "Authentication"
+        - feature: "Blog / Articles with WYSIWYG Editor"
+        - feature: "Landing Page CMS"
 
-    - name: "Production Readiness"
+  phase_7_intake_permissions:
+    - name: "Roles & Permissions System"
       status: "pending"
-      why: "Error tracking, analytics, security audit, E2E tests"
+      why: "Multi-user access control needed before client onboarding — role-based + granular feature permissions"
       acceptance_criteria:
-        - "Error tracking enabled (Sentry)"
-        - "Lighthouse score > 90"
-        - "No critical security vulnerabilities"
+        - "user_roles table (super_admin, admin, member)"
+        - "feature_permissions table (user_id, feature, enabled) for granular overrides"
+        - "RLS policies with role check"
+        - "Middleware route protection"
+        - "Sidebar UI hiding per role"
+      tech_decisions:
+        - decision: "Role-based + feature-level permissions hybrid"
+          rationale: "3 roles cover common cases, granular overrides allow per-user customization without role explosion"
+      dependencies:
+        - feature: "Authentication System"
+
+    - name: "Lead Pipeline — Kanban Board"
+      status: "pending"
+      why: "Visual lead management to track prospects from survey submission through qualification to client conversion"
+      acceptance_criteria:
+        - "Kanban view in CMS: Nowy → Skwalifikowany (AI) → W kontakcie → Klient / Odrzucony"
+        - "Drag & drop status change"
+        - "Clickable cards with response detail"
+        - "Integration with ai_qualification (auto-move after AI analysis)"
+      tech_decisions:
+        - decision: "Consolidate with response list (not separate section)"
+          rationale: "Responses ARE leads — avoid data duplication, single source of truth"
+      dependencies:
+        - feature: "Response Management UI (CMS)"
+        - feature: "AI Qualification Workflow"
+
+    - name: "Email: Booking Confirmation"
+      status: "pending"
+      why: "Client and firm need confirmation after appointment booking"
+      acceptance_criteria:
+        - "n8n workflow triggered after booking creation"
+        - "Email to client: date, time, link"
+        - "Email to firm: notification of new booking"
+        - "Reuses Send Email subworkflow + email_templates"
+      dependencies:
+        - feature: "Booking Creation & Notifications"
+        - feature: "Email Notifications + Template Management"
+
+    - name: "Email: Booking Reminder"
+      status: "pending"
+      why: "Reduce no-shows by reminding clients 24h before appointment"
+      acceptance_criteria:
+        - "n8n scheduled workflow: daily check for tomorrow's appointments"
+        - "Reminder email to client with appointment details"
+        - "Reuses Send Email subworkflow"
+      dependencies:
+        - feature: "Email: Booking Confirmation"
+
+  phase_8_infrastructure:
+    - name: "Plausible Analytics — Self-Hosted"
+      status: "pending"
+      why: "Privacy-friendly analytics on VPS, no cookie consent required"
+      acceptance_criteria:
+        - "Plausible running on VPS (Docker Compose)"
+        - "Tracking script integrated in Website app"
+        - "Dashboard accessible (analytics.trustcode.pl or similar)"
+      tech_decisions:
+        - decision: "Self-hosted Plausible (not Google Analytics)"
+          rationale: "Privacy-friendly, no cookies, RODO compliant without consent banner for analytics"
       dependencies: []
+
+  phase_future_nice_to_have:
+    - name: "Multi-language Support (PL/EN)"
+      status: "backlog"
+      why: "Expand reach to English-speaking clients"
+      dependencies: []
+
+    - name: "External Integrations (CRM, Slack)"
+      status: "backlog"
+      why: "Connect with external systems for notifications and client management"
+      dependencies: []
+
+    - name: "Reporting & Data Export"
+      status: "backlog"
+      why: "Export responses, leads, appointments to CSV/PDF"
+      dependencies: []
+
+    - name: "Tenant Onboarding Flow"
+      status: "backlog"
+      why: "Guided setup for new tenants (company profile, survey creation, calendar connect)"
+      dependencies: []
+
+    - name: "Newsletter System"
+      status: "backlog"
+      why: "Email campaigns from CMS with subscriber management and RODO compliance"
+      dependencies: []
+
+    - name: "Email: Booking Cancellation"
+      status: "backlog"
+      why: "Cancellation notification workflow — requires cancel/reschedule flow"
+      dependencies:
+        - feature: "Email: Booking Confirmation"
 
 dependencies:
   - from: "Form Submission"
@@ -779,7 +886,10 @@ status_summary:
   phase_3: "✅ Complete (100%) - Calendar Integration FINISHED"
   phase_4: "✅ Complete (100%) - UI/UX Improvements"
   phase_5: "✅ Complete (100%) - Email Notifications E2E tested"
-  phase_6: "🚀 In Progress (50%) - Landing Page CMS & Blog Feature complete, Marketing Polish in progress"
+  phase_6: "🚀 In Progress (70%) - Blog & Landing Page CMS complete, CTA integration + Legal/SEO pending"
+  phase_7: "📋 Planned - Intake pipeline, Roles & Permissions, Booking emails"
+  phase_8: "📋 Planned - Plausible Analytics on VPS"
+  phase_future: "📝 Backlog - Multi-language, CRM integrations, Newsletter, Reporting, Onboarding"
 
 critical_path:
   - "Phase 1 Foundation (✅ COMPLETE)"
@@ -787,4 +897,6 @@ critical_path:
   - "Phase 3 Calendar Integration (✅ COMPLETE)"
   - "Phase 4 UI/UX Improvements (✅ COMPLETE)"
   - "Phase 5 n8n & AI Analysis (✅ COMPLETE)"
-  - "Phase 6 Marketing & Production (📋 NEXT)"
+  - "Phase 6 Marketing & Content (🚀 IN PROGRESS — CTA + Legal + SEO)"
+  - "Phase 7 Intake & Permissions (📋 NEXT — Kanban + Roles + Booking Emails)"
+  - "Phase 8 Infrastructure (📋 PLANNED — Plausible on VPS)"
