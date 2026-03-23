@@ -21,7 +21,20 @@ export async function createBlogPost(
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return { success: false, error: 'Nie zalogowany' }
 
+    // Fetch tenant_id for the authenticated user (required by RLS after multi-tenant migration)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: userData, error: userError } = await (supabase as any)
+      .from('users')
+      .select('tenant_id')
+      .eq('id', user.id)
+      .single()
+
+    if (userError || !userData?.tenant_id) {
+      return { success: false, error: 'Nie znaleziono danych użytkownika' }
+    }
+
     const insertPayload = {
+      tenant_id: userData.tenant_id,
       title: parsed.data.title,
       slug: parsed.data.slug,
       excerpt: parsed.data.excerpt || null,
