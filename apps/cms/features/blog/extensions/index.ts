@@ -6,11 +6,15 @@ import TextAlign from '@tiptap/extension-text-align'
 import { VideoExtension } from './VideoExtension'
 import { YouTubeExtension } from './YouTubeExtension'
 import { VimeoExtension } from './VimeoExtension'
+import { InstagramExtension } from './InstagramExtension'
+import { TikTokExtension } from './TikTokExtension'
 
 export const mediaExtensions = [
   VideoExtension,
   YouTubeExtension,
   VimeoExtension,
+  InstagramExtension,
+  TikTokExtension,
 ]
 
 /**
@@ -29,4 +33,4 @@ export const editorExtensions = [
   ...mediaExtensions,
 ]
 
-export { VideoExtension, YouTubeExtension, VimeoExtension }
+export { VideoExtension, YouTubeExtension, VimeoExtension, InstagramExtension, TikTokExtension }

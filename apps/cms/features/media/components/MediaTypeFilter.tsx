@@ -22,6 +22,8 @@ export function MediaTypeFilter({ value, onChange }: MediaTypeFilterProps) {
         <TabsTrigger value="video">Wideo</TabsTrigger>
         <TabsTrigger value="youtube">YouTube</TabsTrigger>
         <TabsTrigger value="vimeo">Vimeo</TabsTrigger>
+        <TabsTrigger value="instagram">Instagram</TabsTrigger>
+        <TabsTrigger value="tiktok">TikTok</TabsTrigger>
       </TabsList>
     </Tabs>
   )

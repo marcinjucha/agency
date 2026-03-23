@@ -2,7 +2,7 @@ import type { Tables } from '@agency/database'
 
 // --- Media type union (matches DB CHECK constraint) ---
 
-export type MediaType = 'image' | 'video' | 'youtube' | 'vimeo'
+export type MediaType = 'image' | 'video' | 'youtube' | 'vimeo' | 'instagram' | 'tiktok'
 
 // --- Full media item (no JSONB overrides needed — all scalar columns) ---
 

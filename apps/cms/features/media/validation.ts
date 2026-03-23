@@ -22,7 +22,7 @@ export const vimeoUrlSchema = z
 
 export const createMediaItemSchema = z.object({
   name: z.string().min(1, 'Nazwa jest wymagana'),
-  type: z.enum(['image', 'video', 'youtube', 'vimeo'], {
+  type: z.enum(['image', 'video', 'youtube', 'vimeo', 'instagram', 'tiktok'], {
     required_error: 'Typ jest wymagany',
   }),
   url: z.string().url('Nieprawidlowy URL'),
