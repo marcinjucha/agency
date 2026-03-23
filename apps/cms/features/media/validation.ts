@@ -1,0 +1,46 @@
+import { z } from 'zod'
+
+// --- YouTube URL pattern ---
+
+export const youtubeUrlSchema = z
+  .string()
+  .regex(
+    /^https?:\/\/(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)[\w-]+/,
+    'Nieprawidlowy URL YouTube'
+  )
+
+// --- Vimeo URL pattern ---
+
+export const vimeoUrlSchema = z
+  .string()
+  .regex(
+    /^https?:\/\/(?:www\.)?(?:vimeo\.com\/|player\.vimeo\.com\/video\/)\d+/,
+    'Nieprawidlowy URL Vimeo'
+  )
+
+// --- Create media item (upload flow: all fields required, embed flow: s3_key optional) ---
+
+export const createMediaItemSchema = z.object({
+  name: z.string().min(1, 'Nazwa jest wymagana'),
+  type: z.enum(['image', 'video', 'youtube', 'vimeo'], {
+    required_error: 'Typ jest wymagany',
+  }),
+  url: z.string().url('Nieprawidlowy URL'),
+  s3_key: z.string().nullable().optional(),
+  mime_type: z.string().nullable().optional(),
+  size_bytes: z.number().int().positive().nullable().optional(),
+  width: z.number().int().positive().nullable().optional(),
+  height: z.number().int().positive().nullable().optional(),
+  thumbnail_url: z.string().url().nullable().optional(),
+})
+
+// --- Update media item (rename only) ---
+
+export const updateMediaItemSchema = z.object({
+  name: z.string().min(1, 'Nazwa jest wymagana'),
+})
+
+// --- Inferred types ---
+
+export type CreateMediaItemFormData = z.infer<typeof createMediaItemSchema>
+export type UpdateMediaItemFormData = z.infer<typeof updateMediaItemSchema>

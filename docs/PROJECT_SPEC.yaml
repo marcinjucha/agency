@@ -786,7 +786,12 @@ features:
         - RLS on media_items via current_user_tenant_id()
         - npm run db:types — types regenerated
 
-        REMAINING: Iterations 2-6 (Foundation Files, Media Page, Tiptap Extensions, Modal, Website CSS)
+        2026-03-23: Iteration 2 (Foundation Files + S3 Extension) COMPLETE
+        - Created: features/media/{types,validation,queries,actions,utils}.ts
+        - Created: lib/s3.ts (shared S3 client extracted from upload route)
+        - Modified: app/api/upload/route.ts (video MIME, media folder, 300s expiry, s3Key)
+
+        REMAINING: Iterations 3-6 (Media Page, Tiptap Extensions, Modal, Website CSS)
 
     - name: "CTA → Survey Flow Integration"
       status: "pending"

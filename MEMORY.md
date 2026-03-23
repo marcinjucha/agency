@@ -108,4 +108,4 @@
 ## Preferences
 
 - **Notion tasks: single task with checklist content, not subtasks** — User prefers one task with plan broken into checkboxes in page body, not 7 separate tasks. Reason: flexibility to partially complete and pause without managing many task statuses. (2026-03-23)
-- **Agency Tasks DB has no "Type" property** — Discovered 2026-03-23 when trying to set "🚀 Delivery". Schema only has: Name, Status, Priority, Deadline, Notes, Projects (relation), Client (relation), ID. (2026-03-23)
+- **Agency Tasks DB: "Type" property removed** — User removed Type property from Agency Tasks DB (2026-03-23). Schema now: Name, Status, Priority, Deadline, Notes, Projects (relation), Client (relation), ID.

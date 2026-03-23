@@ -1,25 +1,24 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3'
+import { PutObjectCommand } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import { randomUUID } from 'crypto'
+import { getS3Client, S3_BUCKET, S3_REGION } from '@/lib/s3'
 
-const BUCKET = 'legal-mind-bucket'
-const REGION = 'eu-central-1'
 const DEFAULT_FOLDER = 'haloefekt/blog'
 
-const ALLOWED_FOLDERS = ['haloefekt/blog']
-const ALLOWED_CONTENT_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml', 'image/avif']
-
-function getS3Client() {
-  return new S3Client({
-    region: REGION,
-    credentials: {
-      accessKeyId: process.env.BUCKET_ACCESS_KEY!,
-      secretAccessKey: process.env.BUCKET_SECRET_KEY!,
-    },
-  })
-}
+const ALLOWED_FOLDERS = ['haloefekt/blog', 'haloefekt/media']
+const ALLOWED_CONTENT_TYPES = [
+  'image/jpeg',
+  'image/png',
+  'image/gif',
+  'image/webp',
+  'image/svg+xml',
+  'image/avif',
+  'video/mp4',
+  'video/webm',
+  'video/quicktime',
+]
 
 export async function POST(request: Request) {
   try {
@@ -45,7 +44,7 @@ export async function POST(request: Request) {
 
     if (!ALLOWED_CONTENT_TYPES.includes(contentType)) {
       return NextResponse.json(
-        { error: 'Niedozwolony typ pliku. Dozwolone: JPEG, PNG, GIF, WebP, SVG, AVIF.' },
+        { error: 'Niedozwolony typ pliku. Dozwolone: JPEG, PNG, GIF, WebP, SVG, AVIF, MP4, WebM, MOV.' },
         { status: 400 }
       )
     }
@@ -62,15 +61,16 @@ export async function POST(request: Request) {
 
     const s3 = getS3Client()
     const command = new PutObjectCommand({
-      Bucket: BUCKET,
+      Bucket: S3_BUCKET,
       Key: key,
       ContentType: contentType,
     })
 
-    const uploadUrl = await getSignedUrl(s3, command, { expiresIn: 60 })
-    const fileUrl = `https://${BUCKET}.s3.${REGION}.amazonaws.com/${key}`
+    const expiresIn = sanitizedFolder.startsWith('haloefekt/media') ? 300 : 60
+    const uploadUrl = await getSignedUrl(s3, command, { expiresIn })
+    const fileUrl = `https://${S3_BUCKET}.s3.${S3_REGION}.amazonaws.com/${key}`
 
-    return NextResponse.json({ uploadUrl, fileUrl })
+    return NextResponse.json({ uploadUrl, fileUrl, s3Key: key })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Upload URL generation failed'
     return NextResponse.json({ error: message }, { status: 500 })
