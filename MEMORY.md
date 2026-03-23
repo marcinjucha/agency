@@ -79,6 +79,9 @@
 - **validator-agent misses P2 architecture violations** — Phase 8 catches functional bugs (P0/P1) but not code organization issues: wrong file placement, code duplication, missing theme tokens. These require a separate architecture audit with explicit ADR-005 checklist. (2026-03-18)
 - **"trustcode.pl" → user meant AWS bucket only** — When user mentioned adding trustcode.pl to remotePatterns in context of AWS, they meant the S3 bucket hostname only, not a wildcard *.trustcode.pl domain. (2026-03-18)
 - **"dawaj auto" / "auto" = switch to auto mode** — User says this when they want all phases to run without confirmation between them. Treat as --auto flag. BUT: always stop at Phase 5 (manual testing) — user must test manually regardless of auto mode. (2026-03-23)
+- **No Co-Authored-By footer in commits** — User does not want AI attribution footer in commit messages. Never add "Co-Authored-By: Claude" or similar. (2026-03-23)
+- **Always use defined agents** — User explicitly requires using agents (code-developer-agent, design-agent, etc.) for ALL code changes. Writing code directly without agents is not acceptable. (2026-03-23)
+- **No backward compatibility (pre-launch only)** — No clients/content yet, so breaking old data is fine now. Once clients onboard and real content exists, backward compatibility becomes required. (2026-03-23)
 
 ## Bugs Found
 
@@ -94,6 +97,9 @@
 - **tenant_id fetch pattern duplicated 4x** — blog/actions.ts, email/actions.ts, surveys/actions.ts, media/actions.ts all query users table for tenant_id. Architecture audit flagged for extraction to shared getUserWithTenant() helper. (2026-03-23)
 - **Tabs + Progress not in @agency/ui** — shadcn/ui Tabs and Progress components were missing. Added manually in Iteration 3 via Radix primitives + existing shadcn pattern. Now exported from packages/ui/src/index.ts. (2026-03-23)
 - **Tiptap extension registry pattern** — `features/blog/extensions/index.ts` exports `editorExtensions` (single source of truth) and `mediaExtensions`. Both `TiptapEditor.tsx` and `utils.ts` import from here. Adding new media type = 1 new extension file + 1 line in index.ts. Shared video utilities live in `lib/video-utils.ts`. (2026-03-23)
+- **Shared video utilities in `lib/`** — `extractVideoId`, `generateThumbnailUrl`, `buildEmbedUrl`, `fetchVimeoThumbnail` all live in `apps/cms/lib/`. Used by both `features/blog` and `features/media` — placing in either feature would create cross-feature import violation. (2026-03-23)
+- **Media flow: images/video only via Library** — TiptapEditor drag/paste opens media modal instead of uploading directly. Images and video inserted into editor only from Library tab. YouTube/Vimeo/Instagram/TikTok paste auto-detect still works via extension paste rules. (2026-03-23)
+- **Instagram/TikTok embed styling issue** — Fixed `aspect-ratio: 9/16` caused too much whitespace (platform UI adds header/footer). Changed to fixed height (700px Instagram, 750px TikTok). Remaining issue: white background inside iframe. Tracked in Notion task (2026-03-23), deferred.
 
 ## Landing Page Redesign — Audit Findings (2026-03-20)
 

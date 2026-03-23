@@ -3,7 +3,7 @@ project:
   description: "SaaS platform for businesses to streamline client intake through smart surveys, calendar booking, and AI qualification — built by Halo Efekt"
   version: "2.0.0"
   status: "in-progress"
-  last_updated: "2026-03-20"
+  last_updated: "2026-03-23"
 
 # IMPORTANT: This file focuses on WHY (architecture, decisions, rationale)
 # For detailed WHAT (acceptance criteria, file paths, task tracking), see Notion:
@@ -758,9 +758,9 @@ features:
         - criterion: "Tiptap extensions: Video (S3), YouTube embed (URL paste), Vimeo embed (URL paste)"
           verified: true
         - criterion: "Insert Media modal in blog editor with Upload + Media Library tabs"
-          verified: false
+          verified: true
         - criterion: "All uploads (drag-drop, paste, modal) create media_items record"
-          verified: false
+          verified: true
         - criterion: "Website .blog-prose renders video and iframe embeds correctly (responsive)"
           verified: false
       tech_decisions:
@@ -806,7 +806,21 @@ features:
         - P0 mitigated: generateHtmlFromContent() now includes all media types in html_body
         - Architecture audit passed: single source of truth for extensions, no duplication
 
-        REMAINING: Iterations 5-6 (Insert Media Modal, Website CSS)
+        2026-03-23: Iteration 5 (Insert Media Modal + Integration) COMPLETE
+        - Created: features/blog/components/InsertMediaModal.tsx (Library tab + Social Media tab)
+        - Created: features/blog/extensions/{InstagramExtension,TikTokExtension}.ts
+        - Created: lib/fetch-vimeo-thumbnail.ts (moved from features, shared)
+        - Modified: features/blog/components/TiptapEditor.tsx (drag/paste opens modal, all uploads → media_items)
+        - Modified: features/blog/components/EditorToolbar.tsx (Media button)
+        - Modified: features/media/components/MediaCard.tsx (inline rename)
+        - Modified: features/media/components/MediaLibrary.tsx (social media URL input)
+        - Modified: features/media/types.ts + validation.ts + utils.ts (instagram + tiktok types)
+        - lib/video-utils.ts extended: buildEmbedUrl extracted (shared between extensions and modal)
+        - TypeBadge supports all 6 types: image, video, youtube, vimeo, instagram, tiktok
+        - Library tab: inline upload + grid selection without leaving modal
+        - Images and video managed via Library only (centralized asset management)
+
+        REMAINING: Iteration 6 (Website CSS)
 
     - name: "CTA → Survey Flow Integration"
       status: "pending"
