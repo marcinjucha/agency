@@ -1,14 +1,14 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState } from 'react'
 import { useEditor, EditorContent } from '@tiptap/react'
 import { BubbleMenu } from '@tiptap/react/menus'
 import Placeholder from '@tiptap/extension-placeholder'
-import { Loader2, Bold, Italic, Underline, Strikethrough, Heading2, Link } from 'lucide-react'
+import { Bold, Italic, Underline, Strikethrough, Heading2, Link } from 'lucide-react'
 import { Button } from '@agency/ui'
 import type { TiptapContent } from '../types'
-import { uploadImageToS3 } from '../utils'
 import { EditorToolbar } from './EditorToolbar'
+import { InsertMediaModal } from './InsertMediaModal'
 import { editorExtensions } from '../extensions'
 
 interface TiptapEditorProps {
@@ -22,28 +22,7 @@ export function TiptapEditor({
   onChange,
   placeholder = 'Zacznij pisac artykul...',
 }: TiptapEditorProps) {
-  const [uploadCount, setUploadCount] = useState(0)
-  const [uploadError, setUploadError] = useState<string | null>(null)
-
-  const isUploading = uploadCount > 0
-
-  const handleImageUpload = useCallback(
-    async (file: File) => {
-      setUploadError(null)
-      setUploadCount((c) => c + 1)
-      try {
-        const url = await uploadImageToS3(file)
-        return url
-      } catch (err) {
-        const message = err instanceof Error ? err.message : 'Blad uploadu'
-        setUploadError(message)
-        throw err
-      } finally {
-        setUploadCount((c) => c - 1)
-      }
-    },
-    []
-  )
+  const [mediaModalOpen, setMediaModalOpen] = useState(false)
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -61,35 +40,23 @@ export function TiptapEditor({
       },
       handleDrop: (_view, event, _slice, moved) => {
         if (moved) return false
-
         const files = event.dataTransfer?.files
         if (!files?.length) return false
-
-        const imageFile = files[0]
-        if (!imageFile.type.startsWith('image/')) return false
-
+        const hasMedia = Array.from(files).some(
+          (f) => f.type.startsWith('image/') || f.type.startsWith('video/')
+        )
+        if (!hasMedia) return false
         event.preventDefault()
-        handleImageUpload(imageFile).then((url) => {
-          editor?.chain().focus().setImage({ src: url }).run()
-        }).catch(() => {
-          // Error already set in handleImageUpload
-        })
+        setMediaModalOpen(true)
         return true
       },
       handlePaste: (_view, event) => {
         const items = event.clipboardData?.items
         if (!items) return false
-
         for (const item of items) {
           if (item.type.startsWith('image/')) {
             event.preventDefault()
-            const file = item.getAsFile()
-            if (!file) continue
-            handleImageUpload(file).then((url) => {
-              editor?.chain().focus().setImage({ src: url }).run()
-            }).catch(() => {
-              // Error already set in handleImageUpload
-            })
+            setMediaModalOpen(true)
             return true
           }
         }
@@ -102,31 +69,8 @@ export function TiptapEditor({
     <div className="tiptap-editor overflow-clip rounded-lg border border-border bg-background shadow-sm transition-shadow focus-within:shadow-md focus-within:ring-1 focus-within:ring-ring">
       {/* Sticky toolbar — offset below BlogPostEditor's top bar (~61px) */}
       <div className="sticky top-[61px] z-10 bg-background">
-        <EditorToolbar editor={editor} onImageUpload={handleImageUpload} />
+        <EditorToolbar editor={editor} onOpenMediaModal={() => setMediaModalOpen(true)} />
       </div>
-
-      {/* Upload indicator */}
-      {isUploading && (
-        <div className="flex items-center gap-2 border-b border-border bg-muted/50 px-4 py-2">
-          <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
-          <span className="text-xs text-muted-foreground">
-            Przesylanie obrazu...
-          </span>
-        </div>
-      )}
-
-      {/* Upload error */}
-      {uploadError && (
-        <div className="flex items-center justify-between border-b border-destructive/30 bg-destructive/5 px-4 py-2">
-          <span className="text-xs text-destructive">{uploadError}</span>
-          <button
-            onClick={() => setUploadError(null)}
-            className="text-xs text-destructive underline hover:no-underline"
-          >
-            Zamknij
-          </button>
-        </div>
-      )}
 
       {/* Bubble menu — appears on text selection */}
       {editor && (
@@ -187,6 +131,13 @@ export function TiptapEditor({
       <div className="min-h-[400px] px-8 py-6">
         <EditorContent editor={editor} />
       </div>
+
+      {/* Insert Media Modal */}
+      <InsertMediaModal
+        editor={editor}
+        open={mediaModalOpen}
+        onClose={() => setMediaModalOpen(false)}
+      />
 
       {/* Prose styles scoped to this editor */}
       <style>{`
@@ -370,11 +321,33 @@ export function TiptapEditor({
         }
 
         .tiptap-editor-content iframe {
-          aspect-ratio: 16/9;
           width: 100%;
           border-radius: 0.5rem;
           margin: 1.5rem 0;
           border: none;
+        }
+
+        .tiptap-editor-content iframe.youtube-embed,
+        .tiptap-editor-content iframe.vimeo-embed {
+          aspect-ratio: 16/9;
+        }
+
+        .tiptap-editor-content iframe.instagram-embed {
+          max-width: 500px;
+          height: 700px;
+          margin-left: auto;
+          margin-right: auto;
+          display: block;
+          background: #000;
+        }
+
+        .tiptap-editor-content iframe.tiktok-embed {
+          max-width: 500px;
+          height: 750px;
+          margin-left: auto;
+          margin-right: auto;
+          display: block;
+          background: #000;
         }
       `}</style>
     </div>

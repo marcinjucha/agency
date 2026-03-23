@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useState } from 'react'
 import type { Editor } from '@tiptap/react'
 import { Button, Input } from '@agency/ui'
 import {
@@ -20,8 +20,7 @@ import {
   Code2,
   Minus,
   Link,
-  Image,
-  Globe,
+  Film,
   Undo2,
   Redo2,
   X,
@@ -30,19 +29,14 @@ import {
 
 interface EditorToolbarProps {
   editor: Editor | null
-  onImageUpload?: (file: File) => Promise<string>
+  onOpenMediaModal?: () => void
 }
 
-export function EditorToolbar({ editor, onImageUpload }: EditorToolbarProps) {
+export function EditorToolbar({ editor, onOpenMediaModal }: EditorToolbarProps) {
   const [linkInput, setLinkInput] = useState<{ visible: boolean; url: string }>({
     visible: false,
     url: '',
   })
-  const [imageInput, setImageInput] = useState<{ visible: boolean; url: string }>({
-    visible: false,
-    url: '',
-  })
-  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const applyLink = useCallback(() => {
     if (!editor || !linkInput.url) return
@@ -59,28 +53,6 @@ export function EditorToolbar({ editor, onImageUpload }: EditorToolbarProps) {
     }
     setLinkInput({ visible: false, url: '' })
   }, [editor, linkInput.url])
-
-  const insertImage = useCallback(() => {
-    if (!editor || !imageInput.url) return
-    editor.chain().focus().setImage({ src: imageInput.url }).run()
-    setImageInput({ visible: false, url: '' })
-  }, [editor, imageInput.url])
-
-  const handleFileSelect = useCallback(
-    async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0]
-      if (!file || !editor || !onImageUpload) return
-      // Reset input so re-selecting the same file triggers onChange
-      e.target.value = ''
-      try {
-        const url = await onImageUpload(file)
-        editor.chain().focus().setImage({ src: url }).run()
-      } catch {
-        // Error handled by parent (TiptapEditor upload state)
-      }
-    },
-    [editor, onImageUpload]
-  )
 
   if (!editor) return null
 
@@ -228,32 +200,20 @@ export function EditorToolbar({ editor, onImageUpload }: EditorToolbarProps) {
             onClick={() => {
               const existingUrl = editor.getAttributes('link').href ?? ''
               setLinkInput({ visible: !linkInput.visible, url: existingUrl })
-              setImageInput({ visible: false, url: '' })
             }}
             active={editor.isActive('link')}
             title="Link"
           >
             <Link className="h-4 w-4" />
           </ToolbarButton>
-          <ToolbarButton
-            onClick={() => {
-              setLinkInput({ visible: false, url: '' })
-              setImageInput({ visible: false, url: '' })
-              fileInputRef.current?.click()
-            }}
-            title="Wstaw obraz (upload)"
-          >
-            <Image className="h-4 w-4" />
-          </ToolbarButton>
-          <ToolbarButton
-            onClick={() => {
-              setImageInput({ visible: !imageInput.visible, url: '' })
-              setLinkInput({ visible: false, url: '' })
-            }}
-            title="Wstaw obraz z URL"
-          >
-            <Globe className="h-4 w-4" />
-          </ToolbarButton>
+          {onOpenMediaModal && (
+            <ToolbarButton
+              onClick={onOpenMediaModal}
+              title="Media"
+            >
+              <Film className="h-4 w-4" />
+            </ToolbarButton>
+          )}
         </ToolbarGroup>
 
         <ToolbarSeparator />
@@ -319,43 +279,6 @@ export function EditorToolbar({ editor, onImageUpload }: EditorToolbarProps) {
         </div>
       )}
 
-      {/* Image URL input row */}
-      {imageInput.visible && (
-        <div className="flex items-center gap-2 border-t border-border px-3 py-2">
-          <span className="text-xs font-medium text-muted-foreground">URL obrazu:</span>
-          <Input
-            value={imageInput.url}
-            onChange={(e) => setImageInput((prev) => ({ ...prev, url: e.target.value }))}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') { e.preventDefault(); insertImage() }
-              if (e.key === 'Escape') setImageInput({ visible: false, url: '' })
-            }}
-            placeholder="https://...image.jpg"
-            className="h-7 flex-1 text-sm"
-            autoFocus
-          />
-          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={insertImage}>
-            <Check className="h-3.5 w-3.5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7"
-            onClick={() => setImageInput({ visible: false, url: '' })}
-          >
-            <X className="h-3.5 w-3.5" />
-          </Button>
-        </div>
-      )}
-
-      {/* Hidden file input for image upload */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        className="hidden"
-        onChange={handleFileSelect}
-      />
     </div>
   )
 }
