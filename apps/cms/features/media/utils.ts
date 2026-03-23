@@ -1,9 +1,17 @@
+// --- Formatting helpers ---
+
+export function formatBytes(bytes: number | null): string | null {
+  if (bytes == null) return null
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
 // --- S3 upload helper for media files ---
 
-const IMAGE_MAX_SIZE = 5 * 1024 * 1024 // 5MB
-const VIDEO_MAX_SIZE = 50 * 1024 * 1024 // 50MB
+export const IMAGE_MAX_SIZE = 5 * 1024 * 1024 // 5MB
+export const VIDEO_MAX_SIZE = 50 * 1024 * 1024 // 50MB
 
-const ALLOWED_MIME_TYPES = [
+export const ALLOWED_MIME_TYPES = [
   'image/jpeg',
   'image/png',
   'image/gif',

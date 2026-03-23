@@ -754,7 +754,7 @@ features:
         - criterion: "Types regenerated and build passes"
           verified: true
         - criterion: "/admin/media page with drag-drop upload, grid view, filter, preview, delete"
-          verified: false
+          verified: true
         - criterion: "Tiptap extensions: Video (S3), YouTube embed (URL paste), Vimeo embed (URL paste)"
           verified: false
         - criterion: "Insert Media modal in blog editor with Upload + Media Library tabs"
@@ -791,7 +791,12 @@ features:
         - Created: lib/s3.ts (shared S3 client extracted from upload route)
         - Modified: app/api/upload/route.ts (video MIME, media folder, 300s expiry, s3Key)
 
-        REMAINING: Iterations 3-6 (Media Page, Tiptap Extensions, Modal, Website CSS)
+        2026-03-23: Iteration 3 (Media Library Page) COMPLETE
+        - /admin/media page live: MediaUploadZone, MediaCard, MediaGrid, MediaTypeFilter, MediaPreviewDialog, MediaLibrary
+        - Tabs + Progress added to @agency/ui (manual Radix implementation)
+        - Fixed: invalidateQueries key mismatch — grid refreshes after upload
+
+        REMAINING: Iterations 4-6 (Tiptap Extensions, Insert Media Modal, Website CSS)
 
     - name: "CTA → Survey Flow Integration"
       status: "pending"

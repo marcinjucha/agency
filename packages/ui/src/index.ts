@@ -62,3 +62,5 @@ export {
   CommandItem,
   CommandSeparator,
 } from './components/ui/command'
+export { Tabs, TabsList, TabsTrigger, TabsContent } from './components/ui/tabs'
+export { Progress } from './components/ui/progress'
