@@ -3,17 +3,13 @@
 import { useState, useCallback } from 'react'
 import { useEditor, EditorContent } from '@tiptap/react'
 import { BubbleMenu } from '@tiptap/react/menus'
-import StarterKit from '@tiptap/starter-kit'
-import LinkExtension from '@tiptap/extension-link'
-import ImageExtension from '@tiptap/extension-image'
 import Placeholder from '@tiptap/extension-placeholder'
-import UnderlineExtension from '@tiptap/extension-underline'
-import TextAlign from '@tiptap/extension-text-align'
 import { Loader2, Bold, Italic, Underline, Strikethrough, Heading2, Link } from 'lucide-react'
 import { Button } from '@agency/ui'
 import type { TiptapContent } from '../types'
 import { uploadImageToS3 } from '../utils'
 import { EditorToolbar } from './EditorToolbar'
+import { editorExtensions } from '../extensions'
 
 interface TiptapEditorProps {
   content: TiptapContent
@@ -52,19 +48,8 @@ export function TiptapEditor({
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
-      StarterKit.configure({
-        heading: { levels: [1, 2, 3] },
-      }),
-      LinkExtension.configure({
-        openOnClick: false,
-        HTMLAttributes: { class: 'text-primary underline' },
-      }),
-      ImageExtension.configure({
-        HTMLAttributes: { class: 'rounded-lg max-w-full mx-auto' },
-      }),
+      ...editorExtensions,
       Placeholder.configure({ placeholder }),
-      UnderlineExtension,
-      TextAlign.configure({ types: ['heading', 'paragraph'] }),
     ],
     content,
     onUpdate: ({ editor: e }) => {
@@ -375,6 +360,21 @@ export function TiptapEditor({
         .tiptap-editor-content s {
           text-decoration: line-through;
           opacity: 0.7;
+        }
+
+        .tiptap-editor-content video {
+          max-width: 100%;
+          border-radius: 0.5rem;
+          margin: 1.5rem auto;
+          display: block;
+        }
+
+        .tiptap-editor-content iframe {
+          aspect-ratio: 16/9;
+          width: 100%;
+          border-radius: 0.5rem;
+          margin: 1.5rem 0;
+          border: none;
         }
       `}</style>
     </div>

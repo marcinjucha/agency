@@ -756,7 +756,7 @@ features:
         - criterion: "/admin/media page with drag-drop upload, grid view, filter, preview, delete"
           verified: true
         - criterion: "Tiptap extensions: Video (S3), YouTube embed (URL paste), Vimeo embed (URL paste)"
-          verified: false
+          verified: true
         - criterion: "Insert Media modal in blog editor with Upload + Media Library tabs"
           verified: false
         - criterion: "All uploads (drag-drop, paste, modal) create media_items record"
@@ -796,7 +796,17 @@ features:
         - Tabs + Progress added to @agency/ui (manual Radix implementation)
         - Fixed: invalidateQueries key mismatch — grid refreshes after upload
 
-        REMAINING: Iterations 4-6 (Tiptap Extensions, Insert Media Modal, Website CSS)
+        2026-03-23: Iteration 4 (Tiptap Extensions) COMPLETE
+        - Created: features/blog/extensions/{VideoExtension,YouTubeExtension,VimeoExtension,index,constants}.ts
+        - Created: lib/video-utils.ts (extractVideoId extracted from media/utils — shared source of truth)
+        - Modified: features/blog/utils.ts (imports editorExtensions from registry)
+        - Modified: features/blog/components/TiptapEditor.tsx (uses editorExtensions + video/iframe CSS)
+        - Modified: features/media/utils.ts (re-exports from lib/video-utils)
+        - Paste auto-detection: YouTube/Vimeo URLs auto-convert on paste
+        - P0 mitigated: generateHtmlFromContent() now includes all media types in html_body
+        - Architecture audit passed: single source of truth for extensions, no duplication
+
+        REMAINING: Iterations 5-6 (Insert Media Modal, Website CSS)
 
     - name: "CTA → Survey Flow Integration"
       status: "pending"

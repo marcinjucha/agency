@@ -70,20 +70,30 @@
 - Paste handler + Insert Media Modal — both active for YouTube/Vimeo embeds
 
 **Iteration 1 DONE:** media_items table, blog_posts tenant_id, RLS, types regenerated
-**Remaining:** Foundation(M) → Media Library Page(L) + Tiptap Extensions(M) → Insert Media Modal(L) → Website CSS(S)
+**Iteration 2 DONE:** foundation files (types/validation/queries/actions/utils), lib/s3.ts shared client, upload route extended
+**Iteration 3 DONE:** /admin/media page — MediaUploadZone, MediaCard, MediaGrid, MediaTypeFilter, MediaPreviewDialog, MediaLibrary, sidebar nav
+**Remaining:** Tiptap Extensions(M) → Insert Media Modal(L) → Website CSS(S)
 
 ## Feedback & Corrections
 
 - **validator-agent misses P2 architecture violations** — Phase 8 catches functional bugs (P0/P1) but not code organization issues: wrong file placement, code duplication, missing theme tokens. These require a separate architecture audit with explicit ADR-005 checklist. (2026-03-18)
 - **"trustcode.pl" → user meant AWS bucket only** — When user mentioned adding trustcode.pl to remotePatterns in context of AWS, they meant the S3 bucket hostname only, not a wildcard *.trustcode.pl domain. (2026-03-18)
-- **"dawaj auto" = switch to auto mode** — User says this when they want all phases to run without confirmation between them. Treat as --auto flag. (2026-03-23)
+- **"dawaj auto" / "auto" = switch to auto mode** — User says this when they want all phases to run without confirmation between them. Treat as --auto flag. BUT: always stop at Phase 5 (manual testing) — user must test manually regardless of auto mode. (2026-03-23)
+
+## Bugs Found
+
+- **TanStack Query invalidateQueries key mismatch** — `mediaKeys.list()` returns `['media-items', 'list', undefined]` but active query key is `mediaKeys.list({ type: undefined })` = `['media-items', 'list', { type: undefined }]`. These don't match so invalidation silently fails. Fix: use `mediaKeys.all` to invalidate all list variants. Pattern: always use the root key (`all`) for broad invalidation after mutations. (2026-03-23)
+- **shadcn CLI fails in packages/ui** — `npx shadcn@latest add` throws "resolvedPaths: Required" error in Turborepo monorepo packages/ui context. Workaround: install Radix dependency manually (`npm install @radix-ui/react-tabs --workspace=@agency/ui`) and create the component file manually following existing shadcn pattern. (2026-03-23)
+- **Tiptap renderHTML must use inline styles, not Tailwind classes** — Custom Tiptap extensions renderHTML output goes into blog_posts.html_body which website renders as raw HTML without Tailwind processing. Tailwind classes (aspect-video, w-full) produce unstyled/tiny elements on website. Fix: use inline `style="..."` attributes in renderHTML. Applies to all future extensions. (2026-03-23)
 
 ## Domain Concepts
 
 - **AWS S3 for media uploads** — Bucket: `legal-mind-bucket`, region: `eu-central-1`, folder: `haloefekt/blog/`. Credentials stored as `BUCKET_ACCESS_KEY` + `BUCKET_SECRET_KEY` in `apps/cms/.env.local`. Same bucket holds n8n backups — new uploads go into separate folder. S3 bucket policy allows public GET; CORS must allow PUT from CMS domains for presigned upload to work. (2026-03-18)
 - **S3 upload helper belongs in `utils.ts`** — Shared upload logic (presigned URL fetch + PUT) extracted to `features/blog/utils.ts` as `uploadImageToS3(file, folder?)`. Used by both `BlogPostEditor` (cover image) and `TiptapEditor` (inline images). (2026-03-19)
 - **Tenant "Halo Efekt" already exists in production** — email: kontakt@haloefekt.pl, domain: null, id: 19342448-4e4e-49ba-8bf0-694d5376f953. No need to INSERT new tenant. (2026-03-23)
-- **tenant_id fetch pattern duplicated 3x** — blog/actions.ts, email/actions.ts, surveys/actions.ts all query users table for tenant_id. Architecture audit flagged for extraction to shared getUserWithTenant() helper. (2026-03-23)
+- **tenant_id fetch pattern duplicated 4x** — blog/actions.ts, email/actions.ts, surveys/actions.ts, media/actions.ts all query users table for tenant_id. Architecture audit flagged for extraction to shared getUserWithTenant() helper. (2026-03-23)
+- **Tabs + Progress not in @agency/ui** — shadcn/ui Tabs and Progress components were missing. Added manually in Iteration 3 via Radix primitives + existing shadcn pattern. Now exported from packages/ui/src/index.ts. (2026-03-23)
+- **Tiptap extension registry pattern** — `features/blog/extensions/index.ts` exports `editorExtensions` (single source of truth) and `mediaExtensions`. Both `TiptapEditor.tsx` and `utils.ts` import from here. Adding new media type = 1 new extension file + 1 line in index.ts. Shared video utilities live in `lib/video-utils.ts`. (2026-03-23)
 
 ## Landing Page Redesign — Audit Findings (2026-03-20)
 

@@ -1,10 +1,6 @@
 import { generateHTML } from '@tiptap/html'
-import StarterKit from '@tiptap/starter-kit'
-import Link from '@tiptap/extension-link'
-import Image from '@tiptap/extension-image'
-import Underline from '@tiptap/extension-underline'
-import TextAlign from '@tiptap/extension-text-align'
 import type { TiptapContent } from './types'
+import { editorExtensions } from './extensions'
 
 // --- S3 upload helper (shared by cover image + inline image upload) ---
 
@@ -49,16 +45,8 @@ export function parseContent(content: unknown): unknown {
   return content
 }
 
-const tiptapExtensions = [
-  StarterKit,
-  Link,
-  Image,
-  Underline,
-  TextAlign.configure({ types: ['heading', 'paragraph'] }),
-]
-
 export function generateHtmlFromContent(content: TiptapContent): string {
-  return generateHTML(content, tiptapExtensions)
+  return generateHTML(content, editorExtensions)
 }
 
 export function calculateReadingTime(html: string): number {
