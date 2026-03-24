@@ -1,10 +1,9 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { getUserWithTenant, isAuthError } from '@/lib/auth'
 import { renderEmailBlocks, DEFAULT_BLOCKS } from '@agency/email'
 import type { Block } from '@agency/email'
-import type { Json, Tables } from '@agency/database'
 import { updateEmailTemplateSchema } from './validation'
 
 export async function updateEmailTemplate(
@@ -19,26 +18,16 @@ export async function updateEmailTemplate(
 
     const html_body = await renderEmailBlocks(parsed.data.blocks)
 
-    const supabase = await createClient()
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-    if (!user) return { success: false, error: 'Nie zalogowany' }
-
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('id', user.id)
-      .single()
-    if (userError || !userData) return { success: false, error: 'Nie znaleziono użytkownika' }
-    const userWithTenant = userData as Pick<Tables<'users'>, 'tenant_id'>
+    const auth = await getUserWithTenant()
+    if (isAuthError(auth)) return { success: false, error: auth.error }
+    const { supabase, tenantId } = auth
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error: upsertError } = await (supabase as any)
       .from('email_templates')
       .upsert(
         {
-          tenant_id: userWithTenant.tenant_id,
+          tenant_id: tenantId,
           type,
           subject: parsed.data.subject,
           blocks: parsed.data.blocks,

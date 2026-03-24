@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { getUserWithTenant, isAuthError } from '@/lib/auth'
 import { blogPostSchema, type BlogPostFormData } from './validation'
 import { toBlogPost, type BlogPost } from './types'
 import { parseContent } from './utils'
@@ -17,24 +18,12 @@ export async function createBlogPost(
       return { success: false, error: parsed.error.errors[0]?.message ?? 'Nieprawidłowe dane' }
     }
 
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return { success: false, error: 'Nie zalogowany' }
-
-    // Fetch tenant_id for the authenticated user (required by RLS after multi-tenant migration)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: userData, error: userError } = await (supabase as any)
-      .from('users')
-      .select('tenant_id')
-      .eq('id', user.id)
-      .single()
-
-    if (userError || !userData?.tenant_id) {
-      return { success: false, error: 'Nie znaleziono danych użytkownika' }
-    }
+    const auth = await getUserWithTenant()
+    if (isAuthError(auth)) return { success: false, error: auth.error }
+    const { supabase, tenantId } = auth
 
     const insertPayload = {
-      tenant_id: userData.tenant_id,
+      tenant_id: tenantId,
       title: parsed.data.title,
       slug: parsed.data.slug,
       excerpt: parsed.data.excerpt || null,
