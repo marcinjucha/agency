@@ -38,9 +38,8 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Button, Card, Input, Label } from '@agency/ui'
+import { Button, Card, Input, Label, LoadingState, ErrorState } from '@agency/ui'
 import { Calendar, Clock, CheckCircle } from 'lucide-react'
-import { LoadingState, ErrorState } from '@/components/shared'
 
 /**
  * Slot object structure returned from /api/calendar/slots

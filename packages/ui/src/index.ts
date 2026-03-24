@@ -64,3 +64,8 @@ export {
 } from './components/ui/command'
 export { Tabs, TabsList, TabsTrigger, TabsContent } from './components/ui/tabs'
 export { Progress } from './components/ui/progress'
+
+// State components
+export { EmptyState } from './empty-state'
+export { ErrorState } from './error-state'
+export { LoadingState } from './loading-state'

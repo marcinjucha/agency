@@ -4,11 +4,10 @@ import { useState, useEffect, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getResponse } from '../queries'
 import type { ResponseWithRelations, QuestionAnswerPair } from '../types'
-import { Button, Card, Badge } from '@agency/ui'
+import { Button, Card, Badge, LoadingState, ErrorState, EmptyState } from '@agency/ui'
 import Link from 'next/link'
 import { ArrowLeft, FileX, Loader2, AlertTriangle } from 'lucide-react'
 import { getResponseStatusColor } from '@/lib/utils/status'
-import { LoadingState, ErrorState, EmptyState } from '@/components/shared'
 import { triggerAiAnalysis } from '../actions'
 
 type ResponseDetailProps = {

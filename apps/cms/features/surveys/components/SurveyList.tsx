@@ -2,11 +2,10 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { getSurveys } from '../queries'
-import { Button, Card } from '@agency/ui'
+import { Button, Card, LoadingState, ErrorState, EmptyState } from '@agency/ui'
 import Link from 'next/link'
 import { FileText, Plus } from 'lucide-react'
 import { getSurveyStatusColor, type SurveyStatus } from '@/lib/utils/status'
-import { LoadingState, ErrorState, EmptyState } from '@/components/shared'
 
 export function SurveyList() {
   const { data: surveys, isLoading, error } = useQuery({

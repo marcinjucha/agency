@@ -1,6 +1,7 @@
 'use client'
 
-import { Card, cn } from '@agency/ui'
+import { Card } from './components/ui/card'
+import { cn } from './lib/utils'
 import { type LucideIcon } from 'lucide-react'
 
 type EmptyStateProps = {
@@ -12,19 +13,6 @@ type EmptyStateProps = {
   className?: string
 }
 
-/**
- * EmptyState Component
- *
- * Shared empty state component for website app.
- * Follows same pattern as CMS app for consistency.
- *
- * @param icon - Lucide icon component to display
- * @param title - Empty state title
- * @param description - Empty state description
- * @param action - Optional action button/element
- * @param variant - Display style (card or inline)
- * @param className - Additional CSS classes
- */
 export function EmptyState({
   icon: Icon,
   title,

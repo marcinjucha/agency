@@ -1,6 +1,8 @@
 'use client'
 
-import { Card, Button, cn } from '@agency/ui'
+import { Card } from './components/ui/card'
+import { Button } from './components/ui/button'
+import { cn } from './lib/utils'
 import { AlertCircle } from 'lucide-react'
 
 type ErrorStateProps = {
@@ -11,18 +13,6 @@ type ErrorStateProps = {
   className?: string
 }
 
-/**
- * ErrorState Component
- *
- * Shared error state component for website app.
- * Follows same pattern as CMS app for consistency.
- *
- * @param title - Error title (default: "Something went wrong")
- * @param message - Error message to display
- * @param onRetry - Optional retry callback
- * @param variant - Display style (card or inline)
- * @param className - Additional CSS classes
- */
 export function ErrorState({
   title = 'Something went wrong',
   message,

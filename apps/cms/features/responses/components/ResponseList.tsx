@@ -2,12 +2,11 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { getResponses } from '../queries'
-import { Card } from '@agency/ui'
+import { Card, LoadingState, ErrorState, EmptyState } from '@agency/ui'
 import { useRouter } from 'next/navigation'
 import { ArrowRight, FileText } from 'lucide-react'
 import type { ResponseListItem, ResponseStatus } from '../types'
 import { getResponseStatusColor } from '@/lib/utils/status'
-import { LoadingState, ErrorState, EmptyState } from '@/components/shared'
 
 /**
  * ResponseList Component
