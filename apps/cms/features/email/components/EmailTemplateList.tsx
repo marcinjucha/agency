@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { Card } from '@agency/ui'
-import { getEmailTemplates } from '@/features/email/queries'
+import { getEmailTemplates } from '@/features/email/queries.server'
 import { TEMPLATE_TYPE_LABELS } from '@/features/email/types'
 import { Mail, ChevronRight } from 'lucide-react'
 

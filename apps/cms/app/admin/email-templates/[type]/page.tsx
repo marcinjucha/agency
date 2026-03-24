@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
-import { getEmailTemplate } from '@/features/email/queries'
+import { getEmailTemplate } from '@/features/email/queries.server'
 import { EmailTemplateEditor } from '@/features/email/components/EmailTemplateEditor'
 import { TEMPLATE_TYPE_LABELS } from '@/features/email/types'
 
