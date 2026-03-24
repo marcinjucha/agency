@@ -47,3 +47,42 @@ export interface CalendarEvent {
   end: { dateTime: string }
   description?: string | null
 }
+
+/**
+ * Validated booking request data (output of Zod schema)
+ */
+export interface BookingRequest {
+  surveyId: string
+  responseId: string
+  startTime: string
+  endTime: string
+  clientName: string
+  clientEmail: string
+  notes: string
+}
+
+/**
+ * Successful booking result
+ */
+export interface BookingResult {
+  appointment: {
+    id: string
+    startTime: string
+    endTime: string
+    clientName: string
+    clientEmail: string
+    status: string
+    createdAt: string
+  }
+  confirmationUrl: string
+}
+
+/**
+ * Booking error with HTTP status code and error code
+ */
+export interface BookingError {
+  error: string
+  code: string
+  status: number
+  details?: Array<{ path: string; message: string }>
+}
