@@ -34,6 +34,7 @@ export function Hero({ headline, subheadline, cta, trustLine }: HeroBlock) {
 
             <div className="animate-fade-in-up animate-delay-300">
               <a
+                id="hero-cta"
                 href={cta.href}
                 className="inline-flex items-center gap-3 bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl px-8 py-4 text-base font-semibold shadow-xl shadow-primary/25 hover:shadow-primary/40 hover:scale-[1.02] transition-all duration-300 group cta-glow"
               >

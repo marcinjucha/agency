@@ -15,6 +15,7 @@ const NAV_LINKS = [
 export function Navbar({ ctaText, ctaHref }: NavbarBlock) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isScrolled, setIsScrolled] = useState(false)
+  const [showNavCta, setShowNavCta] = useState(false)
   const pathname = usePathname()
 
   useEffect(() => {
@@ -23,8 +24,22 @@ export function Navbar({ ctaText, ctaHref }: NavbarBlock) {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- subscribing to pathname changes to reset menu
+  useEffect(() => setIsMenuOpen(false), [pathname])
+
   useEffect(() => {
-    setIsMenuOpen(false)
+    const heroCta = document.getElementById('hero-cta')
+    if (!heroCta) {
+      // No hero CTA on this page — always show nav CTA
+      const id = requestAnimationFrame(() => setShowNavCta(true))
+      return () => cancelAnimationFrame(id)
+    }
+    const observer = new IntersectionObserver(([entry]) => setShowNavCta(!entry.isIntersecting), {
+      threshold: 0,
+      rootMargin: '-80px 0px 0px 0px',
+    })
+    observer.observe(heroCta)
+    return () => observer.disconnect()
   }, [pathname])
 
   function isActive(href: string) {
@@ -37,20 +52,15 @@ export function Navbar({ ctaText, ctaHref }: NavbarBlock) {
       <header
         className={`fixed top-0 left-0 right-0 z-40 transition-all duration-500 ease-out ${
           isScrolled
-            ? 'top-3 left-4 right-4 sm:left-6 sm:right-6 lg:left-auto lg:right-auto lg:max-w-5xl lg:mx-auto lg:inset-x-6 bg-background/70 backdrop-blur-2xl rounded-2xl border border-border/40 shadow-lg shadow-black/20 navbar-border-gradient'
-            : 'bg-transparent'
+            ? 'bg-background/80 backdrop-blur-2xl border-b border-border/50 shadow-lg shadow-black/25'
+            : 'bg-transparent backdrop-blur-none border-b border-transparent'
         }`}
       >
-        <nav className={`mx-auto px-4 sm:px-6 transition-all duration-500 ${
-          isScrolled ? 'py-2.5 max-w-none' : 'py-4 max-w-6xl'
-        }`}>
+        <nav className="mx-auto px-4 sm:px-6 py-3 max-w-6xl">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-8">
-              <Link
-                href="/"
-                className="group flex items-center gap-2"
-              >
-                <span className="text-lg font-bold tracking-tight bg-gradient-to-r from-foreground via-foreground to-primary bg-clip-text text-gradient transition-all duration-300 group-hover:from-primary group-hover:to-primary/70">
+              <Link href="/" className="group flex items-center gap-2">
+                <span className="text-lg font-bold tracking-tight bg-linear-to-r from-foreground via-foreground to-primary bg-clip-text text-gradient transition-all duration-300 group-hover:from-primary group-hover:to-primary/70">
                   Halo Efekt
                 </span>
               </Link>
@@ -75,11 +85,17 @@ export function Navbar({ ctaText, ctaHref }: NavbarBlock) {
               </div>
             </div>
 
-            <div className="hidden sm:flex">
+            <div
+              className={`hidden sm:flex transition-all duration-300 ease-out ${
+                showNavCta
+                  ? 'opacity-100 translate-y-0 scale-100'
+                  : 'opacity-0 translate-y-1 scale-95 pointer-events-none'
+              }`}
+            >
               <Link href={ctaHref}>
                 <Button
                   size="sm"
-                  className="cta-glow bg-primary hover:bg-primary/90 text-primary-foreground transition-all duration-300 gap-1.5 group/cta"
+                  className="cta-glow bg-primary hover:bg-primary/90 text-primary-foreground transition-all duration-200 gap-1.5 group/cta"
                 >
                   {ctaText}
                   <ArrowRight className="h-3.5 w-3.5 transition-transform duration-200 group-hover/cta:translate-x-0.5" />

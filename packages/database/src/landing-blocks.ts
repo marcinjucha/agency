@@ -93,13 +93,13 @@ export const DEFAULT_BLOCKS: LandingBlock[] = [
   {
     type: 'navbar',
     ctaText: 'Umów rozmowę',
-    ctaHref: '#cta',
+    ctaHref: '/survey/89d6d1e9-82a0-4ff7-ac85-0ed4bd6462b4',
   },
   {
     type: 'hero',
     headline: 'Automatyzujemy procesy. Zwiększamy zysk.',
     subheadline: 'Dla firm od 5 do 100 osób. Średnia oszczędność: do 150 000 zł rocznie.',
-    cta: { text: 'Umów bezpłatną rozmowę', href: '#contact' },
+    cta: { text: 'Umów bezpłatną rozmowę', href: '/survey/89d6d1e9-82a0-4ff7-ac85-0ed4bd6462b4' },
     trustLine: 'Jeśli nie znajdziemy potencjału oszczędności — nic nie płacisz.',
   },
   {
@@ -163,7 +163,7 @@ export const DEFAULT_BLOCKS: LandingBlock[] = [
     type: 'cta',
     headline: 'Gotowy na zmianę?',
     description: 'Umów bezpłatną rozmowę i sprawdź, ile możesz zaoszczędzić.',
-    button: { text: 'Zacznij teraz', href: '#contact' },
+    button: { text: 'Zacznij teraz', href: '/survey/89d6d1e9-82a0-4ff7-ac85-0ed4bd6462b4' },
     trustLine: 'Bezpłatna analiza. Bez zobowiązań.',
   },
   {

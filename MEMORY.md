@@ -71,6 +71,24 @@
 
 **All iterations DONE:** DB → Foundation → Media Page → Tiptap Extensions → Insert Media Modal → Website CSS
 
+## CTA → Survey Flow — AAA-T-57 (2026-03-24)
+
+**Status:** Partial — CTA integration done, survey creation in CMS pending
+
+**Key decisions:**
+- Relative path `/survey/[uuid]` (not full URL) — survey is on same domain (website app)
+- Survey link: `/survey/89d6d1e9-82a0-4ff7-ac85-0ed4bd6462b4` (created manually in CMS)
+- Navbar: IntersectionObserver on `#hero-cta` — nav CTA appears when Hero CTA scrolls out of view (`rootMargin: '-80px 0px 0px 0px'` accounts for navbar height)
+- Navbar: transparent at top, glass morphism on scroll (no floating pill — caused element collapse on lg screens)
+- `overflow-x-hidden` on `<body>` — standard for landing pages with decorative overflow elements (glow orbs)
+
+**Survey qualification design (7 pytań):**
+- imię, email, tel, firma+branża (text), wielkość firmy (select: 1-3/4-10/11-30/31-100/100+), obszary (checkbox: 6 opcji), opis wyzwania (textarea, optional)
+- Scoring max 15 pkt: 10-15 hot, 6-9 warm, 1-5 cold
+- AI kwalifikacja w n8n już zbudowana — feed scoring rubric do Claude Haiku
+
+**Remaining:** stworzenie ankiety w CMS, update CTA href w CMS editor (DB row), E2E flow test
+
 ## Feedback & Corrections
 
 - **validator-agent misses P2 architecture violations** — Phase 8 catches functional bugs (P0/P1) but not code organization issues: wrong file placement, code duplication, missing theme tokens. These require a separate architecture audit with explicit ADR-005 checklist. (2026-03-18)
@@ -80,6 +98,8 @@
 - **Always use defined agents** — User explicitly requires using agents (code-developer-agent, design-agent, etc.) for ALL code changes. Writing code directly without agents is not acceptable. (2026-03-23)
 - **No backward compatibility (pre-launch only)** — No clients/content yet, so breaking old data is fine now. Once clients onboard and real content exists, backward compatibility becomes required. (2026-03-23)
 - **Visual dimension decisions → design-agent** — Embed heights, widths, spacing, layout dimensions are design decisions, not just code. Use design-agent (not code-developer-agent) when tuning visual dimensions like iframe heights, max-widths, aspect ratios. Code-developer-agent for CSS implementation, design-agent for deciding the values. (2026-03-24)
+- **Navbar floating pill (lg:left-auto lg:right-auto + fixed) collapses element** — Tailwind `fixed` + `lg:max-w-5xl` + `lg:left-auto lg:right-auto` causes header to collapse to 0 width on large screens. `left-auto/right-auto` on fixed element without explicit width = content-sized = invisible. Fix: keep fixed navbar always full-width, only change background styles. (2026-03-24)
+- **Direct code edits allowed for tiny changes** — User accepts direct edits (not via agent) for trivial string changes (3 href values, 1 className). Agents required for feature-level changes, not micro-fixes. (2026-03-24)
 
 ## Bugs Found
 
@@ -118,7 +138,7 @@
 ## Domain Concepts (Landing Page)
 
 - **Positioning docs already exist** — `.claude/docs/agency/` has 5 complete docs (Oferta, Strategia, Positioning-Broad, Brand-Guide, Sales-Playbook). AAA-T-71 (Pozycjonowanie) deliverables are effectively done — just needs review/approval before closing. (2026-03-20)
-- **Landing page CTA destination** — Currently all CTAs point to `#contact` (dead). Plan: AAA-T-57 creates contact survey + generates a survey_link URL → that URL goes into all 3 CTA locations (Navbar, Hero, FinalCTA). (2026-03-20)
+- **Landing page CTA destination** — AAA-T-57 DONE: all 3 CTA locations (Navbar, Hero, FinalCTA) now point to `/survey/89d6d1e9-82a0-4ff7-ac85-0ed4bd6462b4`. DEFAULT_BLOCKS updated. DB row must be updated via CMS editor. (2026-03-24)
 
 ## Preferences
 
