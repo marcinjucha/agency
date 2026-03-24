@@ -8,9 +8,9 @@ import { Results } from '@/features/marketing/components/Results'
 import { FinalCTA } from '@/features/marketing/components/FinalCTA'
 import { Footer } from '@/features/marketing/components/Footer'
 import { getPublicLandingPage } from '@/features/marketing/queries'
+import { findBlock, hasNewBlockTypes } from '@/features/marketing/utils'
 import {
   DEFAULT_BLOCKS,
-  type LandingBlock,
   type NavbarBlock,
   type HeroBlock,
   type IdentificationBlock,
@@ -56,15 +56,6 @@ export const metadata: Metadata = {
     description:
       'Automatyzujemy procesy operacyjne w firmach i zwiększamy ich dochód bez zatrudniania nowych ludzi.',
   },
-}
-
-function findBlock<T extends LandingBlock>(blocks: LandingBlock[], type: T['type']): T | undefined {
-  return blocks.find((b) => b.type === type) as T | undefined
-}
-
-function hasNewBlockTypes(blocks: LandingBlock[]): boolean {
-  const requiredTypes = ['identification', 'process', 'results']
-  return requiredTypes.every((type) => blocks.some((b) => b.type === type))
 }
 
 export default async function HomePage() {
