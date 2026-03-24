@@ -19,11 +19,12 @@ import {
 import { getBlogCategories, blogKeys } from '../queries'
 
 interface CategoryComboboxProps {
+  id?: string
   value: string
   onChange: (value: string) => void
 }
 
-export function CategoryCombobox({ value, onChange }: CategoryComboboxProps) {
+export function CategoryCombobox({ id, value, onChange }: CategoryComboboxProps) {
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
 
@@ -54,6 +55,7 @@ export function CategoryCombobox({ value, onChange }: CategoryComboboxProps) {
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
+          id={id}
           variant="outline"
           role="combobox"
           aria-expanded={open}

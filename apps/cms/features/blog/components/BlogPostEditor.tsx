@@ -385,12 +385,13 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
               <CardContent className="space-y-4">
                 {/* Category */}
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Kategoria</Label>
+                  <Label htmlFor="blog-category" className="text-xs">Kategoria</Label>
                   <Controller
                     name="category"
                     control={control}
                     render={({ field }) => (
                       <CategoryCombobox
+                        id="blog-category"
                         value={field.value ?? ''}
                         onChange={field.onChange}
                       />

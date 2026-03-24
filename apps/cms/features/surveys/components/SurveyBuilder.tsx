@@ -183,8 +183,9 @@ export function SurveyBuilder({ survey }: SurveyBuilderProps) {
 
                   <div className="space-y-4">
                     <div>
-                      <Label>Question Text</Label>
+                      <Label htmlFor={`question-text-${index}`}>Question Text</Label>
                       <Input
+                        id={`question-text-${index}`}
                         value={question.question}
                         onChange={(e) => updateQuestion(question.id, { question: e.target.value })}
                         placeholder="What is your name?"
@@ -193,7 +194,7 @@ export function SurveyBuilder({ survey }: SurveyBuilderProps) {
 
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <Label>Type</Label>
+                        <Label htmlFor={`question-type-${index}`}>Type</Label>
                         <Select
                           value={question.type}
                           onValueChange={(value) =>
@@ -202,7 +203,7 @@ export function SurveyBuilder({ survey }: SurveyBuilderProps) {
                             })
                           }
                         >
-                          <SelectTrigger>
+                          <SelectTrigger id={`question-type-${index}`}>
                             <SelectValue placeholder="Select question type" />
                           </SelectTrigger>
                           <SelectContent>
