@@ -15,7 +15,7 @@ declare module '@tiptap/core' {
 
 const INSTAGRAM_URL_REGEX = /(?:https?:\/\/)?(?:www\.)?instagram\.com\/(?:p|reel|tv)\/([\w-]+)/g
 
-import { IFRAME_ALLOW } from './constants'
+import { IFRAME_ALLOW, INSTAGRAM_INLINE_STYLE } from './constants'
 
 export const InstagramExtension = Node.create<InstagramOptions>({
   name: 'instagram',
@@ -26,7 +26,7 @@ export const InstagramExtension = Node.create<InstagramOptions>({
     return {
       HTMLAttributes: {
         class: 'instagram-embed',
-        style: 'width:100%;max-width:500px;height:700px;border-radius:0.5rem;margin:1.5rem auto;display:block;background:#000;',
+        style: INSTAGRAM_INLINE_STYLE,
       },
     }
   },

@@ -10,6 +10,7 @@ import type { TiptapContent } from '../types'
 import { EditorToolbar } from './EditorToolbar'
 import { InsertMediaModal } from './InsertMediaModal'
 import { editorExtensions } from '../extensions'
+import { EMBED_DIMENSIONS } from '../extensions/constants'
 
 interface TiptapEditorProps {
   content: TiptapContent
@@ -333,8 +334,9 @@ export function TiptapEditor({
         }
 
         .tiptap-editor-content iframe.instagram-embed {
-          max-width: 500px;
-          height: 700px;
+          max-width: ${EMBED_DIMENSIONS.instagram.maxWidth}px;
+          min-height: ${EMBED_DIMENSIONS.instagram.minHeight}px;
+          height: ${EMBED_DIMENSIONS.instagram.height}px;
           margin-left: auto;
           margin-right: auto;
           display: block;
@@ -342,8 +344,9 @@ export function TiptapEditor({
         }
 
         .tiptap-editor-content iframe.tiktok-embed {
-          max-width: 500px;
-          height: 750px;
+          max-width: ${EMBED_DIMENSIONS.tiktok.maxWidth}px;
+          min-height: ${EMBED_DIMENSIONS.tiktok.minHeight}px;
+          height: ${EMBED_DIMENSIONS.tiktok.height}px;
           margin-left: auto;
           margin-right: auto;
           display: block;

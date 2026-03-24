@@ -15,7 +15,7 @@ declare module '@tiptap/core' {
 
 const TIKTOK_URL_REGEX = /(?:https?:\/\/)?(?:www\.)?(?:tiktok\.com\/@[\w.-]+\/video\/(\d+)|vm\.tiktok\.com\/([\w-]+)|tiktok\.com\/t\/([\w-]+))/g
 
-import { IFRAME_ALLOW } from './constants'
+import { IFRAME_ALLOW, TIKTOK_INLINE_STYLE } from './constants'
 
 export const TikTokExtension = Node.create<TikTokOptions>({
   name: 'tiktok',
@@ -26,7 +26,7 @@ export const TikTokExtension = Node.create<TikTokOptions>({
     return {
       HTMLAttributes: {
         class: 'tiktok-embed',
-        style: 'width:100%;max-width:500px;height:750px;border-radius:0.5rem;margin:1.5rem auto;display:block;background:#000;',
+        style: TIKTOK_INLINE_STYLE,
       },
     }
   },
