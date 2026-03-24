@@ -56,7 +56,7 @@
 
 ## Media Library — AAA-T-75 (2026-03-23)
 
-**Status:** In Progress, Urgent, Iteration 1/6 DONE
+**Status:** COMPLETE (2026-03-24), all 6 iterations done
 **Scope:** 6 iteracji w Notion page content with checkboxes
 
 **Key decisions (UPDATED 2026-03-23):**
@@ -69,10 +69,7 @@
 - Video limit: 50MB, presigned URL 300s for media folder
 - Paste handler + Insert Media Modal — both active for YouTube/Vimeo embeds
 
-**Iteration 1 DONE:** media_items table, blog_posts tenant_id, RLS, types regenerated
-**Iteration 2 DONE:** foundation files (types/validation/queries/actions/utils), lib/s3.ts shared client, upload route extended
-**Iteration 3 DONE:** /admin/media page — MediaUploadZone, MediaCard, MediaGrid, MediaTypeFilter, MediaPreviewDialog, MediaLibrary, sidebar nav
-**Remaining:** Tiptap Extensions(M) → Insert Media Modal(L) → Website CSS(S)
+**All iterations DONE:** DB → Foundation → Media Page → Tiptap Extensions → Insert Media Modal → Website CSS
 
 ## Feedback & Corrections
 
@@ -82,6 +79,7 @@
 - **No Co-Authored-By footer in commits** — User does not want AI attribution footer in commit messages. Never add "Co-Authored-By: Claude" or similar. (2026-03-23)
 - **Always use defined agents** — User explicitly requires using agents (code-developer-agent, design-agent, etc.) for ALL code changes. Writing code directly without agents is not acceptable. (2026-03-23)
 - **No backward compatibility (pre-launch only)** — No clients/content yet, so breaking old data is fine now. Once clients onboard and real content exists, backward compatibility becomes required. (2026-03-23)
+- **Visual dimension decisions → design-agent** — Embed heights, widths, spacing, layout dimensions are design decisions, not just code. Use design-agent (not code-developer-agent) when tuning visual dimensions like iframe heights, max-widths, aspect ratios. Code-developer-agent for CSS implementation, design-agent for deciding the values. (2026-03-24)
 
 ## Bugs Found
 
@@ -99,7 +97,8 @@
 - **Tiptap extension registry pattern** — `features/blog/extensions/index.ts` exports `editorExtensions` (single source of truth) and `mediaExtensions`. Both `TiptapEditor.tsx` and `utils.ts` import from here. Adding new media type = 1 new extension file + 1 line in index.ts. Shared video utilities live in `lib/video-utils.ts`. (2026-03-23)
 - **Shared video utilities in `lib/`** — `extractVideoId`, `generateThumbnailUrl`, `buildEmbedUrl`, `fetchVimeoThumbnail` all live in `apps/cms/lib/`. Used by both `features/blog` and `features/media` — placing in either feature would create cross-feature import violation. (2026-03-23)
 - **Media flow: images/video only via Library** — TiptapEditor drag/paste opens media modal instead of uploading directly. Images and video inserted into editor only from Library tab. YouTube/Vimeo/Instagram/TikTok paste auto-detect still works via extension paste rules. (2026-03-23)
-- **Instagram/TikTok embed styling issue** — Fixed `aspect-ratio: 9/16` caused too much whitespace (platform UI adds header/footer). Changed to fixed height (700px Instagram, 750px TikTok). Remaining issue: white background inside iframe. Tracked in Notion task (2026-03-23), deferred.
+- **Instagram/TikTok embed final dimensions** — Cross-origin iframes cannot auto-report content height, so fixed height is the only approach. Final values after iterative testing (2026-03-24): Instagram 800px height / 500px max-width, TikTok 740px height / 330px max-width (TikTok content is narrower than Instagram). Both centered with `background: #000`. AAA-T-78 resolved.
+- **EMBED_DIMENSIONS constants pattern** — `apps/cms/features/blog/extensions/constants.ts` exports `EMBED_DIMENSIONS` object + `INSTAGRAM_INLINE_STYLE` / `TIKTOK_INLINE_STYLE` string constants. Extensions import these for renderHTML inline styles. TiptapEditor.tsx uses JSX `${EMBED_DIMENSIONS.instagram.height}px` interpolation in style block. Website `globals.css` stays manual (cannot import JS) but has a comment: "Source of truth: constants.ts". Changing dimensions in future = 1 file (constants.ts) + 1 file (globals.css). (2026-03-24)
 
 ## Landing Page Redesign — Audit Findings (2026-03-20)
 

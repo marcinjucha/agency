@@ -129,6 +129,8 @@ agency/
 | **notion-patterns**      | `.claude/skills/notion-patterns/SKILL.md`      | Notion MCP tools — task status updates, project tracking. Properties are CASE-SENSITIVE. Contains Agency database IDs and filter rules                        |
 | **ui-components**        | `.claude/skills/ui-components/SKILL.md`        | React components, shadcn/ui design system, WCAG 2.1 AA accessibility, responsive design. Controller for checkbox arrays, TanStack Query CMS-only, 4 UI states |
 | **ui-design**            | `.claude/skills/ui-design/SKILL.md`            | Visual design decisions — layout choice, color strategy, spacing, typography, animations. Dark/moody tonality (Linear/Vercel aesthetic), decision frameworks when stuck, quality gates before shipping UI |
+| **validation-patterns**  | `.claude/skills/validation-patterns/SKILL.md`  | Two-pass validation (functional + architecture), YAML report formats, severity classification, 8-point architecture checklist. Loaded by validator-agent      |
+| **iterative-planning**   | `.claude/skills/iterative-planning/SKILL.md`   | Task size assessment (S/M/L/XL), iterative breakdown for M/L/XL tasks, dependency graph patterns (sequential/parallel/convergent), iteration sizing, parallelization identification. Used by analyst-agent in /develop Phase 2 |
 | **agency-knowledge**     | `.claude/skills/agency-knowledge/SKILL.md`     | Halo Efekt positioning, ICP, pricing, brand voice, competitive framing, sales playbook. Dual positioning (narrow vs broad), copy decisions, marketing angles. Updated by agents after strategy sessions |
 
 ---
