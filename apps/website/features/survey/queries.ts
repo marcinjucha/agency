@@ -1,14 +1,14 @@
 /**
  * Survey Data Fetching Queries
  *
- * Browser-side data fetching for public survey forms.
- * Uses Supabase browser client (NO authentication required).
+ * Server-side data fetching for public survey forms.
+ * Uses Supabase anon-server client (NO authentication, NO cookies).
  * All queries include comprehensive business logic validation.
  *
  * @module apps/website/features/survey/queries
  */
 
-import { createClient } from '@/lib/supabase/client'
+import { createAnonClient } from '@/lib/supabase/anon-server'
 import type { LinkValidation, SurveyLinkData } from './types'
 
 /**
@@ -36,7 +36,7 @@ import type { LinkValidation, SurveyLinkData } from './types'
  * ```
  */
 export async function getSurveyByToken(token: string): Promise<LinkValidation> {
-  const supabase = createClient()
+  const supabase = createAnonClient()
 
   // Step 1: Fetch survey link (WITHOUT joining surveys to avoid RLS recursion)
   const { data: link, error: linkError } = await supabase
