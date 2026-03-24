@@ -51,7 +51,7 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
 
   // Mutation for deleting link
   const deleteMutation = useMutation({
-    mutationFn: (linkId: string) => deleteSurveyLink(linkId),
+    mutationFn: (linkId: string) => deleteSurveyLink(linkId, surveyId),
     onSuccess: (result) => {
       if (result.success) {
         queryClient.invalidateQueries({ queryKey: ['survey-links', surveyId] })

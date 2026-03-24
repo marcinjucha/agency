@@ -5,6 +5,7 @@ import { revokeAccess } from '@/lib/google-calendar/oauth'
 import { revalidatePath } from 'next/cache'
 import type { GoogleCalendarToken } from '@/lib/google-calendar/oauth'
 import type { CalendarSettingsFormValues } from './types'
+import { calendarSettingsSchema } from './validation'
 
 /**
  * Get Google Calendar connection status
@@ -131,6 +132,11 @@ export async function updateCalendarSettings(
   data: CalendarSettingsFormValues
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    const parsed = calendarSettingsSchema.safeParse(data)
+    if (!parsed.success) {
+      return { success: false, error: parsed.error.errors[0].message }
+    }
+
     const supabase = await createClient()
 
     const {
