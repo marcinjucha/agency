@@ -1,12 +1,5 @@
 import { createClient } from '@/lib/supabase/client'
-import type { Tables } from '@agency/database'
-import type { LandingBlock } from '@agency/database'
-
-export type SeoMetadata = {
-  title: string
-  description: string
-  ogImage?: string
-}
+import type { Tables, LandingBlock, SeoMetadata } from '@agency/database'
 
 // LandingPage with typed blocks replacing the generic JSONB
 export type LandingPage = Omit<Tables<'landing_pages'>, 'blocks' | 'seo_metadata'> & {

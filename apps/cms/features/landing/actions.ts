@@ -4,8 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { toLandingPage } from './queries'
 import { landingPageSchema } from './validation'
-import type { LandingBlock } from '@agency/database'
-import type { SeoMetadata } from './queries'
+import type { LandingBlock, SeoMetadata } from '@agency/database'
 
 export async function updateLandingPage(
   id: string,

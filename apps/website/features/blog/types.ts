@@ -1,9 +1,6 @@
-export type SeoMetadata = {
-  title?: string
-  description?: string
-  ogImage?: string
-  keywords?: string[]
-}
+import type { SeoMetadata } from '@agency/database'
+
+export type { SeoMetadata } from '@agency/database'
 
 /** Full blog post for article detail view */
 export type WebsiteBlogPost = {
