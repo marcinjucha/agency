@@ -40,6 +40,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Button, Card, Input, Label, LoadingState, ErrorState } from '@agency/ui'
 import { Calendar, Clock, CheckCircle } from 'lucide-react'
+import { messages } from '@/lib/messages'
 
 /**
  * Slot object structure returned from /api/calendar/slots
@@ -56,15 +57,15 @@ interface CalendarSlot {
 const bookingFormSchema = z.object({
   clientName: z
     .string()
-    .min(2, 'Name must be at least 2 characters')
-    .max(100, 'Name is too long'),
+    .min(2, messages.validation.nameTooShort)
+    .max(100, messages.validation.nameTooLong),
   clientEmail: z
     .string()
-    .email('Please enter a valid email address')
-    .min(1, 'Email is required'),
+    .email(messages.validation.invalidEmail)
+    .min(1, messages.validation.emailRequired),
   notes: z
     .string()
-    .max(500, 'Notes cannot exceed 500 characters')
+    .max(500, messages.validation.notesTooLong)
     .optional()
     .default(''),
 })
@@ -101,10 +102,10 @@ function SuccessMessage({
         <CheckCircle className="h-16 w-16 text-primary" />
       </div>
       <h2 className="text-3xl font-bold text-foreground mb-3">
-        Appointment Confirmed!
+        {messages.calendar.appointmentConfirmed}
       </h2>
       <p className="text-muted-foreground mb-8">
-        Your appointment has been successfully booked.
+        {messages.calendar.appointmentBookedSuccess}
       </p>
 
       {/* Booking Details Summary */}
@@ -113,14 +114,14 @@ function SuccessMessage({
           <div className="flex items-center gap-3 text-left">
             <Calendar className="h-5 w-5 text-primary flex-shrink-0" />
             <div>
-              <p className="text-sm text-muted-foreground">Date</p>
+              <p className="text-sm text-muted-foreground">{messages.calendar.dateLabel}</p>
               <p className="font-semibold text-foreground">{formattedDate}</p>
             </div>
           </div>
           <div className="flex items-center gap-3 text-left">
             <Clock className="h-5 w-5 text-primary flex-shrink-0" />
             <div>
-              <p className="text-sm text-muted-foreground">Time</p>
+              <p className="text-sm text-muted-foreground">{messages.calendar.timeLabel}</p>
               <p className="font-semibold text-foreground">{formattedTime}</p>
             </div>
           </div>
@@ -241,11 +242,9 @@ export function CalendarBooking({
 
       if (!response.ok) {
         if (response.status === 404) {
-          setSlotsError(
-            'Calendar not connected for this lawyer. Please contact support.'
-          )
+          setSlotsError(messages.calendar.calendarNotConnected)
         } else {
-          setSlotsError('Failed to load available times. Please try again.')
+          setSlotsError(messages.calendar.loadTimesFailed)
         }
         setSlots([])
         return
@@ -254,7 +253,7 @@ export function CalendarBooking({
       const data = await response.json()
 
       if (!data.slots || data.slots.length === 0) {
-        setSlotsError('No available times for this date. Please choose another.')
+        setSlotsError(messages.calendar.noTimesAvailable)
         setSlots([])
       } else {
         setSlotsError(null)
@@ -262,7 +261,7 @@ export function CalendarBooking({
       }
     } catch (error) {
       console.error('Error fetching calendar slots:', error)
-      setSlotsError('Unable to load times. Please check your connection.')
+      setSlotsError(messages.calendar.connectionError)
       setSlots([])
     } finally {
       setSlotsLoading(false)
@@ -274,7 +273,7 @@ export function CalendarBooking({
    */
   const onSubmit = async (data: BookingFormData) => {
     if (!selectedSlot) {
-      setSubmitError('Please select a time slot')
+      setSubmitError(messages.calendar.selectTimeSlot)
       return
     }
 
@@ -304,12 +303,12 @@ export function CalendarBooking({
         setBookingSuccess(true)
       } else {
         setSubmitError(
-          result.error || 'Booking failed. Please try again.'
+          result.error || messages.calendar.bookingFailed
         )
       }
     } catch (error) {
       console.error('Booking submission error:', error)
-      setSubmitError('An unexpected error occurred. Please try again.')
+      setSubmitError(messages.calendar.unexpectedError)
     } finally {
       setIsSubmitting(false)
     }
@@ -343,10 +342,10 @@ export function CalendarBooking({
             {/* Header */}
             <div className="mb-8 pb-6 border-b border-border">
               <h1 className="text-4xl font-bold text-foreground mb-3">
-                Book an Appointment
+                {messages.calendar.bookAppointment}
               </h1>
               <p className="text-lg text-muted-foreground">
-                Select a convenient time for your consultation
+                {messages.calendar.selectConvenientTime}
               </p>
             </div>
 
@@ -357,7 +356,7 @@ export function CalendarBooking({
                   htmlFor="appointment-date"
                   className="text-base font-medium text-foreground"
                 >
-                  Select a Date
+                  {messages.calendar.selectDate}
                   <span className="text-destructive ml-1">*</span>
                 </Label>
                 <input
@@ -374,7 +373,7 @@ export function CalendarBooking({
                   id="date-help"
                   className="text-sm text-muted-foreground"
                 >
-                  Choose a date at least one day from today
+                  {messages.calendar.selectDateHelp}
                 </p>
               </div>
 
@@ -382,14 +381,14 @@ export function CalendarBooking({
               {selectedDate && (
                 <div className="space-y-3">
                   <Label className="text-base font-medium text-foreground">
-                    Select a Time
+                    {messages.calendar.selectTime}
                     <span className="text-destructive ml-1">*</span>
                   </Label>
 
                   {slotsLoading && <LoadingState variant="skeleton-list" rows={6} />}
 
                   {slotsError && (
-                    <ErrorState message={slotsError} variant="inline" title="Calendar Error" />
+                    <ErrorState message={slotsError} variant="inline" title={messages.calendar.calendarError} />
                   )}
 
                   {!slotsLoading && slots.length > 0 && (
@@ -402,7 +401,7 @@ export function CalendarBooking({
 
                   {!slotsLoading && !slotsError && slots.length === 0 && (
                     <p className="text-muted-foreground py-6 text-center">
-                      No slots available for this date. Please try another date.
+                      {messages.calendar.noSlotsForDate}
                     </p>
                   )}
                 </div>
@@ -413,7 +412,7 @@ export function CalendarBooking({
                 <>
                   <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
                     <p className="text-sm text-primary">
-                      <strong>Selected appointment:</strong> {selectedDate?.toLocaleDateString('pl-PL')} at{' '}
+                      <strong>{messages.calendar.selectedAppointment}</strong> {selectedDate?.toLocaleDateString('pl-PL')} {messages.calendar.at}{' '}
                       {new Date(selectedSlot.start).toLocaleTimeString('pl-PL', {
                         hour: '2-digit',
                         minute: '2-digit',
@@ -428,13 +427,13 @@ export function CalendarBooking({
                         htmlFor="client-name"
                         className="text-base font-medium text-foreground"
                       >
-                        Your Name
+                        {messages.calendar.yourName}
                         <span className="text-destructive ml-1">*</span>
                       </Label>
                       <Input
                         id="client-name"
                         type="text"
-                        placeholder="John Doe"
+                        placeholder={messages.calendar.yourNamePlaceholder}
                         {...register('clientName')}
                         aria-required="true"
                         aria-invalid={errors.clientName ? 'true' : 'false'}
@@ -456,13 +455,13 @@ export function CalendarBooking({
                         htmlFor="client-email"
                         className="text-base font-medium text-foreground"
                       >
-                        Email Address
+                        {messages.calendar.emailAddress}
                         <span className="text-destructive ml-1">*</span>
                       </Label>
                       <Input
                         id="client-email"
                         type="email"
-                        placeholder="you@example.com"
+                        placeholder={messages.calendar.emailPlaceholder}
                         {...register('clientEmail')}
                         aria-required="true"
                         aria-invalid={errors.clientEmail ? 'true' : 'false'}
@@ -484,12 +483,12 @@ export function CalendarBooking({
                         htmlFor="appointment-notes"
                         className="text-base font-medium text-foreground"
                       >
-                        Additional Notes (Optional)
+                        {messages.calendar.additionalNotes}
                       </Label>
                       <textarea
                         id="appointment-notes"
                         rows={4}
-                        placeholder="Tell us about your case or any special requests..."
+                        placeholder={messages.calendar.notesPlaceholder}
                         {...register('notes')}
                         className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent ${
                           errors.notes ? 'border-destructive' : 'border-border'
@@ -511,7 +510,7 @@ export function CalendarBooking({
 
               {/* Submission Error Alert */}
               {submitError && (
-                <ErrorState message={submitError} variant="inline" title="Booking Error" />
+                <ErrorState message={submitError} variant="inline" title={messages.calendar.bookingError} />
               )}
 
               {/* Submit Button (only enabled when slot selected) */}
@@ -544,10 +543,10 @@ export function CalendarBooking({
                             d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                           />
                         </svg>
-                        Confirming Appointment...
+                        {messages.calendar.confirming}
                       </span>
                     ) : (
-                      'Confirm Appointment'
+                      messages.calendar.confirmAppointment
                     )}
                   </Button>
                 </div>

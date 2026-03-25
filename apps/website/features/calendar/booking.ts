@@ -13,6 +13,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { getValidAccessToken, refreshAccessToken, createEvent } from '@agency/calendar'
 import type { BookingRequest, BookingResult, BookingError } from './types'
+import { messages } from '@/lib/messages'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -53,7 +54,7 @@ export async function bookAppointment(
   if (surveyError || !surveyLink) {
     return {
       success: false,
-      error: { error: 'Survey not found', code: 'SURVEY_NOT_FOUND', status: 404 },
+      error: { error: messages.calendar.surveyNotFound, code: 'SURVEY_NOT_FOUND', status: 404 },
     }
   }
 
@@ -77,7 +78,7 @@ export async function bookAppointment(
     return {
       success: false,
       error: {
-        error: 'Response not found or does not match survey',
+        error: messages.calendar.responseNotFound,
         code: 'RESPONSE_NOT_FOUND',
         status: 404,
       },
@@ -96,7 +97,7 @@ export async function bookAppointment(
     return {
       success: false,
       error: {
-        error: 'Failed to check availability',
+        error: messages.calendar.availabilityCheckFailed,
         code: 'AVAILABILITY_CHECK_FAILED',
         status: 500,
       },
@@ -116,7 +117,7 @@ export async function bookAppointment(
     return {
       success: false,
       error: {
-        error: 'Selected time slot is no longer available',
+        error: messages.calendar.slotUnavailable,
         code: 'SLOT_UNAVAILABLE',
         status: 409,
       },
@@ -145,7 +146,7 @@ export async function bookAppointment(
     return {
       success: false,
       error: {
-        error: 'Failed to create appointment',
+        error: messages.calendar.appointmentCreationFailed,
         code: 'APPOINTMENT_CREATION_FAILED',
         status: 500,
       },

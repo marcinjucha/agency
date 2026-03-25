@@ -31,6 +31,7 @@ import { Button, Card } from '@agency/ui'
 import { QuestionField } from './QuestionField'
 import { generateSurveySchema } from '../validation'
 import type { SurveyData, SurveyAnswers } from '../types'
+import { messages } from '@/lib/messages'
 
 interface SurveyFormProps {
   /** Survey data including title, description, and questions */
@@ -87,11 +88,11 @@ export function SurveyForm({ survey, linkId, token }: SurveyFormProps) {
         router.push(`/survey/${token}/success${queryString}`)
       } else {
         // Display error message from API
-        setSubmitError(result.error || 'Failed to submit survey. Please try again.')
+        setSubmitError(result.error || messages.survey.submitFailed)
       }
     } catch (error) {
       console.error('Form submission error:', error)
-      setSubmitError('An unexpected error occurred. Please try again.')
+      setSubmitError(messages.survey.unexpectedError)
     } finally {
       setIsSubmitting(false)
     }
@@ -134,7 +135,7 @@ export function SurveyForm({ survey, linkId, token }: SurveyFormProps) {
                   className="bg-destructive/10 border-l-4 border-destructive text-destructive px-6 py-4 rounded-r shadow-sm"
                   role="alert"
                 >
-                  <p className="font-medium">Submission Error</p>
+                  <p className="font-medium">{messages.survey.submissionError}</p>
                   <p className="text-sm mt-1">{submitError}</p>
                 </div>
               )}
@@ -168,10 +169,10 @@ export function SurveyForm({ survey, linkId, token }: SurveyFormProps) {
                           d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                         ></path>
                       </svg>
-                      Submitting...
+                      {messages.survey.submitting}
                     </span>
                   ) : (
-                    'Submit Survey'
+                    messages.survey.submitSurvey
                   )}
                 </Button>
               </div>

@@ -49,12 +49,18 @@ export const messages = {
     bookingFailed: 'Rezerwacja nie powiodła się. Spróbuj ponownie.',
     confirming: 'Potwierdzanie wizyty…',
     confirmAppointment: 'Potwierdź wizytę',
+    unexpectedError: 'Wystąpił nieoczekiwany błąd. Spróbuj ponownie.',
     // Success
     appointmentConfirmed: 'Wizyta potwierdzona!',
     appointmentBookedSuccess: 'Twoja wizyta została pomyślnie zarezerwowana.',
     dateLabel: 'Data',
     timeLabel: 'Godzina',
-    // booking.ts errors (technical, keep in English for API responses)
+    // booking.ts errors (user-visible, codes stay in English)
+    surveyNotFound: 'Nie znaleziono ankiety',
+    responseNotFound: 'Nie znaleziono odpowiedzi lub nie pasuje do ankiety',
+    availabilityCheckFailed: 'Nie udało się sprawdzić dostępności',
+    slotUnavailable: 'Wybrany termin nie jest już dostępny',
+    appointmentCreationFailed: 'Nie udało się utworzyć wizyty',
   },
 
   validation: {
@@ -68,5 +74,6 @@ export const messages = {
     nameTooShort: 'Imię musi mieć co najmniej 2 znaki',
     nameTooLong: 'Imię jest za długie',
     notesTooLong: 'Notatki nie mogą przekraczać 500 znaków',
+    selectPlaceholder: 'Wybierz opcję…',
   },
 } as const

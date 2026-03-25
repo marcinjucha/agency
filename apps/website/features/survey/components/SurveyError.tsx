@@ -1,11 +1,12 @@
 import { Card } from '@agency/ui'
+import { messages } from '@/lib/messages'
 
 interface SurveyErrorProps {
   title?: string
   message: string
 }
 
-export function SurveyError({ title = 'Survey Unavailable', message }: SurveyErrorProps) {
+export function SurveyError({ title = messages.survey.surveyUnavailable, message }: SurveyErrorProps) {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-muted/30 to-muted p-6">
       <Card className="max-w-md w-full p-10 text-center shadow-xl border-0">
