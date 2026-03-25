@@ -256,7 +256,7 @@ export function MediaUploadZone({ onUploadComplete }: MediaUploadZoneProps) {
               <div className="flex items-center gap-2">
                 {job.state === 'done' && (
                   <CheckCircle2
-                    className="h-4 w-4 shrink-0 text-green-500"
+                    className="h-4 w-4 shrink-0 text-success"
                     aria-hidden="true"
                   />
                 )}
@@ -270,7 +270,7 @@ export function MediaUploadZone({ onUploadComplete }: MediaUploadZoneProps) {
                   {job.fileName}
                 </p>
                 {job.state === 'done' && (
-                  <span className="shrink-0 text-xs text-green-500">Gotowe</span>
+                  <span className="shrink-0 text-xs text-success">Gotowe</span>
                 )}
               </div>
 

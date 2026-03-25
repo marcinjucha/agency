@@ -228,7 +228,7 @@ export function ResponseDetail({ responseId }: ResponseDetailProps) {
         {!response.ai_qualification ? (
           aiPhase === 'failed' ? (
             <div className="flex flex-col gap-3 py-4">
-              <div className="flex items-center gap-2 text-orange-500">
+              <div className="flex items-center gap-2 text-status-warning-foreground">
                 <AlertTriangle className="h-4 w-4" />
                 <p className="text-sm">Analysis unavailable</p>
               </div>
@@ -260,8 +260,8 @@ export function ResponseDetail({ responseId }: ResponseDetailProps) {
                   response.ai_qualification.recommendation === 'QUALIFIED'
                     ? 'bg-success/15 text-success'
                     : response.ai_qualification.recommendation === 'DISQUALIFIED'
-                      ? 'bg-destructive/15 text-red-400'
-                      : 'bg-yellow-500/15 text-yellow-400'
+                      ? 'bg-destructive/15 text-destructive'
+                      : 'bg-status-warning/15 text-status-warning-foreground'
                 }`}
               >
                 {response.ai_qualification.recommendation}
