@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Script from "next/script";
+import PlausibleProvider from "next-plausible";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
@@ -29,14 +29,18 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground overflow-x-hidden`}
       >
-        {children}
+        <PlausibleProvider
+          domain="haloefekt.pl"
+          customDomain="https://analytics.trustcode.pl"
+          selfHosted
+          trackOutboundLinks
+          trackFileDownloads
+          taggedEvents
+          enabled
+        >
+          {children}
+        </PlausibleProvider>
         <Analytics />
-        <Script
-          defer
-          data-domain="haloefekt.pl"
-          src="https://analytics.trustcode.pl/js/script.outbound-links.file-downloads.404s.tagged-events.js"
-          strategy="afterInteractive"
-        />
       </body>
     </html>
   );
