@@ -12,6 +12,7 @@ import {
   type UpdateMediaItemFormData,
 } from './validation'
 import { toMediaItem, type MediaItem } from './types'
+import { messages } from '@/lib/messages'
 
 export async function createMediaItem(
   data: CreateMediaItemFormData
@@ -21,7 +22,7 @@ export async function createMediaItem(
     if (!parsed.success) {
       return {
         success: false,
-        error: parsed.error.errors[0]?.message ?? 'Nieprawidlowe dane',
+        error: parsed.error.errors[0]?.message ?? messages.media.invalidData,
       }
     }
 
@@ -54,7 +55,7 @@ export async function createMediaItem(
     revalidatePath('/admin/media')
     return { success: true, data: toMediaItem(created) }
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Nieznany blad'
+    const message = err instanceof Error ? err.message : messages.media.unknownError
     return { success: false, error: message }
   }
 }
@@ -68,7 +69,7 @@ export async function updateMediaItem(
     if (!parsed.success) {
       return {
         success: false,
-        error: parsed.error.errors[0]?.message ?? 'Nieprawidlowe dane',
+        error: parsed.error.errors[0]?.message ?? messages.media.invalidData,
       }
     }
 
@@ -76,7 +77,7 @@ export async function updateMediaItem(
     const {
       data: { user },
     } = await supabase.auth.getUser()
-    if (!user) return { success: false, error: 'Nie zalogowany' }
+    if (!user) return { success: false, error: messages.common.notLoggedIn }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- media_items not in generated types
     const { error } = await (supabase as any)
@@ -89,7 +90,7 @@ export async function updateMediaItem(
     revalidatePath('/admin/media')
     return { success: true }
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Nieznany blad'
+    const message = err instanceof Error ? err.message : messages.media.unknownError
     return { success: false, error: message }
   }
 }
@@ -102,7 +103,7 @@ export async function deleteMediaItem(
     const {
       data: { user },
     } = await supabase.auth.getUser()
-    if (!user) return { success: false, error: 'Nie zalogowany' }
+    if (!user) return { success: false, error: messages.common.notLoggedIn }
 
     // Fetch the item first to get s3_key for S3 cleanup
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- media_items not in generated types
@@ -137,7 +138,7 @@ export async function deleteMediaItem(
     revalidatePath('/admin/media')
     return { success: true }
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Nieznany blad'
+    const message = err instanceof Error ? err.message : messages.media.unknownError
     return { success: false, error: message }
   }
 }

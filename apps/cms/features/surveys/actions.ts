@@ -9,6 +9,7 @@ import {
   updateSurveySchema,
   generateSurveyLinkSchema,
 } from './validation'
+import { messages } from '@/lib/messages'
 
 /**
  * Create a new survey
@@ -45,13 +46,13 @@ export async function createSurvey(formData: {
       .single()
 
     if (insertError || !survey) {
-      return { success: false, error: insertError?.message || 'Nie udało się stworzyć ankiety' }
+      return { success: false, error: insertError?.message || messages.surveys.createFailed }
     }
 
     revalidatePath('/admin/surveys')
     return { success: true, surveyId: (survey as Tables<'surveys'>).id }
   } catch (error) {
-    return { success: false, error: 'Nie udało się stworzyć ankiety' }
+    return { success: false, error: messages.surveys.createFailed }
   }
 }
 
@@ -81,7 +82,7 @@ export async function updateSurvey(
     revalidatePath(`/admin/surveys/${id}`)
     return { success: true }
   } catch (error) {
-    return { success: false, error: 'Nie udało się zaktualizować ankiety' }
+    return { success: false, error: messages.surveys.updateFailed }
   }
 }
 
@@ -101,7 +102,7 @@ export async function deleteSurvey(id: string): Promise<{ success: boolean; erro
     revalidatePath('/admin/surveys')
     return { success: true }
   } catch (error) {
-    return { success: false, error: 'Nie udało się usunąć ankiety' }
+    return { success: false, error: messages.surveys.deleteFailed }
   }
 }
 
@@ -138,7 +139,7 @@ export async function generateSurveyLink(
       .maybeSingle()
 
     if (!survey) {
-      return { success: false, error: 'Nie znaleziono ankiety' }
+      return { success: false, error: messages.surveys.notFound }
     }
 
     // Generate unique token using crypto.randomUUID()
@@ -162,7 +163,7 @@ export async function generateSurveyLink(
       .single()
 
     if (insertError || !link) {
-      return { success: false, error: insertError?.message || 'Nie udało się wygenerować linku' }
+      return { success: false, error: insertError?.message || messages.surveys.generateLinkFailed }
     }
 
     revalidatePath(`/admin/surveys/${surveyId}`)
@@ -172,7 +173,7 @@ export async function generateSurveyLink(
       token: (link as Tables<'survey_links'>).token,
     }
   } catch (error) {
-    return { success: false, error: 'Nie udało się wygenerować linku' }
+    return { success: false, error: messages.surveys.generateLinkFailed }
   }
 }
 
@@ -197,6 +198,6 @@ export async function deleteSurveyLink(
     revalidatePath(`/admin/surveys/${surveyId}`)
     return { success: true }
   } catch (error) {
-    return { success: false, error: 'Nie udało się usunąć linku' }
+    return { success: false, error: messages.surveys.deleteLinkFailed }
   }
 }

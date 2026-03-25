@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { messages } from '@/lib/messages'
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>
 
@@ -22,7 +23,7 @@ export async function getUserWithTenant(): Promise<AuthResult> {
   const {
     data: { user },
   } = await supabase.auth.getUser()
-  if (!user) return { error: 'Nie zalogowany' }
+  if (!user) return { error: messages.common.notLoggedIn }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: userData, error } = await (supabase as any)
@@ -32,7 +33,7 @@ export async function getUserWithTenant(): Promise<AuthResult> {
     .single()
 
   if (error || !userData?.tenant_id) {
-    return { error: 'Nie znaleziono użytkownika' }
+    return { error: messages.common.userNotFound }
   }
 
   return { supabase, userId: user.id, tenantId: userData.tenant_id }

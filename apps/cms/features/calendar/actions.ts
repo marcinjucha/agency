@@ -6,6 +6,7 @@ import { revalidatePath } from 'next/cache'
 import type { GoogleCalendarToken } from '@/lib/google-calendar/oauth'
 import type { CalendarSettingsFormValues } from './types'
 import { calendarSettingsSchema } from './validation'
+import { messages } from '@/lib/messages'
 
 /**
  * Get Google Calendar connection status
@@ -25,7 +26,7 @@ export async function getGoogleCalendarStatus(): Promise<{
     } = await supabase.auth.getUser()
 
     if (!user) {
-      return { connected: false, error: 'Nie zalogowany' }
+      return { connected: false, error: messages.common.notLoggedIn }
     }
 
     // Get user's google_calendar_token
@@ -36,7 +37,7 @@ export async function getGoogleCalendarStatus(): Promise<{
       .maybeSingle()
 
     if (userError) {
-      return { connected: false, error: 'Nie udało się pobrać ustawień' }
+      return { connected: false, error: messages.calendar.fetchSettingsFailed }
     }
 
     const tokenData = (userData as any)?.google_calendar_token
@@ -53,7 +54,7 @@ export async function getGoogleCalendarStatus(): Promise<{
     }
   } catch (error) {
     console.error('Error fetching calendar status:', error)
-    return { connected: false, error: 'Nie udało się pobrać statusu kalendarza' }
+    return { connected: false, error: messages.calendar.fetchStatusFailed }
   }
 }
 
@@ -74,7 +75,7 @@ export async function disconnectGoogleCalendar(): Promise<{
     } = await supabase.auth.getUser()
 
     if (!user) {
-      return { success: false, error: 'Nie zalogowany' }
+      return { success: false, error: messages.common.notLoggedIn }
     }
 
     // Get current tokens for revocation
@@ -85,7 +86,7 @@ export async function disconnectGoogleCalendar(): Promise<{
       .maybeSingle()
 
     if (userError) {
-      return { success: false, error: 'Failed to fetch settings' }
+      return { success: false, error: messages.calendar.fetchSettingsFailed }
     }
 
     // Revoke access with Google if refresh token exists
@@ -112,7 +113,7 @@ export async function disconnectGoogleCalendar(): Promise<{
     if (updateError) {
       return {
         success: false,
-        error: updateError.message || 'Nie udało się odłączyć kalendarza',
+        error: updateError.message || messages.calendar.disconnectFailed,
       }
     }
 
@@ -120,7 +121,7 @@ export async function disconnectGoogleCalendar(): Promise<{
     return { success: true }
   } catch (error) {
     console.error('Error disconnecting calendar:', error)
-    return { success: false, error: 'Nie udało się odłączyć kalendarza' }
+    return { success: false, error: messages.calendar.disconnectFailed }
   }
 }
 
@@ -144,7 +145,7 @@ export async function updateCalendarSettings(
     } = await supabase.auth.getUser()
 
     if (!user) {
-      return { success: false, error: 'Nie zalogowany' }
+      return { success: false, error: messages.common.notLoggedIn }
     }
 
     const { error } = await supabase
@@ -160,7 +161,7 @@ export async function updateCalendarSettings(
     return { success: true }
   } catch (error) {
     console.error('Error updating calendar settings:', error)
-    return { success: false, error: 'Nie udało się zaktualizować ustawień kalendarza' }
+    return { success: false, error: messages.calendar.updateSettingsFailed }
   }
 }
 

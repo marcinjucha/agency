@@ -12,6 +12,7 @@
 import { createAnonClient } from '@/lib/supabase/anon-server'
 import type { TablesInsert } from '@agency/database'
 import type { SurveyAnswers, SubmissionResult } from './types'
+import { messages } from '@/lib/messages'
 
 /**
  * Parameters for survey response submission
@@ -74,7 +75,7 @@ export async function submitSurveyResponse({
       console.error('Failed to fetch survey tenant_id:', surveyError)
       return {
         success: false,
-        error: 'Survey not found. Please try again.'
+        error: messages.survey.surveyNotFound
       }
     }
 
@@ -100,7 +101,7 @@ export async function submitSurveyResponse({
       console.error('Failed to insert response:', insertError)
       return {
         success: false,
-        error: 'Failed to save your response. Please try again.'
+        error: messages.survey.saveFailed
       }
     }
 
@@ -127,7 +128,7 @@ export async function submitSurveyResponse({
     console.error('Unexpected error submitting survey:', error)
     return {
       success: false,
-      error: 'An unexpected error occurred. Please try again.'
+      error: messages.survey.unexpectedError
     }
   }
 }

@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { landingPageSchema } from './validation'
 import type { LandingBlock, SeoMetadata } from '@agency/database'
+import { messages } from '@/lib/messages'
 
 export async function updateLandingPage(
   id: string,
@@ -16,12 +17,12 @@ export async function updateLandingPage(
   try {
     const parsed = landingPageSchema.partial().safeParse(data)
     if (!parsed.success) {
-      return { success: false, error: parsed.error.errors[0]?.message ?? 'Nieprawidłowe dane' }
+      return { success: false, error: parsed.error.errors[0]?.message ?? messages.common.invalidData }
     }
 
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return { success: false, error: 'Nie zalogowany' }
+    if (!user) return { success: false, error: messages.common.notLoggedIn }
 
     const updatePayload = {
       ...(parsed.data.blocks !== undefined && { blocks: parsed.data.blocks }),
@@ -42,7 +43,7 @@ export async function updateLandingPage(
     revalidatePath('/admin/landing-page')
     return { success: true }
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Nieznany błąd'
+    const message = err instanceof Error ? err.message : messages.common.unknownError
     return { success: false, error: message }
   }
 }

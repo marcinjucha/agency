@@ -6,6 +6,7 @@ import { getUserWithTenant, isAuthError } from '@/lib/auth'
 import { blogPostSchema, type BlogPostFormData } from './validation'
 import { toBlogPost, type BlogPost } from './types'
 import { parseContent } from './utils'
+import { messages } from '@/lib/messages'
 
 // --- Server Actions ---
 
@@ -15,7 +16,7 @@ export async function createBlogPost(
   try {
     const parsed = blogPostSchema.safeParse(data)
     if (!parsed.success) {
-      return { success: false, error: parsed.error.errors[0]?.message ?? 'Nieprawidłowe dane' }
+      return { success: false, error: parsed.error.errors[0]?.message ?? messages.common.invalidData }
     }
 
     const auth = await getUserWithTenant()
@@ -50,7 +51,7 @@ export async function createBlogPost(
     revalidatePath('/admin/blog')
     return { success: true, data: toBlogPost(created) }
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Nieznany błąd'
+    const message = err instanceof Error ? err.message : messages.common.unknownError
     return { success: false, error: message }
   }
 }
@@ -62,12 +63,12 @@ export async function updateBlogPost(
   try {
     const parsed = blogPostSchema.safeParse(data)
     if (!parsed.success) {
-      return { success: false, error: parsed.error.errors[0]?.message ?? 'Nieprawidłowe dane' }
+      return { success: false, error: parsed.error.errors[0]?.message ?? messages.common.invalidData }
     }
 
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return { success: false, error: 'Nie zalogowany' }
+    if (!user) return { success: false, error: messages.common.notLoggedIn }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- blog_posts not in generated types
     const { data: existing, error: fetchError } = await (supabase as any)
@@ -109,7 +110,7 @@ export async function updateBlogPost(
     revalidatePath(`/admin/blog/${id}`)
     return { success: true, data: toBlogPost(updated) }
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Nieznany błąd'
+    const message = err instanceof Error ? err.message : messages.common.unknownError
     return { success: false, error: message }
   }
 }
@@ -120,7 +121,7 @@ export async function deleteBlogPost(
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return { success: false, error: 'Nie zalogowany' }
+    if (!user) return { success: false, error: messages.common.notLoggedIn }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- blog_posts not in generated types
     const { error } = await (supabase as any)
@@ -133,7 +134,7 @@ export async function deleteBlogPost(
     revalidatePath('/admin/blog')
     return { success: true }
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Nieznany błąd'
+    const message = err instanceof Error ? err.message : messages.common.unknownError
     return { success: false, error: message }
   }
 }

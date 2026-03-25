@@ -5,6 +5,7 @@ import { getUserWithTenant, isAuthError } from '@/lib/auth'
 import { renderEmailBlocks, DEFAULT_BLOCKS } from '@agency/email'
 import type { Block } from '@agency/email'
 import { updateEmailTemplateSchema } from './validation'
+import { messages } from '@/lib/messages'
 
 export async function updateEmailTemplate(
   type: string,
@@ -13,7 +14,7 @@ export async function updateEmailTemplate(
   try {
     const parsed = updateEmailTemplateSchema.safeParse(data)
     if (!parsed.success) {
-      return { success: false, error: parsed.error.errors[0]?.message ?? 'Nieprawidłowe dane' }
+      return { success: false, error: parsed.error.errors[0]?.message ?? messages.common.invalidData }
     }
 
     const html_body = await renderEmailBlocks(parsed.data.blocks)
@@ -43,7 +44,7 @@ export async function updateEmailTemplate(
     revalidatePath('/admin/email-templates')
     return { success: true }
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Nieznany błąd'
+    const message = err instanceof Error ? err.message : messages.common.unknownError
     return { success: false, error: message }
   }
 }
