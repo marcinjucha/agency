@@ -41,6 +41,7 @@ import { z } from 'zod'
 import { Button, Card, Input, Label, LoadingState, ErrorState } from '@agency/ui'
 import { Calendar, Clock, CheckCircle } from 'lucide-react'
 import { messages } from '@/lib/messages'
+import { trackEvent } from '@/lib/plausible'
 
 /**
  * Slot object structure returned from /api/calendar/slots
@@ -300,6 +301,7 @@ export function CalendarBooking({
       const result = await response.json()
 
       if (result.success) {
+        trackEvent('Booking Completed')
         setBookingSuccess(true)
       } else {
         setSubmitError(

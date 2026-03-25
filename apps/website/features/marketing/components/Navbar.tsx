@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Button } from '@agency/ui'
 import type { NavbarBlock } from '@agency/database'
+import { trackEvent } from '@/lib/plausible'
 
 const NAV_LINKS = [
   { href: '/', label: 'Strona główna' },
@@ -92,7 +93,7 @@ export function Navbar({ ctaText, ctaHref }: NavbarBlock) {
                   : 'opacity-0 translate-y-1 scale-95 pointer-events-none'
               }`}
             >
-              <Link href={ctaHref}>
+              <Link href={ctaHref} onClick={() => trackEvent('CTA Clicked', { props: { location: 'navbar' } })}>
                 <Button
                   size="sm"
                   className="cta-glow bg-primary hover:bg-primary/90 text-primary-foreground transition-all duration-200 gap-1.5 group/cta"
@@ -158,7 +159,7 @@ export function Navbar({ ctaText, ctaHref }: NavbarBlock) {
         </div>
 
         <div className="px-4 py-4 mt-auto border-t border-border/30 absolute bottom-0 left-0 right-0">
-          <Link href={ctaHref}>
+          <Link href={ctaHref} onClick={() => trackEvent('CTA Clicked', { props: { location: 'navbar' } })}>
             <Button className="cta-glow bg-primary hover:bg-primary/90 text-primary-foreground w-full gap-1.5 group/cta">
               {ctaText}
               <ArrowRight className="h-3.5 w-3.5 transition-transform duration-200 group-hover/cta:translate-x-0.5" />

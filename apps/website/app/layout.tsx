@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
@@ -30,6 +31,12 @@ export default function RootLayout({
       >
         {children}
         <Analytics />
+        <Script
+          defer
+          data-domain="haloefekt.pl"
+          src="https://analytics.trustcode.pl/js/script.outbound-links.file-downloads.404s.tagged-events.js"
+          strategy="afterInteractive"
+        />
       </body>
     </html>
   );

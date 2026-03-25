@@ -90,6 +90,7 @@
 - **Test after each priority level, not each fix** — User prefers batching: fix all P0 → test → fix all P1 → test → fix all P2 → test. Individual commits per fix, but testing grouped by severity. (2026-03-25)
 - **Commit per change, test later** — User wants individual commits after each refactor but defers manual testing to the end. Collect all test scenarios and present together. (2026-03-25)
 - **Always use feature branches** — Never commit directly to main. Create `feature/aaa-t-{id}-{slug}` branch, implement, test, then merge with `--no-ff`. User corrected when calendar commits landed on main directly. (2026-03-25)
+- **Use Next.js `<Link>` not `<a>` for same-domain navigation** — User caught CtaLink using plain `<a>` instead of `<Link>` for `/survey/[uuid]` (same domain). Always use `<Link>` for internal routes — client-side navigation is faster, avoids full page reload. Plain `<a>` only for external URLs. (2026-03-25)
 
 ## Bugs Found
 
@@ -104,6 +105,7 @@
 
 ## Domain Concepts
 
+- **Plausible Analytics integration (AAA-T-90)** — Self-hosted at `analytics.trustcode.pl`, data-domain `haloefekt.pl`. Script with 4 extensions: outbound-links, file-downloads, 404s, tagged-events. Typed event wrapper in `apps/website/lib/plausible.ts`. Conversion funnel: CTA Clicked (with location prop) → Survey Started → Survey Submitted → Booking Completed. Goals must be manually created in Plausible dashboard after deploy. No cookies = no RODO consent needed for analytics. (2026-03-25)
 - **AWS S3 for media uploads** — Bucket: `legal-mind-bucket`, region: `eu-central-1`, folder: `haloefekt/blog/`. Credentials stored as `BUCKET_ACCESS_KEY` + `BUCKET_SECRET_KEY` in `apps/cms/.env.local`. Same bucket holds n8n backups — new uploads go into separate folder. S3 bucket policy allows public GET; CORS must allow PUT from CMS domains for presigned upload to work. (2026-03-18)
 - **Tenant "Halo Efekt" already exists in production** — email: kontakt@haloefekt.pl, domain: null, id: 19342448-4e4e-49ba-8bf0-694d5376f953. No need to INSERT new tenant. (2026-03-23)
 - **Tiptap extension registry pattern** — `features/blog/extensions/index.ts` exports `editorExtensions` (single source of truth) and `mediaExtensions`. Both `TiptapEditor.tsx` and `utils.ts` import from here. Adding new media type = 1 new extension file + 1 line in index.ts. Shared video utilities live in `lib/video-utils.ts`. (2026-03-23)

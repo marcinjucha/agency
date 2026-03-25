@@ -1,6 +1,7 @@
 import { ArrowRight, Shield } from 'lucide-react'
 import type { CtaBlock } from '@agency/database'
 import { ScrollReveal } from './ScrollReveal'
+import { CtaLink } from './CtaLink'
 
 export function FinalCTA({ headline, description, button, trustLine }: CtaBlock) {
   return (
@@ -33,13 +34,14 @@ export function FinalCTA({ headline, description, button, trustLine }: CtaBlock)
         </ScrollReveal>
 
         <ScrollReveal delay={200}>
-          <a
+          <CtaLink
             href={button.href}
+            location="final_cta"
             className="inline-flex items-center gap-3 bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl px-10 py-5 text-lg font-semibold shadow-2xl shadow-primary/30 hover:shadow-primary/50 hover:scale-[1.02] transition-all duration-300 group cta-glow"
           >
             {button.text}
             <ArrowRight className="w-5 h-5 transition-transform duration-300 group-hover:translate-x-1" />
-          </a>
+          </CtaLink>
         </ScrollReveal>
 
         <ScrollReveal delay={300}>
