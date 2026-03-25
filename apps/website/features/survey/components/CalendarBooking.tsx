@@ -367,6 +367,7 @@ export function CalendarBooking({
                   onChange={handleDateChange}
                   min={minDate}
                   className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  aria-required="true"
                   aria-describedby="date-help"
                 />
                 <p
@@ -435,6 +436,7 @@ export function CalendarBooking({
                         type="text"
                         placeholder="John Doe"
                         {...register('clientName')}
+                        aria-required="true"
                         aria-invalid={errors.clientName ? 'true' : 'false'}
                         className={errors.clientName ? 'border-destructive' : ''}
                       />
@@ -462,6 +464,7 @@ export function CalendarBooking({
                         type="email"
                         placeholder="you@example.com"
                         {...register('clientEmail')}
+                        aria-required="true"
                         aria-invalid={errors.clientEmail ? 'true' : 'false'}
                         className={errors.clientEmail ? 'border-destructive' : ''}
                       />
