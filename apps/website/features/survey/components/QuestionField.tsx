@@ -17,6 +17,7 @@
 import { Control, Controller, UseFormRegister } from 'react-hook-form'
 import { Input, Label } from '@agency/ui'
 import type { Question, SurveyAnswers } from '../types'
+import { messages } from '@/lib/messages'
 
 interface QuestionFieldProps {
   question: Question
@@ -78,7 +79,7 @@ export function QuestionField({
           aria-invalid={error ? 'true' : 'false'}
           aria-describedby={error ? `${id}-error` : undefined}
         >
-          <option value="">Select an option...</option>
+          <option value="">{messages.validation.selectPlaceholder}</option>
           {options?.map((option) => (
             <option key={option} value={option}>
               {option}

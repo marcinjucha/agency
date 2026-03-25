@@ -1,9 +1,9 @@
 project:
   name: "Halo-Efekt"
   description: "SaaS platform for businesses to streamline client intake through smart surveys, calendar booking, and AI qualification — built by Halo Efekt"
-  version: "2.0.0"
+  version: "2.1.0"
   status: "in-progress"
-  last_updated: "2026-03-23"
+  last_updated: "2026-03-25"
 
 # IMPORTANT: This file focuses on WHY (architecture, decisions, rationale)
 # For detailed WHAT (acceptance criteria, file paths, task tracking), see Notion:
@@ -79,6 +79,18 @@ architecture:
     - decision: "Monorepo with shared packages (not separate repos)"
       rationale: "Type sharing, code reuse, atomic commits across apps"
 
+    - decision: "getUserWithTenant() shared auth helper (not inline per-action)"
+      rationale: "Was duplicated 4x across blog/email/media/surveys actions. Extracted to apps/cms/lib/auth.ts. Returns { supabase, userId, tenantId } with isAuthError() type guard"
+
+    - decision: "createAnonClient() for ALL website queries (not server client)"
+      rationale: "Cookie-based server client calls cookies() which fails at build time during ISR/generateStaticParams. Service role via anon client bypasses RLS — acceptable for public data"
+
+    - decision: "Centralized messages in lib/messages.ts (not inline strings)"
+      rationale: "~220 hardcoded strings extracted to per-app message files. Nested by feature, as const for type safety. Prepares for i18n — switching language = changing one file"
+
+    - decision: "queries.ts (browser) vs queries.server.ts (server) naming convention"
+      rationale: "Wrong naming causes silent bugs — browser client in Server Component works at runtime but fails at build time. Architecture audit found 3 violations"
+
   design_patterns:
     - pattern: "Feature-based folder structure"
       why: "Co-locate types, queries, actions, components by domain (surveys, responses, appointments)"
@@ -88,6 +100,12 @@ architecture:
 
     - pattern: "Server Actions for mutations, API Routes for public endpoints"
       why: "Server Actions for authenticated ops, API Routes for anonymous clients"
+
+    - pattern: "Shared UI state components in @agency/ui"
+      why: "EmptyState, ErrorState, LoadingState consolidated from 2 apps into packages/ui. Prevents divergence"
+
+    - pattern: "Thin route files — business logic in features/"
+      why: "ADR-005 enforced: route pages <20 lines (import + render), API routes delegate to feature functions. Architecture audit extracted 780+ lines from routes"
 
 features:
   phase_1_foundation:

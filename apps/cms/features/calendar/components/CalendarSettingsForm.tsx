@@ -4,13 +4,13 @@ import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useQuery } from '@tanstack/react-query'
-import { Button, Card, Input, Label } from '@agency/ui'
+import { Button, Card, Input, Label, LoadingState } from '@agency/ui'
 import { Loader2 } from 'lucide-react'
-import { LoadingState } from '@/components/shared/LoadingState'
 import { getCalendarSettings } from '../queries'
 import { updateCalendarSettings } from '../actions'
 import { calendarSettingsSchema, type CalendarSettingsSchema } from '../validation'
 import { useState } from 'react'
+import { messages } from '@/lib/messages'
 
 export function CalendarSettingsForm() {
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
@@ -46,10 +46,10 @@ export function CalendarSettingsForm() {
   }
 
   const saveLabel = {
-    idle: 'Zapisz ustawienia',
-    saving: 'Zapisywanie…',
-    saved: 'Zapisano',
-    error: 'Błąd zapisu',
+    idle: messages.calendar.saveSettings,
+    saving: messages.common.saving,
+    saved: messages.common.saved,
+    error: messages.common.saveError,
   }[saveState]
 
   if (isLoading) {
@@ -59,7 +59,7 @@ export function CalendarSettingsForm() {
   if (error) {
     return (
       <Card className="p-6">
-        <p className="text-destructive text-sm">Nie udało się wczytać ustawień kalendarza.</p>
+        <p className="text-destructive text-sm">{messages.calendar.loadSettingsFailed}</p>
       </Card>
     )
   }
@@ -67,9 +67,9 @@ export function CalendarSettingsForm() {
   return (
     <Card className="p-6">
       <div className="mb-6">
-        <h2 className="text-lg font-semibold">Godziny pracy i dostępność</h2>
+        <h2 className="text-lg font-semibold">{messages.calendar.workHoursTitle}</h2>
         <p className="text-sm text-muted-foreground mt-1">
-          Ustaw godziny pracy oraz czas trwania wizyt
+          {messages.calendar.workHoursDescription}
         </p>
       </div>
 
@@ -77,7 +77,7 @@ export function CalendarSettingsForm() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           {/* work_start_hour */}
           <div className="space-y-1.5">
-            <Label htmlFor="work_start_hour">Godzina rozpoczęcia</Label>
+            <Label htmlFor="work_start_hour">{messages.calendar.workStartHour}</Label>
             <Input
               id="work_start_hour"
               type="number"
@@ -96,7 +96,7 @@ export function CalendarSettingsForm() {
 
           {/* work_end_hour */}
           <div className="space-y-1.5">
-            <Label htmlFor="work_end_hour">Godzina zakończenia</Label>
+            <Label htmlFor="work_end_hour">{messages.calendar.workEndHour}</Label>
             <Input
               id="work_end_hour"
               type="number"
@@ -115,7 +115,7 @@ export function CalendarSettingsForm() {
 
           {/* slot_duration_minutes */}
           <div className="space-y-1.5">
-            <Label htmlFor="slot_duration_minutes">Czas trwania wizyty (min)</Label>
+            <Label htmlFor="slot_duration_minutes">{messages.calendar.slotDuration}</Label>
             <Input
               id="slot_duration_minutes"
               type="number"
@@ -136,7 +136,7 @@ export function CalendarSettingsForm() {
 
           {/* buffer_minutes */}
           <div className="space-y-1.5">
-            <Label htmlFor="buffer_minutes">Przerwa między wizytami (min)</Label>
+            <Label htmlFor="buffer_minutes">{messages.calendar.bufferMinutes}</Label>
             <Input
               id="buffer_minutes"
               type="number"

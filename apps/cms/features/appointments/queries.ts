@@ -16,6 +16,12 @@ import { createClient } from '@/lib/supabase/client'
 import type { Tables } from '@agency/database'
 import type { AppointmentListItem, AppointmentWithResponse, AppointmentResponseContext } from './types'
 
+async function requireAuth(supabase: ReturnType<typeof createClient>) {
+  const { data: { user }, error } = await supabase.auth.getUser()
+  if (error || !user) throw new Error('Authentication required')
+  return user
+}
+
 /**
  * Raw Supabase response structure from nested join query
  * Matches the select() query structure with nested responses table
@@ -105,16 +111,7 @@ function transformToListItem(data: SupabaseAppointmentRow): AppointmentListItem 
  */
 export async function getAppointments(): Promise<AppointmentListItem[]> {
   const supabase = createClient()
-
-  // Get authenticated user
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser()
-
-  if (authError || !user) {
-    throw new Error('Authentication required')
-  }
+  const user = await requireAuth(supabase)
 
   // Fetch appointments with optional response join
   const { data, error } = await supabase
@@ -156,16 +153,7 @@ export async function getAppointments(): Promise<AppointmentListItem[]> {
  */
 export async function getAppointmentById(id: string): Promise<AppointmentWithResponse | null> {
   const supabase = createClient()
-
-  // Get authenticated user
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser()
-
-  if (authError || !user) {
-    throw new Error('Authentication required')
-  }
+  const user = await requireAuth(supabase)
 
   // Fetch single appointment with security check
   const { data, error } = await supabase
@@ -216,16 +204,7 @@ export async function getAppointmentById(id: string): Promise<AppointmentWithRes
  */
 export async function getAppointmentCount(): Promise<number> {
   const supabase = createClient()
-
-  // Get authenticated user
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser()
-
-  if (authError || !user) {
-    throw new Error('Authentication required')
-  }
+  const user = await requireAuth(supabase)
 
   const { count, error } = await supabase
     .from('appointments')
@@ -255,16 +234,7 @@ export async function getAppointmentCount(): Promise<number> {
  */
 export async function getAppointmentCountByStatus(status: string): Promise<number> {
   const supabase = createClient()
-
-  // Get authenticated user
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser()
-
-  if (authError || !user) {
-    throw new Error('Authentication required')
-  }
+  const user = await requireAuth(supabase)
 
   const { count, error } = await supabase
     .from('appointments')

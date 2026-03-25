@@ -1,9 +1,10 @@
 import { z } from 'zod'
+import { messages } from '@/lib/messages'
 
 export const navbarBlockSchema = z.object({
   type: z.literal('navbar'),
-  ctaText: z.string().min(1, 'Tekst CTA jest wymagany'),
-  ctaHref: z.string().min(1, 'Link CTA jest wymagany'),
+  ctaText: z.string().min(1, messages.validation.ctaTextRequired),
+  ctaHref: z.string().min(1, messages.validation.ctaLinkRequired),
 })
 
 export const heroBlockSchema = z.object({

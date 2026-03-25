@@ -10,6 +10,7 @@ import { EmailPreview } from './EmailPreview'
 import { DEFAULT_BLOCKS, TEMPLATE_VARIABLES } from '../types'
 import type { Block, EmailTemplate } from '../types'
 import { updateEmailTemplate } from '../actions'
+import { messages } from '@/lib/messages'
 
 interface EmailTemplateEditorProps {
   templateType: string
@@ -20,6 +21,7 @@ export function EmailTemplateEditor({ templateType, initialTemplate }: EmailTemp
   const [subject, setSubject] = useState(initialTemplate?.subject ?? '')
   const [blocks, setBlocks] = useState<Block[]>(initialTemplate?.blocks ?? DEFAULT_BLOCKS)
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   const variables = TEMPLATE_VARIABLES[templateType as keyof typeof TEMPLATE_VARIABLES] ?? []
 
@@ -35,11 +37,14 @@ export function EmailTemplateEditor({ templateType, initialTemplate }: EmailTemp
 
   async function handleSave() {
     setSaveState('saving')
+    setErrorMessage(null)
     try {
       const result = await updateEmailTemplate(templateType, { subject, blocks })
       setSaveState(result.success ? 'saved' : 'error')
-    } catch {
+      if (!result.success) setErrorMessage(result.error ?? null)
+    } catch (err) {
       setSaveState('error')
+      setErrorMessage(err instanceof Error ? err.message : 'Unexpected error')
     } finally {
       // Reset to idle after 2.5s so button label returns to normal
       setTimeout(() => setSaveState('idle'), 2500)
@@ -47,10 +52,10 @@ export function EmailTemplateEditor({ templateType, initialTemplate }: EmailTemp
   }
 
   const saveLabel = {
-    idle: 'Zapisz',
-    saving: 'Zapisywanie…',
-    saved: 'Zapisano',
-    error: 'Błąd zapisu',
+    idle: messages.common.save,
+    saving: messages.common.saving,
+    saved: messages.common.saved,
+    error: messages.common.saveError,
   }[saveState]
 
   return (
@@ -58,18 +63,18 @@ export function EmailTemplateEditor({ templateType, initialTemplate }: EmailTemp
       {/* Subject + variables */}
       <div className="space-y-3">
         <div className="space-y-1.5">
-          <Label htmlFor="email-subject">Temat emaila</Label>
+          <Label htmlFor="email-subject">{messages.email.subjectLabel}</Label>
           <Input
             id="email-subject"
             value={subject}
             onChange={(e) => setSubject(e.target.value)}
-            placeholder="np. Dziękujemy za wypełnienie formularza — {{surveyTitle}}"
+            placeholder={messages.email.subjectPlaceholder}
           />
         </div>
 
         {variables.length > 0 && (
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs text-muted-foreground">Dostępne zmienne:</span>
+            <span className="text-xs text-muted-foreground">{messages.email.availableVariables}</span>
             {variables.map((v) => (
               <Badge
                 key={v.name}
@@ -90,7 +95,7 @@ export function EmailTemplateEditor({ templateType, initialTemplate }: EmailTemp
         {/* Left: block list (40% ≈ 2/5) */}
         <div className="overflow-y-auto">
           <p className="text-xs font-semibold uppercase text-muted-foreground tracking-wide mb-3">
-            Bloki
+            {messages.email.blocksLabel}
           </p>
           <BlockList blocks={blocks} onChange={setBlocks} />
         </div>
@@ -107,10 +112,13 @@ export function EmailTemplateEditor({ templateType, initialTemplate }: EmailTemp
           {saveLabel}
         </Button>
         <Button variant="outline" onClick={resetToDefaults} className="text-destructive border-destructive/40 hover:bg-destructive/5">
-          Przywróć domyślne
+          {messages.email.restoreDefaults}
         </Button>
         {saveState === 'error' && (
-          <p className="text-sm text-destructive">Nie udało się zapisać szablonu. Spróbuj ponownie.</p>
+          <p className="text-sm text-destructive">
+            {messages.email.templateSaveFailed}
+            {errorMessage && <span className="block mt-1 text-xs opacity-75">{errorMessage}</span>}
+          </p>
         )}
       </div>
     </div>

@@ -12,6 +12,7 @@ import {
 } from '@agency/ui'
 import { getGoogleCalendarStatus, disconnectGoogleCalendar } from '../actions'
 import { AlertCircle, CheckCircle, Loader2, LogOut } from 'lucide-react'
+import { messages } from '@/lib/messages'
 
 interface CalendarStatus {
   connected: boolean
@@ -58,7 +59,7 @@ export function CalendarSettings() {
     } catch (error) {
       setStatus({
         connected: false,
-        error: 'Failed to load calendar status',
+        error: messages.calendar.loadStatusFailed,
       })
     } finally {
       setLoading(false)
@@ -83,7 +84,7 @@ export function CalendarSettings() {
       if (result.success) {
         setShowMessage({
           type: 'success',
-          text: 'Google Calendar disconnected',
+          text: messages.calendar.disconnected,
         })
         setStatus({ connected: false })
         // Reload status after a short delay
@@ -91,13 +92,13 @@ export function CalendarSettings() {
       } else {
         setShowMessage({
           type: 'error',
-          text: result.error || 'Failed to disconnect',
+          text: result.error || messages.calendar.disconnectError,
         })
       }
     } catch (error) {
       setShowMessage({
         type: 'error',
-        text: 'Failed to disconnect calendar',
+        text: messages.calendar.disconnectCalendarError,
       })
     } finally {
       setDisconnecting(false)
@@ -107,9 +108,9 @@ export function CalendarSettings() {
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="text-lg font-semibold">Google Calendar</h2>
+        <h2 className="text-lg font-semibold">{messages.calendar.googleCalendar}</h2>
         <p className="text-sm text-muted-foreground mt-1">
-          Connect your Google Calendar to enable client booking
+          {messages.calendar.connectDescription}
         </p>
       </div>
 
@@ -148,9 +149,9 @@ export function CalendarSettings() {
             <div className="flex items-start gap-3">
               <CheckCircle className="w-5 h-5 text-status-success-foreground flex-shrink-0 mt-0.5" />
               <div>
-                <p className="font-medium text-status-success-foreground">Connected</p>
+                <p className="font-medium text-status-success-foreground">{messages.calendar.connected}</p>
                 <p className="text-sm text-status-success-foreground mt-1">
-                  Connected as <span className="font-semibold">{status.email}</span>
+                  {messages.calendar.connectedAs} <span className="font-semibold">{status.email}</span>
                 </p>
               </div>
             </div>
@@ -166,12 +167,12 @@ export function CalendarSettings() {
             {disconnecting ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Disconnecting...
+                {messages.calendar.disconnecting}
               </>
             ) : (
               <>
                 <LogOut className="w-4 h-4 mr-2" />
-                Disconnect Calendar
+                {messages.calendar.disconnectCalendar}
               </>
             )}
           </Button>
@@ -180,9 +181,9 @@ export function CalendarSettings() {
           <Dialog open={showDisconnectDialog} onOpenChange={setShowDisconnectDialog}>
             <DialogContent className="sm:max-w-md">
               <DialogHeader>
-                <DialogTitle>Disconnect Google Calendar?</DialogTitle>
+                <DialogTitle>{messages.calendar.disconnectConfirmTitle}</DialogTitle>
                 <DialogDescription>
-                  This will revoke Google Calendar access. You can reconnect at any time.
+                  {messages.calendar.disconnectConfirmDescription}
                 </DialogDescription>
               </DialogHeader>
               <DialogFooter className="flex gap-3 mt-6">
@@ -192,7 +193,7 @@ export function CalendarSettings() {
                   onClick={() => setShowDisconnectDialog(false)}
                   className="flex-1"
                 >
-                  Cancel
+                  {messages.common.cancel}
                 </Button>
                 <Button
                   type="button"
@@ -200,7 +201,7 @@ export function CalendarSettings() {
                   onClick={handleConfirmDisconnect}
                   className="flex-1"
                 >
-                  Disconnect
+                  {messages.calendar.disconnect}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -209,10 +210,10 @@ export function CalendarSettings() {
       ) : (
         <div className="border border-border rounded-lg p-4">
           <p className="text-foreground mb-4">
-            Click the button below to connect your Google Calendar account.
+            {messages.calendar.connectPrompt}
           </p>
           <Button type="button" onClick={handleConnect} className="w-full sm:w-auto">
-            Connect Google Calendar
+            {messages.calendar.connectButton}
           </Button>
         </div>
       )}

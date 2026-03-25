@@ -1,6 +1,7 @@
 import { createAnonClient } from '@/lib/supabase/anon-server'
 import type { TablesInsert } from '@agency/database'
 import type { SurveyAnswers } from './types'
+import { messages } from '@/lib/messages'
 
 interface SubmitResponseParams {
   linkId: string
@@ -32,7 +33,7 @@ export async function submitResponse({
 
   if (surveyError || !survey) {
     console.error('Failed to fetch survey tenant_id:', surveyError)
-    return { success: false, error: 'Survey not found. Please try again.', httpStatus: 404 }
+    return { success: false, error: messages.survey.surveyNotFound, httpStatus: 404 }
   }
 
   const surveyData = survey as { tenant_id: string }
@@ -54,7 +55,7 @@ export async function submitResponse({
 
   if (insertError || !response) {
     console.error('Failed to insert response:', insertError)
-    return { success: false, error: 'Failed to save your response. Please try again.', httpStatus: 400 }
+    return { success: false, error: messages.survey.saveFailed, httpStatus: 400 }
   }
 
   const { id: responseId } = response as { id: string }

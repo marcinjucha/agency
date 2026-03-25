@@ -7,6 +7,7 @@ import { generateSurveyLink, deleteSurveyLink } from '../actions'
 import { Button, Card, Input, Label } from '@agency/ui'
 import { Link as LinkIcon, Copy, Trash2, Plus, Check } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
+import { messages } from '@/lib/messages'
 
 type SurveyLinksProps = {
   surveyId: string
@@ -44,20 +45,20 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
         setFormData({ notificationEmail: '', expiresAt: '', maxSubmissions: '' })
         setError(null)
       } else {
-        setError(result.error || 'Failed to generate link')
+        setError(result.error || messages.surveys.generateFailed)
       }
     },
   })
 
   // Mutation for deleting link
   const deleteMutation = useMutation({
-    mutationFn: (linkId: string) => deleteSurveyLink(linkId),
+    mutationFn: (linkId: string) => deleteSurveyLink(linkId, surveyId),
     onSuccess: (result) => {
       if (result.success) {
         queryClient.invalidateQueries({ queryKey: ['survey-links', surveyId] })
         setError(null)
       } else {
-        setError(result.error || 'Failed to delete link')
+        setError(result.error || messages.surveys.deleteLinkFailed2)
       }
     },
   })
@@ -72,7 +73,7 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
       setCopiedLinkId(linkId)
       setTimeout(() => setCopiedLinkId(null), 2000)
     } catch (err) {
-      setError('Failed to copy link to clipboard')
+      setError(messages.surveys.copyFailed)
     }
   }
 
@@ -81,11 +82,11 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold flex items-center">
           <LinkIcon className="mr-2 h-5 w-5" />
-          Survey Links
+          {messages.surveys.surveyLinks}
         </h2>
         <Button variant="outline" size="sm" onClick={() => setShowForm(!showForm)}>
           <Plus className="mr-2 h-4 w-4" />
-          Generate Link
+          {messages.surveys.generateLink}
         </Button>
       </div>
 
@@ -101,7 +102,7 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
           <div className="space-y-3">
             <div>
               <Label htmlFor="notificationEmail" className="text-sm">
-                Notification Email <span className="text-destructive">*</span>
+                {messages.surveys.notificationEmail} <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="notificationEmail"
@@ -116,7 +117,7 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
 
             <div>
               <Label htmlFor="expiresAt" className="text-sm">
-                Expiration Date (optional)
+                {messages.surveys.expirationDate}
               </Label>
               <Input
                 id="expiresAt"
@@ -129,7 +130,7 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
 
             <div>
               <Label htmlFor="maxSubmissions" className="text-sm">
-                Max Submissions (optional, leave empty for unlimited)
+                {messages.surveys.maxSubmissions}
               </Label>
               <Input
                 id="maxSubmissions"
@@ -137,7 +138,7 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
                 min="1"
                 value={formData.maxSubmissions}
                 onChange={(e) => setFormData({ ...formData, maxSubmissions: e.target.value })}
-                placeholder="Unlimited"
+                placeholder={messages.surveys.maxSubmissionsPlaceholder}
                 className="mt-1"
               />
             </div>
@@ -146,7 +147,7 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
               <Button
                 onClick={() => {
                   if (!formData.notificationEmail) {
-                    setError('Notification email is required')
+                    setError(messages.surveys.notificationEmailRequired)
                     return
                   }
                   generateMutation.mutate()
@@ -154,7 +155,7 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
                 disabled={generateMutation.isPending}
                 size="sm"
               >
-                {generateMutation.isPending ? 'Generating...' : 'Generate'}
+                {generateMutation.isPending ? messages.surveys.generating : messages.surveys.generate}
               </Button>
               <Button
                 variant="outline"
@@ -164,7 +165,7 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
                 }}
                 size="sm"
               >
-                Cancel
+                {messages.common.cancel}
               </Button>
             </div>
           </div>
@@ -173,12 +174,12 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
 
       {/* Links List */}
       {isLoading ? (
-        <div className="py-8 text-center text-muted-foreground text-sm">Loading links...</div>
+        <div className="py-8 text-center text-muted-foreground text-sm">{messages.surveys.loadingLinks}</div>
       ) : !links || links.length === 0 ? (
         <div className="py-8 text-center text-muted-foreground text-sm">
           <LinkIcon className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
-          <p>No survey links yet</p>
-          <p className="text-xs mt-1">Generate a link to share this survey</p>
+          <p>{messages.surveys.noLinksYet}</p>
+          <p className="text-xs mt-1">{messages.surveys.noLinksDescription}</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -204,7 +205,7 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
                   variant="outline"
                   size="sm"
                   onClick={() => {
-                    if (confirm('Delete this survey link?')) {
+                    if (confirm(messages.surveys.deleteLinkConfirm)) {
                       deleteMutation.mutate(link.id)
                     }
                   }}
@@ -217,11 +218,11 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
               <div className="text-xs text-muted-foreground space-y-1">
                 {link.notification_email && <div>Email: {link.notification_email}</div>}
                 <div>
-                  Expires: {link.expires_at ? format(parseISO(link.expires_at), 'PPp') : 'Never'}
+                  {messages.surveys.expires} {link.expires_at ? format(parseISO(link.expires_at), 'PPp') : messages.surveys.never}
                 </div>
                 <div>
-                  Submissions: {link.submission_count || 0} /{' '}
-                  {link.max_submissions !== null ? link.max_submissions : 'Unlimited'}
+                  {messages.surveys.submissions} {link.submission_count || 0} /{' '}
+                  {link.max_submissions !== null ? link.max_submissions : messages.surveys.unlimited}
                 </div>
               </div>
             </div>

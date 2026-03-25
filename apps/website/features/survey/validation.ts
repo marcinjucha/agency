@@ -9,6 +9,7 @@
 
 import { z } from 'zod'
 import type { Question } from './types'
+import { messages } from '@/lib/messages'
 
 /**
  * Dynamically generate Zod schema from survey questions
@@ -42,15 +43,15 @@ export function generateSurveySchema(questions: Question[]) {
       case 'textarea': {
         const textSchema = z.string()
         fieldSchema = question.required
-          ? textSchema.min(1, 'This field is required')
+          ? textSchema.min(1, messages.validation.fieldRequired)
           : textSchema
         break
       }
 
       case 'email': {
-        const emailSchema = z.string().email('Please enter a valid email address')
+        const emailSchema = z.string().email(messages.validation.invalidEmail)
         fieldSchema = question.required
-          ? emailSchema.min(1, 'Email is required')
+          ? emailSchema.min(1, messages.validation.emailRequired)
           : emailSchema
         break
       }
@@ -61,11 +62,11 @@ export function generateSurveySchema(questions: Question[]) {
           .regex(
             /^[+]?[(]?[0-9]{1,4}[)]?[-\s\.]?[(]?[0-9]{1,4}[)]?[-\s\.]?[0-9]{1,9}$/,
             {
-              message: 'Please enter a valid phone number',
+              message: messages.validation.invalidPhone,
             }
           )
         fieldSchema = question.required
-          ? telSchema.min(1, 'Phone number is required')
+          ? telSchema.min(1, messages.validation.phoneRequired)
           : telSchema
         break
       }
@@ -80,7 +81,7 @@ export function generateSurveySchema(questions: Question[]) {
         }
         fieldSchema = question.required
           ? selectSchema.refine((val: string) => val !== '', {
-              message: 'Please select an option',
+              message: messages.validation.selectOption,
             })
           : selectSchema
         break
@@ -89,7 +90,7 @@ export function generateSurveySchema(questions: Question[]) {
       case 'checkbox': {
         const checkboxSchema = z.array(z.string())
         fieldSchema = question.required
-          ? checkboxSchema.min(1, 'Please select at least one option')
+          ? checkboxSchema.min(1, messages.validation.selectAtLeastOne)
           : checkboxSchema
         break
       }

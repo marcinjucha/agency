@@ -1,28 +1,5 @@
 import { createClient } from '@/lib/supabase/client'
-import type { Tables } from '@agency/database'
-import type { LandingBlock } from '@agency/database'
-
-export type SeoMetadata = {
-  title: string
-  description: string
-  ogImage?: string
-}
-
-// LandingPage with typed blocks replacing the generic JSONB
-export type LandingPage = Omit<Tables<'landing_pages'>, 'blocks' | 'seo_metadata'> & {
-  blocks: LandingBlock[]
-  seo_metadata: SeoMetadata | null
-}
-
-// Supabase returns blocks/seo_metadata as generic Json (JSONB) — cast to typed LandingPage once here
-export function toLandingPage(raw: unknown): LandingPage {
-  const row = raw as Tables<'landing_pages'>
-  return {
-    ...row,
-    blocks: Array.isArray(row.blocks) ? (row.blocks as unknown as LandingBlock[]) : [],
-    seo_metadata: row.seo_metadata as unknown as SeoMetadata | null,
-  }
-}
+import { toLandingPage, type LandingPage } from './types'
 
 // Used by TanStack Query in LandingPageEditor (browser client — cannot use server client from client components)
 export async function getLandingPage(): Promise<LandingPage | null> {

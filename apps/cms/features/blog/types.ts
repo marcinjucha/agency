@@ -1,4 +1,4 @@
-import type { Tables } from '@agency/database'
+import type { Tables, SeoMetadata } from '@agency/database'
 
 // --- Tiptap ProseMirror JSON structure ---
 
@@ -18,15 +18,6 @@ export type TiptapNode = {
 export type TiptapContent = {
   type: 'doc'
   content: TiptapNode[]
-}
-
-// --- SEO metadata (matches landing page pattern) ---
-
-export type SeoMetadata = {
-  title: string
-  description: string
-  ogImage?: string
-  keywords?: string[]
 }
 
 // --- BlogPost with typed JSONB fields ---

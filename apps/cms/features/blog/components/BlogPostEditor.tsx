@@ -25,6 +25,7 @@ import {
   AlertDialogAction,
   AlertDialogCancel,
 } from '@agency/ui'
+import { messages } from '@/lib/messages'
 import { blogPostSchema, type BlogPostFormData } from '../validation'
 import { createBlogPost, updateBlogPost, deleteBlogPost } from '../actions'
 import { generateHtmlFromContent, calculateReadingTime, generateSlug, uploadImageToS3 } from '../utils'
@@ -180,7 +181,7 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
       }
     } else {
       setSaveState('error')
-      setErrorMessage(result.error ?? 'Nie udalo sie zapisac')
+      setErrorMessage(result.error ?? messages.blog.saveFailed)
       setTimeout(() => setSaveState('idle'), 4000)
     }
   }
@@ -208,7 +209,7 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
       router.push('/admin/blog')
     } else {
       setDeleteState('idle')
-      setErrorMessage(result.error ?? 'Nie udalo sie usunac')
+      setErrorMessage(result.error ?? messages.blog.deleteFailed)
     }
   }
 
@@ -223,7 +224,7 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
       setValue('cover_image_url', fileUrl)
       setCoverPreview(fileUrl)
     } catch (err) {
-      setErrorMessage(err instanceof Error ? err.message : 'Blad uploadu')
+      setErrorMessage(err instanceof Error ? err.message : messages.blog.uploadError)
     } finally {
       setIsUploading(false)
     }
@@ -249,10 +250,10 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
   // --- Save button labels ---
 
   const saveLabel: Record<SaveState, string> = {
-    idle: isEditing ? 'Zapisz' : 'Zapisz szkic',
-    saving: 'Zapisywanie...',
-    saved: 'Zapisano',
-    error: 'Blad zapisu',
+    idle: isEditing ? messages.common.save : messages.blog.saveDraft,
+    saving: messages.common.saving,
+    saved: messages.common.saved,
+    error: messages.common.saveError,
   }
 
   return (
@@ -271,7 +272,7 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
               Blog
             </Button>
             <h1 className="text-lg font-semibold tracking-tight">
-              {isEditing ? 'Edytuj artykul' : 'Nowy artykul'}
+              {isEditing ? messages.blog.editPost : messages.blog.newPost}
             </h1>
           </div>
 
@@ -283,7 +284,7 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
                 onClick={handleUnpublish}
                 disabled={saveState === 'saving'}
               >
-                Cofnij publikacje
+                {messages.common.unpublish}
               </Button>
             )}
 
@@ -311,7 +312,7 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
                   disabled={saveState === 'saving'}
                   className="bg-primary hover:bg-primary/90 text-primary-foreground"
                 >
-                  Opublikuj
+                  {messages.common.publish}
                 </Button>
               </>
             )}
@@ -337,9 +338,9 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
             <div>
               <Input
                 {...register('title')}
-                placeholder="Tytul artykulu"
+                placeholder={messages.blog.titlePlaceholder}
                 className="border-none bg-transparent px-0 text-3xl font-bold tracking-tight placeholder:text-muted-foreground/40 focus-visible:ring-0 focus-visible:ring-offset-0"
-                aria-label="Tytul artykulu"
+                aria-label={messages.blog.titlePlaceholder}
               />
               {errors.title && (
                 <p className="mt-1 text-sm text-destructive">{errors.title.message}</p>
@@ -352,9 +353,9 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
               <Input
                 value={watchSlug}
                 onChange={handleSlugChange}
-                placeholder="slug-artykulu"
+                placeholder={messages.blog.slugPlaceholder}
                 className="h-8 text-sm text-muted-foreground"
-                aria-label="Slug artykulu"
+                aria-label={messages.blog.slugPlaceholder}
               />
               {errors.slug && (
                 <p className="shrink-0 text-sm text-destructive">{errors.slug.message}</p>
@@ -369,7 +370,7 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
                 <TiptapEditor
                   content={field.value as TiptapContent}
                   onChange={field.onChange}
-                  placeholder="Zacznij pisac artykul..."
+                  placeholder={messages.blog.contentPlaceholder}
                 />
               )}
             />
@@ -380,17 +381,18 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
             {/* Settings card */}
             <Card className="shadow-sm">
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium">Ustawienia</CardTitle>
+                <CardTitle className="text-sm font-medium">{messages.blog.settingsTitle}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 {/* Category */}
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Kategoria</Label>
+                  <Label htmlFor="blog-category" className="text-xs">{messages.blog.categoryLabel}</Label>
                   <Controller
                     name="category"
                     control={control}
                     render={({ field }) => (
                       <CategoryCombobox
+                        id="blog-category"
                         value={field.value ?? ''}
                         onChange={field.onChange}
                       />
@@ -401,26 +403,26 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
                 {/* Author */}
                 <div className="space-y-1.5">
                   <Label htmlFor="author_name" className="text-xs">
-                    Autor
+                    {messages.blog.authorLabel}
                   </Label>
                   <Input
                     id="author_name"
                     {...register('author_name')}
-                    placeholder="Imie i nazwisko"
+                    placeholder={messages.blog.authorPlaceholder}
                     className="h-8 text-sm"
                   />
                 </div>
 
                 {/* Cover image */}
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Obrazek okladkowy</Label>
+                  <Label className="text-xs">{messages.blog.coverImageLabel}</Label>
 
                   {coverPreview ? (
                     <div className="group relative overflow-hidden rounded-lg">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={coverPreview}
-                        alt="Podglad okladki"
+                        alt={messages.blog.coverImagePreviewAlt}
                         className="aspect-video w-full rounded-lg object-cover"
                       />
                       <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
@@ -431,7 +433,7 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
                           className="bg-background/90 text-xs"
                           onClick={() => fileInputRef.current?.click()}
                         >
-                          Zmien
+                          {messages.common.change}
                         </Button>
                         <Button
                           type="button"
@@ -440,7 +442,7 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
                           className="bg-background/90 text-xs text-destructive"
                           onClick={removeCoverImage}
                         >
-                          Usun
+                          {messages.common.delete}
                         </Button>
                       </div>
                     </div>
@@ -455,7 +457,7 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' || e.key === ' ') fileInputRef.current?.click()
                       }}
-                      aria-label="Przeciagnij lub kliknij aby dodac obrazek"
+                      aria-label={messages.blog.dragOrClickAria}
                     >
                       <svg
                         className="h-8 w-8 text-muted-foreground/50"
@@ -471,7 +473,7 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
                         />
                       </svg>
                       <p className="text-xs text-muted-foreground">
-                        {isUploading ? 'Uploading...' : 'Przeciagnij lub kliknij'}
+                        {isUploading ? messages.blog.uploading : messages.blog.dragOrClick}
                       </p>
                     </div>
                   )}
@@ -489,7 +491,7 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
                     <Label htmlFor="excerpt" className="text-xs">
-                      Zajawka
+                      {messages.blog.excerptLabel}
                     </Label>
                     <span className="text-xs text-muted-foreground">
                       {(watchExcerpt?.length ?? 0)}/300
@@ -498,7 +500,7 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
                   <Textarea
                     id="excerpt"
                     {...register('excerpt')}
-                    placeholder="Krotki opis artykulu..."
+                    placeholder={messages.blog.excerptPlaceholder}
                     className="min-h-[80px] resize-none text-sm"
                     maxLength={300}
                   />
@@ -512,17 +514,17 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
             {/* SEO card */}
             <Card className="shadow-sm">
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium">SEO</CardTitle>
+                <CardTitle className="text-sm font-medium">{messages.blog.seoTitle}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-1.5">
                   <Label htmlFor="seo-title" className="text-xs">
-                    Tytul SEO
+                    {messages.blog.seoTitleLabel}
                   </Label>
                   <Input
                     id="seo-title"
                     {...register('seo_metadata.title')}
-                    placeholder="Tytul widoczny w wyszukiwarce"
+                    placeholder={messages.blog.seoTitlePlaceholder}
                     className="h-8 text-sm"
                   />
                 </div>
@@ -530,7 +532,7 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
                     <Label htmlFor="seo-description" className="text-xs">
-                      Opis SEO
+                      {messages.blog.seoDescriptionLabel}
                     </Label>
                     <span className="text-xs text-muted-foreground">
                       {(watchSeoDescription?.length ?? 0)}/160
@@ -539,7 +541,7 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
                   <Textarea
                     id="seo-description"
                     {...register('seo_metadata.description')}
-                    placeholder="Opis widoczny w wynikach wyszukiwania"
+                    placeholder={messages.blog.seoDescriptionPlaceholder}
                     className="min-h-[60px] resize-none text-sm"
                     maxLength={160}
                   />
@@ -564,7 +566,7 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
 
                 <div className="space-y-1.5">
                   <Label htmlFor="seo-keywords" className="text-xs">
-                    Slowa kluczowe
+                    {messages.blog.seoKeywordsLabel}
                   </Label>
                   <Controller
                     name="seo_metadata.keywords"
@@ -574,7 +576,7 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
                         id="seo-keywords"
                         value={formatKeywords(field.value)}
                         onChange={(e) => field.onChange(parseKeywords(e.target.value))}
-                        placeholder="marketing, ai, automatyzacja"
+                        placeholder={messages.blog.seoKeywordsPlaceholder}
                         className="h-8 text-sm"
                       />
                     )}
@@ -586,19 +588,19 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
             {/* Status card */}
             <Card className="shadow-sm">
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium">Status</CardTitle>
+                <CardTitle className="text-sm font-medium">{messages.blog.statusTitle}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground">Status</span>
+                  <span className="text-xs text-muted-foreground">{messages.blog.statusTitle}</span>
                   <Badge variant={watchIsPublished ? 'default' : 'secondary'}>
-                    {watchIsPublished ? 'Opublikowany' : 'Szkic'}
+                    {watchIsPublished ? messages.common.published : messages.common.draft}
                   </Badge>
                 </div>
 
                 {blogPost?.published_at && (
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-muted-foreground">Data publikacji</span>
+                    <span className="text-xs text-muted-foreground">{messages.blog.publishDate}</span>
                     <span className="text-xs">
                       {new Date(blogPost.published_at).toLocaleDateString('pl-PL', {
                         day: 'numeric',
@@ -610,13 +612,13 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
                 )}
 
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground">Czas czytania</span>
+                  <span className="text-xs text-muted-foreground">{messages.blog.readingTime}</span>
                   <span className="text-xs">{readingTime} min</span>
                 </div>
 
                 {blogPost?.preview_token && (
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-muted-foreground">Link podgladu</span>
+                    <span className="text-xs text-muted-foreground">{messages.blog.previewLink}</span>
                     <Button
                       type="button"
                       variant="ghost"
@@ -627,7 +629,7 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
                         navigator.clipboard.writeText(url)
                       }}
                     >
-                      Kopiuj link
+                      {messages.common.copyLink}
                     </Button>
                   </div>
                 )}
@@ -643,24 +645,23 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
                     className="w-full border-destructive/30 text-destructive hover:bg-destructive/5 hover:text-destructive"
                     disabled={deleteState === 'deleting'}
                   >
-                    {deleteState === 'deleting' ? 'Usuwanie...' : 'Usun artykul'}
+                    {deleteState === 'deleting' ? messages.blog.deleting : messages.blog.deletePost}
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>Usunac artykul?</AlertDialogTitle>
+                    <AlertDialogTitle>{messages.blog.deleteConfirmTitle}</AlertDialogTitle>
                     <AlertDialogDescription>
-                      Ta operacja jest nieodwracalna. Artykul &ldquo;{blogPost.title}&rdquo; zostanie
-                      trwale usuniety.
+                      {messages.blog.deleteConfirmDescription(blogPost.title)}
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
-                    <AlertDialogCancel>Anuluj</AlertDialogCancel>
+                    <AlertDialogCancel>{messages.common.cancel}</AlertDialogCancel>
                     <AlertDialogAction
                       onClick={handleDelete}
                       className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                     >
-                      Usun
+                      {messages.common.delete}
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>

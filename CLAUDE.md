@@ -155,3 +155,11 @@ agency/
 2. Apply signal-vs-noise filter (remove AI-known content)
 3. Verify structure compliance (9 required sections from command-creation skill)
 4. Add production WHY context (not just WHAT)
+
+**When committing:**
+
+- **No Co-Authored-By in commits** — Never add AI attribution footer ("Co-Authored-By: Claude" or similar) to commit messages.
+
+**When writing code:**
+
+- **Always use defined agents for code changes** — Use code-developer-agent, design-agent etc. via Agent tool for ALL feature-level code changes. Direct edits only for trivial string changes (3 href values, 1 className).

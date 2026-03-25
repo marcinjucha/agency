@@ -1,241 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { createClient } from '@supabase/supabase-js'
-import { getValidAccessToken, refreshAccessToken, createEvent } from '@agency/calendar'
-
-// Initialize Supabase client with service role key for server-side operations
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-
-if (!supabaseUrl) {
-  console.error('❌ Missing environment variable: NEXT_PUBLIC_SUPABASE_URL')
-  throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL')
-}
-
-if (!supabaseKey) {
-  console.error('❌ Missing environment variable: SUPABASE_SERVICE_ROLE_KEY')
-  throw new Error('Missing SUPABASE_SERVICE_ROLE_KEY')
-}
-
-const supabase = createClient(supabaseUrl, supabaseKey)
-
-// Validation schema for booking request
-const bookingRequestSchema = z.object({
-  surveyId: z.string().uuid('Invalid survey ID'),
-  responseId: z.string().uuid('Invalid response ID'),
-  startTime: z.string().datetime('Invalid start time'),
-  endTime: z.string().datetime('Invalid end time'),
-  clientName: z.string().min(2).max(100),
-  clientEmail: z.string().email('Invalid email'),
-  notes: z.string().max(500).optional().default(''),
-})
+import { bookingRequestSchema } from '@/features/calendar/validation'
+import { bookAppointment } from '@/features/calendar/booking'
 
 /**
  * POST /api/calendar/book
- * Creates a new appointment after client books a time slot
+ * Creates a new appointment after client books a time slot.
  *
- * Request body:
- * {
- *   surveyId: string (uuid)
- *   responseId: string (uuid)
- *   startTime: string (ISO 8601)
- *   endTime: string (ISO 8601)
- *   clientName: string
- *   clientEmail: string
- *   notes?: string
- * }
- *
- * Success response (201):
- * {
- *   success: true
- *   appointment: { id, startTime, endTime, clientName, clientEmail, status }
- *   confirmationUrl?: string
- * }
- *
- * Error responses:
- * 400: Invalid request body
- * 404: Survey or response not found
- * 409: Double-booking conflict or slot no longer available
- * 500: Server error
+ * Thin HTTP handler — all business logic lives in features/calendar/booking.ts
  */
 export async function POST(request: NextRequest) {
   try {
-    // Parse and validate request body
     const body = await request.json()
     const validatedData = bookingRequestSchema.parse(body)
 
-    // Step 1: Validate survey exists and get lawyer info
-    const { data: surveyLink, error: surveyError } = await supabase
-      .from('survey_links')
-      .select('surveys(id, created_by, tenant_id)')
-      .eq('id', validatedData.surveyId)
-      .single()
+    const result = await bookAppointment(validatedData)
 
-    if (surveyError || !surveyLink) {
+    if (!result.success) {
+      const { error, code, status, details } = result.error
       return NextResponse.json(
-        { error: 'Survey not found', code: 'SURVEY_NOT_FOUND' },
-        { status: 404 }
+        { error, code, ...(details && { details }) },
+        { status }
       )
     }
 
-    const survey = surveyLink.surveys as unknown as {
-      id: string
-      created_by: string
-      tenant_id: string
-    }
-    const userId = survey.created_by
-    const tenantId = survey.tenant_id
-
-    // Step 2: Validate response exists and belongs to this survey
-    const { data: response, error: responseError } = await supabase
-      .from('responses')
-      .select('id, survey_link_id')
-      .eq('id', validatedData.responseId)
-      .eq('survey_link_id', validatedData.surveyId)
-      .single()
-
-    if (responseError || !response) {
-      return NextResponse.json(
-        { error: 'Response not found or does not match survey', code: 'RESPONSE_NOT_FOUND' },
-        { status: 404 }
-      )
-    }
-
-    // Step 3: Check for double-booking conflicts in database
-    const { data: existingAppointments, error: conflictError } = await supabase
-      .from('appointments')
-      .select('id, start_time, end_time')
-      .eq('user_id', userId)
-      .eq('status', 'scheduled')
-
-    if (conflictError) {
-      console.error('Error checking conflicts:', conflictError)
-      return NextResponse.json(
-        { error: 'Failed to check availability', code: 'AVAILABILITY_CHECK_FAILED' },
-        { status: 500 }
-      )
-    }
-
-    // Detect time conflicts with existing appointments
-    const bookingStart = new Date(validatedData.startTime).getTime()
-    const bookingEnd = new Date(validatedData.endTime).getTime()
-
-    const hasConflict = existingAppointments?.some((apt) => {
-      const aptStart = new Date(apt.start_time).getTime()
-      const aptEnd = new Date(apt.end_time).getTime()
-
-      // Check if booking overlaps with existing appointment
-      return bookingStart < aptEnd && bookingEnd > aptStart
-    })
-
-    if (hasConflict) {
-      return NextResponse.json(
-        { error: 'Selected time slot is no longer available', code: 'SLOT_UNAVAILABLE' },
-        { status: 409 }
-      )
-    }
-
-    // Step 4: Create appointment in database
-    const { data: newAppointment, error: createError } = await supabase
-      .from('appointments')
-      .insert({
-        response_id: validatedData.responseId,
-        user_id: userId,
-        tenant_id: tenantId,
-        start_time: validatedData.startTime,
-        end_time: validatedData.endTime,
-        client_name: validatedData.clientName,
-        client_email: validatedData.clientEmail,
-        notes: validatedData.notes || null,
-        status: 'scheduled',
-        // google_calendar_event_id will be set after event creation
-      })
-      .select()
-      .single()
-
-    if (createError || !newAppointment) {
-      console.error('Error creating appointment:', createError)
-      return NextResponse.json(
-        { error: 'Failed to create appointment', code: 'APPOINTMENT_CREATION_FAILED' },
-        { status: 500 }
-      )
-    }
-
-    // Step 5: Create Google Calendar event
-    let googleEventId: string | null = null
-
-    try {
-      // Get fresh access token with auto-refresh
-      const tokenResult = await getValidAccessToken(
-        survey.created_by,
-        supabase,
-        refreshAccessToken
-      )
-
-      if (tokenResult.error) {
-        console.error('[BOOKING API] Failed to get access token:', tokenResult.error)
-        // Graceful degradation: Save appointment even if calendar fails
-      } else {
-        // Create event in Google Calendar
-        try {
-          const calendarEvent = {
-            summary: `Appointment: ${validatedData.clientName}`,
-            description: `Client: ${validatedData.clientName}\nEmail: ${validatedData.clientEmail}\nNotes: ${validatedData.notes || 'N/A'}`,
-            start: {
-              dateTime: validatedData.startTime,
-              timeZone: 'Europe/Warsaw',
-            },
-            end: {
-              dateTime: validatedData.endTime,
-              timeZone: 'Europe/Warsaw',
-            },
-            attendees: [{ email: validatedData.clientEmail }],
-          }
-
-          googleEventId = await createEvent(tokenResult.accessToken!, calendarEvent)
-        } catch (eventError) {
-          console.error('Failed to create Google Calendar event:', eventError)
-          // Graceful degradation: Continue without event ID
-        }
-      }
-
-      // Update appointment with Google Calendar event ID (if created)
-      if (googleEventId) {
-        const { error: updateError } = await supabase
-          .from('appointments')
-          .update({ google_calendar_event_id: googleEventId })
-          .eq('id', newAppointment.id)
-
-        if (updateError) {
-          console.error('Error updating appointment with event ID:', updateError)
-          // Don't fail the booking if this fails, the appointment is already created
-        }
-      }
-    } catch (error) {
-      console.error('Error in calendar integration:', error)
-      // Don't fail the booking if calendar integration fails
-      // The appointment is already created in the database
-    }
-
-    // Step 6: Return success response
     return NextResponse.json(
-      {
-        success: true,
-        appointment: {
-          id: newAppointment.id,
-          startTime: newAppointment.start_time,
-          endTime: newAppointment.end_time,
-          clientName: newAppointment.client_name,
-          clientEmail: newAppointment.client_email,
-          status: newAppointment.status,
-          createdAt: newAppointment.created_at,
-        },
-        confirmationUrl: `/survey/${validatedData.surveyId}/success?appointmentId=${newAppointment.id}`,
-      },
+      { success: true, ...result.data },
       { status: 201 }
     )
   } catch (error) {
-    // Handle Zod validation errors
     if (error instanceof z.ZodError) {
       console.error('[BOOKING API] Zod validation failed:', error.errors)
       return NextResponse.json(
@@ -251,7 +44,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Handle JSON parsing errors
     if (error instanceof SyntaxError) {
       return NextResponse.json(
         { error: 'Invalid JSON in request body', code: 'PARSE_ERROR' },
@@ -259,7 +51,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Handle unexpected errors
     console.error('Unexpected error in booking endpoint:', error)
     return NextResponse.json(
       { error: 'Internal server error', code: 'INTERNAL_SERVER_ERROR' },

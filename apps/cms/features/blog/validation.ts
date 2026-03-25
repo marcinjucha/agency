@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { messages } from '@/lib/messages'
 
 // --- SEO metadata schema ---
 
@@ -6,32 +7,32 @@ export const seoMetadataSchema = z.object({
   title: z.string().optional(),
   description: z
     .string()
-    .max(160, 'Opis SEO może mieć maksymalnie 160 znaków')
+    .max(160, messages.validation.seoDescriptionMax)
     .optional(),
-  ogImage: z.string().url('Nieprawidłowy URL obrazka OG').optional().or(z.literal('')),
+  ogImage: z.string().url(messages.validation.invalidOgImageUrl).optional().or(z.literal('')),
   keywords: z.array(z.string()).optional(),
 })
 
 // --- Blog post schema ---
 
 export const blogPostSchema = z.object({
-  title: z.string().min(1, 'Tytuł jest wymagany'),
+  title: z.string().min(1, messages.validation.titleRequired),
   slug: z
     .string()
-    .min(1, 'Slug jest wymagany')
+    .min(1, messages.validation.slugRequired)
     .regex(
       /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
-      'Slug może zawierać tylko małe litery, cyfry i myślniki'
+      messages.validation.slugFormat
     ),
   excerpt: z
     .string()
-    .max(300, 'Zajawka może mieć maksymalnie 300 znaków')
+    .max(300, messages.validation.excerptMax)
     .optional(),
   content: z.any(),
   html_body: z.string().optional(),
   cover_image_url: z
     .string()
-    .url('Nieprawidłowy URL obrazka')
+    .url(messages.validation.invalidImageUrl)
     .optional()
     .or(z.literal('')),
   category: z.string().optional(),
@@ -40,8 +41,8 @@ export const blogPostSchema = z.object({
   is_published: z.boolean().default(false),
   estimated_reading_time: z
     .number()
-    .int('Czas czytania musi być liczbą całkowitą')
-    .positive('Czas czytania musi być większy od zera')
+    .int(messages.validation.readingTimeMustBeInteger)
+    .positive(messages.validation.readingTimeMustBePositive)
     .optional(),
 })
 

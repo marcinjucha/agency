@@ -1,5 +1,14 @@
 import type { Tables } from './types'
 
+// Canonical SEO metadata type — all fields optional (safe for JSONB storage).
+// Required fields enforced via Zod validation in each app, not here.
+export type SeoMetadata = {
+  title?: string
+  description?: string
+  ogImage?: string
+  keywords?: string[]
+}
+
 export type NavbarBlock = {
   type: 'navbar'
   ctaText: string

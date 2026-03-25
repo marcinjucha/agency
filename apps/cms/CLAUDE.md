@@ -144,6 +144,10 @@ const { data } = await supabase.from('surveys').select('*')
 // Automatically filtered by user's tenant_id
 ```
 
+**getUserWithTenant() helper** — All CMS actions needing tenant_id import `getUserWithTenant` from `@/lib/auth.ts`. Returns `{ supabase, userId, tenantId }` or `{ error }` with `isAuthError()` type guard. **Why:** Eliminates duplicated tenant_id fetch across 4+ feature actions files.
+
+**API routes must check auth** — All CMS API routes (except OAuth callbacks) must call `supabase.auth.getUser()` and return 401 if unauthenticated. Pattern: same as `app/api/upload/route.ts`. **Why:** API routes bypass middleware auth — unauthenticated requests silently succeed without explicit check.
+
 **Service Role (use sparingly):**
 Only for admin operations that bypass RLS.
 

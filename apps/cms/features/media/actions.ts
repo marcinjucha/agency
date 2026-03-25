@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { getUserWithTenant, isAuthError } from '@/lib/auth'
 import { DeleteObjectCommand } from '@aws-sdk/client-s3'
 import { getS3Client, S3_BUCKET } from '@/lib/s3'
 import {
@@ -11,6 +12,7 @@ import {
   type UpdateMediaItemFormData,
 } from './validation'
 import { toMediaItem, type MediaItem } from './types'
+import { messages } from '@/lib/messages'
 
 export async function createMediaItem(
   data: CreateMediaItemFormData
@@ -20,30 +22,16 @@ export async function createMediaItem(
     if (!parsed.success) {
       return {
         success: false,
-        error: parsed.error.errors[0]?.message ?? 'Nieprawidlowe dane',
+        error: parsed.error.errors[0]?.message ?? messages.media.invalidData,
       }
     }
 
-    const supabase = await createClient()
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-    if (!user) return { success: false, error: 'Nie zalogowany' }
-
-    // Fetch tenant_id for the authenticated user
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: userData, error: userError } = await (supabase as any)
-      .from('users')
-      .select('tenant_id')
-      .eq('id', user.id)
-      .single()
-
-    if (userError || !userData?.tenant_id) {
-      return { success: false, error: 'Nie znaleziono danych uzytkownika' }
-    }
+    const auth = await getUserWithTenant()
+    if (isAuthError(auth)) return { success: false, error: auth.error }
+    const { supabase, tenantId } = auth
 
     const insertPayload = {
-      tenant_id: userData.tenant_id,
+      tenant_id: tenantId,
       name: parsed.data.name,
       type: parsed.data.type,
       url: parsed.data.url,
@@ -55,19 +43,19 @@ export async function createMediaItem(
       thumbnail_url: parsed.data.thumbnail_url ?? null,
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- media_items not in generated types
     const { data: created, error } = await (supabase as any)
       .from('media_items')
       .insert(insertPayload)
       .select()
       .single()
 
-    if (error) throw new Error(error.message)
+    if (error) return { success: false, error: error.message }
 
     revalidatePath('/admin/media')
     return { success: true, data: toMediaItem(created) }
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Nieznany blad'
+    const message = err instanceof Error ? err.message : messages.media.unknownError
     return { success: false, error: message }
   }
 }
@@ -81,7 +69,7 @@ export async function updateMediaItem(
     if (!parsed.success) {
       return {
         success: false,
-        error: parsed.error.errors[0]?.message ?? 'Nieprawidlowe dane',
+        error: parsed.error.errors[0]?.message ?? messages.media.invalidData,
       }
     }
 
@@ -89,20 +77,20 @@ export async function updateMediaItem(
     const {
       data: { user },
     } = await supabase.auth.getUser()
-    if (!user) return { success: false, error: 'Nie zalogowany' }
+    if (!user) return { success: false, error: messages.common.notLoggedIn }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- media_items not in generated types
     const { error } = await (supabase as any)
       .from('media_items')
       .update({ name: parsed.data.name })
       .eq('id', id)
 
-    if (error) throw new Error(error.message)
+    if (error) return { success: false, error: error.message }
 
     revalidatePath('/admin/media')
     return { success: true }
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Nieznany blad'
+    const message = err instanceof Error ? err.message : messages.media.unknownError
     return { success: false, error: message }
   }
 }
@@ -115,17 +103,17 @@ export async function deleteMediaItem(
     const {
       data: { user },
     } = await supabase.auth.getUser()
-    if (!user) return { success: false, error: 'Nie zalogowany' }
+    if (!user) return { success: false, error: messages.common.notLoggedIn }
 
     // Fetch the item first to get s3_key for S3 cleanup
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- media_items not in generated types
     const { data: item, error: fetchError } = await (supabase as any)
       .from('media_items')
       .select('s3_key')
       .eq('id', id)
       .single()
 
-    if (fetchError) throw new Error(fetchError.message)
+    if (fetchError) return { success: false, error: fetchError.message }
 
     // Delete from S3 if the item has an s3_key (uploaded files, not embeds)
     if (item?.s3_key) {
@@ -139,18 +127,18 @@ export async function deleteMediaItem(
     }
 
     // Delete DB row (RLS ensures tenant isolation)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- media_items not in generated types
     const { error } = await (supabase as any)
       .from('media_items')
       .delete()
       .eq('id', id)
 
-    if (error) throw new Error(error.message)
+    if (error) return { success: false, error: error.message }
 
     revalidatePath('/admin/media')
     return { success: true }
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Nieznany blad'
+    const message = err instanceof Error ? err.message : messages.media.unknownError
     return { success: false, error: message }
   }
 }

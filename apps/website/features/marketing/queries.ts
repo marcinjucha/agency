@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAnonClient } from '@/lib/supabase/anon-server'
 import type { Tables } from '@agency/database'
 import type { LandingBlock } from '@agency/database'
 
@@ -14,10 +14,10 @@ function toLandingPage(raw: unknown): LandingPage {
   }
 }
 
-// Fetch published landing page for SSR. Returns null when no published row exists —
-// caller should fall back to DEFAULT_BLOCKS from @agency/database.
+// Fetch published landing page for SSR/ISR. Uses createAnonClient (no cookies) so it
+// works at build time in generateStaticParams — same pattern as blog queries.
 export async function getPublicLandingPage(): Promise<LandingPage | null> {
-  const supabase = await createClient()
+  const supabase = createAnonClient()
   const { data, error } = await supabase
     .from('landing_pages')
     .select('*')

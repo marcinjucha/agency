@@ -39,7 +39,7 @@ export async function CalendarTokenStatus() {
 
         {status === 'expired' && (
           <>
-            <Badge className="bg-yellow-500/15 text-yellow-400 border-yellow-500/30 w-fit">
+            <Badge className="bg-status-warning/15 text-status-warning-foreground border-status-warning/30 w-fit">
               Wygasł ⚠
             </Badge>
             <Button asChild variant="outline" className="w-full sm:w-auto">
@@ -50,7 +50,7 @@ export async function CalendarTokenStatus() {
 
         {status === 'disconnected' && (
           <>
-            <Badge className="bg-destructive/15 text-red-400 border-destructive/30 w-fit">
+            <Badge className="bg-destructive/15 text-destructive border-destructive/30 w-fit">
               Niepołączony
             </Badge>
             <Button asChild className="w-full sm:w-auto">

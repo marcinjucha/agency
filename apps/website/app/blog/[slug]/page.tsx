@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { getPublishedBlogPost, getPublishedBlogSlugs } from '@/features/blog/queries'
 import { BlogArticlePage } from '@/features/blog/components/BlogArticlePage'
+import { buildArticleJsonLd } from '@/features/blog/utils'
 import type { SeoMetadata } from '@/features/blog/types'
 
 export const revalidate = 60
@@ -48,21 +49,7 @@ export default async function BlogPostPage({ params }: Props) {
 
   if (!post) notFound()
 
-  const jsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'Article',
-    headline: post.title,
-    description: post.excerpt || undefined,
-    image: post.cover_image_url || undefined,
-    datePublished: post.published_at || undefined,
-    author: post.author_name
-      ? { '@type': 'Person', name: post.author_name }
-      : undefined,
-    publisher: {
-      '@type': 'Organization',
-      name: 'Halo Efekt',
-    },
-  }
+  const jsonLd = buildArticleJsonLd(post)
 
   return (
     <>

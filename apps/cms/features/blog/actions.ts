@@ -2,9 +2,11 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { getUserWithTenant, isAuthError } from '@/lib/auth'
 import { blogPostSchema, type BlogPostFormData } from './validation'
 import { toBlogPost, type BlogPost } from './types'
 import { parseContent } from './utils'
+import { messages } from '@/lib/messages'
 
 // --- Server Actions ---
 
@@ -14,27 +16,15 @@ export async function createBlogPost(
   try {
     const parsed = blogPostSchema.safeParse(data)
     if (!parsed.success) {
-      return { success: false, error: parsed.error.errors[0]?.message ?? 'Nieprawidłowe dane' }
+      return { success: false, error: parsed.error.errors[0]?.message ?? messages.common.invalidData }
     }
 
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return { success: false, error: 'Nie zalogowany' }
-
-    // Fetch tenant_id for the authenticated user (required by RLS after multi-tenant migration)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: userData, error: userError } = await (supabase as any)
-      .from('users')
-      .select('tenant_id')
-      .eq('id', user.id)
-      .single()
-
-    if (userError || !userData?.tenant_id) {
-      return { success: false, error: 'Nie znaleziono danych użytkownika' }
-    }
+    const auth = await getUserWithTenant()
+    if (isAuthError(auth)) return { success: false, error: auth.error }
+    const { supabase, tenantId } = auth
 
     const insertPayload = {
-      tenant_id: userData.tenant_id,
+      tenant_id: tenantId,
       title: parsed.data.title,
       slug: parsed.data.slug,
       excerpt: parsed.data.excerpt || null,
@@ -49,19 +39,19 @@ export async function createBlogPost(
       published_at: parsed.data.is_published ? new Date().toISOString() : null,
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- blog_posts not in generated types
     const { data: created, error } = await (supabase as any)
       .from('blog_posts')
       .insert(insertPayload)
       .select()
       .single()
 
-    if (error) throw new Error(error.message)
+    if (error) return { success: false, error: error.message }
 
     revalidatePath('/admin/blog')
     return { success: true, data: toBlogPost(created) }
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Nieznany błąd'
+    const message = err instanceof Error ? err.message : messages.common.unknownError
     return { success: false, error: message }
   }
 }
@@ -73,21 +63,21 @@ export async function updateBlogPost(
   try {
     const parsed = blogPostSchema.safeParse(data)
     if (!parsed.success) {
-      return { success: false, error: parsed.error.errors[0]?.message ?? 'Nieprawidłowe dane' }
+      return { success: false, error: parsed.error.errors[0]?.message ?? messages.common.invalidData }
     }
 
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return { success: false, error: 'Nie zalogowany' }
+    if (!user) return { success: false, error: messages.common.notLoggedIn }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- blog_posts not in generated types
     const { data: existing, error: fetchError } = await (supabase as any)
       .from('blog_posts')
       .select('published_at')
       .eq('id', id)
       .single()
 
-    if (fetchError) throw new Error(fetchError.message)
+    if (fetchError) return { success: false, error: fetchError.message }
 
     const shouldSetPublishedAt = parsed.data.is_published && !existing.published_at
 
@@ -106,7 +96,7 @@ export async function updateBlogPost(
       ...(shouldSetPublishedAt && { published_at: new Date().toISOString() }),
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- blog_posts not in generated types
     const { data: updated, error } = await (supabase as any)
       .from('blog_posts')
       .update(updatePayload)
@@ -114,13 +104,13 @@ export async function updateBlogPost(
       .select()
       .single()
 
-    if (error) throw new Error(error.message)
+    if (error) return { success: false, error: error.message }
 
     revalidatePath('/admin/blog')
     revalidatePath(`/admin/blog/${id}`)
     return { success: true, data: toBlogPost(updated) }
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Nieznany błąd'
+    const message = err instanceof Error ? err.message : messages.common.unknownError
     return { success: false, error: message }
   }
 }
@@ -131,20 +121,20 @@ export async function deleteBlogPost(
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return { success: false, error: 'Nie zalogowany' }
+    if (!user) return { success: false, error: messages.common.notLoggedIn }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- blog_posts not in generated types
     const { error } = await (supabase as any)
       .from('blog_posts')
       .delete()
       .eq('id', id)
 
-    if (error) throw new Error(error.message)
+    if (error) return { success: false, error: error.message }
 
     revalidatePath('/admin/blog')
     return { success: true }
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Nieznany błąd'
+    const message = err instanceof Error ? err.message : messages.common.unknownError
     return { success: false, error: message }
   }
 }

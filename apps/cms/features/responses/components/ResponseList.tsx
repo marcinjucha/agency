@@ -2,12 +2,12 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { getResponses } from '../queries'
-import { Card } from '@agency/ui'
+import { Card, LoadingState, ErrorState, EmptyState } from '@agency/ui'
 import { useRouter } from 'next/navigation'
 import { ArrowRight, FileText } from 'lucide-react'
 import type { ResponseListItem, ResponseStatus } from '../types'
 import { getResponseStatusColor } from '@/lib/utils/status'
-import { LoadingState, ErrorState, EmptyState } from '@/components/shared'
+import { messages } from '@/lib/messages'
 
 /**
  * ResponseList Component
@@ -56,8 +56,8 @@ export function ResponseList() {
   if (error) {
     return (
       <ErrorState
-        title="Failed to load responses"
-        message={error instanceof Error ? error.message : 'An error occurred'}
+        title={messages.responses.loadFailed}
+        message={error instanceof Error ? error.message : messages.common.errorOccurred}
         onRetry={() => refetch()}
         variant="card"
       />
@@ -69,8 +69,8 @@ export function ResponseList() {
     return (
       <EmptyState
         icon={FileText}
-        title="No responses yet"
-        description="Create a survey and share the link to start collecting responses."
+        title={messages.responses.noResponses}
+        description={messages.responses.noResponsesDescription}
         variant="card"
       />
     )
@@ -84,16 +84,16 @@ export function ResponseList() {
           <thead className="bg-muted border-b border-border">
             <tr>
               <th scope="col" className="px-6 py-4 text-left text-sm font-semibold text-foreground">
-                Survey
+                {messages.responses.surveyColumn}
               </th>
               <th scope="col" className="px-6 py-4 text-left text-sm font-semibold text-foreground">
-                Submitted
+                {messages.responses.submittedColumn}
               </th>
               <th scope="col" className="px-6 py-4 text-left text-sm font-semibold text-foreground">
-                Status
+                {messages.responses.statusColumn}
               </th>
               <th scope="col" className="px-6 py-4 text-left text-sm font-semibold text-foreground">
-                Actions
+                {messages.responses.actionsColumn}
               </th>
             </tr>
           </thead>
@@ -112,13 +112,13 @@ export function ResponseList() {
 
       {/* Live region for screen readers */}
       <div className="sr-only" aria-live="polite" aria-atomic="true">
-        {responses.length} {responses.length === 1 ? 'response' : 'responses'} loaded
+        {messages.responses.responsesLoaded(responses.length)}
       </div>
 
       {/* Footer with count */}
       <div className="px-6 py-3 bg-muted border-t border-border">
         <p className="text-xs text-muted-foreground">
-          Showing {responses.length} {responses.length === 1 ? 'response' : 'responses'}
+          {messages.responses.showingResponses(responses.length)}
         </p>
       </div>
     </Card>
@@ -143,7 +143,7 @@ function ResponseRow({
 }) {
   // Format date: "Dec 12, 2025 10:30 AM"
   const formatDate = (dateString: string | null) => {
-    if (!dateString) return 'Unknown date'
+    if (!dateString) return messages.responses.unknownDate
     try {
       const date = new Date(dateString)
       return date.toLocaleString('en-US', {
@@ -155,12 +155,12 @@ function ResponseRow({
         hour12: true
       })
     } catch {
-      return 'Invalid date'
+      return messages.responses.invalidDate
     }
   }
 
   // Get survey title with fallback
-  const surveyTitle = response.surveys?.title || 'Unknown Survey'
+  const surveyTitle = response.surveys?.title || messages.responses.unknownSurvey
 
   // Truncate long survey titles
   const truncatedTitle =
@@ -203,7 +203,7 @@ function ResponseRow({
               onRowClick()
             }}
             className="p-3 text-muted-foreground hover:text-foreground transition-colors rounded-md hover:bg-muted"
-            aria-label="View response details"
+            aria-label={messages.responses.viewDetails}
           >
             <ArrowRight className="h-5 w-5" />
           </button>

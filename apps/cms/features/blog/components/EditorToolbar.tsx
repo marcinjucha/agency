@@ -252,7 +252,7 @@ export function EditorToolbar({ editor, onOpenMediaModal }: EditorToolbarProps) 
             className="h-7 flex-1 text-sm"
             autoFocus
           />
-          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={applyLink}>
+          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={applyLink} aria-label="Zastosuj link">
             <Check className="h-3.5 w-3.5" />
           </Button>
           <Button
@@ -260,6 +260,7 @@ export function EditorToolbar({ editor, onOpenMediaModal }: EditorToolbarProps) 
             size="icon"
             className="h-7 w-7"
             onClick={() => setLinkInput({ visible: false, url: '' })}
+            aria-label="Anuluj"
           >
             <X className="h-3.5 w-3.5" />
           </Button>

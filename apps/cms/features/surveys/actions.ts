@@ -2,7 +2,14 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { getUserWithTenant, isAuthError } from '@/lib/auth'
 import type { Tables, TablesInsert } from '@agency/database'
+import {
+  createSurveySchema,
+  updateSurveySchema,
+  generateSurveyLinkSchema,
+} from './validation'
+import { messages } from '@/lib/messages'
 
 /**
  * Create a new survey
@@ -13,37 +20,21 @@ export async function createSurvey(formData: {
   description?: string
 }): Promise<{ success: boolean; surveyId?: string; error?: string }> {
   try {
-    const supabase = await createClient()
-
-    // Get current user
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-
-    if (!user) {
-      return { success: false, error: 'Not authenticated' }
+    const parsed = createSurveySchema.safeParse(formData)
+    if (!parsed.success) {
+      return { success: false, error: parsed.error.errors[0].message }
     }
 
-    // Get user's tenant_id
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('id', user.id)
-      .maybeSingle()
-
-    if (userError || !userData) {
-      return { success: false, error: 'User not found in database' }
-    }
-
-    // Type assertion for Supabase inference
-    const userWithTenant = userData as Pick<Tables<'users'>, 'tenant_id'>
+    const auth = await getUserWithTenant()
+    if (isAuthError(auth)) return { success: false, error: auth.error }
+    const { supabase, userId, tenantId } = auth
 
     // Create survey
     const surveyData: TablesInsert<'surveys'> = {
       title: formData.title,
       description: formData.description || null,
-      tenant_id: userWithTenant.tenant_id,
-      created_by: user.id,
+      tenant_id: tenantId,
+      created_by: userId,
       questions: [],
       status: 'draft',
     }
@@ -55,13 +46,13 @@ export async function createSurvey(formData: {
       .single()
 
     if (insertError || !survey) {
-      return { success: false, error: insertError?.message || 'Failed to create survey' }
+      return { success: false, error: insertError?.message || messages.surveys.createFailed }
     }
 
     revalidatePath('/admin/surveys')
     return { success: true, surveyId: (survey as Tables<'surveys'>).id }
   } catch (error) {
-    return { success: false, error: 'Failed to create survey' }
+    return { success: false, error: messages.surveys.createFailed }
   }
 }
 
@@ -73,6 +64,11 @@ export async function updateSurvey(
   data: Partial<Pick<Tables<'surveys'>, 'title' | 'description' | 'status' | 'questions'>>
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    const parsed = updateSurveySchema.safeParse(data)
+    if (!parsed.success) {
+      return { success: false, error: parsed.error.errors[0].message }
+    }
+
     const supabase = await createClient()
 
     // @ts-expect-error - Supabase type inference issue with Server Actions
@@ -86,7 +82,7 @@ export async function updateSurvey(
     revalidatePath(`/admin/surveys/${id}`)
     return { success: true }
   } catch (error) {
-    return { success: false, error: 'Failed to update survey' }
+    return { success: false, error: messages.surveys.updateFailed }
   }
 }
 
@@ -106,7 +102,7 @@ export async function deleteSurvey(id: string): Promise<{ success: boolean; erro
     revalidatePath('/admin/surveys')
     return { success: true }
   } catch (error) {
-    return { success: false, error: 'Failed to delete survey' }
+    return { success: false, error: messages.surveys.deleteFailed }
   }
 }
 
@@ -123,6 +119,16 @@ export async function generateSurveyLink(
   }
 ): Promise<{ success: boolean; linkId?: string; token?: string; error?: string }> {
   try {
+    const parsed = generateSurveyLinkSchema.safeParse({
+      surveyId,
+      notificationEmail: options.notificationEmail,
+      expiresAt: options.expiresAt,
+      maxSubmissions: options.maxSubmissions,
+    })
+    if (!parsed.success) {
+      return { success: false, error: parsed.error.errors[0].message }
+    }
+
     const supabase = await createClient()
 
     // Verify user has access to this survey (via tenant_id RLS)
@@ -133,7 +139,7 @@ export async function generateSurveyLink(
       .maybeSingle()
 
     if (!survey) {
-      return { success: false, error: 'Survey not found or access denied' }
+      return { success: false, error: messages.surveys.notFound }
     }
 
     // Generate unique token using crypto.randomUUID()
@@ -157,7 +163,7 @@ export async function generateSurveyLink(
       .single()
 
     if (insertError || !link) {
-      return { success: false, error: insertError?.message || 'Failed to generate link' }
+      return { success: false, error: insertError?.message || messages.surveys.generateLinkFailed }
     }
 
     revalidatePath(`/admin/surveys/${surveyId}`)
@@ -167,14 +173,17 @@ export async function generateSurveyLink(
       token: (link as Tables<'survey_links'>).token,
     }
   } catch (error) {
-    return { success: false, error: 'Failed to generate survey link' }
+    return { success: false, error: messages.surveys.generateLinkFailed }
   }
 }
 
 /**
  * Delete a survey link
  */
-export async function deleteSurveyLink(linkId: string): Promise<{ success: boolean; error?: string }> {
+export async function deleteSurveyLink(
+  linkId: string,
+  surveyId: string
+): Promise<{ success: boolean; error?: string }> {
   try {
     const supabase = await createClient()
 
@@ -185,8 +194,10 @@ export async function deleteSurveyLink(linkId: string): Promise<{ success: boole
       return { success: false, error: error.message }
     }
 
+    revalidatePath('/admin/surveys')
+    revalidatePath(`/admin/surveys/${surveyId}`)
     return { success: true }
   } catch (error) {
-    return { success: false, error: 'Failed to delete survey link' }
+    return { success: false, error: messages.surveys.deleteLinkFailed }
   }
 }

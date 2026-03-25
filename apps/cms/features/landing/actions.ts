@@ -2,10 +2,9 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
-import { toLandingPage } from './queries'
 import { landingPageSchema } from './validation'
-import type { LandingBlock } from '@agency/database'
-import type { SeoMetadata } from './queries'
+import type { LandingBlock, SeoMetadata } from '@agency/database'
+import { messages } from '@/lib/messages'
 
 export async function updateLandingPage(
   id: string,
@@ -18,12 +17,12 @@ export async function updateLandingPage(
   try {
     const parsed = landingPageSchema.partial().safeParse(data)
     if (!parsed.success) {
-      return { success: false, error: parsed.error.errors[0]?.message ?? 'Nieprawidłowe dane' }
+      return { success: false, error: parsed.error.errors[0]?.message ?? messages.common.invalidData }
     }
 
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return { success: false, error: 'Nie zalogowany' }
+    if (!user) return { success: false, error: messages.common.notLoggedIn }
 
     const updatePayload = {
       ...(parsed.data.blocks !== undefined && { blocks: parsed.data.blocks }),
@@ -31,7 +30,7 @@ export async function updateLandingPage(
       ...(parsed.data.is_published !== undefined && { is_published: parsed.data.is_published }),
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- landing_pages not in generated types
     const { data: updated, error } = await (supabase as any)
       .from('landing_pages')
       .update(updatePayload)
@@ -39,12 +38,12 @@ export async function updateLandingPage(
       .select()
       .single()
 
-    if (error) throw new Error(error.message)
+    if (error) return { success: false, error: error.message }
 
     revalidatePath('/admin/landing-page')
     return { success: true }
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Nieznany błąd'
+    const message = err instanceof Error ? err.message : messages.common.unknownError
     return { success: false, error: message }
   }
 }

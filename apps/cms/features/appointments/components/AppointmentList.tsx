@@ -2,13 +2,12 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { getAppointments } from '../queries'
-import { Card } from '@agency/ui'
+import { Card, LoadingState, ErrorState, EmptyState } from '@agency/ui'
 import { useRouter } from 'next/navigation'
 import { ExternalLink, CalendarCheck } from 'lucide-react'
 import { format } from 'date-fns'
 import type { AppointmentListItem, AppointmentStatus } from '../types'
 import { getAppointmentStatusColor } from '@/lib/utils/status'
-import { LoadingState, ErrorState, EmptyState } from '@/components/shared'
 
 /**
  * AppointmentList Component

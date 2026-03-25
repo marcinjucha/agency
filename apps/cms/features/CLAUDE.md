@@ -41,6 +41,8 @@ features/{feature}/
 └── __tests__/       # Tests
 ```
 
+**queries.ts vs queries.server.ts** — `queries.ts` = browser client (TanStack Query in client components). `queries.server.ts` = server client (Server Components/SSR). Wrong naming causes silent bugs: browser client in Server Component works at runtime but fails at build time (no cookies context). **Why:** Multiple features had wrong client usage discovered during architecture audit.
+
 ## Example: Surveys Feature
 
 ### components/SurveyList.tsx

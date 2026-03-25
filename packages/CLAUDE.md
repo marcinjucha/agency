@@ -47,6 +47,8 @@ function MyComponent() {
 - App-specific components (use features/ instead)
 - One-off components (keep in app)
 
+**Shared state components** — `EmptyState`, `ErrorState`, `LoadingState` exported from `@agency/ui`. Do NOT create local copies in `apps/components/shared/`. **Why:** Duplicated state components diverged between CMS and Website during AAA-T-83 audit.
+
 ### packages/database/
 **Purpose:** Single source of truth for database types
 
@@ -64,6 +66,8 @@ const supabase = createClient<Database>()
 const { data } = await supabase.from('surveys').select('*')
 // data is typed as Survey[]
 ```
+
+**SeoMetadata type** — Canonical `SeoMetadata` interface lives in `packages/database/src/landing-blocks.ts`. All fields optional (JSONB storage). Required-ness enforced via Zod validation in each app. Do NOT define local SeoMetadata types. **Why:** Duplicate definitions caused type drift between CMS and Website, discovered during AAA-T-83 consolidation.
 
 **Regenerate types:**
 ```bash

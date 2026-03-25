@@ -2,11 +2,11 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { getSurveys } from '../queries'
-import { Button, Card } from '@agency/ui'
+import { Button, Card, LoadingState, ErrorState, EmptyState } from '@agency/ui'
 import Link from 'next/link'
 import { FileText, Plus } from 'lucide-react'
 import { getSurveyStatusColor, type SurveyStatus } from '@/lib/utils/status'
-import { LoadingState, ErrorState, EmptyState } from '@/components/shared'
+import { messages } from '@/lib/messages'
 
 export function SurveyList() {
   const { data: surveys, isLoading, error } = useQuery({
@@ -15,7 +15,7 @@ export function SurveyList() {
   })
 
   if (isLoading) {
-    return <LoadingState variant="spinner" message="Loading surveys..." />
+    return <LoadingState variant="spinner" message={messages.surveys.loadingSurveys} />
   }
 
   if (error) {
@@ -26,13 +26,13 @@ export function SurveyList() {
     return (
       <EmptyState
         icon={FileText}
-        title="No surveys"
-        description="Get started by creating a new survey."
+        title={messages.surveys.noSurveys}
+        description={messages.surveys.noSurveysDescription}
         action={
           <Link href="/admin/surveys/new">
             <Button>
               <Plus className="mr-2 h-4 w-4" />
-              Create Survey
+              {messages.surveys.createSurvey}
             </Button>
           </Link>
         }

@@ -142,38 +142,6 @@ export async function handleCallback(
 }
 
 /**
- * Refresh expired access token
- */
-export async function refreshAccessToken(
-  refreshToken: string
-): Promise<string> {
-  if (USE_MOCK_OAUTH) {
-    // Mock: Return new mock token
-    return `mock_access_${Date.now()}`
-  }
-
-  try {
-    const oauth2Client = createOAuthClient()
-
-    oauth2Client.setCredentials({
-      refresh_token: refreshToken,
-    })
-
-    const { credentials } = await oauth2Client.refreshAccessToken()
-
-    if (!credentials.access_token) {
-      throw new Error('No access token returned from refresh')
-    }
-
-    return credentials.access_token
-  } catch (error) {
-    throw new Error(
-      `Failed to refresh access token: ${error instanceof Error ? error.message : 'Unknown error'}`
-    )
-  }
-}
-
-/**
  * Revoke Google Calendar access
  * User's calendar access is permanently revoked
  */
