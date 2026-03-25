@@ -24,8 +24,7 @@ import {
   IMAGE_MAX_SIZE,
   VIDEO_MAX_SIZE,
 } from '@/features/media/utils'
-import { extractVideoId, generateThumbnailUrl, buildEmbedUrl } from '@/lib/video-utils'
-import { fetchVimeoThumbnail } from '@/lib/fetch-vimeo-thumbnail'
+import { extractVideoId, generateThumbnailUrl, buildEmbedUrl, fetchVimeoThumbnail } from '@/lib/video-utils'
 import { MediaTypeFilter } from '@/features/media/components/MediaTypeFilter'
 import type { MediaType, MediaItemListItem } from '@/features/media/types'
 import type { Editor } from '@tiptap/react'
