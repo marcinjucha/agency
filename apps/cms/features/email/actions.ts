@@ -39,12 +39,16 @@ export async function updateEmailTemplate(
         { onConflict: 'tenant_id,type' }
       )
 
-    if (upsertError) return { success: false, error: upsertError.message }
+    if (upsertError) {
+      console.error('[EMAIL_TEMPLATE] Upsert failed:', upsertError.message, upsertError.code, upsertError.details)
+      return { success: false, error: upsertError.message }
+    }
 
     revalidatePath('/admin/email-templates')
     return { success: true }
   } catch (err) {
     const message = err instanceof Error ? err.message : messages.common.unknownError
+    console.error('[EMAIL_TEMPLATE] Unexpected error:', message)
     return { success: false, error: message }
   }
 }

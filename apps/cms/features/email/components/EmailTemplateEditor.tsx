@@ -21,6 +21,7 @@ export function EmailTemplateEditor({ templateType, initialTemplate }: EmailTemp
   const [subject, setSubject] = useState(initialTemplate?.subject ?? '')
   const [blocks, setBlocks] = useState<Block[]>(initialTemplate?.blocks ?? DEFAULT_BLOCKS)
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   const variables = TEMPLATE_VARIABLES[templateType as keyof typeof TEMPLATE_VARIABLES] ?? []
 
@@ -36,11 +37,14 @@ export function EmailTemplateEditor({ templateType, initialTemplate }: EmailTemp
 
   async function handleSave() {
     setSaveState('saving')
+    setErrorMessage(null)
     try {
       const result = await updateEmailTemplate(templateType, { subject, blocks })
       setSaveState(result.success ? 'saved' : 'error')
-    } catch {
+      if (!result.success) setErrorMessage(result.error ?? null)
+    } catch (err) {
       setSaveState('error')
+      setErrorMessage(err instanceof Error ? err.message : 'Unexpected error')
     } finally {
       // Reset to idle after 2.5s so button label returns to normal
       setTimeout(() => setSaveState('idle'), 2500)
@@ -111,7 +115,10 @@ export function EmailTemplateEditor({ templateType, initialTemplate }: EmailTemp
           {messages.email.restoreDefaults}
         </Button>
         {saveState === 'error' && (
-          <p className="text-sm text-destructive">{messages.email.templateSaveFailed}</p>
+          <p className="text-sm text-destructive">
+            {messages.email.templateSaveFailed}
+            {errorMessage && <span className="block mt-1 text-xs opacity-75">{errorMessage}</span>}
+          </p>
         )}
       </div>
     </div>

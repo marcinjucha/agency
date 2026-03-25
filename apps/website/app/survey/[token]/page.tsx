@@ -17,6 +17,7 @@
 import { getSurveyByToken } from '@/features/survey/queries'
 import { SurveyForm } from '@/features/survey/components/SurveyForm'
 import { SurveyError } from '@/features/survey/components/SurveyError'
+import { messages } from '@/lib/messages'
 
 interface PageProps {
   params: Promise<{
@@ -33,7 +34,7 @@ export default async function SurveyPage({ params }: PageProps) {
 
   // Handle validation errors
   if (!result.isValid) {
-    return <SurveyError message={result.message ?? 'Survey unavailable'} />
+    return <SurveyError message={result.message ?? messages.survey.surveyUnavailable} />
   }
 
   // Render survey form with validated data
