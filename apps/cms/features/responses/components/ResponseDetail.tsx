@@ -9,6 +9,7 @@ import Link from 'next/link'
 import { ArrowLeft, FileX, Loader2, AlertTriangle } from 'lucide-react'
 import { getResponseStatusColor } from '@/lib/utils/status'
 import { triggerAiAnalysis } from '../actions'
+import { messages } from '@/lib/messages'
 
 type ResponseDetailProps = {
   responseId: string
@@ -73,14 +74,14 @@ export function ResponseDetail({ responseId }: ResponseDetailProps) {
 
   // Loading state
   if (isLoading) {
-    return <LoadingState variant="spinner" message="Loading response..." />
+    return <LoadingState variant="spinner" message={messages.responses.loadingResponse} />
   }
 
   // Error state
   if (error) {
     return (
       <ErrorState
-        title="Error loading response"
+        title={messages.responses.loadError}
         message={error.message}
         variant="inline"
       />
@@ -92,14 +93,14 @@ export function ResponseDetail({ responseId }: ResponseDetailProps) {
     return (
       <EmptyState
         icon={FileX}
-        title="Response not found"
-        description="This response may have been deleted or you don't have access to it."
+        title={messages.responses.notFound}
+        description={messages.responses.notFoundDescription}
         variant="card"
         action={
           <Link href="/admin/responses">
             <Button variant="outline">
               <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Responses
+              {messages.responses.backToResponses}
             </Button>
           </Link>
         }
@@ -109,7 +110,7 @@ export function ResponseDetail({ responseId }: ResponseDetailProps) {
 
   // Get survey data from the response
   const survey = response.surveys
-  const surveyTitle = survey?.title || 'Unknown Survey'
+  const surveyTitle = survey?.title || messages.responses.unknown
   const questions = survey?.questions || []
 
   // Build question-answer pairs
@@ -127,7 +128,7 @@ export function ResponseDetail({ responseId }: ResponseDetailProps) {
         hour: '2-digit',
         minute: '2-digit',
       })
-    : 'Unknown date'
+    : messages.responses.unknown
 
   return (
     <div className="space-y-6">
@@ -137,7 +138,7 @@ export function ResponseDetail({ responseId }: ResponseDetailProps) {
           <div className="flex-1">
             <h1 className="text-2xl font-bold text-foreground mb-2">{surveyTitle}</h1>
             <p className="text-sm text-muted-foreground">
-              Submitted on {submissionDate}
+              {messages.responses.submittedOn(submissionDate)}
             </p>
           </div>
           <Badge className={`${getResponseStatusColor(response.status)} px-3 py-1 rounded-full text-sm font-medium`}>
@@ -148,25 +149,25 @@ export function ResponseDetail({ responseId }: ResponseDetailProps) {
         {/* Metadata Details */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6 border-t border-border">
           <div>
-            <p className="text-xs font-semibold text-muted-foreground uppercase">Response ID</p>
+            <p className="text-xs font-semibold text-muted-foreground uppercase">{messages.responses.responseId}</p>
             <p className="text-sm text-foreground font-mono mt-1">{response.id}</p>
           </div>
           <div>
-            <p className="text-xs font-semibold text-muted-foreground uppercase">Survey Link</p>
+            <p className="text-xs font-semibold text-muted-foreground uppercase">{messages.responses.surveyLink}</p>
             <p className="text-sm text-foreground font-mono mt-1">
-              {response.survey_links?.token ? response.survey_links.token.slice(0, 8) + '...' : 'Unknown'}
+              {response.survey_links?.token ? response.survey_links.token.slice(0, 8) + '...' : messages.responses.unknown}
             </p>
           </div>
           <div>
-            <p className="text-xs font-semibold text-muted-foreground uppercase">Last Updated</p>
+            <p className="text-xs font-semibold text-muted-foreground uppercase">{messages.responses.lastUpdated}</p>
             <p className="text-sm text-foreground mt-1">
               {response.updated_at
-                ? new Date(response.updated_at).toLocaleDateString('en-US', {
+                ? new Date(response.updated_at).toLocaleDateString('pl-PL', {
                     month: 'short',
                     day: 'numeric',
                     year: 'numeric',
                   })
-                : 'Never'}
+                : messages.responses.neverUpdated}
             </p>
           </div>
         </div>
@@ -175,7 +176,7 @@ export function ResponseDetail({ responseId }: ResponseDetailProps) {
       {/* Question-Answer Pairs */}
       {questionAnswerPairs.length > 0 ? (
         <Card className="p-6">
-          <h2 className="text-lg font-semibold text-foreground mb-6">Responses</h2>
+          <h2 className="text-lg font-semibold text-foreground mb-6">{messages.responses.responsesSection}</h2>
           <div className="space-y-6">
             {questionAnswerPairs.map((pair, index) => (
               <div key={pair.question.id} className={index > 0 ? 'pt-6 border-t border-border' : ''}>
@@ -184,14 +185,14 @@ export function ResponseDetail({ responseId }: ResponseDetailProps) {
                     {pair.question.question}
                   </h3>
                   {pair.question.required && (
-                    <p className="text-xs text-muted-foreground mt-1">Required field</p>
+                    <p className="text-xs text-muted-foreground mt-1">{messages.responses.requiredField}</p>
                   )}
                 </div>
 
                 {/* Answer Value */}
                 <div className="bg-muted rounded-lg p-4 border border-border">
                   {!pair.answer || (Array.isArray(pair.answer) && pair.answer.length === 0) ? (
-                    <p className="text-muted-foreground italic">No answer provided</p>
+                    <p className="text-muted-foreground italic">{messages.responses.noAnswer}</p>
                   ) : Array.isArray(pair.answer) ? (
                     // Checkbox array - join with commas
                     <p className="text-foreground whitespace-pre-wrap break-words">
@@ -207,9 +208,9 @@ export function ResponseDetail({ responseId }: ResponseDetailProps) {
 
                 {/* Question metadata */}
                 <div className="mt-2 flex items-center gap-4 text-xs text-muted-foreground">
-                  <span>Type: {pair.question.type}</span>
+                  <span>{messages.responses.typeLabel(pair.question.type)}</span>
                   {pair.question.options && pair.question.options.length > 0 && (
-                    <span>{pair.question.options.length} options</span>
+                    <span>{messages.responses.optionsCount(pair.question.options.length)}</span>
                   )}
                 </div>
               </div>
@@ -218,19 +219,19 @@ export function ResponseDetail({ responseId }: ResponseDetailProps) {
         </Card>
       ) : (
         <Card className="p-6">
-          <p className="text-center text-muted-foreground">No questions in this survey</p>
+          <p className="text-center text-muted-foreground">{messages.responses.noQuestionsInSurvey}</p>
         </Card>
       )}
 
       {/* AI Qualification Section */}
       <Card className="p-6">
-        <h2 className="text-lg font-semibold text-foreground mb-4">AI Analysis</h2>
+        <h2 className="text-lg font-semibold text-foreground mb-4">{messages.responses.aiAnalysis}</h2>
         {!response.ai_qualification ? (
           aiPhase === 'failed' ? (
             <div className="flex flex-col gap-3 py-4">
               <div className="flex items-center gap-2 text-status-warning-foreground">
                 <AlertTriangle className="h-4 w-4" />
-                <p className="text-sm">Analysis unavailable</p>
+                <p className="text-sm">{messages.responses.analysisUnavailable}</p>
               </div>
               <Button
                 variant="outline"
@@ -238,7 +239,7 @@ export function ResponseDetail({ responseId }: ResponseDetailProps) {
                 disabled={aiPhase !== 'failed'}
                 className="w-fit"
               >
-                Retry Analysis
+                {messages.common.retryAnalysis}
               </Button>
             </div>
           ) : (
@@ -246,8 +247,8 @@ export function ResponseDetail({ responseId }: ResponseDetailProps) {
               <Loader2 className="h-4 w-4 animate-spin" />
               <p className="text-sm">
                 {retryAttempt === 0
-                  ? 'Analyzing response...'
-                  : `Retrying analysis... (${retryAttempt}/${MAX_RETRIES})`}
+                  ? messages.responses.analyzingResponse
+                  : messages.responses.retryingAnalysis(retryAttempt, MAX_RETRIES)}
               </p>
             </div>
           )
@@ -267,24 +268,24 @@ export function ResponseDetail({ responseId }: ResponseDetailProps) {
                 {response.ai_qualification.recommendation}
               </Badge>
               <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-                <span>Overall: <strong className="text-foreground">{response.ai_qualification.overall_score}/10</strong></span>
-                <span>Urgency: <strong className="text-foreground">{response.ai_qualification.urgency_score}/10</strong></span>
-                <span>Value: <strong className="text-foreground">{response.ai_qualification.value_score}/10</strong></span>
-                <span>Complexity: <strong className="text-foreground">{response.ai_qualification.complexity_score}/10</strong></span>
-                <span>Success: <strong className="text-foreground">{response.ai_qualification.success_probability}/10</strong></span>
+                <span>{messages.responses.overall}: <strong className="text-foreground">{response.ai_qualification.overall_score}/10</strong></span>
+                <span>{messages.responses.urgency}: <strong className="text-foreground">{response.ai_qualification.urgency_score}/10</strong></span>
+                <span>{messages.responses.value}: <strong className="text-foreground">{response.ai_qualification.value_score}/10</strong></span>
+                <span>{messages.responses.complexity}: <strong className="text-foreground">{response.ai_qualification.complexity_score}/10</strong></span>
+                <span>{messages.responses.success}: <strong className="text-foreground">{response.ai_qualification.success_probability}/10</strong></span>
               </div>
             </div>
 
             {/* Summary */}
             <div>
-              <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">Summary</p>
+              <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">{messages.responses.summary}</p>
               <p className="text-sm text-foreground">{response.ai_qualification.summary}</p>
             </div>
 
             {/* Notes for lawyer */}
             {response.ai_qualification.notes_for_lawyer.length > 0 && (
               <div>
-                <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">Notes for Lawyer</p>
+                <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">{messages.responses.notesForLawyer}</p>
                 <ul className="list-disc list-inside space-y-2">
                   {response.ai_qualification.notes_for_lawyer.map((note, i) => (
                     <li key={i} className="text-sm text-foreground">{note}</li>
@@ -304,7 +305,7 @@ export function ResponseDetail({ responseId }: ResponseDetailProps) {
       {/* Actions Footer - Placeholder */}
       <Card className="p-6 bg-muted border-border">
         <p className="text-sm text-muted-foreground">
-          More actions coming in Phase 5 (status update, notes, export, etc.)
+          {messages.responses.moreActionsComing}
         </p>
       </Card>
     </div>

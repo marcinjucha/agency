@@ -31,6 +31,7 @@ import {
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { FileText, Plus, Pencil, Trash2, Clock, User } from 'lucide-react'
+import { messages } from '@/lib/messages'
 
 export function BlogPostList() {
   const router = useRouter()
@@ -61,8 +62,8 @@ export function BlogPostList() {
   if (error) {
     return (
       <ErrorState
-        title="Nie udalo sie zaladowac artykulow"
-        message={error instanceof Error ? error.message : 'Wystapil blad'}
+        title={messages.blog.loadFailed}
+        message={error instanceof Error ? error.message : messages.common.errorOccurred}
         onRetry={() => refetch()}
         variant="card"
       />
@@ -73,14 +74,14 @@ export function BlogPostList() {
     return (
       <EmptyState
         icon={FileText}
-        title="Nie masz jeszcze artykulow"
-        description="Zacznij tworzyc tresc na bloga swojej firmy."
+        title={messages.blog.noPostsYet}
+        description={messages.blog.noPostsDescription}
         variant="card"
         action={
           <Link href="/admin/blog/new">
             <Button>
               <Plus className="mr-2 h-4 w-4" />
-              Napisz pierwszy artykul
+              {messages.blog.writeFirstPost}
             </Button>
           </Link>
         }
@@ -102,15 +103,15 @@ export function BlogPostList() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-bold text-foreground">Blog</h1>
+        <h1 className="text-2xl font-bold text-foreground">{messages.blog.blog}</h1>
         <div className="flex items-center gap-3">
           {categories.length > 0 && (
             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
               <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Kategoria" />
+                <SelectValue placeholder={messages.blog.categoryPlaceholder} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Wszystkie</SelectItem>
+                <SelectItem value="all">{messages.blog.allCategories}</SelectItem>
                 {categories.map((cat) => (
                   <SelectItem key={cat} value={cat}>
                     {cat}
@@ -122,7 +123,7 @@ export function BlogPostList() {
           <Link href="/admin/blog/new">
             <Button>
               <Plus className="mr-2 h-4 w-4" />
-              Nowy artykul
+              {messages.blog.newPostButton}
             </Button>
           </Link>
         </div>
@@ -143,8 +144,7 @@ export function BlogPostList() {
 
       {/* Footer count */}
       <p className="text-xs text-muted-foreground">
-        {filteredPosts.length} z {posts.length}{' '}
-        {posts.length === 1 ? 'artykul' : 'artykulow'}
+        {messages.blog.postsCount(filteredPosts.length, posts.length, messages.blog.postsLabel(posts.length))}
       </p>
     </div>
   )
@@ -199,11 +199,11 @@ function BlogPostCard({
         <div className="absolute top-3 right-3">
           {post.is_published ? (
             <Badge className="bg-primary/90 text-primary-foreground border-0 shadow-sm">
-              Opublikowany
+              {messages.common.published}
             </Badge>
           ) : (
             <Badge variant="secondary" className="bg-muted/90 shadow-sm">
-              Szkic
+              {messages.common.draft}
             </Badge>
           )}
         </div>
@@ -244,7 +244,7 @@ function BlogPostCard({
           {post.estimated_reading_time != null && (
             <span className="flex items-center gap-1">
               <Clock className="h-3 w-3" aria-hidden="true" />
-              {post.estimated_reading_time} min czytania
+              {messages.blog.readingTimeLabel(post.estimated_reading_time)}
             </span>
           )}
           {post.is_published && post.published_at && (
@@ -264,7 +264,7 @@ function BlogPostCard({
             }}
           >
             <Pencil className="mr-1.5 h-3.5 w-3.5" />
-            Edytuj
+            {messages.common.edit}
           </Button>
 
           <AlertDialog>
@@ -277,24 +277,23 @@ function BlogPostCard({
                 disabled={isDeleting}
               >
                 <Trash2 className="h-3.5 w-3.5" />
-                <span className="sr-only">Usun artykul</span>
+                <span className="sr-only">{messages.blog.deletePost}</span>
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent onClick={(e) => e.stopPropagation()}>
               <AlertDialogHeader>
-                <AlertDialogTitle>Usunac artykul?</AlertDialogTitle>
+                <AlertDialogTitle>{messages.blog.deletePostConfirmTitle}</AlertDialogTitle>
                 <AlertDialogDescription>
-                  Artykul &quot;{post.title}&quot; zostanie trwale usuniety. Tej
-                  operacji nie mozna cofnac.
+                  {messages.blog.deletePostConfirmDescription(post.title)}
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel>Anuluj</AlertDialogCancel>
+                <AlertDialogCancel>{messages.common.cancel}</AlertDialogCancel>
                 <AlertDialogAction
                   onClick={onDelete}
                   className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                 >
-                  Usun
+                  {messages.common.delete}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>

@@ -1,6 +1,7 @@
 'use client'
 
 import { Button, Input, Label, Textarea } from '@agency/ui'
+import { messages } from '@/lib/messages'
 import type {
   LandingBlock,
   NavbarBlock,
@@ -76,12 +77,12 @@ function StringArrayField({ label, items, onChange }: StringArrayFieldProps) {
               size="sm"
               onClick={() => onChange(items.filter((_, j) => j !== i))}
             >
-              Usuń
+              {messages.common.delete}
             </Button>
           </div>
         ))}
         <Button variant="outline" size="sm" onClick={() => onChange([...items, ''])}>
-          + Dodaj
+          {messages.common.add}
         </Button>
       </div>
     </div>
@@ -145,12 +146,12 @@ function ObjectArrayField<T extends Record<string, string>>({
               size="sm"
               onClick={() => onChange(items.filter((_, j) => j !== i))}
             >
-              Usuń
+              {messages.common.delete}
             </Button>
           </div>
         ))}
         <Button variant="outline" size="sm" onClick={() => onChange([...items, emptyItem])}>
-          + Dodaj
+          {messages.common.add}
         </Button>
       </div>
     </div>
@@ -162,10 +163,10 @@ function ObjectArrayField<T extends Record<string, string>>({
 function NavbarEditor({ block, onChange }: { block: NavbarBlock; onChange: (b: LandingBlock) => void }) {
   return (
     <div className="space-y-3">
-      <Field label="Tekst CTA" id="navbar-ctaText">
+      <Field label={messages.landing.ctaText} id="navbar-ctaText">
         <Input id="navbar-ctaText" value={block.ctaText} onChange={(e) => onChange({ ...block, ctaText: e.target.value })} />
       </Field>
-      <Field label="Link CTA" id="navbar-ctaHref">
+      <Field label={messages.landing.ctaLink} id="navbar-ctaHref">
         <Input id="navbar-ctaHref" value={block.ctaHref} onChange={(e) => onChange({ ...block, ctaHref: e.target.value })} />
       </Field>
     </div>
@@ -175,19 +176,19 @@ function NavbarEditor({ block, onChange }: { block: NavbarBlock; onChange: (b: L
 function HeroEditor({ block, onChange }: { block: HeroBlock; onChange: (b: LandingBlock) => void }) {
   return (
     <div className="space-y-3">
-      <Field label="Nagłówek" id="hero-headline">
+      <Field label={messages.landing.headline} id="hero-headline">
         <Input id="hero-headline" value={block.headline} onChange={(e) => onChange({ ...block, headline: e.target.value })} />
       </Field>
-      <Field label="Podtytuł" id="hero-subheadline">
+      <Field label={messages.landing.subheadline} id="hero-subheadline">
         <Textarea id="hero-subheadline" rows={2} value={block.subheadline} onChange={(e) => onChange({ ...block, subheadline: e.target.value })} />
       </Field>
-      <Field label="CTA — tekst" id="hero-ctaText">
+      <Field label={messages.landing.ctaButtonText} id="hero-ctaText">
         <Input id="hero-ctaText" value={block.cta.text} onChange={(e) => onChange({ ...block, cta: { ...block.cta, text: e.target.value } })} />
       </Field>
-      <Field label="CTA — link" id="hero-ctaHref">
+      <Field label={messages.landing.ctaButtonLink} id="hero-ctaHref">
         <Input id="hero-ctaHref" value={block.cta.href} onChange={(e) => onChange({ ...block, cta: { ...block.cta, href: e.target.value } })} />
       </Field>
-      <Field label="Linia zaufania" id="hero-trustLine">
+      <Field label={messages.landing.trustLine} id="hero-trustLine">
         <Input id="hero-trustLine" value={block.trustLine} onChange={(e) => onChange({ ...block, trustLine: e.target.value })} />
       </Field>
     </div>

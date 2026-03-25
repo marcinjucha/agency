@@ -6,6 +6,7 @@ import { createSurvey } from '@/features/surveys/actions'
 import { Button, Input, Label, Card } from '@agency/ui'
 import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
+import { messages } from '@/lib/messages'
 
 export function NewSurveyForm() {
   const [title, setTitle] = useState('')
@@ -24,7 +25,7 @@ export function NewSurveyForm() {
     if (result.success && result.surveyId) {
       router.push(`/admin/surveys/${result.surveyId}`)
     } else {
-      setError(result.error || 'Failed to create survey')
+      setError(result.error || messages.surveys.createFailed)
       setLoading(false)
     }
   }
@@ -37,10 +38,10 @@ export function NewSurveyForm() {
           className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-4"
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Surveys
+          {messages.surveys.backToSurveys}
         </Link>
-        <h1 className="text-3xl font-bold text-foreground">Create New Survey</h1>
-        <p className="text-muted-foreground mt-1">Set up a new client intake form</p>
+        <h1 className="text-3xl font-bold text-foreground">{messages.surveys.createNewSurvey}</h1>
+        <p className="text-muted-foreground mt-1">{messages.surveys.setupNewForm}</p>
       </div>
 
       <Card className="max-w-2xl">
@@ -53,40 +54,40 @@ export function NewSurveyForm() {
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="title">Survey Title *</Label>
+              <Label htmlFor="title">{messages.surveys.surveyTitleLabel}</Label>
               <Input
                 id="title"
                 type="text"
-                placeholder="Client Intake Form"
+                placeholder={messages.surveys.surveyTitlePlaceholder}
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 required
                 autoFocus
               />
               <p className="text-sm text-muted-foreground">
-                This will be shown to clients when they fill out the form
+                {messages.surveys.surveyTitleHelp}
               </p>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
+              <Label htmlFor="description">{messages.surveys.descriptionLabel}</Label>
               <Input
                 id="description"
                 type="text"
-                placeholder="Please provide your information to help us serve you better"
+                placeholder={messages.surveys.descriptionPlaceholder}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
               />
-              <p className="text-sm text-muted-foreground">Optional description shown below the title</p>
+              <p className="text-sm text-muted-foreground">{messages.surveys.surveyDescriptionHelp}</p>
             </div>
 
             <div className="flex gap-3">
               <Button type="submit" disabled={loading || !title.trim()}>
-                {loading ? 'Creating...' : 'Create Survey'}
+                {loading ? messages.surveys.creatingSurvey : messages.surveys.createSurvey}
               </Button>
               <Link href="/admin/surveys">
                 <Button type="button" variant="outline">
-                  Cancel
+                  {messages.common.cancel}
                 </Button>
               </Link>
             </div>
