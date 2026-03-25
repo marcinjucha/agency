@@ -45,15 +45,6 @@
 - `survey_links.client_email` = law firm email (attorney provides when creating link)
 - CTA button in email → links to CMS for response management
 
-## Blog Feature — COMPLETED (2026-03-18)
-
-**Key decisions:**
-- Single-tenant (no tenant_id) — blog promotes the agency, same pattern as `landing_pages`
-- Tiptap editor (not Plate.js) — headless, full Tailwind/shadcn control, JSON storage (JSONB)
-- HTML pre-rendered on CMS save (`html_body` column) — website uses SSR with stored HTML, no Tiptap on website
-- S3 upload: bucket `legal-mind-bucket`, region `eu-central-1`, folder `haloefekt/blog/`, presigned URLs
-- Draft preview via `preview_token` (UUID) — service role client bypasses RLS
-
 ## Media Library — AAA-T-75 (2026-03-23)
 
 **Status:** COMPLETE (2026-03-24), all 6 iterations done
@@ -92,53 +83,55 @@
 ## Feedback & Corrections
 
 - **validator-agent misses P2 architecture violations** — Phase 8 catches functional bugs (P0/P1) but not code organization issues: wrong file placement, code duplication, missing theme tokens. These require a separate architecture audit with explicit ADR-005 checklist. (2026-03-18)
-- **"trustcode.pl" → user meant AWS bucket only** — When user mentioned adding trustcode.pl to remotePatterns in context of AWS, they meant the S3 bucket hostname only, not a wildcard *.trustcode.pl domain. (2026-03-18)
 - **"dawaj auto" / "auto" = switch to auto mode** — User says this when they want all phases to run without confirmation between them. Treat as --auto flag. BUT: always stop at Phase 5 (manual testing) — user must test manually regardless of auto mode. (2026-03-23)
-- **No Co-Authored-By footer in commits** — User does not want AI attribution footer in commit messages. Never add "Co-Authored-By: Claude" or similar. (2026-03-23)
-- **Always use defined agents** — User explicitly requires using agents (code-developer-agent, design-agent, etc.) for ALL code changes. Writing code directly without agents is not acceptable. (2026-03-23)
 - **No backward compatibility (pre-launch only)** — No clients/content yet, so breaking old data is fine now. Once clients onboard and real content exists, backward compatibility becomes required. (2026-03-23)
 - **Visual dimension decisions → design-agent** — Embed heights, widths, spacing, layout dimensions are design decisions, not just code. Use design-agent (not code-developer-agent) when tuning visual dimensions like iframe heights, max-widths, aspect ratios. Code-developer-agent for CSS implementation, design-agent for deciding the values. (2026-03-24)
-- **Navbar floating pill (lg:left-auto lg:right-auto + fixed) collapses element** — Tailwind `fixed` + `lg:max-w-5xl` + `lg:left-auto lg:right-auto` causes header to collapse to 0 width on large screens. `left-auto/right-auto` on fixed element without explicit width = content-sized = invisible. Fix: keep fixed navbar always full-width, only change background styles. (2026-03-24)
 - **Direct code edits allowed for tiny changes** — User accepts direct edits (not via agent) for trivial string changes (3 href values, 1 className). Agents required for feature-level changes, not micro-fixes. (2026-03-24)
+- **Test after each priority level, not each fix** — User prefers batching: fix all P0 → test → fix all P1 → test → fix all P2 → test. Individual commits per fix, but testing grouped by severity. (2026-03-25)
+- **Commit per change, test later** — User wants individual commits after each refactor but defers manual testing to the end. Collect all test scenarios and present together. (2026-03-25)
 
 ## Bugs Found
 
 - **TanStack Query invalidateQueries key mismatch** — `mediaKeys.list()` returns `['media-items', 'list', undefined]` but active query key is `mediaKeys.list({ type: undefined })` = `['media-items', 'list', { type: undefined }]`. These don't match so invalidation silently fails. Fix: use `mediaKeys.all` to invalidate all list variants. Pattern: always use the root key (`all`) for broad invalidation after mutations. (2026-03-23)
-- **shadcn CLI fails in packages/ui** — `npx shadcn@latest add` throws "resolvedPaths: Required" error in Turborepo monorepo packages/ui context. Workaround: install Radix dependency manually (`npm install @radix-ui/react-tabs --workspace=@agency/ui`) and create the component file manually following existing shadcn pattern. (2026-03-23)
 - **Tiptap renderHTML must use inline styles, not Tailwind classes** — Custom Tiptap extensions renderHTML output goes into blog_posts.html_body which website renders as raw HTML without Tailwind processing. Tailwind classes (aspect-video, w-full) produce unstyled/tiny elements on website. Fix: use inline `style="..."` attributes in renderHTML. Applies to all future extensions. (2026-03-23)
+- **Email template save broken (pre-existing)** — "Nie udało się zapisać szablonu" on both dev and prod. Unrelated to architecture audit changes. Likely RLS/tenant or renderEmailBlocks issue. Tracked as separate Notion task. (2026-03-25)
+- **Google Calendar OAuth invalid_grant (pre-existing)** — Refresh token expired, /api/calendar/slots returns 500 instead of graceful fallback. Comment in code says "returns all slots as available" but fallback never implemented. Tracked as separate Notion task. (2026-03-25)
 
 ## Domain Concepts
 
 - **AWS S3 for media uploads** — Bucket: `legal-mind-bucket`, region: `eu-central-1`, folder: `haloefekt/blog/`. Credentials stored as `BUCKET_ACCESS_KEY` + `BUCKET_SECRET_KEY` in `apps/cms/.env.local`. Same bucket holds n8n backups — new uploads go into separate folder. S3 bucket policy allows public GET; CORS must allow PUT from CMS domains for presigned upload to work. (2026-03-18)
-- **S3 upload helper belongs in `utils.ts`** — Shared upload logic (presigned URL fetch + PUT) extracted to `features/blog/utils.ts` as `uploadImageToS3(file, folder?)`. Used by both `BlogPostEditor` (cover image) and `TiptapEditor` (inline images). (2026-03-19)
 - **Tenant "Halo Efekt" already exists in production** — email: kontakt@haloefekt.pl, domain: null, id: 19342448-4e4e-49ba-8bf0-694d5376f953. No need to INSERT new tenant. (2026-03-23)
-- **tenant_id fetch pattern duplicated 4x** — blog/actions.ts, email/actions.ts, surveys/actions.ts, media/actions.ts all query users table for tenant_id. Architecture audit flagged for extraction to shared getUserWithTenant() helper. (2026-03-23)
-- **Tabs + Progress not in @agency/ui** — shadcn/ui Tabs and Progress components were missing. Added manually in Iteration 3 via Radix primitives + existing shadcn pattern. Now exported from packages/ui/src/index.ts. (2026-03-23)
 - **Tiptap extension registry pattern** — `features/blog/extensions/index.ts` exports `editorExtensions` (single source of truth) and `mediaExtensions`. Both `TiptapEditor.tsx` and `utils.ts` import from here. Adding new media type = 1 new extension file + 1 line in index.ts. Shared video utilities live in `lib/video-utils.ts`. (2026-03-23)
-- **Shared video utilities in `lib/`** — `extractVideoId`, `generateThumbnailUrl`, `buildEmbedUrl`, `fetchVimeoThumbnail` all live in `apps/cms/lib/`. Used by both `features/blog` and `features/media` — placing in either feature would create cross-feature import violation. (2026-03-23)
+- **Shared video utilities in `lib/video-utils.ts`** — `extractVideoId`, `generateThumbnailUrl`, `buildEmbedUrl`, `fetchVimeoThumbnail` all consolidated in `apps/cms/lib/video-utils.ts` (2026-03-25, was separate file). Used by both `features/blog` and `features/media`. (2026-03-23)
 - **Media flow: images/video only via Library** — TiptapEditor drag/paste opens media modal instead of uploading directly. Images and video inserted into editor only from Library tab. YouTube/Vimeo/Instagram/TikTok paste auto-detect still works via extension paste rules. (2026-03-23)
 - **Instagram/TikTok embed final dimensions** — Cross-origin iframes cannot auto-report content height, so fixed height is the only approach. Final values after iterative testing (2026-03-24): Instagram 800px height / 500px max-width, TikTok 740px height / 330px max-width (TikTok content is narrower than Instagram). Both centered with `background: #000`. AAA-T-78 resolved.
 - **EMBED_DIMENSIONS constants pattern** — `apps/cms/features/blog/extensions/constants.ts` exports `EMBED_DIMENSIONS` object + `INSTAGRAM_INLINE_STYLE` / `TIKTOK_INLINE_STYLE` string constants. Extensions import these for renderHTML inline styles. TiptapEditor.tsx uses JSX `${EMBED_DIMENSIONS.instagram.height}px` interpolation in style block. Website `globals.css` stays manual (cannot import JS) but has a comment: "Source of truth: constants.ts". Changing dimensions in future = 1 file (constants.ts) + 1 file (globals.css). (2026-03-24)
-
-## Landing Page Redesign — Audit Findings (2026-03-20)
-
-**Scope:** Full design audit → redesign plan. 9 sekcji → 7 sekcji. Plan w Notion AAA-T-72.
-
-**Structural changes planned:**
-- Merge `Guarantee.tsx` + `RiskReversal.tsx` → `Process.tsx` (timeline + zero-risk box)
-- Merge `Benefits.tsx` + `Qualification.tsx` → `Results.tsx` (metric strip + outcomes + reframed qualification)
-- New `Identification.tsx` section (qualifiers moved from Hero)
-- Hero simplified: 8 content blocks → 3 elements above fold (headline + subheadline + CTA)
-
-**Block schema changes planned (packages/database/src/landing-blocks.ts):**
-- New: `IdentificationBlock`, `ProcessBlock`, `ResultsBlock`
-- Modified: `HeroBlock` (simplified), `CtaBlock` (added trustLine)
-- Removed: `GuaranteeBlock`, `RiskReversalBlock`, `BenefitsBlock`, `QualificationBlock`
 
 ## Domain Concepts (Landing Page)
 
 - **Positioning docs already exist** — `.claude/docs/agency/` has 5 complete docs (Oferta, Strategia, Positioning-Broad, Brand-Guide, Sales-Playbook). AAA-T-71 (Pozycjonowanie) deliverables are effectively done — just needs review/approval before closing. (2026-03-20)
 - **Landing page CTA destination** — AAA-T-57 DONE: all 3 CTA locations (Navbar, Hero, FinalCTA) now point to `/survey/89d6d1e9-82a0-4ff7-ac85-0ed4bd6462b4`. DEFAULT_BLOCKS updated. DB row must be updated via CMS editor. (2026-03-24)
+
+## Architecture Audit — AAA-T-83 (2026-03-25)
+
+**Status:** COMPLETE — 30 commits on `arch-audit` branch, 40 issues fixed, 10 deferred.
+
+**Key structural changes:**
+- `apps/cms/lib/auth.ts` — shared `getUserWithTenant()` helper (eliminated 4x duplication)
+- `apps/website/features/calendar/slot-calculator.ts` + `settings-cache.ts` + `booking.ts` + `validation.ts` — extracted from monolithic API routes
+- `apps/cms/features/calendar/oauth-callback.ts` — extracted from auth callback route
+- `EmptyState/ErrorState/LoadingState` moved from both apps → `@agency/ui`
+- `SeoMetadata` consolidated to `@agency/database` (was 3 diverging definitions)
+- `email/queries.ts` → `queries.server.ts` (naming convention fix)
+- `surveys/validation.ts` created (was missing — 5 unvalidated actions)
+- `landing/types.ts` created (types moved out of queries.ts)
+
+**Deferred items (documented in Notion):**
+- BlogPostEditor 674L + CalendarBooking 559L — split into subcomponents
+- lib/google-calendar/ → features/calendar/ (363L business logic in lib/)
+- @agency/email used only by CMS — consider moving to app
+- Speculative types in responses/types.ts + appointments/types.ts — remove unused
+- .env.local.example files missing
 
 ## Preferences
 
