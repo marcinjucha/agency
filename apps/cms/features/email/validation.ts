@@ -17,10 +17,16 @@ const textBlockSchema = blockBaseSchema.extend({
   content: z.string().min(1, messages.validation.contentRequired),
 })
 
+// URL field allows both real URLs and template variables like {{responseUrl}}
+const templateOrUrl = z.string().min(1, messages.validation.invalidUrl).refine(
+  (val) => /^\{\{.+\}\}$/.test(val) || z.string().url().safeParse(val).success,
+  { message: messages.validation.invalidUrl }
+)
+
 const ctaBlockSchema = blockBaseSchema.extend({
   type: z.literal('cta'),
   label: z.string().min(1, messages.validation.buttonLabelRequired),
-  url: z.string().url(messages.validation.invalidUrl),
+  url: templateOrUrl,
   backgroundColor: z.string().regex(/^#[0-9a-fA-F]{6}$/),
   textColor: z.string().regex(/^#[0-9a-fA-F]{6}$/),
 })
