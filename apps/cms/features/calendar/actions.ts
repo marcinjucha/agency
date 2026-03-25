@@ -25,7 +25,7 @@ export async function getGoogleCalendarStatus(): Promise<{
     } = await supabase.auth.getUser()
 
     if (!user) {
-      return { connected: false, error: 'Not authenticated' }
+      return { connected: false, error: 'Nie zalogowany' }
     }
 
     // Get user's google_calendar_token
@@ -36,7 +36,7 @@ export async function getGoogleCalendarStatus(): Promise<{
       .maybeSingle()
 
     if (userError) {
-      return { connected: false, error: 'Failed to fetch settings' }
+      return { connected: false, error: 'Nie udało się pobrać ustawień' }
     }
 
     const tokenData = (userData as any)?.google_calendar_token
@@ -53,7 +53,7 @@ export async function getGoogleCalendarStatus(): Promise<{
     }
   } catch (error) {
     console.error('Error fetching calendar status:', error)
-    return { connected: false, error: 'Failed to fetch calendar status' }
+    return { connected: false, error: 'Nie udało się pobrać statusu kalendarza' }
   }
 }
 
@@ -74,7 +74,7 @@ export async function disconnectGoogleCalendar(): Promise<{
     } = await supabase.auth.getUser()
 
     if (!user) {
-      return { success: false, error: 'Not authenticated' }
+      return { success: false, error: 'Nie zalogowany' }
     }
 
     // Get current tokens for revocation
@@ -112,7 +112,7 @@ export async function disconnectGoogleCalendar(): Promise<{
     if (updateError) {
       return {
         success: false,
-        error: updateError.message || 'Failed to disconnect calendar',
+        error: updateError.message || 'Nie udało się odłączyć kalendarza',
       }
     }
 
@@ -120,7 +120,7 @@ export async function disconnectGoogleCalendar(): Promise<{
     return { success: true }
   } catch (error) {
     console.error('Error disconnecting calendar:', error)
-    return { success: false, error: 'Failed to disconnect calendar' }
+    return { success: false, error: 'Nie udało się odłączyć kalendarza' }
   }
 }
 
@@ -144,7 +144,7 @@ export async function updateCalendarSettings(
     } = await supabase.auth.getUser()
 
     if (!user) {
-      return { success: false, error: 'Not authenticated' }
+      return { success: false, error: 'Nie zalogowany' }
     }
 
     const { error } = await supabase
@@ -160,7 +160,7 @@ export async function updateCalendarSettings(
     return { success: true }
   } catch (error) {
     console.error('Error updating calendar settings:', error)
-    return { success: false, error: 'Failed to update calendar settings' }
+    return { success: false, error: 'Nie udało się zaktualizować ustawień kalendarza' }
   }
 }
 

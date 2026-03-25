@@ -45,13 +45,13 @@ export async function createSurvey(formData: {
       .single()
 
     if (insertError || !survey) {
-      return { success: false, error: insertError?.message || 'Failed to create survey' }
+      return { success: false, error: insertError?.message || 'Nie udało się stworzyć ankiety' }
     }
 
     revalidatePath('/admin/surveys')
     return { success: true, surveyId: (survey as Tables<'surveys'>).id }
   } catch (error) {
-    return { success: false, error: 'Failed to create survey' }
+    return { success: false, error: 'Nie udało się stworzyć ankiety' }
   }
 }
 
@@ -81,7 +81,7 @@ export async function updateSurvey(
     revalidatePath(`/admin/surveys/${id}`)
     return { success: true }
   } catch (error) {
-    return { success: false, error: 'Failed to update survey' }
+    return { success: false, error: 'Nie udało się zaktualizować ankiety' }
   }
 }
 
@@ -101,7 +101,7 @@ export async function deleteSurvey(id: string): Promise<{ success: boolean; erro
     revalidatePath('/admin/surveys')
     return { success: true }
   } catch (error) {
-    return { success: false, error: 'Failed to delete survey' }
+    return { success: false, error: 'Nie udało się usunąć ankiety' }
   }
 }
 
@@ -138,7 +138,7 @@ export async function generateSurveyLink(
       .maybeSingle()
 
     if (!survey) {
-      return { success: false, error: 'Survey not found or access denied' }
+      return { success: false, error: 'Nie znaleziono ankiety' }
     }
 
     // Generate unique token using crypto.randomUUID()
@@ -162,7 +162,7 @@ export async function generateSurveyLink(
       .single()
 
     if (insertError || !link) {
-      return { success: false, error: insertError?.message || 'Failed to generate link' }
+      return { success: false, error: insertError?.message || 'Nie udało się wygenerować linku' }
     }
 
     revalidatePath(`/admin/surveys/${surveyId}`)
@@ -172,7 +172,7 @@ export async function generateSurveyLink(
       token: (link as Tables<'survey_links'>).token,
     }
   } catch (error) {
-    return { success: false, error: 'Failed to generate survey link' }
+    return { success: false, error: 'Nie udało się wygenerować linku' }
   }
 }
 
@@ -197,6 +197,6 @@ export async function deleteSurveyLink(
     revalidatePath(`/admin/surveys/${surveyId}`)
     return { success: true }
   } catch (error) {
-    return { success: false, error: 'Failed to delete survey link' }
+    return { success: false, error: 'Nie udało się usunąć linku' }
   }
 }
