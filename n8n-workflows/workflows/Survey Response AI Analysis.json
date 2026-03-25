@@ -33,7 +33,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Initialize Sentry\nconst Sentry = require('@sentry/node');\n\n// Get AI response (from AI Agent node)\nconst aiResponse = $input.first().json;\nconst previousData = $('Transform Q&A Data').first().json;\n\n// Breadcrumb: AI response received\nSentry.addBreadcrumb({\n  message: 'Parse Output: AI response received',\n  level: 'info',\n  data: {\n    responseId: previousData.responseId,\n    hasContent: !!aiResponse.content?.[0]?.text,\n    responseLength: aiResponse.content?.[0]?.text?.length || 0\n  }\n});\n\ntry {\n  // Parse AI response (Anthropic returns content in content[0].text)\n  let aiText = aiResponse.content[0].text;\n\n  // ✅ Remove markdown code blocks if present\n  if (aiText.includes('```')) {\n    // Extract JSON from ```json ... ``` wrapper\n    const jsonMatch = aiText.match(/```(?:json)?\\s*([\\s\\S]*?)\\s*```/);\n    if (jsonMatch && jsonMatch[1]) {\n      aiText = jsonMatch[1];\n    } else {\n      // Fallback: simple strip\n      aiText = aiText.replace(/```json\\n?/g, '').replace(/```\\n?/g, '');\n    }\n  }\n\n  // ✅ Trim whitespace\n  aiText = aiText.trim();\n\n  const aiAnalysis = JSON.parse(aiText);\n\n  // Structure for database (ai_qualification JSONB field)\n  const qualification = {\n    // Scores (0-10)\n    urgency_score: aiAnalysis.urgency_score,\n    complexity_score: aiAnalysis.complexity_score,\n    value_score: aiAnalysis.value_score,\n    success_probability: aiAnalysis.success_probability,\n\n    // Overall score (weighted average)\n    overall_score: parseFloat((\n      aiAnalysis.urgency_score * 0.3 +\n      aiAnalysis.value_score * 0.3 +\n      aiAnalysis.success_probability * 0.25 +\n      aiAnalysis.complexity_score * 0.15\n    ).toFixed(1)),\n\n    // Analysis\n    summary: aiAnalysis.summary,\n    recommendation: aiAnalysis.recommendation,\n    notes_for_lawyer: aiAnalysis.notes_for_lawyer || [],\n\n    // Metadata\n    analyzed_at: new Date().toISOString(),\n    model: 'claude-haiku-4-5',\n    version: '1.0'\n  };\n\n  // Determine status change based on recommendation\n  let newStatus = null;\n  if (aiAnalysis.recommendation === 'QUALIFIED') {\n    newStatus = 'qualified';\n  } else if (aiAnalysis.recommendation === 'DISQUALIFIED') {\n    newStatus = 'disqualified';\n  }\n  // NEEDS_MORE_INFO leaves status as 'new'\n\n  // Breadcrumb: Parsing succeeded\n  Sentry.addBreadcrumb({\n    message: 'Parse Output: Parsing succeeded',\n    level: 'info',\n    data: {\n      responseId: previousData.responseId,\n      recommendation: aiAnalysis.recommendation,\n      overall_score: qualification.overall_score,\n      newStatus: newStatus || 'new',\n      hasNotes: qualification.notes_for_lawyer.length > 0\n    }\n  });\n\n  return {\n    responseId: previousData.responseId,\n    tenant_id: previousData.tenant_id,\n    qualification,\n    newStatus: newStatus || 'new'\n  };\n\n} catch (error) {\n  // Breadcrumb: Parsing failed\n  Sentry.addBreadcrumb({\n    message: 'Parse Output: Parsing FAILED',\n    level: 'error',\n    data: {\n      responseId: previousData.responseId,\n      errorMessage: error.message,\n      errorType: error.name,\n      rawResponsePreview: aiResponse.content?.[0]?.text?.substring(0, 200) || 'N/A'\n    }\n  });\n \n  // If parsing fails, return error structure\n  return {\n    responseId: previousData.responseId,\n    tenant_id: previousData.tenant_id,\n    qualification: {\n      error: 'Failed to parse AI response',\n      raw_response: aiResponse.content?.[0]?.text || JSON.stringify(aiResponse),\n      analyzed_at: new Date().toISOString()\n    },\n    newStatus: 'new'\n  };\n}\n"
+        "jsCode": "// Initialize Sentry\nconst Sentry = require('@sentry/node');\n\n// Get AI response (from AI Agent node)\nconst aiResponse = $input.first().json;\nconst previousData = $('Transform Q&A Data').first().json;\n\n// Breadcrumb: AI response received\nSentry.addBreadcrumb({\n  message: 'Parse Output: AI response received',\n  level: 'info',\n  data: {\n    responseId: previousData.responseId,\n    hasContent: !!aiResponse.content?.find(c => c.type === 'text')?.text,\n    responseLength: aiResponse.content?.find(c => c.type === 'text')?.text?.length || 0\n  }\n});\n\ntry {\n  // Parse AI response (MiniMax returns content array with thinking + text blocks)\n  const textBlock = aiResponse.content.find(c => c.type === 'text');\n  if (!textBlock) throw new Error('No text block found in AI response');\n  let aiText = textBlock.text;\n\n  // ✅ Remove markdown code blocks if present\n  if (aiText.includes('```')) {\n    // Extract JSON from ```json ... ``` wrapper\n    const jsonMatch = aiText.match(/```(?:json)?\\s*([\\s\\S]*?)\\s*```/);\n    if (jsonMatch && jsonMatch[1]) {\n      aiText = jsonMatch[1];\n    } else {\n      // Fallback: simple strip\n      aiText = aiText.replace(/```json\\n?/g, '').replace(/```\\n?/g, '');\n    }\n  }\n\n  // ✅ Trim whitespace\n  aiText = aiText.trim();\n\n  const aiAnalysis = JSON.parse(aiText);\n\n  // Structure for database (ai_qualification JSONB field)\n  const qualification = {\n    // Scores (0-10)\n    urgency_score: aiAnalysis.urgency_score,\n    complexity_score: aiAnalysis.complexity_score,\n    value_score: aiAnalysis.value_score,\n    success_probability: aiAnalysis.success_probability,\n\n    // Overall score (weighted average)\n    overall_score: parseFloat((\n      aiAnalysis.urgency_score * 0.3 +\n      aiAnalysis.value_score * 0.3 +\n      aiAnalysis.success_probability * 0.25 +\n      aiAnalysis.complexity_score * 0.15\n    ).toFixed(1)),\n\n    // Analysis\n    summary: aiAnalysis.summary,\n    recommendation: aiAnalysis.recommendation,\n    notes_for_lawyer: aiAnalysis.notes_for_lawyer || [],\n\n    // Metadata\n    analyzed_at: new Date().toISOString(),\n    model: 'MiniMax-M2.7',\n    version: '1.0'\n  };\n\n  // Determine status change based on recommendation\n  let newStatus = null;\n  if (aiAnalysis.recommendation === 'QUALIFIED') {\n    newStatus = 'qualified';\n  } else if (aiAnalysis.recommendation === 'DISQUALIFIED') {\n    newStatus = 'disqualified';\n  }\n  // NEEDS_MORE_INFO leaves status as 'new'\n\n  // Breadcrumb: Parsing succeeded\n  Sentry.addBreadcrumb({\n    message: 'Parse Output: Parsing succeeded',\n    level: 'info',\n    data: {\n      responseId: previousData.responseId,\n      recommendation: aiAnalysis.recommendation,\n      overall_score: qualification.overall_score,\n      newStatus: newStatus || 'new',\n      hasNotes: qualification.notes_for_lawyer.length > 0\n    }\n  });\n\n  return {\n    responseId: previousData.responseId,\n    tenant_id: previousData.tenant_id,\n    qualification,\n    newStatus: newStatus || 'new'\n  };\n\n} catch (error) {\n  // Breadcrumb: Parsing failed\n  Sentry.addBreadcrumb({\n    message: 'Parse Output: Parsing FAILED',\n    level: 'error',\n    data: {\n      responseId: previousData.responseId,\n      errorMessage: error.message,\n      errorType: error.name,\n      rawResponsePreview: aiResponse.content?.find(c => c.type === 'text')?.text?.substring(0, 200) || 'N/A'\n    }\n  });\n \n  // If parsing fails, return error structure\n  return {\n    responseId: previousData.responseId,\n    tenant_id: previousData.tenant_id,\n    qualification: {\n      error: 'Failed to parse AI response',\n      raw_response: aiResponse.content?.find(c => c.type === 'text')?.text || JSON.stringify(aiResponse),\n      analyzed_at: new Date().toISOString()\n    },\n    newStatus: 'new'\n  };\n}\n"
       },
       "id": "c83f103d-6fa2-473a-b724-48109a313e05",
       "name": "Parse & Structure Output",
@@ -132,9 +132,8 @@
       "parameters": {
         "modelId": {
           "__rl": true,
-          "value": "claude-haiku-4-5-20251001",
-          "mode": "list",
-          "cachedResultName": "claude-haiku-4-5-20251001"
+          "value": "MiniMax-M2.7",
+          "mode": "id"
         },
         "messages": {
           "values": [
@@ -156,8 +155,8 @@
       "name": "Message a model",
       "credentials": {
         "anthropicApi": {
-          "id": "R4saFWAglpjdYgD6",
-          "name": "Anthropic account"
+          "id": "VRQ2lqbk56wZ2woA",
+          "name": "MiniMax"
         }
       }
     },
@@ -241,26 +240,26 @@
         "json": {
           "headers": {
             "host": "n8n.trustcode.pl",
-            "user-agent": "PostmanRuntime/7.49.1",
-            "content-length": "59",
+            "user-agent": "node",
+            "content-length": "53",
             "accept": "*/*",
-            "accept-encoding": "gzip, deflate, br",
-            "cache-control": "no-cache",
+            "accept-encoding": "br, gzip, deflate",
+            "accept-language": "*",
             "content-type": "application/json",
-            "postman-token": "60647593-330d-4e2e-b663-f6fc164e2867",
-            "x-forwarded-for": "31.61.228.95",
+            "sec-fetch-mode": "cors",
+            "x-forwarded-for": "85.195.222.114",
             "x-forwarded-host": "n8n.trustcode.pl",
             "x-forwarded-port": "443",
             "x-forwarded-proto": "https",
             "x-forwarded-server": "e659b6829b94",
-            "x-real-ip": "31.61.228.95"
+            "x-real-ip": "85.195.222.114"
           },
           "params": {},
           "query": {},
           "body": {
-            "responseId": "c3d4e5f6-a7b8-9012-cdef-333333333333"
+            "responseId": "145d8bd5-7258-46bc-98f3-9fd777a04691"
           },
-          "webhookUrl": "https://n8n.trustcode.pl/webhook/survey-analysis",
+          "webhookUrl": "https://n8n.trustcode.pl/webhook/form-confirmation-email",
           "executionMode": "production"
         }
       }
@@ -365,7 +364,7 @@
     "binaryMode": "separate",
     "availableInMCP": false
   },
-  "versionId": "3cdc6d47-ccdc-42f5-966b-45d9c9d683e7",
+  "versionId": "fcb2a460-6dea-4b80-bc03-615a18caedf0",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "b46d0b13d69880a2fec430102877b55af4e44991549a68a3e78cd50a4dc1a09e"
