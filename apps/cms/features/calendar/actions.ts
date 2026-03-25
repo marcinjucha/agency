@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { revokeAccess } from '@/lib/google-calendar/oauth'
 import { revalidatePath } from 'next/cache'
+import { getValidAccessToken, refreshAccessToken } from '@agency/calendar'
 import type { GoogleCalendarToken } from '@/lib/google-calendar/oauth'
 import type { CalendarSettingsFormValues } from './types'
 import { calendarSettingsSchema } from './validation'
@@ -210,10 +211,21 @@ export async function getCalendarTokenStatus(): Promise<{
       : null
     const isExpired = !expiresAt || new Date(expiresAt) <= new Date()
 
-    // Connected = has refresh_token (access token expiry is normal, auto-refreshable)
-    // Expired = token exists but no refresh_token (needs reconnect)
+    // No refresh_token → cannot recover, needs reconnect
     if (!hasRefreshToken) {
       return { status: 'expired', expiresAt, hasRefreshToken }
+    }
+
+    // Access token expired → attempt refresh to detect revoked tokens
+    // Only when expiry_date is in the past (not on every page load)
+    if (isExpired) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const result = await getValidAccessToken(user.id, supabase as any, refreshAccessToken)
+      if (result.error === 'token_revoked') {
+        return { status: 'expired', expiresAt, hasRefreshToken }
+      }
+      // Transient failure or success — treat as connected
+      // (refresh succeeded or will succeed on next real API call)
     }
 
     return { status: 'connected', expiresAt, hasRefreshToken }

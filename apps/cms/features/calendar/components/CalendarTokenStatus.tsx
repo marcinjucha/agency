@@ -1,6 +1,7 @@
 import { Badge, Button, Card } from '@agency/ui'
 import Link from 'next/link'
 import { getCalendarTokenStatus } from '../actions'
+import { messages } from '@/lib/messages'
 
 export async function CalendarTokenStatus() {
   const { status, expiresAt } = await getCalendarTokenStatus()
@@ -39,9 +40,14 @@ export async function CalendarTokenStatus() {
 
         {status === 'expired' && (
           <>
-            <Badge className="bg-status-warning/15 text-status-warning-foreground border-status-warning/30 w-fit">
-              Wygasł ⚠
-            </Badge>
+            <div className="flex flex-col gap-2">
+              <Badge className="bg-status-warning/15 text-status-warning-foreground border-status-warning/30 w-fit">
+                Wygasł ⚠
+              </Badge>
+              <p className="text-sm text-muted-foreground">
+                {messages.calendar.tokenExpiredExplanation}
+              </p>
+            </div>
             <Button asChild variant="outline" className="w-full sm:w-auto">
               <Link href="/api/auth/google">Odnów połączenie</Link>
             </Button>

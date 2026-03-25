@@ -242,6 +242,8 @@ export const messages = {
     bufferMinutes: 'Przerwa między wizytami (min)',
     saveSettings: 'Zapisz ustawienia',
     loadSettingsFailed: 'Nie udało się wczytać ustawień kalendarza.',
+    tokenExpiredExplanation:
+      'Token wygasł lub został cofnięty. Połącz ponownie, aby przywrócić synchronizację kalendarza.',
   },
 
   email: {

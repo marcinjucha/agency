@@ -365,7 +365,7 @@ export function CalendarBooking({
                   value={selectedDate ? selectedDate.toISOString().split('T')[0] : ''}
                   onChange={handleDateChange}
                   min={minDate}
-                  className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  className="w-full px-4 py-3 bg-background text-foreground border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent [color-scheme:dark]"
                   aria-required="true"
                   aria-describedby="date-help"
                 />

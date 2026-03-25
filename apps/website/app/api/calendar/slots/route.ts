@@ -98,25 +98,24 @@ export async function GET(request: NextRequest): Promise<
     // Step 3: Get valid access token with auto-refresh
     const tokenResult = await getValidAccessToken(userId, supabase, refreshAccessToken)
 
-    if (tokenResult.error) {
-      console.error('[SLOTS API] Failed to get access token:', tokenResult.error)
-      return NextResponse.json(
-        { success: false, error: 'Calendar not available' },
-        { status: 500 }
-      )
-    }
-
-    const accessToken = tokenResult.accessToken!
-
-    // Step 4: Fetch busy events from calendar
+    let calendarConnected = true
     let busyEvents: CalendarEvent[] = []
 
-    try {
-      const { dayStartUTC, dayEndUTC } = getDayBoundsUTC(requestedDate)
-      busyEvents = await getEvents(accessToken, dayStartUTC, dayEndUTC)
-    } catch (error) {
-      console.error('[SLOTS API] Error fetching calendar events:', error)
-      busyEvents = []
+    if (tokenResult.error) {
+      // Calendar not connected — proceed with empty busy events (all work-hour slots available)
+      console.warn('[SLOTS API] Calendar not connected, returning all slots as available:', tokenResult.error)
+      calendarConnected = false
+    } else {
+      const accessToken = tokenResult.accessToken!
+
+      // Step 4: Fetch busy events from calendar
+      try {
+        const { dayStartUTC, dayEndUTC } = getDayBoundsUTC(requestedDate)
+        busyEvents = await getEvents(accessToken, dayStartUTC, dayEndUTC)
+      } catch (error) {
+        console.warn('[SLOTS API] Error fetching calendar events, returning all slots:', error)
+        busyEvents = []
+      }
     }
 
     // Step 5: Load per-user calendar settings (cached)
@@ -137,6 +136,7 @@ export async function GET(request: NextRequest): Promise<
       slots: availableSlots,
       date: dateStr,
       timezone: 'Europe/Warsaw',
+      calendarConnected,
     }
 
     return NextResponse.json(response)
