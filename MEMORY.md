@@ -133,6 +133,15 @@
 - Speculative types in responses/types.ts + appointments/types.ts — remove unused
 - .env.local.example files missing
 
+## Centralized Messages — COMPLETED (2026-03-25)
+
+**Files:** `apps/cms/lib/messages.ts` (~180 strings) + `apps/website/lib/messages.ts` (~40 strings)
+**Pattern:** `messages` (static `as const` object, nested by feature) + `templates` (dynamic functions with params)
+**Usage:** `import { messages } from '@/lib/messages'` → `messages.surveys.createFailed`
+**i18n path:** Replace `messages.key` with `t('key')` + move object to `messages/pl.json` when adding next-intl
+**Decision:** Per-app files (not shared package) — CMS and website have almost entirely different string sets
+**Diacritics:** 15+ typos fixed during extraction (Tytul→Tytuł, blad→błąd, etc.)
+
 ## Preferences
 
 - **Notion tasks: single task with checklist content, not subtasks** — User prefers one task with plan broken into checkboxes in page body, not 7 separate tasks. Reason: flexibility to partially complete and pause without managing many task statuses. (2026-03-23)

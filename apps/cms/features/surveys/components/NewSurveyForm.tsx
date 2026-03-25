@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useQueryClient } from '@tanstack/react-query'
 import { createSurvey } from '@/features/surveys/actions'
 import { Button, Input, Label, Card } from '@agency/ui'
 import { ArrowLeft } from 'lucide-react'
@@ -14,6 +15,7 @@ export function NewSurveyForm() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
+  const queryClient = useQueryClient()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -23,6 +25,7 @@ export function NewSurveyForm() {
     const result = await createSurvey({ title, description })
 
     if (result.success && result.surveyId) {
+      await queryClient.invalidateQueries({ queryKey: ['surveys'] })
       router.push(`/admin/surveys/${result.surveyId}`)
     } else {
       setError(result.error || messages.surveys.createFailed)
