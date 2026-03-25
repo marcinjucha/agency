@@ -33,7 +33,7 @@ export default async function SurveyPage({ params }: PageProps) {
 
   // Handle validation errors
   if (!result.isValid) {
-    return <SurveyError message={result.message} />
+    return <SurveyError message={result.message ?? 'Survey unavailable'} />
   }
 
   // Render survey form with validated data
