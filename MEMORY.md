@@ -76,7 +76,7 @@
 **Survey qualification design (7 pytań):**
 - imię, email, tel, firma+branża (text), wielkość firmy (select: 1-3/4-10/11-30/31-100/100+), obszary (checkbox: 6 opcji), opis wyzwania (textarea, optional)
 - Scoring max 15 pkt: 10-15 hot, 6-9 warm, 1-5 cold
-- AI kwalifikacja w n8n już zbudowana — feed scoring rubric do Claude Haiku
+- AI kwalifikacja w n8n już zbudowana — model: MiniMax-M2.7 (switched from Claude Haiku 2026-03-25, AAA-T-94)
 
 **Remaining:** stworzenie ankiety w CMS, update CTA href w CMS editor (DB row), E2E flow test
 
@@ -100,6 +100,7 @@
 - **Survey list stale after creation** — TanStack Query `staleTime: 5min` + `refetchOnWindowFocus: false` in providers.tsx. NewSurveyForm didn't invalidate cache after creation. Fix: `queryClient.invalidateQueries({ queryKey: ['surveys'] })`. FIXED 2026-03-25.
 - **Date picker calendar icon invisible on dark theme** — Native `<input type="date">` renders black calendar icon on dark bg. Fix: add `[color-scheme:dark]` Tailwind class — tells browser to use light icons. Applies to any native input on dark-themed pages. FIXED 2026-03-25 (AAA-T-91).
 - **Google Calendar token saved to wrong user** — Token went to "Bartek" instead of "Marcin". Code is correct (`.eq('id', user.id)` from `auth.getUser()`). Likely Supabase auth session belonged to different user than CMS displayed. Session/cookie issue, not code bug. (2026-03-25)
+- **n8n MiniMax parser: content[0] assumes no thinking block** — MiniMax returns `content: [{type:"thinking",...}, {type:"text",...}]` but parser used `content[0].text` (assumed text at index 0). Fix: `.find(c => c.type === 'text')`. Applies to any model with extended thinking via Anthropic-compatible API. FIXED 2026-03-25 (AAA-T-94).
 
 ## Domain Concepts
 
