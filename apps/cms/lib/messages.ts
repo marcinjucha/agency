@@ -411,6 +411,13 @@ export const messages = {
     endHourAfterStart: 'Godzina zakończenia musi być późniejsza niż godzina rozpoczęcia',
     ctaTextRequired: 'Tekst CTA jest wymagany',
     ctaLinkRequired: 'Link CTA jest wymagany',
+    companyNameRequired: 'Nazwa firmy jest wymagana',
+    invalidHexColor: 'Nieprawidłowy kolor hex',
+    contentRequired: 'Treść jest wymagana',
+    buttonLabelRequired: 'Etykieta przycisku jest wymagana',
+    subjectRequired: 'Temat jest wymagany',
+    subjectTooLong: 'Temat jest za długi',
+    templateNeedsBlock: 'Szablon musi zawierać co najmniej jeden blok',
   },
 } as const
 

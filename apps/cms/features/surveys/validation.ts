@@ -1,16 +1,17 @@
 import { z } from 'zod'
+import { messages } from '@/lib/messages'
 
 // --- Create survey schema ---
 
 export const createSurveySchema = z.object({
-  title: z.string().min(1, 'Tytuł jest wymagany'),
+  title: z.string().min(1, messages.validation.titleRequired),
   description: z.string().optional(),
 })
 
 // --- Update survey schema ---
 
 export const updateSurveySchema = z.object({
-  title: z.string().min(1, 'Tytuł jest wymagany').optional(),
+  title: z.string().min(1, messages.validation.titleRequired).optional(),
   description: z.string().optional(),
   status: z.enum(['draft', 'active', 'archived']).optional(),
   questions: z.array(z.any()).optional(),
@@ -19,13 +20,13 @@ export const updateSurveySchema = z.object({
 // --- Generate survey link schema ---
 
 export const generateSurveyLinkSchema = z.object({
-  surveyId: z.string().uuid('Nieprawidłowy identyfikator ankiety'),
-  notificationEmail: z.string().email('Nieprawidłowy adres email'),
-  expiresAt: z.string().datetime({ message: 'Nieprawidłowy format daty' }).optional(),
+  surveyId: z.string().uuid(messages.validation.invalidSurveyId),
+  notificationEmail: z.string().email(messages.validation.invalidEmail),
+  expiresAt: z.string().datetime({ message: messages.validation.invalidDateFormat }).optional(),
   maxSubmissions: z
     .number()
-    .int('Liczba wypełnień musi być liczbą całkowitą')
-    .positive('Liczba wypełnień musi być większa od zera')
+    .int(messages.validation.submissionsMustBeInteger)
+    .positive(messages.validation.submissionsMustBePositive)
     .optional()
     .nullable(),
 })

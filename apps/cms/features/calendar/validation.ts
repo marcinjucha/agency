@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { messages } from '@/lib/messages'
 
 export const calendarSettingsSchema = z
   .object({
@@ -8,7 +9,7 @@ export const calendarSettingsSchema = z
     buffer_minutes: z.number().int().min(0).max(120),
   })
   .refine((data) => data.work_end_hour > data.work_start_hour, {
-    message: 'Godzina zakończenia musi być późniejsza niż godzina rozpoczęcia',
+    message: messages.validation.endHourAfterStart,
     path: ['work_end_hour'],
   })
 
