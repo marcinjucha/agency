@@ -89,13 +89,17 @@
 - **Direct code edits allowed for tiny changes** — User accepts direct edits (not via agent) for trivial string changes (3 href values, 1 className). Agents required for feature-level changes, not micro-fixes. (2026-03-24)
 - **Test after each priority level, not each fix** — User prefers batching: fix all P0 → test → fix all P1 → test → fix all P2 → test. Individual commits per fix, but testing grouped by severity. (2026-03-25)
 - **Commit per change, test later** — User wants individual commits after each refactor but defers manual testing to the end. Collect all test scenarios and present together. (2026-03-25)
+- **Always use feature branches** — Never commit directly to main. Create `feature/aaa-t-{id}-{slug}` branch, implement, test, then merge with `--no-ff`. User corrected when calendar commits landed on main directly. (2026-03-25)
 
 ## Bugs Found
 
 - **TanStack Query invalidateQueries key mismatch** — `mediaKeys.list()` returns `['media-items', 'list', undefined]` but active query key is `mediaKeys.list({ type: undefined })` = `['media-items', 'list', { type: undefined }]`. These don't match so invalidation silently fails. Fix: use `mediaKeys.all` to invalidate all list variants. Pattern: always use the root key (`all`) for broad invalidation after mutations. (2026-03-23)
 - **Tiptap renderHTML must use inline styles, not Tailwind classes** — Custom Tiptap extensions renderHTML output goes into blog_posts.html_body which website renders as raw HTML without Tailwind processing. Tailwind classes (aspect-video, w-full) produce unstyled/tiny elements on website. Fix: use inline `style="..."` attributes in renderHTML. Applies to all future extensions. (2026-03-23)
-- **Email template save broken (pre-existing)** — "Nie udało się zapisać szablonu" on both dev and prod. Unrelated to architecture audit changes. Likely RLS/tenant or renderEmailBlocks issue. Tracked as separate Notion task. (2026-03-25)
-- **Google Calendar OAuth invalid_grant (pre-existing)** — Refresh token expired, /api/calendar/slots returns 500 instead of graceful fallback. Comment in code says "returns all slots as available" but fallback never implemented. Tracked as separate Notion task. (2026-03-25)
+- **Email template save: Zod .url() rejected template variables** — Root cause was NOT missing tenant_id. CTA block default URL `{{responseUrl}}` failed Zod `.url()` validation. Fix: `refine()` that accepts `{{...}}` pattern OR valid URL. FIXED 2026-03-25.
+- **Google Calendar OAuth: slots API 500 → fallback implemented** — Slots API now returns all work-hour slots (busyEvents=[]) when token invalid, instead of 500. Token manager returns `token_revoked` vs `refresh_failed` for CMS status detection. CMS settings shows "Wygasł" + reconnect button. FIXED 2026-03-25 (AAA-T-91).
+- **Survey list stale after creation** — TanStack Query `staleTime: 5min` + `refetchOnWindowFocus: false` in providers.tsx. NewSurveyForm didn't invalidate cache after creation. Fix: `queryClient.invalidateQueries({ queryKey: ['surveys'] })`. FIXED 2026-03-25.
+- **Date picker calendar icon invisible on dark theme** — Native `<input type="date">` renders black calendar icon on dark bg. Fix: add `[color-scheme:dark]` Tailwind class — tells browser to use light icons. Applies to any native input on dark-themed pages. FIXED 2026-03-25 (AAA-T-91).
+- **Google Calendar token saved to wrong user** — Token went to "Bartek" instead of "Marcin". Code is correct (`.eq('id', user.id)` from `auth.getUser()`). Likely Supabase auth session belonged to different user than CMS displayed. Session/cookie issue, not code bug. (2026-03-25)
 
 ## Domain Concepts
 
@@ -114,7 +118,7 @@
 
 ## Architecture Audit — AAA-T-83 (2026-03-25)
 
-**Status:** COMPLETE — 30 commits on `arch-audit` branch, 40 issues fixed, 10 deferred.
+**Status:** COMPLETE — 41 commits, merged to main 2026-03-25. 40 issues fixed, 10 deferred. Also fixed 2 pre-existing bugs during testing (email template save, survey list cache).
 
 **Key structural changes:**
 - `apps/cms/lib/auth.ts` — shared `getUserWithTenant()` helper (eliminated 4x duplication)
@@ -141,6 +145,12 @@
 **i18n path:** Replace `messages.key` with `t('key')` + move object to `messages/pl.json` when adding next-intl
 **Decision:** Per-app files (not shared package) — CMS and website have almost entirely different string sets
 **Diacritics:** 15+ typos fixed during extraction (Tytul→Tytuł, blad→błąd, etc.)
+
+## CMS Settings — Calendar Card Consolidation (2026-03-25)
+
+**Change:** Merged two separate Google Calendar cards (`CalendarSettings` + `CalendarTokenStatus`) into one unified `CalendarSettings` component. `CalendarTokenStatus.tsx` deleted.
+**Why:** Redundant UX — both cards showed connection status independently. Single card handles all 3 states (connected/expired/disconnected) with `Promise.all` fetching both `getCalendarTokenStatus()` + `getGoogleCalendarStatus()`.
+**Disconnect Dialog** moved outside conditional blocks — shared between connected and expired states.
 
 ## Preferences
 

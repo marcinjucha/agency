@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import {
+  Badge,
   Button,
   Dialog,
   DialogContent,
@@ -10,18 +11,25 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@agency/ui'
-import { getGoogleCalendarStatus, disconnectGoogleCalendar } from '../actions'
+import {
+  getGoogleCalendarStatus,
+  getCalendarTokenStatus,
+  disconnectGoogleCalendar,
+} from '../actions'
 import { AlertCircle, CheckCircle, Loader2, LogOut } from 'lucide-react'
 import { messages } from '@/lib/messages'
 
-interface CalendarStatus {
-  connected: boolean
+type TokenStatus = 'connected' | 'expired' | 'disconnected'
+
+interface CalendarState {
+  tokenStatus: TokenStatus
   email?: string
+  expiresAt: string | null
   error?: string
 }
 
 export function CalendarSettings() {
-  const [status, setStatus] = useState<CalendarStatus | null>(null)
+  const [state, setState] = useState<CalendarState | null>(null)
   const [loading, setLoading] = useState(true)
   const [disconnecting, setDisconnecting] = useState(false)
   const [showDisconnectDialog, setShowDisconnectDialog] = useState(false)
@@ -30,11 +38,9 @@ export function CalendarSettings() {
     text: string
   } | null>(null)
 
-  // Load initial status
   useEffect(() => {
     loadStatus()
 
-    // Check for OAuth callback messages from URL search params
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search)
       const successParam = params.get('success')
@@ -42,11 +48,9 @@ export function CalendarSettings() {
 
       if (successParam) {
         setShowMessage({ type: 'success', text: successParam })
-        // Clear URL params
         window.history.replaceState({}, '', '/admin/settings')
       } else if (errorParam) {
         setShowMessage({ type: 'error', text: errorParam })
-        // Clear URL params
         window.history.replaceState({}, '', '/admin/settings')
       }
     }
@@ -54,11 +58,21 @@ export function CalendarSettings() {
 
   async function loadStatus() {
     try {
-      const result = await getGoogleCalendarStatus()
-      setStatus(result)
-    } catch (error) {
-      setStatus({
-        connected: false,
+      const [tokenResult, statusResult] = await Promise.all([
+        getCalendarTokenStatus(),
+        getGoogleCalendarStatus(),
+      ])
+
+      setState({
+        tokenStatus: tokenResult.status,
+        email: statusResult.email,
+        expiresAt: tokenResult.expiresAt,
+        error: statusResult.error,
+      })
+    } catch {
+      setState({
+        tokenStatus: 'disconnected',
+        expiresAt: null,
         error: messages.calendar.loadStatusFailed,
       })
     } finally {
@@ -66,8 +80,7 @@ export function CalendarSettings() {
     }
   }
 
-  async function handleConnect() {
-    // Redirect to OAuth initiation endpoint
+  function handleConnect() {
     window.location.href = '/api/auth/google'
   }
 
@@ -86,8 +99,10 @@ export function CalendarSettings() {
           type: 'success',
           text: messages.calendar.disconnected,
         })
-        setStatus({ connected: false })
-        // Reload status after a short delay
+        setState({
+          tokenStatus: 'disconnected',
+          expiresAt: null,
+        })
         setTimeout(() => loadStatus(), 1000)
       } else {
         setShowMessage({
@@ -95,7 +110,7 @@ export function CalendarSettings() {
           text: result.error || messages.calendar.disconnectError,
         })
       }
-    } catch (error) {
+    } catch {
       setShowMessage({
         type: 'error',
         text: messages.calendar.disconnectCalendarError,
@@ -103,6 +118,16 @@ export function CalendarSettings() {
     } finally {
       setDisconnecting(false)
     }
+  }
+
+  function formatExpiryDate(dateString: string): string {
+    return new Date(dateString).toLocaleDateString('pl-PL', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
   }
 
   return (
@@ -114,7 +139,6 @@ export function CalendarSettings() {
         </p>
       </div>
 
-      {/* Messages */}
       {showMessage && (
         <div
           className={`p-3 rounded-lg flex items-start gap-3 ${
@@ -130,7 +154,9 @@ export function CalendarSettings() {
           )}
           <p
             className={
-              showMessage.type === 'success' ? 'text-status-success-foreground' : 'text-destructive'
+              showMessage.type === 'success'
+                ? 'text-status-success-foreground'
+                : 'text-destructive'
             }
           >
             {showMessage.text}
@@ -138,21 +164,38 @@ export function CalendarSettings() {
         </div>
       )}
 
-      {/* Status */}
       {loading ? (
         <div className="flex items-center justify-center py-8">
           <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
         </div>
-      ) : status?.connected ? (
+      ) : state?.tokenStatus === 'connected' ? (
         <div className="border border-status-success bg-status-success/10 rounded-lg p-4">
-          <div className="flex items-start justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
             <div className="flex items-start gap-3">
               <CheckCircle className="w-5 h-5 text-status-success-foreground flex-shrink-0 mt-0.5" />
-              <div>
-                <p className="font-medium text-status-success-foreground">{messages.calendar.connected}</p>
-                <p className="text-sm text-status-success-foreground mt-1">
-                  {messages.calendar.connectedAs} <span className="font-semibold">{status.email}</span>
-                </p>
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <p className="font-medium text-status-success-foreground">
+                    {messages.calendar.connected}
+                  </p>
+                  <Badge className="bg-status-success/15 text-status-success-foreground border-status-success/30">
+                    Połączony
+                  </Badge>
+                </div>
+                {state.email && (
+                  <p className="text-sm text-status-success-foreground">
+                    {messages.calendar.connectedAs}{' '}
+                    <span className="font-semibold">{state.email}</span>
+                  </p>
+                )}
+                {state.expiresAt && (
+                  <p className="text-sm text-muted-foreground">
+                    Token ważny do:{' '}
+                    <span className="font-medium text-foreground">
+                      {formatExpiryDate(state.expiresAt)}
+                    </span>
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -176,47 +219,115 @@ export function CalendarSettings() {
               </>
             )}
           </Button>
+        </div>
+      ) : state?.tokenStatus === 'expired' ? (
+        <div className="border border-status-warning bg-status-warning/10 rounded-lg p-4">
+          <div className="flex flex-col gap-3">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-status-warning-foreground flex-shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <p className="font-medium text-status-warning-foreground">
+                    Token wygasł
+                  </p>
+                  <Badge className="bg-status-warning/15 text-status-warning-foreground border-status-warning/30">
+                    Wygasł
+                  </Badge>
+                </div>
+                {state.email && (
+                  <p className="text-sm text-muted-foreground">
+                    {messages.calendar.connectedAs}{' '}
+                    <span className="font-medium text-foreground">{state.email}</span>
+                  </p>
+                )}
+                <p className="text-sm text-muted-foreground">
+                  {messages.calendar.tokenExpiredExplanation}
+                </p>
+              </div>
+            </div>
 
-          {/* Disconnect Confirmation Dialog */}
-          <Dialog open={showDisconnectDialog} onOpenChange={setShowDisconnectDialog}>
-            <DialogContent className="sm:max-w-md">
-              <DialogHeader>
-                <DialogTitle>{messages.calendar.disconnectConfirmTitle}</DialogTitle>
-                <DialogDescription>
-                  {messages.calendar.disconnectConfirmDescription}
-                </DialogDescription>
-              </DialogHeader>
-              <DialogFooter className="flex gap-3 mt-6">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setShowDisconnectDialog(false)}
-                  className="flex-1"
-                >
-                  {messages.common.cancel}
-                </Button>
-                <Button
-                  type="button"
-                  variant="destructive"
-                  onClick={handleConfirmDisconnect}
-                  className="flex-1"
-                >
-                  {messages.calendar.disconnect}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+            <div className="flex flex-col sm:flex-row gap-2 mt-1">
+              <Button
+                type="button"
+                onClick={handleConnect}
+                className="w-full sm:w-auto"
+              >
+                Odnów połączenie
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleDisconnectClick}
+                disabled={disconnecting}
+                className="w-full sm:w-auto"
+              >
+                {disconnecting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    {messages.calendar.disconnecting}
+                  </>
+                ) : (
+                  <>
+                    <LogOut className="w-4 h-4 mr-2" />
+                    {messages.calendar.disconnectCalendar}
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
         </div>
       ) : (
         <div className="border border-border rounded-lg p-4">
-          <p className="text-foreground mb-4">
-            {messages.calendar.connectPrompt}
-          </p>
-          <Button type="button" onClick={handleConnect} className="w-full sm:w-auto">
+          <div className="flex items-start gap-3">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Badge className="bg-destructive/15 text-destructive border-destructive/30">
+                  Niepołączony
+                </Badge>
+              </div>
+              <p className="text-foreground">
+                {messages.calendar.connectPrompt}
+              </p>
+            </div>
+          </div>
+          <Button
+            type="button"
+            onClick={handleConnect}
+            className="mt-4 w-full sm:w-auto"
+          >
             {messages.calendar.connectButton}
           </Button>
         </div>
       )}
+
+      <Dialog open={showDisconnectDialog} onOpenChange={setShowDisconnectDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{messages.calendar.disconnectConfirmTitle}</DialogTitle>
+            <DialogDescription>
+              {messages.calendar.disconnectConfirmDescription}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex gap-3 mt-6">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowDisconnectDialog(false)}
+              className="flex-1"
+            >
+              {messages.common.cancel}
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={handleConfirmDisconnect}
+              className="flex-1"
+            >
+              {messages.calendar.disconnect}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
