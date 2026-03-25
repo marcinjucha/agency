@@ -115,7 +115,10 @@ export async function getValidAccessToken(
       } catch (refreshError) {
         const errorMsg = refreshError instanceof Error ? refreshError.message : String(refreshError)
         console.error('[TOKEN MANAGER] Token refresh failed:', errorMsg)
-        return { error: 'Token refresh failed' }
+
+        // Distinguish permanent revocation from transient failures
+        const isTokenRevoked = errorMsg.toLowerCase().includes('invalid_grant')
+        return { error: isTokenRevoked ? 'token_revoked' : 'refresh_failed' }
       }
     }
 
