@@ -23,7 +23,7 @@
 
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useRouter } from 'next/navigation'
@@ -32,6 +32,7 @@ import { QuestionField } from './QuestionField'
 import { generateSurveySchema } from '../validation'
 import type { SurveyData, SurveyAnswers } from '../types'
 import { messages } from '@/lib/messages'
+import { trackEvent } from '@/lib/plausible'
 
 interface SurveyFormProps {
   /** Survey data including title, description, and questions */
@@ -46,6 +47,10 @@ export function SurveyForm({ survey, linkId, token }: SurveyFormProps) {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
+
+  useEffect(() => {
+    trackEvent('Survey Started')
+  }, [])
 
   // Generate dynamic Zod schema from survey questions
   // Schema validates based on question types and required flags
@@ -80,6 +85,7 @@ export function SurveyForm({ survey, linkId, token }: SurveyFormProps) {
       const result = await response.json()
 
       if (result.success) {
+        trackEvent('Survey Submitted')
         // Redirect to success page with responseId and linkId for calendar booking
         const params = new URLSearchParams()
         if (result.responseId) params.append('responseId', result.responseId)
