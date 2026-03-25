@@ -27,6 +27,8 @@ export interface AvailableSlotsResponse {
   date: string
   /** Timezone identifier (e.g., 'Europe/Warsaw') */
   timezone: string
+  /** Whether Google Calendar is connected — false means all work-hour slots returned without conflict filtering */
+  calendarConnected: boolean
 }
 
 /**
