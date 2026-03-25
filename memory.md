@@ -91,6 +91,7 @@
 - **Commit per change, test later** — User wants individual commits after each refactor but defers manual testing to the end. Collect all test scenarios and present together. (2026-03-25)
 - **Always use feature branches** — Never commit directly to main. Create `feature/aaa-t-{id}-{slug}` branch, implement, test, then merge with `--no-ff`. User corrected when calendar commits landed on main directly. (2026-03-25)
 - **Use Next.js `<Link>` not `<a>` for same-domain navigation** — User caught CtaLink using plain `<a>` instead of `<Link>` for `/survey/[uuid]` (same domain). Always use `<Link>` for internal routes — client-side navigation is faster, avoids full page reload. Plain `<a>` only for external URLs. (2026-03-25)
+- **All docs commits (memory.md, PROJECT_SPEC) before merge to main** — Documentation updates (memory.md, PROJECT_SPEC.yaml) should be committed on the feature branch BEFORE merging to main, not after. Group them in one "docs" commit or with the feature commit. Everything must be contained in the merge. (2026-03-25)
 
 ## Bugs Found
 

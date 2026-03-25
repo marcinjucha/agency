@@ -938,15 +938,19 @@ features:
 
   phase_8_infrastructure:
     - name: "Plausible Analytics — Self-Hosted"
-      status: "pending"
+      status: "complete"
       why: "Privacy-friendly analytics on VPS, no cookie consent required"
       acceptance_criteria:
         - "Plausible running on VPS (Docker Compose)"
+          verified: true
         - "Tracking script integrated in Website app"
+          verified: true
         - "Dashboard accessible (analytics.trustcode.pl or similar)"
+          verified: true
       tech_decisions:
         - decision: "Self-hosted Plausible (not Google Analytics)"
           rationale: "Privacy-friendly, no cookies, RODO compliant without consent banner for analytics"
+      completion_notes: "Plausible integrated with 4 script extensions (outbound-links, file-downloads, 404, tagged-events). Typed conversion funnel: CTA Clicked (hero/final_cta/navbar) → Survey Started → Survey Submitted → Booking Completed. CtaLink client component preserves Server Component boundary. Global not-found.tsx enables automatic 404 tracking."
       dependencies: []
 
   phase_future_nice_to_have:
@@ -1006,7 +1010,7 @@ status_summary:
   phase_5: "✅ Complete (100%) - Email Notifications E2E tested"
   phase_6: "🚀 In Progress (80%) - Blog, Landing Page CMS, Redesign, Dark Theme complete. CTA integration + Legal/SEO pending"
   phase_7: "📋 Planned - Intake pipeline, Roles & Permissions, Booking emails"
-  phase_8: "📋 Planned - Plausible Analytics on VPS"
+  phase_8: "✅ Complete (100%) - Plausible Analytics integrated with conversion funnel tracking"
   phase_future: "📝 Backlog - Multi-language, CRM integrations, Newsletter, Reporting, Onboarding"
 
 critical_path:
@@ -1017,4 +1021,4 @@ critical_path:
   - "Phase 5 n8n & AI Analysis (✅ COMPLETE)"
   - "Phase 6 Marketing & Content (🚀 IN PROGRESS — CTA + Legal + SEO)"
   - "Phase 7 Intake & Permissions (📋 NEXT — Kanban + Roles + Booking Emails)"
-  - "Phase 8 Infrastructure (📋 PLANNED — Plausible on VPS)"
+  - "Phase 8 Infrastructure (✅ COMPLETE — Plausible Analytics integrated)"
