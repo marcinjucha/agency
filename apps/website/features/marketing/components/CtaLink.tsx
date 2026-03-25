@@ -1,7 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { trackEvent } from '@/lib/plausible'
+import { usePlausible } from 'next-plausible'
+import type { PlausibleEvents } from '@/lib/plausible'
 
 interface CtaLinkProps {
   href: string
@@ -12,12 +13,14 @@ interface CtaLinkProps {
 }
 
 export function CtaLink({ href, location, className, children, id }: CtaLinkProps) {
+  const plausible = usePlausible<PlausibleEvents>()
+
   return (
     <Link
       id={id}
       href={href}
       className={className}
-      onClick={() => trackEvent('CTA Clicked', { props: { location } })}
+      onClick={() => plausible('CTA Clicked', { props: { location } })}
     >
       {children}
     </Link>

@@ -41,7 +41,8 @@ import { z } from 'zod'
 import { Button, Card, Input, Label, LoadingState, ErrorState } from '@agency/ui'
 import { Calendar, Clock, CheckCircle } from 'lucide-react'
 import { messages } from '@/lib/messages'
-import { trackEvent } from '@/lib/plausible'
+import { usePlausible } from 'next-plausible'
+import type { PlausibleEvents } from '@/lib/plausible'
 
 /**
  * Slot object structure returned from /api/calendar/slots
@@ -193,6 +194,7 @@ export function CalendarBooking({
   responseId,
 }: CalendarBookingProps) {
   // State: Multi-step form flow
+  const plausible = usePlausible<PlausibleEvents>()
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [selectedSlot, setSelectedSlot] = useState<CalendarSlot | null>(null)
   const [bookingSuccess, setBookingSuccess] = useState(false)
@@ -301,7 +303,7 @@ export function CalendarBooking({
       const result = await response.json()
 
       if (result.success) {
-        trackEvent('Booking Completed')
+        plausible('Booking Completed')
         setBookingSuccess(true)
       } else {
         setSubmitError(
