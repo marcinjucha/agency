@@ -2,7 +2,6 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
-import { toLandingPage } from './queries'
 import { landingPageSchema } from './validation'
 import type { LandingBlock, SeoMetadata } from '@agency/database'
 
@@ -30,7 +29,7 @@ export async function updateLandingPage(
       ...(parsed.data.is_published !== undefined && { is_published: parsed.data.is_published }),
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- landing_pages not in generated types
     const { data: updated, error } = await (supabase as any)
       .from('landing_pages')
       .update(updatePayload)
@@ -38,7 +37,7 @@ export async function updateLandingPage(
       .select()
       .single()
 
-    if (error) throw new Error(error.message)
+    if (error) return { success: false, error: error.message }
 
     revalidatePath('/admin/landing-page')
     return { success: true }

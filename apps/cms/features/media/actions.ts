@@ -42,14 +42,14 @@ export async function createMediaItem(
       thumbnail_url: parsed.data.thumbnail_url ?? null,
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- media_items not in generated types
     const { data: created, error } = await (supabase as any)
       .from('media_items')
       .insert(insertPayload)
       .select()
       .single()
 
-    if (error) throw new Error(error.message)
+    if (error) return { success: false, error: error.message }
 
     revalidatePath('/admin/media')
     return { success: true, data: toMediaItem(created) }
@@ -78,13 +78,13 @@ export async function updateMediaItem(
     } = await supabase.auth.getUser()
     if (!user) return { success: false, error: 'Nie zalogowany' }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- media_items not in generated types
     const { error } = await (supabase as any)
       .from('media_items')
       .update({ name: parsed.data.name })
       .eq('id', id)
 
-    if (error) throw new Error(error.message)
+    if (error) return { success: false, error: error.message }
 
     revalidatePath('/admin/media')
     return { success: true }
@@ -105,14 +105,14 @@ export async function deleteMediaItem(
     if (!user) return { success: false, error: 'Nie zalogowany' }
 
     // Fetch the item first to get s3_key for S3 cleanup
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- media_items not in generated types
     const { data: item, error: fetchError } = await (supabase as any)
       .from('media_items')
       .select('s3_key')
       .eq('id', id)
       .single()
 
-    if (fetchError) throw new Error(fetchError.message)
+    if (fetchError) return { success: false, error: fetchError.message }
 
     // Delete from S3 if the item has an s3_key (uploaded files, not embeds)
     if (item?.s3_key) {
@@ -126,13 +126,13 @@ export async function deleteMediaItem(
     }
 
     // Delete DB row (RLS ensures tenant isolation)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- media_items not in generated types
     const { error } = await (supabase as any)
       .from('media_items')
       .delete()
       .eq('id', id)
 
-    if (error) throw new Error(error.message)
+    if (error) return { success: false, error: error.message }
 
     revalidatePath('/admin/media')
     return { success: true }

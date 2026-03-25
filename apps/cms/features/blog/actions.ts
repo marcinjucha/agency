@@ -38,14 +38,14 @@ export async function createBlogPost(
       published_at: parsed.data.is_published ? new Date().toISOString() : null,
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- blog_posts not in generated types
     const { data: created, error } = await (supabase as any)
       .from('blog_posts')
       .insert(insertPayload)
       .select()
       .single()
 
-    if (error) throw new Error(error.message)
+    if (error) return { success: false, error: error.message }
 
     revalidatePath('/admin/blog')
     return { success: true, data: toBlogPost(created) }
@@ -69,14 +69,14 @@ export async function updateBlogPost(
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return { success: false, error: 'Nie zalogowany' }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- blog_posts not in generated types
     const { data: existing, error: fetchError } = await (supabase as any)
       .from('blog_posts')
       .select('published_at')
       .eq('id', id)
       .single()
 
-    if (fetchError) throw new Error(fetchError.message)
+    if (fetchError) return { success: false, error: fetchError.message }
 
     const shouldSetPublishedAt = parsed.data.is_published && !existing.published_at
 
@@ -95,7 +95,7 @@ export async function updateBlogPost(
       ...(shouldSetPublishedAt && { published_at: new Date().toISOString() }),
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- blog_posts not in generated types
     const { data: updated, error } = await (supabase as any)
       .from('blog_posts')
       .update(updatePayload)
@@ -103,7 +103,7 @@ export async function updateBlogPost(
       .select()
       .single()
 
-    if (error) throw new Error(error.message)
+    if (error) return { success: false, error: error.message }
 
     revalidatePath('/admin/blog')
     revalidatePath(`/admin/blog/${id}`)
@@ -122,13 +122,13 @@ export async function deleteBlogPost(
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return { success: false, error: 'Nie zalogowany' }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- blog_posts not in generated types
     const { error } = await (supabase as any)
       .from('blog_posts')
       .delete()
       .eq('id', id)
 
-    if (error) throw new Error(error.message)
+    if (error) return { success: false, error: error.message }
 
     revalidatePath('/admin/blog')
     return { success: true }
