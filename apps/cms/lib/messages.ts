@@ -390,6 +390,80 @@ export const messages = {
     invalidDate: 'Nieprawidłowa data',
   },
 
+  nav: {
+    dashboard: 'Pulpit',
+    surveys: 'Ankiety',
+    responses: 'Odpowiedzi',
+    appointments: 'Wizyty',
+    calendar: 'Kalendarz',
+    emailTemplates: 'Szablony email',
+    landingPage: 'Strona główna',
+    blog: 'Blog',
+    media: 'Media',
+    settings: 'Ustawienia',
+    adminPanel: 'Panel administracyjny',
+    logout: 'Wyloguj',
+    skipToContent: 'Przejdź do treści',
+  },
+
+  login: {
+    signInDescription: 'Zaloguj się do swojego konta',
+    emailLabel: 'Email',
+    emailPlaceholder: 'jan@kancelaria.pl',
+    passwordLabel: 'Hasło',
+    signingIn: 'Logowanie…',
+    signIn: 'Zaloguj się',
+  },
+
+  dashboard: {
+    title: 'Pulpit',
+    welcomeBack: (email: string) => `Witaj ponownie, ${email}`,
+    totalSurveys: 'Wszystkie ankiety',
+    activeForms: 'Aktywne formularze',
+    totalResponses: 'Wszystkie odpowiedzi',
+    clientSubmissions: 'Zgłoszenia klientów',
+    appointments: 'Wizyty',
+    scheduledMeetings: 'Zaplanowane spotkania',
+    gettingStarted: 'Pierwsze kroki',
+    welcomeMessage: 'Witaj w Halo Efekt CMS!',
+    step1: 'Stwórz pierwszą ankietę w sekcji',
+    step1Bold: 'Ankiety',
+    step2: 'Udostępnij link do ankiety swoim klientom',
+    step3: 'Przeglądaj odpowiedzi i kwalifikację AI w sekcji',
+    step3Bold: 'Odpowiedzi',
+    step4: 'Zarządzaj wizytami w sekcji',
+    step4Bold: 'Kalendarz',
+  },
+
+  pages: {
+    // Settings
+    settingsTitle: 'Ustawienia',
+    settingsDescription: 'Zarządzaj kontem i integracjami',
+    // Surveys
+    surveysTitle: 'Ankiety',
+    surveysDescription: 'Zarządzaj formularzami przyjęcia klienta',
+    createSurvey: 'Stwórz ankietę',
+    // Responses
+    responsesTitle: 'Odpowiedzi klientów',
+    responsesDescription: 'Przeglądaj i zarządzaj odpowiedziami klientów na Twoje ankiety.',
+    responsesMetaTitle: 'Odpowiedzi klientów | Halo-Efekt CMS',
+    responsesMetaDescription: 'Przeglądaj odpowiedzi klientów',
+    // Response Detail
+    responseDetailTitle: 'Szczegóły odpowiedzi',
+    responseDetailMetaTitle: 'Szczegóły odpowiedzi | Halo-Efekt CMS',
+    responseDetailMetaDescription: 'Szczegółowe informacje o odpowiedzi klienta',
+    backToResponses: 'Powrót do odpowiedzi',
+    // Appointments
+    appointmentsTitle: 'Wizyty',
+    appointmentsDescription: 'Przeglądaj i zarządzaj wizytami klientów.',
+    appointmentsMetaTitle: 'Wizyty | Halo-Efekt CMS',
+    appointmentsMetaDescription: 'Przeglądaj wizyty klientów',
+    // Landing Page
+    landingPageTitle: 'Strona główna',
+    // CMS Layout
+    cmsDescription: 'Platforma automatyzacji procesów biznesowych',
+  },
+
   validation: {
     titleRequired: 'Tytuł jest wymagany',
     slugRequired: 'Slug jest wymagany',
