@@ -7,6 +7,7 @@ import { Button } from '@agency/ui'
 import { Input } from '@agency/ui'
 import { Label } from '@agency/ui'
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@agency/ui'
+import { messages } from '@/lib/messages'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -40,7 +41,7 @@ export default function LoginPage() {
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="space-y-1 pb-6">
           <CardTitle className="text-3xl font-bold text-center">Halo Efekt CMS</CardTitle>
-          <CardDescription className="text-center">Sign in to your account</CardDescription>
+          <CardDescription className="text-center">{messages.login.signInDescription}</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
@@ -51,11 +52,11 @@ export default function LoginPage() {
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{messages.login.emailLabel}</Label>
               <Input
                 id="email"
                 type="email"
-                placeholder="lawyer@lawfirm.com"
+                placeholder={messages.login.emailPlaceholder}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -64,7 +65,7 @@ export default function LoginPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">{messages.login.passwordLabel}</Label>
               <Input
                 id="password"
                 type="password"
@@ -77,7 +78,7 @@ export default function LoginPage() {
             </div>
 
             <Button type="submit" className="w-full mt-6" disabled={loading}>
-              {loading ? 'Signing in...' : 'Sign In'}
+              {loading ? messages.login.signingIn : messages.login.signIn}
             </Button>
           </form>
         </CardContent>

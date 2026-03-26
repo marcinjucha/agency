@@ -85,7 +85,7 @@ function EmbedTab({
 
     const parsed = extractVideoId(videoUrl.trim())
     if (!parsed) {
-      setVideoUrlError('Nieprawidlowy link YouTube, Vimeo, Instagram lub TikTok.')
+      setVideoUrlError('Nieprawidłowy link YouTube, Vimeo, Instagram lub TikTok.')
       return
     }
 
@@ -111,7 +111,7 @@ function EmbedTab({
       })
 
       if (!result.success)
-        throw new Error(result.error ?? 'Blad zapisu do bazy')
+        throw new Error(result.error ?? 'Błąd zapisu do bazy')
 
       queryClient.invalidateQueries({ queryKey: mediaKeys.all })
 
@@ -120,7 +120,7 @@ function EmbedTab({
         onInserted()
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Nieznany blad'
+      const message = err instanceof Error ? err.message : 'Nieznany błąd'
       setVideoUrlError(message)
     } finally {
       setIsInsertingUrl(false)
@@ -130,7 +130,7 @@ function EmbedTab({
   return (
     <div className="space-y-3">
       <p className="text-sm text-muted-foreground">
-        Wklej link do YouTube, Vimeo, Instagram lub TikTok, aby wstawic embed do edytora.
+        Wklej link do YouTube, Vimeo, Instagram lub TikTok, aby wstawić embed do edytora.
       </p>
       <div className="flex gap-2">
         <div className="relative flex-1">
@@ -214,7 +214,7 @@ function LibraryTab({
     }
     const maxSize = file.type.startsWith('video/') ? VIDEO_MAX_SIZE : IMAGE_MAX_SIZE
     if (file.size > maxSize) {
-      setUploadError(`Plik za duzy. Max: ${maxSize / (1024 * 1024)}MB.`)
+      setUploadError(`Plik za duży. Max: ${maxSize / (1024 * 1024)}MB.`)
       return
     }
 
@@ -231,13 +231,13 @@ function LibraryTab({
         mime_type: file.type,
         size_bytes: file.size,
       })
-      if (!result.success) throw new Error(result.error ?? 'Blad zapisu')
+      if (!result.success) throw new Error(result.error ?? 'Błąd zapisu')
 
       setUploadProgress(100)
       queryClient.invalidateQueries({ queryKey: mediaKeys.all })
       setTimeout(() => setUploadProgress(null), 800)
     } catch (err) {
-      setUploadError(err instanceof Error ? err.message : 'Nieznany blad')
+      setUploadError(err instanceof Error ? err.message : 'Nieznany błąd')
       setUploadProgress(null)
     }
   }
@@ -261,7 +261,7 @@ function LibraryTab({
       <div
         role="button"
         tabIndex={0}
-        aria-label="Przeciagnij pliki lub kliknij aby przeslac"
+        aria-label="Przeciągnij pliki lub kliknij aby przesłać"
         onDrop={(e) => { e.preventDefault(); setIsDragOver(false); handleFiles(e.dataTransfer.files) }}
         onDragOver={(e) => { e.preventDefault(); setIsDragOver(true) }}
         onDragLeave={(e) => { e.preventDefault(); setIsDragOver(false) }}
@@ -275,7 +275,7 @@ function LibraryTab({
       >
         <UploadCloud className={`h-5 w-5 shrink-0 ${isDragOver ? 'text-primary' : 'text-muted-foreground'}`} />
         <div className="flex-1 min-w-0">
-          <p className="text-sm text-foreground">Przeciagnij lub kliknij aby przeslac</p>
+          <p className="text-sm text-foreground">Przeciągnij lub kliknij aby przesłać</p>
           <p className="text-xs text-muted-foreground">Obrazy (max 5MB), Wideo (max 50MB)</p>
         </div>
       </div>
@@ -301,10 +301,10 @@ function LibraryTab({
       {!isLoading && (!items || items.length === 0) && (
         <div className="flex flex-col items-center justify-center py-12 text-center">
           <p className="text-sm text-muted-foreground">
-            Brak mediow w bibliotece.
+            Brak mediów w bibliotece.
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
-            Przeciagnij pliki powyzej, aby dodac nowe media.
+            Przeciągnij pliki powyżej, aby dodać nowe media.
           </p>
         </div>
       )}

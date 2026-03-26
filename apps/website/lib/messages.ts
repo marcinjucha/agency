@@ -63,6 +63,22 @@ export const messages = {
     appointmentCreationFailed: 'Nie udało się utworzyć wizyty',
   },
 
+  success: {
+    thankYou: 'Dziękujemy!',
+    surveySubmitted: 'Twoja ankieta została pomyślnie wysłana. Przejrzymy Twoje odpowiedzi i wkrótce się z Tobą skontaktujemy.',
+    bookAppointmentHeading: 'Zarezerwuj wizytę',
+    whatsNext: 'Co dalej?',
+    whatsNextDescription: 'Wkrótce otrzymasz email z potwierdzeniem. Jeśli chcesz zarezerwować wizytę, sprawdź email po dalsze instrukcje.',
+    metaTitle: 'Ankieta wysłana - Halo Efekt',
+    metaDescription: 'Twoja ankieta została pomyślnie wysłana.',
+  },
+
+  metadata: {
+    surveyUnavailableTitle: 'Ankieta niedostępna - Halo Efekt',
+    surveyUnavailableDescription: 'Ta ankieta nie jest już dostępna.',
+    defaultSurveyDescription: 'Wypełnij ankietę, aby przekazać swoje dane.',
+  },
+
   validation: {
     fieldRequired: 'To pole jest wymagane',
     invalidEmail: 'Podaj prawidłowy adres email',

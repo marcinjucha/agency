@@ -5,18 +5,19 @@ import { usePathname } from 'next/navigation'
 import { LayoutDashboard, FileText, Inbox, CalendarCheck, Calendar, Settings, LogOut, Mail, Globe, Newspaper, Images } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import { messages } from '@/lib/messages'
 
 const menuItems = [
-  { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/admin/surveys', label: 'Surveys', icon: FileText },
-  { href: '/admin/responses', label: 'Responses', icon: Inbox },
-  { href: '/admin/appointments', label: 'Appointments', icon: CalendarCheck },
-  { href: '/admin/calendar', label: 'Calendar', icon: Calendar },
-  { href: '/admin/email-templates', label: 'Email Templates', icon: Mail },
-  { href: '/admin/landing-page', label: 'Landing Page', icon: Globe },
-  { href: '/admin/blog', label: 'Blog', icon: Newspaper },
-  { href: '/admin/media', label: 'Media', icon: Images },
-  { href: '/admin/settings', label: 'Settings', icon: Settings },
+  { href: '/admin', label: messages.nav.dashboard, icon: LayoutDashboard },
+  { href: '/admin/surveys', label: messages.nav.surveys, icon: FileText },
+  { href: '/admin/responses', label: messages.nav.responses, icon: Inbox },
+  { href: '/admin/appointments', label: messages.nav.appointments, icon: CalendarCheck },
+  { href: '/admin/calendar', label: messages.nav.calendar, icon: Calendar },
+  { href: '/admin/email-templates', label: messages.nav.emailTemplates, icon: Mail },
+  { href: '/admin/landing-page', label: messages.nav.landingPage, icon: Globe },
+  { href: '/admin/blog', label: messages.nav.blog, icon: Newspaper },
+  { href: '/admin/media', label: messages.nav.media, icon: Images },
+  { href: '/admin/settings', label: messages.nav.settings, icon: Settings },
 ]
 
 export function Sidebar() {
@@ -34,7 +35,7 @@ export function Sidebar() {
     <aside className="w-64 bg-card border-r border-border flex flex-col h-screen">
       <div className="p-6">
         <h1 className="text-xl font-bold text-foreground">Halo Efekt</h1>
-        <p className="text-muted-foreground text-sm mt-1">Admin Panel</p>
+        <p className="text-muted-foreground text-sm mt-1">{messages.nav.adminPanel}</p>
       </div>
 
       <nav className="flex-1 px-3 space-y-1">
@@ -65,7 +66,7 @@ export function Sidebar() {
           className="flex items-center gap-3 px-3 py-2.5 rounded-lg w-full text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
         >
           <LogOut size={18} />
-          <span>Wyloguj</span>
+          <span>{messages.nav.logout}</span>
         </button>
       </div>
     </aside>

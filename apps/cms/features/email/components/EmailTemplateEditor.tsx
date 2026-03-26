@@ -44,7 +44,7 @@ export function EmailTemplateEditor({ templateType, initialTemplate }: EmailTemp
       if (!result.success) setErrorMessage(result.error ?? null)
     } catch (err) {
       setSaveState('error')
-      setErrorMessage(err instanceof Error ? err.message : 'Unexpected error')
+      setErrorMessage(err instanceof Error ? err.message : 'Nieoczekiwany błąd')
     } finally {
       // Reset to idle after 2.5s so button label returns to normal
       setTimeout(() => setSaveState('idle'), 2500)

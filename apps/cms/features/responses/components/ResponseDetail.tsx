@@ -121,7 +121,7 @@ export function ResponseDetail({ responseId }: ResponseDetailProps) {
 
   // Format submission date
   const submissionDate = response.created_at
-    ? new Date(response.created_at).toLocaleDateString('en-US', {
+    ? new Date(response.created_at).toLocaleDateString('pl-PL', {
         year: 'numeric',
         month: 'long',
         day: 'numeric',
@@ -142,7 +142,7 @@ export function ResponseDetail({ responseId }: ResponseDetailProps) {
             </p>
           </div>
           <Badge className={`${getResponseStatusColor(response.status)} px-3 py-1 rounded-full text-sm font-medium`}>
-            {response.status || 'Pending'}
+            {response.status || 'Oczekuje'}
           </Badge>
         </div>
 
@@ -296,7 +296,7 @@ export function ResponseDetail({ responseId }: ResponseDetailProps) {
 
             {/* Meta */}
             <div className="pt-4 border-t border-border text-xs text-muted-foreground">
-              Analyzed {new Date(response.ai_qualification.analyzed_at).toLocaleString('pl-PL')} · {response.ai_qualification.model}
+              Przeanalizowano {new Date(response.ai_qualification.analyzed_at).toLocaleString('pl-PL')} · {response.ai_qualification.model}
             </div>
           </div>
         )}

@@ -1,8 +1,8 @@
 import { AppointmentList } from '@/features/appointments/components/AppointmentList'
 
 export const metadata = {
-  title: 'Appointments | Halo-Efekt CMS',
-  description: 'View and manage client appointments',
+  title: 'Wizyty | Halo-Efekt CMS',
+  description: 'Przeglądaj wizyty klientów',
 }
 
 export default function AppointmentsPage() {
@@ -10,10 +10,10 @@ export default function AppointmentsPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight text-foreground">
-          Appointments
+          Wizyty
         </h1>
         <p className="mt-2 text-lg text-muted-foreground">
-          View and manage client appointments.
+          Przeglądaj i zarządzaj wizytami klientów.
         </p>
       </div>
       <AppointmentList />

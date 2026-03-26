@@ -1,5 +1,6 @@
 import { CalendarSettings } from '@/features/calendar/components/CalendarSettings'
 import { CalendarSettingsForm } from '@/features/calendar/components/CalendarSettingsForm'
+import { messages } from '@/lib/messages'
 
 export const dynamic = 'force-dynamic'
 
@@ -7,9 +8,9 @@ export default function SettingsPage() {
   return (
     <div className="space-y-8 pb-8">
       <div>
-        <h1 className="text-2xl font-bold">Settings</h1>
+        <h1 className="text-2xl font-bold">{messages.pages.settingsTitle}</h1>
         <p className="text-muted-foreground mt-2">
-          Manage your account and integrations
+          {messages.pages.settingsDescription}
         </p>
       </div>
 

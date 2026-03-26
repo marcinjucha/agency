@@ -58,8 +58,8 @@ export async function generateMetadata({ params }: PageProps) {
 
   if (!result.isValid || !result.data) {
     return {
-      title: 'Survey Unavailable - Halo Efekt',
-      description: 'This survey is no longer available.',
+      title: messages.metadata.surveyUnavailableTitle,
+      description: messages.metadata.surveyUnavailableDescription,
     }
   }
 
@@ -67,6 +67,6 @@ export async function generateMetadata({ params }: PageProps) {
     title: `${result.data.survey.title} - Halo Efekt`,
     description:
       result.data.survey.description ||
-      'Complete this survey to provide your information.',
+      messages.metadata.defaultSurveyDescription,
   }
 }

@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Halo Efekt - Automatyzacja Client Intake",
-  description: "Smart surveys, AI qualification, i instant booking dla polskich kancelarii",
+  title: "Halo Efekt - Automatyzacja przyjmowania klientów",
+  description: "Inteligentne ankiety, kwalifikacja AI i automatyczne rezerwacje dla polskich firm usługowych",
 };
 
 export default function RootLayout({

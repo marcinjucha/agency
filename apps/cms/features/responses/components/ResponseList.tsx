@@ -146,13 +146,12 @@ function ResponseRow({
     if (!dateString) return messages.responses.unknownDate
     try {
       const date = new Date(dateString)
-      return date.toLocaleString('en-US', {
+      return date.toLocaleString('pl-PL', {
         month: 'short',
         day: 'numeric',
         year: 'numeric',
         hour: '2-digit',
         minute: '2-digit',
-        hour12: true
       })
     } catch {
       return messages.responses.invalidDate
@@ -190,7 +189,7 @@ function ResponseRow({
             response.status
           )}`}
         >
-          {response.status || 'unknown'}
+          {response.status || messages.responses.unknown}
         </span>
       </td>
 

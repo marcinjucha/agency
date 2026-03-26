@@ -7,8 +7,8 @@ import { Providers } from './providers'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Halo Efekt CMS - Admin Panel',
-  description: 'AI-Powered Business Automation Platform',
+  title: 'Halo Efekt CMS - Panel administracyjny',
+  description: 'Platforma automatyzacji procesów biznesowych',
 }
 
 export default function RootLayout({
