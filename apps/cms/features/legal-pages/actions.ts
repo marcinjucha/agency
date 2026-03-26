@@ -3,10 +3,10 @@
 import { revalidatePath } from 'next/cache'
 import { getUserWithTenant, isAuthError } from '@/lib/auth'
 import { legalPageSchema, type LegalPageFormData } from './validation'
-import { parseContent } from '../blog/utils'
-import { generateHtmlFromContent } from '../blog/utils'
+import { parseContent, generateHtmlFromContent } from '../editor/utils'
 import { messages } from '@/lib/messages'
-import type { TiptapContent } from '../blog/types'
+import type { TiptapContent } from '../editor/types'
+import type { Tables } from '@agency/database'
 
 export async function updateLegalPage(
   id: string,
@@ -25,15 +25,18 @@ export async function updateLegalPage(
     const content = parseContent(parsed.data.content) as TiptapContent
     const htmlBody = generateHtmlFromContent(content)
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- pages update type resolves to never
+    const payload: Partial<Tables<'pages'>> = {
+      title: parsed.data.title,
+      blocks: content as unknown as Tables<'pages'>['blocks'],
+      html_body: htmlBody,
+      is_published: parsed.data.is_published,
+    }
+
+    // Supabase .update() parameter resolves to `never` for pages table (known Supabase JS v2 issue)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await (supabase as any)
       .from('pages')
-      .update({
-        title: parsed.data.title,
-        blocks: content as unknown as Record<string, unknown>,
-        html_body: htmlBody,
-        is_published: parsed.data.is_published,
-      })
+      .update(payload)
       .eq('id', id)
       .eq('page_type', 'legal')
 

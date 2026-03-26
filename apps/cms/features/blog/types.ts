@@ -1,24 +1,6 @@
 import type { Tables, SeoMetadata } from '@agency/database'
-
-// --- Tiptap ProseMirror JSON structure ---
-
-export type TiptapMark = {
-  type: string
-  attrs?: Record<string, unknown>
-}
-
-export type TiptapNode = {
-  type: string
-  content?: TiptapNode[]
-  attrs?: Record<string, unknown>
-  marks?: TiptapMark[]
-  text?: string
-}
-
-export type TiptapContent = {
-  type: 'doc'
-  content: TiptapNode[]
-}
+export type { TiptapContent, TiptapNode, TiptapMark } from '../editor/types'
+import type { TiptapContent } from '../editor/types'
 
 // --- BlogPost with typed JSONB fields ---
 

@@ -1,5 +1,5 @@
 import type { Tables } from '@agency/database'
-import type { TiptapContent } from '../blog/types'
+import type { TiptapContent } from '../editor/types'
 
 // --- LegalPage with typed JSONB fields ---
 

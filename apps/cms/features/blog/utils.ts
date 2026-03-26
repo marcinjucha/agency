@@ -1,6 +1,13 @@
-import { generateHTML } from '@tiptap/html'
-import type { TiptapContent } from './types'
+import { parseContent as _parseContent, generateHtmlFromContent as _generateHtml } from '../editor/utils'
 import { editorExtensions } from './extensions'
+import type { TiptapContent } from '../editor/types'
+
+export { _parseContent as parseContent }
+
+/** Blog-specific wrapper — always includes media extensions for HTML generation */
+export function generateHtmlFromContent(content: TiptapContent): string {
+  return _generateHtml(content, editorExtensions)
+}
 
 // --- S3 upload helper (shared by cover image + inline image upload) ---
 
@@ -30,23 +37,6 @@ export async function uploadImageToS3(file: File, folder = 'haloefekt/blog'): Pr
   if (!uploadRes.ok) throw new Error('Upload nie powiodl sie')
 
   return fileUrl
-}
-
-// --- Content parsing (for Server Action JSON.stringify round-trip) ---
-
-export function parseContent(content: unknown): unknown {
-  if (typeof content === 'string') {
-    try {
-      return JSON.parse(content)
-    } catch {
-      return content
-    }
-  }
-  return content
-}
-
-export function generateHtmlFromContent(content: TiptapContent): string {
-  return generateHTML(content, editorExtensions)
 }
 
 export function calculateReadingTime(html: string): number {
