@@ -68,7 +68,7 @@ export function MediaLibrary() {
   const renameMutation = useMutation({
     mutationFn: async ({ id, name }: { id: string; name: string }) => {
       const result = await updateMediaItem(id, { name })
-      if (!result.success) throw new Error(result.error ?? 'Nie udalo sie zmienic nazwy')
+      if (!result.success) throw new Error(result.error ?? 'Nie udało się zmienić nazwy')
       return result
     },
     onSuccess: () => {
@@ -99,7 +99,7 @@ export function MediaLibrary() {
 
     const parsed = extractVideoId(socialUrl.trim())
     if (!parsed) {
-      setSocialError('Nieprawidlowy link. Obslugiwane: YouTube, Vimeo, Instagram, TikTok.')
+      setSocialError('Nieprawidłowy link. Obsługiwane: YouTube, Vimeo, Instagram, TikTok.')
       return
     }
 
@@ -123,12 +123,12 @@ export function MediaLibrary() {
         thumbnail_url: thumbnailUrl,
       })
 
-      if (!result.success) throw new Error(result.error ?? 'Blad zapisu')
+      if (!result.success) throw new Error(result.error ?? 'Błąd zapisu')
 
       queryClient.invalidateQueries({ queryKey: mediaKeys.all })
       setSocialUrl('')
     } catch (err) {
-      setSocialError(err instanceof Error ? err.message : 'Nieznany blad')
+      setSocialError(err instanceof Error ? err.message : 'Nieznany błąd')
     } finally {
       setIsAddingSocial(false)
     }

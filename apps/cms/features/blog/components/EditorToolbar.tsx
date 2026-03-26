@@ -79,14 +79,14 @@ export function EditorToolbar({ editor, onOpenMediaModal }: EditorToolbarProps) 
           <ToolbarButton
             onClick={() => editor.chain().focus().toggleUnderline().run()}
             active={editor.isActive('underline')}
-            title="Podkreslenie"
+            title="Podkreślenie"
           >
             <Underline className="h-4 w-4" />
           </ToolbarButton>
           <ToolbarButton
             onClick={() => editor.chain().focus().toggleStrike().run()}
             active={editor.isActive('strike')}
-            title="Przekreslenie"
+            title="Przekreślenie"
           >
             <Strikethrough className="h-4 w-4" />
           </ToolbarButton>
@@ -99,21 +99,21 @@ export function EditorToolbar({ editor, onOpenMediaModal }: EditorToolbarProps) 
           <ToolbarButton
             onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
             active={editor.isActive('heading', { level: 1 })}
-            title="Naglowek 1"
+            title="Nagłówek 1"
           >
             <Heading1 className="h-4 w-4" />
           </ToolbarButton>
           <ToolbarButton
             onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
             active={editor.isActive('heading', { level: 2 })}
-            title="Naglowek 2"
+            title="Nagłówek 2"
           >
             <Heading2 className="h-4 w-4" />
           </ToolbarButton>
           <ToolbarButton
             onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
             active={editor.isActive('heading', { level: 3 })}
-            title="Naglowek 3"
+            title="Nagłówek 3"
           >
             <Heading3 className="h-4 w-4" />
           </ToolbarButton>
@@ -126,7 +126,7 @@ export function EditorToolbar({ editor, onOpenMediaModal }: EditorToolbarProps) 
           <ToolbarButton
             onClick={() => editor.chain().focus().setTextAlign('left').run()}
             active={editor.isActive({ textAlign: 'left' })}
-            title="Wyrownaj do lewej"
+            title="Wyrównaj do lewej"
           >
             <AlignLeft className="h-4 w-4" />
           </ToolbarButton>
@@ -140,7 +140,7 @@ export function EditorToolbar({ editor, onOpenMediaModal }: EditorToolbarProps) 
           <ToolbarButton
             onClick={() => editor.chain().focus().setTextAlign('right').run()}
             active={editor.isActive({ textAlign: 'right' })}
-            title="Wyrownaj do prawej"
+            title="Wyrównaj do prawej"
           >
             <AlignRight className="h-4 w-4" />
           </ToolbarButton>
@@ -230,7 +230,7 @@ export function EditorToolbar({ editor, onOpenMediaModal }: EditorToolbarProps) 
           <ToolbarButton
             onClick={() => editor.chain().focus().redo().run()}
             disabled={!editor.can().redo()}
-            title="Ponow"
+            title="Ponów"
           >
             <Redo2 className="h-4 w-4" />
           </ToolbarButton>
@@ -274,7 +274,7 @@ export function EditorToolbar({ editor, onOpenMediaModal }: EditorToolbarProps) 
                 setLinkInput({ visible: false, url: '' })
               }}
             >
-              Usun link
+              Usuń link
             </Button>
           )}
         </div>

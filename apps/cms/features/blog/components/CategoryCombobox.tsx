@@ -62,7 +62,7 @@ export function CategoryCombobox({ id, value, onChange }: CategoryComboboxProps)
           className="h-8 w-full justify-between text-sm font-normal"
         >
           <span className={cn(!value && 'text-muted-foreground')}>
-            {value || 'Wybierz kategorie...'}
+            {value || 'Wybierz kategorię...'}
           </span>
           <ChevronsUpDown className="ml-2 h-3.5 w-3.5 shrink-0 opacity-50" />
         </Button>
