@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { Button } from '@agency/ui'
 import { messages } from '@/lib/messages'
+import { routes } from '@/lib/routes'
 
 const STORAGE_KEY = 'cookie-consent-dismissed'
 
@@ -52,7 +53,7 @@ export function CookieBanner() {
             <p className="text-sm text-muted-foreground">
               {messages.cookie.message}{' '}
               <Link
-                href="/polityka-prywatnosci"
+                href={routes.politykaPrywatnosci}
                 className="text-primary underline underline-offset-4 decoration-primary/40 hover:decoration-primary transition-colors duration-200"
               >
                 {messages.cookie.privacyLink}
@@ -60,7 +61,7 @@ export function CookieBanner() {
             </p>
 
             <div className="flex items-center gap-3 shrink-0">
-              <Link href="/polityka-prywatnosci" tabIndex={-1}>
+              <Link href={routes.politykaPrywatnosci} tabIndex={-1}>
                 <Button
                   variant="ghost"
                   size="sm"

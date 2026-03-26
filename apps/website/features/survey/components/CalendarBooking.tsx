@@ -43,6 +43,7 @@ import { Calendar, Clock, CheckCircle } from 'lucide-react'
 import { messages } from '@/lib/messages'
 import { usePlausible } from 'next-plausible'
 import type { PlausibleEvents } from '@/lib/plausible'
+import { routes } from '@/lib/routes'
 
 /**
  * Slot object structure returned from /api/calendar/slots
@@ -241,7 +242,7 @@ export function CalendarBooking({
         date: dateStr,
       })
 
-      const response = await fetch(`/api/calendar/slots?${params.toString()}`)
+      const response = await fetch(`${routes.api.calendarSlots}?${params.toString()}`)
 
       if (!response.ok) {
         if (response.status === 404) {
@@ -284,7 +285,7 @@ export function CalendarBooking({
     setSubmitError(null)
 
     try {
-      const response = await fetch('/api/calendar/book', {
+      const response = await fetch(routes.api.calendarBook, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

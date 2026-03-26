@@ -1,7 +1,9 @@
+import { routes } from '@/lib/routes'
+
 export const defaultNavbar = {
   type: 'navbar' as const,
   ctaText: 'Umów rozmowę',
-  ctaHref: '/#cta',
+  ctaHref: `${routes.home}#cta`,
 }
 
 export const defaultFooter = {
