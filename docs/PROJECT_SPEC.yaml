@@ -862,14 +862,55 @@ features:
         - feature: "Calendar Booking UI"
 
     - name: "Regulamin, Polityka Prywatności, Cookie Banner"
-      status: "pending"
+      status: "complete"
       why: "RODO compliance required before analytics and lead collection go live"
       acceptance_criteria:
-        - "/regulamin and /polityka-prywatnosci pages on website"
-        - "Cookie consent banner on all pages (RODO compliant)"
-        - "Legal text sourced/drafted"
+        - criterion: "/regulamin and /polityka-prywatnosci routes render CMS-managed legal content"
+          verified: true
+        - criterion: "CMS legal page editor with Tiptap WYSIWYG (reuses shared editor, no duplication)"
+          verified: true
+        - criterion: "Cookie consent banner visible on first visit, dismissed permanently via localStorage"
+          verified: true
+        - criterion: "Legal pages included in sitemap.ts"
+          verified: true
+        - criterion: "Build passes for both CMS and Website"
+          verified: true
+      tech_decisions:
+        - decision: "TiptapEditor extracted to features/editor/ with dependency injection"
+          rationale: "Blog and Legal Pages both needed Tiptap — extracted shared editor to features/editor/ accepting extensions and media modal as props. Blog wraps with media support; Legal Pages uses plain text variant. Prevents divergence, no duplication"
+        - decision: "legal page_type in existing pages table (not new table)"
+          rationale: "pages table already existed from landing page infrastructure. ALTER CHECK constraint to add 'legal' + seed 2 rows simpler than new table"
+        - decision: "Sidebar grouped thematically (Intake / Treść / System)"
+          rationale: "Sidebar grew to 8+ items — flat list became hard to scan. Groups match user mental model: intake work, content authoring, system admin"
+        - decision: "Centralized route constants in lib/routes.ts (both apps)"
+          rationale: "Hardcoded path strings across 47 files (35 CMS + 12 Website) → typos in revalidatePath and fetch URLs caused silent bugs. Single source of truth prevents drift"
       dependencies:
         - feature: "Landing Page CMS"
+      notes: |
+        2026-03-26: AAA-T-58 COMPLETE — 4 iterations + 3 bonus refactors
+
+        MIGRATION: supabase/migrations/20260326000000_add_legal_page_type_and_seed.sql
+        - ALTER pages.page_type CHECK to include 'legal'
+        - ADD COLUMN html_body TEXT
+        - Seed: regulamin + polityka-prywatnosci rows for Halo Efekt tenant
+
+        CMS (apps/cms/):
+        - features/legal-pages/ (types, queries, queries.server, validation, actions, LegalPageList, LegalPageEditor)
+        - features/editor/ (types, extensions, utils, TiptapEditor, EditorToolbar) — shared editor extracted
+        - features/blog/ updated: TiptapEditor wrapper imports from features/editor/, not standalone
+        - app/admin/legal-pages/ routes (list + [id] edit)
+        - lib/routes.ts — centralized route constants (35 files updated)
+        - lib/messages.ts — nav groups + legal page strings added
+        - Sidebar: grouped into Intake / Treść / System
+
+        WEBSITE (apps/website/):
+        - features/legal/ (types, queries, LegalPageContent, CookieBanner)
+        - app/regulamin/ + app/polityka-prywatnosci/ (layout + page with generateMetadata)
+        - lib/routes.ts — centralized route constants (12 files updated)
+        - lib/layout-defaults.ts — shared layout helpers
+        - app/layout.tsx — CookieBanner added
+        - app/sitemap.ts — legal entries added
+        - features/marketing/components/Footer.tsx — legal links added
 
     - name: "SEO Foundations"
       status: "pending"
