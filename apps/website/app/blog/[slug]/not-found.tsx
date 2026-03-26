@@ -1,7 +1,18 @@
+'use client'
+
+import { useEffect } from 'react'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
+import { usePlausible } from 'next-plausible'
+import type { PlausibleEvents } from '@/lib/plausible'
 
 export default function BlogPostNotFound() {
+  const plausible = usePlausible<PlausibleEvents>()
+
+  useEffect(() => {
+    plausible('404', { props: { path: window.location.pathname } })
+  }, [])
+
   return (
     <div className="flex min-h-[60vh] flex-col items-center justify-center px-4 text-center">
       <p className="mb-2 text-sm font-medium uppercase tracking-wider text-primary">

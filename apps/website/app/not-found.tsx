@@ -1,6 +1,17 @@
+'use client'
+
+import { useEffect } from 'react'
 import Link from 'next/link'
+import { usePlausible } from 'next-plausible'
+import type { PlausibleEvents } from '@/lib/plausible'
 
 export default function NotFound() {
+  const plausible = usePlausible<PlausibleEvents>()
+
+  useEffect(() => {
+    plausible('404', { props: { path: window.location.pathname } })
+  }, [])
+
   return (
     <div className="min-h-screen flex items-center justify-center px-4">
       <div className="text-center max-w-md">
