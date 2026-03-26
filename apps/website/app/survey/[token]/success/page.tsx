@@ -1,5 +1,6 @@
 import { Card } from '@agency/ui'
 import { CalendarBooking } from '@/features/survey/components/CalendarBooking'
+import { messages } from '@/lib/messages'
 
 interface PageProps {
   params: Promise<{
@@ -39,11 +40,11 @@ export default async function SuccessPage({ params, searchParams }: PageProps) {
             </div>
 
             <h1 className="text-3xl font-bold text-foreground mb-4">
-              Thank You!
+              {messages.success.thankYou}
             </h1>
 
             <p className="text-muted-foreground">
-              Your survey has been submitted successfully. We will review your responses and get back to you soon.
+              {messages.success.surveySubmitted}
             </p>
           </Card>
         </div>
@@ -52,15 +53,15 @@ export default async function SuccessPage({ params, searchParams }: PageProps) {
         {responseId && linkId ? (
           <div>
             <h2 className="text-2xl font-bold text-foreground mb-6">
-              Book Your Appointment
+              {messages.success.bookAppointmentHeading}
             </h2>
             <CalendarBooking surveyId={linkId} responseId={responseId} />
           </div>
         ) : (
           <Card className="p-8">
             <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 text-sm text-primary">
-              <p className="font-medium mb-1">What's Next?</p>
-              <p>You will receive a confirmation email shortly. If you need to book an appointment, check your email for further instructions.</p>
+              <p className="font-medium mb-1">{messages.success.whatsNext}</p>
+              <p>{messages.success.whatsNextDescription}</p>
             </div>
           </Card>
         )}
@@ -72,7 +73,7 @@ export default async function SuccessPage({ params, searchParams }: PageProps) {
 // Generate metadata for SEO
 export function generateMetadata() {
   return {
-    title: 'Survey Submitted - Halo Efekt',
-    description: 'Your survey has been submitted successfully.'
+    title: messages.success.metaTitle,
+    description: messages.success.metaDescription
   }
 }
