@@ -10,6 +10,7 @@ import { ArrowLeft, FileX, Loader2, AlertTriangle } from 'lucide-react'
 import { getResponseStatusColor } from '@/lib/utils/status'
 import { triggerAiAnalysis } from '../actions'
 import { messages } from '@/lib/messages'
+import { routes } from '@/lib/routes'
 
 type ResponseDetailProps = {
   responseId: string
@@ -97,7 +98,7 @@ export function ResponseDetail({ responseId }: ResponseDetailProps) {
         description={messages.responses.notFoundDescription}
         variant="card"
         action={
-          <Link href="/admin/responses">
+          <Link href={routes.admin.responses}>
             <Button variant="outline">
               <ArrowLeft className="mr-2 h-4 w-4" />
               {messages.responses.backToResponses}

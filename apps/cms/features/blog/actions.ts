@@ -7,6 +7,7 @@ import { blogPostSchema, type BlogPostFormData } from './validation'
 import { toBlogPost, type BlogPost } from './types'
 import { parseContent } from './utils'
 import { messages } from '@/lib/messages'
+import { routes } from '@/lib/routes'
 
 // --- Server Actions ---
 
@@ -48,7 +49,7 @@ export async function createBlogPost(
 
     if (error) return { success: false, error: error.message }
 
-    revalidatePath('/admin/blog')
+    revalidatePath(routes.admin.blog)
     return { success: true, data: toBlogPost(created) }
   } catch (err) {
     const message = err instanceof Error ? err.message : messages.common.unknownError
@@ -106,8 +107,8 @@ export async function updateBlogPost(
 
     if (error) return { success: false, error: error.message }
 
-    revalidatePath('/admin/blog')
-    revalidatePath(`/admin/blog/${id}`)
+    revalidatePath(routes.admin.blog)
+    revalidatePath(routes.admin.blogPost(id))
     return { success: true, data: toBlogPost(updated) }
   } catch (err) {
     const message = err instanceof Error ? err.message : messages.common.unknownError
@@ -131,7 +132,7 @@ export async function deleteBlogPost(
 
     if (error) return { success: false, error: error.message }
 
-    revalidatePath('/admin/blog')
+    revalidatePath(routes.admin.blog)
     return { success: true }
   } catch (err) {
     const message = err instanceof Error ? err.message : messages.common.unknownError

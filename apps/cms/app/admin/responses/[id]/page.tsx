@@ -2,6 +2,7 @@ import { ResponseDetail } from '@/features/responses/components/ResponseDetail'
 import Link from 'next/link'
 import { Button } from '@agency/ui'
 import { ArrowLeft } from 'lucide-react'
+import { routes } from '@/lib/routes'
 
 export const metadata = {
   title: 'Szczegóły odpowiedzi | Halo-Efekt CMS',
@@ -18,7 +19,7 @@ export default async function ResponsePage({ params }: PageProps) {
   return (
     <div className="space-y-6">
       <div>
-        <Link href="/admin/responses">
+        <Link href={routes.admin.responses}>
           <Button variant="ghost" className="mb-4 -ml-4">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Powrót do odpowiedzi

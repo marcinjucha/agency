@@ -13,6 +13,7 @@ import {
 } from './validation'
 import { toMediaItem, type MediaItem } from './types'
 import { messages } from '@/lib/messages'
+import { routes } from '@/lib/routes'
 
 export async function createMediaItem(
   data: CreateMediaItemFormData
@@ -52,7 +53,7 @@ export async function createMediaItem(
 
     if (error) return { success: false, error: error.message }
 
-    revalidatePath('/admin/media')
+    revalidatePath(routes.admin.media)
     return { success: true, data: toMediaItem(created) }
   } catch (err) {
     const message = err instanceof Error ? err.message : messages.media.unknownError
@@ -87,7 +88,7 @@ export async function updateMediaItem(
 
     if (error) return { success: false, error: error.message }
 
-    revalidatePath('/admin/media')
+    revalidatePath(routes.admin.media)
     return { success: true }
   } catch (err) {
     const message = err instanceof Error ? err.message : messages.media.unknownError
@@ -135,7 +136,7 @@ export async function deleteMediaItem(
 
     if (error) return { success: false, error: error.message }
 
-    revalidatePath('/admin/media')
+    revalidatePath(routes.admin.media)
     return { success: true }
   } catch (err) {
     const message = err instanceof Error ? err.message : messages.media.unknownError

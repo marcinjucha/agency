@@ -6,6 +6,7 @@ import { renderEmailBlocks, DEFAULT_BLOCKS } from '@agency/email'
 import type { Block } from '@agency/email'
 import { updateEmailTemplateSchema } from './validation'
 import { messages } from '@/lib/messages'
+import { routes } from '@/lib/routes'
 
 export async function updateEmailTemplate(
   type: string,
@@ -44,7 +45,7 @@ export async function updateEmailTemplate(
       return { success: false, error: upsertError.message }
     }
 
-    revalidatePath('/admin/email-templates')
+    revalidatePath(routes.admin.emailTemplates)
     return { success: true }
   } catch (err) {
     const message = err instanceof Error ? err.message : messages.common.unknownError

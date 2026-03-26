@@ -5,6 +5,7 @@ import { getUserWithTenant, isAuthError } from '@/lib/auth'
 import { legalPageSchema, type LegalPageFormData } from './validation'
 import { parseContent, generateHtmlFromContent } from '../editor/utils'
 import { messages } from '@/lib/messages'
+import { routes } from '@/lib/routes'
 import type { TiptapContent } from '../editor/types'
 import type { Tables } from '@agency/database'
 
@@ -42,8 +43,8 @@ export async function updateLegalPage(
 
     if (error) return { success: false, error: error.message }
 
-    revalidatePath('/admin/legal-pages')
-    revalidatePath(`/admin/legal-pages/${id}`)
+    revalidatePath(routes.admin.legalPages)
+    revalidatePath(routes.admin.legalPage(id))
     return { success: true }
   } catch (err) {
     const message = err instanceof Error ? err.message : messages.common.unknownError

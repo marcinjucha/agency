@@ -6,6 +6,7 @@ import { UploadCloud, CheckCircle2, XCircle } from 'lucide-react'
 import { createMediaItem } from '../actions'
 import type { MediaType } from '../types'
 import { ALLOWED_MIME_TYPES, IMAGE_MAX_SIZE, VIDEO_MAX_SIZE } from '../utils'
+import { routes } from '@/lib/routes'
 
 type UploadState = 'idle' | 'uploading' | 'done' | 'error'
 
@@ -97,7 +98,7 @@ export function MediaUploadZone({ onUploadComplete }: MediaUploadZoneProps) {
       )
 
       // 1. Get presigned URL
-      const res = await fetch('/api/upload', {
+      const res = await fetch(routes.api.upload, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

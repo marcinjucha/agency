@@ -32,6 +32,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { FileText, Plus, Pencil, Trash2, Clock, User } from 'lucide-react'
 import { messages } from '@/lib/messages'
+import { routes } from '@/lib/routes'
 
 export function BlogPostList() {
   const router = useRouter()
@@ -78,7 +79,7 @@ export function BlogPostList() {
         description={messages.blog.noPostsDescription}
         variant="card"
         action={
-          <Link href="/admin/blog/new">
+          <Link href={routes.admin.blogNew}>
             <Button>
               <Plus className="mr-2 h-4 w-4" />
               {messages.blog.writeFirstPost}
@@ -120,7 +121,7 @@ export function BlogPostList() {
               </SelectContent>
             </Select>
           )}
-          <Link href="/admin/blog/new">
+          <Link href={routes.admin.blogNew}>
             <Button>
               <Plus className="mr-2 h-4 w-4" />
               {messages.blog.newPostButton}
@@ -135,7 +136,7 @@ export function BlogPostList() {
           <BlogPostCard
             key={post.id}
             post={post}
-            onNavigate={() => router.push(`/admin/blog/${post.id}`)}
+            onNavigate={() => router.push(routes.admin.blogPost(post.id))}
             onDelete={() => deleteMutation.mutate(post.id)}
             isDeleting={deleteMutation.isPending}
           />

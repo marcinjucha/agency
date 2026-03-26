@@ -1,5 +1,6 @@
 import { processOAuthCallback } from '@/features/calendar/oauth-callback'
 import { NextRequest, NextResponse } from 'next/server'
+import { routes } from '@/lib/routes'
 
 /**
  * GET /api/auth/google/callback
@@ -28,7 +29,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('OAuth callback error:', error)
     return NextResponse.redirect(
-      new URL('/admin/settings?error=Internal+server+error', request.url)
+      new URL(`${routes.admin.settings}?error=Internal+server+error`, request.url)
     )
   }
 }

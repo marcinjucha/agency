@@ -6,6 +6,8 @@ export function formatBytes(bytes: number | null): string | null {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
+import { routes } from '@/lib/routes'
+
 // --- S3 upload helper for media files ---
 
 export const IMAGE_MAX_SIZE = 5 * 1024 * 1024 // 5MB
@@ -38,7 +40,7 @@ export async function uploadMediaToS3(
     throw new Error(`Plik jest za duzy. Maksymalny rozmiar to ${limitMB}MB.`)
   }
 
-  const res = await fetch('/api/upload', {
+  const res = await fetch(routes.api.upload, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({

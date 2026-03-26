@@ -10,6 +10,7 @@ import { pl } from 'date-fns/locale/pl'
 import type { AppointmentListItem, AppointmentStatus } from '../types'
 import { getAppointmentStatusColor } from '@/lib/utils/status'
 import { messages } from '@/lib/messages'
+import { routes } from '@/lib/routes'
 
 export function AppointmentList() {
   const router = useRouter()
@@ -85,7 +86,7 @@ export function AppointmentList() {
                 appointment={appointment}
                 onRowClick={() => {
                   if (appointment.response?.id) {
-                    router.push(`/admin/responses/${appointment.response.id}`)
+                    router.push(routes.admin.response(appointment.response.id))
                   }
                 }}
               />

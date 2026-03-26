@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
+import { routes } from '@/lib/routes'
 import { getEmailTemplate } from '@/features/email/queries.server'
 import { EmailTemplateEditor } from '@/features/email/components/EmailTemplateEditor'
 import { TEMPLATE_TYPE_LABELS } from '@/features/email/types'
@@ -28,7 +29,7 @@ export default async function EmailTemplateDetailPage({ params }: Props) {
     <div className="space-y-6">
       <div>
         <Link
-          href="/admin/email-templates"
+          href={routes.admin.emailTemplates}
           className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4"
         >
           <ArrowLeft className="h-4 w-4" />

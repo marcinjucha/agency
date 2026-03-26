@@ -6,19 +6,42 @@ import { LayoutDashboard, FileText, Inbox, CalendarCheck, Calendar, Settings, Lo
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { messages } from '@/lib/messages'
+import { routes } from '@/lib/routes'
 
-const menuItems = [
-  { href: '/admin', label: messages.nav.dashboard, icon: LayoutDashboard },
-  { href: '/admin/surveys', label: messages.nav.surveys, icon: FileText },
-  { href: '/admin/responses', label: messages.nav.responses, icon: Inbox },
-  { href: '/admin/appointments', label: messages.nav.appointments, icon: CalendarCheck },
-  { href: '/admin/calendar', label: messages.nav.calendar, icon: Calendar },
-  { href: '/admin/email-templates', label: messages.nav.emailTemplates, icon: Mail },
-  { href: '/admin/landing-page', label: messages.nav.landingPage, icon: Globe },
-  { href: '/admin/blog', label: messages.nav.blog, icon: Newspaper },
-  { href: '/admin/media', label: messages.nav.media, icon: Images },
-  { href: '/admin/legal-pages', label: messages.nav.legalPages, icon: Scale },
-  { href: '/admin/settings', label: messages.nav.settings, icon: Settings },
+type MenuItem = { href: string; label: string; icon: typeof LayoutDashboard }
+type MenuGroup = { label?: string; items: MenuItem[] }
+
+const menuGroups: MenuGroup[] = [
+  {
+    items: [
+      { href: routes.admin.root, label: messages.nav.dashboard, icon: LayoutDashboard },
+    ],
+  },
+  {
+    label: messages.nav.groupIntake,
+    items: [
+      { href: routes.admin.surveys, label: messages.nav.surveys, icon: FileText },
+      { href: routes.admin.responses, label: messages.nav.responses, icon: Inbox },
+      { href: routes.admin.appointments, label: messages.nav.appointments, icon: CalendarCheck },
+      { href: routes.admin.calendar, label: messages.nav.calendar, icon: Calendar },
+    ],
+  },
+  {
+    label: messages.nav.groupContent,
+    items: [
+      { href: routes.admin.landingPage, label: messages.nav.landingPage, icon: Globe },
+      { href: routes.admin.blog, label: messages.nav.blog, icon: Newspaper },
+      { href: routes.admin.media, label: messages.nav.media, icon: Images },
+      { href: routes.admin.legalPages, label: messages.nav.legalPages, icon: Scale },
+    ],
+  },
+  {
+    label: messages.nav.groupSystem,
+    items: [
+      { href: routes.admin.emailTemplates, label: messages.nav.emailTemplates, icon: Mail },
+      { href: routes.admin.settings, label: messages.nav.settings, icon: Settings },
+    ],
+  },
 ]
 
 export function Sidebar() {
@@ -28,7 +51,7 @@ export function Sidebar() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
-    router.push('/login')
+    router.push(routes.login)
     router.refresh()
   }
 
@@ -39,26 +62,37 @@ export function Sidebar() {
         <p className="text-muted-foreground text-sm mt-1">{messages.nav.adminPanel}</p>
       </div>
 
-      <nav className="flex-1 px-3 space-y-1">
-        {menuItems.map((item) => {
-          const Icon = item.icon
-          const isActive = pathname === item.href
+      <nav className="flex-1 overflow-y-auto px-3 space-y-4">
+        {menuGroups.map((group, groupIdx) => (
+          <div key={group.label ?? groupIdx}>
+            {group.label && (
+              <p className="px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+                {group.label}
+              </p>
+            )}
+            <div className="space-y-0.5">
+              {group.items.map((item) => {
+                const Icon = item.icon
+                const isActive = pathname === item.href
 
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                isActive
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-              }`}
-            >
-              <Icon size={18} />
-              <span>{item.label}</span>
-            </Link>
-          )
-        })}
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      isActive
+                        ? 'bg-primary text-primary-foreground'
+                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                    }`}
+                  >
+                    <Icon size={18} />
+                    <span>{item.label}</span>
+                  </Link>
+                )
+              })}
+            </div>
+          </div>
+        ))}
       </nav>
 
       <div className="p-3 border-t border-border">

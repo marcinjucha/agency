@@ -8,6 +8,7 @@ import type { GoogleCalendarToken } from '@/lib/google-calendar/oauth'
 import type { CalendarSettingsFormValues } from './types'
 import { calendarSettingsSchema } from './validation'
 import { messages } from '@/lib/messages'
+import { routes } from '@/lib/routes'
 
 /**
  * Get Google Calendar connection status
@@ -118,7 +119,7 @@ export async function disconnectGoogleCalendar(): Promise<{
       }
     }
 
-    revalidatePath('/admin/settings')
+    revalidatePath(routes.admin.settings)
     return { success: true }
   } catch (error) {
     console.error('Error disconnecting calendar:', error)
@@ -158,7 +159,7 @@ export async function updateCalendarSettings(
       return { success: false, error: error.message }
     }
 
-    revalidatePath('/admin/settings')
+    revalidatePath(routes.admin.settings)
     return { success: true }
   } catch (error) {
     console.error('Error updating calendar settings:', error)

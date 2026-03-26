@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { Card } from '@agency/ui'
+import { routes } from '@/lib/routes'
 import { getEmailTemplates } from '@/features/email/queries.server'
 import { TEMPLATE_TYPE_LABELS } from '@/features/email/types'
 import { Mail, ChevronRight } from 'lucide-react'
@@ -25,7 +26,7 @@ export async function EmailTemplateList() {
         {allTypes.map(([type, label]) => {
           const template = templates.find((t) => t.type === type)
           return (
-            <Link key={type} href={`/admin/email-templates/${type}`}>
+            <Link key={type} href={routes.admin.emailTemplate(type)}>
               <Card className="flex items-center justify-between p-5 hover:bg-accent transition-colors cursor-pointer">
                 <div className="flex items-center gap-4">
                   <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">

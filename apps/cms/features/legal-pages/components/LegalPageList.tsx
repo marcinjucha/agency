@@ -6,6 +6,7 @@ import { Badge, LoadingState, ErrorState, EmptyState } from '@agency/ui'
 import Link from 'next/link'
 import { Scale, Pencil } from 'lucide-react'
 import { messages } from '@/lib/messages'
+import { routes } from '@/lib/routes'
 
 export function LegalPageList() {
   const {
@@ -27,7 +28,7 @@ export function LegalPageList() {
       {pages.map((page) => (
         <Link
           key={page.id}
-          href={`/admin/legal-pages/${page.id}`}
+          href={routes.admin.legalPage(page.id)}
           className="flex items-center justify-between p-4 rounded-lg border border-border bg-card hover:bg-muted transition-colors"
         >
           <div className="flex items-center gap-3">

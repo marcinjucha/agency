@@ -8,6 +8,7 @@ import { ArrowRight, FileText } from 'lucide-react'
 import type { ResponseListItem, ResponseStatus } from '../types'
 import { getResponseStatusColor } from '@/lib/utils/status'
 import { messages } from '@/lib/messages'
+import { routes } from '@/lib/routes'
 
 /**
  * ResponseList Component
@@ -103,7 +104,7 @@ export function ResponseList() {
               <ResponseRow
                 key={response.id}
                 response={response}
-                onRowClick={() => router.push(`/admin/responses/${response.id}`)}
+                onRowClick={() => router.push(routes.admin.response(response.id))}
               />
             ))}
           </tbody>

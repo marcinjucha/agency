@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
 import { Button, Input, Label, Badge, Checkbox } from '@agency/ui'
 import { messages } from '@/lib/messages'
+import { routes } from '@/lib/routes'
 import { legalPageSchema, type LegalPageFormData } from '../validation'
 import { updateLegalPage } from '../actions'
 import { legalPageKeys } from '../queries'
@@ -71,7 +72,7 @@ export function LegalPageEditor({ legalPage }: LegalPageEditorProps) {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Link
-            href="/admin/legal-pages"
+            href={routes.admin.legalPages}
             className="text-muted-foreground hover:text-foreground transition-colors"
           >
             <ArrowLeft size={20} />

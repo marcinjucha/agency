@@ -1,6 +1,7 @@
 import { parseContent as _parseContent, generateHtmlFromContent as _generateHtml } from '../editor/utils'
 import { editorExtensions } from './extensions'
 import type { TiptapContent } from '../editor/types'
+import { routes } from '@/lib/routes'
 
 export { _parseContent as parseContent }
 
@@ -21,7 +22,7 @@ export async function uploadImageToS3(file: File, folder = 'haloefekt/blog'): Pr
     throw new Error('Dozwolone sa tylko pliki graficzne.')
   }
 
-  const res = await fetch('/api/upload', {
+  const res = await fetch(routes.api.upload, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ fileName: file.name, contentType: file.type, folder }),
