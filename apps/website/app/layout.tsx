@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import PlausibleProvider from "next-plausible";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
+import { CookieBanner } from "@/features/legal/components/CookieBanner";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -40,6 +41,7 @@ export default function RootLayout({
         >
           {children}
         </PlausibleProvider>
+        <CookieBanner />
         <Analytics />
       </body>
     </html>

@@ -83,6 +83,13 @@ export const messages = {
     notFoundTitle: 'Strona nie znaleziona | Halo Efekt',
   },
 
+  cookie: {
+    message: 'Ta strona korzysta z analityki na potrzeby własne.',
+    privacyLink: 'Polityka prywatności',
+    accept: 'Akceptuję',
+    moreInfo: 'Więcej info',
+  },
+
   validation: {
     fieldRequired: 'To pole jest wymagane',
     invalidEmail: 'Podaj prawidłowy adres email',
