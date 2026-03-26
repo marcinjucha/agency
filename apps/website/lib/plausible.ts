@@ -3,4 +3,5 @@ export type PlausibleEvents = {
   'Survey Started': never
   'Survey Submitted': never
   'Booking Completed': never
+  '404': never
 }
