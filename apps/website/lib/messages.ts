@@ -79,6 +79,10 @@ export const messages = {
     defaultSurveyDescription: 'Wypełnij ankietę, aby przekazać swoje dane.',
   },
 
+  legal: {
+    notFoundTitle: 'Strona nie znaleziona | Halo Efekt',
+  },
+
   validation: {
     fieldRequired: 'To pole jest wymagane',
     invalidEmail: 'Podaj prawidłowy adres email',

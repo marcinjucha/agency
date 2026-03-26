@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import type { FooterBlock } from '@agency/database'
 
 export function Footer({ description, privacy, terms, copyright }: FooterBlock) {
@@ -10,9 +11,9 @@ export function Footer({ description, privacy, terms, copyright }: FooterBlock) 
         <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-8">
           {/* Brand + Description */}
           <div className="max-w-sm">
-            <a href="/" className="text-lg font-bold text-foreground hover:text-primary transition-colors duration-300">
+            <Link href="/" className="text-lg font-bold text-foreground hover:text-primary transition-colors duration-300">
               Halo Efekt
-            </a>
+            </Link>
             <p className="text-sm text-muted-foreground mt-3 leading-relaxed">
               {description}
             </p>
@@ -20,18 +21,18 @@ export function Footer({ description, privacy, terms, copyright }: FooterBlock) 
 
           {/* Legal Links */}
           <div className="flex items-center gap-6 text-sm">
-            <a
-              href="#privacy"
+            <Link
+              href="/polityka-prywatnosci"
               className="text-muted-foreground hover:text-foreground transition-colors duration-300"
             >
               {privacy}
-            </a>
-            <a
-              href="#terms"
+            </Link>
+            <Link
+              href="/regulamin"
               className="text-muted-foreground hover:text-foreground transition-colors duration-300"
             >
               {terms}
-            </a>
+            </Link>
           </div>
         </div>
 
