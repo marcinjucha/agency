@@ -400,6 +400,7 @@ export const messages = {
     landingPage: 'Strona główna',
     blog: 'Blog',
     media: 'Media',
+    legalPages: 'Strony prawne',
     settings: 'Ustawienia',
     adminPanel: 'Panel administracyjny',
     logout: 'Wyloguj',
@@ -462,6 +463,17 @@ export const messages = {
     landingPageTitle: 'Strona główna',
     // CMS Layout
     cmsDescription: 'Platforma automatyzacji procesów biznesowych',
+  },
+
+  legalPages: {
+    title: 'Strony prawne',
+    editTitle: 'Edycja strony prawnej',
+    updateSuccess: 'Strona prawna została zaktualizowana',
+    updateError: 'Błąd aktualizacji strony prawnej',
+    published: 'Opublikowana',
+    draft: 'Szkic',
+    empty: 'Brak stron prawnych',
+    emptyDescription: 'Strony prawne zostaną utworzone automatycznie.',
   },
 
   validation: {
