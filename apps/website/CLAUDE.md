@@ -82,6 +82,10 @@ This app is completely public. No login, no middleware, no protected routes.
 - URL: `/pricing` (not `/marketing/pricing`)
 - Purpose: Shared layout (Navbar + Footer)
 
+### Internal Links: `<Link>` not `<a>`
+Always use Next.js `<Link>` for same-domain routes (`/survey/[uuid]`, `/blog/[slug]`). Plain `<a>` only for external URLs.
+**Why:** CtaLink used `<a>` for `/survey/...` — caused full page reload instead of client-side navigation.
+
 ## Database Access
 
 **Public access via RLS:**

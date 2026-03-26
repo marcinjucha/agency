@@ -203,6 +203,12 @@ export async function getSurveys(): Promise<Tables<'surveys'>[]> {
 }
 ```
 
+## Gotchas
+
+**Tiptap renderHTML: inline styles only, no Tailwind** — Extensions' `renderHTML` output goes into `blog_posts.html_body` rendered as raw HTML on website (no Tailwind processing). Tailwind classes silently produce unstyled elements. **Why:** Works in CMS editor (Tailwind loaded) but breaks on public website. Use `style="..."` in all renderHTML output.
+
+**TanStack Query: use root key for cache invalidation** — `mediaKeys.list()` and `mediaKeys.list({ type: undefined })` produce different query keys, so exact-key invalidation silently fails. After mutations, use `mediaKeys.all` (root key) to invalidate all list variants. **Why:** Applies to all features using TanStack Query key factories -- always invalidate with the broadest key after mutations.
+
 ## Related Documentation
 
 - [ADR-005: App vs Features Separation](../../../docs/adr/ARCHIVED-005-app-vs-features-separation.md)

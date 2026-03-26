@@ -68,6 +68,21 @@ Don't duplicate code between apps. Use:
 - `packages/database/` for shared types
 - `packages/validators/` for shared validation
 
+## Centralized Messages (i18n-ready)
+
+**Files:** `apps/cms/lib/messages.ts` (~250 strings) + `apps/website/lib/messages.ts` (~50 strings)
+**Pattern:** `messages` (static `as const` object, nested by feature) + `templates` (dynamic functions with params)
+**Usage:** `import { messages } from '@/lib/messages'` → `messages.surveys.createFailed`
+**Per-app files** (not shared package) — CMS and website have almost entirely different string sets.
+**i18n path:** Replace `messages.key` with `t('key')` + move object to `messages/pl.json` when adding next-intl.
+
+**Rules:**
+- All user-facing strings must go through `messages.ts`
+- `console.error` stays English (developer-facing)
+- Date formatting uses `pl-PL` locale
+
+**WHY:** Prevents recurring EN/PL inconsistency discovered in 2026-03-26 audit. Single source of truth per app for all UI strings. (2026-03-26)
+
 ## Development
 
 ```bash

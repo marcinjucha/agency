@@ -89,19 +89,9 @@
 - **Direct code edits allowed for tiny changes** — User accepts direct edits (not via agent) for trivial string changes (3 href values, 1 className). Agents required for feature-level changes, not micro-fixes. (2026-03-24)
 - **Test after each priority level, not each fix** — User prefers batching: fix all P0 → test → fix all P1 → test → fix all P2 → test. Individual commits per fix, but testing grouped by severity. (2026-03-25)
 - **Commit per change, test later** — User wants individual commits after each refactor but defers manual testing to the end. Collect all test scenarios and present together. (2026-03-25)
-- **Always use feature branches** — Never commit directly to main. Create `feature/aaa-t-{id}-{slug}` branch, implement, test, then merge with `--no-ff`. User corrected when calendar commits landed on main directly. (2026-03-25)
-- **Use Next.js `<Link>` not `<a>` for same-domain navigation** — User caught CtaLink using plain `<a>` instead of `<Link>` for `/survey/[uuid]` (same domain). Always use `<Link>` for internal routes — client-side navigation is faster, avoids full page reload. Plain `<a>` only for external URLs. (2026-03-25)
-- **All docs commits (memory.md, PROJECT_SPEC) before merge to main** — Documentation updates (memory.md, PROJECT_SPEC.yaml) should be committed on the feature branch BEFORE merging to main, not after. Group them in one "docs" commit or with the feature commit. Everything must be contained in the merge. (2026-03-25)
 
 ## Bugs Found
 
-- **TanStack Query invalidateQueries key mismatch** — `mediaKeys.list()` returns `['media-items', 'list', undefined]` but active query key is `mediaKeys.list({ type: undefined })` = `['media-items', 'list', { type: undefined }]`. These don't match so invalidation silently fails. Fix: use `mediaKeys.all` to invalidate all list variants. Pattern: always use the root key (`all`) for broad invalidation after mutations. (2026-03-23)
-- **Tiptap renderHTML must use inline styles, not Tailwind classes** — Custom Tiptap extensions renderHTML output goes into blog_posts.html_body which website renders as raw HTML without Tailwind processing. Tailwind classes (aspect-video, w-full) produce unstyled/tiny elements on website. Fix: use inline `style="..."` attributes in renderHTML. Applies to all future extensions. (2026-03-23)
-- **Email template save: Zod .url() rejected template variables** — Root cause was NOT missing tenant_id. CTA block default URL `{{responseUrl}}` failed Zod `.url()` validation. Fix: `refine()` that accepts `{{...}}` pattern OR valid URL. FIXED 2026-03-25.
-- **Google Calendar OAuth: slots API 500 → fallback implemented** — Slots API now returns all work-hour slots (busyEvents=[]) when token invalid, instead of 500. Token manager returns `token_revoked` vs `refresh_failed` for CMS status detection. CMS settings shows "Wygasł" + reconnect button. FIXED 2026-03-25 (AAA-T-91).
-- **Survey list stale after creation** — TanStack Query `staleTime: 5min` + `refetchOnWindowFocus: false` in providers.tsx. NewSurveyForm didn't invalidate cache after creation. Fix: `queryClient.invalidateQueries({ queryKey: ['surveys'] })`. FIXED 2026-03-25.
-- **Date picker calendar icon invisible on dark theme** — Native `<input type="date">` renders black calendar icon on dark bg. Fix: add `[color-scheme:dark]` Tailwind class — tells browser to use light icons. Applies to any native input on dark-themed pages. FIXED 2026-03-25 (AAA-T-91).
-- **Google Calendar token saved to wrong user** — Token went to "Bartek" instead of "Marcin". Code is correct (`.eq('id', user.id)` from `auth.getUser()`). Likely Supabase auth session belonged to different user than CMS displayed. Session/cookie issue, not code bug. (2026-03-25)
 - **next-plausible: no 404s extension + scriptProps.src override fails** — `next-plausible` `allModifiers` list doesn't include `404s`. Tried `scriptProps.src` override — didn't work. Correct approach: skip script extension entirely, call `plausible('404', {props: {path}})` manually via `usePlausible` hook in `not-found.tsx`. Gives path-level reporting in Plausible dashboard. (2026-03-26)
 - **n8n MiniMax parser: content[0] assumes no thinking block** — MiniMax returns `content: [{type:"thinking",...}, {type:"text",...}]` but parser used `content[0].text` (assumed text at index 0). Fix: `.find(c => c.type === 'text')`. Applies to any model with extended thinking via Anthropic-compatible API. FIXED 2026-03-25 (AAA-T-94).
 
@@ -111,14 +101,10 @@
 - **AWS S3 for media uploads** — Bucket: `legal-mind-bucket`, region: `eu-central-1`, folder: `haloefekt/blog/`. Credentials stored as `BUCKET_ACCESS_KEY` + `BUCKET_SECRET_KEY` in `apps/cms/.env.local`. Same bucket holds n8n backups — new uploads go into separate folder. S3 bucket policy allows public GET; CORS must allow PUT from CMS domains for presigned upload to work. (2026-03-18)
 - **Tenant "Halo Efekt" already exists in production** — email: kontakt@haloefekt.pl, domain: null, id: 19342448-4e4e-49ba-8bf0-694d5376f953. No need to INSERT new tenant. (2026-03-23)
 - **Tiptap extension registry pattern** — `features/blog/extensions/index.ts` exports `editorExtensions` (single source of truth) and `mediaExtensions`. Both `TiptapEditor.tsx` and `utils.ts` import from here. Adding new media type = 1 new extension file + 1 line in index.ts. Shared video utilities live in `lib/video-utils.ts`. (2026-03-23)
-- **Shared video utilities in `lib/video-utils.ts`** — `extractVideoId`, `generateThumbnailUrl`, `buildEmbedUrl`, `fetchVimeoThumbnail` all consolidated in `apps/cms/lib/video-utils.ts` (2026-03-25, was separate file). Used by both `features/blog` and `features/media`. (2026-03-23)
 - **Media flow: images/video only via Library** — TiptapEditor drag/paste opens media modal instead of uploading directly. Images and video inserted into editor only from Library tab. YouTube/Vimeo/Instagram/TikTok paste auto-detect still works via extension paste rules. (2026-03-23)
-- **Instagram/TikTok embed final dimensions** — Cross-origin iframes cannot auto-report content height, so fixed height is the only approach. Final values after iterative testing (2026-03-24): Instagram 800px height / 500px max-width, TikTok 740px height / 330px max-width (TikTok content is narrower than Instagram). Both centered with `background: #000`. AAA-T-78 resolved.
-- **EMBED_DIMENSIONS constants pattern** — `apps/cms/features/blog/extensions/constants.ts` exports `EMBED_DIMENSIONS` object + `INSTAGRAM_INLINE_STYLE` / `TIKTOK_INLINE_STYLE` string constants. Extensions import these for renderHTML inline styles. TiptapEditor.tsx uses JSX `${EMBED_DIMENSIONS.instagram.height}px` interpolation in style block. Website `globals.css` stays manual (cannot import JS) but has a comment: "Source of truth: constants.ts". Changing dimensions in future = 1 file (constants.ts) + 1 file (globals.css). (2026-03-24)
 
 ## Domain Concepts (Landing Page)
 
-- **Positioning docs already exist** — `.claude/docs/agency/` has 5 complete docs (Oferta, Strategia, Positioning-Broad, Brand-Guide, Sales-Playbook). AAA-T-71 (Pozycjonowanie) deliverables are effectively done — just needs review/approval before closing. (2026-03-20)
 - **Landing page CTA destination** — AAA-T-57 DONE: all 3 CTA locations (Navbar, Hero, FinalCTA) now point to `/survey/89d6d1e9-82a0-4ff7-ac85-0ed4bd6462b4`. DEFAULT_BLOCKS updated. DB row must be updated via CMS editor. (2026-03-24)
 
 ## Architecture Audit — AAA-T-83 (2026-03-25)
@@ -141,15 +127,6 @@
 - @agency/email used only by CMS — consider moving to app
 - Speculative types in responses/types.ts + appointments/types.ts — remove unused
 - .env.local.example files missing
-
-## Centralized Messages — COMPLETED (2026-03-25)
-
-**Files:** `apps/cms/lib/messages.ts` (~180 strings) + `apps/website/lib/messages.ts` (~40 strings)
-**Pattern:** `messages` (static `as const` object, nested by feature) + `templates` (dynamic functions with params)
-**Usage:** `import { messages } from '@/lib/messages'` → `messages.surveys.createFailed`
-**i18n path:** Replace `messages.key` with `t('key')` + move object to `messages/pl.json` when adding next-intl
-**Decision:** Per-app files (not shared package) — CMS and website have almost entirely different string sets
-**Diacritics:** 15+ typos fixed during extraction (Tytul→Tytuł, blad→błąd, etc.)
 
 ## CMS Settings — Calendar Card Consolidation (2026-03-25)
 

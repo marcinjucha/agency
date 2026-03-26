@@ -159,7 +159,25 @@ agency/
 **When committing:**
 
 - **No Co-Authored-By in commits** — Never add AI attribution footer ("Co-Authored-By: Claude" or similar) to commit messages.
+- **Always use feature branches** — Never commit directly to main. Create `feature/aaa-t-{id}-{slug}` branch, implement, test, then merge with `--no-ff`.
+- **All docs commits before merge** — memory.md, PROJECT_SPEC.yaml updates go on the feature branch BEFORE merging to main.
 
 **When writing code:**
 
 - **Always use defined agents for code changes** — Use code-developer-agent, design-agent etc. via Agent tool for ALL feature-level code changes. Direct edits only for trivial string changes (3 href values, 1 className).
+
+---
+
+## Project CLAUDE.md Files
+
+Index of all CLAUDE.md files and their scope:
+- `./CLAUDE.md` — Root project overview, skills reference, Notion integration
+- `./.claude/CLAUDE.md` — Claude-dev artifact repo (agents, skills, commands)
+- `./apps/CLAUDE.md` — Apps directory (CMS vs Website separation, shared patterns)
+- `./apps/cms/CLAUDE.md` — CMS admin panel (auth, routes, TanStack Query)
+- `./apps/cms/features/CLAUDE.md` — CMS features pattern (ADR-005, queries naming)
+- `./apps/website/CLAUDE.md` — Public website (survey flow, marketing pages)
+- `./packages/CLAUDE.md` — Shared packages (ui, database, validators)
+- `./packages/calendar/CLAUDE.md` — Google Calendar integration
+- `./supabase/CLAUDE.md` — Database config and migrations
+- `./n8n-workflows/CLAUDE.md` — N8n AI survey analysis workflows
