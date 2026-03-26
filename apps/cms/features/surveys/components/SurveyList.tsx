@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { FileText, Plus } from 'lucide-react'
 import { getSurveyStatusColor, type SurveyStatus } from '@/lib/utils/status'
 import { messages } from '@/lib/messages'
+import { routes } from '@/lib/routes'
 
 export function SurveyList() {
   const { data: surveys, isLoading, error } = useQuery({
@@ -29,7 +30,7 @@ export function SurveyList() {
         title={messages.surveys.noSurveys}
         description={messages.surveys.noSurveysDescription}
         action={
-          <Link href="/admin/surveys/new">
+          <Link href={routes.admin.surveyNew}>
             <Button>
               <Plus className="mr-2 h-4 w-4" />
               {messages.surveys.createSurvey}
@@ -44,7 +45,7 @@ export function SurveyList() {
     <div className="space-y-4">
       {surveys.map((survey) => (
         <Card key={survey.id} className="p-6 hover:shadow-md transition-shadow">
-          <Link href={`/admin/surveys/${survey.id}`}>
+          <Link href={routes.admin.survey(survey.id)}>
             <div className="flex items-start justify-between">
               <div className="flex-1 min-w-0">
                 <h3 className="text-lg font-semibold text-foreground truncate">{survey.title}</h3>

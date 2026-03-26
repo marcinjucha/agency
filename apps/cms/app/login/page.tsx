@@ -8,6 +8,7 @@ import { Input } from '@agency/ui'
 import { Label } from '@agency/ui'
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@agency/ui'
 import { messages } from '@/lib/messages'
+import { routes } from '@/lib/routes'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -31,7 +32,7 @@ export default function LoginPage() {
       setError(authError.message)
       setLoading(false)
     } else {
-      router.push('/admin')
+      router.push(routes.admin.root)
       router.refresh()
     }
   }

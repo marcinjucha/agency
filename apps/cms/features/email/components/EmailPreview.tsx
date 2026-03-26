@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react'
 import type { Block } from '../types'
+import { routes } from '@/lib/routes'
 
 interface EmailPreviewProps {
   blocks: Block[]
@@ -29,7 +30,7 @@ export function EmailPreview({ blocks, className }: EmailPreviewProps) {
 
       setLoading(true)
       try {
-        const res = await fetch('/api/email-templates/render', {
+        const res = await fetch(routes.api.emailTemplatesRender, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ blocks }),

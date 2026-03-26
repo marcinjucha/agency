@@ -10,6 +10,7 @@ import {
   generateSurveyLinkSchema,
 } from './validation'
 import { messages } from '@/lib/messages'
+import { routes } from '@/lib/routes'
 
 /**
  * Create a new survey
@@ -49,7 +50,7 @@ export async function createSurvey(formData: {
       return { success: false, error: insertError?.message || messages.surveys.createFailed }
     }
 
-    revalidatePath('/admin/surveys')
+    revalidatePath(routes.admin.surveys)
     return { success: true, surveyId: (survey as Tables<'surveys'>).id }
   } catch (error) {
     return { success: false, error: messages.surveys.createFailed }
@@ -78,8 +79,8 @@ export async function updateSurvey(
       return { success: false, error: error.message }
     }
 
-    revalidatePath('/admin/surveys')
-    revalidatePath(`/admin/surveys/${id}`)
+    revalidatePath(routes.admin.surveys)
+    revalidatePath(routes.admin.survey(id))
     return { success: true }
   } catch (error) {
     return { success: false, error: messages.surveys.updateFailed }
@@ -99,7 +100,7 @@ export async function deleteSurvey(id: string): Promise<{ success: boolean; erro
       return { success: false, error: error.message }
     }
 
-    revalidatePath('/admin/surveys')
+    revalidatePath(routes.admin.surveys)
     return { success: true }
   } catch (error) {
     return { success: false, error: messages.surveys.deleteFailed }
@@ -166,7 +167,7 @@ export async function generateSurveyLink(
       return { success: false, error: insertError?.message || messages.surveys.generateLinkFailed }
     }
 
-    revalidatePath(`/admin/surveys/${surveyId}`)
+    revalidatePath(routes.admin.survey(surveyId))
     return {
       success: true,
       linkId: (link as Tables<'survey_links'>).id,
@@ -194,8 +195,8 @@ export async function deleteSurveyLink(
       return { success: false, error: error.message }
     }
 
-    revalidatePath('/admin/surveys')
-    revalidatePath(`/admin/surveys/${surveyId}`)
+    revalidatePath(routes.admin.surveys)
+    revalidatePath(routes.admin.survey(surveyId))
     return { success: true }
   } catch (error) {
     return { success: false, error: messages.surveys.deleteLinkFailed }

@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { Badge } from '@agency/ui'
 import type { WebsiteBlogPost } from '../types'
 import { formatPolishDate } from '../utils'
+import { routes } from '@/lib/routes'
 
 type BlogArticlePageProps = {
   post: WebsiteBlogPost
@@ -116,7 +117,7 @@ export function BlogArticlePage({ post, isPreview = false }: BlogArticlePageProp
             </button>
 
             <Link
-              href="/blog"
+              href={routes.blog}
               className="text-sm font-medium text-muted-foreground transition-colors duration-200 hover:text-foreground"
             >
               {'\u2190 Wr\u00f3\u0107 do bloga'}

@@ -14,6 +14,7 @@ import { createClient } from '@supabase/supabase-js'
 import { getValidAccessToken, refreshAccessToken, createEvent } from '@agency/calendar'
 import type { BookingRequest, BookingResult, BookingError } from './types'
 import { messages } from '@/lib/messages'
+import { routes } from '@/lib/routes'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -214,7 +215,7 @@ export async function bookAppointment(
         status: newAppointment.status,
         createdAt: newAppointment.created_at,
       },
-      confirmationUrl: `/survey/${data.surveyId}/success?appointmentId=${newAppointment.id}`,
+      confirmationUrl: `${routes.surveySuccess(data.surveyId)}?appointmentId=${newAppointment.id}`,
     },
   }
 }

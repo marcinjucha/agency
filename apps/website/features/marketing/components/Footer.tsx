@@ -1,4 +1,6 @@
+import Link from 'next/link'
 import type { FooterBlock } from '@agency/database'
+import { routes } from '@/lib/routes'
 
 export function Footer({ description, privacy, terms, copyright }: FooterBlock) {
   return (
@@ -10,9 +12,9 @@ export function Footer({ description, privacy, terms, copyright }: FooterBlock) 
         <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-8">
           {/* Brand + Description */}
           <div className="max-w-sm">
-            <a href="/" className="text-lg font-bold text-foreground hover:text-primary transition-colors duration-300">
+            <Link href={routes.home} className="text-lg font-bold text-foreground hover:text-primary transition-colors duration-300">
               Halo Efekt
-            </a>
+            </Link>
             <p className="text-sm text-muted-foreground mt-3 leading-relaxed">
               {description}
             </p>
@@ -20,18 +22,18 @@ export function Footer({ description, privacy, terms, copyright }: FooterBlock) 
 
           {/* Legal Links */}
           <div className="flex items-center gap-6 text-sm">
-            <a
-              href="#privacy"
+            <Link
+              href={routes.politykaPrywatnosci}
               className="text-muted-foreground hover:text-foreground transition-colors duration-300"
             >
               {privacy}
-            </a>
-            <a
-              href="#terms"
+            </Link>
+            <Link
+              href={routes.regulamin}
               className="text-muted-foreground hover:text-foreground transition-colors duration-300"
             >
               {terms}
-            </a>
+            </Link>
           </div>
         </div>
 

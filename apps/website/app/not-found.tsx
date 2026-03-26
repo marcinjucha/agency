@@ -4,6 +4,7 @@ import { useEffect } from 'react'
 import Link from 'next/link'
 import { usePlausible } from 'next-plausible'
 import type { PlausibleEvents } from '@/lib/plausible'
+import { routes } from '@/lib/routes'
 
 export default function NotFound() {
   const plausible = usePlausible<PlausibleEvents>()
@@ -23,7 +24,7 @@ export default function NotFound() {
           Strona, której szukasz, nie istnieje lub została przeniesiona.
         </p>
         <Link
-          href="/"
+          href={routes.home}
           className="inline-flex items-center gap-2 bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl px-6 py-3 text-sm font-semibold transition-all duration-200"
         >
           Wróć na stronę główną

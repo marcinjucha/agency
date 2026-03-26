@@ -1,5 +1,6 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { routes } from '@/lib/routes'
 
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
@@ -11,7 +12,7 @@ export async function middleware(request: NextRequest) {
 
   if (!supabaseUrl || !supabaseKey) {
     console.error('Missing Supabase environment variables')
-    return NextResponse.redirect(new URL('/login', request.url))
+    return NextResponse.redirect(new URL(routes.login, request.url))
   }
 
   const supabase = createServerClient(
@@ -41,13 +42,13 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser()
 
   // Protect /admin routes
-  if (request.nextUrl.pathname.startsWith('/admin') && !user) {
-    return NextResponse.redirect(new URL('/login', request.url))
+  if (request.nextUrl.pathname.startsWith(routes.admin.root) && !user) {
+    return NextResponse.redirect(new URL(routes.login, request.url))
   }
 
   // Redirect logged-in users away from login page
-  if (request.nextUrl.pathname === '/login' && user) {
-    return NextResponse.redirect(new URL('/admin', request.url))
+  if (request.nextUrl.pathname === routes.login && user) {
+    return NextResponse.redirect(new URL(routes.admin.root, request.url))
   }
 
   return supabaseResponse

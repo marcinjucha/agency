@@ -5,6 +5,7 @@ import { Button } from '@agency/ui'
 import Link from 'next/link'
 import { Plus } from 'lucide-react'
 import { messages } from '@/lib/messages'
+import { routes } from '@/lib/routes'
 
 export default function SurveysPage() {
   return (
@@ -14,7 +15,7 @@ export default function SurveysPage() {
           <h1 className="text-3xl font-bold text-foreground">{messages.pages.surveysTitle}</h1>
           <p className="text-muted-foreground mt-1">{messages.pages.surveysDescription}</p>
         </div>
-        <Link href="/admin/surveys/new">
+        <Link href={routes.admin.surveyNew}>
           <Button>
             <Plus className="mr-2 h-4 w-4" />
             {messages.pages.createSurvey}

@@ -9,6 +9,7 @@ import Link from 'next/link'
 import type { Tables } from '@agency/database'
 import { SurveyLinks } from './SurveyLinks'
 import { messages } from '@/lib/messages'
+import { routes } from '@/lib/routes'
 
 type Question = {
   id: string
@@ -73,7 +74,7 @@ export function SurveyBuilder({ survey }: SurveyBuilderProps) {
     })
 
     if (result.success) {
-      router.push('/admin/surveys')
+      router.push(routes.admin.surveys)
       router.refresh()
     } else {
       setError(result.error || messages.surveys.saveFailed)
@@ -85,7 +86,7 @@ export function SurveyBuilder({ survey }: SurveyBuilderProps) {
     <div>
       <div className="mb-6">
         <Link
-          href="/admin/surveys"
+          href={routes.admin.surveys}
           className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-4"
         >
           <ArrowLeft className="mr-2 h-4 w-4" />

@@ -429,6 +429,7 @@ export type Database = {
         Row: {
           blocks: Json
           created_at: string
+          html_body: string | null
           id: string
           is_published: boolean
           page_type: string
@@ -441,6 +442,7 @@ export type Database = {
         Insert: {
           blocks?: Json
           created_at?: string
+          html_body?: string | null
           id?: string
           is_published?: boolean
           page_type?: string
@@ -453,6 +455,7 @@ export type Database = {
         Update: {
           blocks?: Json
           created_at?: string
+          html_body?: string | null
           id?: string
           is_published?: boolean
           page_type?: string

@@ -18,6 +18,7 @@ import {
 } from '../actions'
 import { AlertCircle, CheckCircle, Loader2, LogOut } from 'lucide-react'
 import { messages } from '@/lib/messages'
+import { routes } from '@/lib/routes'
 
 type TokenStatus = 'connected' | 'expired' | 'disconnected'
 
@@ -48,10 +49,10 @@ export function CalendarSettings() {
 
       if (successParam) {
         setShowMessage({ type: 'success', text: successParam })
-        window.history.replaceState({}, '', '/admin/settings')
+        window.history.replaceState({}, '', routes.admin.settings)
       } else if (errorParam) {
         setShowMessage({ type: 'error', text: errorParam })
-        window.history.replaceState({}, '', '/admin/settings')
+        window.history.replaceState({}, '', routes.admin.settings)
       }
     }
   }, [])
@@ -81,7 +82,7 @@ export function CalendarSettings() {
   }
 
   function handleConnect() {
-    window.location.href = '/api/auth/google'
+    window.location.href = routes.api.authGoogle
   }
 
   function handleDisconnectClick() {

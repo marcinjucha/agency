@@ -34,6 +34,7 @@ import type { SurveyData, SurveyAnswers } from '../types'
 import { messages } from '@/lib/messages'
 import { usePlausible } from 'next-plausible'
 import type { PlausibleEvents } from '@/lib/plausible'
+import { routes } from '@/lib/routes'
 
 interface SurveyFormProps {
   /** Survey data including title, description, and questions */
@@ -72,7 +73,7 @@ export function SurveyForm({ survey, linkId, token }: SurveyFormProps) {
     setSubmitError(null)
 
     try {
-      const response = await fetch('/api/survey/submit', {
+      const response = await fetch(routes.api.surveySubmit, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -93,7 +94,7 @@ export function SurveyForm({ survey, linkId, token }: SurveyFormProps) {
         if (result.responseId) params.append('responseId', result.responseId)
         if (result.linkId) params.append('linkId', result.linkId)
         const queryString = params.toString() ? `?${params.toString()}` : ''
-        router.push(`/survey/${token}/success${queryString}`)
+        router.push(`${routes.surveySuccess(token)}${queryString}`)
       } else {
         // Display error message from API
         setSubmitError(result.error || messages.survey.submitFailed)

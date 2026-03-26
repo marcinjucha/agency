@@ -8,6 +8,7 @@ import { Button, Input, Label, Card } from '@agency/ui'
 import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import { messages } from '@/lib/messages'
+import { routes } from '@/lib/routes'
 
 export function NewSurveyForm() {
   const [title, setTitle] = useState('')
@@ -26,7 +27,7 @@ export function NewSurveyForm() {
 
     if (result.success && result.surveyId) {
       await queryClient.invalidateQueries({ queryKey: ['surveys'] })
-      router.push(`/admin/surveys/${result.surveyId}`)
+      router.push(routes.admin.survey(result.surveyId))
     } else {
       setError(result.error || messages.surveys.createFailed)
       setLoading(false)
@@ -37,7 +38,7 @@ export function NewSurveyForm() {
     <div>
       <div className="mb-6">
         <Link
-          href="/admin/surveys"
+          href={routes.admin.surveys}
           className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-4"
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
@@ -88,7 +89,7 @@ export function NewSurveyForm() {
               <Button type="submit" disabled={loading || !title.trim()}>
                 {loading ? messages.surveys.creatingSurvey : messages.surveys.createSurvey}
               </Button>
-              <Link href="/admin/surveys">
+              <Link href={routes.admin.surveys}>
                 <Button type="button" variant="outline">
                   {messages.common.cancel}
                 </Button>

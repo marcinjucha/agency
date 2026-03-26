@@ -8,10 +8,11 @@ import { Button } from '@agency/ui'
 import type { NavbarBlock } from '@agency/database'
 import { usePlausible } from 'next-plausible'
 import type { PlausibleEvents } from '@/lib/plausible'
+import { routes } from '@/lib/routes'
 
 const NAV_LINKS = [
-  { href: '/', label: 'Strona główna' },
-  { href: '/blog', label: 'Blog' },
+  { href: routes.home, label: 'Strona główna' },
+  { href: routes.blog, label: 'Blog' },
 ] as const
 
 export function Navbar({ ctaText, ctaHref }: NavbarBlock) {
@@ -46,7 +47,7 @@ export function Navbar({ ctaText, ctaHref }: NavbarBlock) {
   }, [pathname])
 
   function isActive(href: string) {
-    if (href === '/') return pathname === '/'
+    if (href === routes.home) return pathname === routes.home
     return pathname.startsWith(href)
   }
 
@@ -62,7 +63,7 @@ export function Navbar({ ctaText, ctaHref }: NavbarBlock) {
         <nav className="mx-auto px-4 sm:px-6 py-3 max-w-6xl">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-8">
-              <Link href="/" className="group flex items-center gap-2">
+              <Link href={routes.home} className="group flex items-center gap-2">
                 <span className="text-lg font-bold tracking-tight bg-linear-to-r from-foreground via-foreground to-primary bg-clip-text text-gradient transition-all duration-300 group-hover:from-primary group-hover:to-primary/70">
                   Halo Efekt
                 </span>

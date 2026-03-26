@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { landingPageSchema } from './validation'
 import type { LandingBlock, SeoMetadata } from '@agency/database'
 import { messages } from '@/lib/messages'
+import { routes } from '@/lib/routes'
 
 export async function updateLandingPage(
   id: string,
@@ -40,7 +41,7 @@ export async function updateLandingPage(
 
     if (error) return { success: false, error: error.message }
 
-    revalidatePath('/admin/landing-page')
+    revalidatePath(routes.admin.landingPage)
     return { success: true }
   } catch (err) {
     const message = err instanceof Error ? err.message : messages.common.unknownError

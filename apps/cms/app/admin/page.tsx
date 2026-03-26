@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { messages } from '@/lib/messages'
+import { routes } from '@/lib/routes'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -11,7 +12,7 @@ export default async function DashboardPage() {
   } = await supabase.auth.getUser()
 
   if (!user) {
-    redirect('/login')
+    redirect(routes.login)
   }
 
   // Get basic stats

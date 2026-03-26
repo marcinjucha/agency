@@ -26,6 +26,7 @@ import {
   AlertDialogCancel,
 } from '@agency/ui'
 import { messages } from '@/lib/messages'
+import { routes } from '@/lib/routes'
 import { blogPostSchema, type BlogPostFormData } from '../validation'
 import { createBlogPost, updateBlogPost, deleteBlogPost } from '../actions'
 import { generateHtmlFromContent, calculateReadingTime, generateSlug, uploadImageToS3 } from '../utils'
@@ -177,7 +178,7 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
       onSuccess?.()
 
       if (!isEditing && result.data) {
-        router.push(`/admin/blog/${result.data.id}`)
+        router.push(routes.admin.blogPost(result.data.id))
       }
     } else {
       setSaveState('error')
@@ -206,7 +207,7 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
     const result = await deleteBlogPost(blogPost.id)
     if (result.success) {
       queryClient.invalidateQueries({ queryKey: blogKeys.all })
-      router.push('/admin/blog')
+      router.push(routes.admin.blog)
     } else {
       setDeleteState('idle')
       setErrorMessage(result.error ?? messages.blog.deleteFailed)
@@ -265,7 +266,7 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => router.push('/admin/blog')}
+              onClick={() => router.push(routes.admin.blog)}
               className="gap-1.5 text-muted-foreground hover:text-foreground"
             >
               <span aria-hidden="true">&larr;</span>

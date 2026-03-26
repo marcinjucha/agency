@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { handleCallback, revokeAccess } from '@/lib/google-calendar/oauth'
 import { cookies } from 'next/headers'
+import { routes } from '@/lib/routes'
 
 type CallbackResult =
   | { success: true; redirectPath: string }
@@ -31,7 +32,7 @@ export async function processOAuthCallback(
     console.error('Google OAuth error:', error, description)
     return {
       success: false,
-      redirectPath: `/admin/settings?error=Google+OAuth+failed:+${encodeURIComponent(description)}`,
+      redirectPath: `${routes.admin.settings}?error=Google+OAuth+failed:+${encodeURIComponent(description)}`,
     }
   }
 
@@ -40,7 +41,7 @@ export async function processOAuthCallback(
     console.error('No authorization code returned from Google')
     return {
       success: false,
-      redirectPath: '/admin/settings?error=No+authorization+code+received',
+      redirectPath: `${routes.admin.settings}?error=No+authorization+code+received`,
     }
   }
 
@@ -49,7 +50,7 @@ export async function processOAuthCallback(
     console.error('No state parameter returned from Google')
     return {
       success: false,
-      redirectPath: '/admin/settings?error=Invalid+OAuth+state',
+      redirectPath: `${routes.admin.settings}?error=Invalid+OAuth+state`,
     }
   }
 
@@ -60,7 +61,7 @@ export async function processOAuthCallback(
     console.error('State mismatch - possible CSRF attack')
     return {
       success: false,
-      redirectPath: '/admin/settings?error=OAuth+security+validation+failed',
+      redirectPath: `${routes.admin.settings}?error=OAuth+security+validation+failed`,
     }
   }
 
@@ -73,7 +74,7 @@ export async function processOAuthCallback(
   if (!user) {
     return {
       success: false,
-      redirectPath: '/login?error=Session+expired',
+      redirectPath: `${routes.login}?error=Session+expired`,
     }
   }
 
@@ -86,7 +87,7 @@ export async function processOAuthCallback(
     return {
       success: false,
       redirectPath:
-        '/admin/settings?error=Failed+to+exchange+authorization+code',
+        `${routes.admin.settings}?error=Failed+to+exchange+authorization+code`,
     }
   }
 
@@ -106,7 +107,7 @@ export async function processOAuthCallback(
     return {
       success: false,
       redirectPath:
-        '/admin/settings?error=Failed+to+save+calendar+connection',
+        `${routes.admin.settings}?error=Failed+to+save+calendar+connection`,
     }
   }
 
@@ -116,6 +117,6 @@ export async function processOAuthCallback(
   return {
     success: true,
     redirectPath:
-      '/admin/settings?success=Google+Calendar+connected+successfully',
+      `${routes.admin.settings}?success=Google+Calendar+connected+successfully`,
   }
 }
