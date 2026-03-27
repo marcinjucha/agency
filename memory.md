@@ -95,6 +95,11 @@
 - **next-plausible: no 404s extension + scriptProps.src override fails** — `next-plausible` `allModifiers` list doesn't include `404s`. Tried `scriptProps.src` override — didn't work. Correct approach: skip script extension entirely, call `plausible('404', {props: {path}})` manually via `usePlausible` hook in `not-found.tsx`. Gives path-level reporting in Plausible dashboard. (2026-03-26)
 - **pages table missing html_body column — Notion plan gap (AAA-T-58)** — `pages` table (migration 20260317200000) had `blocks JSONB` but NO `html_body` column. Blog uses `html_body` for website rendering via `dangerouslySetInnerHTML`. Analyst plan missed this — migration had to ADD COLUMN in addition to ALTER CHECK. Always verify actual DB schema vs assumptions. (2026-03-26)
 - **n8n MiniMax parser: content[0] assumes no thinking block** — MiniMax returns `content: [{type:"thinking",...}, {type:"text",...}]` but parser used `content[0].text` (assumed text at index 0). Fix: `.find(c => c.type === 'text')`. Applies to any model with extended thinking via Anthropic-compatible API. FIXED 2026-03-25 (AAA-T-94).
+- **responses table missing DELETE RLS policy** — SELECT/UPDATE/INSERT existed but no DELETE policy. Supabase silently returns `error: null` + 0 affected rows when RLS blocks DELETE — Server Action reports success but nothing is deleted. Fix: migration `20260327000000_add_delete_policy_responses.sql`. Always verify all CRUD RLS policies exist before implementing delete features. (2026-03-27, AAA-T-92)
+- **updateSurveySchema rejects null description** — `z.string().optional()` accepts `undefined` but NOT `null`. DB stores `null` for empty description. Fix: `.nullable().optional()`. Pre-existing bug surfaced during AAA-T-92 testing. (2026-03-27)
+- **useMutation + Server Action structured return = silent failure** — TanStack Query `useMutation` treats any non-thrown result as success. Server Actions returning `{ success: false }` don't trigger `onError`. Fix: wrap mutationFn to throw on `!result.success`. (2026-03-27, AAA-T-92)
+- **stopPropagation doesn't prevent Link navigation** — `e.stopPropagation()` on a button inside `<Link>` doesn't prevent navigation (Link is an ancestor `<a>`). Fix: restructure so `<Link>` wraps only content area, not action buttons. (2026-03-27, AAA-T-92)
+- **Detail view delete must invalidate list query cache** — Deleting from detail page + `router.push()` to list shows stale data because TanStack Query cache wasn't invalidated. Fix: `queryClient.invalidateQueries()` before `router.push()`. (2026-03-27, AAA-T-92)
 
 ## Domain Concepts
 
@@ -134,6 +139,20 @@
 **Change:** Merged two separate Google Calendar cards (`CalendarSettings` + `CalendarTokenStatus`) into one unified `CalendarSettings` component. `CalendarTokenStatus.tsx` deleted.
 **Why:** Redundant UX — both cards showed connection status independently. Single card handles all 3 states (connected/expired/disconnected) with `Promise.all` fetching both `getCalendarTokenStatus()` + `getGoogleCalendarStatus()`.
 **Disconnect Dialog** moved outside conditional blocks — shared between connected and expired states.
+
+## Domain Concepts (Email Infrastructure)
+
+- **email_configs table empty in production (2026-03-27)** — All 0 rows. Every email sent by n8n uses hardcoded fallback: Resend API key + `noreply@haloefekt.pl`. CMS Settings email config feature planned to fill this gap.
+- **survey_links.notification_email = private Gmail addresses** — All 5 survey links in production have @gmail.com notification emails (markos734@, trustcodepl@, mjucha92@, jan.kowalski@). These are OK for now — will be updated organically when surveys are recreated with firmowy email. (2026-03-27)
+- **notification_email is per survey_link, not per tenant** — Each survey link has its own notification address (set in CMS when creating link). No default from tenant config. Future enhancement: pre-fill from email_configs.from_email.
+
+## Architecture Decisions (Email Config Feature — 2026-03-27)
+
+- **`features/email-config/` separate from `features/email/`** — Config (API key, provider, from address) is ops/admin concern. Templates (blocks, HTML, WYSIWYG) is content concern. Different actors, different change frequency.
+- **pgcrypto for API key encryption (not Supabase Vault)** — `pgcrypto` already enabled (migration 20250105000001). Vault (pgsodium) needs verification + superuser. Using `pgp_sym_encrypt/decrypt` with key from `current_setting('app.encryption_key')`.
+- **`email_configs_decrypted` view for n8n** — n8n reads `api_key` as plain text via Supabase node. View auto-decrypts, n8n changes only tableId (no Code node changes).
+- **Test email via Server Action (not n8n)** — Fast operation <2s, direct Resend API call from CMS. Sends to logged-in admin's email. No n8n overhead needed.
+- **API key masked in client** — queries.ts returns `re_****abcd`. Full key never in browser state. Form uses empty field + masked placeholder (avoids dirty state issues with pre-filled masked values).
 
 ## Preferences
 

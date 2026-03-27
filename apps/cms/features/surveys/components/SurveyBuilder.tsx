@@ -2,8 +2,14 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { updateSurvey } from '../actions'
-import { Button, Input, Label, Card, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Textarea, Checkbox } from '@agency/ui'
+import { useQueryClient } from '@tanstack/react-query'
+import { updateSurvey, deleteSurvey } from '../actions'
+import {
+  Button, Input, Label, Card, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Textarea, Checkbox,
+  AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader,
+  AlertDialogFooter, AlertDialogTitle, AlertDialogDescription,
+  AlertDialogAction, AlertDialogCancel,
+} from '@agency/ui'
 import { ArrowLeft, Plus, Trash2, Save } from 'lucide-react'
 import Link from 'next/link'
 import type { Tables } from '@agency/database'
@@ -25,6 +31,7 @@ type SurveyBuilderProps = {
 }
 
 export function SurveyBuilder({ survey }: SurveyBuilderProps) {
+  const queryClient = useQueryClient()
   const [title, setTitle] = useState(survey.title)
   const [description, setDescription] = useState(survey.description || '')
   const [questions, setQuestions] = useState<Question[]>(() => {
@@ -41,6 +48,7 @@ export function SurveyBuilder({ survey }: SurveyBuilderProps) {
     }))
   })
   const [loading, setLoading] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
 
@@ -97,10 +105,45 @@ export function SurveyBuilder({ survey }: SurveyBuilderProps) {
             <h1 className="text-3xl font-bold text-foreground">{messages.surveys.editSurvey}</h1>
             <p className="text-muted-foreground mt-1">{messages.surveys.designForm}</p>
           </div>
-          <Button onClick={handleSave} disabled={loading}>
-            <Save className="mr-2 h-4 w-4" />
-            {loading ? messages.surveys.savingSurvey : messages.surveys.saveSurvey}
-          </Button>
+          <div className="flex items-center gap-2">
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="outline" disabled={deleting}>
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  {messages.common.delete}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>{messages.surveys.deleteSurveyConfirmTitle}</AlertDialogTitle>
+                  <AlertDialogDescription>{messages.surveys.deleteSurveyConfirmDescription(survey.title)}</AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>{messages.common.cancel}</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={async () => {
+                      setDeleting(true)
+                      const result = await deleteSurvey(survey.id)
+                      if (result.success) {
+                        queryClient.invalidateQueries({ queryKey: ['surveys'] })
+                        router.push(routes.admin.surveys)
+                      } else {
+                        setError(result.error || messages.surveys.deleteFailed)
+                        setDeleting(false)
+                      }
+                    }}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    {messages.common.delete}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+            <Button onClick={handleSave} disabled={loading}>
+              <Save className="mr-2 h-4 w-4" />
+              {loading ? messages.surveys.savingSurvey : messages.surveys.saveSurvey}
+            </Button>
+          </div>
         </div>
       </div>
 

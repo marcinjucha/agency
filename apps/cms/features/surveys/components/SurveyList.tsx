@@ -1,18 +1,33 @@
 'use client'
 
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getSurveys } from '../queries'
-import { Button, Card, LoadingState, ErrorState, EmptyState } from '@agency/ui'
+import { deleteSurvey } from '../actions'
+import {
+  Button, Card, LoadingState, ErrorState, EmptyState,
+  AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader,
+  AlertDialogFooter, AlertDialogTitle, AlertDialogDescription,
+  AlertDialogAction, AlertDialogCancel,
+} from '@agency/ui'
 import Link from 'next/link'
-import { FileText, Plus } from 'lucide-react'
+import { FileText, Plus, Trash2 } from 'lucide-react'
 import { getSurveyStatusColor, type SurveyStatus } from '@/lib/utils/status'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
 
 export function SurveyList() {
+  const queryClient = useQueryClient()
   const { data: surveys, isLoading, error } = useQuery({
     queryKey: ['surveys'],
     queryFn: getSurveys,
+  })
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const result = await deleteSurvey(id)
+      if (!result.success) throw new Error(result.error)
+      return result
+    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['surveys'] }) },
   })
 
   if (isLoading) {
@@ -45,29 +60,52 @@ export function SurveyList() {
     <div className="space-y-4">
       {surveys.map((survey) => (
         <Card key={survey.id} className="p-6 hover:shadow-md transition-shadow">
-          <Link href={routes.admin.survey(survey.id)}>
-            <div className="flex items-start justify-between">
-              <div className="flex-1 min-w-0">
-                <h3 className="text-lg font-semibold text-foreground truncate">{survey.title}</h3>
-                {survey.description && (
-                  <p className="text-sm text-muted-foreground mt-1 truncate">{survey.description}</p>
-                )}
-                <div className="flex items-center gap-4 mt-3 text-sm text-muted-foreground">
-                  <span className="flex items-center gap-1">
-                    <FileText className="h-4 w-4" />
-                    {Array.isArray(survey.questions) ? survey.questions.length : 0} questions
-                  </span>
-                  <span
-                    className={`px-2 py-1 rounded-full text-xs font-medium ${getSurveyStatusColor(
-                      survey.status as SurveyStatus
-                    )}`}
-                  >
-                    {survey.status}
-                  </span>
-                </div>
+          <div className="flex items-start justify-between">
+            <Link href={routes.admin.survey(survey.id)} className="flex-1 min-w-0">
+              <h3 className="text-lg font-semibold text-foreground truncate">{survey.title}</h3>
+              {survey.description && (
+                <p className="text-sm text-muted-foreground mt-1 truncate">{survey.description}</p>
+              )}
+              <div className="flex items-center gap-4 mt-3 text-sm text-muted-foreground">
+                <span className="flex items-center gap-1">
+                  <FileText className="h-4 w-4" />
+                  {Array.isArray(survey.questions) ? survey.questions.length : 0} questions
+                </span>
+                <span
+                  className={`px-2 py-1 rounded-full text-xs font-medium ${getSurveyStatusColor(
+                    survey.status as SurveyStatus
+                  )}`}
+                >
+                  {survey.status}
+                </span>
               </div>
-            </div>
-          </Link>
+            </Link>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <button
+                  className="p-3 text-muted-foreground hover:text-destructive transition-colors rounded-md hover:bg-muted"
+                  aria-label="Usuń"
+                >
+                  <Trash2 className="h-5 w-5" />
+                </button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>{messages.surveys.deleteSurveyConfirmTitle}</AlertDialogTitle>
+                  <AlertDialogDescription>{messages.surveys.deleteSurveyConfirmDescription(survey.title)}</AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>{messages.common.cancel}</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => deleteMutation.mutate(survey.id)}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    {messages.common.delete}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
         </Card>
       ))}
     </div>

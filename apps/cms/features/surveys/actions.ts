@@ -92,9 +92,10 @@ export async function updateSurvey(
  */
 export async function deleteSurvey(id: string): Promise<{ success: boolean; error?: string }> {
   try {
-    const supabase = await createClient()
+    const auth = await getUserWithTenant()
+    if (isAuthError(auth)) return { success: false, error: auth.error }
 
-    const { error } = await supabase.from('surveys').delete().eq('id', id)
+    const { error } = await auth.supabase.from('surveys').delete().eq('id', id)
 
     if (error) {
       return { success: false, error: error.message }
@@ -102,7 +103,7 @@ export async function deleteSurvey(id: string): Promise<{ success: boolean; erro
 
     revalidatePath(routes.admin.surveys)
     return { success: true }
-  } catch (error) {
+  } catch {
     return { success: false, error: messages.surveys.deleteFailed }
   }
 }

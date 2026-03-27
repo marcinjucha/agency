@@ -1,10 +1,16 @@
 'use client'
 
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getResponses } from '../queries'
-import { Card, LoadingState, ErrorState, EmptyState } from '@agency/ui'
+import { deleteResponse } from '../actions'
+import {
+  Card, LoadingState, ErrorState, EmptyState,
+  AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader,
+  AlertDialogFooter, AlertDialogTitle, AlertDialogDescription,
+  AlertDialogAction, AlertDialogCancel,
+} from '@agency/ui'
 import { useRouter } from 'next/navigation'
-import { ArrowRight, FileText } from 'lucide-react'
+import { ArrowRight, FileText, Trash2 } from 'lucide-react'
 import type { ResponseListItem, ResponseStatus } from '../types'
 import { getResponseStatusColor } from '@/lib/utils/status'
 import { messages } from '@/lib/messages'
@@ -32,6 +38,18 @@ import { routes } from '@/lib/routes'
  */
 export function ResponseList() {
   const router = useRouter()
+  const queryClient = useQueryClient()
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const result = await deleteResponse(id)
+      if (!result.success) throw new Error(result.error)
+      return result
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['responses'] })
+      queryClient.invalidateQueries({ queryKey: ['appointments'] })
+    },
+  })
   const {
     data: responses,
     isLoading,
@@ -105,6 +123,7 @@ export function ResponseList() {
                 key={response.id}
                 response={response}
                 onRowClick={() => router.push(routes.admin.response(response.id))}
+                onDelete={(id) => deleteMutation.mutate(id)}
               />
             ))}
           </tbody>
@@ -137,10 +156,12 @@ export function ResponseList() {
  */
 function ResponseRow({
   response,
-  onRowClick
+  onRowClick,
+  onDelete,
 }: {
   response: ResponseListItem
   onRowClick: () => void
+  onDelete: (id: string) => void
 }) {
   // Format date: "Dec 12, 2025 10:30 AM"
   const formatDate = (dateString: string | null) => {
@@ -197,6 +218,36 @@ function ResponseRow({
       {/* Actions Column */}
       <td className="px-6 py-4">
         <div className="flex items-center justify-end">
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <button
+                onClick={(e) => e.stopPropagation()}
+                className="p-3 text-muted-foreground hover:text-destructive transition-colors rounded-md hover:bg-muted"
+                aria-label="Usuń"
+              >
+                <Trash2 className="h-5 w-5" />
+              </button>
+            </AlertDialogTrigger>
+            <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+              <AlertDialogHeader>
+                <AlertDialogTitle>{messages.responses.deleteResponseConfirmTitle}</AlertDialogTitle>
+                <AlertDialogDescription>
+                  {response.has_appointment
+                    ? messages.responses.deleteResponseWithAppointmentDescription
+                    : messages.responses.deleteResponseConfirmDescription}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>{messages.common.cancel}</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => onDelete(response.id)}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  {messages.common.delete}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
           <button
             onClick={(e) => {
               e.stopPropagation()

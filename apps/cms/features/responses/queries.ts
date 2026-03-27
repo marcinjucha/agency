@@ -10,6 +10,7 @@ type SupabaseResponseRow = Tables<'responses'> & {
   survey_links: (Tables<'survey_links'> & {
     surveys: Tables<'surveys'>
   }) | null
+  appointments: { id: string }[] | null
 }
 
 /**
@@ -28,6 +29,7 @@ function transformToListItem(data: SupabaseResponseRow): ResponseListItem {
     surveys: {
       title: data.survey_links?.surveys?.title || 'Unknown Survey',
     },
+    has_appointment: !!(data.appointments && data.appointments.length > 0),
   }
 }
 
@@ -46,7 +48,8 @@ export async function getResponses(): Promise<ResponseListItem[]> {
     .from('responses')
     .select(`
       *,
-      survey_links(id, token, notification_email, survey_id, surveys(id, title))
+      survey_links(id, token, notification_email, survey_id, surveys(id, title)),
+      appointments(id)
     `)
     .order('created_at', { ascending: false })
 
@@ -92,6 +95,7 @@ function transformToDetailResponse(data: SupabaseDetailResponseRow): ResponseWit
           questions: (data.survey_links.surveys.questions ?? []) as any[],
         } as ResponseWithRelations['surveys'])
       : undefined,
+    has_appointment: !!(data.appointments && data.appointments.length > 0),
   }
 }
 
@@ -111,7 +115,8 @@ export async function getResponse(id: string): Promise<ResponseWithRelations | n
     .from('responses')
     .select(`
       *,
-      survey_links(id, token, survey_id, surveys(id, title, description, questions))
+      survey_links(id, token, survey_id, surveys(id, title, description, questions)),
+      appointments(id)
     `)
     .eq('id', id)
     .maybeSingle()

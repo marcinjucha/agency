@@ -106,6 +106,8 @@ export interface ResponseWithRelations {
   survey_links?: ResponseSurveyLinkContext
   /** Joined surveys data for question context */
   surveys?: SurveyData
+  /** Whether this response has a linked appointment */
+  has_appointment?: boolean
 }
 
 /**
@@ -144,6 +146,8 @@ export interface ResponseListItem {
     /** Survey title for list column */
     title: string
   }
+  /** Whether this response has a linked appointment */
+  has_appointment?: boolean
 }
 
 

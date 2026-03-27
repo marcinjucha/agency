@@ -106,6 +106,9 @@ export const messages = {
     copyFailed: 'Nie udało się skopiować linku',
     generateFailed: 'Nie udało się wygenerować linku',
     deleteLinkFailed2: 'Nie udało się usunąć linku',
+    deleteSurveyConfirmTitle: 'Usunąć ankietę?',
+    deleteSurveyConfirmDescription: (title: string) =>
+      `Ankieta "${title}" zostanie trwale usunięta wraz ze wszystkimi linkami i odpowiedziami. Tej operacji nie można cofnąć.`,
     expires: 'Wygasa:',
     never: 'Nigdy',
     submissions: 'Wypełnienia:',
@@ -370,6 +373,12 @@ export const messages = {
     summary: 'Podsumowanie',
     notesForLawyer: 'Notatki dla prawnika',
     moreActionsComing: 'Więcej akcji wkrótce (zmiana statusu, notatki, eksport itp.)',
+    deleteFailed: 'Nie udało się usunąć odpowiedzi',
+    deleteResponseConfirmTitle: 'Usunąć odpowiedź?',
+    deleteResponseConfirmDescription:
+      'Ta odpowiedź zostanie trwale usunięta. Tej operacji nie można cofnąć.',
+    deleteResponseWithAppointmentDescription:
+      'Ta odpowiedź ma powiązaną wizytę, która również zostanie usunięta. Tej operacji nie można cofnąć.',
   },
 
   appointments: {
@@ -388,6 +397,10 @@ export const messages = {
       `Wyświetlanie ${count} ${count === 1 ? 'wizyty' : 'wizyt'}`,
     viewResponseDetails: 'Zobacz szczegóły odpowiedzi',
     invalidDate: 'Nieprawidłowa data',
+    deleteFailed: 'Nie udało się usunąć wizyty',
+    deleteAppointmentConfirmTitle: 'Usunąć wizytę?',
+    deleteAppointmentConfirmDescription: (clientName: string) =>
+      `Wizyta z "${clientName}" zostanie trwale usunięta. Tej operacji nie można cofnąć.`,
   },
 
   nav: {

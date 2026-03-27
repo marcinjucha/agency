@@ -12,7 +12,7 @@ export const createSurveySchema = z.object({
 
 export const updateSurveySchema = z.object({
   title: z.string().min(1, messages.validation.titleRequired).optional(),
-  description: z.string().optional(),
+  description: z.string().nullable().optional(),
   status: z.enum(['draft', 'active', 'archived']).optional(),
   questions: z.array(z.any()).optional(),
 })

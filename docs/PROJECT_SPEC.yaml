@@ -160,6 +160,7 @@ features:
         - "Users can create surveys with 7 question types (text, textarea, email, tel, select, radio, checkbox)"
         - "Questions persist to database on save"
         - "Survey list shows all surveys for tenant"
+        - "Users can delete surveys (with confirmation dialog, cascades to links and responses)"
       tech_decisions:
         - decision: "React Hook Form for builder"
           rationale: "Complex form state with nested arrays (questions, options)"
@@ -231,6 +232,7 @@ features:
         - "Response list with submission date, status, survey title"
         - "Response detail shows question-answer pairs"
         - "RLS ensures users only see their tenant's responses"
+        - "Users can delete responses (with appointment-aware warning when linked appointment exists)"
       dependencies:
         - feature: "Form Submission"
         - feature: "Authentication"

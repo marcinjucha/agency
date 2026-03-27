@@ -10,7 +10,7 @@
       "path": "../claude-dev",
     },
     {
-      "path": "../../../Scandit/claude",
+      "path": "../../../.claude",
     },
   ],
   "settings": {
