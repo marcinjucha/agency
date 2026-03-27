@@ -1,14 +1,20 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useRouter } from 'next/navigation'
 import { getResponse } from '../queries'
 import type { ResponseWithRelations, QuestionAnswerPair } from '../types'
-import { Button, Card, Badge, LoadingState, ErrorState, EmptyState } from '@agency/ui'
+import {
+  Button, Card, Badge, LoadingState, ErrorState, EmptyState,
+  AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader,
+  AlertDialogFooter, AlertDialogTitle, AlertDialogDescription,
+  AlertDialogAction, AlertDialogCancel,
+} from '@agency/ui'
 import Link from 'next/link'
-import { ArrowLeft, FileX, Loader2, AlertTriangle } from 'lucide-react'
+import { ArrowLeft, FileX, Loader2, AlertTriangle, Trash2 } from 'lucide-react'
 import { getResponseStatusColor } from '@/lib/utils/status'
-import { triggerAiAnalysis } from '../actions'
+import { triggerAiAnalysis, deleteResponse } from '../actions'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
 
@@ -37,8 +43,11 @@ const MAX_RETRIES = 3
 const POLLS_PER_ATTEMPT = 3
 
 export function ResponseDetail({ responseId }: ResponseDetailProps) {
+  const router = useRouter()
+  const queryClient = useQueryClient()
   const [retryAttempt, setRetryAttempt] = useState(0)
   const [aiPhase, setAiPhase] = useState<'polling' | 'failed'>('polling')
+  const [deleting, setDeleting] = useState(false)
   const { data: response, isLoading, error } = useQuery({
     queryKey: ['response', responseId],
     queryFn: () => getResponse(responseId),
@@ -303,11 +312,50 @@ export function ResponseDetail({ responseId }: ResponseDetailProps) {
         )}
       </Card>
 
-      {/* Actions Footer - Placeholder */}
-      <Card className="p-6 bg-muted border-border">
-        <p className="text-sm text-muted-foreground">
-          {messages.responses.moreActionsComing}
-        </p>
+      {/* Actions Footer */}
+      <Card className="p-6">
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">
+            {messages.responses.moreActionsComing}
+          </p>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="outline" disabled={deleting}>
+                <Trash2 className="mr-2 h-4 w-4" />
+                {messages.common.delete}
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>{messages.responses.deleteResponseConfirmTitle}</AlertDialogTitle>
+                <AlertDialogDescription>
+                  {response.has_appointment
+                    ? messages.responses.deleteResponseWithAppointmentDescription
+                    : messages.responses.deleteResponseConfirmDescription}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>{messages.common.cancel}</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={async () => {
+                    setDeleting(true)
+                    const result = await deleteResponse(responseId)
+                    if (result.success) {
+                      queryClient.invalidateQueries({ queryKey: ['responses'] })
+                      if (result.hadAppointment) queryClient.invalidateQueries({ queryKey: ['appointments'] })
+                      router.push(routes.admin.responses)
+                    } else {
+                      setDeleting(false)
+                    }
+                  }}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  {messages.common.delete}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
       </Card>
     </div>
   )

@@ -1,10 +1,16 @@
 'use client'
 
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getAppointments } from '../queries'
-import { Card, LoadingState, ErrorState, EmptyState } from '@agency/ui'
+import { deleteAppointment } from '../actions'
+import {
+  Card, LoadingState, ErrorState, EmptyState,
+  AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader,
+  AlertDialogFooter, AlertDialogTitle, AlertDialogDescription,
+  AlertDialogAction, AlertDialogCancel,
+} from '@agency/ui'
 import { useRouter } from 'next/navigation'
-import { ExternalLink, CalendarCheck } from 'lucide-react'
+import { ExternalLink, CalendarCheck, Trash2 } from 'lucide-react'
 import { format } from 'date-fns'
 import { pl } from 'date-fns/locale/pl'
 import type { AppointmentListItem, AppointmentStatus } from '../types'
@@ -14,6 +20,15 @@ import { routes } from '@/lib/routes'
 
 export function AppointmentList() {
   const router = useRouter()
+  const queryClient = useQueryClient()
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const result = await deleteAppointment(id)
+      if (!result.success) throw new Error(result.error)
+      return result
+    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['appointments'] }) },
+  })
   const {
     data: appointments,
     isLoading,
@@ -89,6 +104,7 @@ export function AppointmentList() {
                     router.push(routes.admin.response(appointment.response.id))
                   }
                 }}
+                onDelete={(id) => deleteMutation.mutate(id)}
               />
             ))}
           </tbody>
@@ -110,10 +126,12 @@ export function AppointmentList() {
 
 function AppointmentRow({
   appointment,
-  onRowClick
+  onRowClick,
+  onDelete,
 }: {
   appointment: AppointmentListItem
   onRowClick: () => void
+  onDelete: (id: string) => void
 }) {
   const formatDateTime = (startTime: string, endTime: string) => {
     try {
@@ -165,6 +183,32 @@ function AppointmentRow({
 
       <td className="px-6 py-4">
         <div className="flex items-center justify-end">
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <button
+                onClick={(e) => e.stopPropagation()}
+                className="p-3 text-muted-foreground hover:text-destructive transition-colors rounded-md hover:bg-muted"
+                aria-label="Usuń"
+              >
+                <Trash2 className="h-5 w-5" />
+              </button>
+            </AlertDialogTrigger>
+            <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+              <AlertDialogHeader>
+                <AlertDialogTitle>{messages.appointments.deleteAppointmentConfirmTitle}</AlertDialogTitle>
+                <AlertDialogDescription>{messages.appointments.deleteAppointmentConfirmDescription(appointment.client_name)}</AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>{messages.common.cancel}</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => onDelete(appointment.id)}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  {messages.common.delete}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
           {hasResponse ? (
             <button
               onClick={(e) => {
