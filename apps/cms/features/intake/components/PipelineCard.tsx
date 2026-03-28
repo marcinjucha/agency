@@ -131,7 +131,7 @@ export const PipelineCardContent = forwardRef<HTMLDivElement, PipelineCardConten
         {response.internalNotes && (
           <div className="flex items-start gap-1.5 mt-2">
             <StickyNote className="h-3 w-3 text-muted-foreground flex-shrink-0 mt-0.5" />
-            <p className="text-xs text-muted-foreground truncate">
+            <p className="text-xs text-muted-foreground line-clamp-2">
               {response.internalNotes}
             </p>
           </div>
