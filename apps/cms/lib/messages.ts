@@ -179,6 +179,25 @@ export const messages = {
     deletePostConfirmTitle: 'Usunąć artykuł?',
     deletePostConfirmDescription: (title: string) =>
       `Artykuł "${title}" zostanie trwale usunięty. Tej operacji nie można cofnąć.`,
+    // Scheduling
+    scheduled: 'Zaplanowany',
+    published: 'Opublikowany',
+    draft: 'Szkic',
+    schedulePublish: 'Zaplanuj publikację',
+    publishNow: 'Opublikuj teraz',
+    scheduledFor: 'Zaplanowany na',
+    changeSchedule: 'Zmień termin',
+    removeSchedule: 'Usuń planowanie',
+    pickDate: 'Wybierz datę',
+    pickTime: 'Wybierz godzinę',
+    scheduleRequired: 'Wybierz datę i godzinę publikacji',
+    scheduleMustBeFuture: 'Data publikacji musi być w przyszłości',
+    // Views
+    listView: 'Lista',
+    calendarView: 'Kalendarz',
+    allStatuses: 'Wszystkie statusy',
+    noScheduledPosts: 'Brak zaplanowanych artykułów',
+    postsOnDate: (count: number) => count === 1 ? '1 artykuł' : `${count} artykułów`,
   },
 
   media: {
@@ -413,11 +432,70 @@ export const messages = {
       `Wizyta z "${clientName}" zostanie trwale usunięta. Tej operacji nie można cofnąć.`,
   },
 
+  intake: {
+    // Tabs
+    tabPipeline: 'Pipeline',
+    tabResponses: 'Odpowiedzi',
+    tabAppointments: 'Wizyty',
+    // Pipeline columns
+    columnNew: 'Nowy',
+    columnQualified: 'Skwalifikowany',
+    columnContacted: 'W kontakcie',
+    columnClosed: 'Zamknięty',
+    // Sub-status badges
+    badgeClient: 'Klient',
+    badgeRejected: 'Odrzucony',
+    badgeDisqualified: 'Zdyskwalifikowany',
+    // Sort
+    sortNewest: 'Najnowsze',
+    sortAiScore: 'AI score',
+    sortName: 'Nazwa',
+    sortLabel: 'Sortuj',
+    // Stats
+    statsNewResponses: 'Nowe odpowiedzi',
+    statsWaitingContact: 'Czekają na kontakt',
+    statsAppointmentsToday: 'Wizyty dziś',
+    statsAppointmentsTomorrow: 'Wizyty jutro',
+    // Sheet
+    sheetOpenFullPage: 'Otwórz pełną stronę',
+    sheetInternalNotes: 'Notatki wewnętrzne',
+    sheetNotesPlaceholder: 'Dodaj notatki o tym kliencie…',
+    sheetSaveNotes: 'Zapisz notatki',
+    sheetSavingNotes: 'Zapisywanie…',
+    sheetNotesSaved: 'Notatki zapisane',
+    sheetNotesSaveFailed: 'Nie udało się zapisać notatek',
+    sheetAiAnalysis: 'Analiza AI',
+    sheetAppointment: 'Wizyta',
+    sheetNoAppointment: 'Brak wizyty',
+    sheetChangeStatus: 'Zmień status',
+    // Pipeline
+    pipelineEmpty: 'Brak odpowiedzi w pipeline',
+    pipelineEmptyDescription: 'Odpowiedzi pojawią się tutaj po wypełnieniu ankiety przez klientów.',
+    pipelineCardNoName: 'Odpowiedź',
+    pipelineCardTimeAgo: 'temu',
+    // Table
+    tableFilterStatus: 'Status',
+    tableFilterSurvey: 'Ankieta',
+    tableFilterDate: 'Data',
+    tableFilterAiScore: 'AI Score',
+    tableFilterClient: 'Klient',
+    tableNoResults: 'Brak wyników',
+    tableNoResultsDescription: 'Spróbuj zmienić filtry.',
+    // Status update
+    statusUpdateFailed: 'Nie udało się zaktualizować statusu',
+    statusUpdateSuccess: 'Status zaktualizowany',
+    // Page
+    pageTitle: 'Intake Hub',
+    pageDescription: 'Zarządzaj procesem przyjmowania klientów.',
+    pageMetaTitle: 'Intake Hub | Halo-Efekt CMS',
+  },
+
   nav: {
     dashboard: 'Pulpit',
     surveys: 'Ankiety',
     responses: 'Odpowiedzi',
     appointments: 'Wizyty',
+    intake: 'Intake hub',
     calendar: 'Kalendarz',
     emailTemplates: 'Szablony email',
     landingPage: 'Strona główna',
@@ -485,6 +563,10 @@ export const messages = {
     appointmentsDescription: 'Przeglądaj i zarządzaj wizytami klientów.',
     appointmentsMetaTitle: 'Wizyty | Halo-Efekt CMS',
     appointmentsMetaDescription: 'Przeglądaj wizyty klientów',
+    // Intake Hub
+    intakeTitle: 'Intake Hub',
+    intakeDescription: 'Zarządzaj procesem przyjmowania klientów.',
+    intakeMetaTitle: 'Intake Hub | Halo-Efekt CMS',
     // Landing Page
     landingPageTitle: 'Strona główna',
     // CMS Layout

@@ -65,6 +65,19 @@ export {
 export { Tabs, TabsList, TabsTrigger, TabsContent } from './components/ui/tabs'
 export { Progress } from './components/ui/progress'
 export { Switch } from './components/ui/switch'
+export {
+  Sheet,
+  SheetPortal,
+  SheetOverlay,
+  SheetTrigger,
+  SheetClose,
+  SheetContent,
+  SheetHeader,
+  SheetFooter,
+  SheetTitle,
+  SheetDescription,
+} from './components/ui/sheet'
+export { Calendar } from './components/ui/calendar'
 
 // State components
 export { EmptyState } from './empty-state'

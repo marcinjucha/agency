@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, FileText, Inbox, CalendarCheck, Calendar, Settings, LogOut, Mail, Globe, Newspaper, Images, Scale } from 'lucide-react'
+import { LayoutDashboard, FileText, Inbox, Calendar, Settings, LogOut, Mail, Globe, Newspaper, Images, Scale } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { messages } from '@/lib/messages'
@@ -21,8 +21,7 @@ const menuGroups: MenuGroup[] = [
     label: messages.nav.groupIntake,
     items: [
       { href: routes.admin.surveys, label: messages.nav.surveys, icon: FileText },
-      { href: routes.admin.responses, label: messages.nav.responses, icon: Inbox },
-      { href: routes.admin.appointments, label: messages.nav.appointments, icon: CalendarCheck },
+      { href: routes.admin.intake, label: messages.nav.intake, icon: Inbox },
       { href: routes.admin.calendar, label: messages.nav.calendar, icon: Calendar },
     ],
   },
