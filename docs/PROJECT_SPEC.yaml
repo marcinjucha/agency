@@ -177,11 +177,17 @@ features:
         - "Generate unique links with UUID tokens"
         - "Optional expiration date and max submission limit"
         - "Expired/maxed-out links show error to clients"
+        - "Inline editing of link properties (notification_email, expires_at, max_submissions, is_active) without regenerating the token (AAA-T-88)"
+        - "Always-visible is_active Switch for instant link deactivation without opening an edit form (AAA-T-88)"
       tech_decisions:
         - decision: "RLS allows anonymous link reads"
           rationale: "Clients need to validate link without authentication"
         - decision: "Atomic counter increment via PostgreSQL function"
           rationale: "Prevent race conditions on submission count"
+        - decision: "Inline edit updates properties only, never touches link UUID"
+          rationale: "Regenerating the token breaks all existing client bookmarks — admins need to change email/expiry/limits without invalidating distributed links (AAA-T-88)"
+        - decision: "datetime-local input format requires manual coercion before Zod .datetime() validation"
+          rationale: "Browser datetime-local returns '2026-03-28T12:00' (no timezone); Zod .datetime() expects ISO 8601 with timezone — coerce to UTC before validation (AAA-T-88 bug fix)"
       dependencies:
         - feature: "Survey Builder"
 

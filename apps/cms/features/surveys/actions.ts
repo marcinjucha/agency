@@ -8,7 +8,9 @@ import {
   createSurveySchema,
   updateSurveySchema,
   generateSurveyLinkSchema,
+  updateSurveyLinkSchema,
 } from './validation'
+import type { UpdateSurveyLinkFormData } from './validation'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
 
@@ -118,6 +120,7 @@ export async function generateSurveyLink(
     notificationEmail: string
     expiresAt?: string // ISO date string
     maxSubmissions?: number | null
+    isActive?: boolean
   }
 ): Promise<{ success: boolean; linkId?: string; token?: string; error?: string }> {
   try {
@@ -126,6 +129,7 @@ export async function generateSurveyLink(
       notificationEmail: options.notificationEmail,
       expiresAt: options.expiresAt,
       maxSubmissions: options.maxSubmissions,
+      isActive: options.isActive ?? true,
     })
     if (!parsed.success) {
       return { success: false, error: parsed.error.errors[0].message }
@@ -155,7 +159,7 @@ export async function generateSurveyLink(
       expires_at: options.expiresAt || null,
       max_submissions: options.maxSubmissions ?? null, // null = unlimited
       submission_count: 0,
-      is_active: true, // CRITICAL: Required for RLS policy to allow public access
+      is_active: parsed.data.isActive, // CRITICAL: Required for RLS policy to allow public access
     }
 
     const { data: link, error: insertError } = await supabase
@@ -201,5 +205,46 @@ export async function deleteSurveyLink(
     return { success: true }
   } catch (error) {
     return { success: false, error: messages.surveys.deleteLinkFailed }
+  }
+}
+
+/**
+ * Update an existing survey link
+ * Allows editing notification_email, expires_at, max_submissions, is_active
+ */
+export async function updateSurveyLink(
+  linkId: string,
+  surveyId: string,
+  data: UpdateSurveyLinkFormData
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const parsed = updateSurveyLinkSchema.safeParse(data)
+    if (!parsed.success) {
+      return { success: false, error: parsed.error.errors[0].message }
+    }
+
+    const supabase = await createClient()
+
+    // RLS will ensure user can only update links for their tenant's surveys
+    const { error } = await supabase
+      .from('survey_links')
+      // @ts-expect-error - Supabase type inference issue with update payload
+      .update({
+        notification_email: parsed.data.notificationEmail,
+        expires_at: parsed.data.expiresAt ?? null,
+        max_submissions: parsed.data.maxSubmissions ?? null,
+        is_active: parsed.data.isActive,
+      })
+      .eq('id', linkId)
+
+    if (error) {
+      return { success: false, error: error.message }
+    }
+
+    revalidatePath(routes.admin.surveys)
+    revalidatePath(routes.admin.survey(surveyId))
+    return { success: true }
+  } catch {
+    return { success: false, error: messages.surveys.updateLinkFailed }
   }
 }

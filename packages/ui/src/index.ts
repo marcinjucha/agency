@@ -64,6 +64,7 @@ export {
 } from './components/ui/command'
 export { Tabs, TabsList, TabsTrigger, TabsContent } from './components/ui/tabs'
 export { Progress } from './components/ui/progress'
+export { Switch } from './components/ui/switch'
 
 // State components
 export { EmptyState } from './empty-state'
