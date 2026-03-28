@@ -28,22 +28,13 @@ import { getResponseStatusColor } from '@/lib/utils/status'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
 import { RESPONSE_STATUSES } from '../validation'
+import { STATUS_LABELS, getAiScoreTextColor, APPOINTMENT_STATUS_LABELS } from '../types'
 import type { PipelineResponse, ResponseStatus } from '../types'
 import type { Question, SurveyAnswers } from '../../responses/types'
 
 interface ResponseDetailPanelProps {
   response: PipelineResponse
   onClose: () => void
-}
-
-/** Status labels for the status selector */
-const STATUS_LABELS: Record<ResponseStatus, string> = {
-  new: messages.intake.columnNew,
-  qualified: messages.intake.columnQualified,
-  contacted: messages.intake.columnContacted,
-  disqualified: messages.intake.badgeDisqualified,
-  client: messages.intake.badgeClient,
-  rejected: messages.intake.badgeRejected,
 }
 
 /** AI recommendation badge styling */
@@ -65,13 +56,6 @@ const RECOMMENDATION_LABELS: Record<string, string> = {
   QUALIFIED: messages.intake.aiRecommendationQualified,
   DISQUALIFIED: messages.intake.aiRecommendationDisqualified,
   NEEDS_MORE_INFO: messages.intake.aiRecommendationNeedsMoreInfo,
-}
-
-/** AI score color: green 8-10, amber 5-7, red 0-4 */
-function getScoreColor(score: number): string {
-  if (score >= 8) return 'text-emerald-400'
-  if (score >= 5) return 'text-amber-400'
-  return 'text-red-400'
 }
 
 /** Build Q&A pairs from questions and answers */
@@ -276,7 +260,7 @@ export function ResponseDetailPanel({ response, onClose }: ResponseDetailPanelPr
                 )}
                 <span className="text-sm text-muted-foreground">
                   {messages.responses.overall}:{' '}
-                  <strong className={getScoreColor(response.aiScore)}>
+                  <strong className={getAiScoreTextColor(response.aiScore)}>
                     {response.aiScore}/10
                   </strong>
                 </span>
@@ -325,10 +309,7 @@ export function ResponseDetailPanel({ response, onClose }: ResponseDetailPanelPr
               </div>
               <div className="pl-6">
                 <Badge variant="secondary" className="text-xs">
-                  {response.appointment.status === 'scheduled' && 'Zaplanowana'}
-                  {response.appointment.status === 'completed' && 'Zakończona'}
-                  {response.appointment.status === 'cancelled' && 'Anulowana'}
-                  {response.appointment.status === 'no_show' && 'Nieobecność'}
+                  {APPOINTMENT_STATUS_LABELS[response.appointment.status] ?? response.appointment.status}
                 </Badge>
               </div>
             </div>

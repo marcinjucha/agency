@@ -89,6 +89,10 @@ export async function getPipelineResponses(): Promise<PipelineResponse[]> {
 export async function getIntakeStats(): Promise<IntakeStats> {
   const supabase = createClient()
 
+  // Appointments are filtered by user_id (same scope as getAppointments)
+  const { data: { user } } = await supabase.auth.getUser()
+  const userId = user?.id
+
   const today = new Date()
   today.setHours(0, 0, 0, 0)
   const tomorrow = new Date(today)
@@ -96,22 +100,28 @@ export async function getIntakeStats(): Promise<IntakeStats> {
   const dayAfter = new Date(tomorrow)
   dayAfter.setDate(dayAfter.getDate() + 1)
 
+  const todayApptQuery = supabase
+    .from('appointments')
+    .select('*', { count: 'exact', head: true })
+    .gte('start_time', today.toISOString())
+    .lt('start_time', tomorrow.toISOString())
+  if (userId) todayApptQuery.eq('user_id', userId)
+
+  const tomorrowApptQuery = supabase
+    .from('appointments')
+    .select('*', { count: 'exact', head: true })
+    .gte('start_time', tomorrow.toISOString())
+    .lt('start_time', dayAfter.toISOString())
+  if (userId) tomorrowApptQuery.eq('user_id', userId)
+
   const [newRes, contactedRes, todayAppt, tomorrowAppt] = await Promise.all([
     supabase.from('responses').select('*', { count: 'exact', head: true }).eq('status', 'new'),
     supabase
       .from('responses')
       .select('*', { count: 'exact', head: true })
       .eq('status', 'contacted'),
-    supabase
-      .from('appointments')
-      .select('*', { count: 'exact', head: true })
-      .gte('start_time', today.toISOString())
-      .lt('start_time', tomorrow.toISOString()),
-    supabase
-      .from('appointments')
-      .select('*', { count: 'exact', head: true })
-      .gte('start_time', tomorrow.toISOString())
-      .lt('start_time', dayAfter.toISOString()),
+    todayApptQuery,
+    tomorrowApptQuery,
   ])
 
   return {

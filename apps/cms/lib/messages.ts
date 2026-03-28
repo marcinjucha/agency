@@ -472,6 +472,11 @@ export const messages = {
     sheetAppointment: 'Wizyta',
     sheetNoAppointment: 'Brak wizyty',
     sheetChangeStatus: 'Zmień status',
+    // Appointment status labels
+    appointmentScheduled: 'Zaplanowana',
+    appointmentCompleted: 'Zakończona',
+    appointmentCancelled: 'Anulowana',
+    appointmentNoShow: 'Nieobecność',
     // Pipeline
     pipelineEmpty: 'Brak odpowiedzi w pipeline',
     pipelineEmptyDescription: 'Odpowiedzi pojawią się tutaj po wypełnieniu ankiety przez klientów.',
@@ -574,6 +579,7 @@ export const messages = {
     appointmentsMetaTitle: 'Wizyty | Halo-Efekt CMS',
     appointmentsMetaDescription: 'Przeglądaj wizyty klientów',
     // Intake Hub
+    backToIntake: 'Powrót do Intake Hub',
     intakeTitle: 'Intake Hub',
     intakeDescription: 'Zarządzaj procesem przyjmowania klientów.',
     intakeMetaTitle: 'Intake Hub | Halo-Efekt CMS',

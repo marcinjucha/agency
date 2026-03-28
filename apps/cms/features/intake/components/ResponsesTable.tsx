@@ -26,35 +26,16 @@ import { getResponseStatusColor } from '@/lib/utils/status'
 import { messages } from '@/lib/messages'
 import { RESPONSE_STATUSES } from '../validation'
 import { deleteResponse } from '../../responses/actions'
-import type { PipelineResponse, ResponseStatus } from '../types'
+import { STATUS_LABELS, getAiScoreTextColor } from '../types'
+import type { PipelineResponse } from '../types'
 
 interface ResponsesTableProps {
   responses: PipelineResponse[]
   onSelectResponse: (response: PipelineResponse) => void
 }
 
-/** Status labels for display */
-const STATUS_LABELS: Record<ResponseStatus, string> = {
-  new: messages.intake.columnNew,
-  qualified: messages.intake.columnQualified,
-  contacted: messages.intake.columnContacted,
-  disqualified: messages.intake.badgeDisqualified,
-  client: messages.intake.badgeClient,
-  rejected: messages.intake.badgeRejected,
-}
-
 /** "All" sentinel value for Select — Radix Select does not support empty string */
 const ALL_VALUE = '__all__'
-
-/**
- * AI score color based on the same green/amber/red scheme used in PipelineCard.
- * 8-10 = green (hot), 5-7 = amber (warm), 0-4 = red (cold)
- */
-function getAiScoreColor(score: number): string {
-  if (score >= 8) return 'text-status-success-foreground'
-  if (score >= 5) return 'text-status-warning-foreground'
-  return 'text-status-error-foreground'
-}
 
 /** Format date to pl-PL locale */
 function formatDate(dateString: string): string {
@@ -228,7 +209,7 @@ export function ResponsesTable({ responses, onSelectResponse }: ResponsesTablePr
                     {/* AI Score */}
                     <td className="px-6 py-4">
                       {response.aiScore !== null ? (
-                        <span className={`text-sm font-medium ${getAiScoreColor(response.aiScore)}`}>
+                        <span className={`text-sm font-medium ${getAiScoreTextColor(response.aiScore)}`}>
                           {response.aiScore}/10
                         </span>
                       ) : (

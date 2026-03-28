@@ -5,6 +5,7 @@ import { useDraggable } from '@dnd-kit/core'
 import { Badge } from '@agency/ui'
 import { Calendar, StickyNote } from 'lucide-react'
 import { messages } from '@/lib/messages'
+import { getAiScoreBgColor } from '../types'
 import type { PipelineResponse, ClosedSubStatus, CLOSED_SUB_STATUSES } from '../types'
 
 interface PipelineCardProps {
@@ -48,12 +49,6 @@ function formatTimeAgo(dateStr: string): string {
   return `${weeks}tyg ${messages.intake.pipelineCardTimeAgo}`
 }
 
-/** AI score color: green 8-10, amber 5-7, red 0-4 */
-function getScoreColor(score: number): string {
-  if (score >= 8) return 'bg-emerald-500'
-  if (score >= 5) return 'bg-amber-500'
-  return 'bg-red-500'
-}
 
 interface PipelineCardContentProps {
   response: PipelineResponse
@@ -96,7 +91,7 @@ export const PipelineCardContent = forwardRef<HTMLDivElement, PipelineCardConten
           </span>
           {response.aiScore !== null && (
             <span
-              className={`flex-shrink-0 inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold text-white ${getScoreColor(response.aiScore)}`}
+              className={`flex-shrink-0 inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold text-white ${getAiScoreBgColor(response.aiScore)}`}
               aria-label={`AI score: ${response.aiScore}`}
             >
               {response.aiScore}

@@ -25,6 +25,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@agency/ui'
+import { APPOINTMENT_STATUS_LABELS } from '../types'
 import { getAppointments } from '../../appointments/queries'
 import { deleteAppointment } from '../../appointments/actions'
 import type { AppointmentListItem, AppointmentStatus } from '../../appointments/types'
@@ -35,10 +36,10 @@ import { routes } from '@/lib/routes'
 const REFETCH_INTERVAL = 30_000
 
 const STATUS_OPTIONS: { value: AppointmentStatus; label: string }[] = [
-  { value: 'scheduled', label: 'Zaplanowana' },
-  { value: 'completed', label: 'Zakończona' },
-  { value: 'cancelled', label: 'Anulowana' },
-  { value: 'no_show', label: 'Nieobecność' },
+  { value: 'scheduled', label: APPOINTMENT_STATUS_LABELS['scheduled'] },
+  { value: 'completed', label: APPOINTMENT_STATUS_LABELS['completed'] },
+  { value: 'cancelled', label: APPOINTMENT_STATUS_LABELS['cancelled'] },
+  { value: 'no_show', label: APPOINTMENT_STATUS_LABELS['no_show'] },
 ]
 
 function formatDateTime(startTime: string, endTime: string): string {

@@ -9,6 +9,7 @@
 
 import type { ResponseStatus, AIQualification, SurveyAnswers } from '../responses/types'
 import type { AppointmentListItem } from '../appointments/types'
+import { messages } from '@/lib/messages'
 
 // Re-export for convenience
 export type { ResponseStatus, AIQualification, AppointmentListItem }
@@ -81,4 +82,41 @@ export interface IntakeStats {
   waitingForContact: number
   appointmentsToday: number
   appointmentsTomorrow: number
+}
+
+/** Shared status labels — single source of truth */
+export const STATUS_LABELS: Record<ResponseStatus, string> = {
+  new: messages.intake.columnNew,
+  qualified: messages.intake.columnQualified,
+  contacted: messages.intake.columnContacted,
+  disqualified: messages.intake.badgeDisqualified,
+  client: messages.intake.badgeClient,
+  rejected: messages.intake.badgeRejected,
+}
+
+/** AI score threshold: 8-10 hot, 5-7 warm, 0-4 cold */
+export function getAiScoreThreshold(score: number): 'hot' | 'warm' | 'cold' {
+  if (score >= 8) return 'hot'
+  if (score >= 5) return 'warm'
+  return 'cold'
+}
+
+/** AI score → background color (for pipeline card circles) */
+export function getAiScoreBgColor(score: number): string {
+  const t = getAiScoreThreshold(score)
+  return t === 'hot' ? 'bg-emerald-500' : t === 'warm' ? 'bg-amber-500' : 'bg-red-500'
+}
+
+/** AI score → text color (for table/panel display) */
+export function getAiScoreTextColor(score: number): string {
+  const t = getAiScoreThreshold(score)
+  return t === 'hot' ? 'text-emerald-400' : t === 'warm' ? 'text-amber-400' : 'text-red-400'
+}
+
+/** Appointment status labels */
+export const APPOINTMENT_STATUS_LABELS: Record<string, string> = {
+  scheduled: messages.intake.appointmentScheduled ?? 'Zaplanowana',
+  completed: messages.intake.appointmentCompleted ?? 'Zakończona',
+  cancelled: messages.intake.appointmentCancelled ?? 'Anulowana',
+  no_show: messages.intake.appointmentNoShow ?? 'Nieobecność',
 }
