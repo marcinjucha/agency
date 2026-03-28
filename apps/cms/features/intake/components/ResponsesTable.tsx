@@ -211,7 +211,7 @@ export function ResponsesTable({ responses, onSelectResponse }: ResponsesTablePr
 
                     {/* Survey */}
                     <td className="px-6 py-4">
-                      <span className="text-sm text-muted-foreground truncate max-w-[200px] block">
+                      <span className="text-sm text-muted-foreground">
                         {response.surveyTitle}
                       </span>
                     </td>
