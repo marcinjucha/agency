@@ -4,6 +4,9 @@ import { useState, useMemo, useCallback } from 'react'
 import {
   DndContext,
   DragOverlay,
+  PointerSensor,
+  useSensor,
+  useSensors,
   closestCorners,
   type DragStartEvent,
   type DragEndEvent,
@@ -45,6 +48,12 @@ interface PipelineViewProps {
 }
 
 export function PipelineView({ responses }: PipelineViewProps) {
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 8 },
+    })
+  )
+
   const [sortOption, setSortOption] = useState<PipelineSortOption>('newest')
   const [activeId, setActiveId] = useState<string | null>(null)
   const [selectedResponse, setSelectedResponse] = useState<PipelineResponse | null>(null)
@@ -160,6 +169,7 @@ export function PipelineView({ responses }: PipelineViewProps) {
 
       {/* Kanban columns */}
       <DndContext
+        sensors={sensors}
         collisionDetection={closestCorners}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
