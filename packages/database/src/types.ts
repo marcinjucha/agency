@@ -529,6 +529,62 @@ export type Database = {
           },
         ]
       }
+      site_settings: {
+        Row: {
+          created_at: string
+          default_keywords: string[] | null
+          default_og_image_url: string | null
+          google_site_verification: string | null
+          id: string
+          logo_url: string | null
+          organization_name: string | null
+          social_facebook: string | null
+          social_instagram: string | null
+          social_linkedin: string | null
+          social_twitter: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          default_keywords?: string[] | null
+          default_og_image_url?: string | null
+          google_site_verification?: string | null
+          id?: string
+          logo_url?: string | null
+          organization_name?: string | null
+          social_facebook?: string | null
+          social_instagram?: string | null
+          social_linkedin?: string | null
+          social_twitter?: string | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          default_keywords?: string[] | null
+          default_og_image_url?: string | null
+          google_site_verification?: string | null
+          id?: string
+          logo_url?: string | null
+          organization_name?: string | null
+          social_facebook?: string | null
+          social_instagram?: string | null
+          social_linkedin?: string | null
+          social_twitter?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "site_settings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       survey_links: {
         Row: {
           created_at: string | null

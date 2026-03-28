@@ -1,3 +1,4 @@
+import { cache } from 'react'
 import { createAnonClient } from '@/lib/supabase/anon-server'
 import type { Tables } from '@agency/database'
 import type { LandingBlock } from '@agency/database'
@@ -16,7 +17,9 @@ function toLandingPage(raw: unknown): LandingPage {
 
 // Fetch published landing page for SSR/ISR. Uses createAnonClient (no cookies) so it
 // works at build time in generateStaticParams — same pattern as blog queries.
-export async function getPublicLandingPage(): Promise<LandingPage | null> {
+// Wrapped with React.cache() to deduplicate within a single request —
+// generateMetadata() and HomePage both call this function.
+export const getPublicLandingPage = cache(async (): Promise<LandingPage | null> => {
   const supabase = createAnonClient()
   const { data, error } = await supabase
     .from('landing_pages')
@@ -28,4 +31,4 @@ export async function getPublicLandingPage(): Promise<LandingPage | null> {
   if (error) throw error
   if (!data) return null
   return toLandingPage(data)
-}
+})

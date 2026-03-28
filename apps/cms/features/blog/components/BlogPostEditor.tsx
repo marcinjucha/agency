@@ -4,7 +4,7 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useRouter } from 'next/navigation'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Button,
   Input,
@@ -18,6 +18,10 @@ import {
   Popover,
   PopoverTrigger,
   PopoverContent,
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
   AlertDialog,
   AlertDialogTrigger,
   AlertDialogContent,
@@ -28,7 +32,7 @@ import {
   AlertDialogAction,
   AlertDialogCancel,
 } from '@agency/ui'
-import { CalendarIcon } from 'lucide-react'
+import { CalendarIcon, HelpCircle } from 'lucide-react'
 import { format, startOfDay } from 'date-fns'
 import { pl } from 'date-fns/locale'
 import { messages } from '@/lib/messages'
@@ -42,6 +46,9 @@ import type { BlogPost, TiptapContent } from '../types'
 import { TiptapEditor } from './TiptapEditor'
 import { CategoryCombobox } from './CategoryCombobox'
 import { BlogStatusBadge } from './blog-status-badge'
+import { KeywordSelect } from '@/features/site-settings/components/KeywordSelect'
+import { getKeywordPool } from '@/features/site-settings/queries'
+import { siteSettingsKeys } from '@/features/site-settings/types'
 
 // --- Types ---
 
@@ -71,23 +78,17 @@ function extractText(node: TiptapContent | TiptapContent['content'][number]): st
   return ''
 }
 
-function parseKeywords(input: string): string[] {
-  return input
-    .split(',')
-    .map((k) => k.trim())
-    .filter(Boolean)
-}
-
-function formatKeywords(keywords: string[] | undefined): string {
-  return keywords?.join(', ') ?? ''
-}
-
 // --- Component ---
 
 export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
   const router = useRouter()
   const queryClient = useQueryClient()
   const isEditing = !!blogPost
+
+  const { data: keywordPool = [], isLoading: isPoolLoading } = useQuery({
+    queryKey: siteSettingsKeys.keywordPool,
+    queryFn: getKeywordPool,
+  })
 
   const [saveState, setSaveState] = useState<SaveState>('idle')
   const [deleteState, setDeleteState] = useState<'idle' | 'deleting'>('idle')
@@ -327,7 +328,7 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
     <div className="flex flex-col min-h-screen bg-muted/30">
       {/* ---- TOP BAR ---- */}
       <div className="sticky top-0 z-20 border-b border-border bg-background/95 backdrop-blur-sm">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
+        <div className="flex items-center justify-between px-4 py-3 sm:px-6">
           <div className="flex items-center gap-4">
             <Button
               variant="ghost"
@@ -421,7 +422,7 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
 
       {/* Error banner */}
       {errorMessage && (
-        <div className="mx-auto w-full max-w-7xl px-4 pt-3 sm:px-6">
+        <div className="w-full px-4 pt-3 sm:px-6">
           <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
             {errorMessage}
           </div>
@@ -429,7 +430,7 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
       )}
 
       {/* ---- MAIN CONTENT ---- */}
-      <div className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6">
+      <div className="w-full flex-1 px-4 py-6 sm:px-6">
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_380px]">
           {/* LEFT COLUMN — Title + Slug + Editor */}
           <div className="flex flex-col gap-6">
@@ -616,71 +617,137 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
                 <CardTitle className="text-sm font-medium">{messages.blog.seoTitle}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="space-y-1.5">
-                  <Label htmlFor="seo-title" className="text-xs">
-                    {messages.blog.seoTitleLabel}
-                  </Label>
-                  <Input
-                    id="seo-title"
-                    {...register('seo_metadata.title')}
-                    placeholder={messages.blog.seoTitlePlaceholder}
-                    className="h-8 text-sm"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="seo-description" className="text-xs">
-                      {messages.blog.seoDescriptionLabel}
-                    </Label>
-                    <span className="text-xs text-muted-foreground">
-                      {(watchSeoDescription?.length ?? 0)}/160
-                    </span>
+                <TooltipProvider delayDuration={300}>
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-1.5">
+                      <Label htmlFor="seo-title" className="text-xs">
+                        {messages.blog.seoTitleLabel}
+                      </Label>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            type="button"
+                            className="text-muted-foreground hover:text-foreground transition-colors"
+                            aria-label="Jeśli pusty, użyty zostanie tytuł artykułu. Zalecana długość: 50-60 znaków."
+                          >
+                            <HelpCircle className="h-3 w-3" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="right" className="max-w-xs">
+                          <p>Jeśli pusty, użyty zostanie tytuł artykułu. Zalecana długość: 50-60 znaków.</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                    <Input
+                      id="seo-title"
+                      {...register('seo_metadata.title')}
+                      placeholder={messages.blog.seoTitlePlaceholder}
+                      className="h-8 text-sm"
+                    />
                   </div>
-                  <Textarea
-                    id="seo-description"
-                    {...register('seo_metadata.description')}
-                    placeholder={messages.blog.seoDescriptionPlaceholder}
-                    className="min-h-[60px] resize-none text-sm"
-                    maxLength={160}
-                  />
-                  {errors.seo_metadata?.description && (
-                    <p className="text-xs text-destructive">
-                      {errors.seo_metadata.description.message}
-                    </p>
-                  )}
-                </div>
 
-                <div className="space-y-1.5">
-                  <Label htmlFor="seo-og-image" className="text-xs">
-                    OG Image URL
-                  </Label>
-                  <Input
-                    id="seo-og-image"
-                    {...register('seo_metadata.ogImage')}
-                    placeholder="https://..."
-                    className="h-8 text-sm"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="seo-keywords" className="text-xs">
-                    {messages.blog.seoKeywordsLabel}
-                  </Label>
-                  <Controller
-                    name="seo_metadata.keywords"
-                    control={control}
-                    render={({ field }) => (
-                      <Input
-                        id="seo-keywords"
-                        value={formatKeywords(field.value)}
-                        onChange={(e) => field.onChange(parseKeywords(e.target.value))}
-                        placeholder={messages.blog.seoKeywordsPlaceholder}
-                        className="h-8 text-sm"
-                      />
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <Label htmlFor="seo-description" className="text-xs">
+                          {messages.blog.seoDescriptionLabel}
+                        </Label>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              type="button"
+                              className="text-muted-foreground hover:text-foreground transition-colors"
+                              aria-label="Opis wyświetlany w wynikach wyszukiwania. Maksymalnie 160 znaków."
+                            >
+                              <HelpCircle className="h-3 w-3" />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent side="right" className="max-w-xs">
+                            <p>Opis wyświetlany w wynikach wyszukiwania. Maksymalnie 160 znaków.</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+                      <span className="text-xs text-muted-foreground">
+                        {(watchSeoDescription?.length ?? 0)}/160
+                      </span>
+                    </div>
+                    <Textarea
+                      id="seo-description"
+                      {...register('seo_metadata.description')}
+                      placeholder={messages.blog.seoDescriptionPlaceholder}
+                      className="min-h-[60px] resize-none text-sm"
+                      maxLength={160}
+                    />
+                    {errors.seo_metadata?.description && (
+                      <p className="text-xs text-destructive">
+                        {errors.seo_metadata.description.message}
+                      </p>
                     )}
-                  />
-                </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-1.5">
+                      <Label htmlFor="seo-og-image" className="text-xs">
+                        OG Image URL
+                      </Label>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            type="button"
+                            className="text-muted-foreground hover:text-foreground transition-colors"
+                            aria-label="Obraz wyświetlany przy udostępnianiu w mediach społecznościowych. Jeśli pusty, użyty zostanie obrazek okładkowy."
+                          >
+                            <HelpCircle className="h-3 w-3" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="right" className="max-w-xs">
+                          <p>Obraz wyświetlany przy udostępnianiu w mediach społecznościowych. Jeśli pusty, użyty zostanie obrazek okładkowy.</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                    <Input
+                      id="seo-og-image"
+                      {...register('seo_metadata.ogImage')}
+                      placeholder="https://..."
+                      className="h-8 text-sm"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-1.5">
+                      <Label htmlFor="seo-keywords" className="text-xs">
+                        {messages.blog.seoKeywordsLabel}
+                      </Label>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            type="button"
+                            className="text-muted-foreground hover:text-foreground transition-colors"
+                            aria-label="Słowa kluczowe pomagają w pozycjonowaniu. Wybierz istniejące lub dodaj nowe."
+                          >
+                            <HelpCircle className="h-3 w-3" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="right" className="max-w-xs">
+                          <p>Słowa kluczowe pomagają w pozycjonowaniu. Wybierz istniejące lub dodaj nowe.</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                    <Controller
+                      name="seo_metadata.keywords"
+                      control={control}
+                      render={({ field }) => (
+                        <KeywordSelect
+                          id="seo-keywords"
+                          value={field.value ?? []}
+                          onChange={field.onChange}
+                          pool={keywordPool}
+                          isLoading={isPoolLoading}
+                        />
+                      )}
+                    />
+                  </div>
+                </TooltipProvider>
               </CardContent>
             </Card>
 

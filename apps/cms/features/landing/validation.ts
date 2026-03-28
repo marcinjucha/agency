@@ -110,6 +110,7 @@ export const landingPageSchema = z.object({
       title: z.string(),
       description: z.string(),
       ogImage: z.string().optional(),
+      keywords: z.array(z.string()).optional(),
     })
     .optional(),
   is_published: z.boolean().optional(),

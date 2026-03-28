@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { getPublishedBlogPost, getPublishedBlogSlugs } from '@/features/blog/queries'
 import { BlogArticlePage } from '@/features/blog/components/BlogArticlePage'
 import { buildArticleJsonLd } from '@/features/blog/utils'
+import { getSiteSettings } from '@/features/site-settings/queries'
 import type { SeoMetadata } from '@/features/blog/types'
 
 export const revalidate = 60
@@ -25,10 +26,20 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 
   const seo = post.seo_metadata as SeoMetadata | null
+  const siteSettings = await getSiteSettings()
+
+  const mergedKeywords = [
+    ...new Set(
+      [...(seo?.keywords ?? []), ...(siteSettings?.default_keywords ?? [])].map(
+        (k) => k.toLowerCase()
+      )
+    ),
+  ]
 
   return {
-    title: seo?.title || `${post.title} | Halo Efekt`,
+    title: seo?.title || post.title,
     description: seo?.description || post.excerpt || undefined,
+    keywords: mergedKeywords.length > 0 ? mergedKeywords : undefined,
     openGraph: {
       title: seo?.title || post.title,
       description: seo?.description || post.excerpt || undefined,
@@ -39,6 +50,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       images: seo?.ogImage || post.cover_image_url
         ? [{ url: (seo?.ogImage || post.cover_image_url)! }]
         : undefined,
+    },
+    twitter: {
+      card: 'summary_large_image',
     },
   }
 }

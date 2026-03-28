@@ -78,6 +78,12 @@ export {
   SheetDescription,
 } from './components/ui/sheet'
 export { Calendar } from './components/ui/calendar'
+export {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+  TooltipProvider,
+} from './components/ui/tooltip'
 
 // State components
 export { EmptyState } from './empty-state'

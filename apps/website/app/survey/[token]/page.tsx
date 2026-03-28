@@ -60,6 +60,7 @@ export async function generateMetadata({ params }: PageProps) {
     return {
       title: messages.metadata.surveyUnavailableTitle,
       description: messages.metadata.surveyUnavailableDescription,
+      robots: { index: false, follow: false },
     }
   }
 
@@ -68,5 +69,6 @@ export async function generateMetadata({ params }: PageProps) {
     description:
       result.data.survey.description ||
       messages.metadata.defaultSurveyDescription,
+    robots: { index: false, follow: false },
   }
 }

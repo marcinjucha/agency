@@ -12,6 +12,7 @@ export type WebsiteBlogPost = {
   category: string | null
   author_name: string | null
   published_at: string | null
+  updated_at: string | null
   estimated_reading_time: number | null
   seo_metadata: SeoMetadata | null
 }

@@ -2,14 +2,31 @@
 
 import { useState, useEffect } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Button } from '@agency/ui'
-import { Input } from '@agency/ui'
-import { Label } from '@agency/ui'
+import { HelpCircle } from 'lucide-react'
+import {
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Input,
+  Label,
+  Switch,
+  Textarea,
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@agency/ui'
 import type { LandingBlock, SeoMetadata } from '@agency/database'
 import { DEFAULT_BLOCKS, BLOCK_TYPE_LABELS } from '@agency/database'
 import { getLandingPage } from '../queries'
 import { BlockFieldEditor } from './BlockFieldEditor'
 import { updateLandingPage } from '../actions'
+import { KeywordSelect } from '@/features/site-settings/components/KeywordSelect'
+import { getKeywordPool } from '@/features/site-settings/queries'
+import { siteSettingsKeys } from '@/features/site-settings/types'
+import { messages } from '@/lib/messages'
 
 type SaveState = 'idle' | 'saving' | 'saved' | 'error'
 
@@ -20,8 +37,13 @@ export function LandingPageEditor() {
     queryFn: getLandingPage,
   })
 
+  const { data: keywordPool = [], isLoading: isPoolLoading } = useQuery({
+    queryKey: siteSettingsKeys.keywordPool,
+    queryFn: getKeywordPool,
+  })
+
   const [blocks, setBlocks] = useState<LandingBlock[] | null>(null)
-  const [seo, setSeo] = useState<SeoMetadata>({ title: '', description: '', ogImage: '' })
+  const [seo, setSeo] = useState<SeoMetadata>({ title: '', description: '', ogImage: '', keywords: [] })
   const [isPublished, setIsPublished] = useState(false)
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null)
   const [saveState, setSaveState] = useState<SaveState>('idle')
@@ -30,7 +52,7 @@ export function LandingPageEditor() {
   useEffect(() => {
     if (page && blocks === null) {
       setBlocks(page.blocks?.length ? page.blocks : DEFAULT_BLOCKS)
-      setSeo(page.seo_metadata ?? { title: '', description: '', ogImage: '' })
+      setSeo(page.seo_metadata ?? { title: '', description: '', ogImage: '', keywords: [] })
       setIsPublished(page.is_published ?? false)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -79,20 +101,16 @@ export function LandingPageEditor() {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col gap-6 animate-pulse">
-        <div className="space-y-3">
-          <div className="h-3 w-12 rounded bg-muted" />
-          <div className="grid grid-cols-2 gap-4">
-            <div className="h-10 rounded-lg bg-muted" />
-            <div className="h-10 rounded-lg bg-muted" />
-          </div>
-          <div className="h-10 rounded-lg bg-muted" />
-        </div>
-        <div className="space-y-3">
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_380px]">
+        <div className="flex flex-col gap-2 animate-pulse">
           <div className="h-3 w-16 rounded bg-muted" />
           {Array.from({ length: 4 }).map((_, i) => (
             <div key={i} className="h-14 rounded-lg bg-muted" />
           ))}
+        </div>
+        <div className="flex flex-col gap-6 animate-pulse">
+          <div className="h-48 rounded-lg bg-muted" />
+          <div className="h-24 rounded-lg bg-muted" />
         </div>
       </div>
     )
@@ -102,51 +120,19 @@ export function LandingPageEditor() {
     return (
       <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-4">
         <p className="text-sm text-destructive font-medium">
-          Nie udało się załadować strony. Odśwież i spróbuj ponownie.
+          {messages.landing.loadFailed}
         </p>
       </div>
     )
   }
 
   return (
-    <div className="flex flex-col gap-8">
-      {/* SEO section */}
-      <section className="space-y-4">
-        <p className="text-xs font-semibold uppercase text-muted-foreground tracking-wide">SEO</p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="seo-title">Tytuł strony</Label>
-            <Input
-              id="seo-title"
-              value={activeSeo.title}
-              onChange={(e) => setSeo((prev) => ({ ...prev, title: e.target.value }))}
-              placeholder="Tytuł widoczny w wynikach wyszukiwania"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="seo-og-image">OG Image URL</Label>
-            <Input
-              id="seo-og-image"
-              value={activeSeo.ogImage ?? ''}
-              onChange={(e) => setSeo((prev) => ({ ...prev, ogImage: e.target.value }))}
-              placeholder="https://…"
-            />
-          </div>
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="seo-description">Opis strony</Label>
-          <Input
-            id="seo-description"
-            value={activeSeo.description}
-            onChange={(e) => setSeo((prev) => ({ ...prev, description: e.target.value }))}
-            placeholder="Krótki opis widoczny w wynikach wyszukiwania"
-          />
-        </div>
-      </section>
-
-      {/* Blocks list */}
+    <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_380px]">
+      {/* LEFT COLUMN — Block content editing */}
       <section className="space-y-3">
-        <p className="text-xs font-semibold uppercase text-muted-foreground tracking-wide">Sekcje</p>
+        <p className="text-xs font-semibold uppercase text-muted-foreground tracking-wide">
+          {messages.landing.sectionsLabel}
+        </p>
         <div className="flex flex-col gap-2">
           {activeBlocks.map((block, index) => (
             <div
@@ -169,7 +155,7 @@ export function LandingPageEditor() {
                   variant="ghost"
                   size="sm"
                   className="text-muted-foreground hover:text-foreground"
-                  aria-label={expandedIndex === index ? 'Zwiń' : 'Rozwiń'}
+                  aria-label={expandedIndex === index ? messages.landing.collapse : messages.landing.expand}
                   onClick={() => setExpandedIndex((prev) => (prev === index ? null : index))}
                 >
                   {expandedIndex === index ? '▲' : '▼'}
@@ -190,50 +176,176 @@ export function LandingPageEditor() {
         </div>
       </section>
 
-      {/* Publish toggle + save */}
-      <div className="flex items-center justify-between gap-4 pt-4 border-t border-border">
-        <label className="flex items-center gap-3 cursor-pointer select-none">
-          <div
-            role="switch"
-            aria-checked={activePublished}
-            aria-label="Publikuj stronę"
-            tabIndex={0}
-            onClick={() => setIsPublished(!activePublished)}
-            onKeyDown={(e) => {
-              if (e.key === ' ' || e.key === 'Enter') {
-                e.preventDefault()
-                setIsPublished(!activePublished)
-              }
-            }}
-            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${
-              activePublished ? 'bg-primary' : 'bg-muted'
-            }`}
-          >
-            <span
-              className={`inline-block h-4 w-4 rounded-full bg-background shadow-sm transition-transform ${
-                activePublished ? 'translate-x-6' : 'translate-x-1'
-              }`}
-            />
-          </div>
-          <span className="text-sm font-medium text-foreground">
-            {activePublished ? 'Opublikowana' : 'Szkic'}
-          </span>
-        </label>
+      {/* RIGHT COLUMN — Sidebar (SEO + Settings + Save) */}
+      <div className="flex flex-col gap-6">
+        {/* SEO card */}
+        <Card className="shadow-sm">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-base font-semibold">{messages.landing.seoCardTitle}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            <TooltipProvider delayDuration={300}>
+              {/* SEO Title */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-1.5">
+                  <Label htmlFor="seo-title" className="text-sm font-medium">
+                    {messages.landing.pageTitle}
+                  </Label>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        className="text-muted-foreground hover:text-foreground transition-colors"
+                        aria-label={messages.landing.pageTitleTooltip}
+                      >
+                        <HelpCircle className="h-3 w-3" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="right" className="max-w-xs">
+                      <p>{messages.landing.pageTitleTooltip}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+                <Input
+                  id="seo-title"
+                  value={activeSeo.title ?? ''}
+                  onChange={(e) => setSeo((prev) => ({ ...prev, title: e.target.value }))}
+                  placeholder={messages.landing.pageTitlePlaceholder}
+                  className="text-sm"
+                />
+              </div>
 
-        <div className="flex items-center gap-3">
+              {/* SEO Description */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <Label htmlFor="seo-description" className="text-sm font-medium">
+                      {messages.landing.pageDescription}
+                    </Label>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          className="text-muted-foreground hover:text-foreground transition-colors"
+                          aria-label={messages.landing.pageDescriptionTooltip}
+                        >
+                          <HelpCircle className="h-3 w-3" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="right" className="max-w-xs">
+                        <p>{messages.landing.pageDescriptionTooltip}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                  <span className="text-xs text-muted-foreground">
+                    {(activeSeo.description?.length ?? 0)}/160
+                  </span>
+                </div>
+                <Textarea
+                  id="seo-description"
+                  value={activeSeo.description ?? ''}
+                  onChange={(e) => setSeo((prev) => ({ ...prev, description: e.target.value }))}
+                  placeholder={messages.landing.pageDescriptionPlaceholder}
+                  rows={4}
+                  className="resize-none text-sm"
+                  maxLength={160}
+                />
+              </div>
+
+              {/* OG Image URL */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-1.5">
+                  <Label htmlFor="seo-og-image" className="text-sm font-medium">
+                    {messages.landing.ogImageLabel}
+                  </Label>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        className="text-muted-foreground hover:text-foreground transition-colors"
+                        aria-label={messages.landing.ogImageTooltip}
+                      >
+                        <HelpCircle className="h-3 w-3" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="right" className="max-w-xs">
+                      <p>{messages.landing.ogImageTooltip}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+                <Input
+                  id="seo-og-image"
+                  value={activeSeo.ogImage ?? ''}
+                  onChange={(e) => setSeo((prev) => ({ ...prev, ogImage: e.target.value }))}
+                  placeholder="https://…"
+                  className="text-sm"
+                />
+              </div>
+
+              {/* Keywords */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-1.5">
+                  <Label htmlFor="seo-keywords" className="text-sm font-medium">
+                    {messages.landing.keywordsLabel}
+                  </Label>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        className="text-muted-foreground hover:text-foreground transition-colors"
+                        aria-label={messages.landing.keywordsTooltip}
+                      >
+                        <HelpCircle className="h-3 w-3" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="right" className="max-w-xs">
+                      <p>{messages.landing.keywordsTooltip}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+                <KeywordSelect
+                  id="seo-keywords"
+                  value={activeSeo.keywords ?? []}
+                  onChange={(keywords) => setSeo((prev) => ({ ...prev, keywords }))}
+                  pool={keywordPool}
+                  isLoading={isPoolLoading}
+                />
+              </div>
+            </TooltipProvider>
+          </CardContent>
+        </Card>
+
+        {/* Settings card */}
+        <Card className="shadow-sm">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-base font-semibold">{messages.landing.settingsCardTitle}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="landing-publish" className="text-sm font-medium cursor-pointer">
+                {activePublished ? messages.landing.publishedLabel : messages.landing.draftLabel}
+              </Label>
+              <Switch
+                id="landing-publish"
+                checked={activePublished}
+                onCheckedChange={setIsPublished}
+                aria-label={messages.landing.publishPage}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Save button */}
+        <div className="flex flex-col gap-2">
           {saveState === 'error' && (
             <p className="text-sm text-destructive">
-              Nie udało się zapisać.
+              {messages.landing.saveFailed}
             </p>
           )}
           <Button
             onClick={handleSave}
             disabled={saveState === 'saving' || !page}
-            className={
-              saveState === 'saved'
-                ? 'bg-primary/80'
-                : undefined
-            }
+            className={`w-full ${saveState === 'saved' ? 'bg-primary/80' : ''}`}
           >
             {saveLabel[saveState]}
           </Button>

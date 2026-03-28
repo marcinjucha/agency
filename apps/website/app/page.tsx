@@ -1,4 +1,4 @@
-import { Metadata } from 'next'
+import type { Metadata } from 'next'
 import { Navbar } from '@/features/marketing/components/Navbar'
 import { Hero } from '@/features/marketing/components/Hero'
 import { Identification } from '@/features/marketing/components/Identification'
@@ -9,8 +9,10 @@ import { FinalCTA } from '@/features/marketing/components/FinalCTA'
 import { Footer } from '@/features/marketing/components/Footer'
 import { getPublicLandingPage } from '@/features/marketing/queries'
 import { findBlock, hasNewBlockTypes } from '@/features/marketing/utils'
+import { getSiteSettings } from '@/features/site-settings/queries'
 import {
   DEFAULT_BLOCKS,
+  type SeoMetadata,
   type NavbarBlock,
   type HeroBlock,
   type IdentificationBlock,
@@ -23,39 +25,56 @@ import {
 
 export const revalidate = 3600
 
-export const metadata: Metadata = {
-  title: 'Halo Efekt — Automatyzacja procesów biznesowych',
-  description:
-    'Automatyzujemy procesy operacyjne w firmach zatrudniających od kilku do 100 osób. Średnia oszczędność: 150 000 zł rocznie. Twoje ryzyko: 0%.',
-  keywords: [
-    'automatyzacja procesów',
-    'automatyzacja biznesu',
-    'AI dla firm',
-    'optymalizacja procesów',
-    'redukcja kosztów operacyjnych',
-    'automatyzacja pracy',
-  ],
-  openGraph: {
-    title: 'Halo Efekt — Automatyzacja procesów biznesowych',
-    description:
-      'Automatyzujemy procesy operacyjne w firmach i zwiększamy ich dochód bez zatrudniania nowych ludzi.',
-    type: 'website',
-    locale: 'pl_PL',
-    images: [
-      {
-        url: '/og-image.png',
-        width: 1200,
-        height: 630,
-        alt: 'Halo Efekt',
-      },
-    ],
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'Halo Efekt — Automatyzacja procesów biznesowych',
-    description:
-      'Automatyzujemy procesy operacyjne w firmach i zwiększamy ich dochód bez zatrudniania nowych ludzi.',
-  },
+const FALLBACK_TITLE = 'Halo Efekt — Automatyzacja procesów biznesowych'
+const FALLBACK_DESCRIPTION =
+  'Automatyzujemy procesy operacyjne w firmach zatrudniających od kilku do 100 osób. Średnia oszczędność: 150 000 zł rocznie. Twoje ryzyko: 0%.'
+const FALLBACK_OG_DESCRIPTION =
+  'Automatyzujemy procesy operacyjne w firmach i zwiększamy ich dochód bez zatrudniania nowych ludzi.'
+const FALLBACK_OG_IMAGE = '/og-image.png'
+
+export async function generateMetadata(): Promise<Metadata> {
+  const [page, siteSettings] = await Promise.all([
+    getPublicLandingPage(),
+    getSiteSettings(),
+  ])
+  const seo = (page?.seo_metadata ?? {}) as SeoMetadata
+
+  const title = seo.title || FALLBACK_TITLE
+  const description = seo.description || FALLBACK_DESCRIPTION
+  const ogImage = seo.ogImage || FALLBACK_OG_IMAGE
+  const mergedKeywords = [
+    ...new Set(
+      [...(seo.keywords ?? []), ...(siteSettings?.default_keywords ?? [])].map(
+        (k) => k.toLowerCase()
+      )
+    ),
+  ]
+  const keywords = mergedKeywords.length ? mergedKeywords : undefined
+
+  return {
+    title: { absolute: title },
+    description,
+    ...(keywords && { keywords }),
+    openGraph: {
+      title,
+      description: seo.description || FALLBACK_OG_DESCRIPTION,
+      type: 'website',
+      locale: 'pl_PL',
+      images: [
+        {
+          url: ogImage,
+          width: 1200,
+          height: 630,
+          alt: 'Halo Efekt',
+        },
+      ],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description: seo.description || FALLBACK_OG_DESCRIPTION,
+    },
+  }
 }
 
 export default async function HomePage() {
