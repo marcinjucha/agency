@@ -106,6 +106,16 @@ export const messages = {
     copyFailed: 'Nie udało się skopiować linku',
     generateFailed: 'Nie udało się wygenerować linku',
     deleteLinkFailed2: 'Nie udało się usunąć linku',
+    // Edit link
+    editLink: 'Edytuj link',
+    updateLinkSuccess: 'Link został zaktualizowany',
+    updateLinkFailed: 'Nie udało się zaktualizować linku',
+    active: 'Aktywny',
+    inactive: 'Nieaktywny',
+    noExpiry: 'Bez limitu czasowego',
+    noSubmissionLimit: 'Bez limitu',
+    editLinkSave: 'Zapisz zmiany',
+    editLinkCancel: 'Anuluj',
     deleteSurveyConfirmTitle: 'Usunąć ankietę?',
     deleteSurveyConfirmDescription: (title: string) =>
       `Ankieta "${title}" zostanie trwale usunięta wraz ze wszystkimi linkami i odpowiedziami. Tej operacji nie można cofnąć.`,

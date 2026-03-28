@@ -22,13 +22,32 @@ export const updateSurveySchema = z.object({
 export const generateSurveyLinkSchema = z.object({
   surveyId: z.string().uuid(messages.validation.invalidSurveyId),
   notificationEmail: z.string().email(messages.validation.invalidEmail),
-  expiresAt: z.string().datetime({ message: messages.validation.invalidDateFormat }).optional(),
+  expiresAt: z.string().min(1).optional(),
   maxSubmissions: z
     .number()
     .int(messages.validation.submissionsMustBeInteger)
     .positive(messages.validation.submissionsMustBePositive)
     .optional()
     .nullable(),
+  isActive: z.boolean().default(true),
+})
+
+// --- Update survey link schema ---
+
+export const updateSurveyLinkSchema = z.object({
+  notificationEmail: z.string().email(messages.validation.invalidEmail),
+  expiresAt: z
+    .string()
+    .min(1)
+    .nullable()
+    .optional(),
+  maxSubmissions: z
+    .number()
+    .int(messages.validation.submissionsMustBeInteger)
+    .positive(messages.validation.submissionsMustBePositive)
+    .nullable()
+    .optional(),
+  isActive: z.boolean(),
 })
 
 // --- Inferred types ---
@@ -36,3 +55,4 @@ export const generateSurveyLinkSchema = z.object({
 export type CreateSurveyFormData = z.infer<typeof createSurveySchema>
 export type UpdateSurveyFormData = z.infer<typeof updateSurveySchema>
 export type GenerateSurveyLinkFormData = z.infer<typeof generateSurveyLinkSchema>
+export type UpdateSurveyLinkFormData = z.infer<typeof updateSurveyLinkSchema>
