@@ -3,47 +3,23 @@
 ## Roadmap & Planning (2026-03-20)
 
 **Sprint 1 (current):** CTA → Survey flow + Regulamin/RODO/Cookies
-**Sprint 2:** Plausible Analytics + SEO + Roles & Permissions + Lead Pipeline Kanban
-**Sprint 3:** Email booking_confirmation + booking_reminder + T-5 Response Status
+**Sprint 2:** Plausible Analytics + SEO + Roles & Permissions + Intake Hub (replaces Kanban + Response Status)
+**Sprint 3:** Email booking_confirmation + booking_reminder
 **Backlog:** Multi-language, CRM/Slack integrations, Reporting, Onboarding, Newsletter, booking_cancellation
 
 **Key decisions:**
 - No pricing page — individual client approach, "umów się na rozmowę" instead
 - Contact form = reuse existing survey+calendar flow (no new backend code)
-- Kanban board consolidates with response list (responses ARE leads)
+- Kanban board consolidates with response list (responses ARE leads) → evolved into Intake Hub (AAA-T-124, 2026-03-28)
 - Roles: super_admin/admin/member + granular feature permissions per user
 - Plausible self-hosted on VPS (privacy-friendly, no cookies)
 - New Notion project: "Halo Efekt - VPS Infrastructure" for server-side services
 - Priority order: marketing (acquire clients) → intake/permissions (manage clients) → CMS polish
 
-## Email Notifications — Phase 1 DONE, Phase 2 COMPLETED (2026-03-13)
+## Email Notifications — COMPLETED (2026-03-13)
 
-### Phase 1 (COMPLETED 2026-03-06)
-**Scope:** n8n workflow for form_confirmation (hardcoded HTML template)
-
-**Delivered:**
-1. `survey_links.client_email` NOT NULL migration
-2. `email_configs` table (per-tenant: provider, api_key, from_email, from_name, is_active)
-3. n8n Subworkflow: Send Email — accepts `{ to, subject, html, from?, tenant_id }`, fetches tenant config, falls back to default Resend key
-4. n8n Workflow: Form Confirmation Email — webhook → fetch response → build HTML → Send Email
-5. Website fire-and-forget webhook call, CMS client email required
-6. `N8N_WEBHOOK_EMAIL_URL` env var
-
-**Technical:** Resend via native `https` (n8n sandbox blocks fetch/SDK). Per-tenant config via `email_configs`. HTML hardcoded in n8n Code node.
-
-### Phase 2 (COMPLETED 2026-03-13 - E2E TEST PASSED)
-
-**Completed Components:**
-- `email_templates` migration with RLS and default seed
-- React Email package (@agency/email) with block editor blocks
-- CMS email template manager with block editor + live preview
-- n8n Form Confirmation Email workflow updated to fetch html_body from DB
-
-**Architecture Changes Discovered:**
-- Email NOT to client (who only gets success page)
-- Email IS notification to kancelaria (law firm) about new submission
-- `survey_links.client_email` = law firm email (attorney provides when creating link)
-- CTA button in email → links to CMS for response management
+Phase 1 (n8n form_confirmation) + Phase 2 (CMS template editor + live preview) — both done.
+**Key domain insight:** Email is notification TO kancelaria about new submission (not to client). `survey_links.client_email` = law firm email. Client only sees success page. CTA in email → CMS response management.
 
 ## Media Library — AAA-T-75 (2026-03-23)
 
@@ -80,6 +56,26 @@
 
 **Remaining:** stworzenie ankiety w CMS, update CTA href w CMS editor (DB row), E2E flow test
 
+## Intake Hub — AAA-T-124 (2026-03-28)
+
+**Status:** Planned, In Progress in Notion. Absorbs AAA-T-5, T-62, T-6, T-4 (all cancelled).
+**Scope:** Unified `/admin/intake` page replacing 3 separate sidebar pages (Responses, Appointments removed from sidebar). Ankiety stays separate (config/setup).
+
+**Key decisions:**
+- 4 Kanban columns: Nowy → Skwalifikowany → W kontakcie → Zamknięty (client/rejected/disqualified as sub-status badges)
+- `needs_more_info` is AI recommendation in `ai_qualification.recommendation`, NOT a DB status — status stays `new`
+- responses.status CHECK constraint (TEXT, not enum) — extend with `client`, `rejected`
+- New columns: `internal_notes TEXT`, `status_changed_at TIMESTAMPTZ` on responses
+- Sheet (480px drawer) for detail view from Kanban; full page `/admin/responses/[id]` stays for bookmarks
+- Tables (Odpowiedzi/Wizyty tabs): row click → full page, NOT Sheet
+- Sorting configurable (default: Najnowsze, options: AI score, Nazwa)
+- Auto-refresh 30s (not 5s) — stats overview, not real-time monitor
+- Filters in tables via URL searchParams (bookmarkable)
+- Single useQuery at IntakeHub level, data passed as props to children
+- @dnd-kit for D&D (not react-beautiful-dnd — unmaintained)
+- Sheet component needs `npx shadcn@latest add sheet` in packages/ui/
+- 10 iterations in 3 phases: (1) Hub + Pipeline, (2) Sheet detail, (3) Tables + Stats + cleanup
+
 ## Feedback & Corrections
 
 - **validator-agent misses P2 architecture violations** — Phase 8 catches functional bugs (P0/P1) but not code organization issues: wrong file placement, code duplication, missing theme tokens. These require a separate architecture audit with explicit ADR-005 checklist. (2026-03-18)
@@ -93,13 +89,10 @@
 ## Bugs Found
 
 - **next-plausible: no 404s extension + scriptProps.src override fails** — `next-plausible` `allModifiers` list doesn't include `404s`. Tried `scriptProps.src` override — didn't work. Correct approach: skip script extension entirely, call `plausible('404', {props: {path}})` manually via `usePlausible` hook in `not-found.tsx`. Gives path-level reporting in Plausible dashboard. (2026-03-26)
-- **pages table missing html_body column — Notion plan gap (AAA-T-58)** — `pages` table (migration 20260317200000) had `blocks JSONB` but NO `html_body` column. Blog uses `html_body` for website rendering via `dangerouslySetInnerHTML`. Analyst plan missed this — migration had to ADD COLUMN in addition to ALTER CHECK. Always verify actual DB schema vs assumptions. (2026-03-26)
 - **n8n MiniMax parser: content[0] assumes no thinking block** — MiniMax returns `content: [{type:"thinking",...}, {type:"text",...}]` but parser used `content[0].text` (assumed text at index 0). Fix: `.find(c => c.type === 'text')`. Applies to any model with extended thinking via Anthropic-compatible API. FIXED 2026-03-25 (AAA-T-94).
 - **responses table missing DELETE RLS policy** — SELECT/UPDATE/INSERT existed but no DELETE policy. Supabase silently returns `error: null` + 0 affected rows when RLS blocks DELETE — Server Action reports success but nothing is deleted. Fix: migration `20260327000000_add_delete_policy_responses.sql`. Always verify all CRUD RLS policies exist before implementing delete features. (2026-03-27, AAA-T-92)
 - **updateSurveySchema rejects null description** — `z.string().optional()` accepts `undefined` but NOT `null`. DB stores `null` for empty description. Fix: `.nullable().optional()`. Pre-existing bug surfaced during AAA-T-92 testing. (2026-03-27)
 - **useMutation + Server Action structured return = silent failure** — TanStack Query `useMutation` treats any non-thrown result as success. Server Actions returning `{ success: false }` don't trigger `onError`. Fix: wrap mutationFn to throw on `!result.success`. (2026-03-27, AAA-T-92)
-- **stopPropagation doesn't prevent Link navigation** — `e.stopPropagation()` on a button inside `<Link>` doesn't prevent navigation (Link is an ancestor `<a>`). Fix: restructure so `<Link>` wraps only content area, not action buttons. (2026-03-27, AAA-T-92)
-- **Detail view delete must invalidate list query cache** — Deleting from detail page + `router.push()` to list shows stale data because TanStack Query cache wasn't invalidated. Fix: `queryClient.invalidateQueries()` before `router.push()`. (2026-03-27, AAA-T-92)
 - **datetime-local vs Zod .datetime() mismatch** — HTML `datetime-local` input produces `"2026-03-28T14:30"` (no seconds, no timezone) but `z.string().datetime()` requires full ISO 8601. Fix: replace with `z.string().min(1)` — actual date parsing happens on PostgreSQL side (`timestamptz` column). Pre-existing bug in `generateSurveyLinkSchema`, also affected new `updateSurveyLinkSchema`. FIXED 2026-03-28 (AAA-T-88).
 
 ## Domain Concepts
@@ -117,17 +110,7 @@
 
 ## Architecture Audit — AAA-T-83 (2026-03-25)
 
-**Status:** COMPLETE — 41 commits, merged to main 2026-03-25. 40 issues fixed, 10 deferred. Also fixed 2 pre-existing bugs during testing (email template save, survey list cache).
-
-**Key structural changes:**
-- `apps/cms/lib/auth.ts` — shared `getUserWithTenant()` helper (eliminated 4x duplication)
-- `apps/website/features/calendar/slot-calculator.ts` + `settings-cache.ts` + `booking.ts` + `validation.ts` — extracted from monolithic API routes
-- `apps/cms/features/calendar/oauth-callback.ts` — extracted from auth callback route
-- `EmptyState/ErrorState/LoadingState` moved from both apps → `@agency/ui`
-- `SeoMetadata` consolidated to `@agency/database` (was 3 diverging definitions)
-- `email/queries.ts` → `queries.server.ts` (naming convention fix)
-- `surveys/validation.ts` created (was missing — 5 unvalidated actions)
-- `landing/types.ts` created (types moved out of queries.ts)
+**Status:** COMPLETE (2026-03-25). Structural changes in code/git.
 
 **Deferred items (documented in Notion):**
 - BlogPostEditor 674L + CalendarBooking 559L — split into subcomponents
@@ -135,12 +118,6 @@
 - @agency/email used only by CMS — consider moving to app
 - Speculative types in responses/types.ts + appointments/types.ts — remove unused
 - .env.local.example files missing
-
-## CMS Settings — Calendar Card Consolidation (2026-03-25)
-
-**Change:** Merged two separate Google Calendar cards (`CalendarSettings` + `CalendarTokenStatus`) into one unified `CalendarSettings` component. `CalendarTokenStatus.tsx` deleted.
-**Why:** Redundant UX — both cards showed connection status independently. Single card handles all 3 states (connected/expired/disconnected) with `Promise.all` fetching both `getCalendarTokenStatus()` + `getGoogleCalendarStatus()`.
-**Disconnect Dialog** moved outside conditional blocks — shared between connected and expired states.
 
 ## Domain Concepts (Email Infrastructure)
 
@@ -155,11 +132,14 @@
 - **`email_configs_decrypted` view for n8n** — n8n reads `api_key` as plain text via Supabase node. View auto-decrypts, n8n changes only tableId (no Code node changes).
 - **Test email via Server Action (not n8n)** — Fast operation <2s, direct Resend API call from CMS. Sends to logged-in admin's email. No n8n overhead needed.
 - **API key masked in client** — queries.ts returns `re_****abcd`. Full key never in browser state. Form uses empty field + masked placeholder (avoids dirty state issues with pre-filled masked values).
+- **`features/intake/` composes from responses + appointments** — New feature, does NOT modify existing `features/responses/` or `features/appointments/`. Sheet reuses `getResponse()` from responses/queries.ts. Pipeline has its own `getPipelineResponses()` (needs ai_qualification + answers for name extraction). ADR-005 compliant. (2026-03-28, AAA-T-124)
+- **Survey required fields (imię + email) — deferred** — User wants to enforce first 2 questions as required (imię, email) in survey builder. Deferred to AAA-T-8 (Survey Builder Improvements). Intake Hub assumes name/email exist in answers; fallback "Odpowiedź #N" for old data. (2026-03-28)
 
 ## Preferences
 
 - **Notion tasks: single task with checklist content, not subtasks** — User prefers one task with plan broken into checkboxes in page body, not 7 separate tasks. Reason: flexibility to partially complete and pause without managing many task statuses. (2026-03-23)
 - **Agency Tasks DB: "Type" property removed** — User removed Type property from Agency Tasks DB (2026-03-23). Schema now: Name, Status, Priority, Deadline, Notes, Projects (relation), Client (relation), ID.
 - **Centralized route constants: lib/routes.ts** — Both CMS and Website now have `lib/routes.ts` (like `messages.ts`). Static routes = strings, dynamic = functions. CMS: 24 routes, 35 files updated. Website: 12 routes, 12 files updated. Prevents typos in hrefs, revalidatePath, API fetch calls. (2026-03-26, AAA-T-58)
-- **CMS sidebar grouped thematically** — User requested grouping during AAA-T-58 testing. Groups: (no label) Pulpit, **Intake** (Ankiety, Odpowiedzi, Wizyty, Kalendarz), **Treść** (Strona główna, Blog, Media, Strony prawne), **System** (Szablony email, Ustawienia). Tiny uppercase labels at 60% opacity. (2026-03-26)
+- **CMS sidebar grouped thematically** — User requested grouping during AAA-T-58 testing. Groups: (no label) Pulpit, **Intake** (Ankiety, Intake hub, Kalendarz — after AAA-T-124), **Treść** (Strona główna, Blog, Media, Strony prawne), **System** (Szablony email, Ustawienia). Tiny uppercase labels at 60% opacity. (2026-03-26, updated 2026-03-28)
 - **/develop command: docs before merge** — Phase 5 reordered: (1) Notion + PROJECT_SPEC update, (2) auto-invoke /extract-memory, (3) merge to main. All doc commits land on feature branch inside --no-ff merge bubble. Phase 6 absorbed into Phase 5. (2026-03-26)
+- **current_submissions read-only, max_submissions editable** — Never reset submission counter (loses audit trail). To allow more submissions, increase max_submissions instead. User confirmed 2026-03-28 (AAA-T-88).
