@@ -479,8 +479,14 @@ export const messages = {
     tableFilterDate: 'Data',
     tableFilterAiScore: 'AI Score',
     tableFilterClient: 'Klient',
+    tableAllStatuses: 'Wszystkie statusy',
+    tableAllSurveys: 'Wszystkie ankiety',
+    tableActions: 'Akcje',
+    tableView: 'Zobacz',
     tableNoResults: 'Brak wyników',
     tableNoResultsDescription: 'Spróbuj zmienić filtry.',
+    tableShowingResults: (count: number) =>
+      `Wyświetlanie ${count} ${count === 1 ? 'odpowiedzi' : 'odpowiedzi'}`,
     // Status update
     statusUpdateFailed: 'Nie udało się zaktualizować statusu',
     statusUpdateSuccess: 'Status zaktualizowany',

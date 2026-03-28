@@ -6,6 +6,9 @@ import { LoadingState, ErrorState, EmptyState } from '@agency/ui'
 import { Inbox } from 'lucide-react'
 import { getPipelineResponses } from '../queries'
 import { PipelineView } from './PipelineView'
+import { ResponsesTable } from './ResponsesTable'
+import { AppointmentsTable } from './AppointmentsTable'
+import { StatsBar } from './StatsBar'
 import { messages } from '@/lib/messages'
 
 const REFETCH_INTERVAL = 30_000
@@ -33,7 +36,7 @@ export function IntakeHub() {
         </p>
       </div>
 
-      {/* StatsBar placeholder — iteration 6 */}
+      <StatsBar />
 
       <Tabs defaultValue="pipeline" className="w-full">
         <TabsList>
@@ -68,15 +71,11 @@ export function IntakeHub() {
         </TabsContent>
 
         <TabsContent value="responses" className="mt-4">
-          <div className="text-muted-foreground text-sm p-8 text-center border border-dashed rounded-lg">
-            Tabela odpowiedzi (iteracja 7)
-          </div>
+          <ResponsesTable responses={responses ?? []} />
         </TabsContent>
 
         <TabsContent value="appointments" className="mt-4">
-          <div className="text-muted-foreground text-sm p-8 text-center border border-dashed rounded-lg">
-            Tabela wizyt (iteracja 8)
-          </div>
+          <AppointmentsTable />
         </TabsContent>
       </Tabs>
     </div>
