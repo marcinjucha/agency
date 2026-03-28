@@ -43,7 +43,7 @@ export async function getPipelineResponses(): Promise<PipelineResponse[]> {
     .select(`
       id, status, answers, ai_qualification, created_at, internal_notes, status_changed_at, survey_link_id,
       survey_links(survey_id, surveys(title, questions)),
-      appointments(id)
+      appointments(id, start_time, end_time, status)
     `)
     .order('created_at', { ascending: false })
 
@@ -62,6 +62,13 @@ export async function getPipelineResponses(): Promise<PipelineResponse[]> {
       aiRecommendation: ai?.recommendation ?? null,
       createdAt: row.created_at,
       hasAppointment: !!(row.appointments && row.appointments.length > 0),
+      appointment: row.appointments?.[0]
+        ? {
+            startTime: row.appointments[0].start_time,
+            endTime: row.appointments[0].end_time,
+            status: row.appointments[0].status,
+          }
+        : null,
       internalNotes: row.internal_notes,
       statusChangedAt: row.status_changed_at,
       answers: answers as PipelineResponse['answers'],

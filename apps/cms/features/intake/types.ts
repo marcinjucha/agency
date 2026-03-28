@@ -52,6 +52,12 @@ export interface PipelineResponse {
   createdAt: string
   /** Whether this response has a linked appointment */
   hasAppointment: boolean
+  /** Appointment details (if linked) */
+  appointment: {
+    startTime: string
+    endTime: string
+    status: string
+  } | null
   /** Internal notes (for Sheet, not shown on card) */
   internalNotes: string | null
   /** When status was last changed */

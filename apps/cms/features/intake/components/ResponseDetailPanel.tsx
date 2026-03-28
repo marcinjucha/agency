@@ -299,10 +299,38 @@ export function ResponseDetailPanel({ response, onClose }: ResponseDetailPanelPr
           <h3 className="text-sm font-semibold text-foreground mb-3">
             {messages.intake.sheetAppointment}
           </h3>
-          {response.hasAppointment ? (
-            <div className="flex items-center gap-2 text-sm text-foreground">
-              <Calendar className="h-4 w-4 text-emerald-400" />
-              <span>{messages.intake.sheetAppointment}</span>
+          {response.appointment ? (
+            <div className="bg-muted rounded-md p-3 space-y-1.5">
+              <div className="flex items-center gap-2 text-sm text-foreground">
+                <Calendar className="h-4 w-4 text-emerald-400 flex-shrink-0" />
+                <span className="font-medium">
+                  {new Date(response.appointment.startTime).toLocaleDateString('pl-PL', {
+                    weekday: 'long',
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric',
+                  })}
+                </span>
+              </div>
+              <div className="text-sm text-muted-foreground pl-6">
+                {new Date(response.appointment.startTime).toLocaleTimeString('pl-PL', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+                {' – '}
+                {new Date(response.appointment.endTime).toLocaleTimeString('pl-PL', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </div>
+              <div className="pl-6">
+                <Badge variant="secondary" className="text-xs">
+                  {response.appointment.status === 'scheduled' && 'Zaplanowana'}
+                  {response.appointment.status === 'completed' && 'Zakończona'}
+                  {response.appointment.status === 'cancelled' && 'Anulowana'}
+                  {response.appointment.status === 'no_show' && 'Nieobecność'}
+                </Badge>
+              </div>
             </div>
           ) : (
             <p className="text-sm text-muted-foreground italic">
