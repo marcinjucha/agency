@@ -77,6 +77,7 @@ export {
   SheetTitle,
   SheetDescription,
 } from './components/ui/sheet'
+export { Calendar } from './components/ui/calendar'
 
 // State components
 export { EmptyState } from './empty-state'

@@ -14,7 +14,7 @@ export async function getBlogPosts(): Promise<BlogPostListItem[]> {
   const supabase = createClient()
   const { data, error } = await supabase
     .from('blog_posts')
-    .select('id, slug, title, excerpt, cover_image_url, category, is_published, published_at, estimated_reading_time, author_name')
+    .select('id, slug, title, excerpt, cover_image_url, category, is_published, published_at, estimated_reading_time, author_name, created_at')
     .order('updated_at', { ascending: false })
 
   if (error) throw error

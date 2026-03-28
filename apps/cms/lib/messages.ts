@@ -182,8 +182,6 @@ export const messages = {
       `Artykuł "${title}" zostanie trwale usunięty. Tej operacji nie można cofnąć.`,
     // Scheduling
     scheduled: 'Zaplanowany',
-    published: 'Opublikowany',
-    draft: 'Szkic',
     schedulePublish: 'Zaplanuj publikację',
     publishNow: 'Opublikuj teraz',
     scheduledFor: 'Zaplanowany na',
@@ -197,6 +195,8 @@ export const messages = {
     listView: 'Lista',
     calendarView: 'Kalendarz',
     allStatuses: 'Wszystkie statusy',
+    sortNewest: 'Najnowsze',
+    sortOldest: 'Najstarsze',
     noScheduledPosts: 'Brak zaplanowanych artykułów',
     postsOnDate: (count: number) => count === 1 ? '1 artykuł' : `${count} artykułów`,
   },
