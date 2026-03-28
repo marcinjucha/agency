@@ -100,6 +100,7 @@
 - **useMutation + Server Action structured return = silent failure** — TanStack Query `useMutation` treats any non-thrown result as success. Server Actions returning `{ success: false }` don't trigger `onError`. Fix: wrap mutationFn to throw on `!result.success`. (2026-03-27, AAA-T-92)
 - **stopPropagation doesn't prevent Link navigation** — `e.stopPropagation()` on a button inside `<Link>` doesn't prevent navigation (Link is an ancestor `<a>`). Fix: restructure so `<Link>` wraps only content area, not action buttons. (2026-03-27, AAA-T-92)
 - **Detail view delete must invalidate list query cache** — Deleting from detail page + `router.push()` to list shows stale data because TanStack Query cache wasn't invalidated. Fix: `queryClient.invalidateQueries()` before `router.push()`. (2026-03-27, AAA-T-92)
+- **datetime-local vs Zod .datetime() mismatch** — HTML `datetime-local` input produces `"2026-03-28T14:30"` (no seconds, no timezone) but `z.string().datetime()` requires full ISO 8601. Fix: replace with `z.string().min(1)` — actual date parsing happens on PostgreSQL side (`timestamptz` column). Pre-existing bug in `generateSurveyLinkSchema`, also affected new `updateSurveyLinkSchema`. FIXED 2026-03-28 (AAA-T-88).
 
 ## Domain Concepts
 
@@ -108,6 +109,7 @@
 - **Tenant "Halo Efekt" already exists in production** — email: kontakt@haloefekt.pl, domain: null, id: 19342448-4e4e-49ba-8bf0-694d5376f953. No need to INSERT new tenant. (2026-03-23)
 - **Tiptap editor: shared features/editor/ with dependency injection** — TiptapEditor extracted from blog to `features/editor/` (2026-03-26, AAA-T-58). Accepts `extensions`, `mediaModal`, `onOpenMediaModal`, `embedDimensions`, `onEditorReady` as optional props. `baseExtensions` in `editor/extensions.ts` (StarterKit, Link, Image, Underline, TextAlign). Blog wraps with media extensions + InsertMediaModal. Legal pages uses plain defaults. `generateHtmlFromContent(content, extensions?)` defaults to baseExtensions. `features/editor/` has ZERO imports from any consuming feature. (2026-03-23 → updated 2026-03-26)
 - **Media flow: images/video only via Library** — TiptapEditor drag/paste opens media modal instead of uploading directly. Images and video inserted into editor only from Library tab. YouTube/Vimeo/Instagram/TikTok paste auto-detect still works via extension paste rules. (2026-03-23)
+- **survey_links.is_active exists since initial migration** — Column added in migration `20251210143628`, not new. RLS `FOR ALL` policy already covers UPDATE. Website already validates `is_active` in `features/survey/queries.ts`. No migration needed for edit feature. (2026-03-28, AAA-T-88)
 
 ## Domain Concepts (Landing Page)
 
