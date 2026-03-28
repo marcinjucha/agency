@@ -35,6 +35,7 @@ export async function deleteResponse(
     if (error) return { success: false, error: error.message }
 
     revalidatePath(routes.admin.responses)
+    revalidatePath(routes.admin.intake)
     if (appointment) revalidatePath(routes.admin.appointments)
     return { success: true, hadAppointment: !!appointment }
   } catch {

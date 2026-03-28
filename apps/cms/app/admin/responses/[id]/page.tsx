@@ -19,10 +19,10 @@ export default async function ResponsePage({ params }: PageProps) {
   return (
     <div className="space-y-6">
       <div>
-        <Link href={routes.admin.responses}>
+        <Link href={routes.admin.intake}>
           <Button variant="ghost" className="mb-4 -ml-4">
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Powrót do odpowiedzi
+            Powrót do Intake Hub
           </Button>
         </Link>
         <h1 className="text-3xl font-bold tracking-tight text-foreground">
