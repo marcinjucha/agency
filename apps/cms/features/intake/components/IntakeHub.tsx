@@ -1,0 +1,85 @@
+'use client'
+
+import { useQuery } from '@tanstack/react-query'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@agency/ui'
+import { LoadingState, ErrorState, EmptyState } from '@agency/ui'
+import { Inbox } from 'lucide-react'
+import { getPipelineResponses } from '../queries'
+import { messages } from '@/lib/messages'
+
+const REFETCH_INTERVAL = 30_000
+
+export function IntakeHub() {
+  const {
+    data: responses,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: ['intake', 'pipeline'],
+    queryFn: getPipelineResponses,
+    refetchInterval: REFETCH_INTERVAL,
+  })
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold text-foreground">
+          {messages.pages.intakeTitle}
+        </h1>
+        <p className="text-muted-foreground mt-1">
+          {messages.pages.intakeDescription}
+        </p>
+      </div>
+
+      {/* StatsBar placeholder — iteration 6 */}
+
+      <Tabs defaultValue="pipeline" className="w-full">
+        <TabsList>
+          <TabsTrigger value="pipeline">
+            {messages.intake.tabPipeline}
+          </TabsTrigger>
+          <TabsTrigger value="responses">
+            {messages.intake.tabResponses}
+          </TabsTrigger>
+          <TabsTrigger value="appointments">
+            {messages.intake.tabAppointments}
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="pipeline" className="mt-4">
+          {isLoading ? (
+            <LoadingState variant="skeleton-card" rows={3} />
+          ) : error ? (
+            <ErrorState
+              message={messages.common.errorOccurred}
+              onRetry={() => refetch()}
+            />
+          ) : !responses || responses.length === 0 ? (
+            <EmptyState
+              icon={Inbox}
+              title={messages.intake.pipelineEmpty}
+              description={messages.intake.pipelineEmptyDescription}
+            />
+          ) : (
+            <div className="text-muted-foreground text-sm p-8 text-center border border-dashed rounded-lg">
+              Pipeline: {responses.length} odpowiedzi (komponent w iteracji 4)
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="responses" className="mt-4">
+          <div className="text-muted-foreground text-sm p-8 text-center border border-dashed rounded-lg">
+            Tabela odpowiedzi (iteracja 7)
+          </div>
+        </TabsContent>
+
+        <TabsContent value="appointments" className="mt-4">
+          <div className="text-muted-foreground text-sm p-8 text-center border border-dashed rounded-lg">
+            Tabela wizyt (iteracja 8)
+          </div>
+        </TabsContent>
+      </Tabs>
+    </div>
+  )
+}
