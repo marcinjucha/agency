@@ -5,6 +5,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@agency/ui'
 import { LoadingState, ErrorState, EmptyState } from '@agency/ui'
 import { Inbox } from 'lucide-react'
 import { getPipelineResponses } from '../queries'
+import { PipelineView } from './PipelineView'
 import { messages } from '@/lib/messages'
 
 const REFETCH_INTERVAL = 30_000
@@ -62,9 +63,7 @@ export function IntakeHub() {
               description={messages.intake.pipelineEmptyDescription}
             />
           ) : (
-            <div className="text-muted-foreground text-sm p-8 text-center border border-dashed rounded-lg">
-              Pipeline: {responses.length} odpowiedzi (komponent w iteracji 4)
-            </div>
+            <PipelineView responses={responses} />
           )}
         </TabsContent>
 
