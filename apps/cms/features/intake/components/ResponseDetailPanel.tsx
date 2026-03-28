@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import Link from 'next/link'
 import {
@@ -115,6 +115,8 @@ export function ResponseDetailPanel({ response, onClose }: ResponseDetailPanelPr
     },
   })
 
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   // Sync local notes with selected response
   useEffect(() => {
     setNotesValue(response.internalNotes ?? '')
@@ -136,6 +138,26 @@ export function ResponseDetailPanel({ response, onClose }: ResponseDetailPanelPr
       setNotesSaveState('error')
     },
   })
+
+  /** Autosave notes with 1s debounce */
+  const autosaveNotes = useCallback(
+    (value: string) => {
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+      debounceRef.current = setTimeout(() => {
+        if (value !== (response.internalNotes ?? '')) {
+          notesMutation.mutate({ responseId: response.id, notes: value })
+        }
+      }, 1000)
+    },
+    [response.id, response.internalNotes, notesMutation]
+  )
+
+  // Cleanup debounce on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+    }
+  }, [])
 
   const statusMutation = useMutation({
     mutationFn: async ({ responseId, newStatus }: { responseId: string; newStatus: string }) => {
@@ -301,44 +323,29 @@ export function ResponseDetailPanel({ response, onClose }: ResponseDetailPanelPr
             onChange={(e) => {
               setNotesValue(e.target.value)
               setNotesSaveState('idle')
+              autosaveNotes(e.target.value)
             }}
             placeholder={messages.intake.sheetNotesPlaceholder}
             className="min-h-[80px] resize-y bg-muted border-border"
           />
-          <div className="flex items-center justify-between mt-2">
-            <div className="text-xs">
-              {notesSaveState === 'saved' && (
-                <span className="text-emerald-400 flex items-center gap-1">
-                  <CheckCircle2 className="h-3 w-3" />
-                  {messages.intake.sheetNotesSaved}
-                </span>
-              )}
-              {notesSaveState === 'error' && (
-                <span className="text-destructive">
-                  {messages.intake.sheetNotesSaveFailed}
-                </span>
-              )}
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={notesMutation.isPending || notesValue === (response.internalNotes ?? '')}
-              onClick={() =>
-                notesMutation.mutate({
-                  responseId: response.id,
-                  notes: notesValue,
-                })
-              }
-            >
-              {notesMutation.isPending ? (
-                <>
-                  <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
-                  {messages.intake.sheetSavingNotes}
-                </>
-              ) : (
-                messages.intake.sheetSaveNotes
-              )}
-            </Button>
+          <div className="flex items-center mt-2 h-5 text-xs">
+            {notesMutation.isPending && (
+              <span className="text-muted-foreground flex items-center gap-1">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                {messages.intake.sheetSavingNotes}
+              </span>
+            )}
+            {notesSaveState === 'saved' && (
+              <span className="text-emerald-400 flex items-center gap-1">
+                <CheckCircle2 className="h-3 w-3" />
+                {messages.intake.sheetNotesSaved}
+              </span>
+            )}
+            {notesSaveState === 'error' && (
+              <span className="text-destructive">
+                {messages.intake.sheetNotesSaveFailed}
+              </span>
+            )}
           </div>
         </section>
 
