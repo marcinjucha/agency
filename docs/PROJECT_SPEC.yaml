@@ -3,7 +3,7 @@ project:
   description: "SaaS platform for businesses to streamline client intake through smart surveys, calendar booking, and AI qualification — built by Halo Efekt"
   version: "2.1.0"
   status: "in-progress"
-  last_updated: "2026-03-25"
+  last_updated: "2026-03-28"
 
 # IMPORTANT: This file focuses on WHY (architecture, decisions, rationale)
 # For detailed WHAT (acceptance criteria, file paths, task tracking), see Notion:
@@ -948,17 +948,38 @@ features:
       dependencies:
         - feature: "Authentication System"
 
-    - name: "Lead Pipeline — Kanban Board"
-      status: "pending"
-      why: "Visual lead management to track prospects from survey submission through qualification to client conversion"
+    - name: "Intake Hub — Unified CMS View"
+      status: "complete"
+      why: "Replace 3 separate CMS pages (Responses, Appointments, planned Kanban) with a single Intake Hub — unified lead and appointment management from first contact to closure"
       acceptance_criteria:
-        - "Kanban view in CMS: Nowy → Skwalifikowany (AI) → W kontakcie → Klient / Odrzucony"
-        - "Drag & drop status change"
-        - "Clickable cards with response detail"
-        - "Integration with ai_qualification (auto-move after AI analysis)"
+        - criterion: "Pipeline Kanban: Nowy → Skwalifikowany → W kontakcie → Zamknięty with drag-and-drop (@dnd-kit)"
+          verified: true
+        - criterion: "JIRA-style inline detail panel (xl+) with Q&A, AI qualification, appointment info, internal notes"
+          verified: true
+        - criterion: "Autosave internal notes (1s debounce) with real-time status indicator"
+          verified: true
+        - criterion: "ResponsesTable and AppointmentsTable with URL searchParams filters (bookmarkable)"
+          verified: true
+        - criterion: "StatsBar with 4 live metrics (new responses, pending contact, today/tomorrow appointments)"
+          verified: true
+        - criterion: "Delete actions with confirmation dialogs for responses and appointments"
+          verified: true
+        - criterion: "Old /admin/responses and /admin/appointments redirect to /admin/intake"
+          verified: true
+        - criterion: "/admin/responses/[id] kept for bookmarks with updated back link"
+          verified: true
       tech_decisions:
-        - decision: "Consolidate with response list (not separate section)"
-          rationale: "Responses ARE leads — avoid data duplication, single source of truth"
+        - decision: "features/intake/ composes from responses + appointments (ADR-005)"
+          rationale: "New feature does NOT modify existing features/responses/ or features/appointments/ — Sheet reuses getResponse() from responses/queries.ts, Pipeline has its own getPipelineResponses() with ai_qualification + answers for name extraction"
+        - decision: "@dnd-kit for drag-and-drop (not react-beautiful-dnd)"
+          rationale: "react-beautiful-dnd is unmaintained; @dnd-kit is actively maintained and React 19 compatible"
+        - decision: "Single useQuery at IntakeHub level, data passed as props to children"
+          rationale: "Prevents waterfall queries; single 30s auto-refresh interval at hub level"
+        - decision: "Sheet for Kanban card click, full page for table row click"
+          rationale: "Kanban = quick triage (panel sufficient); table rows = explicit navigation intent (full detail expected)"
+        - decision: "needs_more_info is AI recommendation, NOT a DB status"
+          rationale: "ai_qualification.recommendation stores the flag; responses.status stays 'new' — separates AI suggestion from human decision"
+      completion_notes: "Admins can manage the full lead lifecycle from a single /admin/intake page. Pipeline Kanban provides drag-and-drop status management. Inline panel shows complete response context without leaving the page. Tables provide bookmarkable filtered views of all responses and appointments."
       dependencies:
         - feature: "Response Management UI (CMS)"
         - feature: "AI Qualification Workflow"
@@ -1058,7 +1079,7 @@ status_summary:
   phase_4: "✅ Complete (100%) - UI/UX Improvements"
   phase_5: "✅ Complete (100%) - Email Notifications E2E tested"
   phase_6: "🚀 In Progress (80%) - Blog, Landing Page CMS, Redesign, Dark Theme complete. CTA integration + Legal/SEO pending"
-  phase_7: "📋 Planned - Intake pipeline, Roles & Permissions, Booking emails"
+  phase_7: "🚀 In Progress (33%) - Intake Hub complete. Roles & Permissions + Booking Emails pending"
   phase_8: "✅ Complete (100%) - Plausible Analytics integrated with conversion funnel tracking"
   phase_future: "📝 Backlog - Multi-language, CRM integrations, Newsletter, Reporting, Onboarding"
 
@@ -1069,5 +1090,5 @@ critical_path:
   - "Phase 4 UI/UX Improvements (✅ COMPLETE)"
   - "Phase 5 n8n & AI Analysis (✅ COMPLETE)"
   - "Phase 6 Marketing & Content (🚀 IN PROGRESS — CTA + Legal + SEO)"
-  - "Phase 7 Intake & Permissions (📋 NEXT — Kanban + Roles + Booking Emails)"
+  - "Phase 7 Intake & Permissions (🚀 IN PROGRESS — Intake Hub done, Roles + Booking Emails next)"
   - "Phase 8 Infrastructure (✅ COMPLETE — Plausible Analytics integrated)"
