@@ -38,6 +38,7 @@ export const blogPostSchema = z.object({
   category: z.string().optional(),
   author_name: z.string().optional(),
   seo_metadata: seoMetadataSchema.optional(),
+  published_at: z.string().nullable().optional(),
   is_published: z.boolean().default(false),
   estimated_reading_time: z
     .number()

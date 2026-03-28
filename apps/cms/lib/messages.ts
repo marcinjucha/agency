@@ -179,6 +179,25 @@ export const messages = {
     deletePostConfirmTitle: 'Usunąć artykuł?',
     deletePostConfirmDescription: (title: string) =>
       `Artykuł "${title}" zostanie trwale usunięty. Tej operacji nie można cofnąć.`,
+    // Scheduling
+    scheduled: 'Zaplanowany',
+    schedulePublish: 'Zaplanuj publikację',
+    publishNow: 'Opublikuj teraz',
+    scheduledFor: 'Zaplanowany na',
+    changeSchedule: 'Zmień termin',
+    removeSchedule: 'Usuń planowanie',
+    pickDate: 'Wybierz datę',
+    pickTime: 'Wybierz godzinę',
+    scheduleRequired: 'Wybierz datę i godzinę publikacji',
+    scheduleMustBeFuture: 'Data publikacji musi być w przyszłości',
+    // Views
+    listView: 'Lista',
+    calendarView: 'Kalendarz',
+    allStatuses: 'Wszystkie statusy',
+    sortNewest: 'Najnowsze',
+    sortOldest: 'Najstarsze',
+    noScheduledPosts: 'Brak zaplanowanych artykułów',
+    postsOnDate: (count: number) => count === 1 ? '1 artykuł' : `${count} artykułów`,
   },
 
   media: {

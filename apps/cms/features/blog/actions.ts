@@ -1,6 +1,5 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { getUserWithTenant, isAuthError } from '@/lib/auth'
 import { blogPostSchema, type BlogPostFormData } from './validation'
@@ -37,7 +36,9 @@ export async function createBlogPost(
       seo_metadata: parsed.data.seo_metadata || null,
       is_published: parsed.data.is_published,
       estimated_reading_time: data.estimated_reading_time || null,
-      published_at: parsed.data.is_published ? new Date().toISOString() : null,
+      published_at: parsed.data.is_published
+        ? (parsed.data.published_at || new Date().toISOString())
+        : null,
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- blog_posts not in generated types
@@ -67,9 +68,9 @@ export async function updateBlogPost(
       return { success: false, error: parsed.error.errors[0]?.message ?? messages.common.invalidData }
     }
 
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return { success: false, error: messages.common.notLoggedIn }
+    const auth = await getUserWithTenant()
+    if (isAuthError(auth)) return { success: false, error: auth.error }
+    const { supabase } = auth
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- blog_posts not in generated types
     const { data: existing, error: fetchError } = await (supabase as any)
@@ -80,7 +81,21 @@ export async function updateBlogPost(
 
     if (fetchError) return { success: false, error: fetchError.message }
 
-    const shouldSetPublishedAt = parsed.data.is_published && !existing.published_at
+    // Determine published_at value (4-way branch)
+    let published_at: string | null
+    if (!parsed.data.is_published) {
+      // Draft — clear published_at
+      published_at = null
+    } else if (parsed.data.published_at) {
+      // Explicit date from form (scheduled or re-scheduled)
+      published_at = parsed.data.published_at
+    } else if (!existing.published_at) {
+      // First publish, no date set — now
+      published_at = new Date().toISOString()
+    } else {
+      // Keep existing published_at
+      published_at = existing.published_at
+    }
 
     const updatePayload = {
       title: parsed.data.title,
@@ -94,7 +109,7 @@ export async function updateBlogPost(
       seo_metadata: parsed.data.seo_metadata || null,
       is_published: parsed.data.is_published,
       estimated_reading_time: data.estimated_reading_time || null,
-      ...(shouldSetPublishedAt && { published_at: new Date().toISOString() }),
+      published_at,
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- blog_posts not in generated types
@@ -120,9 +135,9 @@ export async function deleteBlogPost(
   id: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return { success: false, error: messages.common.notLoggedIn }
+    const auth = await getUserWithTenant()
+    if (isAuthError(auth)) return { success: false, error: auth.error }
+    const { supabase } = auth
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- blog_posts not in generated types
     const { error } = await (supabase as any)

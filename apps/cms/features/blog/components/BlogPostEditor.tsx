@@ -14,7 +14,10 @@ import {
   CardHeader,
   CardTitle,
   Textarea,
-  Badge,
+  Calendar,
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
   AlertDialog,
   AlertDialogTrigger,
   AlertDialogContent,
@@ -25,15 +28,20 @@ import {
   AlertDialogAction,
   AlertDialogCancel,
 } from '@agency/ui'
+import { CalendarIcon } from 'lucide-react'
+import { format, startOfDay } from 'date-fns'
+import { pl } from 'date-fns/locale'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
 import { blogPostSchema, type BlogPostFormData } from '../validation'
 import { createBlogPost, updateBlogPost, deleteBlogPost } from '../actions'
 import { generateHtmlFromContent, calculateReadingTime, generateSlug, uploadImageToS3 } from '../utils'
 import { blogKeys } from '../queries'
+import { getPostStatus, type BlogPostStatus } from '../types'
 import type { BlogPost, TiptapContent } from '../types'
 import { TiptapEditor } from './TiptapEditor'
 import { CategoryCombobox } from './CategoryCombobox'
+import { BlogStatusBadge } from './blog-status-badge'
 
 // --- Types ---
 
@@ -48,6 +56,7 @@ interface BlogPostEditorProps {
 
 const EMPTY_CONTENT: TiptapContent = { type: 'doc', content: [] }
 
+// Live preview estimate from TiptapContent JSON — utils.ts calculateReadingTime works on final HTML string (used in onSave)
 function estimateReadingTime(content: TiptapContent): number {
   const text = extractText(content)
   const wordCount = text.split(/\s+/).filter(Boolean).length
@@ -116,6 +125,7 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
         keywords: blogPost?.seo_metadata?.keywords ?? [],
       },
       is_published: blogPost?.is_published ?? false,
+      published_at: blogPost?.published_at ?? null,
     },
   })
 
@@ -126,6 +136,24 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
   const watchSeoDescription = watch('seo_metadata.description')
   const watchIsPublished = watch('is_published')
   const watchCoverImageUrl = watch('cover_image_url')
+  const watchPublishedAt = watch('published_at')
+  const currentStatus: BlogPostStatus = getPostStatus(watchIsPublished, watchPublishedAt ?? null)
+
+  // Schedule picker local state
+  const [scheduledDate, setScheduledDate] = useState<Date | undefined>(() => {
+    if (blogPost?.published_at) {
+      const d = new Date(blogPost.published_at)
+      return d > new Date() ? d : undefined
+    }
+    return undefined
+  })
+  const [scheduledTime, setScheduledTime] = useState<string>(() => {
+    if (blogPost?.published_at) {
+      const d = new Date(blogPost.published_at)
+      return d > new Date() ? format(d, 'HH:mm') : '09:00'
+    }
+    return '09:00'
+  })
 
   // Auto-generate slug from title
   useEffect(() => {
@@ -191,12 +219,50 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
     handleSubmit((data) => onSave(data, false))()
   }
 
-  function handlePublish() {
+  function handleDateSelect(date: Date | undefined) {
+    if (!date) return
+    setScheduledDate(date)
+    const [hours, minutes] = scheduledTime.split(':').map(Number)
+    const combined = new Date(date)
+    combined.setHours(hours, minutes, 0, 0)
+    setValue('published_at', combined.toISOString())
+  }
+
+  function handleTimeChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const time = e.target.value
+    setScheduledTime(time)
+    if (scheduledDate) {
+      const [hours, minutes] = time.split(':').map(Number)
+      const combined = new Date(scheduledDate)
+      combined.setHours(hours, minutes, 0, 0)
+      setValue('published_at', combined.toISOString())
+    }
+  }
+
+  function clearSchedule() {
+    setScheduledDate(undefined)
+    setScheduledTime('09:00')
+    setValue('published_at', null)
+    setValue('is_published', false)
+  }
+
+  function handleSchedulePublish() {
+    const publishedAt = watch('published_at')
+    if (!publishedAt) {
+      setErrorMessage(messages.blog.scheduleRequired)
+      return
+    }
+    if (new Date(publishedAt) <= new Date()) {
+      setErrorMessage(messages.blog.scheduleMustBeFuture)
+      return
+    }
     handleSubmit((data) => onSave(data, true))()
   }
 
-  function handleUnpublish() {
-    handleSubmit((data) => onSave(data, false))()
+  function handlePublishNow() {
+    setValue('published_at', new Date().toISOString())
+    setScheduledDate(undefined)
+    handleSubmit((data) => onSave(data, true))()
   }
 
   // --- Delete ---
@@ -278,18 +344,20 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
           </div>
 
           <div className="flex items-center gap-2">
-            {isEditing && watchIsPublished && (
+            {/* Unpublish — shown for scheduled and published */}
+            {isEditing && currentStatus !== 'draft' && (
               <Button
                 variant="outline"
                 size="sm"
-                onClick={handleUnpublish}
+                onClick={handleSaveDraft}
                 disabled={saveState === 'saving'}
               >
                 {messages.common.unpublish}
               </Button>
             )}
 
-            {watchIsPublished ? (
+            {currentStatus === 'published' ? (
+              // Published: just Save
               <Button
                 size="sm"
                 onClick={handleSubmit((data) => onSave(data))}
@@ -297,7 +365,27 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
               >
                 {saveLabel[saveState]}
               </Button>
+            ) : currentStatus === 'scheduled' ? (
+              // Scheduled: Save + Publish Now
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSubmit((data) => onSave(data))}
+                  disabled={saveState === 'saving'}
+                >
+                  {saveLabel[saveState]}
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handlePublishNow}
+                  disabled={saveState === 'saving'}
+                >
+                  {messages.blog.publishNow}
+                </Button>
+              </>
             ) : (
+              // Draft: Save Draft + Schedule (if date) + Publish Now
               <>
                 <Button
                   variant="outline"
@@ -307,13 +395,23 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
                 >
                   {saveLabel[saveState]}
                 </Button>
+                {watchPublishedAt && new Date(watchPublishedAt) > new Date() && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleSchedulePublish}
+                    disabled={saveState === 'saving'}
+                  >
+                    {messages.blog.schedulePublish}
+                  </Button>
+                )}
                 <Button
                   size="sm"
-                  onClick={handlePublish}
+                  onClick={handlePublishNow}
                   disabled={saveState === 'saving'}
                   className="bg-primary hover:bg-primary/90 text-primary-foreground"
                 >
-                  {messages.common.publish}
+                  {messages.blog.publishNow}
                 </Button>
               </>
             )}
@@ -594,12 +692,59 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
               <CardContent className="space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-muted-foreground">{messages.blog.statusTitle}</span>
-                  <Badge variant={watchIsPublished ? 'default' : 'secondary'}>
-                    {watchIsPublished ? messages.common.published : messages.common.draft}
-                  </Badge>
+                  <BlogStatusBadge status={currentStatus} />
                 </div>
 
-                {blogPost?.published_at && (
+                {/* Schedule date/time picker — visible for draft + scheduled, hidden for published */}
+                {currentStatus !== 'published' && (
+                  <div className="space-y-2">
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" size="sm" className="w-full justify-start text-left font-normal">
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {scheduledDate ? format(scheduledDate, 'd MMMM yyyy', { locale: pl }) : messages.blog.pickDate}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={scheduledDate}
+                          onSelect={handleDateSelect}
+                          disabled={(date) => date < startOfDay(new Date())}
+                          locale={pl}
+                        />
+                      </PopoverContent>
+                    </Popover>
+
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="time"
+                        value={scheduledTime}
+                        onChange={handleTimeChange}
+                        className="h-8 text-sm"
+                        aria-label={messages.blog.pickTime}
+                      />
+                      {scheduledDate && (
+                        <Button variant="ghost" size="sm" onClick={clearSchedule} className="text-xs text-muted-foreground">
+                          {messages.blog.removeSchedule}
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Scheduled date display for scheduled status */}
+                {currentStatus === 'scheduled' && watchPublishedAt && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-muted-foreground">{messages.blog.scheduledFor}</span>
+                    <span className="text-xs">
+                      {format(new Date(watchPublishedAt), 'd MMM yyyy, HH:mm', { locale: pl })}
+                    </span>
+                  </div>
+                )}
+
+                {/* Published date display */}
+                {currentStatus === 'published' && blogPost?.published_at && (
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-muted-foreground">{messages.blog.publishDate}</span>
                     <span className="text-xs">

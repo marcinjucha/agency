@@ -26,6 +26,7 @@ export async function getPublishedBlogPosts(): Promise<WebsiteBlogListItem[]> {
     .from('blog_posts')
     .select(LIST_FIELDS)
     .eq('is_published', true)
+    .lte('published_at', new Date().toISOString())
     .order('published_at', { ascending: false })
 
   if (error) throw error
@@ -39,6 +40,7 @@ export async function getPublishedBlogPost(slug: string): Promise<WebsiteBlogPos
     .select(POST_FIELDS)
     .eq('slug', slug)
     .eq('is_published', true)
+    .lte('published_at', new Date().toISOString())
     .maybeSingle()
 
   if (error) throw error
@@ -67,6 +69,7 @@ export async function getPublishedBlogSlugs(): Promise<string[]> {
     .from('blog_posts')
     .select('slug')
     .eq('is_published', true)
+    .lte('published_at', new Date().toISOString())
 
   if (error) throw error
   return (data as unknown as { slug: string }[] || []).map((row) => row.slug)
