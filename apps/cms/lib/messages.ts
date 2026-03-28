@@ -34,6 +34,7 @@ export const messages = {
     loading: 'Ładowanie…',
     errorOccurred: 'Wystąpił błąd',
     retryAnalysis: 'Ponów analizę',
+    close: 'Zamknij',
   },
 
   surveys: {

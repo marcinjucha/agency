@@ -15,15 +15,15 @@ import {
 import { ArrowRight, FileText } from 'lucide-react'
 import { getResponseStatusColor } from '@/lib/utils/status'
 import { messages } from '@/lib/messages'
-import { routes } from '@/lib/routes'
 import { RESPONSE_STATUSES } from '../validation'
 import type { PipelineResponse, ResponseStatus } from '../types'
 
 interface ResponsesTableProps {
   responses: PipelineResponse[]
+  onSelectResponse: (response: PipelineResponse) => void
 }
 
-/** Status labels reused from ResponseSheet pattern */
+/** Status labels for display */
 const STATUS_LABELS: Record<ResponseStatus, string> = {
   new: messages.intake.columnNew,
   qualified: messages.intake.columnQualified,
@@ -59,7 +59,7 @@ function formatDate(dateString: string): string {
   }
 }
 
-export function ResponsesTable({ responses }: ResponsesTableProps) {
+export function ResponsesTable({ responses, onSelectResponse }: ResponsesTableProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
 
@@ -175,7 +175,7 @@ export function ResponsesTable({ responses }: ResponsesTableProps) {
                 {filtered.map((response) => (
                   <tr
                     key={response.id}
-                    onClick={() => router.push(routes.admin.response(response.id))}
+                    onClick={() => onSelectResponse(response)}
                     className="hover:bg-muted/50 cursor-pointer transition-colors"
                   >
                     {/* Client Name */}
@@ -224,7 +224,7 @@ export function ResponsesTable({ responses }: ResponsesTableProps) {
                       <button
                         onClick={(e) => {
                           e.stopPropagation()
-                          router.push(routes.admin.response(response.id))
+                          onSelectResponse(response)
                         }}
                         className="p-2 text-muted-foreground hover:text-foreground transition-colors rounded-md hover:bg-muted"
                         aria-label={messages.responses.viewDetails}
