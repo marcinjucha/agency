@@ -329,17 +329,16 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
       {/* ---- TOP BAR ---- */}
       <div className="sticky top-0 z-20 border-b border-border bg-background/95 backdrop-blur-sm">
         <div className="flex items-center justify-between px-4 py-3 sm:px-6">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="sm"
+          <div className="flex flex-col gap-1">
+            <button
+              type="button"
               onClick={() => router.push(routes.admin.blog)}
-              className="gap-1.5 text-muted-foreground hover:text-foreground"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-1 w-fit"
             >
               <span aria-hidden="true">&larr;</span>
               Blog
-            </Button>
-            <h1 className="text-lg font-semibold tracking-tight">
+            </button>
+            <h1 className="text-2xl font-bold tracking-tight">
               {isEditing ? messages.blog.editPost : messages.blog.newPost}
             </h1>
           </div>
@@ -454,7 +453,7 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
                 value={watchSlug}
                 onChange={handleSlugChange}
                 placeholder={messages.blog.slugPlaceholder}
-                className="h-8 text-sm text-muted-foreground"
+                className="text-sm text-muted-foreground"
                 aria-label={messages.blog.slugPlaceholder}
               />
               {errors.slug && (
@@ -480,13 +479,13 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
           <div className="flex flex-col gap-6">
             {/* Settings card */}
             <Card className="shadow-sm">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium">{messages.blog.settingsTitle}</CardTitle>
+              <CardHeader className="pb-4">
+                <CardTitle className="text-base font-semibold">{messages.blog.settingsTitle}</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-5">
                 {/* Category */}
                 <div className="space-y-1.5">
-                  <Label htmlFor="blog-category" className="text-xs">{messages.blog.categoryLabel}</Label>
+                  <Label htmlFor="blog-category" className="text-sm font-medium">{messages.blog.categoryLabel}</Label>
                   <Controller
                     name="category"
                     control={control}
@@ -502,20 +501,20 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
 
                 {/* Author */}
                 <div className="space-y-1.5">
-                  <Label htmlFor="author_name" className="text-xs">
+                  <Label htmlFor="author_name" className="text-sm font-medium">
                     {messages.blog.authorLabel}
                   </Label>
                   <Input
                     id="author_name"
                     {...register('author_name')}
                     placeholder={messages.blog.authorPlaceholder}
-                    className="h-8 text-sm"
+                    className="text-sm"
                   />
                 </div>
 
                 {/* Cover image */}
                 <div className="space-y-1.5">
-                  <Label className="text-xs">{messages.blog.coverImageLabel}</Label>
+                  <Label className="text-sm font-medium">{messages.blog.coverImageLabel}</Label>
 
                   {coverPreview ? (
                     <div className="group relative overflow-hidden rounded-lg">
@@ -590,7 +589,7 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
                 {/* Excerpt */}
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <Label htmlFor="excerpt" className="text-xs">
+                    <Label htmlFor="excerpt" className="text-sm font-medium">
                       {messages.blog.excerptLabel}
                     </Label>
                     <span className="text-xs text-muted-foreground">
@@ -613,14 +612,14 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
 
             {/* SEO card */}
             <Card className="shadow-sm">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium">{messages.blog.seoTitle}</CardTitle>
+              <CardHeader className="pb-4">
+                <CardTitle className="text-base font-semibold">{messages.blog.seoTitle}</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-5">
                 <TooltipProvider delayDuration={300}>
                   <div className="space-y-1.5">
                     <div className="flex items-center gap-1.5">
-                      <Label htmlFor="seo-title" className="text-xs">
+                      <Label htmlFor="seo-title" className="text-sm font-medium">
                         {messages.blog.seoTitleLabel}
                       </Label>
                       <Tooltip>
@@ -642,14 +641,14 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
                       id="seo-title"
                       {...register('seo_metadata.title')}
                       placeholder={messages.blog.seoTitlePlaceholder}
-                      className="h-8 text-sm"
+                      className="text-sm"
                     />
                   </div>
 
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1.5">
-                        <Label htmlFor="seo-description" className="text-xs">
+                        <Label htmlFor="seo-description" className="text-sm font-medium">
                           {messages.blog.seoDescriptionLabel}
                         </Label>
                         <Tooltip>
@@ -687,7 +686,7 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
 
                   <div className="space-y-1.5">
                     <div className="flex items-center gap-1.5">
-                      <Label htmlFor="seo-og-image" className="text-xs">
+                      <Label htmlFor="seo-og-image" className="text-sm font-medium">
                         OG Image URL
                       </Label>
                       <Tooltip>
@@ -709,13 +708,13 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
                       id="seo-og-image"
                       {...register('seo_metadata.ogImage')}
                       placeholder="https://..."
-                      className="h-8 text-sm"
+                      className="text-sm"
                     />
                   </div>
 
                   <div className="space-y-1.5">
                     <div className="flex items-center gap-1.5">
-                      <Label htmlFor="seo-keywords" className="text-xs">
+                      <Label htmlFor="seo-keywords" className="text-sm font-medium">
                         {messages.blog.seoKeywordsLabel}
                       </Label>
                       <Tooltip>
@@ -753,8 +752,8 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
 
             {/* Status card */}
             <Card className="shadow-sm">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium">{messages.blog.statusTitle}</CardTitle>
+              <CardHeader className="pb-4">
+                <CardTitle className="text-base font-semibold">{messages.blog.statusTitle}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex items-center justify-between">
@@ -788,7 +787,7 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
                         type="time"
                         value={scheduledTime}
                         onChange={handleTimeChange}
-                        className="h-8 text-sm"
+                        className="text-sm"
                         aria-label={messages.blog.pickTime}
                       />
                       {scheduledDate && (

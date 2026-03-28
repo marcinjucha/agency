@@ -165,7 +165,7 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
   return (
     <Card className="p-6">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold flex items-center">
+        <h2 className="text-base font-semibold flex items-center">
           <LinkIcon className="mr-2 h-5 w-5" />
           {messages.surveys.surveyLinks}
         </h2>
@@ -360,7 +360,7 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
                 {isEditing ? (
                   <div className="space-y-3 pt-2 border-t border-border mt-2">
                     <div>
-                      <Label htmlFor={`edit-email-${link.id}`} className="text-xs text-muted-foreground">
+                      <Label htmlFor={`edit-email-${link.id}`} className="text-sm font-medium">
                         {messages.surveys.notificationEmail} <span className="text-destructive">*</span>
                       </Label>
                       <Input
@@ -370,12 +370,12 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
                         aria-required="true"
                         value={editFormData.notificationEmail}
                         onChange={(e) => setEditFormData({ ...editFormData, notificationEmail: e.target.value })}
-                        className="mt-1 h-8 text-sm"
+                        className="mt-1 text-sm"
                       />
                     </div>
 
                     <div>
-                      <Label htmlFor={`edit-expires-${link.id}`} className="text-xs text-muted-foreground">
+                      <Label htmlFor={`edit-expires-${link.id}`} className="text-sm font-medium">
                         {messages.surveys.expirationDate}
                       </Label>
                       <div className="flex items-center gap-2 mt-1">
@@ -384,7 +384,7 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
                           type="datetime-local"
                           value={editFormData.expiresAt}
                           onChange={(e) => setEditFormData({ ...editFormData, expiresAt: e.target.value })}
-                          className="h-8 text-sm flex-1"
+                          className="text-sm flex-1"
                         />
                         {editFormData.expiresAt && (
                           <Button
@@ -404,7 +404,7 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
                     </div>
 
                     <div>
-                      <Label htmlFor={`edit-max-${link.id}`} className="text-xs text-muted-foreground">
+                      <Label htmlFor={`edit-max-${link.id}`} className="text-sm font-medium">
                         {messages.surveys.maxSubmissions}
                       </Label>
                       <div className="flex items-center gap-2 mt-1">
@@ -415,7 +415,7 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
                           value={editFormData.maxSubmissions}
                           onChange={(e) => setEditFormData({ ...editFormData, maxSubmissions: e.target.value })}
                           placeholder={messages.surveys.noSubmissionLimit}
-                          className="h-8 text-sm flex-1"
+                          className="text-sm flex-1"
                         />
                         {editFormData.maxSubmissions && (
                           <Button
