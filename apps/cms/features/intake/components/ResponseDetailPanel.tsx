@@ -62,9 +62,9 @@ function getRecommendationStyle(rec: string): string {
 
 /** Human-readable AI recommendation labels */
 const RECOMMENDATION_LABELS: Record<string, string> = {
-  QUALIFIED: 'Skwalifikowany',
-  DISQUALIFIED: 'Zdyskwalifikowany',
-  NEEDS_MORE_INFO: 'Wymaga informacji',
+  QUALIFIED: messages.intake.aiRecommendationQualified,
+  DISQUALIFIED: messages.intake.aiRecommendationDisqualified,
+  NEEDS_MORE_INFO: messages.intake.aiRecommendationNeedsMoreInfo,
 }
 
 /** AI score color: green 8-10, amber 5-7, red 0-4 */
