@@ -60,6 +60,13 @@ function getRecommendationStyle(rec: string): string {
   }
 }
 
+/** Human-readable AI recommendation labels */
+const RECOMMENDATION_LABELS: Record<string, string> = {
+  QUALIFIED: 'Skwalifikowany',
+  DISQUALIFIED: 'Zdyskwalifikowany',
+  NEEDS_MORE_INFO: 'Wymaga informacji',
+}
+
 /** AI score color: green 8-10, amber 5-7, red 0-4 */
 function getScoreColor(score: number): string {
   if (score >= 8) return 'text-emerald-400'
@@ -242,7 +249,7 @@ export function ResponseDetailPanel({ response, onClose }: ResponseDetailPanelPr
                   <Badge
                     className={`${getRecommendationStyle(response.aiRecommendation)} px-2.5 py-0.5 rounded-full text-xs font-medium`}
                   >
-                    {response.aiRecommendation}
+                    {RECOMMENDATION_LABELS[response.aiRecommendation] ?? response.aiRecommendation}
                   </Badge>
                 )}
                 <span className="text-sm text-muted-foreground">
