@@ -14,6 +14,7 @@ import { messages } from '@/lib/messages'
 import { PipelineColumn } from './PipelineColumn'
 import { PipelineCardContent } from './PipelineCard'
 import { SortDropdown } from './SortDropdown'
+import { ResponseSheet } from './ResponseSheet'
 import {
   STATUS_TO_COLUMN,
   type PipelineResponse,
@@ -46,6 +47,7 @@ interface PipelineViewProps {
 export function PipelineView({ responses }: PipelineViewProps) {
   const [sortOption, setSortOption] = useState<PipelineSortOption>('newest')
   const [activeId, setActiveId] = useState<string | null>(null)
+  const [selectedResponse, setSelectedResponse] = useState<PipelineResponse | null>(null)
   const queryClient = useQueryClient()
 
   const statusMutation = useMutation({
@@ -145,8 +147,8 @@ export function PipelineView({ responses }: PipelineViewProps) {
     [responses, queryClient, statusMutation]
   )
 
-  const handleCardClick = useCallback((_response: PipelineResponse) => {
-    // Sheet detail view — iteration 5
+  const handleCardClick = useCallback((response: PipelineResponse) => {
+    setSelectedResponse(response)
   }, [])
 
   return (
@@ -179,6 +181,15 @@ export function PipelineView({ responses }: PipelineViewProps) {
           ) : null}
         </DragOverlay>
       </DndContext>
+
+      {/* Response detail Sheet */}
+      <ResponseSheet
+        response={selectedResponse}
+        open={!!selectedResponse}
+        onOpenChange={(open) => {
+          if (!open) setSelectedResponse(null)
+        }}
+      />
     </div>
   )
 }

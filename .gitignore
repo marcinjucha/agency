@@ -59,4 +59,4 @@ Thumbs.db
 # Optional
 *.sublime-project
 *.sublime-workspace
-/worktree1
+/worktree*
