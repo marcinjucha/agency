@@ -481,7 +481,9 @@ export type Database = {
           answers: Json
           created_at: string | null
           id: string
+          internal_notes: string | null
           status: string | null
+          status_changed_at: string | null
           survey_link_id: string
           tenant_id: string
           updated_at: string | null
@@ -491,7 +493,9 @@ export type Database = {
           answers: Json
           created_at?: string | null
           id?: string
+          internal_notes?: string | null
           status?: string | null
+          status_changed_at?: string | null
           survey_link_id: string
           tenant_id: string
           updated_at?: string | null
@@ -501,7 +505,9 @@ export type Database = {
           answers?: Json
           created_at?: string | null
           id?: string
+          internal_notes?: string | null
           status?: string | null
+          status_changed_at?: string | null
           survey_link_id?: string
           tenant_id?: string
           updated_at?: string | null

@@ -10,7 +10,7 @@
 /**
  * Response status types from survey_responses table
  */
-export type ResponseStatus = 'new' | 'qualified' | 'disqualified' | 'contacted' | null
+export type ResponseStatus = 'new' | 'qualified' | 'disqualified' | 'contacted' | 'client' | 'rejected' | null
 
 /**
  * Appointment status types from appointments table
@@ -45,6 +45,10 @@ export function getResponseStatusColor(status: ResponseStatus): string {
       return 'bg-status-error text-status-error-foreground'
     case 'contacted':
       return 'bg-status-info text-status-info-foreground'
+    case 'client':
+      return 'bg-status-success text-status-success-foreground'
+    case 'rejected':
+      return 'bg-status-error text-status-error-foreground'
     default:
       return 'bg-status-neutral text-status-neutral-foreground'
   }

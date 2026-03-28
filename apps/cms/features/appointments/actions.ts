@@ -18,6 +18,7 @@ export async function deleteAppointment(
     if (error) return { success: false, error: error.message }
 
     revalidatePath(routes.admin.appointments)
+    revalidatePath(routes.admin.intake)
     return { success: true }
   } catch {
     return { success: false, error: messages.appointments.deleteFailed }

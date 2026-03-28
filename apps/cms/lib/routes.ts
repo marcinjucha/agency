@@ -17,6 +17,7 @@ export const routes = {
     surveys: '/admin/surveys',
     surveyNew: '/admin/surveys/new',
     survey: (id: string) => `/admin/surveys/${id}`,
+    intake: '/admin/intake',
     responses: '/admin/responses',
     response: (id: string) => `/admin/responses/${id}`,
     appointments: '/admin/appointments',

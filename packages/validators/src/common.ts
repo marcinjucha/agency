@@ -70,7 +70,7 @@ export type SurveyAnswers = Record<string, string | string[]>
  * Response status enum
  * Tracks where a client response is in the qualification workflow
  */
-export type ResponseStatus = 'new' | 'qualified' | 'disqualified' | 'contacted'
+export type ResponseStatus = 'new' | 'qualified' | 'disqualified' | 'contacted' | 'client' | 'rejected'
 
 /**
  * Survey metadata structure
