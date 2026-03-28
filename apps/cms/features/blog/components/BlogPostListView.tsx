@@ -20,8 +20,8 @@ import {
   AlertDialogCancel,
 } from '@agency/ui'
 import { useRouter } from 'next/navigation'
-import { Trash2, ArrowUpDown } from 'lucide-react'
-import { formatDistanceToNow } from 'date-fns'
+import { Trash2, ArrowUpDown, X, CalendarDays } from 'lucide-react'
+import { formatDistanceToNow, format } from 'date-fns'
 import { pl } from 'date-fns/locale'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
@@ -31,6 +31,12 @@ import { BlogStatusBadge } from './blog-status-badge'
 
 interface BlogPostListViewProps {
   posts: BlogPostListItem[]
+  /** Total number of posts (before date filtering). Used for footer count. */
+  totalCount?: number
+  /** Currently selected calendar date (for the active filter chip). */
+  selectedDate?: Date
+  /** Callback to clear the calendar date filter. */
+  onClearDate?: () => void
   onDelete: (id: string) => void
   isDeleting: boolean
 }
@@ -62,6 +68,9 @@ function getDisplayDate(post: BlogPostListItem): string | null {
 
 export function BlogPostListView({
   posts,
+  totalCount,
+  selectedDate,
+  onClearDate,
   onDelete,
   isDeleting,
 }: BlogPostListViewProps) {
@@ -90,6 +99,27 @@ export function BlogPostListView({
 
   return (
     <div className="space-y-4">
+      {/* Active date filter chip */}
+      {selectedDate && onClearDate && (
+        <div className="flex items-center gap-2">
+          <div className="inline-flex items-center gap-2 rounded-md border border-border bg-muted/50 px-3 py-1.5 text-sm text-foreground">
+            <CalendarDays className="h-3.5 w-3.5 text-muted-foreground" />
+            <span>
+              {format(selectedDate, 'd MMMM yyyy', { locale: pl })}
+              {' — '}
+              {messages.blog.postsOnDate(posts.length)}
+            </span>
+            <button
+              onClick={onClearDate}
+              className="ml-1 rounded-sm p-0.5 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              aria-label="Wyczyść filtr daty"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Filters */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -141,8 +171,8 @@ export function BlogPostListView({
       <p className="text-xs text-muted-foreground">
         {messages.blog.postsCount(
           filteredAndSorted.length,
-          posts.length,
-          messages.blog.postsLabel(posts.length)
+          totalCount ?? posts.length,
+          messages.blog.postsLabel(totalCount ?? posts.length)
         )}
       </p>
     </div>

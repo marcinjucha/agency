@@ -1,28 +1,36 @@
 'use client'
 
+import { useState, useMemo, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getBlogPosts, blogKeys } from '../queries'
 import { deleteBlogPost } from '../actions'
 import {
   Button,
   Skeleton,
-  Tabs,
-  TabsList,
-  TabsTrigger,
-  TabsContent,
   LoadingState,
   ErrorState,
   EmptyState,
 } from '@agency/ui'
 import Link from 'next/link'
 import { FileText, Plus } from 'lucide-react'
+import { startOfDay, isSameDay } from 'date-fns'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
 import { BlogPostListView } from './BlogPostListView'
 import { BlogCalendarView } from './BlogCalendarView'
+import type { BlogPostListItem } from '../types'
+
+/** Returns the date used to place a post on the calendar. */
+function getCalendarDate(post: BlogPostListItem): Date {
+  if (post.is_published && post.published_at) {
+    return startOfDay(new Date(post.published_at))
+  }
+  return startOfDay(new Date(post.created_at))
+}
 
 export function BlogPostList() {
   const queryClient = useQueryClient()
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined)
 
   const {
     data: posts,
@@ -44,6 +52,27 @@ export function BlogPostList() {
       queryClient.invalidateQueries({ queryKey: blogKeys.all })
     },
   })
+
+  /** Toggle date selection — clicking the same date deselects it. */
+  const handleSelectDate = useCallback(
+    (date: Date | undefined) => {
+      if (date && selectedDate && isSameDay(date, selectedDate)) {
+        setSelectedDate(undefined)
+      } else {
+        setSelectedDate(date)
+      }
+    },
+    [selectedDate]
+  )
+
+  /** Filter posts by selected date, or return all if no date selected. */
+  const filteredPosts = useMemo(() => {
+    if (!posts) return []
+    if (!selectedDate) return posts
+    return posts.filter((post) =>
+      isSameDay(getCalendarDate(post), selectedDate)
+    )
+  }, [posts, selectedDate])
 
   if (isLoading) return <BlogPostListSkeleton />
 
@@ -78,35 +107,42 @@ export function BlogPostList() {
   }
 
   return (
-    <Tabs defaultValue="list" className="space-y-6">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold text-foreground">{messages.blog.blog}</h1>
-        <div className="flex items-center gap-3">
-          <TabsList>
-            <TabsTrigger value="list">{messages.blog.listView}</TabsTrigger>
-            <TabsTrigger value="calendar">{messages.blog.calendarView}</TabsTrigger>
-          </TabsList>
-          <Link href={routes.admin.blogNew}>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              {messages.blog.newPostButton}
-            </Button>
-          </Link>
-        </div>
+        <Link href={routes.admin.blogNew}>
+          <Button>
+            <Plus className="mr-2 h-4 w-4" />
+            {messages.blog.newPostButton}
+          </Button>
+        </Link>
       </div>
 
-      <TabsContent value="list">
-        <BlogPostListView
-          posts={posts}
-          onDelete={(id) => deleteMutation.mutate(id)}
-          isDeleting={deleteMutation.isPending}
-        />
-      </TabsContent>
-      <TabsContent value="calendar">
-        <BlogCalendarView posts={posts} />
-      </TabsContent>
-    </Tabs>
+      {/* Unified layout: calendar + list */}
+      <div className="flex flex-col lg:flex-row gap-6">
+        {/* Calendar panel */}
+        <div className="shrink-0">
+          <BlogCalendarView
+            posts={posts}
+            selectedDate={selectedDate}
+            onSelectDate={handleSelectDate}
+          />
+        </div>
+
+        {/* List panel */}
+        <div className="min-w-0 flex-1">
+          <BlogPostListView
+            posts={filteredPosts}
+            totalCount={posts.length}
+            selectedDate={selectedDate}
+            onClearDate={() => setSelectedDate(undefined)}
+            onDelete={(id) => deleteMutation.mutate(id)}
+            isDeleting={deleteMutation.isPending}
+          />
+        </div>
+      </div>
+    </div>
   )
 }
 
