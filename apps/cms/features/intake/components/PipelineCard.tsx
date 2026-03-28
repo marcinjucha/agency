@@ -113,10 +113,6 @@ export const PipelineCardContent = forwardRef<HTMLDivElement, PipelineCardConten
         <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
           <span>{formatTimeAgo(response.createdAt)}</span>
 
-          {response.internalNotes && (
-            <StickyNote className="h-3 w-3 text-muted-foreground" aria-label="Ma notatki" />
-          )}
-
           {response.hasAppointment && (
             <Calendar className="h-3 w-3 text-muted-foreground" aria-label="Ma wizytę" />
           )}
@@ -130,6 +126,16 @@ export const PipelineCardContent = forwardRef<HTMLDivElement, PipelineCardConten
             </Badge>
           )}
         </div>
+
+        {/* Row 4: Internal notes preview */}
+        {response.internalNotes && (
+          <div className="flex items-start gap-1.5 mt-2">
+            <StickyNote className="h-3 w-3 text-muted-foreground flex-shrink-0 mt-0.5" />
+            <p className="text-xs text-muted-foreground truncate">
+              {response.internalNotes}
+            </p>
+          </div>
+        )}
       </div>
     )
   }
