@@ -603,6 +603,10 @@ features:
   phase_6_marketing:
     - name: "Blog / Articles with WYSIWYG Editor"
       status: "complete"
+      scheduled_publishing:
+        status: "complete"
+        task_id: "AAA-T-107"
+        completion_notes: "3-state publishing model (draft/scheduled/published) via existing is_published + published_at columns. CMS editor gets Calendar date/time picker, Zaplanuj publikację / Opublikuj teraz buttons, 3-state status badges. Blog list has Tabs (Lista/Kalendarz) with status filter. Website queries filter published_at <= now() so scheduled posts stay hidden until publish date."
       why: "CMS users create and manage blog articles for agency marketing without code. Public site displays blog listing, articles, and draft previews with SEO optimization."
       acceptance_criteria:
         - criterion: "Tiptap WYSIWYG editor with full formatting toolbar (bold, italic, headings, links, images, lists, blockquote, code, alignment)"
