@@ -78,6 +78,8 @@ Phase 1 (n8n form_confirmation) + Phase 2 (CMS template editor + live preview) �
 - **Direct code edits allowed for tiny changes** — User accepts direct edits (not via agent) for trivial string changes (3 href values, 1 className). Agents required for feature-level changes, not micro-fixes. (2026-03-24)
 - **Test after each priority level, not each fix** — User prefers batching: fix all P0 → test → fix all P1 → test → fix all P2 → test. Individual commits per fix, but testing grouped by severity. (2026-03-25)
 - **Commit per change, test later** — User wants individual commits after each refactor but defers manual testing to the end. Collect all test scenarios and present together. (2026-03-25)
+- **Visual consistency fixes → design-agent, not code-developer-agent** — Typography sizes, spacing values, layout changes, card styling are design decisions. User corrected when code-developer-agent was used for fixing card titles/labels/input heights. design-agent owns all visual changes. (2026-03-29)
+- **Commit before side-quests** — When user requests work outside the current task scope (e.g., skill updates, visual audit), commit current progress first. User explicitly asked for this during AAA-T-60. (2026-03-29)
 
 ## Bugs Found
 
@@ -99,6 +101,22 @@ Phase 1 (n8n form_confirmation) + Phase 2 (CMS template editor + live preview) �
 - **Media flow: images/video only via Library** — TiptapEditor drag/paste opens media modal instead of uploading directly. Images and video inserted into editor only from Library tab. YouTube/Vimeo/Instagram/TikTok paste auto-detect still works via extension paste rules. (2026-03-23)
 - **deleteAppointment does NOT remove Google Calendar event** — `appointments/actions.ts` only deletes the DB row. `google_calendar_event_id` column exists but no Calendar API call. Notion ticket created (2026-03-28). Requires `@agency/calendar` token manager for access token.
 - **survey_links.is_active exists since initial migration** — Column added in migration `20251210143628`, not new. RLS `FOR ALL` policy already covers UPDATE. Website already validates `is_active` in `features/survey/queries.ts`. No migration needed for edit feature. (2026-03-28, AAA-T-88)
+
+## SEO Foundations — AAA-T-60 + AAA-T-85 — COMPLETED (2026-03-29)
+
+**Scope:** Comprehensive SEO overhaul — CMS settings, meta tags, structured data, keyword management, visual consistency.
+
+**Key decisions:**
+- `site_settings` table for org-level SEO config (one row per tenant, UNIQUE constraint)
+- Anon SELECT on site_settings — all fields public (org name, social links, OG image, GSC code). Website reads at build time via `createAnonClient()`
+- Keyword pool: JS merge of `site_settings.default_keywords` + all unique `blog_posts.seo_metadata.keywords` (no Postgres function needed at this scale)
+- `React.cache()` wraps website queries called in both `generateMetadata()` and component body — deduplicates within single request
+- Next.js `verification.google` for GSC meta tag (not manual `<meta>` tag)
+- Title template `%s | Halo Efekt` in root layout, homepage uses `{ absolute: '...' }` to bypass
+- Homepage metadata now dynamic via `generateMetadata()` reading `landing_pages.seo_metadata` with hardcoded fallbacks
+- Keywords deduplicated with `.toLowerCase()` via `Set` across post-specific + global defaults
+- CMS Admin View Patterns codified in ui-components skill (2026-03-29) — page headers, editor layouts, card/form/save conventions
+- Google Search Console verification code: `GCfETKDyC-evSaMt_NyqAihacXKNVV30zIpP5VfOUSo`
 
 ## Domain Concepts (Landing Page)
 
@@ -144,3 +162,5 @@ Phase 1 (n8n form_confirmation) + Phase 2 (CMS template editor + live preview) �
 - **current_submissions read-only, max_submissions editable** — Never reset submission counter (loses audit trail). To allow more submissions, increase max_submissions instead. User confirmed 2026-03-28 (AAA-T-88).
 - **Worktree needs .env.local copied manually** — Git worktrees don't include .env.local (gitignored). Must copy from main repo: `cp apps/cms/.env.local worktree1/apps/cms/.env.local`. Hit for both CMS and Website. (2026-03-28)
 - **Scheduled publishing: derived status, no migration** — 3 states (draft/scheduled/published) derived from `is_published` + `published_at` at render time via `getPostStatus()`. No new DB column needed. Website filters `published_at <= now()` — ISR revalidate=60 means ~60s delay max. Calendar component added to `packages/ui/` (react-day-picker v9). (2026-03-28, AAA-T-107)
+- **CMS editor pages: full width, no max-w constraints** — Removed `max-w-3xl` from landing page route and `max-w-7xl` from blog editor. Admin layout `p-8` provides sufficient margin. 2-column grid `lg:grid-cols-[1fr_380px]` for all editors. (2026-03-29, AAA-T-60)
+- **Shared keyword combobox pattern** — `KeywordSelect` is a pure presentational component (no internal data fetching). Accepts `pool: string[]` and `isLoading` props. Each consumer fetches pool via own query. Avoids cross-feature coupling. (2026-03-29)

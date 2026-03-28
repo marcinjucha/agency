@@ -925,13 +925,19 @@ features:
         - features/marketing/components/Footer.tsx — legal links added
 
     - name: "SEO Foundations"
-      status: "pending"
+      status: "complete"
+      task_id: "AAA-T-60"
       why: "Ensure marketing content is discoverable and shareable"
       acceptance_criteria:
-        - "Open Graph + Twitter Card meta tags on all pages"
-        - "Structured data (Organization, Article for blog)"
-        - "sitemap.xml verified, robots.txt configured"
-        - "Lighthouse SEO score >90"
+        - criterion: "Open Graph + Twitter Card meta tags on all pages"
+          verified: true
+        - criterion: "Structured data (Organization, Article for blog)"
+          verified: true
+        - criterion: "sitemap.xml verified, robots.txt configured"
+          verified: true
+        - criterion: "Lighthouse SEO score >90"
+          verified: true
+      completion_notes: "Full SEO overhaul: site_settings table for org-level config (social profiles, GSC verification, default keywords, OG defaults), Organization JSON-LD in root layout, metadataBase + title template, blog Article + CollectionPage JSON-LD, survey pages noindex, robots.ts, sitemap with DB timestamps, homepage metadata dynamic from CMS, keywords merged/deduplicated. CMS: Settings page with tabbed layout + KeywordSelect combobox, blog editor keyword combobox, landing page editor redesigned to 2-column. Additional: CMS Admin View Patterns documented in ui-components skill."
       dependencies:
         - feature: "Blog / Articles with WYSIWYG Editor"
         - feature: "Landing Page CMS"
@@ -1082,7 +1088,7 @@ status_summary:
   phase_3: "✅ Complete (100%) - Calendar Integration FINISHED"
   phase_4: "✅ Complete (100%) - UI/UX Improvements"
   phase_5: "✅ Complete (100%) - Email Notifications E2E tested"
-  phase_6: "🚀 In Progress (80%) - Blog, Landing Page CMS, Redesign, Dark Theme complete. CTA integration + Legal/SEO pending"
+  phase_6: "✅ Complete (100%) - Blog, Landing Page CMS, Redesign, Dark Theme, CTA, Legal Pages, SEO Foundations all complete"
   phase_7: "🚀 In Progress (33%) - Intake Hub complete. Roles & Permissions + Booking Emails pending"
   phase_8: "✅ Complete (100%) - Plausible Analytics integrated with conversion funnel tracking"
   phase_future: "📝 Backlog - Multi-language, CRM integrations, Newsletter, Reporting, Onboarding"
@@ -1093,6 +1099,6 @@ critical_path:
   - "Phase 3 Calendar Integration (✅ COMPLETE)"
   - "Phase 4 UI/UX Improvements (✅ COMPLETE)"
   - "Phase 5 n8n & AI Analysis (✅ COMPLETE)"
-  - "Phase 6 Marketing & Content (🚀 IN PROGRESS — CTA + Legal + SEO)"
+  - "Phase 6 Marketing & Content (✅ COMPLETE — SEO Foundations done)"
   - "Phase 7 Intake & Permissions (🚀 IN PROGRESS — Intake Hub done, Roles + Booking Emails next)"
   - "Phase 8 Infrastructure (✅ COMPLETE — Plausible Analytics integrated)"
