@@ -12,9 +12,18 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
 } from '@agency/ui'
-import { X, ExternalLink, Calendar, CheckCircle2, Loader2 } from 'lucide-react'
+import { X, ExternalLink, Calendar, CheckCircle2, Loader2, Trash2 } from 'lucide-react'
 import { updateResponseStatus, updateInternalNotes } from '../actions'
+import { deleteResponse } from '../../responses/actions'
 import { getResponseStatusColor } from '@/lib/utils/status'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
@@ -84,6 +93,20 @@ export function ResponseDetailPanel({ response, onClose }: ResponseDetailPanelPr
   const queryClient = useQueryClient()
   const [notesValue, setNotesValue] = useState('')
   const [notesSaveState, setNotesSaveState] = useState<'idle' | 'saved' | 'error'>('idle')
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const result = await deleteResponse(id)
+      if (!result.success) throw new Error(result.error)
+      return result
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['intake'] })
+      setShowDeleteConfirm(false)
+      onClose()
+    },
+  })
 
   // Sync local notes with selected response
   useEffect(() => {
@@ -347,7 +370,45 @@ export function ResponseDetailPanel({ response, onClose }: ResponseDetailPanelPr
             </p>
           )}
         </section>
+
+        <div className="border-t border-border" />
+
+        {/* Delete */}
+        <section>
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive"
+            onClick={() => setShowDeleteConfirm(true)}
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            {messages.common.delete}
+          </Button>
+        </section>
       </div>
+
+      {/* Delete confirmation */}
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{messages.responses.deleteResponseConfirmTitle}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {response.hasAppointment
+                ? messages.responses.deleteResponseWithAppointmentDescription
+                : messages.responses.deleteResponseConfirmDescription}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{messages.common.cancel}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteMutation.mutate(response.id)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {messages.common.delete}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

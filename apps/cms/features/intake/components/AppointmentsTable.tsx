@@ -1,8 +1,9 @@
 'use client'
 
-import { useQuery } from '@tanstack/react-query'
+import { useState } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { CalendarCheck, ExternalLink } from 'lucide-react'
+import { CalendarCheck, ExternalLink, Trash2 } from 'lucide-react'
 import { format } from 'date-fns'
 import { pl } from 'date-fns/locale/pl'
 import {
@@ -15,8 +16,17 @@ import {
   SelectValue,
   SelectContent,
   SelectItem,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
 } from '@agency/ui'
 import { getAppointments } from '../../appointments/queries'
+import { deleteAppointment } from '../../appointments/actions'
 import type { AppointmentListItem, AppointmentStatus } from '../../appointments/types'
 import { getAppointmentStatusColor } from '@/lib/utils/status'
 import { messages } from '@/lib/messages'
@@ -47,7 +57,21 @@ function formatDateTime(startTime: string, endTime: string): string {
 export function AppointmentsTable() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const queryClient = useQueryClient()
   const statusFilter = searchParams.get('appointmentStatus') as AppointmentStatus | null
+  const [deleteTarget, setDeleteTarget] = useState<AppointmentListItem | null>(null)
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const result = await deleteAppointment(id)
+      if (!result.success) throw new Error(result.error)
+      return result
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['intake'] })
+      setDeleteTarget(null)
+    },
+  })
 
   const {
     data: appointments,
@@ -188,20 +212,30 @@ export function AppointmentsTable() {
                         </span>
                       </td>
                       <td className="px-6 py-4 text-right">
-                        {hasResponse ? (
+                        <div className="flex items-center justify-end gap-1">
+                          {hasResponse && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleRowClick(appointment)
+                              }}
+                              className="p-2 text-muted-foreground hover:text-foreground transition-colors rounded-md hover:bg-muted"
+                              aria-label={messages.appointments.viewResponseDetails}
+                            >
+                              <ExternalLink className="h-4 w-4" />
+                            </button>
+                          )}
                           <button
                             onClick={(e) => {
                               e.stopPropagation()
-                              handleRowClick(appointment)
+                              setDeleteTarget(appointment)
                             }}
-                            className="p-2 text-muted-foreground hover:text-foreground transition-colors rounded-md hover:bg-muted"
-                            aria-label={messages.appointments.viewResponseDetails}
+                            className="p-2 text-muted-foreground hover:text-destructive transition-colors rounded-md hover:bg-muted"
+                            aria-label={messages.common.delete}
                           >
-                            <ExternalLink className="h-4 w-4" />
+                            <Trash2 className="h-4 w-4" />
                           </button>
-                        ) : (
-                          <span className="text-muted-foreground text-sm">&mdash;</span>
-                        )}
+                        </div>
                       </td>
                     </tr>
                   )
@@ -232,6 +266,29 @@ export function AppointmentsTable() {
           </p>
         </div>
       </Card>
+
+      {/* Delete confirmation dialog */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{messages.appointments.deleteAppointmentConfirmTitle}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteTarget
+                ? messages.appointments.deleteAppointmentConfirmDescription(deleteTarget.client_name)
+                : ''}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{messages.common.cancel}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {messages.common.delete}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

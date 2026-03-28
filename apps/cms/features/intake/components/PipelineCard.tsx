@@ -3,7 +3,7 @@
 import { forwardRef } from 'react'
 import { useDraggable } from '@dnd-kit/core'
 import { Badge } from '@agency/ui'
-import { Calendar } from 'lucide-react'
+import { Calendar, StickyNote } from 'lucide-react'
 import { messages } from '@/lib/messages'
 import type { PipelineResponse, ClosedSubStatus, CLOSED_SUB_STATUSES } from '../types'
 
@@ -112,6 +112,10 @@ export const PipelineCardContent = forwardRef<HTMLDivElement, PipelineCardConten
         {/* Row 3: Time ago + appointment + sub-status */}
         <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
           <span>{formatTimeAgo(response.createdAt)}</span>
+
+          {response.internalNotes && (
+            <StickyNote className="h-3 w-3 text-muted-foreground" aria-label="Ma notatki" />
+          )}
 
           {response.hasAppointment && (
             <Calendar className="h-3 w-3 text-muted-foreground" aria-label="Ma wizytę" />

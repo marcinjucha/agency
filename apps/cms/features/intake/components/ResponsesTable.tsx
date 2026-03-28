@@ -1,7 +1,8 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Card,
   Badge,
@@ -11,11 +12,20 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
 } from '@agency/ui'
-import { ArrowRight, FileText } from 'lucide-react'
+import { ArrowRight, FileText, Trash2 } from 'lucide-react'
 import { getResponseStatusColor } from '@/lib/utils/status'
 import { messages } from '@/lib/messages'
 import { RESPONSE_STATUSES } from '../validation'
+import { deleteResponse } from '../../responses/actions'
 import type { PipelineResponse, ResponseStatus } from '../types'
 
 interface ResponsesTableProps {
@@ -62,6 +72,20 @@ function formatDate(dateString: string): string {
 export function ResponsesTable({ responses, onSelectResponse }: ResponsesTableProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const queryClient = useQueryClient()
+  const [deleteTarget, setDeleteTarget] = useState<PipelineResponse | null>(null)
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const result = await deleteResponse(id)
+      if (!result.success) throw new Error(result.error)
+      return result
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['intake'] })
+      setDeleteTarget(null)
+    },
+  })
 
   const statusFilter = searchParams.get('status') ?? ''
   const surveyFilter = searchParams.get('survey') ?? ''
@@ -221,16 +245,28 @@ export function ResponsesTable({ responses, onSelectResponse }: ResponsesTablePr
 
                     {/* Actions */}
                     <td className="px-6 py-4 text-right">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          onSelectResponse(response)
-                        }}
-                        className="p-2 text-muted-foreground hover:text-foreground transition-colors rounded-md hover:bg-muted"
-                        aria-label={messages.responses.viewDetails}
-                      >
-                        <ArrowRight className="h-4 w-4" />
-                      </button>
+                      <div className="flex items-center justify-end gap-1">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            onSelectResponse(response)
+                          }}
+                          className="p-2 text-muted-foreground hover:text-foreground transition-colors rounded-md hover:bg-muted"
+                          aria-label={messages.responses.viewDetails}
+                        >
+                          <ArrowRight className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setDeleteTarget(response)
+                          }}
+                          className="p-2 text-muted-foreground hover:text-destructive transition-colors rounded-md hover:bg-muted"
+                          aria-label={messages.common.delete}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -246,6 +282,29 @@ export function ResponsesTable({ responses, onSelectResponse }: ResponsesTablePr
           </div>
         </Card>
       )}
+
+      {/* Delete confirmation dialog */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{messages.responses.deleteResponseConfirmTitle}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteTarget?.hasAppointment
+                ? messages.responses.deleteResponseWithAppointmentDescription
+                : messages.responses.deleteResponseConfirmDescription}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{messages.common.cancel}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {messages.common.delete}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
