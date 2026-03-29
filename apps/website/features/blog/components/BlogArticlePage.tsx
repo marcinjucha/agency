@@ -35,7 +35,7 @@ export function BlogArticlePage({ post, isPreview = false }: BlogArticlePageProp
 
       <article className="pb-16 pt-24 md:pt-32">
         {/* Article header */}
-        <header className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 text-center">
+        <header className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
           {post.category && (
             <Badge className="mb-6 bg-primary/10 text-primary hover:bg-primary/10">
               {post.category}
@@ -46,7 +46,7 @@ export function BlogArticlePage({ post, isPreview = false }: BlogArticlePageProp
             {post.title}
           </h1>
 
-          <div className="mt-6 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+          <div className="mt-6 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
             {post.author_name && <span className="font-medium">{post.author_name}</span>}
             {post.author_name && post.published_at && (
               <span className="text-border" aria-hidden="true">&middot;</span>
