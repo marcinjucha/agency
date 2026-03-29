@@ -161,10 +161,13 @@ agency/
 - **No Co-Authored-By in commits** — Never add AI attribution footer ("Co-Authored-By: Claude" or similar) to commit messages.
 - **Always use feature branches** — Never commit directly to main. Create `feature/aaa-t-{id}-{slug}` branch, implement, test, then merge with `--no-ff`.
 - **All docs commits before merge** — memory.md, PROJECT_SPEC.yaml updates go on the feature branch BEFORE merging to main.
+- **Commit before side-quests** — When user requests work outside current task scope (skill updates, visual audit), commit current progress first.
+- **Worktree needs .env.local** — Git worktrees don't include .env.local (gitignored). Copy from main: `cp apps/cms/.env.local worktree/apps/cms/.env.local` (same for website).
 
 **When writing code:**
 
 - **Always use defined agents for code changes** — Use code-developer-agent, design-agent etc. via Agent tool for ALL feature-level code changes. Direct edits only for trivial string changes (3 href values, 1 className).
+- **Visual decisions → design-agent** — Embed heights, widths, spacing, layout dimensions, typography sizes, card styling are design decisions. Use design-agent (not code-developer-agent) for visual tuning. Code-developer-agent for CSS implementation only.
 
 ---
 

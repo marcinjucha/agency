@@ -1,1104 +1,198 @@
 project:
-  name: "Halo-Efekt"
-  description: "SaaS platform for businesses to streamline client intake through smart surveys, calendar booking, and AI qualification — built by Halo Efekt"
-  version: "2.1.0"
-  status: "in-progress"
-  last_updated: "2026-03-28"
-
-# IMPORTANT: This file focuses on WHY (architecture, decisions, rationale)
-# For detailed WHAT (acceptance criteria, file paths, task tracking), see Notion:
-# - Notion Tasks: Task-level acceptance criteria and implementation details
-# - Notion Projects: Feature-level context and dependencies
+  name: "Halo Efekt"
+  type: monorepo
+  notion_project: "AAA-P-4"
+  tech_stack: "Turborepo, Next.js 16 (App Router), React 19, Tailwind CSS 4, shadcn/ui, Supabase (PostgreSQL 17 + RLS), TanStack Query 5, React Hook Form 7, Zod 3, n8n (self-hosted), Resend, AWS S3, Google Calendar API"
 
 architecture:
-  overview: "Monorepo with two Next.js apps (CMS for business users, Website for clients), shared packages for UI/database/validation"
-
-  tech_stack:
-    monorepo:
-      - name: "Turborepo"
-        version: "^2.0"
-        why: "Code sharing across apps, independent deployments, smart caching for build performance"
-      - name: "npm workspaces"
-        version: "^10.0"
-        why: "Native monorepo package management without external tools"
-
-    frontend:
-      - name: "Next.js"
-        version: "^16 (App Router)"
-        why: "RSC for data fetching, Server Actions for mutations, zero-config Vercel deployment"
-      - name: "React"
-        version: "^19"
-        why: "Component composition, hooks for state management"
-      - name: "Tailwind CSS"
-        version: "^4"
-        why: "Utility-first styling, responsive design, design system consistency"
-      - name: "shadcn/ui"
-        version: "latest"
-        why: "Accessible, customizable components (WCAG 2.1 AA compliant)"
-
-    backend:
-      - name: "Supabase"
-        version: "cloud"
-        why: "Managed PostgreSQL + Auth + Realtime, RLS for multi-tenant isolation, generous free tier"
-      - name: "PostgreSQL"
-        version: "^17"
-        why: "JSONB for flexible survey responses, RLS policies for tenant isolation, performance"
-
-    state_management:
-      - name: "TanStack Query"
-        version: "^5"
-        why: "Server state caching, automatic refetching, optimistic updates (CMS only)"
-      - name: "React Hook Form"
-        version: "^7"
-        why: "Complex form state, validation integration with Zod"
-      - name: "Zod"
-        version: "^3"
-        why: "Type-safe validation, runtime schema generation for dynamic surveys"
-
-    future:
-      - name: "n8n"
-        version: "self-hosted"
-        why: "Workflow automation for AI analysis and email notifications (Phase 5)"
-
   key_decisions:
-    - decision: "API Routes for public submissions (not Server Actions)"
-      rationale: "Better HTTP context for anonymous operations, service role key usage is safe when tenant_id derived from database"
-
-    - decision: "RLS for multi-tenancy (not application-level filtering)"
-      rationale: "Database-level enforcement prevents data leaks, PostgreSQL performance better than app-level joins"
-
-    - decision: "JSONB for survey responses (not relational tables)"
-      rationale: "Dynamic survey schemas, flexible question types, simpler queries for response display"
-
-    - decision: "TanStack Query only in CMS (not Website)"
-      rationale: "CMS needs caching/refetching, Website is mostly static SSR/SSG"
-
-    - decision: "shadcn/ui (not pre-built component library)"
-      rationale: "Full control over components, accessibility out of box, no bundle bloat"
-
-    - decision: "Monorepo with shared packages (not separate repos)"
-      rationale: "Type sharing, code reuse, atomic commits across apps"
-
-    - decision: "getUserWithTenant() shared auth helper (not inline per-action)"
-      rationale: "Was duplicated 4x across blog/email/media/surveys actions. Extracted to apps/cms/lib/auth.ts. Returns { supabase, userId, tenantId } with isAuthError() type guard"
-
-    - decision: "createAnonClient() for ALL website queries (not server client)"
-      rationale: "Cookie-based server client calls cookies() which fails at build time during ISR/generateStaticParams. Service role via anon client bypasses RLS — acceptable for public data"
-
-    - decision: "Centralized messages in lib/messages.ts (not inline strings)"
-      rationale: "~220 hardcoded strings extracted to per-app message files. Nested by feature, as const for type safety. Prepares for i18n — switching language = changing one file"
-
-    - decision: "queries.ts (browser) vs queries.server.ts (server) naming convention"
-      rationale: "Wrong naming causes silent bugs — browser client in Server Component works at runtime but fails at build time. Architecture audit found 3 violations"
-
-  design_patterns:
-    - pattern: "Feature-based folder structure"
-      why: "Co-locate types, queries, actions, components by domain (surveys, responses, appointments)"
-
-    - pattern: "Server Components for data fetching, Client Components for interactivity"
-      why: "Minimize client bundle, leverage RSC for auth/database queries"
-
-    - pattern: "Server Actions for mutations, API Routes for public endpoints"
-      why: "Server Actions for authenticated ops, API Routes for anonymous clients"
-
-    - pattern: "Shared UI state components in @agency/ui"
-      why: "EmptyState, ErrorState, LoadingState consolidated from 2 apps into packages/ui. Prevents divergence"
-
-    - pattern: "Thin route files — business logic in features/"
-      why: "ADR-005 enforced: route pages <20 lines (import + render), API routes delegate to feature functions. Architecture audit extracted 780+ lines from routes"
+    - "API Routes for public submissions — better HTTP context for anonymous ops, service role key safe when tenant_id from DB"
+    - "RLS for multi-tenancy — database-level enforcement prevents data leaks"
+    - "JSONB for survey responses — dynamic schemas, no migration for new question types"
+    - "TanStack Query only in CMS — Website is mostly static SSR/SSG"
+    - "getUserWithTenant() shared auth — extracted from 4x duplication, returns { supabase, userId, tenantId }"
+    - "createAnonClient() for ALL website queries — server client calls cookies() which fails at build time during ISR"
+    - "queries.ts (browser) vs queries.server.ts (server) — wrong naming causes silent build-time bugs"
+    - "Feature-based folder structure (ADR-005) — thin route files <20 lines, business logic in features/"
+    - "Centralized messages in lib/messages.ts — ~220 strings, nested by feature, prepares for i18n"
+    - "Centralized routes in lib/routes.ts — prevents typos in hrefs, revalidatePath, API fetch calls"
+    - "Fire-and-forget webhook pattern for n8n — don't block user requests, workflow runs async"
+    - "TiptapEditor extracted to features/editor/ with dependency injection — blog and legal pages share editor, no duplication"
 
 features:
-  phase_1_foundation:
-    - name: "Monorepo & Infrastructure"
-      status: "complete"
-      why: "Enable code sharing, independent app deployments, and type-safe integrations"
-      acceptance_criteria:
-        - "Both apps build independently without errors"
-        - "Shared packages accessible from both apps"
-        - "TypeScript strict mode enforced globally"
-      dependencies: []
-
-    - name: "Authentication System"
-      status: "complete"
-      why: "Secure user access to CMS, session management for protected routes"
-      acceptance_criteria:
-        - "Users can register/login with email/password"
-        - "Middleware protects /admin routes from unauthenticated users"
-        - "Sessions persist in cookies, survive page reload"
-      dependencies:
-        - feature: "Database Schema"
-          reason: "Needs users table and Supabase Auth setup"
-
-    - name: "Database Schema & Multi-Tenancy"
-      status: "complete"
-      why: "Multi-tenant data isolation via RLS, flexible JSONB responses, performance indexes"
-      acceptance_criteria:
-        - "6 tables with RLS policies (tenants, users, surveys, survey_links, responses, appointments)"
-        - "TypeScript types auto-generated from schema"
-        - "Proper indexes for common queries"
-      tech_decisions:
-        - decision: "JSONB for survey responses"
-          rationale: "Dynamic schemas, no migration needed for new question types"
-        - decision: "RLS policies on all tables"
-          rationale: "Database-level tenant isolation prevents data leaks"
-      dependencies: []
-
-    - name: "CMS Admin Layout"
-      status: "complete"
-      why: "Navigation hub for business users, dashboard for real-time stats"
-      acceptance_criteria:
-        - "Responsive sidebar navigation"
-        - "Dashboard shows real-time stats (surveys, responses, appointments)"
-      dependencies:
-        - feature: "Authentication"
-          reason: "Only authenticated users see admin layout"
-
-    - name: "Survey Builder"
-      status: "complete"
-      why: "Empower users to create custom surveys without code"
-      acceptance_criteria:
-        - "Users can create surveys with 7 question types (text, textarea, email, tel, select, radio, checkbox)"
-        - "Questions persist to database on save"
-        - "Survey list shows all surveys for tenant"
-        - "Users can delete surveys (with confirmation dialog, cascades to links and responses)"
-      tech_decisions:
-        - decision: "React Hook Form for builder"
-          rationale: "Complex form state with nested arrays (questions, options)"
-        - decision: "TanStack Query for survey list"
-          rationale: "Real-time updates, cache invalidation on mutations"
-      dependencies:
-        - feature: "Authentication"
-        - feature: "Database Schema"
-
-    - name: "Survey Link Generation"
-      status: "complete"
-      why: "Secure, shareable links with expiration and submission limits"
-      acceptance_criteria:
-        - "Generate unique links with UUID tokens"
-        - "Optional expiration date and max submission limit"
-        - "Expired/maxed-out links show error to clients"
-        - "Inline editing of link properties (notification_email, expires_at, max_submissions, is_active) without regenerating the token (AAA-T-88)"
-        - "Always-visible is_active Switch for instant link deactivation without opening an edit form (AAA-T-88)"
-      tech_decisions:
-        - decision: "RLS allows anonymous link reads"
-          rationale: "Clients need to validate link without authentication"
-        - decision: "Atomic counter increment via PostgreSQL function"
-          rationale: "Prevent race conditions on submission count"
-        - decision: "Inline edit updates properties only, never touches link UUID"
-          rationale: "Regenerating the token breaks all existing client bookmarks — admins need to change email/expiry/limits without invalidating distributed links (AAA-T-88)"
-        - decision: "datetime-local input format requires manual coercion before Zod .datetime() validation"
-          rationale: "Browser datetime-local returns '2026-03-28T12:00' (no timezone); Zod .datetime() expects ISO 8601 with timezone — coerce to UTC before validation (AAA-T-88 bug fix)"
-      dependencies:
-        - feature: "Survey Builder"
-
-  phase_2_client_form:
-    - name: "Dynamic Survey Form"
-      status: "complete"
-      why: "Client-facing form that renders dynamically from JSON, validates before submission"
-      acceptance_criteria:
-        - "All 7 question types render correctly"
-        - "Client-side validation with inline error messages"
-        - "Form accessible via unique link token"
-      tech_decisions:
-        - decision: "Zod schema generation from survey JSON"
-          rationale: "Type-safe validation, runtime schema for dynamic surveys"
-        - decision: "React Hook Form Controller for checkboxes"
-          rationale: "Array handling for multi-select questions"
-      dependencies:
-        - feature: "Survey Link Generation"
-
-    - name: "Form Submission & Response Storage"
-      status: "complete"
-      why: "Persist client responses with multi-tenant isolation, atomic submission counter"
-      acceptance_criteria:
-        - "Responses saved to database with tenant_id, survey_link_id, answers (JSONB)"
-        - "Submission count atomically incremented"
-        - "RLS policy allows anonymous inserts"
-      tech_decisions:
-        - decision: "API Route (not Server Action)"
-          rationale: "Better HTTP context for anonymous operations"
-        - decision: "Service role key for public submissions"
-          rationale: "Safe when tenant_id derived from database, not user input"
-      dependencies:
-        - feature: "Dynamic Survey Form"
-
-    - name: "Success Page & Redirect"
-      status: "complete"
-      why: "Confirm submission success, preview next steps (calendar booking)"
-      acceptance_criteria:
-        - "Thank you message after submission"
-        - "Calendar booking UI placeholder (Phase 3)"
-      dependencies:
-        - feature: "Form Submission"
-
-    - name: "Response Management UI (CMS)"
-      status: "complete"
-      why: "Users view submitted responses, prepare for AI qualification (Phase 5)"
-      acceptance_criteria:
-        - "Response list with submission date, status, survey title"
-        - "Response detail shows question-answer pairs"
-        - "RLS ensures users only see their tenant's responses"
-        - "Users can delete responses (with appointment-aware warning when linked appointment exists)"
-      dependencies:
-        - feature: "Form Submission"
-        - feature: "Authentication"
-
-  phase_3_calendar:
-    - name: "Google Calendar OAuth"
-      status: "complete"
-      why: "Connect user's calendar for availability and booking"
-      acceptance_criteria:
-        - "Users can connect/disconnect Google Calendar"
-        - "OAuth refresh token stored securely"
-      tech_decisions:
-        - decision: "Mocked OAuth for MVP"
-          rationale: "Avoid Google Cloud setup complexity during development"
-      dependencies:
-        - feature: "Authentication"
-
-    - name: "Available Slots API"
-      status: "complete"
-      why: "Calculate user's availability with buffer time, prevent double-booking"
-      acceptance_criteria:
-        - "API returns available time slots respecting working hours"
-        - "15-minute buffer between appointments"
-        - "Timezone-aware (Europe/Warsaw with DST)"
-      tech_decisions:
-        - decision: "date-fns for timezone calculations"
-          rationale: "Lightweight, reliable DST handling"
-      dependencies:
-        - feature: "Google Calendar OAuth"
-
-    - name: "Calendar Booking UI"
-      status: "complete"
-      why: "Client-facing interface to book appointments after form submission"
-      acceptance_criteria:
-        - "Date picker and time slot selector"
-        - "Booking confirmation shows appointment details"
-      dependencies:
-        - feature: "Success Page"
-        - feature: "Available Slots API"
-
-    - name: "Booking Creation & Notifications"
-      status: "complete"
-      why: "Persist appointments, sync with Google Calendar, notify participants"
-      acceptance_criteria:
-        - "Appointment record in database linked to response_id"
-          verified: true
-        - "Google Calendar event created (REAL - not mock)"
-          verified: true
-        - "Double-booking prevention (conflict detection)"
-          verified: true
-      tech_decisions:
-        - decision: "Email notifications deferred to n8n (Phase 5)"
-          rationale: "Centralize all notifications in workflow automation"
-      dependencies:
-        - feature: "Calendar Booking UI"
-      notes: |
-        2026-02-01: Phase 3 COMPLETE - All Code & Testing Done
-
-        CREATED:
-        - Shared calendar package (@agency/calendar)
-        - Token manager with auto-refresh (5-minute buffer)
-        - Real Google Calendar event creation
-        - OAuth token refresh logic
-
-        TESTED:
-        - P0 Test PASSED: Events appear in Google Calendar
-        - Token manager returns valid access token
-        - Appointment saves to database even if calendar fails (graceful degradation)
-        - Booking API validates conflicts correctly
-        - Real screenshot: 2 appointments visible in Google Calendar
-
-        CODE QUALITY:
-        - Debug logging removed (console.log cleanup)
-        - Only console.error for real errors kept
-        - All commented code removed
-        - Unused types cleaned up (BookingRequest, Appointment interfaces)
-
-        2026-03-17: Calendar Bug Fixes + Settings COMPLETE (AAA-T-44, AAA-T-45, AAA-T-25)
-
-        BUG FIXES (AAA-T-44, AAA-T-45):
-        - getEvents() added to @agency/calendar shared package (was returning mock [])
-        - slots/route.ts now uses real Google Calendar API via getEvents()
-        - getResponsesByLink/getResponsesBySurvey fixed (wrong select shape using transformToListItem())
-        - no_show status added to appointments CHECK constraint
-        - 6x console.log removed from calendar/queries.ts
-
-        CALENDAR SETTINGS (AAA-T-25):
-        - calendar_settings table created (per-user: work_start_hour, work_end_hour, slot_duration_minutes, buffer_minutes)
-        - CMS settings page: CalendarTokenStatus component shows refresh token expiry
-        - CalendarSettingsForm: users edit working hours and slot configuration
-        - Slots API reads from calendar_settings DB with 5-min in-memory cache per userId
-        - All 4 tasks updated to Done in Notion
-
-  phase_4_uiux:
-    - name: "Accessibility Critical Path"
-      status: "complete"
-      why: "WCAG 2.1 AA compliance for semantic HTML, keyboard navigation, screen readers"
-      acceptance_criteria:
-        - "Semantic HTML table structures in AppointmentList and ResponseList"
-        - "Keyboard focus management with skip-to-content link"
-        - "Accessible Dialog component (replaces window.confirm)"
-      tech_decisions:
-        - decision: "shadcn/ui Dialog for confirmations"
-          rationale: "WCAG-compliant, keyboard accessible, focus trap"
-      dependencies: []
-
-    - name: "Design System Foundation"
-      status: "complete"
-      why: "Centralized component library, consistent status colors, iconography"
-      acceptance_criteria:
-        - "shadcn/ui components verified and exported from @agency/ui"
-        - "Centralized status color utilities"
-        - "Lucide Icons for consistent iconography"
-      dependencies:
-        - feature: "Accessibility Critical Path"
-
-    - name: "Component Library Expansion"
-      status: "complete"
-      why: "Eliminate duplicated loading/error/empty states, improve maintainability"
-      acceptance_criteria:
-        - "LoadingState, ErrorState, EmptyState components created"
-        - "Replaced custom states in SurveyList, AppointmentList, ResponseDetail, ResponseList"
-        - "Skeleton component installed and exported"
-      tech_decisions:
-        - decision: "4 LoadingState variants (spinner, skeleton, page, inline)"
-          rationale: "Match context: full-page vs inline loading"
-      dependencies:
-        - feature: "Design System Foundation"
-
-    - name: "Responsive Design & Visual Polish"
-      status: "complete"
-      why: "Touch-friendly targets (WCAG 2.1 AA), responsive layouts, typography hierarchy"
-      acceptance_criteria:
-        - "Touch target sizes ≥44px (WCAG compliant)"
-        - "Responsive table layouts verified"
-        - "Typography hierarchy fixed in ResponseDetail"
-      dependencies:
-        - feature: "Component Library Expansion"
-
-  phase_5_n8n_ai:
-    - name: "n8n Infrastructure"
-      status: "complete"
-      why: "Self-hosted workflow automation for AI analysis and email notifications"
-      acceptance_criteria:
-        - "n8n running on Hetzner VPS with Docker, SSL, reverse proxy"
-          verified: true
-        - "Queue mode with 2 workers (Redis message broker)"
-          verified: true
-        - "PostgreSQL 16 database for workflow storage"
-          verified: true
-        - "Traefik reverse proxy with Let's Encrypt SSL"
-          verified: true
-      tech_decisions:
-        - decision: "Self-hosted n8n (not cloud)"
-          rationale: "Lower cost, full control, privacy compliance"
-        - decision: "Queue mode with Redis (not in-memory)"
-          rationale: "Scalable workflow execution, prevents main instance blocking, allows horizontal scaling"
-      dependencies: []
-      notes: |
-        2026-02-05: n8n Infrastructure COMPLETE
-
-        DEPLOYED:
-        - N8N instance: https://n8n.trustcode.pl/
-        - Docker Compose stack (9 services)
-        - Queue mode: n8n-app + 2 workers
-        - Redis message broker (max 256MB)
-        - PostgreSQL 16 (tuned for 4GB RAM)
-        - Traefik v3.5 (automatic SSL renewal)
-
-        MONITORING:
-        - GlitchTip error tracking (glitchtip.trustcode.pl)
-        - Prometheus + Grafana + AlertManager
-        - Slack alerts (#n8n-critical, #n8n-monitoring)
-        - Email alerts for backups
-
-        CUSTOM MODULES:
-        - Sentry SDK (@sentry/node v7.120.4) for Code nodes
-        - Mounted as read-only volume: ./custom_modules/node_modules/@sentry
-
-        VPS DETAILS:
-        - Location: infra/n8n-vps/ (symlink to n8n-vps repo)
-        - Backup strategy: 3-2-1 (daily 2AM, local + AWS S3)
-
-    - name: "AI Qualification Workflow"
-      status: "complete"
-      why: "Automated client qualification to prioritize high-value leads"
-      acceptance_criteria:
-        - criterion: "Webhook triggered on form submission"
-          verified: true  # Fire-and-forget in apps/website/features/survey/submit.ts:62
-        - criterion: "AI analyzes responses and stores results in responses.ai_qualification"
-          verified: true  # Workflow tested, works correctly
-        - criterion: "8-node workflow with error handling"
-          verified: true  # Modified from 7 to 8 nodes (added Fetch Response node)
-        - criterion: "Retry logic for API failures (3 retries, 5s delay)"
-          verified: true
-      tech_decisions:
-        - decision: "Claude Haiku 4.5 for AI analysis (not GPT-4)"
-          rationale: "37x cheaper ($0.0008 vs $0.03 per request), sufficient quality for 0-10 scoring, native Polish support, <2s response time"
-        - decision: "Single model approach (not hybrid GPT-4 + Claude)"
-          rationale: "Haiku quality sufficient for qualification task, no need for expensive model combo"
-        - decision: "JSONB storage for ai_qualification (not separate tables)"
-          rationale: "Flexible schema evolution, can add new fields without migrations, atomic updates"
-        - decision: "Fire-and-forget webhook pattern"
-          rationale: "Don't block user requests, workflow runs async in background, retry on failure"
-        - decision: "Simplified webhook input (responseId only)"
-          rationale: "Fetch remaining data via SQL JOIN, reduces payload size, prevents data duplication"
-      dependencies:
-        - feature: "n8n Infrastructure"
-        - feature: "Form Submission"
-      notes: |
-        2026-02-11: Workflow Simplified & Tested Successfully
-
-        MODIFICATIONS:
-        - Simplified webhook input: 4 parameters → 1 parameter (responseId only)
-        - Added Node 2 (Fetch Response): SQL JOIN responses + survey_links tables
-        - Updated Transform node to use database-fetched data instead of webhook payload
-        - Updated Parse node to strip markdown from Claude response
-        - All existing error handling and retry logic maintained
-
-        TESTING:
-        - Test case: Jan Kowalski (high-value divorce case)
-        - responseId: c3d4e5f6-a7b8-9012-cdef-333333333333
-        - Result: ai_qualification populated correctly
-        - Status changed: new → qualified
-        - Execution time: ~6 seconds
-        - All nodes executed successfully, no errors
-
-        WORKFLOW STRUCTURE (8 nodes):
-        1. Webhook (responseId only)
-        2. Fetch Response (NEW - SQL JOIN responses + survey_links)
-        3. Fetch Survey (modified to use Node 2 output)
-        4. Transform Q&A (modified data sources)
-        5. Claude Haiku API (unchanged)
-        6. Parse Output (added markdown stripping)
-        7. Update Response (unchanged)
-        8. Response (returns full qualification object)
-
-        READY FOR:
-        - Production testing with real survey submissions
-        - Email notifications (Phase 5 - pending)
-
-    - name: "Email Notifications + Template Management"
-      status: "complete"
-      why: "Automated confirmation emails after form submission, with per-tenant CMS template management"
-      acceptance_criteria:
-        - criterion: "Client receives form submission confirmation email"
-          verified: true  # E2E test PASSED - Form Confirmation Email workflow tested end-to-end
-        - criterion: "Per-tenant email config (Resend API key + from address)"
-          verified: true
-        - criterion: "Fallback domain (noreply@haloefekt.pl) when tenant config missing"
-          verified: true
-        - criterion: "n8n workflow with subworkflow pattern for reusability"
-          verified: true
-        - criterion: "CMS block editor for email templates with live preview"
-          verified: true
-        - criterion: "email_templates table with RLS and default seed per tenant"
-          verified: true
-        - criterion: "n8n fetches html_body from DB instead of hardcoded HTML"
-          verified: true  # E2E test PASSED
-      tech_decisions:
-        - decision: "Resend via HTTP Request node (not SDK)"
-          rationale: "n8n sandbox blocks fetch/SDK, native https module works"
-        - decision: "Per-tenant email config in database"
-          rationale: "Future multi-provider support, each tenant owns credentials"
-        - decision: "Send Email subworkflow pattern"
-          rationale: "Reusable across workflows (form_confirmation, booking_confirmation, lawyer_digest)"
-        - decision: "Fire-and-forget webhook from website"
-          rationale: "User gets instant response, workflow runs async, retry on failure"
-      dependencies:
-        - feature: "n8n Infrastructure"
-      notes: |
-        2026-03-06: Email Notifications COMPLETE
-
-        DATABASE MIGRATIONS:
-        - Made survey_links.client_email NOT NULL (deleted NULL rows)
-        - Created email_configs table (tenant_id, provider, api_key, from_email, from_name, is_active)
-
-        N8N SUBWORKFLOW: Send Email
-        - Reusable pattern (like Sentry Init pattern)
-        - Accepts: { to, subject, html, from?, tenant_id }
-        - Fetches email_configs from Supabase
-        - If config found + active → uses tenant credentials
-        - If no config → fallback to default Resend (noreply@haloefekt.pl)
-        - Provider routing stub (MVP: Resend only)
-
-        N8N WORKFLOW: Form Confirmation Email
-        - Webhook receives { responseId }
-        - Fetches Response → Survey Link → Survey
-        - Builds email (extract client email/name from responses)
-        - Calls Send Email subworkflow
-        - PENDING: Import both workflows to n8n, get Send Email workflow ID,
-          replace REPLACE_WITH_SEND_EMAIL_WORKFLOW_ID placeholder, E2E test
-
-        WEBSITE INTEGRATION:
-        - Fire-and-forget webhook in apps/website/features/survey/submit.ts
-        - Environment: N8N_WEBHOOK_EMAIL_URL in turbo.json, .env.local, .env.local.example
-
-        CMS INTEGRATION:
-        - Made client email required in SurveyLinks form (validation + UI)
-        - generateSurveyLink now requires clientEmail: string
-
-        SKILLS UPDATED:
-        - Added Sentry Init subworkflow pattern to n8n-patterns SKILL.md
-        - Added Global Error Handling workflow section
-
-    - name: "Monitoring & Error Handling"
-      status: "complete"
-      why: "Track workflow execution, alert on failures, monitor AI costs"
-      acceptance_criteria:
-        - "Failed workflows trigger alerts"
-          verified: true
-        - "Cost monitoring for AI usage"
-          verified: true  # Prometheus tracks execution count
-        - "GlitchTip captures workflow errors"
-          verified: true
-        - "Prometheus scrapes n8n metrics"
-          verified: true
-        - "Grafana dashboards for visualization"
-          verified: true
-      tech_decisions:
-        - decision: "GlitchTip for error tracking (not Sentry cloud)"
-          rationale: "Self-hosted, free, compatible with Sentry SDK, privacy compliant"
-        - decision: "Prometheus + Grafana for metrics (not n8n internal)"
-          rationale: "Unified monitoring stack, 30-day retention, custom dashboards, AlertManager integration"
-      dependencies:
-        - feature: "n8n Infrastructure"
-      notes: |
-        2026-02-05: Monitoring & Error Handling COMPLETE
-
-        ERROR TRACKING:
-        - GlitchTip v4.1.3 deployed (glitchtip.trustcode.pl)
-        - Sentry SDK in Code nodes (@sentry/node v7.120.4)
-        - Error node connected to all workflow failure paths
-        - DSN: https://bed6a207b979467bbb60e51d25995111@glitchtip.trustcode.pl/1
-
-        METRICS (PROMETHEUS):
-        - N8N metrics endpoint: :5678/metrics
-        - Scraped every 15s
-        - 30-day retention
-        - Metrics include:
-          * Workflow execution count/duration
-          * Queue metrics (jobs waiting/active/completed)
-          * API response times
-          * Worker health status
-
-        EXPORTERS:
-        - node-exporter (system metrics)
-        - redis-exporter (queue metrics)
-        - postgres-exporter (database metrics)
-
-        ALERTING (ALERTMANAGER):
-        - Critical alerts → Slack #n8n-critical
-        - Warning alerts → Slack #n8n-monitoring
-        - Info alerts → Email
-
-        GRAFANA DASHBOARDS:
-        - N8N overview (execution success rate, duration)
-        - Queue metrics (jobs/sec, backlog)
-        - System resources (CPU, memory, disk)
-        - Database performance (connections, queries/sec)
-
-  phase_6_marketing:
-    - name: "Blog / Articles with WYSIWYG Editor"
-      status: "complete"
-      scheduled_publishing:
-        status: "complete"
-        task_id: "AAA-T-107"
-        completion_notes: "3-state publishing model (draft/scheduled/published) via existing is_published + published_at columns. CMS editor gets Calendar date/time picker, Zaplanuj publikację / Opublikuj teraz buttons, 3-state status badges. Blog list has Tabs (Lista/Kalendarz) with status filter. Website queries filter published_at <= now() so scheduled posts stay hidden until publish date."
-      why: "CMS users create and manage blog articles for agency marketing without code. Public site displays blog listing, articles, and draft previews with SEO optimization."
-      acceptance_criteria:
-        - criterion: "Tiptap WYSIWYG editor with full formatting toolbar (bold, italic, headings, links, images, lists, blockquote, code, alignment)"
-          verified: true
-        - criterion: "Blog post management UI: create, edit, delete with draft/publish workflow"
-          verified: true
-        - criterion: "Blog list with search, status badges, reading time display"
-          verified: true
-        - criterion: "Auto-generated Polish slugs (handles ą, ę, ś, etc.)"
-          verified: true
-        - criterion: "AWS S3 cover image upload with presigned URLs (direct browser-to-S3)"
-          verified: true
-        - criterion: "SEO metadata management (title, description, OG image, keywords)"
-          verified: true
-        - criterion: "Website /blog listing page with hero, category filters, featured post"
-          verified: true
-        - criterion: "Website /blog/[slug] detail page with prose typography, cover image, metadata"
-          verified: true
-        - criterion: "/blog/preview/[token] draft preview with preview banner and noindex"
-          verified: true
-        - criterion: "Database schema with RLS (owner writes, published visible to all)"
-          verified: true
-        - criterion: "ISR revalidate=60 for performance, sitemap.ts integration"
-          verified: true
-      tech_decisions:
-        - decision: "Tiptap over Plate.js"
-          rationale: "Headless architecture, full styling control, stable API, JSON storage fits JSONB pattern"
-        - decision: "HTML pre-rendered on CMS save via @tiptap/html"
-          rationale: "Website uses stored html_body → no Tiptap dependency on public site, better performance"
-        - decision: "S3 presigned URLs for image upload"
-          rationale: "Direct browser-to-S3, no server proxy, secure 15-minute expiry, reduces server load"
-        - decision: "Single-tenant blog (no tenant_id)"
-          rationale: "haloefekt.pl blog promotes agency marketing, not per-tenant customization"
-        - decision: "createAnonClient() for website queries"
-          rationale: "Works at build time with generateStaticParams, no cookies required"
-      dependencies: []
-      notes: |
-        2026-03-18: Blog Feature COMPLETE (AAA-T-47)
-
-        DATABASE:
-        - blog_posts table (slug UNIQUE, title, excerpt, content JSONB, html_body, cover_image_url, category, author_name, seo_metadata JSONB, is_published, published_at, estimated_reading_time, preview_token)
-        - RLS: owner writes, authenticated reads all, anon reads published only
-        - Indexes on slug, published_at, category, preview_token
-
-        CMS IMPLEMENTATION:
-        - apps/cms/features/blog/ (types.ts, queries.ts, queries.server.ts, validation.ts, utils.ts, actions.ts)
-        - TiptapEditor.tsx: Editor instance with extensions (bold, italic, heading, link, image, etc.)
-        - EditorToolbar.tsx: Formatting buttons with keyboard shortcuts
-        - BlogPostEditor.tsx: 2-column form (content on left, settings/SEO on right)
-        - BlogPostList.tsx: List with search, status badges, actions
-        - /admin/blog routes: list, create, edit
-        - /api/upload/route.ts: S3 presigned URL generation
-        - Sidebar navigation: Blog item added
-
-        WEBSITE IMPLEMENTATION:
-        - apps/website/features/blog/ (types.ts, queries.ts, utils.ts, components)
-        - BlogListPage.tsx: /blog with hero, category filters, featured card, grid
-        - BlogArticlePage.tsx: /blog/[slug] with prose, metadata, cover image
-        - /blog/layout.tsx, /blog/page.tsx, /blog/[slug]/page.tsx, /blog/preview/[token]/page.tsx
-        - sitemap.ts: includes blog URLs
-        - Navbar.tsx: Blog link added
-        - next.config.ts: S3 remotePatterns
-        - globals.css: .blog-prose CSS for article typography
-
-        TESTING & VERIFICATION:
-        - Build passes for both CMS and Website
-        - Slug generation tested with Polish characters
-        - S3 presigned URL integration working
-        - ISR revalidation functioning correctly
-        - SEO metadata properly generated
-        - Draft preview token validation working
-        - All acceptance criteria verified
-
-        2026-03-19: Post-Launch Improvements
-
-        NEW FEATURES:
-        - Creatable category combobox (shadcn Popover + Command/cmdk)
-        - Tiptap S3 image upload: drag-drop, paste, toolbar file picker (5MB limit)
-        - Sticky editor toolbar with overflow-clip + top offset
-        - BubbleMenu: floating formatting toolbar on text selection
-        - Custom blog 404 page (not-found.tsx) with "Wróć do bloga" link
-        - Website blog images centered (.blog-prose img)
-
-        BUG FIXES:
-        - Preview link 404: window.location.origin → NEXT_PUBLIC_WEBSITE_URL
-        - Images lost after save: JSON.stringify content before Server Action (Flight protocol strips attrs)
-
-        SECURITY FIXES:
-        - S3 upload API: ALLOWED_FOLDERS allowlist + path traversal prevention
-        - S3 upload API: ALLOWED_CONTENT_TYPES server-side validation
-
-        CODE QUALITY:
-        - Shared uploadImageToS3() in utils.ts (was duplicated in 2 components)
-        - parseContent() moved from actions.ts to utils.ts (non-async in 'use server' fragile)
-        - aria-label on all icon-only toolbar buttons (WCAG 2.1 AA)
-        - New packages/ui components: Popover, Command (cmdk v1.1.1)
-
-    - name: "Landing Page CMS"
-      status: "complete"
-      why: "Allow business users to edit marketing website sections via block editor, no code deployment needed"
-      acceptance_criteria:
-        - criterion: "7 block types (navbar, hero, identification, problems, process, results, cta, footer)"
-          verified: true
-        - criterion: "Block editor in CMS with live preview"
-          verified: true
-        - criterion: "Database schema: landing_pages table with blocks JSONB"
-          verified: true
-        - criterion: "RLS: only owner role can mutate, anon SELECT published only"
-          verified: true
-        - criterion: "Website homepage fetches from database, falls back to DEFAULT_BLOCKS"
-          verified: true
-        - criterion: "All 7 marketing components accept block props"
-          verified: true
-        - criterion: "ISR revalidate=3600 for performance"
-          verified: true
-      tech_decisions:
-        - decision: "Shared landing page (no tenant_id)"
-          rationale: "haloefekt.pl is company marketing page, not per-tenant customization"
-        - decision: "7 block types with BLOCK_TYPE_LABELS (redesigned from 9)"
-          rationale: "Merged overlapping sections for stronger messaging: Guarantee+RiskReversal→Process, Benefits+Qualification→Results, new Identification"
-        - decision: "CMS queries use browser client"
-          rationale: "TanStack Query runs in client context for real-time updates"
-        - decision: "current_user_role() SECURITY DEFINER function"
-          rationale: "Avoid RLS recursion when checking ownership for mutations"
-        - decision: "next-intl removed from marketing components"
-          rationale: "PL-only for now, extend later if multi-language needed"
-      dependencies: []
-      notes: |
-        2026-03-17: Landing Page CMS COMPLETE (AAA-T-46)
-        2026-03-20: Landing Page REDESIGN COMPLETE (AAA-T-72)
-
-        REDESIGN (2026-03-20):
-        - 9 sections → 7 sections for stronger messaging
-        - Merged: Guarantee + RiskReversal → Process (timeline + zero-risk box)
-        - Merged: Benefits + Qualification → Results (metrics + outcomes + reframed qualification)
-        - New: Identification section (empathy "mirror" — qualifiers moved from Hero)
-        - Hero simplified: 8 content blocks → 3 elements above fold
-        - Deleted: Guarantee.tsx, RiskReversal.tsx, Benefits.tsx, Qualification.tsx
-        - Created: Identification.tsx, Process.tsx, Results.tsx
-        - Block schema updated (new types, removed legacy)
-        - CMS BlockFieldEditor + validation aligned with new schema
-
-        ORIGINAL (2026-03-17):
-        - landing_pages table (slug, blocks JSONB, seo_metadata, is_published)
-        - CMS: features/landing/ (queries, validation, actions, components)
-        - Website: all components accept block props, DB fetch with DEFAULT_BLOCKS fallback
-
-    - name: "CMS Dark + Orange Theme"
-      status: "complete"
-      why: "Align CMS admin panel with website's dark + orange (#EA580C) aesthetic for brand consistency"
-      acceptance_criteria:
-        - criterion: "Theme variables swapped: dark background, orange primary, dark-mode status colors"
-          verified: true
-        - criterion: "Badge colors readable on dark bg (success, warning, destructive)"
-          verified: true
-        - criterion: "TiptapEditor inline CSS uses correct Tailwind v4 variable prefix"
-          verified: true
-        - criterion: "Dialog, buttons, headings all visible with proper contrast"
-          verified: true
-      tech_decisions:
-        - decision: "className='dark' on <html> + bg-background text-foreground on <body>"
-          rationale: "Both required — dark class activates shadcn dark: variants, body classes set base color cascade"
-        - decision: "Brighter destructive color in CMS (hsl 0 72% 51%) vs website (hsl 0 63% 31%)"
-          rationale: "CMS uses text-destructive frequently (delete buttons, error states) — needs higher lightness for text readability on dark bg"
-      dependencies: []
-
-    - name: "Media Library"
-      status: "complete"
-      why: "Centralized media management so CMS users can upload images, video, and YouTube/Vimeo embeds once and reuse across blog posts — avoids duplicate S3 uploads"
-      acceptance_criteria:
-        - criterion: "media_items table with tenant_id + RLS via current_user_tenant_id()"
-          verified: true
-        - criterion: "blog_posts upgraded with tenant_id and tenant-isolated RLS"
-          verified: true
-        - criterion: "Types regenerated and build passes"
-          verified: true
-        - criterion: "/admin/media page with drag-drop upload, grid view, filter, preview, delete"
-          verified: true
-        - criterion: "Tiptap extensions: Video (S3), YouTube embed (URL paste), Vimeo embed (URL paste)"
-          verified: true
-        - criterion: "Insert Media modal in blog editor with Upload + Media Library tabs"
-          verified: true
-        - criterion: "All uploads (drag-drop, paste, modal) create media_items record"
-          verified: true
-        - criterion: "Website .blog-prose renders video and iframe embeds correctly (responsive)"
-          verified: true
-      tech_decisions:
-        - decision: "S3 folder haloefekt/media/ separate from haloefekt/blog/"
-          rationale: "Media Library assets managed independently from blog cover images, different lifecycle"
-        - decision: "media_items tenant_id via current_user_tenant_id() pattern"
-          rationale: "Same RLS pattern as email_templates — avoids infinite recursion"
-        - decision: "50MB video limit, 300s presigned URL timeout"
-          rationale: "Typical short-form video size for services business, longer timeout needed for large uploads"
-        - decision: "tiptapExtensions array in utils.ts must include all new extensions"
-          rationale: "P0 risk — without this generateHtmlFromContent() silently omits video/embed nodes from html_body"
-      dependencies:
-        - feature: "Blog / Articles with WYSIWYG Editor"
-      notes: |
-        2026-03-23: Iteration 1 (Database Foundation) COMPLETE
-
-        MIGRATION: supabase/migrations/20260323000000_add_tenant_to_blog_and_create_media.sql
-        - INSERT tenant "Halo Efekt" (already existed, verified)
-        - ALTER blog_posts ADD tenant_id
-        - UPDATE existing blog_posts SET tenant_id = Halo Efekt id
-        - UPDATE blog_posts RLS (tenant isolation)
-        - CREATE media_items table
-        - RLS on media_items via current_user_tenant_id()
-        - npm run db:types — types regenerated
-
-        2026-03-23: Iteration 2 (Foundation Files + S3 Extension) COMPLETE
-        - Created: features/media/{types,validation,queries,actions,utils}.ts
-        - Created: lib/s3.ts (shared S3 client extracted from upload route)
-        - Modified: app/api/upload/route.ts (video MIME, media folder, 300s expiry, s3Key)
-
-        2026-03-23: Iteration 3 (Media Library Page) COMPLETE
-        - /admin/media page live: MediaUploadZone, MediaCard, MediaGrid, MediaTypeFilter, MediaPreviewDialog, MediaLibrary
-        - Tabs + Progress added to @agency/ui (manual Radix implementation)
-        - Fixed: invalidateQueries key mismatch — grid refreshes after upload
-
-        2026-03-23: Iteration 4 (Tiptap Extensions) COMPLETE
-        - Created: features/blog/extensions/{VideoExtension,YouTubeExtension,VimeoExtension,index,constants}.ts
-        - Created: lib/video-utils.ts (extractVideoId extracted from media/utils — shared source of truth)
-        - Modified: features/blog/utils.ts (imports editorExtensions from registry)
-        - Modified: features/blog/components/TiptapEditor.tsx (uses editorExtensions + video/iframe CSS)
-        - Modified: features/media/utils.ts (re-exports from lib/video-utils)
-        - Paste auto-detection: YouTube/Vimeo URLs auto-convert on paste
-        - P0 mitigated: generateHtmlFromContent() now includes all media types in html_body
-        - Architecture audit passed: single source of truth for extensions, no duplication
-
-        2026-03-23: Iteration 5 (Insert Media Modal + Integration) COMPLETE
-        - Created: features/blog/components/InsertMediaModal.tsx (Library tab + Social Media tab)
-        - Created: features/blog/extensions/{InstagramExtension,TikTokExtension}.ts
-        - Created: lib/fetch-vimeo-thumbnail.ts (moved from features, shared)
-        - Modified: features/blog/components/TiptapEditor.tsx (drag/paste opens modal, all uploads → media_items)
-        - Modified: features/blog/components/EditorToolbar.tsx (Media button)
-        - Modified: features/media/components/MediaCard.tsx (inline rename)
-        - Modified: features/media/components/MediaLibrary.tsx (social media URL input)
-        - Modified: features/media/types.ts + validation.ts + utils.ts (instagram + tiktok types)
-        - lib/video-utils.ts extended: buildEmbedUrl extracted (shared between extensions and modal)
-        - TypeBadge supports all 6 types: image, video, youtube, vimeo, instagram, tiktok
-        - Library tab: inline upload + grid selection without leaving modal
-        - Images and video managed via Library only (centralized asset management)
-
-        2026-03-24: Iteration 6 (Website CSS) COMPLETE
-        - Modified: apps/website/app/globals.css (blog-prose media CSS — video, youtube-embed, vimeo-embed, instagram-embed, tiktok-embed)
-        - Modified: apps/cms/features/blog/components/TiptapEditor.tsx (editor CSS heights updated)
-        - Modified: apps/cms/features/blog/extensions/constants.ts (EMBED_DIMENSIONS, inline style constants added)
-        - Modified: apps/cms/features/blog/extensions/InstagramExtension.ts (uses INSTAGRAM_INLINE_STYLE from constants)
-        - Modified: apps/cms/features/blog/extensions/TikTokExtension.ts (uses TIKTOK_INLINE_STYLE from constants)
-        - All 5 media types render correctly on website: video, YouTube, Vimeo, Instagram, TikTok
-        - Mobile responsive: @media max-width 640px for social embeds
-        - AAA-T-78 (Instagram/TikTok styling) resolved as part of this iteration
-
-    - name: "CTA → Survey Flow Integration"
-      status: "pending"
-      why: "Connect landing page CTA to existing survey+calendar flow for lead acquisition"
-      acceptance_criteria:
-        - "Contact survey created (imię, firma, email, telefon, opis potrzeby)"
-        - "CTA button on landing page opens survey flow"
-        - "After survey completion → calendar booking"
-        - "Reuses existing survey+calendar infrastructure"
-      dependencies:
-        - feature: "Landing Page CMS"
-        - feature: "Survey Link Generation"
-        - feature: "Calendar Booking UI"
-
-    - name: "Regulamin, Polityka Prywatności, Cookie Banner"
-      status: "complete"
-      why: "RODO compliance required before analytics and lead collection go live"
-      acceptance_criteria:
-        - criterion: "/regulamin and /polityka-prywatnosci routes render CMS-managed legal content"
-          verified: true
-        - criterion: "CMS legal page editor with Tiptap WYSIWYG (reuses shared editor, no duplication)"
-          verified: true
-        - criterion: "Cookie consent banner visible on first visit, dismissed permanently via localStorage"
-          verified: true
-        - criterion: "Legal pages included in sitemap.ts"
-          verified: true
-        - criterion: "Build passes for both CMS and Website"
-          verified: true
-      tech_decisions:
-        - decision: "TiptapEditor extracted to features/editor/ with dependency injection"
-          rationale: "Blog and Legal Pages both needed Tiptap — extracted shared editor to features/editor/ accepting extensions and media modal as props. Blog wraps with media support; Legal Pages uses plain text variant. Prevents divergence, no duplication"
-        - decision: "legal page_type in existing pages table (not new table)"
-          rationale: "pages table already existed from landing page infrastructure. ALTER CHECK constraint to add 'legal' + seed 2 rows simpler than new table"
-        - decision: "Sidebar grouped thematically (Intake / Treść / System)"
-          rationale: "Sidebar grew to 8+ items — flat list became hard to scan. Groups match user mental model: intake work, content authoring, system admin"
-        - decision: "Centralized route constants in lib/routes.ts (both apps)"
-          rationale: "Hardcoded path strings across 47 files (35 CMS + 12 Website) → typos in revalidatePath and fetch URLs caused silent bugs. Single source of truth prevents drift"
-      dependencies:
-        - feature: "Landing Page CMS"
-      notes: |
-        2026-03-26: AAA-T-58 COMPLETE — 4 iterations + 3 bonus refactors
-
-        MIGRATION: supabase/migrations/20260326000000_add_legal_page_type_and_seed.sql
-        - ALTER pages.page_type CHECK to include 'legal'
-        - ADD COLUMN html_body TEXT
-        - Seed: regulamin + polityka-prywatnosci rows for Halo Efekt tenant
-
-        CMS (apps/cms/):
-        - features/legal-pages/ (types, queries, queries.server, validation, actions, LegalPageList, LegalPageEditor)
-        - features/editor/ (types, extensions, utils, TiptapEditor, EditorToolbar) — shared editor extracted
-        - features/blog/ updated: TiptapEditor wrapper imports from features/editor/, not standalone
-        - app/admin/legal-pages/ routes (list + [id] edit)
-        - lib/routes.ts — centralized route constants (35 files updated)
-        - lib/messages.ts — nav groups + legal page strings added
-        - Sidebar: grouped into Intake / Treść / System
-
-        WEBSITE (apps/website/):
-        - features/legal/ (types, queries, LegalPageContent, CookieBanner)
-        - app/regulamin/ + app/polityka-prywatnosci/ (layout + page with generateMetadata)
-        - lib/routes.ts — centralized route constants (12 files updated)
-        - lib/layout-defaults.ts — shared layout helpers
-        - app/layout.tsx — CookieBanner added
-        - app/sitemap.ts — legal entries added
-        - features/marketing/components/Footer.tsx — legal links added
-
-    - name: "SEO Foundations"
-      status: "complete"
-      task_id: "AAA-T-60"
-      why: "Ensure marketing content is discoverable and shareable"
-      acceptance_criteria:
-        - criterion: "Open Graph + Twitter Card meta tags on all pages"
-          verified: true
-        - criterion: "Structured data (Organization, Article for blog)"
-          verified: true
-        - criterion: "sitemap.xml verified, robots.txt configured"
-          verified: true
-        - criterion: "Lighthouse SEO score >90"
-          verified: true
-      completion_notes: "Full SEO overhaul: site_settings table for org-level config (social profiles, GSC verification, default keywords, OG defaults), Organization JSON-LD in root layout, metadataBase + title template, blog Article + CollectionPage JSON-LD, survey pages noindex, robots.ts, sitemap with DB timestamps, homepage metadata dynamic from CMS, keywords merged/deduplicated. CMS: Settings page with tabbed layout + KeywordSelect combobox, blog editor keyword combobox, landing page editor redesigned to 2-column. Additional: CMS Admin View Patterns documented in ui-components skill."
-      dependencies:
-        - feature: "Blog / Articles with WYSIWYG Editor"
-        - feature: "Landing Page CMS"
-
-  phase_7_intake_permissions:
-    - name: "Roles & Permissions System"
-      status: "pending"
-      why: "Multi-user access control needed before client onboarding — role-based + granular feature permissions"
-      acceptance_criteria:
-        - "user_roles table (super_admin, admin, member)"
-        - "feature_permissions table (user_id, feature, enabled) for granular overrides"
-        - "RLS policies with role check"
-        - "Middleware route protection"
-        - "Sidebar UI hiding per role"
-      tech_decisions:
-        - decision: "Role-based + feature-level permissions hybrid"
-          rationale: "3 roles cover common cases, granular overrides allow per-user customization without role explosion"
-      dependencies:
-        - feature: "Authentication System"
-
-    - name: "Intake Hub — Unified CMS View"
-      status: "complete"
-      why: "Replace 3 separate CMS pages (Responses, Appointments, planned Kanban) with a single Intake Hub — unified lead and appointment management from first contact to closure"
-      acceptance_criteria:
-        - criterion: "Pipeline Kanban: Nowy → Skwalifikowany → W kontakcie → Zamknięty with drag-and-drop (@dnd-kit)"
-          verified: true
-        - criterion: "JIRA-style inline detail panel (xl+) with Q&A, AI qualification, appointment info, internal notes"
-          verified: true
-        - criterion: "Autosave internal notes (1s debounce) with real-time status indicator"
-          verified: true
-        - criterion: "ResponsesTable and AppointmentsTable with URL searchParams filters (bookmarkable)"
-          verified: true
-        - criterion: "StatsBar with 4 live metrics (new responses, pending contact, today/tomorrow appointments)"
-          verified: true
-        - criterion: "Delete actions with confirmation dialogs for responses and appointments"
-          verified: true
-        - criterion: "Old /admin/responses and /admin/appointments redirect to /admin/intake"
-          verified: true
-        - criterion: "/admin/responses/[id] kept for bookmarks with updated back link"
-          verified: true
-      tech_decisions:
-        - decision: "features/intake/ composes from responses + appointments (ADR-005)"
-          rationale: "New feature does NOT modify existing features/responses/ or features/appointments/ — Sheet reuses getResponse() from responses/queries.ts, Pipeline has its own getPipelineResponses() with ai_qualification + answers for name extraction"
-        - decision: "@dnd-kit for drag-and-drop (not react-beautiful-dnd)"
-          rationale: "react-beautiful-dnd is unmaintained; @dnd-kit is actively maintained and React 19 compatible"
-        - decision: "Single useQuery at IntakeHub level, data passed as props to children"
-          rationale: "Prevents waterfall queries; single 30s auto-refresh interval at hub level"
-        - decision: "Sheet for Kanban card click, full page for table row click"
-          rationale: "Kanban = quick triage (panel sufficient); table rows = explicit navigation intent (full detail expected)"
-        - decision: "needs_more_info is AI recommendation, NOT a DB status"
-          rationale: "ai_qualification.recommendation stores the flag; responses.status stays 'new' — separates AI suggestion from human decision"
-      completion_notes: "Admins can manage the full lead lifecycle from a single /admin/intake page. Pipeline Kanban provides drag-and-drop status management. Inline panel shows complete response context without leaving the page. Tables provide bookmarkable filtered views of all responses and appointments."
-      dependencies:
-        - feature: "Response Management UI (CMS)"
-        - feature: "AI Qualification Workflow"
-
-    - name: "Email: Booking Confirmation"
-      status: "pending"
-      why: "Client and firm need confirmation after appointment booking"
-      acceptance_criteria:
-        - "n8n workflow triggered after booking creation"
-        - "Email to client: date, time, link"
-        - "Email to firm: notification of new booking"
-        - "Reuses Send Email subworkflow + email_templates"
-      dependencies:
-        - feature: "Booking Creation & Notifications"
-        - feature: "Email Notifications + Template Management"
-
-    - name: "Email: Booking Reminder"
-      status: "pending"
-      why: "Reduce no-shows by reminding clients 24h before appointment"
-      acceptance_criteria:
-        - "n8n scheduled workflow: daily check for tomorrow's appointments"
-        - "Reminder email to client with appointment details"
-        - "Reuses Send Email subworkflow"
-      dependencies:
-        - feature: "Email: Booking Confirmation"
-
-  phase_8_infrastructure:
-    - name: "Plausible Analytics — Self-Hosted"
-      status: "complete"
-      why: "Privacy-friendly analytics on VPS, no cookie consent required"
-      acceptance_criteria:
-        - "Plausible running on VPS (Docker Compose)"
-          verified: true
-        - "Tracking script integrated in Website app"
-          verified: true
-        - "Dashboard accessible (analytics.trustcode.pl or similar)"
-          verified: true
-      tech_decisions:
-        - decision: "Self-hosted Plausible (not Google Analytics)"
-          rationale: "Privacy-friendly, no cookies, RODO compliant without consent banner for analytics"
-      completion_notes: "Plausible integrated with 4 script extensions (outbound-links, file-downloads, 404, tagged-events). Typed conversion funnel: CTA Clicked (hero/final_cta/navbar) → Survey Started → Survey Submitted → Booking Completed. CtaLink client component preserves Server Component boundary. Global not-found.tsx enables automatic 404 tracking."
-      dependencies: []
-
-  phase_future_nice_to_have:
-    - name: "Multi-language Support (PL/EN)"
-      status: "backlog"
-      why: "Expand reach to English-speaking clients"
-      dependencies: []
-
-    - name: "External Integrations (CRM, Slack)"
-      status: "backlog"
-      why: "Connect with external systems for notifications and client management"
-      dependencies: []
-
-    - name: "Reporting & Data Export"
-      status: "backlog"
-      why: "Export responses, leads, appointments to CSV/PDF"
-      dependencies: []
-
-    - name: "Tenant Onboarding Flow"
-      status: "backlog"
-      why: "Guided setup for new tenants (company profile, survey creation, calendar connect)"
-      dependencies: []
-
-    - name: "Newsletter System"
-      status: "backlog"
-      why: "Email campaigns from CMS with subscriber management and RODO compliance"
-      dependencies: []
-
-    - name: "Email: Booking Cancellation"
-      status: "backlog"
-      why: "Cancellation notification workflow — requires cancel/reschedule flow"
-      dependencies:
-        - feature: "Email: Booking Confirmation"
-
-dependencies:
-  - from: "Form Submission"
-    to: "Response Management"
-    reason: "Cannot display responses until submission works"
-
-  - from: "Survey Link Generation"
-    to: "Dynamic Survey Form"
-    reason: "Form accessed via token from survey_links"
-
-  - from: "Response Management"
-    to: "Calendar Booking UI"
-    reason: "Calendar shown after form success and response recorded"
-
-  - from: "Booking Creation"
-    to: "Response Detail"
-    reason: "Appointment linked to response in detail view"
-
-status_summary:
-  phase_1: "✅ Complete (100%) - Foundation & CMS Core"
-  phase_2: "✅ Complete (100%) - Client Survey Form & Response Management"
-  phase_3: "✅ Complete (100%) - Calendar Integration FINISHED"
-  phase_4: "✅ Complete (100%) - UI/UX Improvements"
-  phase_5: "✅ Complete (100%) - Email Notifications E2E tested"
-  phase_6: "✅ Complete (100%) - Blog, Landing Page CMS, Redesign, Dark Theme, CTA, Legal Pages, SEO Foundations all complete"
-  phase_7: "🚀 In Progress (33%) - Intake Hub complete. Roles & Permissions + Booking Emails pending"
-  phase_8: "✅ Complete (100%) - Plausible Analytics integrated with conversion funnel tracking"
-  phase_future: "📝 Backlog - Multi-language, CRM integrations, Newsletter, Reporting, Onboarding"
-
-critical_path:
-  - "Phase 1 Foundation (✅ COMPLETE)"
-  - "Phase 2 Form Submission & Response Management (✅ COMPLETE)"
-  - "Phase 3 Calendar Integration (✅ COMPLETE)"
-  - "Phase 4 UI/UX Improvements (✅ COMPLETE)"
-  - "Phase 5 n8n & AI Analysis (✅ COMPLETE)"
-  - "Phase 6 Marketing & Content (✅ COMPLETE — SEO Foundations done)"
-  - "Phase 7 Intake & Permissions (🚀 IN PROGRESS — Intake Hub done, Roles + Booking Emails next)"
-  - "Phase 8 Infrastructure (✅ COMPLETE — Plausible Analytics integrated)"
+  # Phase 1: Foundation
+  - name: "Monorepo & Infrastructure"
+    status: done
+    description: "Turborepo + npm workspaces with shared packages (ui, database, validators)"
+    why: "Code sharing across apps, independent deployments, type-safe integrations"
+
+  - name: "Authentication System"
+    status: done
+    description: "Supabase Auth with email/password, middleware-protected /admin routes, cookie sessions"
+    why: "Secure user access to CMS, session management for protected routes"
+
+  - name: "Database Schema & Multi-Tenancy"
+    status: done
+    description: "6 tables with RLS (tenants, users, surveys, survey_links, responses, appointments), JSONB responses, auto-generated TS types"
+    why: "Multi-tenant data isolation, flexible survey schemas, performance indexes"
+
+  - name: "CMS Admin Layout"
+    status: done
+    description: "Responsive sidebar (grouped: Intake/Content/System), dashboard with real-time stats"
+    why: "Navigation hub for business users"
+
+  # Phase 1: Survey System
+  - name: "Survey Builder"
+    status: done
+    description: "7 question types (text, textarea, email, tel, select, radio, checkbox), RHF + TanStack Query, delete with cascade"
+    why: "Empower users to create custom surveys without code"
+
+  - name: "Survey Link Generation"
+    status: done
+    description: "UUID tokens with expiration, submission limits, inline editing, is_active toggle. Atomic counter via PostgreSQL function"
+    why: "Secure, shareable links with expiration and submission controls"
+
+  - name: "Dynamic Survey Form"
+    status: done
+    description: "Client-facing form rendered from JSON, Zod schema generation, RHF Controller for checkboxes"
+    why: "Anonymous survey submission with runtime validation"
+
+  - name: "Form Submission & Response Storage"
+    status: done
+    description: "API Route for anonymous inserts, JSONB answers, atomic submission counter, service role key"
+    why: "Persist client responses with multi-tenant isolation"
+
+  - name: "Response Management UI"
+    status: done
+    description: "Response list + detail view in CMS, question-answer pairs, delete with appointment-aware warning"
+    why: "CMS users view and manage submitted responses"
+
+  # Phase 3: Calendar
+  - name: "Calendar Integration"
+    status: done
+    description: "Google Calendar OAuth, available slots API (timezone-aware, buffer time), booking UI, event creation, calendar_settings per user"
+    why: "Appointment scheduling after form submission, synced with Google Calendar"
+    depends_on: ["Form Submission & Response Storage"]
+
+  # Phase 4: UI/UX
+  - name: "Design System & Accessibility"
+    status: done
+    description: "shadcn/ui components, WCAG 2.1 AA (semantic HTML, keyboard nav, focus management), LoadingState/ErrorState/EmptyState, responsive layouts, CMS dark+orange theme"
+    why: "Consistent component library, accessibility compliance, brand consistency"
+
+  # Phase 5: n8n & AI
+  - name: "n8n Infrastructure"
+    status: done
+    description: "Self-hosted on Hetzner VPS, Docker Compose (9 services), queue mode with 2 workers, Redis, PostgreSQL 16, Traefik SSL"
+    why: "Workflow automation for AI analysis and email notifications"
+
+  - name: "AI Qualification Workflow"
+    status: done
+    description: "8-node n8n workflow: webhook trigger, Claude Haiku 4.5 analysis, JSONB scoring (0-10), fire-and-forget from website"
+    why: "Automated client qualification to prioritize high-value leads"
+    depends_on: ["n8n Infrastructure", "Form Submission & Response Storage"]
+
+  - name: "Email Notifications + Template Management"
+    status: done
+    description: "n8n Send Email subworkflow (per-tenant config, Resend fallback), Form Confirmation workflow, CMS block editor with live preview, email_templates table with RLS"
+    why: "Automated confirmation emails with per-tenant template customization"
+    depends_on: ["n8n Infrastructure"]
+
+  - name: "Monitoring & Error Handling"
+    status: done
+    description: "GlitchTip error tracking, Prometheus + Grafana + AlertManager, Slack/email alerts, 30-day retention"
+    why: "Track workflow execution, alert on failures, monitor AI costs"
+    depends_on: ["n8n Infrastructure"]
+
+  # Phase 6: Marketing & Content
+  - name: "Blog / Articles with WYSIWYG Editor"
+    status: done
+    description: "Tiptap editor (JSON+HTML), S3 images, categories, SEO metadata, scheduled publishing (draft/scheduled/published derived from is_published+published_at), ISR revalidate=60. Website: /blog listing + /blog/[slug] detail + /blog/preview/[token]"
+    why: "CMS-managed blog for agency marketing, SEO-optimized public pages"
+
+  - name: "Landing Page CMS"
+    status: done
+    description: "7 block types (navbar, hero, identification, problems, process, results, cta, footer), block editor + live preview, DEFAULT_BLOCKS fallback, ISR revalidate=3600"
+    why: "Editable marketing website without code deployment"
+
+  - name: "Media Library"
+    status: done
+    description: "Multi-tenant media management (S3), drag-drop upload, 6 types (image, video, youtube, vimeo, instagram, tiktok), Tiptap extensions for all types, Insert Media modal in blog editor"
+    why: "Centralized asset management, reuse across blog posts, no duplicate uploads"
+    depends_on: ["Blog / Articles with WYSIWYG Editor"]
+
+  - name: "Legal Pages & Cookie Banner"
+    status: done
+    description: "CMS-managed /regulamin and /polityka-prywatnosci with shared Tiptap editor (dependency injection), cookie consent via localStorage, sitemap integration"
+    why: "RODO compliance before analytics and lead collection go live"
+    depends_on: ["Landing Page CMS"]
+
+  - name: "SEO Foundations"
+    status: done
+    description: "site_settings table (org-level config), OG+Twitter meta tags, Organization+Article JSON-LD, robots.ts, sitemap with DB timestamps, keyword management, Google Search Console verification"
+    why: "Marketing content discoverable and shareable"
+    depends_on: ["Blog / Articles with WYSIWYG Editor", "Landing Page CMS"]
+
+  - name: "CTA → Survey Flow Integration"
+    status: not_started
+    description: "Connect landing page CTA buttons to existing survey+calendar flow for lead acquisition"
+    why: "Close the marketing-to-intake loop — visitor clicks CTA, fills survey, books appointment"
+    depends_on: ["Landing Page CMS", "Survey Link Generation", "Calendar Integration"]
+    blockers: ["Survey needs to be created in CMS with contact questions (imie, firma, email, telefon, opis potrzeby)"]
+
+  # Phase 7: Intake & Permissions
+  - name: "Intake Hub"
+    status: done
+    description: "Unified /admin/intake replacing 3 pages. @dnd-kit Kanban (Nowy→Skwalifikowany→W kontakcie→Zamkniety), JIRA-style inline detail panel (xl+), autosave notes, StatsBar, URL searchParams filters"
+    why: "Single view for full lead lifecycle from first contact to closure"
+    depends_on: ["Response Management UI", "AI Qualification Workflow"]
+
+  - name: "Roles & Permissions System"
+    status: not_started
+    description: "user_roles (super_admin/admin/member) + feature_permissions for granular overrides, RLS policies with role check, middleware route protection, sidebar hiding per role"
+    why: "Multi-user access control needed before client onboarding"
+    depends_on: ["Authentication System"]
+
+  - name: "Email: Booking Confirmation"
+    status: not_started
+    description: "n8n workflow triggered after booking creation — email to client (date, time, link) + notification to firm"
+    why: "Client and firm need confirmation after appointment booking"
+    depends_on: ["Calendar Integration", "Email Notifications + Template Management"]
+
+  - name: "Email: Booking Reminder"
+    status: not_started
+    description: "n8n scheduled workflow — daily check for tomorrow's appointments, reminder email to client"
+    why: "Reduce no-shows by reminding clients 24h before appointment"
+    depends_on: ["Email: Booking Confirmation"]
+
+  # Phase 8: Infrastructure
+  - name: "Plausible Analytics"
+    status: done
+    description: "Self-hosted on VPS, 4 script extensions, typed conversion funnel (CTA Clicked→Survey Started→Survey Submitted→Booking Completed), CtaLink client component"
+    why: "Privacy-friendly analytics without cookie consent"
+
+  # Backlog
+  - name: "Multi-language Support (PL/EN)"
+    status: not_started
+    why: "Expand reach to English-speaking clients"
+
+  - name: "External Integrations (CRM, Slack)"
+    status: not_started
+    why: "Connect with external systems for notifications and client management"
+
+  - name: "Reporting & Data Export"
+    status: not_started
+    why: "Export responses, leads, appointments to CSV/PDF"
+
+  - name: "Tenant Onboarding Flow"
+    status: not_started
+    why: "Guided setup for new tenants (company profile, survey creation, calendar connect)"
+
+  - name: "Newsletter System"
+    status: not_started
+    why: "Email campaigns from CMS with subscriber management and RODO compliance"
+
+  - name: "Email: Booking Cancellation"
+    status: not_started
+    why: "Cancellation notification workflow — requires cancel/reschedule flow"
+    depends_on: ["Email: Booking Confirmation"]
