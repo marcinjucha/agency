@@ -205,6 +205,10 @@ https://[key]@glitchtip.trustcode.pl/[project_id]
 
 **Impact:** 20 minutes testing different formats before finding stringify solution.
 
+## Role in Workflow Engine Architecture
+
+- **N8n = execution layer only (2026-03-29)** — Workflow Engine (Supabase + CMS) handles routing, config, conditions, sequences — what the client sees and configures. N8n handles heavy execution only: email sending, AI processing, external API calls. Pattern: CMS workflow engine → triggers n8n webhook with payload → n8n executes → callback to CMS with result. **WHY:** N8n has Redis queue, retry logic, rate limiting, scheduled jobs — rebuilding this in-house would take months. But routing logic ("if score > 10 then email A") belongs in Supabase because clients configure it via CMS UI.
+
 ## Quick Reference
 
 **Key Facts:**

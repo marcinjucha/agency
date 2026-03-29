@@ -115,6 +115,8 @@ agency/
 - Agency Projects: `collection://29284f14-76e0-802f-a1de-000b357345a9`
 - Agency Tasks: `collection://29284f14-76e0-8062-a18d-000bfce0cf23`
 
+**Notion task naming for XL features:** When a feature has 10+ iterations with dependency graph, create separate tasks per iteration with shared prefix (e.g., "Workflow:") for easy filtering. Single-task-with-checklist pattern still applies to S/M tasks.
+
 ---
 
 ## Skills Reference
@@ -148,6 +150,7 @@ agency/
 1. Infrastructure questions → Check `infra/n8n-vps/`
 2. Workflow patterns → Check `.claude/skills/n8n-patterns/SKILL.md`
 3. Background processing → n8n handles async AI operations (see docs)
+4. Workflow engine = backbone → all future features (multi-channel, follow-up, social media) become "add trigger + action blocks" on the workflow engine, not standalone implementations
 
 **When auditing commands:**
 

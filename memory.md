@@ -2,59 +2,23 @@
 
 ## Shop Platform — New Project (2026-03-29)
 
-**Status:** PLANNED (not started)
-**Scope:** E-commerce platform as extension of existing Turborepo monorepo.
+**Status:** PLANNED (not started). Side project — praca w wolnym czasie.
+**Scope:** E-commerce: Kolega (pallets catalog, external links) + Tata (books, Stripe). Single Supabase, CMS extended (`features/shop-*`), separate frontends (`apps/shop-kolega/`).
+**Key decisions:** `shop_` prefixed tables, `listing_type` enum, media folders, tenant feature flags.
+**Plan:** 10 iterations. Graph: 1 → 2 → [3+4] → 5 → [7+8] → 9 → 10. Critical: 1→2→5→7→10.
 
-**Two clients:**
-- **Kolega (first):** Product catalog from pallets, hundreds of items, links to OLX/Allegro (external_link). No payments.
-- **Tata (later):** Book sales, digital downloads, Stripe payments, download link after purchase.
+## Workflow Engine — New Feature (2026-03-29)
 
-**Architecture decisions:**
-- **Single Supabase project** — shop tables prefixed with `shop_` in same DB as Halo Efekt. Reuses auth, RLS, getUserWithTenant(), media library. Migration to separate project possible later.
-- **CMS extended** (not separate app) — `features/shop-products/`, `features/shop-categories/` added to `apps/cms`. Sidebar gets new "Sklep" section to separate from "Agencja" features.
-- **Separate frontends per client** — `apps/shop-kolega/`, later `apps/shop-tata/`. Different UI per client, no builder.
-- **Product model:** `shop_products` table with `listing_type` enum (`external_link` | `digital_download`), Tiptap rich text description, `seo_metadata` JSONB, cover image + image array.
-- **Media folders:** New `media_folders` table + `folder_id` on `media_items` for organization/segregation. Tenant-filtered.
-- **Tenant feature flags:** `enabled_features` JSONB on tenants table (iteration 9, not blocking).
-
-**10-iteration plan:**
-1. DB schema (shop_products, shop_categories, media_folders) — M
-2. CMS foundation (types, queries, actions, validation) — M
-3. CMS product list + category management — M
-4. Media library folder support — M (parallel with 3)
-5. CMS product editor (Tiptap + media + 2 layouts) — L
-6. apps/shop-kolega scaffolding — M (parallel with 3+4)
-7. Shop-kolega product catalog — M
-8. Homepage + search + SEO — M (parallel with 7)
-9. Tenant feature flags + conditional sidebar — S
-10. Polish, testing, deployment — M
-
-**Dependency graph:** 1 → 2 → [3 + 4] → 5 → [6 already done] → [7 + 8] → 9 → 10
-**Critical path:** 1 → 2 → 5 → 7 → 10
-
-**Reuse from Halo Efekt:**
-- packages/ui, packages/database, packages/email
-- features/editor/ (Tiptap with dependency injection)
-- features/media/ (add folder support)
-- SEO patterns, legal pages, Plausible, blog patterns, email notifications, auth + RLS
-
-**Side project** — praca w wolnym czasie, obok sprintów Halo Efekt.
+**Status:** PLANNED (not started). Extends Core CMS (AAA-P-4). 11 Notion tasks with "Workflow:" prefix.
+**Scope:** Per-tenant workflow automation. Two-layer: CMS (routing/config) + n8n (heavy execution). Visual builder (reactflow), explicit save, dynamic email template variables via trigger payload schemas.
+**Key decisions:** Circular trigger protection (max depth=1), delay via n8n cron (±5 min), coexistence with current n8n email.
+**Plan:** 11 iterations. Graph: 1→2→[3+4]→5a→5b→[6+7]→[8+9]→10. Critical: 1→2→5a→5b→6→10.
 
 ## Roadmap & Planning (2026-03-20)
 
-**Sprint 1 (current):** CTA → Survey flow + Regulamin/RODO/Cookies
-**Sprint 2:** Plausible Analytics + SEO + Roles & Permissions + Intake Hub (replaces Kanban + Response Status)
-**Sprint 3:** Email booking_confirmation + booking_reminder
-**Backlog:** Multi-language, CRM/Slack integrations, Reporting, Onboarding, Newsletter, booking_cancellation
-
-**Key decisions:**
-- No pricing page — individual client approach, "umów się na rozmowę" instead
-- Contact form = reuse existing survey+calendar flow (no new backend code)
-- Kanban board consolidates with response list (responses ARE leads) → evolved into Intake Hub (AAA-T-124, 2026-03-28)
-- Roles: super_admin/admin/member + granular feature permissions per user
-- Plausible self-hosted on VPS (privacy-friendly, no cookies)
-- New Notion project: "Halo Efekt - VPS Infrastructure" for server-side services
-- Priority order: marketing (acquire clients) → intake/permissions (manage clients) → CMS polish
+**Priority order:** marketing (acquire clients) → intake/permissions (manage clients) → CMS polish.
+**Key decisions:** No pricing page (individual approach), roles: super_admin/admin/member + feature permissions, Plausible self-hosted.
+**Backlog:** Multi-language, CRM/Slack, Reporting, Onboarding, Newsletter, booking_cancellation.
 
 ## Email Notifications — COMPLETED (2026-03-13)
 
@@ -108,20 +72,12 @@ Google Search Console verification code: `GCfETKDyC-evSaMt_NyqAihacXKNVV30zIpP5V
 
 ## Architecture Audit — AAA-T-83 (2026-03-25)
 
-**Status:** COMPLETE (2026-03-25). Structural changes in code/git.
-
-**Deferred items (documented in Notion):**
-- BlogPostEditor 674L + CalendarBooking 559L — split into subcomponents
-- lib/google-calendar/ → features/calendar/ (363L business logic in lib/)
-- @agency/email used only by CMS — consider moving to app
-- Speculative types in responses/types.ts + appointments/types.ts — remove unused
-- .env.local.example files missing
+**Status:** COMPLETE. Deferred items documented in Notion (BlogPostEditor/CalendarBooking split, lib→features moves, .env.local.example).
 
 ## Domain Concepts (Email Infrastructure)
 
-- **email_configs table empty in production (2026-03-27)** — All 0 rows. Every email sent by n8n uses hardcoded fallback: Resend API key + `noreply@haloefekt.pl`. CMS Settings email config feature planned to fill this gap.
-- **survey_links.notification_email = private Gmail addresses** — All 5 survey links in production have @gmail.com notification emails (markos734@, trustcodepl@, mjucha92@, jan.kowalski@). These are OK for now — will be updated organically when surveys are recreated with firmowy email. (2026-03-27)
-- **notification_email is per survey_link, not per tenant** — Each survey link has its own notification address (set in CMS when creating link). No default from tenant config. Future enhancement: pre-fill from email_configs.from_email.
+- **email_configs table empty in production (2026-03-27)** — N8n uses hardcoded Resend fallback (`noreply@haloefekt.pl`). CMS email config feature planned.
+- **notification_email is per survey_link, not per tenant** — Each link has own notification address. Future: pre-fill from email_configs.from_email.
 
 ## Architecture Decisions (Email Config Feature — 2026-03-27)
 
@@ -132,15 +88,7 @@ Google Search Console verification code: `GCfETKDyC-evSaMt_NyqAihacXKNVV30zIpP5V
 ## Preferences
 
 - **Notion tasks: single task with checklist content, not subtasks** — User prefers one task with plan broken into checkboxes in page body, not 7 separate tasks. Reason: flexibility to partially complete and pause without managing many task statuses. (2026-03-23)
-- **Agency Tasks DB: "Type" property removed** — User removed Type property from Agency Tasks DB (2026-03-23). Schema now: Name, Status, Priority, Deadline, Notes, Projects (relation), Client (relation), ID.
-- **Centralized route constants: lib/routes.ts** — Both CMS and Website now have `lib/routes.ts` (like `messages.ts`). Static routes = strings, dynamic = functions. CMS: 24 routes, 35 files updated. Website: 12 routes, 12 files updated. Prevents typos in hrefs, revalidatePath, API fetch calls. (2026-03-26, AAA-T-58)
-- **CMS sidebar grouped thematically** — User requested grouping during AAA-T-58 testing. Groups: (no label) Pulpit, **Intake** (Ankiety, Intake hub, Kalendarz — after AAA-T-124), **Treść** (Strona główna, Blog, Media, Strony prawne), **System** (Szablony email, Ustawienia). Tiny uppercase labels at 60% opacity. (2026-03-26, updated 2026-03-28)
 - **/develop command: docs before merge** — Phase 5 reordered: (1) Notion + PROJECT_SPEC update, (2) auto-invoke /extract-memory, (3) merge to main. All doc commits land on feature branch inside --no-ff merge bubble. Phase 6 absorbed into Phase 5. (2026-03-26)
 - **JIRA-style split view preferred over Sheet overlay** — User explicitly asked for detail panel next to the table/kanban instead of overlay drawer. Pattern: inline 480px panel on xl+ (≥1280px), navigate to full page on smaller screens. Closable with X. (2026-03-28, AAA-T-124)
-- **Autosave over manual save buttons** — User prefers autosave with debounce (1s) for text fields like internal notes. No explicit "Save" button needed — just show status indicator (saving/saved/error). (2026-03-28, AAA-T-124)
-- **Notes preview on Kanban cards** — User wants 2-line truncated note text on cards, not just an icon. Quick scanning without opening detail view. (2026-03-28, AAA-T-124)
 - **current_submissions read-only, max_submissions editable** — Never reset submission counter (loses audit trail). To allow more submissions, increase max_submissions instead. User confirmed 2026-03-28 (AAA-T-88).
-- **Scheduled publishing: derived status, no migration** — 3 states (draft/scheduled/published) derived from `is_published` + `published_at` at render time via `getPostStatus()`. No new DB column needed. Website filters `published_at <= now()` — ISR revalidate=60 means ~60s delay max. Calendar component added to `packages/ui/` (react-day-picker v9). (2026-03-28, AAA-T-107)
-- **CMS editor pages: full width, no max-w constraints** — Removed `max-w-3xl` from landing page route and `max-w-7xl` from blog editor. Admin layout `p-8` provides sufficient margin. 2-column grid `lg:grid-cols-[1fr_380px]` for all editors. (2026-03-29, AAA-T-60)
-- **Shared keyword combobox pattern** — `KeywordSelect` is a pure presentational component (no internal data fetching). Accepts `pool: string[]` and `isLoading` props. Each consumer fetches pool via own query. Avoids cross-feature coupling. (2026-03-29)
-- **Cross-project task organization in Notion** — Core infrastructure tasks (media folders AAA-T-136, tenant feature flags AAA-T-141) live in AAA-P-4 Core CMS, not AAA-P-9 Platforma Sklepowa, even though shop needs them. Notes field documents `Cross-project: wymagane przez AAA-P-9`. Task lives where its "home" is, consumers reference it. (2026-03-29)
+- **Cross-project task organization in Notion** — Core infrastructure tasks live in AAA-P-4 Core CMS, not consuming project. Notes: `Cross-project: wymagane przez AAA-P-9`. Task lives where its "home" is. (2026-03-29)

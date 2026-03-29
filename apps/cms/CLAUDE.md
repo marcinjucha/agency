@@ -184,6 +184,14 @@ Only for admin operations that bypass RLS.
    import { NewFeatureList } from '@/features/new-feature/components/NewFeatureList'
    ```
 
+## UI Design Patterns
+
+**Save behavior by impact level:**
+- **High-impact changes** (workflow editor, survey builder, landing page editor) → explicit Save/Publish button. Accidental changes can break live features.
+- **Low-impact fields** (internal notes, Kanban reorder) → autosave with debounce (1s) + status indicator (saving/saved/error).
+
+**Rich interactive UIs preferred:** When feature complexity warrants it, use professional interactive libraries (reactflow for workflow builder, @dnd-kit for Kanban) over simple form-based config. User values perceived professionalism of UI.
+
 ## Development
 
 ```bash
