@@ -205,13 +205,11 @@ export async function getSurveys(): Promise<Tables<'surveys'>[]> {
 
 ## Gotchas
 
-**Tiptap renderHTML: inline styles only, no Tailwind** — Extensions' `renderHTML` output goes into `blog_posts.html_body` rendered as raw HTML on website (no Tailwind processing). Tailwind classes silently produce unstyled elements. **Why:** Works in CMS editor (Tailwind loaded) but breaks on public website. Use `style="..."` in all renderHTML output.
-
-**TanStack Query: use root key for cache invalidation** — `mediaKeys.list()` and `mediaKeys.list({ type: undefined })` produce different query keys, so exact-key invalidation silently fails. After mutations, use `mediaKeys.all` (root key) to invalidate all list variants. **Why:** Applies to all features using TanStack Query key factories -- always invalidate with the broadest key after mutations.
-
-**useMutation + Server Action structured return = silent failure** — TanStack Query `useMutation` treats any non-thrown result as success. Server Actions returning `{ success: false }` don't trigger `onError`. Fix: wrap mutationFn to throw on `!result.success`. **Why:** Hit in AAA-T-92 and AAA-T-88 — recurring pattern affecting ALL CMS mutations.
-
-**Zod .nullable().optional() for DB nullable fields** — `z.string().optional()` accepts `undefined` but NOT `null`. DB stores `null` for empty columns. Fix: always use `.nullable().optional()` for nullable DB fields. **Why:** Hit in updateSurveySchema (description), survey link schemas (expires_at, max_submissions) — recurring across features.
+**Recurring patterns (see skills for details):**
+- Tiptap renderHTML: inline styles only → see `ag-ui-components` skill
+- TanStack Query: root key invalidation → see `ag-ui-components` skill
+- useMutation + Server Action silent failure → see `ag-ui-components` skill
+- Zod `.nullable().optional()` for DB nullable → see `ag-database-patterns` skill
 
 **datetime-local vs Zod .datetime() mismatch** — HTML `datetime-local` input produces `"2026-03-28T14:30"` (no seconds, no timezone) but `z.string().datetime()` requires full ISO 8601. Fix: use `z.string().min(1)` — PostgreSQL `timestamptz` handles parsing. **Why:** Pre-existing bug in generate + update survey link schemas (AAA-T-88).
 
