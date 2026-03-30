@@ -54,10 +54,11 @@ features:
     task: "AAA-T-135"
     iteration: 3
     size: M
-    status: not_started
+    status: done
     description: "/admin/shop product list (grid/table), /admin/shop/categories CRUD, sidebar 'Sklep' section, filtering by category/status."
     why: "CMS operators need to browse and organize products before editing them"
     depends_on: ["CMS Foundation"]
+    completion_notes: "CMS operators can browse products with grid/list toggle, filter by category/status/listing_type, sort by name/date/price. Categories manageable via inline Dialog CRUD. Sidebar 'Sklep' section added. Shared badges extracted. Turbopack re-export fix applied."
 
   # Iteration 4 (parallel with 3) — lives in Core CMS (AAA-P-4)
   # AAA-T-136: Media library folder support — cross-project dependency
