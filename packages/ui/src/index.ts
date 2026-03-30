@@ -79,6 +79,8 @@ export {
   SheetDescription,
 } from './components/ui/sheet'
 export { Calendar } from './components/ui/calendar'
+export { DatePicker } from './components/ui/date-picker'
+export type { DatePickerProps } from './components/ui/date-picker'
 export {
   Tooltip,
   TooltipTrigger,

@@ -27,7 +27,10 @@ export function SurveyList() {
       if (!result.success) throw new Error(result.error)
       return result
     },
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['surveys'] }) },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['surveys'] })
+      queryClient.invalidateQueries({ queryKey: ['intake'] })
+    },
   })
 
   if (isLoading) {

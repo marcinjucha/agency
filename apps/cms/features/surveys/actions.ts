@@ -104,6 +104,7 @@ export async function deleteSurvey(id: string): Promise<{ success: boolean; erro
     }
 
     revalidatePath(routes.admin.surveys)
+    revalidatePath(routes.admin.intake)
     return { success: true }
   } catch {
     return { success: false, error: messages.surveys.deleteFailed }

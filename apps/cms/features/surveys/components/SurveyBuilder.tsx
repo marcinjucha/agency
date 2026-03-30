@@ -454,6 +454,7 @@ export function SurveyBuilder({ survey }: SurveyBuilderProps) {
                       const result = await deleteSurvey(survey.id)
                       if (result.success) {
                         queryClient.invalidateQueries({ queryKey: ['surveys'] })
+                        queryClient.invalidateQueries({ queryKey: ['intake'] })
                         router.push(routes.admin.surveys)
                       } else {
                         setError(result.error || messages.surveys.deleteFailed)
