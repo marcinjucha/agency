@@ -120,6 +120,7 @@ function ObjectArrayField<T extends Record<string, string>>({
                     <Textarea
                       id={fieldId}
                       rows={2}
+                      autoResize
                       value={item[field.key]}
                       onChange={(e) => {
                         const next = [...items]
@@ -180,7 +181,7 @@ function HeroEditor({ block, onChange }: { block: HeroBlock; onChange: (b: Landi
         <Input id="hero-headline" value={block.headline} onChange={(e) => onChange({ ...block, headline: e.target.value })} />
       </Field>
       <Field label={messages.landing.subheadline} id="hero-subheadline">
-        <Textarea id="hero-subheadline" rows={2} value={block.subheadline} onChange={(e) => onChange({ ...block, subheadline: e.target.value })} />
+        <Textarea id="hero-subheadline" rows={2} autoResize value={block.subheadline} onChange={(e) => onChange({ ...block, subheadline: e.target.value })} />
       </Field>
       <Field label={messages.landing.ctaButtonText} id="hero-ctaText">
         <Input id="hero-ctaText" value={block.cta.text} onChange={(e) => onChange({ ...block, cta: { ...block.cta, text: e.target.value } })} />
@@ -212,7 +213,7 @@ function IdentificationEditor({ block, onChange }: { block: IdentificationBlock;
         emptyItem={{ icon: '', text: '' }}
       />
       <Field label="Przejście" id="identification-transition">
-        <Textarea id="identification-transition" rows={2} value={block.transition} onChange={(e) => onChange({ ...block, transition: e.target.value })} />
+        <Textarea id="identification-transition" rows={2} autoResize value={block.transition} onChange={(e) => onChange({ ...block, transition: e.target.value })} />
       </Field>
     </div>
   )
@@ -225,7 +226,7 @@ function ProblemsEditor({ block, onChange }: { block: ProblemsBlock; onChange: (
         <Input id="problems-title" value={block.title} onChange={(e) => onChange({ ...block, title: e.target.value })} />
       </Field>
       <Field label="Statystyka" id="problems-stat">
-        <Textarea id="problems-stat" rows={2} value={block.stat} onChange={(e) => onChange({ ...block, stat: e.target.value })} />
+        <Textarea id="problems-stat" rows={2} autoResize value={block.stat} onChange={(e) => onChange({ ...block, stat: e.target.value })} />
       </Field>
       <StringArrayField
         label="Elementy listy"
@@ -263,10 +264,10 @@ function ProcessEditor({ block, onChange }: { block: ProcessBlock; onChange: (b:
         <Input id="process-riskTitle" value={block.riskTitle} onChange={(e) => onChange({ ...block, riskTitle: e.target.value })} />
       </Field>
       <Field label="Opis ryzyka" id="process-riskDescription">
-        <Textarea id="process-riskDescription" rows={3} value={block.riskDescription} onChange={(e) => onChange({ ...block, riskDescription: e.target.value })} />
+        <Textarea id="process-riskDescription" rows={3} autoResize value={block.riskDescription} onChange={(e) => onChange({ ...block, riskDescription: e.target.value })} />
       </Field>
       <Field label="Dowód" id="process-proof">
-        <Textarea id="process-proof" rows={2} value={block.proof} onChange={(e) => onChange({ ...block, proof: e.target.value })} />
+        <Textarea id="process-proof" rows={2} autoResize value={block.proof} onChange={(e) => onChange({ ...block, proof: e.target.value })} />
       </Field>
     </div>
   )
@@ -317,7 +318,7 @@ function CtaEditor({ block, onChange }: { block: CtaBlock; onChange: (b: Landing
         <Input id="cta-headline" value={block.headline} onChange={(e) => onChange({ ...block, headline: e.target.value })} />
       </Field>
       <Field label="Opis" id="cta-description">
-        <Textarea id="cta-description" rows={3} value={block.description} onChange={(e) => onChange({ ...block, description: e.target.value })} />
+        <Textarea id="cta-description" rows={3} autoResize value={block.description} onChange={(e) => onChange({ ...block, description: e.target.value })} />
       </Field>
       <Field label="Przycisk — tekst" id="cta-buttonText">
         <Input id="cta-buttonText" value={block.button.text} onChange={(e) => onChange({ ...block, button: { ...block.button, text: e.target.value } })} />
@@ -336,7 +337,7 @@ function FooterEditor({ block, onChange }: { block: FooterBlock; onChange: (b: L
   return (
     <div className="space-y-3">
       <Field label="Opis" id="footer-description">
-        <Textarea id="footer-description" rows={3} value={block.description} onChange={(e) => onChange({ ...block, description: e.target.value })} />
+        <Textarea id="footer-description" rows={3} autoResize value={block.description} onChange={(e) => onChange({ ...block, description: e.target.value })} />
       </Field>
       <Field label="Polityka prywatności — tekst linku" id="footer-privacy">
         <Input id="footer-privacy" value={block.privacy} onChange={(e) => onChange({ ...block, privacy: e.target.value })} />

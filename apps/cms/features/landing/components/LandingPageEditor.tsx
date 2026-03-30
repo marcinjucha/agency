@@ -248,6 +248,7 @@ export function LandingPageEditor() {
                   onChange={(e) => setSeo((prev) => ({ ...prev, description: e.target.value }))}
                   placeholder={messages.landing.pageDescriptionPlaceholder}
                   rows={4}
+                  autoResize
                   className="resize-none text-sm"
                   maxLength={160}
                 />

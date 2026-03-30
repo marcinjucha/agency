@@ -554,11 +554,12 @@ export function SurveyBuilder({ survey }: SurveyBuilderProps) {
 
               <div className="space-y-1.5">
                 <Label htmlFor="description">{messages.surveys.descriptionLabel}</Label>
-                <Input
+                <Textarea
                   id="description"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder={messages.surveys.descriptionPlaceholder}
+                  autoResize
                 />
               </div>
 
