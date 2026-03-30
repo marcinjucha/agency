@@ -92,6 +92,8 @@ export const messages = {
     semanticRoleCompanyName: 'Nazwa firmy',
     semanticRolePhone: 'Telefon',
     addContactFields: 'Dodaj pola kontaktowe',
+    contactFieldName: 'Imię i nazwisko',
+    contactFieldEmail: 'Adres email',
     placeholderLabel: 'Placeholder',
     placeholderHint: 'Tekst podpowiedzi w polu',
     // NewSurveyForm

@@ -38,9 +38,9 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Button, Card, Input, Label, LoadingState, ErrorState, DatePicker } from '@agency/ui'
+import { Button, Card, Input, Label, Textarea, LoadingState, ErrorState, DatePicker } from '@agency/ui'
 import { Calendar, Clock, CheckCircle } from 'lucide-react'
-import { startOfDay, addDays } from 'date-fns'
+import { startOfDay } from 'date-fns'
 import { messages } from '@/lib/messages'
 import { usePlausible } from 'next-plausible'
 import type { PlausibleEvents } from '@/lib/plausible'
@@ -484,14 +484,12 @@ export function CalendarBooking({
                       >
                         {messages.calendar.additionalNotes}
                       </Label>
-                      <textarea
+                      <Textarea
                         id="appointment-notes"
                         rows={4}
                         placeholder={messages.calendar.notesPlaceholder}
                         {...register('notes')}
-                        className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent ${
-                          errors.notes ? 'border-destructive' : 'border-border'
-                        }`}
+                        className={errors.notes ? 'border-destructive' : ''}
                         aria-invalid={errors.notes ? 'true' : 'false'}
                       />
                       {errors.notes && (
@@ -518,7 +516,7 @@ export function CalendarBooking({
                   <Button
                     type="submit"
                     disabled={isSubmitting}
-                    className="w-full h-12 text-lg font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg shadow-md hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full h-12 text-lg font-semibold"
                   >
                     {isSubmitting ? (
                       <span className="flex items-center justify-center">

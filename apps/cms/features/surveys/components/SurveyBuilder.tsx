@@ -348,7 +348,7 @@ export function SurveyBuilder({ survey }: SurveyBuilderProps) {
       {
         id: crypto.randomUUID(),
         type: 'text',
-        question: 'Imię i nazwisko',
+        question: messages.surveys.contactFieldName,
         required: true,
         order: baseOrder,
         semantic_role: 'client_name',
@@ -357,7 +357,7 @@ export function SurveyBuilder({ survey }: SurveyBuilderProps) {
       {
         id: crypto.randomUUID(),
         type: 'email',
-        question: 'Adres email',
+        question: messages.surveys.contactFieldEmail,
         required: true,
         order: baseOrder + 1,
         semantic_role: 'client_email',
