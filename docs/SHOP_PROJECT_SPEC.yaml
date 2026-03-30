@@ -43,10 +43,11 @@ features:
     task: "AAA-T-134"
     iteration: 2
     size: M
-    status: not_started
+    status: done
     description: "types.ts, validation.ts, queries.ts, queries.server.ts, actions.ts, utils.ts for shop-products and shop-categories. Routes + messages added."
     why: "TypeScript foundation files enable CMS UI and shop frontend development"
     depends_on: ["DB Schema"]
+    completion_notes: "CMS operators can create, read, update, and delete shop products and categories via typed Server Actions. Shared generateSlug extracted to lib/utils/slug.ts. TypeScript compiles clean."
 
   # Iteration 3
   - name: "CMS Product List + Category Management"
