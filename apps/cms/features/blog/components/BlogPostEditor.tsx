@@ -32,6 +32,7 @@ import {
   AlertDialogCancel,
 } from '@agency/ui'
 import { HelpCircle } from 'lucide-react'
+import { InsertMediaModal } from '@/features/media/components/InsertMediaModal'
 import { format, startOfDay } from 'date-fns'
 import { pl } from 'date-fns/locale'
 import { messages } from '@/lib/messages'
@@ -42,7 +43,6 @@ import {
   generateHtmlFromContent,
   calculateReadingTime,
   generateSlug,
-  uploadImageToS3,
 } from '../utils'
 import { blogKeys } from '../queries'
 import { getPostStatus, type BlogPostStatus } from '../types'
@@ -98,13 +98,33 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
   const [deleteState, setDeleteState] = useState<'idle' | 'deleting'>('idle')
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [coverPreview, setCoverPreview] = useState<string | null>(blogPost?.cover_image_url ?? null)
-  const [isUploading, setIsUploading] = useState(false)
+  const [coverModalOpen, setCoverModalOpen] = useState(false)
+
+  // InsertMediaModal requires an Editor prop. Minimal proxy that captures
+  // the image URL when InsertMediaModal calls editor.chain().focus().setImage().
+  const coverEditorProxy = {
+    chain: () => {
+      const chainProxy = {
+        focus: () => chainProxy,
+        setImage: ({ src }: { src: string }) => {
+          setValue('cover_image_url', src)
+          setCoverPreview(src)
+          return chainProxy
+        },
+        setVideo: () => chainProxy,
+        setYouTube: () => chainProxy,
+        setVimeo: () => chainProxy,
+        setInstagram: () => chainProxy,
+        setTikTok: () => chainProxy,
+        run: () => true,
+      }
+      return chainProxy
+    },
+  }
 
   // Track whether the slug was manually edited by the user
   const slugManuallyEdited = useRef(false)
   const lastAutoSlug = useRef(blogPost ? blogPost.slug : '')
-
-  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const {
     register,
@@ -284,38 +304,9 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
     }
   }
 
-  // --- Cover image upload ---
-
-  async function handleCoverUpload(file: File) {
-    setIsUploading(true)
-    setErrorMessage(null)
-
-    try {
-      const fileUrl = await uploadImageToS3(file)
-      setValue('cover_image_url', fileUrl)
-      setCoverPreview(fileUrl)
-    } catch (err) {
-      setErrorMessage(err instanceof Error ? err.message : messages.blog.uploadError)
-    } finally {
-      setIsUploading(false)
-    }
-  }
-
-  function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (file) handleCoverUpload(file)
-  }
-
-  function handleDrop(e: React.DragEvent) {
-    e.preventDefault()
-    const file = e.dataTransfer.files?.[0]
-    if (file && file.type.startsWith('image/')) handleCoverUpload(file)
-  }
-
   function removeCoverImage() {
     setValue('cover_image_url', '')
     setCoverPreview(null)
-    if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
   // --- Save button labels ---
@@ -534,7 +525,7 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
                           size="sm"
                           variant="outline"
                           className="bg-background/90 text-xs"
-                          onClick={() => fileInputRef.current?.click()}
+                          onClick={() => setCoverModalOpen(true)}
                         >
                           {messages.common.change}
                         </Button>
@@ -552,13 +543,11 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
                   ) : (
                     <div
                       className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border bg-muted/40 px-4 py-8 transition-colors hover:border-primary/40 hover:bg-muted/60"
-                      onClick={() => fileInputRef.current?.click()}
-                      onDragOver={(e) => e.preventDefault()}
-                      onDrop={handleDrop}
+                      onClick={() => setCoverModalOpen(true)}
                       role="button"
                       tabIndex={0}
                       onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') fileInputRef.current?.click()
+                        if (e.key === 'Enter' || e.key === ' ') setCoverModalOpen(true)
                       }}
                       aria-label={messages.blog.dragOrClickAria}
                     >
@@ -576,17 +565,15 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
                         />
                       </svg>
                       <p className="text-xs text-muted-foreground">
-                        {isUploading ? messages.blog.uploading : messages.blog.dragOrClick}
+                        {messages.blog.dragOrClick}
                       </p>
                     </div>
                   )}
 
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handleFileSelect}
+                  <InsertMediaModal
+                    editor={coverEditorProxy as never}
+                    open={coverModalOpen}
+                    onClose={() => setCoverModalOpen(false)}
                   />
                 </div>
 

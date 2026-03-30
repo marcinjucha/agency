@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import type { UseFormRegister, UseFormWatch, UseFormSetValue, Control, FieldErrors } from 'react-hook-form'
 import { Controller } from 'react-hook-form'
 import {
@@ -17,6 +17,7 @@ import {
 } from '@agency/ui'
 import { X } from 'lucide-react'
 import { messages } from '@/lib/messages'
+import { InsertMediaModal } from '@/features/media/components/InsertMediaModal'
 import type { CreateShopProductFormData } from '../validation'
 import { LayoutSelector } from './LayoutSelector'
 import { ShopCategorySelect } from './ShopCategorySelect'
@@ -44,7 +45,28 @@ export function ProductSettingsSidebar({
   const watchShortDescription = watch('short_description')
   const watchTags = watch('tags')
   const [tagInput, setTagInput] = useState('')
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [coverModalOpen, setCoverModalOpen] = useState(false)
+
+  // InsertMediaModal requires an Editor prop. Minimal proxy that captures
+  // the image URL when InsertMediaModal calls editor.chain().focus().setImage().
+  const coverEditorProxy = {
+    chain: () => {
+      const chainProxy = {
+        focus: () => chainProxy,
+        setImage: ({ src }: { src: string }) => {
+          onCoverChange(src)
+          return chainProxy
+        },
+        setVideo: () => chainProxy,
+        setYouTube: () => chainProxy,
+        setVimeo: () => chainProxy,
+        setInstagram: () => chainProxy,
+        setTikTok: () => chainProxy,
+        run: () => true,
+      }
+      return chainProxy
+    },
+  }
 
   // --- Tag management ---
 
@@ -290,7 +312,7 @@ export function ProductSettingsSidebar({
                   size="sm"
                   variant="outline"
                   className="bg-background/90 text-xs"
-                  onClick={() => fileInputRef.current?.click()}
+                  onClick={() => setCoverModalOpen(true)}
                 >
                   {messages.common.change}
                 </Button>
@@ -308,11 +330,11 @@ export function ProductSettingsSidebar({
           ) : (
             <div
               className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border bg-muted/40 px-4 py-6 transition-colors hover:border-primary/40 hover:bg-muted/60"
-              onClick={() => fileInputRef.current?.click()}
+              onClick={() => setCoverModalOpen(true)}
               role="button"
               tabIndex={0}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') fileInputRef.current?.click()
+                if (e.key === 'Enter' || e.key === ' ') setCoverModalOpen(true)
               }}
               aria-label="Wybierz zdjęcie główne"
             >
@@ -333,21 +355,10 @@ export function ProductSettingsSidebar({
             </div>
           )}
 
-          {/* Hidden file input for cover image URL (used via media library button in future, or manual URL) */}
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={(e) => {
-              // For now, cover image is set from gallery or URL - file upload handled by media library
-              const file = e.target.files?.[0]
-              if (file) {
-                // Create a temporary preview URL
-                const url = URL.createObjectURL(file)
-                onCoverChange(url)
-              }
-            }}
+          <InsertMediaModal
+            editor={coverEditorProxy as never}
+            open={coverModalOpen}
+            onClose={() => setCoverModalOpen(false)}
           />
         </div>
       </div>

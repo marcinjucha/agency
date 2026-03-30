@@ -22,7 +22,17 @@ type ViewMode = 'grid' | 'list'
 
 export function ShopProductList() {
   const queryClient = useQueryClient()
-  const [viewMode, setViewMode] = useState<ViewMode>('grid')
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    if (typeof window !== 'undefined') {
+      return (localStorage.getItem('shop-products-view') as ViewMode) ?? 'grid'
+    }
+    return 'grid'
+  })
+
+  const handleViewModeChange = (mode: ViewMode) => {
+    setViewMode(mode)
+    localStorage.setItem('shop-products-view', mode)
+  }
 
   const {
     data: products,
@@ -98,7 +108,7 @@ export function ShopProductList() {
           {/* View toggle */}
           <div className="flex items-center rounded-lg border border-border p-0.5">
             <button
-              onClick={() => setViewMode('grid')}
+              onClick={() => handleViewModeChange('grid')}
               className={`rounded-md p-1.5 transition-colors ${
                 viewMode === 'grid'
                   ? 'bg-muted text-foreground'
@@ -109,7 +119,7 @@ export function ShopProductList() {
               <LayoutGrid className="h-4 w-4" />
             </button>
             <button
-              onClick={() => setViewMode('list')}
+              onClick={() => handleViewModeChange('list')}
               className={`rounded-md p-1.5 transition-colors ${
                 viewMode === 'list'
                   ? 'bg-muted text-foreground'
