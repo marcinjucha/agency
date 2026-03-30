@@ -54,17 +54,16 @@ agency/
 │   └── n8n-vps/          # Symlink to n8n infrastructure repo
 ├── n8n-workflows/         # Workflow definitions for background processing
 ├── apps/
-│   ├── cms/              # CMS application (serves both Halo Efekt + Shop)
-│   ├── website/          # Public website (Halo Efekt marketing)
-│   └── shop/             # Shop frontends (catalog apps)
-│       ├── kolega/       # Kolega shop — pallet product catalog
-│       └── tata/         # Tata shop — book catalog
-├── packages/             # Shared packages
-├── supabase/            # Database migrations and config
+│   ├── cms/              # CMS application (serves Halo Efekt + Shop management)
+│   └── website/          # Public website (Halo Efekt marketing)
+├── packages/             # Shared packages (ui, database, validators, calendar, email)
+├── supabase/            # Database migrations and config (19 tables, 28 migrations)
 └── docs/
     ├── PROJECT_SPEC.yaml       # Halo Efekt Core CMS (AAA-P-4)
     └── SHOP_PROJECT_SPEC.yaml  # Platforma Sklepowa (AAA-P-9)
 ```
+
+Note: `apps/shop/tata/` and `apps/shop/kolega/` are PLANNED (AAA-T-138+) but not yet created. Shop CMS features already exist in `apps/cms/features/shop-*/`.
 
 ---
 
@@ -78,11 +77,11 @@ This monorepo contains two Notion projects with separate PROJECT_SPEC files:
 | `docs/SHOP_PROJECT_SPEC.yaml` | AAA-P-9 — Platforma Sklepowa | E-commerce: product catalog, shop frontends, CMS shop features |
 
 **Routing rule for `/develop` command:**
-- Working on AAA-P-4 tasks (AAA-T-1 to AAA-T-132) → use `docs/PROJECT_SPEC.yaml`
-- Working on AAA-P-9 tasks (AAA-T-133+) → use `docs/SHOP_PROJECT_SPEC.yaml`
-- When task ID is ambiguous → check `📊 Projects` relation in Notion
+- Check task's `📊 Projects` relation in Notion to determine which PROJECT_SPEC
+- AAA-P-4 tasks → `docs/PROJECT_SPEC.yaml`
+- AAA-P-9 tasks → `docs/SHOP_PROJECT_SPEC.yaml`
 
-**Shared infrastructure:** Both projects share the same Supabase DB (shop tables use `shop_` prefix), the same CMS app (shop features in `features/shop-*/`), and the same packages. Only the public frontends are separate (`apps/website/` vs `apps/shop/*/`).
+**Shared infrastructure:** Both projects share the same Supabase DB (shop tables use `shop_` prefix), the same CMS app (shop features in `features/shop-*/`), and the same packages. Only the public frontends will be separate (`apps/website/` vs future `apps/shop/*/`).
 
 **Cross-project updates:** When working on AAA-P-9 (Shop) tasks, always check if changes affect Core CMS (AAA-P-4). If a shop task modifies shared tables (e.g., `media_items`), shared packages, CMS sidebar, or `lib/` files — update BOTH PROJECT_SPECs. Shop extends CMS, so many shop tasks have core CMS side effects.
 
@@ -197,6 +196,7 @@ This monorepo contains two Notion projects with separate PROJECT_SPEC files:
 
 - **Always use defined agents for code changes** — Use code-developer-agent, design-agent etc. via Agent tool for ALL feature-level code changes. Direct edits only for trivial string changes (3 href values, 1 className).
 - **Visual decisions → design-agent** — Embed heights, widths, spacing, layout dimensions, typography sizes, card styling are design decisions. Use design-agent (not code-developer-agent) for visual tuning. Code-developer-agent for CSS implementation only.
+- **Turbopack barrel re-export bug** — `export { X } from 'module'` in files used by Server Actions causes "Expected export to be in eval context". Fix: `import { X } from 'module'; export const Y = X`.
 
 ---
 

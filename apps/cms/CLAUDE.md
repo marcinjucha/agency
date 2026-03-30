@@ -1,14 +1,6 @@
 # apps/cms/ - CMS Admin Panel
 
-Admin panel for service providers to manage surveys, responses, and appointments.
-
-## Purpose
-
-Authenticated application for service providers to:
-- Create and manage client intake surveys
-- View and analyze client responses
-- Manage appointments and calendar
-- Access dashboard analytics
+Admin panel for service providers. Authenticated application managing surveys, intake pipeline, appointments, blog, landing pages, email templates, media library, shop products, and site settings.
 
 ## Tech Stack
 
@@ -34,27 +26,42 @@ apps/cms/
 │   ├── admin/               # Protected routes (requires auth)
 │   │   ├── layout.tsx       # Admin layout with Sidebar
 │   │   ├── page.tsx         # Dashboard
-│   │   ├── surveys/         # Survey management
-│   │   ├── responses/       # Response viewing
-│   │   ├── calendar/        # Calendar management
-│   │   └── settings/        # Settings
+│   │   ├── appointments/    # Appointment management
+│   │   ├── blog/            # Blog posts
+│   │   ├── email-templates/ # Email template editor
+│   │   ├── intake/          # Unified intake hub
+│   │   ├── landing-page/    # Landing page editor
+│   │   ├── legal-pages/     # Legal pages editor
+│   │   ├── media/           # Media library
+│   │   ├── responses/       # Response list + detail
+│   │   ├── settings/        # Settings
+│   │   ├── shop/            # Shop (products + categories)
+│   │   └── surveys/         # Survey management
 │   │
 │   └── api/                 # API Routes
 │       ├── auth/            # Auth callbacks
+│       ├── calendar/        # Google Calendar
+│       ├── email-templates/ # Email template rendering
+│       ├── responses/       # Response API
 │       ├── surveys/         # Survey CRUD
-│       └── calendar/        # Google Calendar
+│       └── upload/          # S3 file upload
 │
 ├── features/                # BUSINESS LOGIC (ADR-005 pattern)
-│   ├── surveys/
-│   │   ├── components/      # SurveyList, SurveyBuilder
-│   │   ├── actions.ts       # Server Actions (create, update, delete)
-│   │   ├── queries.ts       # Data fetching (getSurveys, getSurvey)
-│   │   ├── validations.ts   # Zod schemas (future)
-│   │   └── types.ts         # TypeScript types (future)
-│   │
-│   ├── responses/           # Response management (TODO)
-│   ├── calendar/            # Calendar integration (TODO)
-│   └── auth/                # Auth helpers (TODO)
+│   ├── appointments/        # Appointment management (Google Calendar sync)
+│   ├── blog/                # Blog with Tiptap WYSIWYG, S3 images, SEO, ISR
+│   ├── calendar/            # Calendar booking UI + settings
+│   ├── editor/              # Shared Tiptap editor base (used by blog, shop, legal-pages)
+│   ├── email/               # Email template editor + live preview
+│   ├── intake/              # Unified intake hub — @dnd-kit kanban, split view
+│   ├── landing/             # Landing page block editor + live preview
+│   ├── legal-pages/         # Legal pages (regulamin, polityka prywatności) with shared Tiptap
+│   ├── media/               # Media library — S3 upload, 6 types, folder tree, DnD, InsertMediaModal
+│   ├── responses/           # Response list + detail view
+│   ├── shop-categories/     # Shop category CRUD (inline editing, combobox with create)
+│   ├── shop-products/       # Shop product editor (Tiptap, media gallery, SEO, layout selector)
+│   ├── site-settings/       # Site settings (org-level config, SEO defaults, keywords)
+│   ├── surveys/             # Survey builder + link management
+│   └── CLAUDE.md            # Features pattern documentation
 │
 ├── components/              # SHARED UI COMPONENTS
 │   ├── admin/
@@ -63,12 +70,21 @@ apps/cms/
 │   └── providers/           # React Context (future)
 │
 ├── lib/                     # UTILITIES
+│   ├── auth.ts              # getUserWithTenant() — shared auth helper
+│   ├── messages.ts          # ~700+ Polish strings, nested by feature
+│   ├── query-keys.ts        # Centralized TanStack Query key factories
+│   ├── routes.ts            # All admin routes as constants
+│   ├── s3.ts                # S3 presigned URL generation
+│   ├── video-utils.ts       # Video embed URL parsing (YouTube, Vimeo, etc.)
 │   ├── supabase/
-│   │   ├── client.ts        # Browser Supabase client
-│   │   └── server.ts        # Server Supabase client
-│   ├── google-calendar/     # Google Calendar API (TODO)
-│   ├── n8n/                 # n8n webhooks (TODO)
-│   └── utils/               # Helper functions
+│   │   ├── client.ts        # Browser Supabase client (TanStack Query)
+│   │   └── server.ts        # Server Supabase client (Server Components, Actions)
+│   ├── google-calendar/     # Google Calendar OAuth + event management
+│   ├── n8n/                 # n8n webhook helpers
+│   └── utils/
+│       ├── slug.ts          # Polish slug generation (shared by blog + shop)
+│       ├── status.ts        # Status helper utilities
+│       └── media-proxy.ts   # createMediaProxyEditor for InsertMediaModal integration
 │
 ├── hooks/                   # Custom React hooks (future)
 │
@@ -154,15 +170,28 @@ Only for admin operations that bypass RLS.
 ## Routes
 
 ```
-/                        - Default Next.js page (TODO: redirect to /admin or /login)
-/login                   - Login page (public)
-/admin                   - Dashboard (protected)
-/admin/surveys           - Survey list (protected)
-/admin/surveys/new       - Create survey (protected)
-/admin/surveys/[id]      - Edit survey (protected)
-/admin/responses         - Response list (protected, TODO)
-/admin/calendar          - Calendar (protected, TODO)
-/admin/settings          - Settings (protected, TODO)
+/login                       - Login page (public)
+/admin                       - Dashboard
+/admin/surveys               - Survey list
+/admin/surveys/new           - Create survey
+/admin/surveys/[id]          - Edit survey (builder + links)
+/admin/responses             - Response list
+/admin/responses/[id]        - Response detail
+/admin/intake                - Unified intake hub (kanban + split view)
+/admin/appointments          - Appointment management
+/admin/blog                  - Blog post list
+/admin/blog/new              - Create blog post
+/admin/blog/[id]             - Edit blog post (Tiptap + SEO)
+/admin/landing-page          - Landing page block editor
+/admin/email-templates       - Email template list
+/admin/email-templates/[type]- Email template editor + preview
+/admin/media                 - Media library
+/admin/legal-pages           - Legal pages editor
+/admin/settings              - Site settings
+/admin/shop/products         - Shop product list (grid/list toggle, 3 filters)
+/admin/shop/products/new     - Create product
+/admin/shop/products/[id]    - Edit product (Tiptap, media, SEO)
+/admin/shop/categories       - Category management (inline CRUD)
 ```
 
 ## Adding New Features
@@ -191,6 +220,18 @@ Only for admin operations that bypass RLS.
 - **Low-impact fields** (internal notes, Kanban reorder) → autosave with debounce (1s) + status indicator (saving/saved/error).
 
 **Rich interactive UIs preferred:** When feature complexity warrants it, use professional interactive libraries (reactflow for workflow builder, @dnd-kit for Kanban) over simple form-based config. User values perceived professionalism of UI.
+
+**Editor layout:** All editors (blog, shop, landing, survey, email) use `max-w-[1400px] mx-auto` centered grid. Blog prose additionally capped at `max-w-[700px]` (matches public website rendering). Sidebar 420px.
+
+**CollapsibleCard:** Sidebar cards use `CollapsibleCard` from `@agency/ui`. SEO defaults closed, Settings/Images default open. Independent collapsible (multiple open simultaneously), NOT accordion.
+
+**Cover image:** Always via InsertMediaModal (Media Library picker), never file upload input. InsertMediaModal lives in `features/media/components/`.
+
+**Inline editing over Dialog:** Simple CRUD entities (categories) use inline row editing, not Dialog popups. Dialog is for complex multi-field forms only.
+
+**Combobox with inline create:** Entity selectors (category dropdown) use Popover+Command combobox with search + "+ Nowa kategoria" inline creation. User doesn't need to leave current editor.
+
+**View persistence:** List/grid view toggles persist to localStorage to survive navigation.
 
 ## Development
 

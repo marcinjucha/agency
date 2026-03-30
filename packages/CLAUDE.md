@@ -10,9 +10,11 @@ Prevent code duplication by extracting common functionality into reusable packag
 
 ```
 packages/
-├── ui/          # Shared UI components (shadcn/ui)
+├── ui/          # Shared UI components (shadcn/ui + custom)
 ├── database/    # Supabase types (auto-generated)
-└── validators/  # Zod validation schemas
+├── validators/  # Zod validation schemas
+├── calendar/    # Google Calendar integration (@agency/calendar)
+└── email/       # Email templating with React Email (@agency/email)
 ```
 
 ## Packages
@@ -48,6 +50,8 @@ function MyComponent() {
 - One-off components (keep in app)
 
 **Shared state components** — `EmptyState`, `ErrorState`, `LoadingState` exported from `@agency/ui`. Do NOT create local copies in `apps/components/shared/`. **Why:** Duplicated state components diverged between CMS and Website during AAA-T-83 audit.
+
+**Custom shared components** — `CollapsibleCard` (Radix Collapsible + Card), `DatePicker`, `TimePicker` also exported from `@agency/ui`. **Why:** Extracted after finding duplication across apps (DatePicker was in 3 places before AAA-T-8).
 
 ### packages/database/
 **Purpose:** Single source of truth for database types
@@ -106,6 +110,36 @@ const form = useForm({
 - Validation logic used in multiple apps
 - Client + server validation (same schema)
 - Example: Survey structure validated in CMS (create) and Website (submit)
+
+### packages/calendar/
+**Purpose:** Google Calendar API integration
+
+**Contains:**
+- Token refresh management (OAuth2)
+- Event CRUD (create, update, delete calendar events)
+- Availability query (free/busy slots with timezone + buffer)
+
+**Usage:**
+```typescript
+import { createCalendarEvent, getAvailableSlots } from '@agency/calendar'
+```
+
+**Note:** Has its own CLAUDE.md with detailed token refresh patterns.
+
+### packages/email/
+**Purpose:** Email template rendering with React Email
+
+**Contains:**
+- Block components: HeaderBlock, TextBlock, CtaBlock, DividerBlock, FooterBlock
+- EmailRenderer: compiles JSONB blocks to HTML via @react-email
+
+**Usage:**
+```typescript
+import { EmailRenderer } from '@agency/email'
+const html = await EmailRenderer.render(blocks)
+```
+
+**Used by:** CMS email template editor (live preview), n8n email workflows
 
 ## Package Development
 
@@ -167,7 +201,9 @@ Packages are **NOT pre-built**. They're transpiled on-demand by Next.js:
 transpilePackages: [
   '@agency/ui',
   '@agency/database',
-  '@agency/validators'
+  '@agency/validators',
+  '@agency/calendar',
+  '@agency/email'
 ]
 ```
 
@@ -183,6 +219,8 @@ This means:
 import { Button } from '@agency/ui'
 import type { Database } from '@agency/database'
 import { surveySchema } from '@agency/validators'
+import { createCalendarEvent } from '@agency/calendar'
+import { EmailRenderer } from '@agency/email'
 ```
 
 **Within packages:**

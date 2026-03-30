@@ -13,75 +13,106 @@ This directory contains Supabase configuration and database migrations.
 ```
 supabase/
 ├── config.toml                           # Local Supabase config
-├── migrations/
-│   └── 20250105000001_initial_schema.sql # Database schema
+├── migrations/                           # 28 migration files (as of 2026-03-30)
+│   ├── 20250105000001_initial_schema.sql # Initial schema
+│   └── ...                               # See migrations/ for full list
 ├── seed_first_user.sql                   # User creation guide
 └── README.md                             # Setup instructions
 ```
 
 ## Database Schema
 
-### Tables (6 total)
+### Tables (19 total)
 
-**tenants** - Law firms
-- Multi-tenant isolation root
-- Each law firm = 1 tenant
+**tenants** - Organizations/firms (multi-tenant root)
+- Each organization = 1 tenant
 - Has many users, surveys, responses, appointments
 
-**users** - Lawyers within firms
-- Links auth.users (Supabase Auth) to public.users
+**users** - Users within tenants, linked to auth.users
 - Belongs to one tenant
 - Has role: owner, admin, member
-- Stores Google Calendar OAuth tokens
 
-**surveys** - Survey templates
-- Created by users
-- Contains questions as JSONB
+**surveys** - Survey templates with JSONB questions
 - Has status: draft, active, archived
 - Belongs to tenant (RLS enforced)
 
-**survey_links** - Unique client links
-- One link per survey distribution
-- Has unique token (UUID)
-- Tracks submission count
+**survey_links** - Unique client links with UUID token
+- Tracks submission count (current_submissions, max_submissions)
 - Can expire
 
-**responses** - Client submissions
-- Answers stored as JSONB
-- AI qualification results as JSONB
+**responses** - Client submissions with JSONB answers
+- AI qualification results as JSONB (ai_qualification)
 - Has status: new, qualified, disqualified, contacted
 - Belongs to tenant (RLS enforced)
 
-**appointments** - Scheduled meetings
+**appointments** - Scheduled meetings, Google Calendar sync
 - Links to response (optional)
-- Has user_id (which user)
-- Has start/end time
-- Syncs with Google Calendar (google_calendar_event_id)
+- Has start/end time, google_calendar_event_id
 - Has status: scheduled, completed, cancelled
+
+**blog_posts** - Blog articles with Tiptap JSONB content + pre-rendered html_body
+- S3 images, SEO fields, scheduled publishing
+
+**landing_pages** - Marketing page blocks (JSONB), 7 block types
+- ISR revalidation for public website
+
+**pages** - Legal/static pages (regulamin, polityka prywatnosci)
+- Tiptap JSONB content
+
+**email_configs** - Per-tenant email provider config (Resend)
+- Encrypted API keys via pgcrypto, `email_configs_decrypted` view for n8n
+
+**email_templates** - Per-tenant email templates
+- JSONB blocks + pre-rendered html_body, UNIQUE(tenant_id, type)
+
+**media_items** - Media library items (S3)
+- 6 types: image, video, youtube, vimeo, instagram, tiktok
+- folder_id FK to media_folders
+
+**media_folders** - Hierarchical folders for media
+- Self-referential parent_id, ON DELETE SET NULL on items
+
+**shop_products** - Product catalog (25 cols)
+- listing_type enum, display_layout CHECK, Tiptap description
+- NUMERIC price, JSONB images/seo
+
+**shop_categories** - Product categories (flat, no nesting)
+- Tenant-isolated
+
+**site_settings** - One row per tenant, org-level config
+- Name, logo, SEO defaults, keywords
+
+**calendar_settings** - Per-user Google Calendar OAuth tokens + booking settings
+
+**tenant_domains** - Custom domain mapping per tenant
+
+**docforge_licenses** - DocForge desktop app license keys (cross-project)
 
 ### Row Level Security (RLS)
 
-**All tables protected by RLS policies:**
+**All tables use `current_user_tenant_id()` helper** (SECURITY DEFINER function) to avoid RLS infinite recursion. Never query `users` table directly in RLS policy — causes infinite loop.
 
+**Authenticated tenant isolation (most tables):**
 ```sql
--- Users see only their tenant's data
-CREATE POLICY "Users can view own tenant surveys"
-  ON surveys FOR SELECT
-  USING (tenant_id = (SELECT tenant_id FROM users WHERE id = auth.uid()));
+-- Pattern used by surveys, responses, blog_posts, landing_pages, pages,
+-- email_configs, email_templates, media_items, media_folders, site_settings, etc.
+CREATE POLICY "tenant_isolation"
+  ON surveys FOR ALL
+  USING (tenant_id = current_user_tenant_id());
 ```
 
-**Public access for client forms:**
+**Public access for client-facing data:**
 ```sql
--- Anyone can view survey by token
-CREATE POLICY "Anyone can view survey links by token"
-  ON survey_links FOR SELECT
-  USING (true);
-
--- Anyone can submit responses
-CREATE POLICY "Anyone can create responses"
-  ON responses FOR INSERT
-  WITH CHECK (true);
+-- survey_links: anon SELECT (public form access)
+-- responses: anon INSERT (form submissions)
+-- shop_products: anon SELECT WHERE is_published = true
+-- shop_categories: anon SELECT all (public catalog)
+-- site_settings: anon SELECT (public website needs org name/logo)
+-- landing_pages: anon SELECT WHERE is_published = true
 ```
+
+**Admin-only (no anon access):**
+- media_folders, media_items, email_configs, email_templates, calendar_settings
 
 ## Migrations
 
