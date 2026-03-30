@@ -46,4 +46,5 @@ export function calculateReadingTime(html: string): number {
   return Math.max(1, Math.ceil(wordCount / 200))
 }
 
-export { generateSlug } from '@/lib/utils/slug'
+import { generateSlug as _generateSlug } from '@/lib/utils/slug'
+export const generateSlug = _generateSlug

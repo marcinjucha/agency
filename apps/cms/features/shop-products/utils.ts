@@ -1,7 +1,8 @@
 import type { ListingType, DisplayLayout } from './types'
 import { messages } from '@/lib/messages'
 
-export { generateSlug } from '@/lib/utils/slug'
+import { generateSlug as _generateSlug } from '@/lib/utils/slug'
+export const generateSlug = _generateSlug
 
 // --- Formatting helpers ---
 
