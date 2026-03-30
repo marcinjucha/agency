@@ -90,6 +90,11 @@ export {
   TooltipProvider,
 } from './components/ui/tooltip'
 
+// Collapsible
+export { Collapsible, CollapsibleTrigger, CollapsibleContent } from './components/ui/collapsible'
+export { CollapsibleCard } from './components/ui/collapsible-card'
+export type { CollapsibleCardProps } from './components/ui/collapsible-card'
+
 // State components
 export { EmptyState } from './empty-state'
 export { ErrorState } from './error-state'

@@ -3,10 +3,7 @@
 import type { UseFormRegister, UseFormWatch, Control } from 'react-hook-form'
 import { Controller } from 'react-hook-form'
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
+  CollapsibleCard,
   Input,
   Label,
   Textarea,
@@ -39,11 +36,8 @@ export function ProductSeoSidebar({ register, watch, control, errors }: ProductS
   })
 
   return (
-    <Card className="shadow-sm">
-      <CardHeader className="pb-4">
-        <CardTitle className="text-base font-semibold">{messages.shop.seoTitle}</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-5">
+    <CollapsibleCard title={messages.shop.seoTitle} defaultOpen={false}>
+      <div className="space-y-5">
         <TooltipProvider delayDuration={300}>
           {/* SEO Title */}
           <div className="space-y-1.5">
@@ -180,7 +174,7 @@ export function ProductSeoSidebar({ register, watch, control, errors }: ProductS
             />
           </div>
         </TooltipProvider>
-      </CardContent>
-    </Card>
+      </div>
+    </CollapsibleCard>
   )
 }

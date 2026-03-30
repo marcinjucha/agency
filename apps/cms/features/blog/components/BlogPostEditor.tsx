@@ -13,6 +13,7 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
+  CollapsibleCard,
   Textarea,
   DatePicker,
   TimePicker,
@@ -428,9 +429,10 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
 
       {/* ---- MAIN CONTENT ---- */}
       <div className="w-full flex-1 px-4 py-6 sm:px-6">
+        <div className="mx-auto max-w-[1400px]">
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_420px]">
           {/* LEFT COLUMN — Title + Slug + Editor */}
-          <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-6 max-w-[700px]">
             {/* Title */}
             <div>
               <Input
@@ -614,11 +616,8 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
             </Card>
 
             {/* SEO card */}
-            <Card className="shadow-sm">
-              <CardHeader className="pb-4">
-                <CardTitle className="text-base font-semibold">{messages.blog.seoTitle}</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-5">
+            <CollapsibleCard title={messages.blog.seoTitle} defaultOpen={false}>
+              <div className="space-y-5">
                 <TooltipProvider delayDuration={300}>
                   <div className="space-y-1.5">
                     <div className="flex items-center gap-1.5">
@@ -760,8 +759,8 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
                     />
                   </div>
                 </TooltipProvider>
-              </CardContent>
-            </Card>
+              </div>
+            </CollapsibleCard>
 
             {/* Status card */}
             <Card className="shadow-sm">
@@ -893,6 +892,7 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
               </AlertDialog>
             )}
           </div>
+        </div>
         </div>
       </div>
     </div>
