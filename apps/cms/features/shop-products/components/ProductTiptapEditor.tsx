@@ -4,21 +4,21 @@ import { useState, useCallback } from 'react'
 import type { Editor } from '@tiptap/react'
 import { TiptapEditor as BaseTiptapEditor } from '../../editor/components/TiptapEditor'
 import { InsertMediaModal } from '@/features/media/components/InsertMediaModal'
-import { editorExtensions } from '../extensions'
-import { EMBED_DIMENSIONS } from '../extensions/constants'
+import { baseExtensions } from '../../editor/extensions'
 import type { TiptapContent } from '../../editor/types'
 
-interface BlogTiptapEditorProps {
+interface ProductTiptapEditorProps {
   content: TiptapContent
   onChange: (content: TiptapContent) => void
   placeholder?: string
 }
 
 /**
- * Blog-specific TiptapEditor — wraps the base editor with media extensions,
- * InsertMediaModal, and embed dimension CSS.
+ * Shop product TiptapEditor — wraps the base editor with
+ * InsertMediaModal for inline image insertion.
+ * Uses baseExtensions only (no video embeds needed for product descriptions).
  */
-export function TiptapEditor({ content, onChange, placeholder }: BlogTiptapEditorProps) {
+export function ProductTiptapEditor({ content, onChange, placeholder }: ProductTiptapEditorProps) {
   const [mediaModalOpen, setMediaModalOpen] = useState(false)
   const [editor, setEditor] = useState<Editor | null>(null)
 
@@ -31,9 +31,8 @@ export function TiptapEditor({ content, onChange, placeholder }: BlogTiptapEdito
       content={content}
       onChange={onChange}
       placeholder={placeholder}
-      extensions={editorExtensions}
+      extensions={baseExtensions}
       onOpenMediaModal={() => setMediaModalOpen(true)}
-      embedDimensions={EMBED_DIMENSIONS}
       onEditorReady={handleEditorReady}
       mediaModal={
         <InsertMediaModal
