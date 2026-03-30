@@ -3,6 +3,15 @@
 import { useState, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragStartEvent,
+  type DragEndEvent,
+} from '@dnd-kit/core'
+import {
   Skeleton,
   Card,
   Button,
@@ -21,16 +30,19 @@ import {
 import { Image as ImageIcon, Link2, Loader2 } from 'lucide-react'
 import { mediaKeys, getMediaItems } from '../queries'
 import { deleteMediaItem, createMediaItem, updateMediaItem } from '../actions'
+import { moveMediaToFolder } from '../folder-actions'
 import { extractVideoId, generateThumbnailUrl, buildEmbedUrl, fetchVimeoThumbnail } from '@/lib/video-utils'
 import { MediaUploadZone } from './MediaUploadZone'
 import { MediaTypeFilter } from './MediaTypeFilter'
 import { MediaGrid } from './MediaGrid'
 import { MediaPreviewDialog } from './MediaPreviewDialog'
+import { MediaCardInner } from './MediaCard'
 import { FolderTree } from './FolderTree'
 import { FolderCreateDialog } from './FolderCreateDialog'
 import { getMediaFolders, folderKeys } from '../folder-queries'
 import { deleteFolder } from '../folder-actions'
 import { buildFolderTree } from '../folder-types'
+import { formatBytes } from '../utils'
 import type { FolderTreeNode } from '../folder-types'
 import type { MediaType, MediaItemListItem, MediaItem } from '../types'
 import { messages } from '@/lib/messages'
@@ -182,6 +194,57 @@ export function MediaLibrary() {
     setFolderDialogParentId(undefined)
   }, [])
 
+  // --- Drag-and-drop ---
+  const [draggedItem, setDraggedItem] = useState<MediaItemListItem | null>(null)
+
+  // Require 8px movement before starting drag — prevents accidental drags on click
+  const pointerSensor = useSensor(PointerSensor, {
+    activationConstraint: { distance: 8 },
+  })
+  const sensors = useSensors(pointerSensor)
+
+  const moveMutation = useMutation({
+    mutationFn: async ({ itemId, folderId }: { itemId: string; folderId: string | null }) => {
+      const result = await moveMediaToFolder(itemId, folderId)
+      if (!result.success) throw new Error(result.error ?? messages.media.moveFailed)
+      return result
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: mediaKeys.all })
+      queryClient.invalidateQueries({ queryKey: folderKeys.all })
+    },
+  })
+
+  function handleDragStart(event: DragStartEvent) {
+    const { item } = event.active.data.current as { type: string; item: MediaItemListItem }
+    setDraggedItem(item)
+  }
+
+  function handleDragEnd(event: DragEndEvent) {
+    setDraggedItem(null)
+
+    const { active, over } = event
+    if (!over) return
+
+    const activeData = active.data.current as { type: string; item: MediaItemListItem }
+    const overData = over.data.current as { type: string; folderId: string | null } | undefined
+
+    // Only handle drops on folder targets
+    if (!overData || overData.type !== 'folder') return
+
+    const itemId = activeData.item.id
+    const targetFolderId = overData.folderId
+
+    // Don't move if already in that folder
+    if (activeData.item.folder_id === targetFolderId) return
+
+    moveMutation.mutate({ itemId, folderId: targetFolderId })
+  }
+
+  function handleDragCancel() {
+    setDraggedItem(null)
+  }
+
   async function handleAddSocialUrl() {
     if (!socialUrl.trim()) return
     setSocialError(null)
@@ -225,130 +288,153 @@ export function MediaLibrary() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Page header */}
-      <h1 className="text-2xl font-bold text-foreground">{messages.media.libraryTitle}</h1>
+    <DndContext
+      sensors={sensors}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+      onDragCancel={handleDragCancel}
+    >
+      <div className="space-y-6">
+        {/* Page header */}
+        <h1 className="text-2xl font-bold text-foreground">{messages.media.libraryTitle}</h1>
 
-      {/* Upload zone */}
-      <MediaUploadZone onUploadComplete={handleUploadComplete} />
+        {/* Upload zone */}
+        <MediaUploadZone onUploadComplete={handleUploadComplete} />
 
-      {/* Social media URL input */}
-      <div className="space-y-2">
-        <div className="flex gap-2">
-          <div className="relative flex-1">
-            <Link2 className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={socialUrl}
-              onChange={(e) => { setSocialUrl(e.target.value); setSocialError(null) }}
-              placeholder={messages.media.socialPlaceholder}
-              className="pl-9"
-              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddSocialUrl() } }}
+        {/* Social media URL input */}
+        <div className="space-y-2">
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Link2 className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={socialUrl}
+                onChange={(e) => { setSocialUrl(e.target.value); setSocialError(null) }}
+                placeholder={messages.media.socialPlaceholder}
+                className="pl-9"
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddSocialUrl() } }}
+              />
+            </div>
+            <Button onClick={handleAddSocialUrl} disabled={!socialUrl.trim() || isAddingSocial}>
+              {isAddingSocial ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{messages.media.adding}</> : messages.media.addButton}
+            </Button>
+          </div>
+          {socialError && <p className="text-xs text-destructive" role="alert">{socialError}</p>}
+        </div>
+
+        {/* Type filter */}
+        <MediaTypeFilter value={typeFilter} onChange={setTypeFilter} />
+
+        {/* Delete error */}
+        {deleteError && (
+          <div className="rounded border border-destructive bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            {deleteError}
+          </div>
+        )}
+
+        {/* Two-column layout: sidebar + content */}
+        <div className="flex gap-6">
+          {/* Folder sidebar -- hidden on small screens */}
+          <div className="hidden lg:block">
+            <FolderTree
+              tree={folderTree}
+              selectedFolderId={selectedFolderId}
+              onSelectFolder={setSelectedFolderId}
+              onCreateFolder={handleCreateFolder}
+              onRenameFolder={handleRenameFolder}
+              onDeleteFolder={handleDeleteFolder}
+              totalCount={allItems?.length}
+              unsortedCount={unsortedItems?.length}
             />
           </div>
-          <Button onClick={handleAddSocialUrl} disabled={!socialUrl.trim() || isAddingSocial}>
-            {isAddingSocial ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{messages.media.adding}</> : messages.media.addButton}
-          </Button>
+
+          {/* Main content */}
+          <div className="min-w-0 flex-1">
+            {isLoading ? (
+              <MediaGridSkeleton />
+            ) : error ? (
+              <ErrorState
+                title={messages.media.loadFailed}
+                message={error instanceof Error ? error.message : messages.common.errorOccurred}
+                onRetry={() => refetch()}
+                variant="card"
+              />
+            ) : !data || data.length === 0 ? (
+              <EmptyState
+                icon={ImageIcon}
+                title={messages.media.noMedia}
+                description={messages.media.noMediaDescription}
+                variant="card"
+              />
+            ) : (
+              <MediaGrid
+                items={data}
+                onPreview={handlePreview}
+                onDelete={handleDelete}
+                onRename={handleRename}
+                draggable
+              />
+            )}
+          </div>
         </div>
-        {socialError && <p className="text-xs text-destructive" role="alert">{socialError}</p>}
+
+        {/* Preview dialog */}
+        <MediaPreviewDialog
+          item={previewItem as unknown as MediaItem | null}
+          open={previewOpen}
+          onClose={() => setPreviewOpen(false)}
+        />
+
+        {/* Folder create/rename dialog */}
+        <FolderCreateDialog
+          open={folderDialogOpen}
+          onClose={handleCloseFolderDialog}
+          parentId={folderDialogParentId}
+          existingFolder={folderToRename}
+        />
+
+        {/* Folder delete confirmation */}
+        <AlertDialog
+          open={!!folderToDelete}
+          onOpenChange={(v) => { if (!v) setFolderToDelete(null) }}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{messages.media.deleteFolder}</AlertDialogTitle>
+              <AlertDialogDescription>
+                {messages.media.confirmDeleteFolder}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>{messages.common.cancel}</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  if (folderToDelete) {
+                    deleteFolderMutation.mutate(folderToDelete.id)
+                  }
+                }}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {deleteFolderMutation.isPending ? messages.common.loading : messages.common.delete}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
 
-      {/* Type filter */}
-      <MediaTypeFilter value={typeFilter} onChange={setTypeFilter} />
-
-      {/* Delete error */}
-      {deleteError && (
-        <div className="rounded border border-destructive bg-destructive/10 px-3 py-2 text-sm text-destructive">
-          {deleteError}
-        </div>
-      )}
-
-      {/* Two-column layout: sidebar + content */}
-      <div className="flex gap-6">
-        {/* Folder sidebar -- hidden on small screens */}
-        <div className="hidden lg:block">
-          <FolderTree
-            tree={folderTree}
-            selectedFolderId={selectedFolderId}
-            onSelectFolder={setSelectedFolderId}
-            onCreateFolder={handleCreateFolder}
-            onRenameFolder={handleRenameFolder}
-            onDeleteFolder={handleDeleteFolder}
-            totalCount={allItems?.length}
-            unsortedCount={unsortedItems?.length}
-          />
-        </div>
-
-        {/* Main content */}
-        <div className="min-w-0 flex-1">
-          {isLoading ? (
-            <MediaGridSkeleton />
-          ) : error ? (
-            <ErrorState
-              title={messages.media.loadFailed}
-              message={error instanceof Error ? error.message : messages.common.errorOccurred}
-              onRetry={() => refetch()}
-              variant="card"
+      {/* Drag overlay — floating preview card that follows cursor */}
+      <DragOverlay dropAnimation={null}>
+        {draggedItem ? (
+          <div className="w-40">
+            <MediaCardInner
+              item={draggedItem}
+              size={formatBytes(draggedItem.size_bytes)}
+              onPreview={() => {}}
+              onDelete={() => {}}
+              isDragOverlay
             />
-          ) : !data || data.length === 0 ? (
-            <EmptyState
-              icon={ImageIcon}
-              title={messages.media.noMedia}
-              description={messages.media.noMediaDescription}
-              variant="card"
-            />
-          ) : (
-            <MediaGrid
-              items={data}
-              onPreview={handlePreview}
-              onDelete={handleDelete}
-              onRename={handleRename}
-            />
-          )}
-        </div>
-      </div>
-
-      {/* Preview dialog */}
-      <MediaPreviewDialog
-        item={previewItem as unknown as MediaItem | null}
-        open={previewOpen}
-        onClose={() => setPreviewOpen(false)}
-      />
-
-      {/* Folder create/rename dialog */}
-      <FolderCreateDialog
-        open={folderDialogOpen}
-        onClose={handleCloseFolderDialog}
-        parentId={folderDialogParentId}
-        existingFolder={folderToRename}
-      />
-
-      {/* Folder delete confirmation */}
-      <AlertDialog
-        open={!!folderToDelete}
-        onOpenChange={(v) => { if (!v) setFolderToDelete(null) }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{messages.media.deleteFolder}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {messages.media.confirmDeleteFolder}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{messages.common.cancel}</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                if (folderToDelete) {
-                  deleteFolderMutation.mutate(folderToDelete.id)
-                }
-              }}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {deleteFolderMutation.isPending ? messages.common.loading : messages.common.delete}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
+          </div>
+        ) : null}
+      </DragOverlay>
+    </DndContext>
   )
 }

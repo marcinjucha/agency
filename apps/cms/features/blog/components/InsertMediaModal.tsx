@@ -13,10 +13,18 @@ import {
   Button,
   Input,
   Progress,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from '@agency/ui'
+import { Folder } from 'lucide-react'
 import { Link2, Loader2, UploadCloud } from 'lucide-react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { getMediaItems, mediaKeys } from '@/features/media/queries'
+import { getMediaFolders, folderKeys } from '@/features/media/folder-queries'
+import { buildFolderTree } from '@/features/media/folder-types'
 import { createMediaItem } from '@/features/media/actions'
 import {
   uploadMediaToS3,
@@ -194,6 +202,7 @@ function LibraryTab({
   onInserted: () => void
 }) {
   const [typeFilter, setTypeFilter] = useState<MediaType | undefined>(undefined)
+  const [folderFilter, setFolderFilter] = useState<string | null | undefined>(undefined)
   const [uploadProgress, setUploadProgress] = useState<number | null>(null)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [isDragOver, setIsDragOver] = useState(false)
@@ -201,9 +210,16 @@ function LibraryTab({
   const queryClient = useQueryClient()
 
   const { data: items, isLoading } = useQuery({
-    queryKey: mediaKeys.list({ type: typeFilter }),
-    queryFn: () => getMediaItems({ type: typeFilter }),
+    queryKey: mediaKeys.list({ type: typeFilter, folder_id: folderFilter }),
+    queryFn: () => getMediaItems({ type: typeFilter, folder_id: folderFilter }),
   })
+
+  const { data: folders } = useQuery({
+    queryKey: folderKeys.list,
+    queryFn: getMediaFolders,
+  })
+
+  const folderTree = folders ? buildFolderTree(folders) : []
 
   async function handleUpload(file: File) {
     setUploadError(null)
@@ -290,7 +306,29 @@ function LibraryTab({
       {uploadProgress !== null && <Progress value={uploadProgress} className="h-1.5" />}
       {uploadError && <p className="text-xs text-destructive" role="alert">{uploadError}</p>}
 
-      <MediaTypeFilter value={typeFilter} onChange={setTypeFilter} />
+      <div className="flex items-center gap-2">
+        {folders && folders.length > 0 && (
+          <Select
+            value={folderFilter === undefined ? 'all' : folderFilter === null ? 'root' : folderFilter}
+            onValueChange={(v) => setFolderFilter(v === 'all' ? undefined : v === 'root' ? null : v)}
+          >
+            <SelectTrigger className="w-[180px]">
+              <Folder className="mr-2 h-4 w-4 text-muted-foreground" />
+              <SelectValue placeholder="Wszystkie media" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Wszystkie media</SelectItem>
+              <SelectItem value="root">Główne</SelectItem>
+              {folderTree.map((folder) => (
+                <SelectItem key={folder.id} value={folder.id}>
+                  {folder.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+        <MediaTypeFilter value={typeFilter} onChange={setTypeFilter} />
+      </div>
 
       {isLoading && (
         <div className="flex items-center justify-center py-12">

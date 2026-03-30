@@ -61,6 +61,11 @@ Composes from responses + appointments (ADR-005 compliant).
 - **No placeholders in contact fields** — User rejected placeholder text like "Jan Kowalski" as unsensible. Contact fields have empty placeholders. (2026-03-30)
 - **Reusable component over inline duplication** — User asked "Nie można z tego stworzyć komponentu?" when seeing Popover+Calendar duplicated in 3 places. Prefers extracting to @agency/ui immediately, not "later." (2026-03-30)
 - **Extract query keys to central file** — User asked for centralized query key file for discoverability ("żebyśmy wiedzieli jakie queries mamy"). Created `apps/cms/lib/query-keys.ts`. Blog/media kept their own patterns. (2026-03-30)
+- **"Bez folderu" renamed to "Główne"** — User said "bez foldera brzmi dziwnie". Changed unsorted/unfoldered media label from "Bez folderu" to "Główne" — more natural naming for root media items. (2026-03-30)
+- **Drag handle too small** — User sent screenshot showing tiny grip icon on media cards. Increased from h-4 w-4 p-0.5 to h-5 w-5 p-1.5. (2026-03-30)
+- **InsertMediaModal needs folder filter** — User requested folder filter in blog media insertion modal ("przy blogu, przy dodawaniu mediów, też fajnie mieć tam możliwość wyboru folderu"). Added folder Select dropdown to InsertMediaModal LibraryTab. (2026-03-30)
+- **Media don't have to be in folders** — User emphasized "nie wszystko musi być w folderze". folder_id=NULL is a valid, normal state — not "uncategorized". (2026-03-30)
+- **DnD over simple dropdown for move-to-folder** — User chose "zrobmy dnd" when given choice between dropdown and drag-and-drop for moving media items to folders. (2026-03-30)
 
 ## Bugs Found
 
@@ -76,6 +81,7 @@ Composes from responses + appointments (ADR-005 compliant).
 - **npm run db:types fails with --local when local Supabase not running** — `db:types` script uses `--local` flag but requires local Supabase instance. When not running, must use `--linked` with `grep -v "Initialising"` workaround. Also: `supabase db push` may require re-authentication when session expires. (2026-03-30)
 - **formatPrice divided by 100 for NUMERIC(10,2) column** — Agent assumed cents storage pattern, but DB uses NUMERIC(10,2) which stores actual values (99.99 not 9999). Fix: remove /100. Common AI mistake when generating price formatters. (2026-03-30)
 - **Supabase JS v2.95.2 `as any` needed even for SELECT** — Not just TablesInsert bug. `.from('shop_products')` resolves to `never` in complex chain contexts even for SELECT. Upgrade Supabase JS might fix but is separate task. (2026-03-30)
+- **Turbopack barrel re-export breaks Server Components** — `export { X } from 'module'` in a file imported by Server Actions causes "Expected export to be in eval context" error. Fix: `import { X } from 'module'; export const X2 = X`. Affected blog/utils.ts and shop-products/utils.ts. (2026-03-30)
 
 ## Domain Concepts
 
@@ -84,7 +90,10 @@ Composes from responses + appointments (ADR-005 compliant).
 - **Tenant "Halo Efekt" in production** — email: kontakt@haloefekt.pl, id: 19342448-4e4e-49ba-8bf0-694d5376f953. (2026-03-23)
 - **deleteAppointment does NOT remove Google Calendar event** — DB row deleted only, no Calendar API call. Notion ticket created. Requires `@agency/calendar` token manager. (2026-03-28)
 - **Tata's books are digital only (not physical)** — No physical/hardcover books. Digital content sold via external platform (Zolix), with option for free downloads from S3. Both listing_types (external_link + digital_download) have real use cases. (2026-03-30)
+- **Tata purchase flow: Zolix for paid + optional free S3 downloads** — external_link for paid books (redirects to Zolix), digital_download for free materials (S3 direct download). Two distinct listing_type values for different flows. (2026-03-30)
 - **Cookie banner reuse + Plausible for shop** — Plausible doesn't require cookies/RODO consent. Cookie banner reused from Halo Efekt at zero cost. Polityka prywatności = good practice (no legal requirement without payment). (2026-03-30)
+- **Media folders: ON DELETE SET NULL** — Deleting a folder moves its items to root (folder_id=NULL), doesn't delete them. Folder = organization label, not ownership. (2026-03-30)
+- **"Główne" = root/unfoldered media** — Not "unsorted" or "uncategorized". Just media without a specific folder. Normal default state. (2026-03-30)
 
 ## SEO Foundations — AAA-T-60 + AAA-T-85 — COMPLETED (2026-03-29)
 
@@ -110,6 +119,10 @@ Google Search Console verification code: `GCfETKDyC-evSaMt_NyqAihacXKNVV30zIpP5V
 - **Centralized query keys** — `apps/cms/lib/query-keys.ts` holds all TanStack Query keys (surveys, intake, responses, appointments, landing, calendar). Blog/media have own key factories in their queries.ts. 14 files migrated. Prevents typos, single place for discoverability. (2026-03-30)
 - **generateSlug extracted to shared lib/utils/slug.ts** — Was duplicated between blog/utils.ts and shop-products/utils.ts (2 usages = earned abstraction). Both features re-export from shared location. (2026-03-30)
 - **Shop categories queries.server.ts included** — Both browser and server queries for categories (needed for SSR product forms with category dropdown). (2026-03-30)
+- **Cross-project update rule** — When AAA-P-9 (Shop) tasks affect core CMS, update BOTH PROJECT_SPECs. (2026-03-30)
+- **AAA-T-136 lives in AAA-P-4 (Core CMS)** — Media folders are core infrastructure, not shop-specific. Cross-project: required by AAA-P-9 but owned by AAA-P-4. Pattern: infrastructure tasks live where their "home" is. (2026-03-30)
+- **Media folder files: folder-* prefix** — Separate files (folder-types.ts, folder-queries.ts, folder-actions.ts, folder-validation.ts) not merged into existing media files. Folders are a distinct concern. Prefix `folder-` to distinguish from media item files. (2026-03-30)
+- **getMediaItems folder_id filter: undefined=all, null=root, string=folder** — Critical backward compat: default undefined returns ALL items (InsertMediaModal depends on this). null is NOT the default — it specifically means "root/unfoldered items only". (2026-03-30)
 
 ## Preferences
 
