@@ -68,11 +68,15 @@ features:
     task: "AAA-T-137"
     iteration: 5
     size: L
-    status: not_started
-    description: "Product create/edit with Tiptap editor, media library gallery, SEO sidebar, settings sidebar, cover image, layout selector (image_details vs richtext_sidebar)."
+    status: done
+    description: "Product create/edit with Tiptap editor, media library gallery, SEO sidebar, settings sidebar, cover image, layout selector (gallery | editorial)."
     why: "Core editing experience — operators create and manage product content here"
     depends_on: ["CMS Product List + Category Management"]
-    blockers: []  # AAA-T-136 (media folders) resolved 2026-03-30
+    acceptance_criteria:
+      - verified: true
+      - verified: true
+      - verified: true
+    completion_notes: "CMS operators can create and edit products with full rich-text content (Tiptap), insert media inline, manage gallery images with cover selection, configure listing-type conditional fields, select gallery/editorial layout, manage SEO metadata (title, description, og image, keywords). 2-column layout: content area + 380px sidebar. InsertMediaModal extracted to features/media/ (shared). 10 new components, 1422 lines."
 
   # Iteration 6
   - name: "Shop App Scaffolding"

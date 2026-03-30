@@ -37,7 +37,12 @@ import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
 import { blogPostSchema, type BlogPostFormData } from '../validation'
 import { createBlogPost, updateBlogPost, deleteBlogPost } from '../actions'
-import { generateHtmlFromContent, calculateReadingTime, generateSlug, uploadImageToS3 } from '../utils'
+import {
+  generateHtmlFromContent,
+  calculateReadingTime,
+  generateSlug,
+  uploadImageToS3,
+} from '../utils'
 import { blogKeys } from '../queries'
 import { getPostStatus, type BlogPostStatus } from '../types'
 import type { BlogPost, TiptapContent } from '../types'
@@ -373,11 +378,7 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
                 >
                   {saveLabel[saveState]}
                 </Button>
-                <Button
-                  size="sm"
-                  onClick={handlePublishNow}
-                  disabled={saveState === 'saving'}
-                >
+                <Button size="sm" onClick={handlePublishNow} disabled={saveState === 'saving'}>
                   {messages.blog.publishNow}
                 </Button>
               </>
@@ -427,7 +428,7 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
 
       {/* ---- MAIN CONTENT ---- */}
       <div className="w-full flex-1 px-4 py-6 sm:px-6">
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_380px]">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_420px]">
           {/* LEFT COLUMN — Title + Slug + Editor */}
           <div className="flex flex-col gap-6">
             {/* Title */}
@@ -477,12 +478,16 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
             {/* Settings card */}
             <Card className="shadow-sm">
               <CardHeader className="pb-4">
-                <CardTitle className="text-base font-semibold">{messages.blog.settingsTitle}</CardTitle>
+                <CardTitle className="text-base font-semibold">
+                  {messages.blog.settingsTitle}
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-5">
                 {/* Category */}
                 <div className="space-y-1.5">
-                  <Label htmlFor="blog-category" className="text-sm font-medium">{messages.blog.categoryLabel}</Label>
+                  <Label htmlFor="blog-category" className="text-sm font-medium">
+                    {messages.blog.categoryLabel}
+                  </Label>
                   <Controller
                     name="category"
                     control={control}
@@ -590,7 +595,7 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
                       {messages.blog.excerptLabel}
                     </Label>
                     <span className="text-xs text-muted-foreground">
-                      {(watchExcerpt?.length ?? 0)}/300
+                      {watchExcerpt?.length ?? 0}/300
                     </span>
                   </div>
                   <Textarea
@@ -631,7 +636,10 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
                           </button>
                         </TooltipTrigger>
                         <TooltipContent side="right" className="max-w-xs">
-                          <p>Jeśli pusty, użyty zostanie tytuł artykułu. Zalecana długość: 50-60 znaków.</p>
+                          <p>
+                            Jeśli pusty, użyty zostanie tytuł artykułu. Zalecana długość: 50-60
+                            znaków.
+                          </p>
                         </TooltipContent>
                       </Tooltip>
                     </div>
@@ -665,7 +673,7 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
                         </Tooltip>
                       </div>
                       <span className="text-xs text-muted-foreground">
-                        {(watchSeoDescription?.length ?? 0)}/160
+                        {watchSeoDescription?.length ?? 0}/160
                       </span>
                     </div>
                     <Textarea
@@ -699,7 +707,10 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
                           </button>
                         </TooltipTrigger>
                         <TooltipContent side="right" className="max-w-xs">
-                          <p>Obraz wyświetlany przy udostępnianiu w mediach społecznościowych. Jeśli pusty, użyty zostanie obrazek okładkowy.</p>
+                          <p>
+                            Obraz wyświetlany przy udostępnianiu w mediach społecznościowych. Jeśli
+                            pusty, użyty zostanie obrazek okładkowy.
+                          </p>
                         </TooltipContent>
                       </Tooltip>
                     </div>
@@ -727,7 +738,10 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
                           </button>
                         </TooltipTrigger>
                         <TooltipContent side="right" className="max-w-xs">
-                          <p>Słowa kluczowe pomagają w pozycjonowaniu. Wybierz istniejące lub dodaj nowe.</p>
+                          <p>
+                            Słowa kluczowe pomagają w pozycjonowaniu. Wybierz istniejące lub dodaj
+                            nowe.
+                          </p>
                         </TooltipContent>
                       </Tooltip>
                     </div>
@@ -752,7 +766,9 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
             {/* Status card */}
             <Card className="shadow-sm">
               <CardHeader className="pb-4">
-                <CardTitle className="text-base font-semibold">{messages.blog.statusTitle}</CardTitle>
+                <CardTitle className="text-base font-semibold">
+                  {messages.blog.statusTitle}
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex items-center justify-between">
@@ -777,7 +793,12 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
                         minuteStep={5}
                       />
                       {scheduledDate && (
-                        <Button variant="ghost" size="sm" onClick={clearSchedule} className="text-xs text-muted-foreground">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={clearSchedule}
+                          className="text-xs text-muted-foreground"
+                        >
                           {messages.blog.removeSchedule}
                         </Button>
                       )}
@@ -788,7 +809,9 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
                 {/* Scheduled date display for scheduled status */}
                 {currentStatus === 'scheduled' && watchPublishedAt && (
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-muted-foreground">{messages.blog.scheduledFor}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {messages.blog.scheduledFor}
+                    </span>
                     <span className="text-xs">
                       {format(new Date(watchPublishedAt), 'd MMM yyyy, HH:mm', { locale: pl })}
                     </span>
@@ -798,7 +821,9 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
                 {/* Published date display */}
                 {currentStatus === 'published' && blogPost?.published_at && (
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-muted-foreground">{messages.blog.publishDate}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {messages.blog.publishDate}
+                    </span>
                     <span className="text-xs">
                       {new Date(blogPost.published_at).toLocaleDateString('pl-PL', {
                         day: 'numeric',
@@ -816,7 +841,9 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
 
                 {blogPost?.preview_token && (
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-muted-foreground">{messages.blog.previewLink}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {messages.blog.previewLink}
+                    </span>
                     <Button
                       type="button"
                       variant="ghost"

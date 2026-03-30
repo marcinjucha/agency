@@ -33,7 +33,11 @@ type SaveState = 'idle' | 'saving' | 'saved' | 'error'
 
 export function LandingPageEditor() {
   const queryClient = useQueryClient()
-  const { data: page, isLoading, error } = useQuery({
+  const {
+    data: page,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: queryKeys.landing.all,
     queryFn: getLandingPage,
   })
@@ -44,7 +48,12 @@ export function LandingPageEditor() {
   })
 
   const [blocks, setBlocks] = useState<LandingBlock[] | null>(null)
-  const [seo, setSeo] = useState<SeoMetadata>({ title: '', description: '', ogImage: '', keywords: [] })
+  const [seo, setSeo] = useState<SeoMetadata>({
+    title: '',
+    description: '',
+    ogImage: '',
+    keywords: [],
+  })
   const [isPublished, setIsPublished] = useState(false)
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null)
   const [saveState, setSaveState] = useState<SaveState>('idle')
@@ -56,7 +65,7 @@ export function LandingPageEditor() {
       setSeo(page.seo_metadata ?? { title: '', description: '', ogImage: '', keywords: [] })
       setIsPublished(page.is_published ?? false)
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page])
 
   const activeBlocks = blocks ?? DEFAULT_BLOCKS
@@ -102,7 +111,7 @@ export function LandingPageEditor() {
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_380px]">
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_420px]">
         <div className="flex flex-col gap-2 animate-pulse">
           <div className="h-3 w-16 rounded bg-muted" />
           {Array.from({ length: 4 }).map((_, i) => (
@@ -120,15 +129,13 @@ export function LandingPageEditor() {
   if (error) {
     return (
       <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-4">
-        <p className="text-sm text-destructive font-medium">
-          {messages.landing.loadFailed}
-        </p>
+        <p className="text-sm text-destructive font-medium">{messages.landing.loadFailed}</p>
       </div>
     )
   }
 
   return (
-    <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_380px]">
+    <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_420px]">
       {/* LEFT COLUMN — Block content editing */}
       <section className="space-y-3">
         <p className="text-xs font-semibold uppercase text-muted-foreground tracking-wide">
@@ -156,7 +163,9 @@ export function LandingPageEditor() {
                   variant="ghost"
                   size="sm"
                   className="text-muted-foreground hover:text-foreground"
-                  aria-label={expandedIndex === index ? messages.landing.collapse : messages.landing.expand}
+                  aria-label={
+                    expandedIndex === index ? messages.landing.collapse : messages.landing.expand
+                  }
                   onClick={() => setExpandedIndex((prev) => (prev === index ? null : index))}
                 >
                   {expandedIndex === index ? '▲' : '▼'}
@@ -182,7 +191,9 @@ export function LandingPageEditor() {
         {/* SEO card */}
         <Card className="shadow-sm">
           <CardHeader className="pb-4">
-            <CardTitle className="text-base font-semibold">{messages.landing.seoCardTitle}</CardTitle>
+            <CardTitle className="text-base font-semibold">
+              {messages.landing.seoCardTitle}
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-5">
             <TooltipProvider delayDuration={300}>
@@ -239,7 +250,7 @@ export function LandingPageEditor() {
                     </Tooltip>
                   </div>
                   <span className="text-xs text-muted-foreground">
-                    {(activeSeo.description?.length ?? 0)}/160
+                    {activeSeo.description?.length ?? 0}/160
                   </span>
                 </div>
                 <Textarea
@@ -320,7 +331,9 @@ export function LandingPageEditor() {
         {/* Settings card */}
         <Card className="shadow-sm">
           <CardHeader className="pb-4">
-            <CardTitle className="text-base font-semibold">{messages.landing.settingsCardTitle}</CardTitle>
+            <CardTitle className="text-base font-semibold">
+              {messages.landing.settingsCardTitle}
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">
@@ -340,9 +353,7 @@ export function LandingPageEditor() {
         {/* Save button */}
         <div className="flex flex-col gap-2">
           {saveState === 'error' && (
-            <p className="text-sm text-destructive">
-              {messages.landing.saveFailed}
-            </p>
+            <p className="text-sm text-destructive">{messages.landing.saveFailed}</p>
           )}
           <Button
             onClick={handleSave}
