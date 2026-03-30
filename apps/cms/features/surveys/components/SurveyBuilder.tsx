@@ -402,8 +402,8 @@ export function SurveyBuilder({ survey }: SurveyBuilderProps) {
     })
 
     if (result.success) {
+      queryClient.invalidateQueries({ queryKey: ['surveys'] })
       router.push(routes.admin.surveys)
-      router.refresh()
     } else {
       setError(result.error || messages.surveys.saveFailed)
       setLoading(false)
