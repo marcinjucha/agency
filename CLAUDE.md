@@ -84,6 +84,8 @@ This monorepo contains two Notion projects with separate PROJECT_SPEC files:
 
 **Shared infrastructure:** Both projects share the same Supabase DB (shop tables use `shop_` prefix), the same CMS app (shop features in `features/shop-*/`), and the same packages. Only the public frontends are separate (`apps/website/` vs `apps/shop/*/`).
 
+**Cross-project updates:** When working on AAA-P-9 (Shop) tasks, always check if changes affect Core CMS (AAA-P-4). If a shop task modifies shared tables (e.g., `media_items`), shared packages, CMS sidebar, or `lib/` files — update BOTH PROJECT_SPECs. Shop extends CMS, so many shop tasks have core CMS side effects.
+
 ---
 
 ## Command Quality Standards (Feb 2026)
