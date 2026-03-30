@@ -46,6 +46,7 @@ export {
 } from './components/ui/select'
 export { Textarea } from './components/ui/textarea'
 export { Checkbox } from './components/ui/checkbox'
+export { RadioGroup, RadioGroupItem } from './components/ui/radio-group'
 export { Skeleton } from './components/ui/skeleton'
 export {
   Popover,
@@ -78,6 +79,8 @@ export {
   SheetDescription,
 } from './components/ui/sheet'
 export { Calendar } from './components/ui/calendar'
+export { DatePicker } from './components/ui/date-picker'
+export type { DatePickerProps } from './components/ui/date-picker'
 export {
   Tooltip,
   TooltipTrigger,

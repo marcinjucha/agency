@@ -12,6 +12,7 @@ import { ResponsesTable } from './ResponsesTable'
 import { AppointmentsTable } from './AppointmentsTable'
 import { StatsBar } from './StatsBar'
 import { ResponseDetailPanel } from './ResponseDetailPanel'
+import { queryKeys } from '@/lib/query-keys'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
 import type { PipelineResponse } from '../types'
@@ -31,7 +32,7 @@ export function IntakeHub() {
     error,
     refetch,
   } = useQuery({
-    queryKey: ['intake', 'pipeline'],
+    queryKey: queryKeys.intake.pipeline,
     queryFn: getPipelineResponses,
     refetchInterval: REFETCH_INTERVAL,
   })

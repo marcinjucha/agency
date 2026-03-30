@@ -19,8 +19,17 @@ export const messages = {
     submissionError: 'Błąd wysyłania',
     submitting: 'Wysyłanie…',
     submitSurvey: 'Wyślij ankietę',
+    questionProgress: (filled: number, total: number) =>
+      `Wypełniono ${filled} z ${total} wymaganych pól`,
+    datePickerPlaceholder: 'Wybierz datę',
     // SurveyError
     surveyUnavailable: 'Ankieta niedostępna',
+    // queries.ts — validation error messages
+    errorNotFound: 'Link do ankiety jest nieprawidłowy lub nie istnieje.',
+    errorInactive: 'Ta ankieta nie przyjmuje już odpowiedzi.',
+    errorExpired: 'Link do tej ankiety wygasł.',
+    errorMaxSubmissions: 'Ta ankieta osiągnęła limit wypełnień.',
+    errorSurveyNotFound: 'Nie znaleziono ankiety.',
   },
 
   calendar: {

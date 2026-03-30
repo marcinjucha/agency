@@ -3,7 +3,7 @@
 import { forwardRef } from 'react'
 import { useDraggable } from '@dnd-kit/core'
 import { Badge } from '@agency/ui'
-import { Calendar, StickyNote } from 'lucide-react'
+import { Calendar, Loader2, StickyNote } from 'lucide-react'
 import { messages } from '@/lib/messages'
 import { getAiScoreBgColor } from '../types'
 import type { PipelineResponse, ClosedSubStatus, CLOSED_SUB_STATUSES } from '../types'
@@ -89,14 +89,19 @@ export const PipelineCardContent = forwardRef<HTMLDivElement, PipelineCardConten
           <span className="font-medium text-sm text-foreground truncate">
             {response.clientName}
           </span>
-          {response.aiScore !== null && (
+          {response.aiScore !== null ? (
             <span
               className={`flex-shrink-0 inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold text-white ${getAiScoreBgColor(response.aiScore)}`}
               aria-label={`AI score: ${response.aiScore}`}
             >
               {response.aiScore}
             </span>
-          )}
+          ) : response.status === 'new' && (Date.now() - new Date(response.createdAt).getTime()) < 120_000 ? (
+            <Loader2
+              className="flex-shrink-0 h-4 w-4 animate-spin text-muted-foreground"
+              aria-label={messages.responses.analyzingResponse}
+            />
+          ) : null}
         </div>
 
         {/* Row 2: Survey title */}

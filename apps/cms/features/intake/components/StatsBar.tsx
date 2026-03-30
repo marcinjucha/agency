@@ -5,6 +5,7 @@ import { Skeleton } from '@agency/ui'
 import { Inbox, Phone, CalendarDays, CalendarClock } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { getIntakeStats } from '../queries'
+import { queryKeys } from '@/lib/query-keys'
 import { messages } from '@/lib/messages'
 
 const REFETCH_INTERVAL = 30_000
@@ -47,7 +48,7 @@ function StatsBarSkeleton() {
 
 export function StatsBar() {
   const { data, isLoading } = useQuery({
-    queryKey: ['intake', 'stats'],
+    queryKey: queryKeys.intake.stats,
     queryFn: getIntakeStats,
     refetchInterval: REFETCH_INTERVAL,
   })

@@ -5,9 +5,15 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getSurveyLinks } from '../queries'
 import { generateSurveyLink, deleteSurveyLink, updateSurveyLink } from '../actions'
 import type { UpdateSurveyLinkFormData } from '../validation'
-import { Button, Card, Input, Label, Switch } from '@agency/ui'
+import {
+  Button, Card, Input, Label, Switch,
+  AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader,
+  AlertDialogFooter, AlertDialogTitle, AlertDialogDescription,
+  AlertDialogAction, AlertDialogCancel,
+} from '@agency/ui'
 import { Link as LinkIcon, Copy, Trash2, Plus, Check, Pencil, X } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
+import { queryKeys } from '@/lib/query-keys'
 import { messages } from '@/lib/messages'
 import type { Tables } from '@agency/database'
 
@@ -37,7 +43,7 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
 
   // Query for links
   const { data: links, isLoading } = useQuery({
-    queryKey: ['survey-links', surveyId],
+    queryKey: queryKeys.surveys.links(surveyId),
     queryFn: () => getSurveyLinks(surveyId),
   })
 
@@ -54,7 +60,7 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
       return result
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['survey-links', surveyId] })
+      queryClient.invalidateQueries({ queryKey: queryKeys.surveys.links(surveyId) })
       setShowForm(false)
       setFormData({ notificationEmail: '', expiresAt: '', maxSubmissions: '', isActive: true })
       setError(null)
@@ -72,7 +78,7 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
       return result
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['survey-links', surveyId] })
+      queryClient.invalidateQueries({ queryKey: queryKeys.surveys.links(surveyId) })
       setError(null)
     },
     onError: (err: Error) => {
@@ -94,7 +100,7 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
       return result
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['survey-links', surveyId] })
+      queryClient.invalidateQueries({ queryKey: queryKeys.surveys.links(surveyId) })
       setError(null)
     },
     onError: (err: Error) => {
@@ -116,7 +122,7 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
       return result
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['survey-links', surveyId] })
+      queryClient.invalidateQueries({ queryKey: queryKeys.surveys.links(surveyId) })
       setEditingLinkId(null)
       setError(null)
     },
@@ -286,13 +292,12 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
 
             return (
               <div key={link.id} className="p-3 bg-muted rounded-lg border border-border">
-                {/* Header row: token + actions */}
+                {/* Row 1: token + active switch */}
                 <div className="flex items-center gap-2 mb-2">
                   <code className="text-xs bg-card px-2 py-1 rounded border border-border flex-1 truncate">
                     {link.token}
                   </code>
 
-                  {/* Always-visible is_active switch */}
                   <div className="flex items-center gap-1.5">
                     <Switch
                       checked={link.is_active}
@@ -306,54 +311,73 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
                       {link.is_active ? messages.surveys.active : messages.surveys.inactive}
                     </span>
                   </div>
+                </div>
 
+                {/* Row 2: action buttons */}
+                <div className="flex items-center gap-1.5 mb-2">
                   <Button
                     variant="outline"
                     size="sm"
+                    className="h-7 text-xs"
                     onClick={() => copyToClipboard(link.token, link.id)}
                     aria-label={messages.common.copyLink}
                   >
                     {copiedLinkId === link.id ? (
-                      <Check className="h-4 w-4 text-status-success-foreground" />
+                      <Check className="h-3.5 w-3.5 text-status-success-foreground" />
                     ) : (
-                      <Copy className="h-4 w-4" />
+                      <Copy className="h-3.5 w-3.5" />
                     )}
                   </Button>
 
-                  {!isEditing && (
+                  {!isEditing ? (
                     <Button
                       variant="outline"
                       size="sm"
+                      className="h-7 text-xs"
                       onClick={() => startEditing(link)}
                       aria-label={messages.surveys.editLink}
                     >
-                      <Pencil className="h-4 w-4" />
+                      <Pencil className="h-3.5 w-3.5" />
                     </Button>
-                  )}
-
-                  {isEditing && (
+                  ) : (
                     <Button
                       variant="outline"
                       size="sm"
+                      className="h-7 text-xs"
                       onClick={cancelEditing}
                       aria-label={messages.surveys.editLinkCancel}
                     >
-                      <X className="h-4 w-4" />
+                      <X className="h-3.5 w-3.5" />
                     </Button>
                   )}
 
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      if (confirm(messages.surveys.deleteLinkConfirm)) {
-                        deleteMutation.mutate(link.id)
-                      }
-                    }}
-                    aria-label={messages.common.delete}
-                  >
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-xs"
+                        aria-label={messages.common.delete}
+                      >
+                        <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>{messages.surveys.deleteLinkConfirmTitle}</AlertDialogTitle>
+                        <AlertDialogDescription>{messages.surveys.deleteLinkConfirmDescription}</AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>{messages.common.cancel}</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => deleteMutation.mutate(link.id)}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          {messages.common.delete}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </div>
 
                 {/* Inline Edit Form */}

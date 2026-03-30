@@ -12,13 +12,14 @@ import {
 import Link from 'next/link'
 import { FileText, Plus, Trash2 } from 'lucide-react'
 import { getSurveyStatusColor, type SurveyStatus } from '@/lib/utils/status'
+import { queryKeys } from '@/lib/query-keys'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
 
 export function SurveyList() {
   const queryClient = useQueryClient()
   const { data: surveys, isLoading, error } = useQuery({
-    queryKey: ['surveys'],
+    queryKey: queryKeys.surveys.all,
     queryFn: getSurveys,
   })
   const deleteMutation = useMutation({
@@ -27,7 +28,10 @@ export function SurveyList() {
       if (!result.success) throw new Error(result.error)
       return result
     },
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['surveys'] }) },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.surveys.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.intake.all })
+    },
   })
 
   if (isLoading) {

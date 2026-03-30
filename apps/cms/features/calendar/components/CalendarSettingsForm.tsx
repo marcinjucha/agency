@@ -10,13 +10,14 @@ import { getCalendarSettings } from '../queries'
 import { updateCalendarSettings } from '../actions'
 import { calendarSettingsSchema, type CalendarSettingsSchema } from '../validation'
 import { useState } from 'react'
+import { queryKeys } from '@/lib/query-keys'
 import { messages } from '@/lib/messages'
 
 export function CalendarSettingsForm() {
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ['calendarSettings'],
+    queryKey: queryKeys.calendar.settings,
     queryFn: getCalendarSettings,
   })
 

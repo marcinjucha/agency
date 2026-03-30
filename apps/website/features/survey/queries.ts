@@ -9,7 +9,8 @@
  */
 
 import { createAnonClient } from '@/lib/supabase/anon-server'
-import type { LinkValidation, SurveyLinkData } from './types'
+import type { LinkValidation, Question, SurveyLinkData } from './types'
+import { messages } from '@/lib/messages'
 
 /**
  * Fetch survey by token with comprehensive validation
@@ -59,39 +60,37 @@ export async function getSurveyByToken(token: string): Promise<LinkValidation> {
     return {
       isValid: false,
       error: 'not_found',
-      message: 'Survey link is invalid or does not exist.'
+      message: messages.survey.errorNotFound
     }
   }
 
-  const typedLink = link as any
-
   // Validation 2: Link is inactive (most common check first)
-  if (!typedLink.is_active) {
+  if (!link.is_active) {
     return {
       isValid: false,
       error: 'inactive',
-      message: 'This survey is no longer accepting responses.'
+      message: messages.survey.errorInactive
     }
   }
 
   // Validation 3: Link has expired
-  if (typedLink.expires_at && new Date(typedLink.expires_at) < new Date()) {
+  if (link.expires_at && new Date(link.expires_at) < new Date()) {
     return {
       isValid: false,
       error: 'expired',
-      message: 'This survey link has expired.'
+      message: messages.survey.errorExpired
     }
   }
 
   // Validation 4: Submission limit reached
   if (
-    typedLink.max_submissions !== null &&
-    (typedLink.submission_count ?? 0) >= typedLink.max_submissions
+    link.max_submissions !== null &&
+    (link.submission_count ?? 0) >= link.max_submissions
   ) {
     return {
       isValid: false,
       error: 'max_submissions',
-      message: 'This survey has reached its submission limit.'
+      message: messages.survey.errorMaxSubmissions
     }
   }
 
@@ -104,32 +103,33 @@ export async function getSurveyByToken(token: string): Promise<LinkValidation> {
       description,
       questions
     `)
-    .eq('id', typedLink.survey_id)
+    .eq('id', link.survey_id)
     .single()
 
   if (surveyError || !survey) {
     return {
       isValid: false,
       error: 'not_found',
-      message: 'Survey not found.'
+      message: messages.survey.errorSurveyNotFound
     }
   }
 
   // Transform data to match SurveyLinkData type
+  // Cast questions: JSONB boundary — Supabase returns Json type, we need Question[]
   const surveyData: SurveyLinkData = {
-    id: typedLink.id,
-    token: typedLink.token,
-    survey_id: typedLink.survey_id,
-    notification_email: typedLink.notification_email,
-    expires_at: typedLink.expires_at,
-    max_submissions: typedLink.max_submissions,
-    submission_count: typedLink.submission_count,
-    is_active: typedLink.is_active,
+    id: link.id,
+    token: link.token,
+    survey_id: link.survey_id,
+    notification_email: link.notification_email,
+    expires_at: link.expires_at,
+    max_submissions: link.max_submissions,
+    submission_count: link.submission_count,
+    is_active: link.is_active,
     survey: {
-      id: (survey as any).id,
-      title: (survey as any).title,
-      description: (survey as any).description,
-      questions: (survey as any).questions
+      id: survey.id,
+      title: survey.title,
+      description: survey.description,
+      questions: survey.questions as unknown as Question[]
     }
   }
 

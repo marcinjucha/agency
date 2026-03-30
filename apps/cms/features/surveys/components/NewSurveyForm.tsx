@@ -7,6 +7,7 @@ import { createSurvey } from '@/features/surveys/actions'
 import { Button, Input, Label, Card } from '@agency/ui'
 import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
+import { queryKeys } from '@/lib/query-keys'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
 
@@ -26,7 +27,7 @@ export function NewSurveyForm() {
     const result = await createSurvey({ title, description })
 
     if (result.success && result.surveyId) {
-      await queryClient.invalidateQueries({ queryKey: ['surveys'] })
+      await queryClient.invalidateQueries({ queryKey: queryKeys.surveys.all })
       router.push(routes.admin.survey(result.surveyId))
     } else {
       setError(result.error || messages.surveys.createFailed)

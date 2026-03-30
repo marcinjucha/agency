@@ -38,8 +38,9 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Button, Card, Input, Label, LoadingState, ErrorState } from '@agency/ui'
+import { Button, Card, Input, Label, Textarea, LoadingState, ErrorState, DatePicker } from '@agency/ui'
 import { Calendar, Clock, CheckCircle } from 'lucide-react'
+import { startOfDay } from 'date-fns'
 import { messages } from '@/lib/messages'
 import { usePlausible } from 'next-plausible'
 import type { PlausibleEvents } from '@/lib/plausible'
@@ -222,21 +223,19 @@ export function CalendarBooking({
   /**
    * Handle date selection and fetch available slots
    */
-  const handleDateChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const dateValue = e.target.value
-    if (!dateValue) {
+  const handleDateChange = async (date: Date | undefined) => {
+    if (!date) {
       setSelectedDate(null)
       return
     }
 
-    const date = new Date(dateValue)
     setSelectedDate(date)
     setSelectedSlot(null) // Reset selected slot when date changes
     setSlotsError(null)
     setSlotsLoading(true)
 
     try {
-      const dateStr = dateValue // YYYY-MM-DD format from input
+      const dateStr = date.toISOString().split('T')[0] // YYYY-MM-DD format
       const params = new URLSearchParams({
         surveyId,
         date: dateStr,
@@ -319,10 +318,6 @@ export function CalendarBooking({
     }
   }
 
-  // Calculate min date (today)
-  const today = new Date()
-  const minDate = today.toISOString().split('T')[0]
-
   // Render success state
   if (bookingSuccess) {
     return (
@@ -364,13 +359,12 @@ export function CalendarBooking({
                   {messages.calendar.selectDate}
                   <span className="text-destructive ml-1">*</span>
                 </Label>
-                <input
+                <DatePicker
                   id="appointment-date"
-                  type="date"
-                  value={selectedDate ? selectedDate.toISOString().split('T')[0] : ''}
+                  value={selectedDate ?? undefined}
                   onChange={handleDateChange}
-                  min={minDate}
-                  className="w-full px-4 py-3 bg-background text-foreground border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent [color-scheme:dark]"
+                  placeholder={messages.calendar.selectDate}
+                  minDate={startOfDay(new Date())}
                   aria-required="true"
                   aria-describedby="date-help"
                 />
@@ -490,14 +484,12 @@ export function CalendarBooking({
                       >
                         {messages.calendar.additionalNotes}
                       </Label>
-                      <textarea
+                      <Textarea
                         id="appointment-notes"
                         rows={4}
                         placeholder={messages.calendar.notesPlaceholder}
                         {...register('notes')}
-                        className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent ${
-                          errors.notes ? 'border-destructive' : 'border-border'
-                        }`}
+                        className={errors.notes ? 'border-destructive' : ''}
                         aria-invalid={errors.notes ? 'true' : 'false'}
                       />
                       {errors.notes && (
@@ -524,7 +516,7 @@ export function CalendarBooking({
                   <Button
                     type="submit"
                     disabled={isSubmitting}
-                    className="w-full h-12 text-lg font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg shadow-md hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full h-12 text-lg font-semibold"
                   >
                     {isSubmitting ? (
                       <span className="flex items-center justify-center">

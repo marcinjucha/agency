@@ -26,6 +26,7 @@ import { updateLandingPage } from '../actions'
 import { KeywordSelect } from '@/features/site-settings/components/KeywordSelect'
 import { getKeywordPool } from '@/features/site-settings/queries'
 import { siteSettingsKeys } from '@/features/site-settings/types'
+import { queryKeys } from '@/lib/query-keys'
 import { messages } from '@/lib/messages'
 
 type SaveState = 'idle' | 'saving' | 'saved' | 'error'
@@ -33,7 +34,7 @@ type SaveState = 'idle' | 'saving' | 'saved' | 'error'
 export function LandingPageEditor() {
   const queryClient = useQueryClient()
   const { data: page, isLoading, error } = useQuery({
-    queryKey: ['landing-page'],
+    queryKey: queryKeys.landing.all,
     queryFn: getLandingPage,
   })
 
@@ -81,7 +82,7 @@ export function LandingPageEditor() {
       })
       if (result.success) {
         setSaveState('saved')
-        queryClient.invalidateQueries({ queryKey: ['landing-page'] })
+        queryClient.invalidateQueries({ queryKey: queryKeys.landing.all })
       } else {
         setSaveState('error')
       }

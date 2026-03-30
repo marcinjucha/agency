@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { messages } from '@/lib/messages'
+import { questionSchema } from '@agency/validators'
 
 // --- Create survey schema ---
 
@@ -14,7 +15,7 @@ export const updateSurveySchema = z.object({
   title: z.string().min(1, messages.validation.titleRequired).optional(),
   description: z.string().nullable().optional(),
   status: z.enum(['draft', 'active', 'archived']).optional(),
-  questions: z.array(z.any()).optional(),
+  questions: z.array(questionSchema).optional(),
 })
 
 // --- Generate survey link schema ---

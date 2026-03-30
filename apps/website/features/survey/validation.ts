@@ -95,6 +95,14 @@ export function generateSurveySchema(questions: Question[]) {
         break
       }
 
+      case 'date': {
+        const dateSchema = z.string()
+        fieldSchema = question.required
+          ? dateSchema.min(1, messages.validation.fieldRequired)
+          : dateSchema
+        break
+      }
+
       default:
         fieldSchema = z.string()
     }

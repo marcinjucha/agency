@@ -22,6 +22,13 @@ export type QuestionType =
   | 'select'
   | 'radio'
   | 'checkbox'
+  | 'date'
+
+/**
+ * Semantic role for a question field
+ * Used in Intake Hub to identify lead contact information
+ */
+export type SemanticRole = 'client_name' | 'client_email' | 'company_name' | 'phone'
 
 /**
  * Individual survey question structure
@@ -50,6 +57,12 @@ export interface Question {
 
   /** Display order in the survey */
   order: number
+
+  /** Semantic role for Intake Hub lead identification */
+  semantic_role?: SemanticRole | null
+
+  /** Placeholder text displayed in the input field */
+  placeholder?: string
 }
 
 /**

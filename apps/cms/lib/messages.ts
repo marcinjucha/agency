@@ -64,6 +64,7 @@ export const messages = {
     questionsCount: (count: number) => `${count} ${count === 1 ? 'pytanie' : 'pytań'}`,
     questions: 'Pytania',
     addQuestion: 'Dodaj pytanie',
+    newQuestionDefault: 'Nowe pytanie',
     noQuestionsYet: 'Brak pytań',
     addFirstQuestion: 'Dodaj pierwsze pytanie',
     questionLabel: 'Treść pytania',
@@ -82,6 +83,19 @@ export const messages = {
     typeDropdown: 'Lista rozwijana',
     typeMultipleChoice: 'Wielokrotny wybór',
     typeCheckboxes: 'Pola wyboru',
+    typeDate: 'Data',
+    semanticRole: 'Rola pola',
+    semanticRoleHint: 'Używane w Intake Hub do identyfikacji leadów',
+    semanticRoleNone: 'Brak',
+    semanticRoleClientName: 'Imię klienta',
+    semanticRoleClientEmail: 'Email klienta',
+    semanticRoleCompanyName: 'Nazwa firmy',
+    semanticRolePhone: 'Telefon',
+    addContactFields: 'Dodaj pola kontaktowe',
+    contactFieldName: 'Imię i nazwisko',
+    contactFieldEmail: 'Adres email',
+    placeholderLabel: 'Placeholder',
+    placeholderHint: 'Tekst podpowiedzi w polu',
     // NewSurveyForm
     createNewSurvey: 'Stwórz nową ankietę',
     setupNewForm: 'Utwórz nowy formularz przyjęcia klienta',
@@ -124,6 +138,13 @@ export const messages = {
     never: 'Nigdy',
     submissions: 'Wypełnienia:',
     unlimited: 'Bez limitu',
+    // SurveyBuilder — drag-and-drop & duplicate
+    duplicateQuestion: 'Duplikuj pytanie',
+    questionCopySuffix: '(kopia)',
+    unsavedChanges: 'Niezapisane zmiany',
+    dragToReorder: 'Przeciągnij aby zmienić kolejność',
+    deleteLinkConfirmTitle: 'Usunąć link?',
+    deleteLinkConfirmDescription: 'Ten link ankiety zostanie trwale usunięty. Tej operacji nie można cofnąć.',
   },
 
   blog: {
@@ -480,6 +501,11 @@ export const messages = {
     sheetAppointment: 'Wizyta',
     sheetNoAppointment: 'Brak wizyty',
     sheetChangeStatus: 'Zmień status',
+    // Client contact info (semantic_role)
+    sheetClientInfo: 'Dane kontaktowe',
+    sheetClientEmail: 'Email',
+    sheetCompanyName: 'Firma',
+    sheetPhone: 'Telefon',
     // Appointment status labels
     appointmentScheduled: 'Zaplanowana',
     appointmentCompleted: 'Zakończona',

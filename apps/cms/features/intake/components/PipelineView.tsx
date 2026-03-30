@@ -14,6 +14,7 @@ import {
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { updateResponseStatus } from '../actions'
 import { messages } from '@/lib/messages'
+import { queryKeys } from '@/lib/query-keys'
 import { PipelineColumn } from './PipelineColumn'
 import { PipelineCardContent } from './PipelineCard'
 import { SortDropdown } from './SortDropdown'
@@ -140,7 +141,7 @@ export function PipelineView({ responses, onSelectResponse }: PipelineViewProps)
 
       // Optimistic update
       queryClient.setQueryData<PipelineResponse[]>(
-        ['intake', 'pipeline'],
+        queryKeys.intake.pipeline,
         (old) => {
           if (!old) return old
           return old.map((r) =>

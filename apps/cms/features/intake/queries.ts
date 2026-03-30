@@ -11,20 +11,49 @@
  */
 
 import { createClient } from '@/lib/supabase/client'
-import type { PipelineResponse, IntakeStats } from './types'
+import type { PipelineResponse, IntakeStats, ClientInfo } from './types'
 import type { AIQualification } from '../responses/types'
+import type { Question } from '@agency/validators'
 
 /**
- * Extract client name from survey answers.
- * Takes the first answer value (assumed to be "imie" question).
- * Falls back to "Odpowiedz #N" pattern for old data without name.
+ * Extract client contact info from survey answers using semantic_role.
+ * Uses semantic_role to find name/email/company/phone fields.
+ * Falls back to positional guess (first answer = name) for old surveys without semantic_role.
  */
-function extractClientName(answers: Record<string, unknown>, fallbackIndex: number): string {
-  const values = Object.values(answers)
-  if (values.length > 0 && typeof values[0] === 'string' && values[0].trim()) {
-    return values[0].trim()
+function extractClientInfo(
+  answers: Record<string, unknown>,
+  questions: unknown[],
+  fallbackIndex: number
+): ClientInfo {
+  const typedQuestions = questions as Question[]
+
+  const findByRole = (role: string): string | null => {
+    const q = typedQuestions.find((q) => q.semantic_role === role)
+    if (!q) return null
+    const answer = answers[q.id]
+    return typeof answer === 'string' && answer.trim() ? answer.trim() : null
   }
-  return `Odpowiedź #${fallbackIndex}`
+
+  const name = findByRole('client_name')
+  const email = findByRole('client_email')
+  const companyName = findByRole('company_name')
+  const phone = findByRole('phone')
+
+  // Display name priority: company → name → email → first answer → fallback
+  const displayName = companyName || name || email || (() => {
+    const values = Object.values(answers)
+    if (values.length > 0 && typeof values[0] === 'string' && values[0].trim()) {
+      return values[0].trim()
+    }
+    return `Odpowiedź #${fallbackIndex}`
+  })()
+
+  return {
+    name: displayName,
+    email,
+    companyName,
+    phone,
+  }
 }
 
 /**
@@ -54,10 +83,15 @@ export async function getPipelineResponses(): Promise<PipelineResponse[]> {
     const ai = row.ai_qualification as AIQualification | null
     const answers = (row.answers ?? {}) as Record<string, unknown>
 
+    const clientInfo = extractClientInfo(answers, row.survey_links?.surveys?.questions ?? [], index + 1)
+
     return {
       id: row.id,
       status: row.status ?? 'new',
-      clientName: extractClientName(answers, index + 1),
+      clientName: clientInfo.name,
+      clientEmail: clientInfo.email,
+      companyName: clientInfo.companyName,
+      phone: clientInfo.phone,
       aiScore: ai?.overall_score ?? null,
       aiRecommendation: ai?.recommendation ?? null,
       createdAt: row.created_at,
