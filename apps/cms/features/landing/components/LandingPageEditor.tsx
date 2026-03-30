@@ -9,6 +9,7 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
+  CollapsibleCard,
   Input,
   Label,
   Switch,
@@ -111,7 +112,8 @@ export function LandingPageEditor() {
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_420px]">
+      <div className="mx-auto max-w-[1400px]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_420px]">
         <div className="flex flex-col gap-2 animate-pulse">
           <div className="h-3 w-16 rounded bg-muted" />
           {Array.from({ length: 4 }).map((_, i) => (
@@ -122,6 +124,7 @@ export function LandingPageEditor() {
           <div className="h-48 rounded-lg bg-muted" />
           <div className="h-24 rounded-lg bg-muted" />
         </div>
+      </div>
       </div>
     )
   }
@@ -135,7 +138,8 @@ export function LandingPageEditor() {
   }
 
   return (
-    <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_420px]">
+    <div className="mx-auto max-w-[1400px]">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_420px]">
       {/* LEFT COLUMN — Block content editing */}
       <section className="space-y-3">
         <p className="text-xs font-semibold uppercase text-muted-foreground tracking-wide">
@@ -189,13 +193,8 @@ export function LandingPageEditor() {
       {/* RIGHT COLUMN — Sidebar (SEO + Settings + Save) */}
       <div className="flex flex-col gap-6">
         {/* SEO card */}
-        <Card className="shadow-sm">
-          <CardHeader className="pb-4">
-            <CardTitle className="text-base font-semibold">
-              {messages.landing.seoCardTitle}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-5">
+        <CollapsibleCard title={messages.landing.seoCardTitle} defaultOpen={false}>
+          <div className="space-y-5">
             <TooltipProvider delayDuration={300}>
               {/* SEO Title */}
               <div className="space-y-2">
@@ -325,8 +324,8 @@ export function LandingPageEditor() {
                 />
               </div>
             </TooltipProvider>
-          </CardContent>
-        </Card>
+          </div>
+        </CollapsibleCard>
 
         {/* Settings card */}
         <Card className="shadow-sm">
@@ -364,6 +363,7 @@ export function LandingPageEditor() {
           </Button>
         </div>
       </div>
+    </div>
     </div>
   )
 }

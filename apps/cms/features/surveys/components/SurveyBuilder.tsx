@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
 import { updateSurvey, deleteSurvey } from '../actions'
 import {
-  Button, Input, Label, Card, CardHeader, CardContent, Badge,
+  Button, Input, Label, Card, CardHeader, CardContent, Badge, CollapsibleCard,
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Textarea, Checkbox,
   AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader,
   AlertDialogFooter, AlertDialogTitle, AlertDialogDescription,
@@ -483,6 +483,7 @@ export function SurveyBuilder({ survey }: SurveyBuilderProps) {
         </div>
       )}
 
+      <div className="mx-auto max-w-[1400px]">
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_420px] gap-6">
         {/* Left: Questions Builder */}
         <div>
@@ -537,11 +538,8 @@ export function SurveyBuilder({ survey }: SurveyBuilderProps) {
 
         {/* Right: Survey Settings + Survey Links */}
         <div className="space-y-6">
-          <Card className="sticky top-6">
-            <CardHeader className="pb-4">
-              <h2 className="text-base font-semibold">{messages.surveys.surveySettings}</h2>
-            </CardHeader>
-            <CardContent className="space-y-5">
+          <CollapsibleCard title={messages.surveys.surveySettings} defaultOpen className="sticky top-6">
+            <div className="space-y-5">
               <div className="space-y-1.5">
                 <Label htmlFor="title">{messages.surveys.titleLabel}</Label>
                 <Input
@@ -569,12 +567,13 @@ export function SurveyBuilder({ survey }: SurveyBuilderProps) {
                 </p>
                 <p className="text-sm text-muted-foreground mt-1">Status: {survey.status}</p>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </CollapsibleCard>
 
           {/* Survey Links Section */}
           <SurveyLinks surveyId={survey.id} />
         </div>
+      </div>
       </div>
     </div>
   )

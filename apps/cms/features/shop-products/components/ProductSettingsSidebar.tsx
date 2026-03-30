@@ -4,10 +4,7 @@ import { useState, useRef, useCallback } from 'react'
 import type { UseFormRegister, UseFormWatch, UseFormSetValue, Control, FieldErrors } from 'react-hook-form'
 import { Controller } from 'react-hook-form'
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
+  CollapsibleCard,
   Input,
   Label,
   Textarea,
@@ -86,11 +83,8 @@ export function ProductSettingsSidebar({
   )
 
   return (
-    <Card className="shadow-sm">
-      <CardHeader className="pb-4">
-        <CardTitle className="text-base font-semibold">{messages.shop.settingsTitle}</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-5">
+    <CollapsibleCard title={messages.shop.settingsTitle} defaultOpen>
+      <div className="space-y-5">
         {/* Listing Type */}
         <div className="space-y-1.5">
           <Label htmlFor="listing-type" className="text-sm font-medium">
@@ -356,7 +350,7 @@ export function ProductSettingsSidebar({
             }}
           />
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </CollapsibleCard>
   )
 }

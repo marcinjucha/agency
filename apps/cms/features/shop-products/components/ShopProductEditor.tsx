@@ -304,6 +304,7 @@ export function ShopProductEditor({ product }: ShopProductEditorProps) {
 
       {/* ---- MAIN CONTENT ---- */}
       <div className="w-full flex-1 px-4 py-6 sm:px-6">
+        <div className="mx-auto max-w-[1400px]">
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_420px]">
           {/* LEFT COLUMN — Title + Slug + Editor */}
           <div className="flex flex-col gap-6">
@@ -459,6 +460,7 @@ export function ShopProductEditor({ product }: ShopProductEditorProps) {
               </AlertDialog>
             )}
           </div>
+        </div>
         </div>
       </div>
     </div>

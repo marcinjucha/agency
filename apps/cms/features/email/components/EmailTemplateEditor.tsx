@@ -59,7 +59,7 @@ export function EmailTemplateEditor({ templateType, initialTemplate }: EmailTemp
   }[saveState]
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="mx-auto max-w-[1400px] flex flex-col gap-6">
       {/* Subject + variables */}
       <div className="space-y-3">
         <div className="space-y-1.5">

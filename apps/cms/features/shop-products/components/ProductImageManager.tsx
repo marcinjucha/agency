@@ -4,10 +4,7 @@ import { useState, useCallback } from 'react'
 import { X, Plus, Star } from 'lucide-react'
 import {
   Button,
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
+  CollapsibleCard,
   Tooltip,
   TooltipContent,
   TooltipProvider,
@@ -76,11 +73,8 @@ export function ProductImageManager({
   const MAX_VISIBLE = 6
 
   return (
-    <Card className="shadow-sm">
-      <CardHeader className="pb-4">
-        <CardTitle className="text-base font-semibold">{messages.shop.imagesLabel}</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <CollapsibleCard title={messages.shop.imagesLabel} defaultOpen>
+      <div className="space-y-4">
         {/* Image grid */}
         {images.length > 0 && (
           <TooltipProvider delayDuration={300}>
@@ -177,7 +171,7 @@ export function ProductImageManager({
           open={mediaModalOpen}
           onClose={() => setMediaModalOpen(false)}
         />
-      </CardContent>
-    </Card>
+      </div>
+    </CollapsibleCard>
   )
 }
