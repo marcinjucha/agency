@@ -263,6 +263,22 @@ export const messages = {
     noMediaInLibrary: 'Brak mediów w bibliotece.',
     uploadToAdd: 'Przeciągnij pliki powyżej, aby dodać nowe media.',
     dragOrClickUpload: 'Przeciągnij lub kliknij aby przesłać',
+    // Folders
+    folders: 'Foldery',
+    createFolder: 'Nowy folder',
+    renameFolder: 'Zmień nazwę',
+    deleteFolder: 'Usuń folder',
+    folderNameRequired: 'Nazwa folderu jest wymagana',
+    allMedia: 'Wszystkie media',
+    unsorted: 'Bez folderu',
+    moveTo: 'Przenieś do...',
+    moveToRoot: 'Przenieś do głównego',
+    confirmDeleteFolder:
+      'Czy na pewno chcesz usunąć ten folder? Media zostaną przeniesione do głównego widoku.',
+    createFolderFailed: 'Nie udało się stworzyć folderu',
+    renameFolderFailed: 'Nie udało się zmienić nazwy folderu',
+    deleteFolderFailed: 'Nie udało się usunąć folderu',
+    moveFailed: 'Nie udało się przenieść',
   },
 
   calendar: {

@@ -19,6 +19,7 @@ export type MediaItemListItem = Pick<
   | 'mime_type'
   | 'size_bytes'
   | 'thumbnail_url'
+  | 'folder_id'
   | 'created_at'
 >
 
@@ -38,6 +39,7 @@ export function toMediaItemListItem(raw: unknown): MediaItemListItem {
     mime_type: row.mime_type,
     size_bytes: row.size_bytes,
     thumbnail_url: row.thumbnail_url,
+    folder_id: row.folder_id,
     created_at: row.created_at,
   }
 }
