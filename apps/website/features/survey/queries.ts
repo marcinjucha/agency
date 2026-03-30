@@ -10,6 +10,7 @@
 
 import { createAnonClient } from '@/lib/supabase/anon-server'
 import type { LinkValidation, Question, SurveyLinkData } from './types'
+import { messages } from '@/lib/messages'
 
 /**
  * Fetch survey by token with comprehensive validation
@@ -59,7 +60,7 @@ export async function getSurveyByToken(token: string): Promise<LinkValidation> {
     return {
       isValid: false,
       error: 'not_found',
-      message: 'Survey link is invalid or does not exist.'
+      message: messages.survey.errorNotFound
     }
   }
 
@@ -68,7 +69,7 @@ export async function getSurveyByToken(token: string): Promise<LinkValidation> {
     return {
       isValid: false,
       error: 'inactive',
-      message: 'This survey is no longer accepting responses.'
+      message: messages.survey.errorInactive
     }
   }
 
@@ -77,7 +78,7 @@ export async function getSurveyByToken(token: string): Promise<LinkValidation> {
     return {
       isValid: false,
       error: 'expired',
-      message: 'This survey link has expired.'
+      message: messages.survey.errorExpired
     }
   }
 
@@ -89,7 +90,7 @@ export async function getSurveyByToken(token: string): Promise<LinkValidation> {
     return {
       isValid: false,
       error: 'max_submissions',
-      message: 'This survey has reached its submission limit.'
+      message: messages.survey.errorMaxSubmissions
     }
   }
 
@@ -109,7 +110,7 @@ export async function getSurveyByToken(token: string): Promise<LinkValidation> {
     return {
       isValid: false,
       error: 'not_found',
-      message: 'Survey not found.'
+      message: messages.survey.errorSurveyNotFound
     }
   }
 

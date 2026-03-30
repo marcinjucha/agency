@@ -24,6 +24,12 @@ export const messages = {
     datePickerPlaceholder: 'Wybierz datę',
     // SurveyError
     surveyUnavailable: 'Ankieta niedostępna',
+    // queries.ts — validation error messages
+    errorNotFound: 'Link do ankiety jest nieprawidłowy lub nie istnieje.',
+    errorInactive: 'Ta ankieta nie przyjmuje już odpowiedzi.',
+    errorExpired: 'Link do tej ankiety wygasł.',
+    errorMaxSubmissions: 'Ta ankieta osiągnęła limit wypełnień.',
+    errorSurveyNotFound: 'Nie znaleziono ankiety.',
   },
 
   calendar: {
