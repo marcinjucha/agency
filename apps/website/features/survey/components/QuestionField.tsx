@@ -16,7 +16,6 @@
 'use client'
 
 import { Control, Controller, UseFormRegister } from 'react-hook-form'
-import { useState } from 'react'
 import {
   Input,
   Label,
@@ -29,15 +28,8 @@ import {
   RadioGroup,
   RadioGroupItem,
   Checkbox,
-  Button,
-  Popover,
-  PopoverTrigger,
-  PopoverContent,
-  Calendar,
+  DatePicker,
 } from '@agency/ui'
-import { CalendarIcon } from 'lucide-react'
-import { format } from 'date-fns'
-import { pl } from 'date-fns/locale'
 import type { Question, SurveyAnswers } from '../types'
 import { messages } from '@/lib/messages'
 
@@ -201,44 +193,21 @@ export function QuestionField({
         />
       )}
 
-      {/* DATE - Popover + Calendar (Controller) */}
+      {/* DATE - DatePicker (Controller) */}
       {type === 'date' && (
         <Controller
           name={id}
           control={control}
-          render={({ field }) => {
-            const dateValue = field.value ? new Date(field.value as string) : undefined
-            return (
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    id={id}
-                    variant="outline"
-                    className={`w-full justify-start text-left font-normal ${
-                      !field.value ? 'text-muted-foreground' : ''
-                    } ${error ? 'border-destructive' : ''}`}
-                    aria-invalid={error ? 'true' : 'false'}
-                    aria-describedby={error ? `${id}-error` : undefined}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {dateValue
-                      ? format(dateValue, 'd MMMM yyyy', { locale: pl })
-                      : (placeholder || messages.survey.datePickerPlaceholder)}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={dateValue}
-                    onSelect={(date) => {
-                      field.onChange(date ? date.toISOString().split('T')[0] : '')
-                    }}
-                    locale={pl}
-                  />
-                </PopoverContent>
-              </Popover>
-            )
-          }}
+          render={({ field }) => (
+            <DatePicker
+              id={id}
+              value={field.value ? new Date(field.value as string) : undefined}
+              onChange={(date) => field.onChange(date ? date.toISOString().split('T')[0] : '')}
+              placeholder={placeholder || messages.survey.datePickerPlaceholder}
+              error={!!error}
+              aria-describedby={error ? `${id}-error` : undefined}
+            />
+          )}
         />
       )}
 
