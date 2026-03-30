@@ -54,11 +54,35 @@ agency/
 │   └── n8n-vps/          # Symlink to n8n infrastructure repo
 ├── n8n-workflows/         # Workflow definitions for background processing
 ├── apps/
-│   ├── cms/              # CMS application
-│   └── website/          # Public website
+│   ├── cms/              # CMS application (serves both Halo Efekt + Shop)
+│   ├── website/          # Public website (Halo Efekt marketing)
+│   └── shop/             # Shop frontends (catalog apps)
+│       ├── kolega/       # Kolega shop — pallet product catalog
+│       └── tata/         # Tata shop — book catalog
 ├── packages/             # Shared packages
-└── supabase/            # Database migrations and config
+├── supabase/            # Database migrations and config
+└── docs/
+    ├── PROJECT_SPEC.yaml       # Halo Efekt Core CMS (AAA-P-4)
+    └── SHOP_PROJECT_SPEC.yaml  # Platforma Sklepowa (AAA-P-9)
 ```
+
+---
+
+## PROJECT_SPEC Files (Dual-Project Monorepo)
+
+This monorepo contains two Notion projects with separate PROJECT_SPEC files:
+
+| File | Notion Project | Scope |
+|------|---------------|-------|
+| `docs/PROJECT_SPEC.yaml` | AAA-P-4 — Halo Efekt Core CMS | Agency platform: surveys, intake, calendar, email, blog, landing pages, SEO |
+| `docs/SHOP_PROJECT_SPEC.yaml` | AAA-P-9 — Platforma Sklepowa | E-commerce: product catalog, shop frontends, CMS shop features |
+
+**Routing rule for `/develop` command:**
+- Working on AAA-P-4 tasks (AAA-T-1 to AAA-T-132) → use `docs/PROJECT_SPEC.yaml`
+- Working on AAA-P-9 tasks (AAA-T-133+) → use `docs/SHOP_PROJECT_SPEC.yaml`
+- When task ID is ambiguous → check `📊 Projects` relation in Notion
+
+**Shared infrastructure:** Both projects share the same Supabase DB (shop tables use `shop_` prefix), the same CMS app (shop features in `features/shop-*/`), and the same packages. Only the public frontends are separate (`apps/website/` vs `apps/shop/*/`).
 
 ---
 
