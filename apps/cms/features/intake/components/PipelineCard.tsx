@@ -99,7 +99,7 @@ export const PipelineCardContent = forwardRef<HTMLDivElement, PipelineCardConten
           ) : response.status === 'new' && (Date.now() - new Date(response.createdAt).getTime()) < 120_000 ? (
             <Loader2
               className="flex-shrink-0 h-4 w-4 animate-spin text-muted-foreground"
-              aria-label={messages.intake.analyzingResponse}
+              aria-label={messages.responses.analyzingResponse}
             />
           ) : null}
         </div>
