@@ -135,6 +135,13 @@ export const messages = {
     never: 'Nigdy',
     submissions: 'Wypełnienia:',
     unlimited: 'Bez limitu',
+    // SurveyBuilder — drag-and-drop & duplicate
+    duplicateQuestion: 'Duplikuj pytanie',
+    questionCopySuffix: '(kopia)',
+    unsavedChanges: 'Niezapisane zmiany',
+    dragToReorder: 'Przeciągnij aby zmienić kolejność',
+    deleteLinkConfirmTitle: 'Usunąć link?',
+    deleteLinkConfirmDescription: 'Ten link ankiety zostanie trwale usunięty. Tej operacji nie można cofnąć.',
   },
 
   blog: {

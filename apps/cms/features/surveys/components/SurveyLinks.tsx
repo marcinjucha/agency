@@ -5,7 +5,12 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getSurveyLinks } from '../queries'
 import { generateSurveyLink, deleteSurveyLink, updateSurveyLink } from '../actions'
 import type { UpdateSurveyLinkFormData } from '../validation'
-import { Button, Card, Input, Label, Switch } from '@agency/ui'
+import {
+  Button, Card, Input, Label, Switch,
+  AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader,
+  AlertDialogFooter, AlertDialogTitle, AlertDialogDescription,
+  AlertDialogAction, AlertDialogCancel,
+} from '@agency/ui'
 import { Link as LinkIcon, Copy, Trash2, Plus, Check, Pencil, X } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { messages } from '@/lib/messages'
@@ -342,18 +347,32 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
                     </Button>
                   )}
 
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      if (confirm(messages.surveys.deleteLinkConfirm)) {
-                        deleteMutation.mutate(link.id)
-                      }
-                    }}
-                    aria-label={messages.common.delete}
-                  >
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        aria-label={messages.common.delete}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>{messages.surveys.deleteLinkConfirmTitle}</AlertDialogTitle>
+                        <AlertDialogDescription>{messages.surveys.deleteLinkConfirmDescription}</AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>{messages.common.cancel}</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => deleteMutation.mutate(link.id)}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          {messages.common.delete}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </div>
 
                 {/* Inline Edit Form */}
