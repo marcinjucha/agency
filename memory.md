@@ -74,6 +74,8 @@ Composes from responses + appointments (ADR-005 compliant).
 - **PipelineCard shows no indicator during AI analysis** — New responses had empty AI score slot (no spinner, no text) for 5-8s while n8n processes async. Fix: show Loader2 spinner when response is 'new', aiScore===null, and createdAt < 2min ago. (2026-03-30)
 - **Shared validators label vs question field mismatch** — `packages/validators/src/survey.ts` used `label: z.string()` but CMS SurveyBuilder always stored `question` field. Stale since initial build. Fix: rename to `question` in schema. No DB migration needed (JSONB). (2026-03-30)
 - **npm run db:types fails with --local when local Supabase not running** — `db:types` script uses `--local` flag but requires local Supabase instance. When not running, must use `--linked` with `grep -v "Initialising"` workaround. Also: `supabase db push` may require re-authentication when session expires. (2026-03-30)
+- **formatPrice divided by 100 for NUMERIC(10,2) column** — Agent assumed cents storage pattern, but DB uses NUMERIC(10,2) which stores actual values (99.99 not 9999). Fix: remove /100. Common AI mistake when generating price formatters. (2026-03-30)
+- **Supabase JS v2.95.2 `as any` needed even for SELECT** — Not just TablesInsert bug. `.from('shop_products')` resolves to `never` in complex chain contexts even for SELECT. Upgrade Supabase JS might fix but is separate task. (2026-03-30)
 
 ## Domain Concepts
 
@@ -81,6 +83,8 @@ Composes from responses + appointments (ADR-005 compliant).
 - **AWS S3 for media uploads** — Bucket: `legal-mind-bucket`, region: `eu-central-1`. Credentials: `BUCKET_ACCESS_KEY` + `BUCKET_SECRET_KEY` in `apps/cms/.env.local`. S3 public GET; CORS must allow PUT from CMS domains. (2026-03-18)
 - **Tenant "Halo Efekt" in production** — email: kontakt@haloefekt.pl, id: 19342448-4e4e-49ba-8bf0-694d5376f953. (2026-03-23)
 - **deleteAppointment does NOT remove Google Calendar event** — DB row deleted only, no Calendar API call. Notion ticket created. Requires `@agency/calendar` token manager. (2026-03-28)
+- **Tata's books are digital only (not physical)** — No physical/hardcover books. Digital content sold via external platform (Zolix), with option for free downloads from S3. Both listing_types (external_link + digital_download) have real use cases. (2026-03-30)
+- **Cookie banner reuse + Plausible for shop** — Plausible doesn't require cookies/RODO consent. Cookie banner reused from Halo Efekt at zero cost. Polityka prywatności = good practice (no legal requirement without payment). (2026-03-30)
 
 ## SEO Foundations — AAA-T-60 + AAA-T-85 — COMPLETED (2026-03-29)
 
@@ -104,6 +108,8 @@ Google Search Console verification code: `GCfETKDyC-evSaMt_NyqAihacXKNVV30zIpP5V
 - **semantic_role on Question (not new type)** — Chosen over dedicated field types (e.g., `client_name` type). Reasoning: question type = rendering (text/email/select), semantic_role = business meaning (client_name/email/company/phone). Two orthogonal dimensions — mixing them creates cartesian product. Tally uses the same pattern. (2026-03-30)
 - **DatePicker component in @agency/ui** — Shared across website (survey form, calendar booking) and CMS (future). Props: value, onChange, placeholder, minDate, maxDate, disabled. Uses Popover+Calendar (react-day-picker), Polish locale, month/year dropdown (captionLayout="dropdown"), ±7yr range, auto-close on select. (2026-03-30)
 - **Centralized query keys** — `apps/cms/lib/query-keys.ts` holds all TanStack Query keys (surveys, intake, responses, appointments, landing, calendar). Blog/media have own key factories in their queries.ts. 14 files migrated. Prevents typos, single place for discoverability. (2026-03-30)
+- **generateSlug extracted to shared lib/utils/slug.ts** — Was duplicated between blog/utils.ts and shop-products/utils.ts (2 usages = earned abstraction). Both features re-export from shared location. (2026-03-30)
+- **Shop categories queries.server.ts included** — Both browser and server queries for categories (needed for SSR product forms with category dropdown). (2026-03-30)
 
 ## Preferences
 

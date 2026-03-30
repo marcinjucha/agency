@@ -31,4 +31,14 @@ export const queryKeys = {
   calendar: {
     settings: ['calendarSettings'] as const,
   },
+  shopProducts: {
+    all: ['shop-products'] as const,
+    list: ['shop-products', 'list'] as const,
+    detail: (id: string) => ['shop-products', 'detail', id] as const,
+  },
+  shopCategories: {
+    all: ['shop-categories'] as const,
+    list: ['shop-categories', 'list'] as const,
+    detail: (id: string) => ['shop-categories', 'detail', id] as const,
+  },
 } as const

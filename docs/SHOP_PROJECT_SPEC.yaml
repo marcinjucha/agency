@@ -10,10 +10,14 @@ architecture:
     - "Single Supabase DB — shop_ prefixed tables in same project as Halo Efekt, shared RLS patterns"
     - "CMS extended — features/shop-products/ and features/shop-categories/ in apps/cms, NOT a separate CMS"
     - "Separate frontends per client — apps/shop/kolega/ and apps/shop/tata/ as independent Next.js apps"
-    - "Both clients = catalog-only — external_link listing_type only, no Stripe, no digital downloads"
+    - "Tata: hybrid — external_link (paid books via Zolix/platform) + digital_download (free materials from S3). Kolega: external_link only (OLX/Allegro)"
     - "Reuse packages — @agency/ui, @agency/database, @agency/email, editor, media, SEO, legal pages"
     - "Sidebar 'Sklep' section — hardcoded initially, feature flags later (AAA-T-141 in Core CMS)"
     - "apps/shop/ parent folder — shared config/components possible, each client subfolder is a standalone Next.js app"
+    - "Tata visual direction: dark + warm amber ('library at night'), serif headings (Merriweather/Lora) + sans body (Geist), editorial layout for book detail pages"
+    - "Tata purchase flow: external_link → redirect to Zolix/platform for paid books, digital_download → free PDF from S3 for bonus materials"
+    - "Tata nav: minimal 3 links (Książki, O Autorze, Kontakt), no hamburger, homepage grid = book listing"
+    - "Cookie banner reused from Halo Efekt, Plausible analytics, polityka prywatności (basic)"
 
   dependency_graph: "1 → 2 → [3 + 4] → 5 → [6 already done] → [7 + 8] → 9 → 10"
   critical_path: "1 → 2 → 5 → 7 → 10"
@@ -39,10 +43,11 @@ features:
     task: "AAA-T-134"
     iteration: 2
     size: M
-    status: not_started
+    status: done
     description: "types.ts, validation.ts, queries.ts, queries.server.ts, actions.ts, utils.ts for shop-products and shop-categories. Routes + messages added."
     why: "TypeScript foundation files enable CMS UI and shop frontend development"
     depends_on: ["DB Schema"]
+    completion_notes: "CMS operators can create, read, update, and delete shop products and categories via typed Server Actions. Shared generateSlug extracted to lib/utils/slug.ts. TypeScript compiles clean."
 
   # Iteration 3
   - name: "CMS Product List + Category Management"
