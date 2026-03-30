@@ -88,6 +88,9 @@ function DatePicker({
       <PopoverContent className="w-auto p-0" align="start">
         <Calendar
           mode="single"
+          captionLayout="dropdown"
+          startMonth={new Date(new Date().getFullYear() - 7, 0)}
+          endMonth={new Date(new Date().getFullYear() + 7, 11)}
           selected={value}
           onSelect={(date) => {
             onChange(date)
