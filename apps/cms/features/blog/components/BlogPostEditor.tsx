@@ -14,10 +14,8 @@ import {
   CardHeader,
   CardTitle,
   Textarea,
-  Calendar,
-  Popover,
-  PopoverTrigger,
-  PopoverContent,
+  DatePicker,
+  TimePicker,
   Tooltip,
   TooltipContent,
   TooltipProvider,
@@ -32,7 +30,7 @@ import {
   AlertDialogAction,
   AlertDialogCancel,
 } from '@agency/ui'
-import { CalendarIcon, HelpCircle } from 'lucide-react'
+import { HelpCircle } from 'lucide-react'
 import { format, startOfDay } from 'date-fns'
 import { pl } from 'date-fns/locale'
 import { messages } from '@/lib/messages'
@@ -229,8 +227,7 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
     setValue('published_at', combined.toISOString())
   }
 
-  function handleTimeChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const time = e.target.value
+  function handleTimeChange(time: string) {
     setScheduledTime(time)
     if (scheduledDate) {
       const [hours, minutes] = time.split(':').map(Number)
@@ -602,6 +599,7 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
                     placeholder={messages.blog.excerptPlaceholder}
                     className="min-h-[80px] resize-none text-sm"
                     maxLength={300}
+                    autoResize
                   />
                   {errors.excerpt && (
                     <p className="text-xs text-destructive">{errors.excerpt.message}</p>
@@ -676,6 +674,7 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
                       placeholder={messages.blog.seoDescriptionPlaceholder}
                       className="min-h-[60px] resize-none text-sm"
                       maxLength={160}
+                      autoResize
                     />
                     {errors.seo_metadata?.description && (
                       <p className="text-xs text-destructive">
@@ -764,31 +763,18 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
                 {/* Schedule date/time picker — visible for draft + scheduled, hidden for published */}
                 {currentStatus !== 'published' && (
                   <div className="space-y-2">
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button variant="outline" size="sm" className="w-full justify-start text-left font-normal">
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {scheduledDate ? format(scheduledDate, 'd MMMM yyyy', { locale: pl }) : messages.blog.pickDate}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={scheduledDate}
-                          onSelect={handleDateSelect}
-                          disabled={(date) => date < startOfDay(new Date())}
-                          locale={pl}
-                        />
-                      </PopoverContent>
-                    </Popover>
+                    <DatePicker
+                      value={scheduledDate}
+                      onChange={handleDateSelect}
+                      disabled={(date) => date < startOfDay(new Date())}
+                      placeholder={messages.blog.pickDate}
+                    />
 
                     <div className="flex items-center gap-2">
-                      <Input
-                        type="time"
+                      <TimePicker
                         value={scheduledTime}
-                        onChange={handleTimeChange}
-                        className="text-sm"
-                        aria-label={messages.blog.pickTime}
+                        onChange={(time) => handleTimeChange(time ?? '09:00')}
+                        minuteStep={5}
                       />
                       {scheduledDate && (
                         <Button variant="ghost" size="sm" onClick={clearSchedule} className="text-xs text-muted-foreground">

@@ -81,6 +81,8 @@ export {
 export { Calendar } from './components/ui/calendar'
 export { DatePicker } from './components/ui/date-picker'
 export type { DatePickerProps } from './components/ui/date-picker'
+export { TimePicker } from './components/ui/time-picker'
+export type { TimePickerProps } from './components/ui/time-picker'
 export {
   Tooltip,
   TooltipTrigger,
