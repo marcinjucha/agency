@@ -32,6 +32,14 @@ export const routes = {
     legalPages: '/admin/legal-pages',
     legalPage: (id: string) => `/admin/legal-pages/${id}`,
 
+    // Shop
+    shopProducts: '/admin/shop/products',
+    shopProductNew: '/admin/shop/products/new',
+    shopProduct: (id: string) => `/admin/shop/products/${id}`,
+    shopCategories: '/admin/shop/categories',
+    shopCategoryNew: '/admin/shop/categories/new',
+    shopCategory: (id: string) => `/admin/shop/categories/${id}`,
+
     // System
     emailTemplates: '/admin/email-templates',
     emailTemplate: (type: string) => `/admin/email-templates/${type}`,

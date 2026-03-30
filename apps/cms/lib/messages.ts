@@ -659,6 +659,43 @@ export const messages = {
     save: 'Zapisz ustawienia',
   },
 
+  shop: {
+    // Products
+    productsTitle: 'Produkty',
+    productsDescription: 'Zarządzaj produktami w sklepie.',
+    newProduct: 'Nowy produkt',
+    editProduct: 'Edytuj produkt',
+    noProducts: 'Brak produktów',
+    noProductsDescription: 'Dodaj pierwszy produkt do swojego sklepu.',
+    productNotFound: 'Nie znaleziono produktu',
+    createProductFailed: 'Nie udało się dodać produktu',
+    updateProductFailed: 'Nie udało się zaktualizować produktu',
+    deleteProductFailed: 'Nie udało się usunąć produktu',
+    deleteProductConfirmTitle: 'Usunąć produkt?',
+    deleteProductConfirmDescription: (title: string) =>
+      `Produkt "${title}" zostanie trwale usunięty. Tej operacji nie można cofnąć.`,
+    // Categories
+    categoriesTitle: 'Kategorie',
+    categoriesDescription: 'Zarządzaj kategoriami produktów.',
+    newCategory: 'Nowa kategoria',
+    editCategory: 'Edytuj kategorię',
+    noCategories: 'Brak kategorii',
+    noCategoriesDescription: 'Dodaj pierwszą kategorię produktów.',
+    categoryNotFound: 'Nie znaleziono kategorii',
+    createCategoryFailed: 'Nie udało się dodać kategorii',
+    updateCategoryFailed: 'Nie udało się zaktualizować kategorii',
+    deleteCategoryFailed: 'Nie udało się usunąć kategorii',
+    deleteCategoryConfirmTitle: 'Usunąć kategorię?',
+    deleteCategoryConfirmDescription: (name: string) =>
+      `Kategoria "${name}" zostanie trwale usunięta. Tej operacji nie można cofnąć.`,
+    // Listing types
+    listingTypeExternalLink: 'Link zewnętrzny',
+    listingTypeDigitalDownload: 'Plik cyfrowy',
+    // Display layouts
+    displayLayoutGallery: 'Galeria',
+    displayLayoutEditorial: 'Edytorial',
+  },
+
   legalPages: {
     title: 'Strony prawne',
     editTitle: 'Edycja strony prawnej',
@@ -700,6 +737,12 @@ export const messages = {
     subjectRequired: 'Temat jest wymagany',
     subjectTooLong: 'Temat jest za długi',
     templateNeedsBlock: 'Szablon musi zawierać co najmniej jeden blok',
+    // Shop
+    priceMustBeNonNegative: 'Cena nie może być ujemna',
+    listingTypeRequired: 'Typ oferty jest wymagany',
+    displayLayoutRequired: 'Układ wyświetlania jest wymagany',
+    sortOrderMustBeInteger: 'Kolejność musi być liczbą całkowitą',
+    shortDescriptionMax: 'Krótki opis może mieć maksymalnie 300 znaków',
   },
 } as const
 
