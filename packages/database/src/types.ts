@@ -369,9 +369,55 @@ export type Database = {
         }
         Relationships: []
       }
+      media_folders: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          parent_id: string | null
+          sort_order: number
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          parent_id?: string | null
+          sort_order?: number
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          parent_id?: string | null
+          sort_order?: number
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "media_folders_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "media_folders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_folders_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       media_items: {
         Row: {
           created_at: string
+          folder_id: string | null
           height: number | null
           id: string
           mime_type: string | null
@@ -387,6 +433,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          folder_id?: string | null
           height?: number | null
           id?: string
           mime_type?: string | null
@@ -402,6 +449,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          folder_id?: string | null
           height?: number | null
           id?: string
           mime_type?: string | null
@@ -416,6 +464,13 @@ export type Database = {
           width?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "media_items_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "media_folders"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "media_items_tenant_id_fkey"
             columns: ["tenant_id"]
@@ -522,6 +577,146 @@ export type Database = {
           },
           {
             foreignKeyName: "responses_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shop_categories: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          slug: string
+          sort_order: number
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          slug: string
+          sort_order?: number
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          slug?: string
+          sort_order?: number
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shop_categories_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shop_products: {
+        Row: {
+          category_id: string | null
+          cover_image_url: string | null
+          created_at: string
+          currency: string
+          description: Json | null
+          digital_file_name: string | null
+          digital_file_size: number | null
+          digital_file_url: string | null
+          display_layout: string
+          external_url: string | null
+          html_body: string | null
+          id: string
+          images: Json | null
+          is_published: boolean
+          listing_type: Database["public"]["Enums"]["listing_type"]
+          price: number | null
+          published_at: string | null
+          seo_metadata: Json | null
+          short_description: string | null
+          slug: string
+          sort_order: number
+          tags: string[] | null
+          tenant_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          category_id?: string | null
+          cover_image_url?: string | null
+          created_at?: string
+          currency?: string
+          description?: Json | null
+          digital_file_name?: string | null
+          digital_file_size?: number | null
+          digital_file_url?: string | null
+          display_layout?: string
+          external_url?: string | null
+          html_body?: string | null
+          id?: string
+          images?: Json | null
+          is_published?: boolean
+          listing_type?: Database["public"]["Enums"]["listing_type"]
+          price?: number | null
+          published_at?: string | null
+          seo_metadata?: Json | null
+          short_description?: string | null
+          slug: string
+          sort_order?: number
+          tags?: string[] | null
+          tenant_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          category_id?: string | null
+          cover_image_url?: string | null
+          created_at?: string
+          currency?: string
+          description?: Json | null
+          digital_file_name?: string | null
+          digital_file_size?: number | null
+          digital_file_url?: string | null
+          display_layout?: string
+          external_url?: string | null
+          html_body?: string | null
+          id?: string
+          images?: Json | null
+          is_published?: boolean
+          listing_type?: Database["public"]["Enums"]["listing_type"]
+          price?: number | null
+          published_at?: string | null
+          seo_metadata?: Json | null
+          short_description?: string | null
+          slug?: string
+          sort_order?: number
+          tags?: string[] | null
+          tenant_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shop_products_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "shop_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_products_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -800,7 +995,7 @@ export type Database = {
       verify_docforge_license: { Args: { license_key: string }; Returns: Json }
     }
     Enums: {
-      [_ in never]: never
+      listing_type: "external_link" | "digital_download"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1396,7 +1591,9 @@ export const Constants = {
     Enums: {},
   },
   public: {
-    Enums: {},
+    Enums: {
+      listing_type: ["external_link", "digital_download"],
+    },
   },
   storage: {
     Enums: {

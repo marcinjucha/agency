@@ -1,0 +1,113 @@
+project:
+  name: "Platforma Sklepowa"
+  type: monorepo-extension
+  notion_project: "AAA-P-9"
+  parent_monorepo: "legal-mind (Halo Efekt)"
+  tech_stack: "Next.js 16, React 19, Tailwind CSS 4, shadcn/ui, Supabase (shared DB, shop_ prefix), TanStack Query 5, Tiptap editor (reuse), S3 media (reuse), Plausible Analytics (reuse)"
+
+architecture:
+  key_decisions:
+    - "Single Supabase DB — shop_ prefixed tables in same project as Halo Efekt, shared RLS patterns"
+    - "CMS extended — features/shop-products/ and features/shop-categories/ in apps/cms, NOT a separate CMS"
+    - "Separate frontends per client — apps/shop/kolega/ and apps/shop/tata/ as independent Next.js apps"
+    - "Both clients = catalog-only — external_link listing_type only, no Stripe, no digital downloads"
+    - "Reuse packages — @agency/ui, @agency/database, @agency/email, editor, media, SEO, legal pages"
+    - "Sidebar 'Sklep' section — hardcoded initially, feature flags later (AAA-T-141 in Core CMS)"
+    - "apps/shop/ parent folder — shared config/components possible, each client subfolder is a standalone Next.js app"
+
+  dependency_graph: "1 → 2 → [3 + 4] → 5 → [6 already done] → [7 + 8] → 9 → 10"
+  critical_path: "1 → 2 → 5 → 7 → 10"
+
+  cross_project_dependencies:
+    - "AAA-T-136 (Core CMS) — Media library folder support → blocks AAA-T-137 (product editor)"
+    - "AAA-T-141 (Core CMS) — Tenant feature flags + conditional sidebar → blocks AAA-T-142 (polish)"
+
+features:
+  # Iteration 1
+  - name: "DB Schema"
+    task: "AAA-T-133"
+    iteration: 1
+    size: M
+    status: done
+    description: "shop_products (25 cols), shop_categories (8 cols), media_folders (7 cols, self-referential parent_id), media_items.folder_id FK. listing_type enum (external_link | digital_download), display_layout CHECK (gallery | editorial), NUMERIC(10,2) price, TEXT[] tags, JSONB description/images/seo_metadata. All with tenant-isolated RLS + anon SELECT for published products/categories."
+    why: "Foundation — all other features depend on the data model"
+    depends_on: []
+    completion_notes: "Migration 20260330000000_create_shop_schema.sql pushed to remote. Types regenerated. Two non-blocking warnings: NULL parent_id bypasses UNIQUE on root-level media folders (app-level validation later), redundant indexes on UNIQUE constraints (minor storage waste)."
+
+  # Iteration 2
+  - name: "CMS Foundation"
+    task: "AAA-T-134"
+    iteration: 2
+    size: M
+    status: not_started
+    description: "types.ts, validation.ts, queries.ts, queries.server.ts, actions.ts, utils.ts for shop-products and shop-categories. Routes + messages added."
+    why: "TypeScript foundation files enable CMS UI and shop frontend development"
+    depends_on: ["DB Schema"]
+
+  # Iteration 3
+  - name: "CMS Product List + Category Management"
+    task: "AAA-T-135"
+    iteration: 3
+    size: M
+    status: not_started
+    description: "/admin/shop product list (grid/table), /admin/shop/categories CRUD, sidebar 'Sklep' section, filtering by category/status."
+    why: "CMS operators need to browse and organize products before editing them"
+    depends_on: ["CMS Foundation"]
+
+  # Iteration 4 (parallel with 3) — lives in Core CMS (AAA-P-4)
+  # AAA-T-136: Media library folder support — cross-project dependency
+
+  # Iteration 5
+  - name: "CMS Product Editor"
+    task: "AAA-T-137"
+    iteration: 5
+    size: L
+    status: not_started
+    description: "Product create/edit with Tiptap editor, media library gallery, SEO sidebar, settings sidebar, cover image, layout selector (image_details vs richtext_sidebar)."
+    why: "Core editing experience — operators create and manage product content here"
+    depends_on: ["CMS Product List + Category Management"]
+    blockers: ["AAA-T-136 (media folders) in Core CMS"]
+
+  # Iteration 6
+  - name: "Shop App Scaffolding"
+    task: "AAA-T-138"
+    iteration: 6
+    size: M
+    status: not_started
+    description: "apps/shop/kolega/ Next.js app — dark theme, @agency/ui, Supabase anon client, features/products/ foundation, turbo dev on port 3002."
+    why: "Standalone frontend app for kolega's product catalog"
+    depends_on: ["DB Schema"]
+
+  # Iteration 7
+  - name: "Product Catalog (Listing + Detail)"
+    task: "AAA-T-139"
+    iteration: 7
+    size: M
+    status: not_started
+    description: "/products grid with category filtering, /products/[slug] detail page, two layout renderers, external link buttons ('Zobacz na OLX'), responsive grid, navbar + footer."
+    why: "Public-facing catalog — the main value proposition for kolega's customers"
+    depends_on: ["CMS Product Editor", "Shop App Scaffolding"]
+
+  # Iteration 8 (parallel with 7)
+  - name: "Homepage + Search + SEO"
+    task: "AAA-T-140"
+    iteration: 8
+    size: M
+    status: not_started
+    description: "Homepage with featured/recent products, product search, robots.ts + sitemap.ts, OG images, Plausible Analytics."
+    why: "Discoverability — search engines and users find products"
+    depends_on: ["Shop App Scaffolding", "Product Catalog (Listing + Detail)"]
+
+  # Iteration 9 — lives in Core CMS (AAA-P-4)
+  # AAA-T-141: Tenant feature flags + conditional sidebar — cross-project dependency
+
+  # Iteration 10
+  - name: "Polish, Testing, Deployment"
+    task: "AAA-T-142"
+    iteration: 10
+    size: M
+    status: not_started
+    description: "E2E flow validation, deployment config (Vercel or VPS+Traefik), documentation, all builds pass."
+    why: "Ship it — ensure full CMS-to-shop flow works end-to-end"
+    depends_on: ["Product Catalog (Listing + Detail)", "Homepage + Search + SEO"]
+    blockers: ["AAA-T-141 (feature flags) in Core CMS"]

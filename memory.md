@@ -1,10 +1,12 @@
 # Project Memory: Halo Efekt
 
-## Shop Platform — New Project (2026-03-29)
+## Shop Platform — AAA-P-9 — IN PROGRESS (2026-03-30)
 
-**Status:** PLANNED (not started). Side project — praca w wolnym czasie.
-**Scope:** E-commerce: Kolega (pallets catalog, external links) + Tata (books, Stripe). Single Supabase, CMS extended (`features/shop-*`), separate frontends (`apps/shop-kolega/`).
-**Key decisions:** `shop_` prefixed tables, `listing_type` enum, media folders, tenant feature flags.
+**Status:** Started iteration 1 (DB schema). Side project — praca w wolnym czasie.
+**Scope:** E-commerce: Both Kolega (pallets) AND Tata (books) are catalog-only with external links (NO Stripe — changed from original plan 2026-03-30). Single Supabase, CMS extended (`features/shop-*`), separate frontends under `apps/shop/tata/` and `apps/shop/kolega/` (nested, not flat).
+**Start order:** Tata first, then Kolega.
+**Key decisions:** `shop_` prefixed tables, `listing_type` PostgreSQL ENUM (first enum in project — all previous tables used CHECK/TEXT), `media_folders` with `parent_id` nesting from day one, tenant feature flags. `NUMERIC(10,2)` for price (not INTEGER grosze). `TEXT[]` for tags (not JSONB). `shop_categories` flat (no parent_id). `gallery` and `editorial` as `display_layout` values (intent-based naming over implementation-based like "grid"/"list").
+**Dual PROJECT_SPEC:** `docs/PROJECT_SPEC.yaml` (AAA-P-4 Core CMS) + `docs/SHOP_PROJECT_SPEC.yaml` (AAA-P-9 Shop). Shop work may require updates to Core CMS spec.
 **Plan:** 10 iterations. Graph: 1 → 2 → [3+4] → 5 → [7+8] → 9 → 10. Critical: 1→2→5→7→10.
 
 ## Workflow Engine — New Feature (2026-03-29)
@@ -71,6 +73,7 @@ Composes from responses + appointments (ADR-005 compliant).
 - **Survey delete doesn't invalidate Intake Hub cache** — Deleting a survey left stale responses in Intake Hub. Fix: add `invalidateQueries(['intake'])` in SurveyList, SurveyBuilder delete handlers + `revalidatePath` in server action. (2026-03-30)
 - **PipelineCard shows no indicator during AI analysis** — New responses had empty AI score slot (no spinner, no text) for 5-8s while n8n processes async. Fix: show Loader2 spinner when response is 'new', aiScore===null, and createdAt < 2min ago. (2026-03-30)
 - **Shared validators label vs question field mismatch** — `packages/validators/src/survey.ts` used `label: z.string()` but CMS SurveyBuilder always stored `question` field. Stale since initial build. Fix: rename to `question` in schema. No DB migration needed (JSONB). (2026-03-30)
+- **npm run db:types fails with --local when local Supabase not running** — `db:types` script uses `--local` flag but requires local Supabase instance. When not running, must use `--linked` with `grep -v "Initialising"` workaround. Also: `supabase db push` may require re-authentication when session expires. (2026-03-30)
 
 ## Domain Concepts
 
