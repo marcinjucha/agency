@@ -43,27 +43,27 @@ export function ProductSeoSidebar({ register, watch, control, errors }: ProductS
           <div className="space-y-1.5">
             <div className="flex items-center gap-1.5">
               <Label htmlFor="seo-title" className="text-sm font-medium">
-                Tytuł SEO
+                {messages.shop.seoTitleLabel}
               </Label>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
                     type="button"
                     className="text-muted-foreground hover:text-foreground transition-colors"
-                    aria-label="Jeśli pusty, użyta zostanie nazwa produktu. Zalecana długość: 50-60 znaków."
+                    aria-label={messages.shop.seoTitleHint}
                   >
                     <HelpCircle className="h-3 w-3" />
                   </button>
                 </TooltipTrigger>
                 <TooltipContent side="right" className="max-w-xs">
-                  <p>Jeśli pusty, użyta zostanie nazwa produktu. Zalecana długość: 50-60 znaków.</p>
+                  <p>{messages.shop.seoTitleHint}</p>
                 </TooltipContent>
               </Tooltip>
             </div>
             <Input
               id="seo-title"
               {...register('seo_metadata.title')}
-              placeholder="Tytuł SEO..."
+              placeholder={messages.shop.seoTitlePlaceholder}
               className="text-sm"
             />
           </div>
@@ -73,20 +73,20 @@ export function ProductSeoSidebar({ register, watch, control, errors }: ProductS
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5">
                 <Label htmlFor="seo-description" className="text-sm font-medium">
-                  Opis SEO
+                  {messages.shop.seoDescriptionLabel}
                 </Label>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <button
                       type="button"
                       className="text-muted-foreground hover:text-foreground transition-colors"
-                      aria-label="Opis wyświetlany w wynikach wyszukiwania. Maksymalnie 160 znaków."
+                      aria-label={messages.shop.seoDescriptionHint}
                     >
                       <HelpCircle className="h-3 w-3" />
                     </button>
                   </TooltipTrigger>
                   <TooltipContent side="right" className="max-w-xs">
-                    <p>Opis wyświetlany w wynikach wyszukiwania. Maksymalnie 160 znaków.</p>
+                    <p>{messages.shop.seoDescriptionHint}</p>
                   </TooltipContent>
                 </Tooltip>
               </div>
@@ -97,7 +97,7 @@ export function ProductSeoSidebar({ register, watch, control, errors }: ProductS
             <Textarea
               id="seo-description"
               {...register('seo_metadata.description')}
-              placeholder="Opis produktu dla wyszukiwarek..."
+              placeholder={messages.shop.seoDescriptionPlaceholder}
               className="min-h-[60px] resize-none text-sm"
               maxLength={160}
               autoResize
@@ -113,27 +113,27 @@ export function ProductSeoSidebar({ register, watch, control, errors }: ProductS
           <div className="space-y-1.5">
             <div className="flex items-center gap-1.5">
               <Label htmlFor="seo-og-image" className="text-sm font-medium">
-                OG Image URL
+                {messages.shop.seoOgImageLabel}
               </Label>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
                     type="button"
                     className="text-muted-foreground hover:text-foreground transition-colors"
-                    aria-label="Obraz wyświetlany przy udostępnianiu w mediach społecznościowych."
+                    aria-label={messages.shop.seoOgImageHint}
                   >
                     <HelpCircle className="h-3 w-3" />
                   </button>
                 </TooltipTrigger>
                 <TooltipContent side="right" className="max-w-xs">
-                  <p>Obraz wyświetlany przy udostępnianiu w mediach społecznościowych.</p>
+                  <p>{messages.shop.seoOgImageHint}</p>
                 </TooltipContent>
               </Tooltip>
             </div>
             <Input
               id="seo-og-image"
               {...register('seo_metadata.ogImage')}
-              placeholder="https://..."
+              placeholder={messages.shop.seoOgImagePlaceholder}
               className="text-sm"
             />
           </div>
@@ -142,20 +142,20 @@ export function ProductSeoSidebar({ register, watch, control, errors }: ProductS
           <div className="space-y-1.5">
             <div className="flex items-center gap-1.5">
               <Label htmlFor="seo-keywords" className="text-sm font-medium">
-                Słowa kluczowe
+                {messages.shop.seoKeywordsLabel}
               </Label>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
                     type="button"
                     className="text-muted-foreground hover:text-foreground transition-colors"
-                    aria-label="Słowa kluczowe pomagają w pozycjonowaniu produktu."
+                    aria-label={messages.shop.seoKeywordsHint}
                   >
                     <HelpCircle className="h-3 w-3" />
                   </button>
                 </TooltipTrigger>
                 <TooltipContent side="right" className="max-w-xs">
-                  <p>Słowa kluczowe pomagają w pozycjonowaniu produktu.</p>
+                  <p>{messages.shop.seoKeywordsHint}</p>
                 </TooltipContent>
               </Tooltip>
             </div>

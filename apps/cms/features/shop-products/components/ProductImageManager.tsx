@@ -12,6 +12,7 @@ import {
 } from '@agency/ui'
 import { InsertMediaModal } from '@/features/media/components/InsertMediaModal'
 import { messages } from '@/lib/messages'
+import { createMediaProxyEditor } from '@/lib/utils/media-proxy'
 
 interface ProductImageManagerProps {
   images: string[]
@@ -49,26 +50,7 @@ export function ProductImageManager({
     [onSetCover]
   )
 
-  // InsertMediaModal requires an Editor prop. We create a minimal proxy
-  // that captures the image URL when InsertMediaModal calls editor.chain().focus().setImage().
-  const editorProxy = {
-    chain: () => {
-      const chainProxy = {
-        focus: () => chainProxy,
-        setImage: ({ src }: { src: string }) => {
-          onChange([...images, src])
-          return chainProxy
-        },
-        setVideo: () => chainProxy,
-        setYouTube: () => chainProxy,
-        setVimeo: () => chainProxy,
-        setInstagram: () => chainProxy,
-        setTikTok: () => chainProxy,
-        run: () => true,
-      }
-      return chainProxy
-    },
-  }
+  const editorProxy = createMediaProxyEditor((url) => onChange([...images, url]))
 
   const MAX_VISIBLE = 6
 

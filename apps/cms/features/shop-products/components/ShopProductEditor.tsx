@@ -194,7 +194,7 @@ export function ShopProductEditor({ product }: ShopProductEditorProps) {
   function onFormError(errors: Record<string, unknown>) {
     console.error('Form validation errors:', errors)
     setSaveState('error')
-    setErrorMessage('Formularz zawiera błędy walidacji. Sprawdź pola formularza.')
+    setErrorMessage(messages.shop.formValidationError)
     setTimeout(() => setSaveState('idle'), 4000)
   }
 
@@ -270,7 +270,7 @@ export function ShopProductEditor({ product }: ShopProductEditorProps) {
               // Published: just Save
               <Button
                 size="sm"
-                onClick={handleSubmit((data) => onSave(data))}
+                onClick={handleSubmit((data) => onSave(data), onFormError)}
                 disabled={saveState === 'saving'}
               >
                 {saveLabel[saveState]}
@@ -409,7 +409,7 @@ export function ShopProductEditor({ product }: ShopProductEditorProps) {
 
                 {product?.published_at && watchIsPublished && (
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-muted-foreground">Data publikacji</span>
+                    <span className="text-xs text-muted-foreground">{messages.shop.publishDate}</span>
                     <span className="text-xs">
                       {new Date(product.published_at).toLocaleDateString('pl-PL', {
                         day: 'numeric',
@@ -422,7 +422,7 @@ export function ShopProductEditor({ product }: ShopProductEditorProps) {
 
                 {product?.updated_at && (
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-muted-foreground">Ostatnia edycja</span>
+                    <span className="text-xs text-muted-foreground">{messages.shop.lastEdited}</span>
                     <span className="text-xs">
                       {new Date(product.updated_at).toLocaleDateString('pl-PL', {
                         day: 'numeric',
