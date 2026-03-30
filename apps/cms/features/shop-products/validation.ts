@@ -19,7 +19,8 @@ export const createShopProductSchema = z.object({
     .string()
     .max(300, messages.validation.shortDescriptionMax)
     .nullable()
-    .optional(),
+    .optional()
+    .or(z.literal('').transform(() => null)),
   description: z.any().nullable().optional(),
   html_body: z.string().nullable().optional(),
   cover_image_url: z
@@ -29,7 +30,13 @@ export const createShopProductSchema = z.object({
     .optional()
     .or(z.literal('')),
   images: z.array(z.string()).nullable().optional(),
-  price: z.number().nonnegative(messages.validation.priceMustBeNonNegative).nullable().optional(),
+  price: z
+    .number()
+    .nonnegative(messages.validation.priceMustBeNonNegative)
+    .nullable()
+    .optional()
+    .or(z.literal('').transform(() => null))
+    .or(z.nan().transform(() => null)),
   currency: z.string().default('PLN'),
   external_url: z
     .string()
@@ -39,7 +46,12 @@ export const createShopProductSchema = z.object({
     .or(z.literal('')),
   digital_file_url: z.string().nullable().optional(),
   digital_file_name: z.string().nullable().optional(),
-  digital_file_size: z.number().nullable().optional(),
+  digital_file_size: z
+    .number()
+    .nullable()
+    .optional()
+    .or(z.literal('').transform(() => null))
+    .or(z.nan().transform(() => null)),
   category_id: z.string().uuid().nullable().optional(),
   tags: z.array(z.string()).nullable().optional(),
   sort_order: z

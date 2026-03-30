@@ -191,16 +191,23 @@ export function ShopProductEditor({ product }: ShopProductEditorProps) {
     }
   }
 
+  function onFormError(errors: Record<string, unknown>) {
+    console.error('Form validation errors:', errors)
+    setSaveState('error')
+    setErrorMessage('Formularz zawiera błędy walidacji. Sprawdź pola formularza.')
+    setTimeout(() => setSaveState('idle'), 4000)
+  }
+
   function handleSaveDraft() {
-    handleSubmit((data) => onSave(data, false))()
+    handleSubmit((data) => onSave(data, false), onFormError)()
   }
 
   function handlePublish() {
-    handleSubmit((data) => onSave(data, true))()
+    handleSubmit((data) => onSave(data, true), onFormError)()
   }
 
   function handleUnpublish() {
-    handleSubmit((data) => onSave(data, false))()
+    handleSubmit((data) => onSave(data, false), onFormError)()
   }
 
   // --- Delete ---

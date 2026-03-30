@@ -10,6 +10,7 @@ import type { ShopCategory } from '../types'
 import {
   Button,
   Input,
+  Textarea,
   Skeleton,
   ErrorState,
   EmptyState,
@@ -323,12 +324,13 @@ function InlineEditRow({
       </div>
 
       <div className="hidden lg:block min-w-0 flex-1">
-        <Input
+        <Textarea
           value={formData.description}
           onChange={(e) => onDescriptionChange(e.target.value)}
           onKeyDown={onKeyDown}
           placeholder={messages.shop.descriptionFieldLabel}
-          className="h-8 text-sm"
+          rows={2}
+          className="min-h-0 resize-none text-sm"
           disabled={isPending}
           aria-label={messages.shop.descriptionFieldLabel}
         />
