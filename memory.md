@@ -28,16 +28,23 @@ Phase 1 (n8n form_confirmation) + Phase 2 (CMS template editor + live preview) �
 
 Multi-tenant (WITH tenant_id — changed from single-tenant). S3 folder: `haloefekt/media/`. Video limit: 50MB.
 
-## CTA → Survey Flow — AAA-T-57 (2026-03-24)
+## CTA → Survey Flow — AAA-T-57 — COMPLETED (2026-03-24)
 
-**Status:** Partial — CTA integration done, survey creation in CMS pending
 **Survey:** 7 pytań, scoring max 15 pkt (10-15 hot, 6-9 warm, 1-5 cold). AI: MiniMax-M2.7 via n8n.
-**Remaining:** create survey in CMS, update CTA href, E2E test
+All 3 CTAs (Navbar, Hero, FinalCTA) point to `/survey/89d6d1e9-82a0-4ff7-ac85-0ed4bd6462b4`.
 
 ## Intake Hub — AAA-T-124 — COMPLETED (2026-03-28)
 
 Unified `/admin/intake` replacing 3 pages. @dnd-kit kanban, JIRA-style split view, autosave notes.
 Composes from responses + appointments (ADR-005 compliant).
+
+## Survey Improvements — AAA-T-8 + AAA-T-95 — COMPLETED (2026-03-30)
+
+**Scope:** Tally-style redesign of survey builder (CMS) and survey form (Website). 5 iterations + validator fixes.
+**Iterations:** (1) Type refactoring — remove `as any`, delete deprecated actions.ts. (2) Data model — `semantic_role`, `placeholder`, `date` type, fix `label→question` mismatch. (3) Website form — shadcn/ui components (RadioGroup, Select, Checkbox, Textarea replacing native HTML), progress bar, DatePicker. (4) CMS builder — @dnd-kit drag-drop, duplicate question, layout swap (questions left, sidebar 420px right), AlertDialog replacing window.confirm, unsaved changes indicator. (5) Intake Hub — semantic_role lookup for client name/email/company/phone, contact info panel in detail view.
+**Extra deliverables:** Shared `DatePicker` component in `@agency/ui` (Popover+Calendar, Polish locale, month/year dropdown, ±7yr range). Centralized `apps/cms/lib/query-keys.ts` (14 files migrated). `RadioGroup` added to `@agency/ui`. PipelineCard AI analysis spinner for new responses (<2min).
+**Key decisions:** `semantic_role` on Question (not new question types) — separation of rendering vs business semantics. No DB migration — JSONB fields. Contact fields button creates only name+email (required), not company/phone. Native `input[type=date]` replaced everywhere with shared DatePicker.
+**Tasks closed:** AAA-T-95 (type refactoring), AAA-T-8 (survey improvements), AAA-T-131 (drag-drop merged into T-8).
 
 ## Feedback & Corrections
 
@@ -46,6 +53,10 @@ Composes from responses + appointments (ADR-005 compliant).
 - **No backward compatibility (pre-launch only)** — No clients/content yet, so breaking old data is fine now. Once clients onboard and real content exists, backward compatibility becomes required. (2026-03-23)
 - **Test after each priority level, not each fix** — User prefers batching: fix all P0 → test → fix all P1 → test → fix all P2 → test. Individual commits per fix, but testing grouped by severity. (2026-03-25)
 - **Commit per change, test later** — User wants individual commits after each refactor but defers manual testing to the end. Collect all test scenarios and present together. (2026-03-25)
+- **Contact fields: only name + email, not company/phone** — "Dodaj pola kontaktowe" should create only 2 fields (Imię i nazwisko, Adres email), both required. User explicitly removed Firma and Telefon — too presumptuous for a generic survey tool. (2026-03-30)
+- **No placeholders in contact fields** — User rejected placeholder text like "Jan Kowalski" as unsensible. Contact fields have empty placeholders. (2026-03-30)
+- **Reusable component over inline duplication** — User asked "Nie można z tego stworzyć komponentu?" when seeing Popover+Calendar duplicated in 3 places. Prefers extracting to @agency/ui immediately, not "later." (2026-03-30)
+- **Extract query keys to central file** — User asked for centralized query key file for discoverability ("żebyśmy wiedzieli jakie queries mamy"). Created `apps/cms/lib/query-keys.ts`. Blog/media kept their own patterns. (2026-03-30)
 
 ## Bugs Found
 
@@ -53,6 +64,11 @@ Composes from responses + appointments (ADR-005 compliant).
 - **useMutation + Server Action structured return = silent failure** — TanStack Query `useMutation` treats any non-thrown result as success. Server Actions returning `{ success: false }` don't trigger `onError`. Fix: wrap mutationFn to throw on `!result.success`. (2026-03-27)
 - **supabase gen types prepends "Initialising login role..." to output** — `npx supabase gen types typescript --linked` consistently corrupts `packages/database/src/types.ts` with a debug line on line 1. Workaround: pipe through `grep -v "^Initialising"`. (2026-03-28)
 - **datetime-local vs Zod .datetime() mismatch** — HTML `datetime-local` produces `"2026-03-28T14:30"` (no seconds/timezone) but `z.string().datetime()` requires full ISO 8601. Fix: `z.string().min(1)`. (2026-03-28)
+- **Native input[type=date] unreliable on dark theme** — After selecting a date, picker wouldn't reopen. Replaced everywhere with shared `DatePicker` component (Popover+Calendar from react-day-picker). Also fixes styling inconsistency. (2026-03-30)
+- **router.refresh() doesn't invalidate TanStack Query cache** — SurveyBuilder did `router.push` + `router.refresh()` after save, but survey list (useQuery) showed stale data. Fix: `queryClient.invalidateQueries()` before push. `router.refresh()` only refreshes Server Components, not client-side cache. (2026-03-30)
+- **Survey delete doesn't invalidate Intake Hub cache** — Deleting a survey left stale responses in Intake Hub. Fix: add `invalidateQueries(['intake'])` in SurveyList, SurveyBuilder delete handlers + `revalidatePath` in server action. (2026-03-30)
+- **PipelineCard shows no indicator during AI analysis** — New responses had empty AI score slot (no spinner, no text) for 5-8s while n8n processes async. Fix: show Loader2 spinner when response is 'new', aiScore===null, and createdAt < 2min ago. (2026-03-30)
+- **Shared validators label vs question field mismatch** — `packages/validators/src/survey.ts` used `label: z.string()` but CMS SurveyBuilder always stored `question` field. Stale since initial build. Fix: rename to `question` in schema. No DB migration needed (JSONB). (2026-03-30)
 
 ## Domain Concepts
 
@@ -65,10 +81,6 @@ Composes from responses + appointments (ADR-005 compliant).
 
 `site_settings` table (one row per tenant, anon SELECT). `React.cache()` for request dedup.
 Google Search Console verification code: `GCfETKDyC-evSaMt_NyqAihacXKNVV30zIpP5VfOUSo`
-
-## Domain Concepts (Landing Page)
-
-- **Landing page CTA destination** — AAA-T-57 DONE: all 3 CTA locations (Navbar, Hero, FinalCTA) now point to `/survey/89d6d1e9-82a0-4ff7-ac85-0ed4bd6462b4`. DEFAULT_BLOCKS updated. DB row must be updated via CMS editor. (2026-03-24)
 
 ## Architecture Audit — AAA-T-83 (2026-03-25)
 
@@ -83,7 +95,10 @@ Google Search Console verification code: `GCfETKDyC-evSaMt_NyqAihacXKNVV30zIpP5V
 
 - **`features/email-config/` separate from `features/email/`** — Config (ops) vs templates (content). Different actors, different change frequency.
 - **pgcrypto for API key encryption** — `email_configs_decrypted` view for n8n. API key masked in client (`re_****abcd`).
-- **Survey required fields (imię + email) — deferred** — Deferred to AAA-T-8 (Survey Builder Improvements). Intake Hub fallback: "Odpowiedź #N" for old data. (2026-03-28)
+- **Survey required fields (imię + email) — RESOLVED in AAA-T-8** — Was deferred from email config. Implemented via `semantic_role` — see Survey Improvements section. (2026-03-30)
+- **semantic_role on Question (not new type)** — Chosen over dedicated field types (e.g., `client_name` type). Reasoning: question type = rendering (text/email/select), semantic_role = business meaning (client_name/email/company/phone). Two orthogonal dimensions — mixing them creates cartesian product. Tally uses the same pattern. (2026-03-30)
+- **DatePicker component in @agency/ui** — Shared across website (survey form, calendar booking) and CMS (future). Props: value, onChange, placeholder, minDate, maxDate, disabled. Uses Popover+Calendar (react-day-picker), Polish locale, month/year dropdown (captionLayout="dropdown"), ±7yr range, auto-close on select. (2026-03-30)
+- **Centralized query keys** — `apps/cms/lib/query-keys.ts` holds all TanStack Query keys (surveys, intake, responses, appointments, landing, calendar). Blog/media have own key factories in their queries.ts. 14 files migrated. Prevents typos, single place for discoverability. (2026-03-30)
 
 ## Preferences
 
