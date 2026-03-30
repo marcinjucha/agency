@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback } from 'react'
+import { useDroppable } from '@dnd-kit/core'
 import { Button } from '@agency/ui'
 import {
   Folder,
@@ -51,14 +52,23 @@ function FolderNode({
   const isSelected = selectedFolderId === node.id
   const FolderIcon = expanded && hasChildren ? FolderOpen : Folder
 
+  const { isOver, setNodeRef } = useDroppable({
+    id: `folder-${node.id}`,
+    data: { type: 'folder', folderId: node.id, folderName: node.name },
+  })
+
   return (
     <li role="treeitem" aria-expanded={hasChildren ? expanded : undefined} aria-selected={isSelected}>
       <div
+        ref={setNodeRef}
         className={[
           'group flex items-center gap-1 rounded-md py-1.5 pr-1 text-sm cursor-pointer transition-colors',
           isSelected
             ? 'bg-accent/10 text-accent'
             : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground',
+          isOver
+            ? 'border border-dashed border-accent bg-accent/10 text-accent'
+            : 'border border-transparent',
         ].join(' ')}
         style={{ paddingLeft: `${depth * 16 + 8}px` }}
         onClick={() => onSelectFolder(node.id)}
@@ -169,6 +179,12 @@ export function FolderTree({
   const handleSelectAll = useCallback(() => onSelectFolder(undefined), [onSelectFolder])
   const handleSelectUnsorted = useCallback(() => onSelectFolder(null), [onSelectFolder])
 
+  // "Bez folderu" is a droppable target (move to root / folder_id = null)
+  const { isOver: isOverUnsorted, setNodeRef: setUnsortedRef } = useDroppable({
+    id: 'folder-unsorted',
+    data: { type: 'folder', folderId: null, folderName: messages.media.unsorted },
+  })
+
   return (
     <nav
       className="w-60 shrink-0 rounded-lg border border-border bg-card/5 p-3"
@@ -192,11 +208,11 @@ export function FolderTree({
 
       {/* Virtual folders */}
       <ul role="tree" className="space-y-0.5">
-        {/* All media */}
+        {/* All media — NOT a drop target (it's a view, not a destination) */}
         <li role="treeitem" aria-selected={selectedFolderId === undefined}>
           <div
             className={[
-              'flex items-center gap-2 rounded-md px-2 py-1.5 text-sm cursor-pointer transition-colors',
+              'flex items-center gap-2 rounded-md px-2 py-1.5 text-sm cursor-pointer transition-colors border border-transparent',
               selectedFolderId === undefined
                 ? 'bg-accent/10 text-accent'
                 : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground',
@@ -219,14 +235,18 @@ export function FolderTree({
           </div>
         </li>
 
-        {/* Unsorted */}
+        {/* Unsorted — droppable (move to root) */}
         <li role="treeitem" aria-selected={selectedFolderId === null}>
           <div
+            ref={setUnsortedRef}
             className={[
               'flex items-center gap-2 rounded-md px-2 py-1.5 text-sm cursor-pointer transition-colors',
               selectedFolderId === null
                 ? 'bg-accent/10 text-accent'
                 : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground',
+              isOverUnsorted
+                ? 'border border-dashed border-accent bg-accent/10 text-accent'
+                : 'border border-transparent',
             ].join(' ')}
             onClick={handleSelectUnsorted}
             onKeyDown={(e) => {

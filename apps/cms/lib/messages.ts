@@ -270,7 +270,7 @@ export const messages = {
     deleteFolder: 'Usuń folder',
     folderNameRequired: 'Nazwa folderu jest wymagana',
     allMedia: 'Wszystkie media',
-    unsorted: 'Bez folderu',
+    unsorted: 'Główne',
     moveTo: 'Przenieś do...',
     moveToRoot: 'Przenieś do głównego',
     confirmDeleteFolder:

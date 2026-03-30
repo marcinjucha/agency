@@ -175,7 +175,34 @@ export function MediaCard({ item, onPreview, onDelete, onRename, selectable }: M
   const size = formatBytes(item.size_bytes)
 
   return (
-    <Card className="group overflow-hidden flex flex-col">
+    <MediaCardInner
+      item={item}
+      size={size}
+      onPreview={onPreview}
+      onDelete={onDelete}
+      onRename={onRename}
+      selectable={selectable}
+    />
+  )
+}
+
+/** Inner card content — also used by DragOverlay */
+export function MediaCardInner({
+  item,
+  size,
+  onPreview,
+  onDelete,
+  onRename,
+  selectable,
+  isDragOverlay,
+}: MediaCardProps & { size: string | null; isDragOverlay?: boolean }) {
+  return (
+    <Card
+      className={[
+        'group overflow-hidden flex flex-col',
+        isDragOverlay ? 'opacity-80 shadow-lg ring-2 ring-accent/50 rotate-2' : '',
+      ].join(' ')}
+    >
       {/* Thumbnail */}
       <div className="relative">
         <Thumbnail item={item} onClick={() => onPreview(item)} />
@@ -205,7 +232,7 @@ export function MediaCard({ item, onPreview, onDelete, onRename, selectable }: M
           )}
         </div>
 
-        {!selectable && (
+        {!selectable && !isDragOverlay && (
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button
