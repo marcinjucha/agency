@@ -13,6 +13,7 @@ import {
 } from '@agency/ui'
 import { Link as LinkIcon, Copy, Trash2, Plus, Check, Pencil, X } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
+import { queryKeys } from '@/lib/query-keys'
 import { messages } from '@/lib/messages'
 import type { Tables } from '@agency/database'
 
@@ -42,7 +43,7 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
 
   // Query for links
   const { data: links, isLoading } = useQuery({
-    queryKey: ['survey-links', surveyId],
+    queryKey: queryKeys.surveys.links(surveyId),
     queryFn: () => getSurveyLinks(surveyId),
   })
 
@@ -59,7 +60,7 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
       return result
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['survey-links', surveyId] })
+      queryClient.invalidateQueries({ queryKey: queryKeys.surveys.links(surveyId) })
       setShowForm(false)
       setFormData({ notificationEmail: '', expiresAt: '', maxSubmissions: '', isActive: true })
       setError(null)
@@ -77,7 +78,7 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
       return result
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['survey-links', surveyId] })
+      queryClient.invalidateQueries({ queryKey: queryKeys.surveys.links(surveyId) })
       setError(null)
     },
     onError: (err: Error) => {
@@ -99,7 +100,7 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
       return result
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['survey-links', surveyId] })
+      queryClient.invalidateQueries({ queryKey: queryKeys.surveys.links(surveyId) })
       setError(null)
     },
     onError: (err: Error) => {
@@ -121,7 +122,7 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
       return result
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['survey-links', surveyId] })
+      queryClient.invalidateQueries({ queryKey: queryKeys.surveys.links(surveyId) })
       setEditingLinkId(null)
       setError(null)
     },

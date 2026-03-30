@@ -17,6 +17,7 @@ import {
   GripVertical, Copy, Type, AlignLeft, Mail, Phone, ChevronDown, Circle, CheckSquare, Calendar,
 } from 'lucide-react'
 import Link from 'next/link'
+import { queryKeys } from '@/lib/query-keys'
 import type { Tables } from '@agency/database'
 import { SurveyLinks } from './SurveyLinks'
 import { messages } from '@/lib/messages'
@@ -402,7 +403,7 @@ export function SurveyBuilder({ survey }: SurveyBuilderProps) {
     })
 
     if (result.success) {
-      queryClient.invalidateQueries({ queryKey: ['surveys'] })
+      queryClient.invalidateQueries({ queryKey: queryKeys.surveys.all })
       router.push(routes.admin.surveys)
     } else {
       setError(result.error || messages.surveys.saveFailed)
@@ -453,8 +454,8 @@ export function SurveyBuilder({ survey }: SurveyBuilderProps) {
                       setDeleting(true)
                       const result = await deleteSurvey(survey.id)
                       if (result.success) {
-                        queryClient.invalidateQueries({ queryKey: ['surveys'] })
-                        queryClient.invalidateQueries({ queryKey: ['intake'] })
+                        queryClient.invalidateQueries({ queryKey: queryKeys.surveys.all })
+                        queryClient.invalidateQueries({ queryKey: queryKeys.intake.all })
                         router.push(routes.admin.surveys)
                       } else {
                         setError(result.error || messages.surveys.deleteFailed)

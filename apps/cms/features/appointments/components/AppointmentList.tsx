@@ -15,6 +15,7 @@ import { format } from 'date-fns'
 import { pl } from 'date-fns/locale/pl'
 import type { AppointmentListItem, AppointmentStatus } from '../types'
 import { getAppointmentStatusColor } from '@/lib/utils/status'
+import { queryKeys } from '@/lib/query-keys'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
 
@@ -27,7 +28,7 @@ export function AppointmentList() {
       if (!result.success) throw new Error(result.error)
       return result
     },
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['appointments'] }) },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: queryKeys.appointments.all }) },
   })
   const {
     data: appointments,
@@ -35,7 +36,7 @@ export function AppointmentList() {
     error,
     refetch
   } = useQuery({
-    queryKey: ['appointments'],
+    queryKey: queryKeys.appointments.all,
     queryFn: getAppointments,
     refetchInterval: 5000,
     staleTime: 0

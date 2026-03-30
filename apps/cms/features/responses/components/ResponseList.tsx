@@ -13,6 +13,7 @@ import { useRouter } from 'next/navigation'
 import { ArrowRight, FileText, Trash2 } from 'lucide-react'
 import type { ResponseListItem, ResponseStatus } from '../types'
 import { getResponseStatusColor } from '@/lib/utils/status'
+import { queryKeys } from '@/lib/query-keys'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
 
@@ -46,8 +47,8 @@ export function ResponseList() {
       return result
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['responses'] })
-      queryClient.invalidateQueries({ queryKey: ['appointments'] })
+      queryClient.invalidateQueries({ queryKey: queryKeys.responses.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.appointments.all })
     },
   })
   const {
@@ -56,7 +57,7 @@ export function ResponseList() {
     error,
     refetch
   } = useQuery({
-    queryKey: ['responses'],
+    queryKey: queryKeys.responses.all,
     queryFn: getResponses,
     refetchInterval: 5000, // Auto-refresh every 5 seconds
     staleTime: 0 // Data is always considered stale

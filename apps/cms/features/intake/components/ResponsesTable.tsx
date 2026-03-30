@@ -26,6 +26,7 @@ import { getResponseStatusColor } from '@/lib/utils/status'
 import { messages } from '@/lib/messages'
 import { RESPONSE_STATUSES } from '../validation'
 import { deleteResponse } from '../../responses/actions'
+import { queryKeys } from '@/lib/query-keys'
 import { STATUS_LABELS, getAiScoreTextColor } from '../types'
 import type { PipelineResponse } from '../types'
 
@@ -63,7 +64,7 @@ export function ResponsesTable({ responses, onSelectResponse }: ResponsesTablePr
       return result
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['intake'] })
+      queryClient.invalidateQueries({ queryKey: queryKeys.intake.all })
       setDeleteTarget(null)
     },
   })

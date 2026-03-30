@@ -30,6 +30,7 @@ import { getAppointments } from '../../appointments/queries'
 import { deleteAppointment } from '../../appointments/actions'
 import type { AppointmentListItem, AppointmentStatus } from '../../appointments/types'
 import { getAppointmentStatusColor } from '@/lib/utils/status'
+import { queryKeys } from '@/lib/query-keys'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
 
@@ -69,7 +70,7 @@ export function AppointmentsTable() {
       return result
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['intake'] })
+      queryClient.invalidateQueries({ queryKey: queryKeys.intake.all })
       setDeleteTarget(null)
     },
   })
@@ -80,7 +81,7 @@ export function AppointmentsTable() {
     error,
     refetch,
   } = useQuery({
-    queryKey: ['intake', 'appointments'],
+    queryKey: queryKeys.intake.appointments,
     queryFn: getAppointments,
     refetchInterval: REFETCH_INTERVAL,
   })

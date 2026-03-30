@@ -25,6 +25,7 @@ import { X, ExternalLink, Calendar, CheckCircle2, Loader2, Trash2, Mail, Buildin
 import { updateResponseStatus, updateInternalNotes } from '../actions'
 import { deleteResponse } from '../../responses/actions'
 import { getResponseStatusColor } from '@/lib/utils/status'
+import { queryKeys } from '@/lib/query-keys'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
 import { RESPONSE_STATUSES } from '../validation'
@@ -93,7 +94,7 @@ export function ResponseDetailPanel({ response, onClose }: ResponseDetailPanelPr
       return result
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['intake'] })
+      queryClient.invalidateQueries({ queryKey: queryKeys.intake.all })
       setShowDeleteConfirm(false)
       onClose()
     },
@@ -114,7 +115,7 @@ export function ResponseDetailPanel({ response, onClose }: ResponseDetailPanelPr
       return result
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['intake', 'pipeline'] })
+      queryClient.invalidateQueries({ queryKey: queryKeys.intake.pipeline })
       setNotesSaveState('saved')
       setTimeout(() => setNotesSaveState('idle'), 2000)
     },
@@ -150,7 +151,7 @@ export function ResponseDetailPanel({ response, onClose }: ResponseDetailPanelPr
       return result
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['intake', 'pipeline'] })
+      queryClient.invalidateQueries({ queryKey: queryKeys.intake.pipeline })
     },
   })
 

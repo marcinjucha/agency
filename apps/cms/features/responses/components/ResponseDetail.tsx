@@ -15,6 +15,7 @@ import Link from 'next/link'
 import { ArrowLeft, FileX, Loader2, AlertTriangle, Trash2 } from 'lucide-react'
 import { getResponseStatusColor } from '@/lib/utils/status'
 import { triggerAiAnalysis, deleteResponse } from '../actions'
+import { queryKeys } from '@/lib/query-keys'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
 
@@ -49,7 +50,7 @@ export function ResponseDetail({ responseId }: ResponseDetailProps) {
   const [aiPhase, setAiPhase] = useState<'polling' | 'failed'>('polling')
   const [deleting, setDeleting] = useState(false)
   const { data: response, isLoading, error } = useQuery({
-    queryKey: ['response', responseId],
+    queryKey: queryKeys.responses.detail(responseId),
     queryFn: () => getResponse(responseId),
     enabled: !!responseId,
     refetchInterval: (query) => {
@@ -341,8 +342,8 @@ export function ResponseDetail({ responseId }: ResponseDetailProps) {
                     setDeleting(true)
                     const result = await deleteResponse(responseId)
                     if (result.success) {
-                      queryClient.invalidateQueries({ queryKey: ['responses'] })
-                      if (result.hadAppointment) queryClient.invalidateQueries({ queryKey: ['appointments'] })
+                      queryClient.invalidateQueries({ queryKey: queryKeys.responses.all })
+                      if (result.hadAppointment) queryClient.invalidateQueries({ queryKey: queryKeys.appointments.all })
                       router.push(routes.admin.responses)
                     } else {
                       setDeleting(false)
