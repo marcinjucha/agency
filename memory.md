@@ -14,9 +14,11 @@
 **Key decisions:** Circular trigger protection (max depth=1), delay via n8n cron (±5 min), coexistence with current n8n email.
 **Plan:** 11 iterations. Graph: 1→2→[3+4]→5a→5b→[6+7]→[8+9]→10. Critical: 1→2→5a→5b→6→10.
 
-## Roadmap & Planning (2026-03-20)
+## Roadmap & Planning (2026-03-30)
 
-**Priority order:** marketing (acquire clients) → intake/permissions (manage clients) → CMS polish.
+**Next up:** Workflow Engine (XL, ~1 tydzień) → potem wszystkie emaile (booking confirmation, cancellation, reminder) jako workflow triggery.
+**Key decision (2026-03-30):** NIE hardcode'ować emaili w n8n osobno — workflow engine najpierw, emaile potem jako triggery. Powód: uniknięcie podwójnej roboty (form_confirmation już raz przepisywaliśmy). Dog fooding własnej platformy przed onboardingiem klienta.
+**Priority order:** workflow engine → email triggers → client onboarding.
 **Key decisions:** No pricing page (individual approach), roles: super_admin/admin/member + feature permissions, Plausible self-hosted.
 **Backlog:** Multi-language, CRM/Slack, Reporting, Onboarding, Newsletter, booking_cancellation.
 
