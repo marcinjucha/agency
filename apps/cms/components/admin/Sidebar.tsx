@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, FileText, Inbox, Calendar, Settings, LogOut, Mail, Globe, Newspaper, Images, Scale } from 'lucide-react'
+import { LayoutDashboard, FileText, Inbox, Calendar, Settings, LogOut, Mail, Globe, Newspaper, Images, Scale, ShoppingBag, Tags } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { messages } from '@/lib/messages'
@@ -32,6 +32,13 @@ const menuGroups: MenuGroup[] = [
       { href: routes.admin.blog, label: messages.nav.blog, icon: Newspaper },
       { href: routes.admin.media, label: messages.nav.media, icon: Images },
       { href: routes.admin.legalPages, label: messages.nav.legalPages, icon: Scale },
+    ],
+  },
+  {
+    label: messages.nav.groupShop,
+    items: [
+      { href: routes.admin.shopProducts, label: messages.nav.shopProducts, icon: ShoppingBag },
+      { href: routes.admin.shopCategories, label: messages.nav.shopCategories, icon: Tags },
     ],
   },
   {
