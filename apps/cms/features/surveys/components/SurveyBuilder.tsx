@@ -499,7 +499,7 @@ export function SurveyBuilder({ survey }: SurveyBuilderProps) {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_420px] gap-6">
         {/* Left: Questions Builder */}
         <div>
           <div className="flex items-center justify-between mb-4">
