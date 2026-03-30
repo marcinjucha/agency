@@ -364,7 +364,7 @@ export function CalendarBooking({
                   value={selectedDate ?? undefined}
                   onChange={handleDateChange}
                   placeholder={messages.calendar.selectDate}
-                  minDate={addDays(startOfDay(new Date()), 1)}
+                  minDate={startOfDay(new Date())}
                   aria-required="true"
                   aria-describedby="date-help"
                 />
