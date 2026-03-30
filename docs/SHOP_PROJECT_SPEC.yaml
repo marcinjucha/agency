@@ -23,7 +23,7 @@ architecture:
   critical_path: "1 → 2 → 5 → 7 → 10"
 
   cross_project_dependencies:
-    - "AAA-T-136 (Core CMS) — Media library folder support → blocks AAA-T-137 (product editor)"
+    - "AAA-T-136 (Core CMS) — Media library folder support → blocks AAA-T-137 (product editor) [RESOLVED 2026-03-30]"
     - "AAA-T-141 (Core CMS) — Tenant feature flags + conditional sidebar → blocks AAA-T-142 (polish)"
 
 features:
@@ -72,7 +72,7 @@ features:
     description: "Product create/edit with Tiptap editor, media library gallery, SEO sidebar, settings sidebar, cover image, layout selector (image_details vs richtext_sidebar)."
     why: "Core editing experience — operators create and manage product content here"
     depends_on: ["CMS Product List + Category Management"]
-    blockers: ["AAA-T-136 (media folders) in Core CMS"]
+    blockers: []  # AAA-T-136 (media folders) resolved 2026-03-30
 
   # Iteration 6
   - name: "Shop App Scaffolding"

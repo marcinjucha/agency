@@ -121,6 +121,14 @@ features:
     why: "Centralized asset management, reuse across blog posts, no duplicate uploads"
     depends_on: ["Blog / Articles with WYSIWYG Editor"]
 
+  - name: "Media Library Folders"
+    status: done
+    task_id: "AAA-T-136"
+    description: "Folder tree sidebar with nested hierarchy, CRUD (create/rename/delete), move items between folders, filter by folder. Backward compatible — existing media items visible in all views. Upload inherits current folder context."
+    why: "Organize growing media libraries by project or client, unblocks shop product editor (AAA-T-137)"
+    depends_on: ["Media Library"]
+    completion_notes: "Admins can create nested folder hierarchies, move media items between folders, and filter by folder. Existing media items remain visible in root view without migration."
+
   - name: "Legal Pages & Cookie Banner"
     status: done
     description: "CMS-managed /regulamin and /polityka-prywatnosci with shared Tiptap editor (dependency injection), cookie consent via localStorage, sitemap integration"
