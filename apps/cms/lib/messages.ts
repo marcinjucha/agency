@@ -780,6 +780,32 @@ export const messages = {
     productSaved: 'Produkt zapisany',
     productPublished: 'Produkt opublikowany',
     productDeleted: 'Produkt usunięty',
+    // SEO sidebar
+    seoTitleLabel: 'Tytuł SEO',
+    seoTitleHint: 'Jeśli pusty, użyta zostanie nazwa produktu. Zalecana długość: 50-60 znaków.',
+    seoTitlePlaceholder: 'Tytuł SEO...',
+    seoDescriptionLabel: 'Opis SEO',
+    seoDescriptionHint: 'Opis wyświetlany w wynikach wyszukiwania. Maksymalnie 160 znaków.',
+    seoDescriptionPlaceholder: 'Opis produktu dla wyszukiwarek...',
+    seoOgImageLabel: 'OG Image URL',
+    seoOgImageHint: 'Obraz wyświetlany przy udostępnianiu w mediach społecznościowych.',
+    seoOgImagePlaceholder: 'https://...',
+    seoKeywordsLabel: 'Słowa kluczowe',
+    seoKeywordsHint: 'Słowa kluczowe pomagają w pozycjonowaniu produktu.',
+    // Settings sidebar — digital file fields
+    digitalFileUrlAriaLabel: 'URL pliku do pobrania',
+    digitalFileNamePlaceholder: 'Nazwa pliku...',
+    digitalFileNameAriaLabel: 'Nazwa pliku',
+    digitalFileSizePlaceholder: 'Rozmiar (B)',
+    digitalFileSizeAriaLabel: 'Rozmiar pliku w bajtach',
+    // Cover image
+    coverImageAlt: 'Zdjęcie główne produktu',
+    coverImageClickToSelect: 'Kliknij aby wybrać',
+    coverImageSelectAriaLabel: 'Wybierz zdjęcie główne',
+    // Status card
+    formValidationError: 'Formularz zawiera błędy walidacji. Sprawdź pola formularza.',
+    publishDate: 'Data publikacji',
+    lastEdited: 'Ostatnia edycja',
   },
 
   legalPages: {

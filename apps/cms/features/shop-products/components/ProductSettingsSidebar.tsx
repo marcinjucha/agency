@@ -17,6 +17,7 @@ import {
 } from '@agency/ui'
 import { X } from 'lucide-react'
 import { messages } from '@/lib/messages'
+import { createMediaProxyEditor } from '@/lib/utils/media-proxy'
 import { InsertMediaModal } from '@/features/media/components/InsertMediaModal'
 import type { CreateShopProductFormData } from '../validation'
 import { LayoutSelector } from './LayoutSelector'
@@ -47,26 +48,7 @@ export function ProductSettingsSidebar({
   const [tagInput, setTagInput] = useState('')
   const [coverModalOpen, setCoverModalOpen] = useState(false)
 
-  // InsertMediaModal requires an Editor prop. Minimal proxy that captures
-  // the image URL when InsertMediaModal calls editor.chain().focus().setImage().
-  const coverEditorProxy = {
-    chain: () => {
-      const chainProxy = {
-        focus: () => chainProxy,
-        setImage: ({ src }: { src: string }) => {
-          onCoverChange(src)
-          return chainProxy
-        },
-        setVideo: () => chainProxy,
-        setYouTube: () => chainProxy,
-        setVimeo: () => chainProxy,
-        setInstagram: () => chainProxy,
-        setTikTok: () => chainProxy,
-        run: () => true,
-      }
-      return chainProxy
-    },
-  }
+  const coverEditorProxy = createMediaProxyEditor((url) => onCoverChange(url))
 
   // --- Tag management ---
 
@@ -163,22 +145,22 @@ export function ProductSettingsSidebar({
                 {...register('digital_file_url')}
                 placeholder={messages.shop.digitalFileUrlPlaceholder}
                 className="text-sm"
-                aria-label="URL pliku do pobrania"
+                aria-label={messages.shop.digitalFileUrlAriaLabel}
               />
             </div>
             <div className="grid grid-cols-2 gap-2">
               <Input
                 {...register('digital_file_name')}
-                placeholder="Nazwa pliku..."
+                placeholder={messages.shop.digitalFileNamePlaceholder}
                 className="text-sm"
-                aria-label="Nazwa pliku"
+                aria-label={messages.shop.digitalFileNameAriaLabel}
               />
               <Input
                 {...register('digital_file_size', { valueAsNumber: true })}
                 type="number"
-                placeholder="Rozmiar (B)"
+                placeholder={messages.shop.digitalFileSizePlaceholder}
                 className="text-sm"
-                aria-label="Rozmiar pliku w bajtach"
+                aria-label={messages.shop.digitalFileSizeAriaLabel}
               />
             </div>
           </div>
@@ -303,7 +285,7 @@ export function ProductSettingsSidebar({
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={coverPreview}
-                alt="Zdjęcie główne produktu"
+                alt={messages.shop.coverImageAlt}
                 className="aspect-video w-full rounded-lg object-cover"
               />
               <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
@@ -336,7 +318,7 @@ export function ProductSettingsSidebar({
               onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') setCoverModalOpen(true)
               }}
-              aria-label="Wybierz zdjęcie główne"
+              aria-label={messages.shop.coverImageSelectAriaLabel}
             >
               <svg
                 className="h-8 w-8 text-muted-foreground/50"
@@ -351,7 +333,7 @@ export function ProductSettingsSidebar({
                   d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0022.5 18.75V5.25A2.25 2.25 0 0020.25 3H3.75A2.25 2.25 0 001.5 5.25v13.5A2.25 2.25 0 003.75 21z"
                 />
               </svg>
-              <p className="text-xs text-muted-foreground">Kliknij aby wybrać</p>
+              <p className="text-xs text-muted-foreground">{messages.shop.coverImageClickToSelect}</p>
             </div>
           )}
 

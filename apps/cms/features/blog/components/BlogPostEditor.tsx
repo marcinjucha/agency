@@ -33,6 +33,7 @@ import {
 } from '@agency/ui'
 import { HelpCircle } from 'lucide-react'
 import { InsertMediaModal } from '@/features/media/components/InsertMediaModal'
+import { createMediaProxyEditor } from '@/lib/utils/media-proxy'
 import { format, startOfDay } from 'date-fns'
 import { pl } from 'date-fns/locale'
 import { messages } from '@/lib/messages'
@@ -100,27 +101,10 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
   const [coverPreview, setCoverPreview] = useState<string | null>(blogPost?.cover_image_url ?? null)
   const [coverModalOpen, setCoverModalOpen] = useState(false)
 
-  // InsertMediaModal requires an Editor prop. Minimal proxy that captures
-  // the image URL when InsertMediaModal calls editor.chain().focus().setImage().
-  const coverEditorProxy = {
-    chain: () => {
-      const chainProxy = {
-        focus: () => chainProxy,
-        setImage: ({ src }: { src: string }) => {
-          setValue('cover_image_url', src)
-          setCoverPreview(src)
-          return chainProxy
-        },
-        setVideo: () => chainProxy,
-        setYouTube: () => chainProxy,
-        setVimeo: () => chainProxy,
-        setInstagram: () => chainProxy,
-        setTikTok: () => chainProxy,
-        run: () => true,
-      }
-      return chainProxy
-    },
-  }
+  const coverEditorProxy = createMediaProxyEditor((url) => {
+    setValue('cover_image_url', url)
+    setCoverPreview(url)
+  })
 
   // Track whether the slug was manually edited by the user
   const slugManuallyEdited = useRef(false)
