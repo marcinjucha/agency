@@ -84,7 +84,7 @@ function parseQuestions(survey: Tables<'surveys'>): Question[] {
   return (survey.questions as any[]).map((q, index) => ({
     id: q.id,
     type: q.type,
-    question: q.question || q.label || 'New Question',
+    question: q.question || q.label || messages.surveys.newQuestionDefault,
     required: q.required || false,
     options: q.options,
     order: q.order !== undefined ? q.order : index,
@@ -332,7 +332,7 @@ export function SurveyBuilder({ survey }: SurveyBuilderProps) {
     const newQuestion: Question = {
       id: crypto.randomUUID(),
       type: 'text',
-      question: 'New Question',
+      question: messages.surveys.newQuestionDefault,
       required: false,
       order: questions.length,
       semantic_role: null,

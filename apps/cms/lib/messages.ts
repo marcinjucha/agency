@@ -64,6 +64,7 @@ export const messages = {
     questionsCount: (count: number) => `${count} ${count === 1 ? 'pytanie' : 'pytań'}`,
     questions: 'Pytania',
     addQuestion: 'Dodaj pytanie',
+    newQuestionDefault: 'Nowe pytanie',
     noQuestionsYet: 'Brak pytań',
     addFirstQuestion: 'Dodaj pierwsze pytanie',
     questionLabel: 'Treść pytania',
