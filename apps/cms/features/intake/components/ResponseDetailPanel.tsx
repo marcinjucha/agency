@@ -21,7 +21,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@agency/ui'
-import { X, ExternalLink, Calendar, CheckCircle2, Loader2, Trash2 } from 'lucide-react'
+import { X, ExternalLink, Calendar, CheckCircle2, Loader2, Trash2, Mail, Building2, Phone } from 'lucide-react'
 import { updateResponseStatus, updateInternalNotes } from '../actions'
 import { deleteResponse } from '../../responses/actions'
 import { getResponseStatusColor } from '@/lib/utils/status'
@@ -204,6 +204,48 @@ export function ResponseDetailPanel({ response, onClose }: ResponseDetailPanelPr
 
       {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto p-4 space-y-6">
+        {/* Client Contact Info (from semantic_role) */}
+        {(response.clientEmail || response.companyName || response.phone) && (
+          <>
+            <section>
+              <h3 className="text-sm font-semibold text-foreground mb-3">
+                {messages.intake.sheetClientInfo}
+              </h3>
+              <div className="space-y-2">
+                {response.clientEmail && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Mail className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    <a
+                      href={`mailto:${response.clientEmail}`}
+                      className="text-foreground hover:underline truncate"
+                    >
+                      {response.clientEmail}
+                    </a>
+                  </div>
+                )}
+                {response.companyName && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Building2 className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    <span className="text-foreground">{response.companyName}</span>
+                  </div>
+                )}
+                {response.phone && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Phone className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    <a
+                      href={`tel:${response.phone}`}
+                      className="text-foreground hover:underline"
+                    >
+                      {response.phone}
+                    </a>
+                  </div>
+                )}
+              </div>
+            </section>
+            <div className="border-t border-border" />
+          </>
+        )}
+
         {/* Q&A Section */}
         <section>
           <h3 className="text-sm font-semibold text-foreground mb-3">

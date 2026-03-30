@@ -498,6 +498,11 @@ export const messages = {
     sheetAppointment: 'Wizyta',
     sheetNoAppointment: 'Brak wizyty',
     sheetChangeStatus: 'Zmień status',
+    // Client contact info (semantic_role)
+    sheetClientInfo: 'Dane kontaktowe',
+    sheetClientEmail: 'Email',
+    sheetCompanyName: 'Firma',
+    sheetPhone: 'Telefon',
     // Appointment status labels
     appointmentScheduled: 'Zaplanowana',
     appointmentCompleted: 'Zakończona',

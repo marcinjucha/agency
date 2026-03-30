@@ -39,12 +39,26 @@ export interface PipelineColumnConfig {
   statuses: ResponseStatus[]
 }
 
+/** Client contact info extracted from survey answers via semantic_role */
+export interface ClientInfo {
+  name: string
+  email: string | null
+  companyName: string | null
+  phone: string | null
+}
+
 /** Response as displayed in Pipeline card */
 export interface PipelineResponse {
   id: string
   status: ResponseStatus
-  /** Client name extracted from first answer, or fallback */
+  /** Client name extracted via semantic_role, or positional fallback */
   clientName: string
+  /** Client email extracted via semantic_role */
+  clientEmail: string | null
+  /** Company name extracted via semantic_role */
+  companyName: string | null
+  /** Phone extracted via semantic_role */
+  phone: string | null
   /** AI overall score (0-10), null if not analyzed */
   aiScore: number | null
   /** AI recommendation */
