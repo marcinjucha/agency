@@ -19,6 +19,9 @@ export const messages = {
     submissionError: 'Błąd wysyłania',
     submitting: 'Wysyłanie…',
     submitSurvey: 'Wyślij ankietę',
+    questionProgress: (filled: number, total: number) =>
+      `Wypełniono ${filled} z ${total} wymaganych pól`,
+    datePickerPlaceholder: 'Wybierz datę',
     // SurveyError
     surveyUnavailable: 'Ankieta niedostępna',
   },

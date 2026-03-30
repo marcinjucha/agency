@@ -46,6 +46,7 @@ export {
 } from './components/ui/select'
 export { Textarea } from './components/ui/textarea'
 export { Checkbox } from './components/ui/checkbox'
+export { RadioGroup, RadioGroupItem } from './components/ui/radio-group'
 export { Skeleton } from './components/ui/skeleton'
 export {
   Popover,
