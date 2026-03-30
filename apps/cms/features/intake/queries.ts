@@ -39,8 +39,8 @@ function extractClientInfo(
   const companyName = findByRole('company_name')
   const phone = findByRole('phone')
 
-  // Fallback for old surveys without semantic_role
-  const fallbackName = (() => {
+  // Display name priority: company → name → email → first answer → fallback
+  const displayName = companyName || name || email || (() => {
     const values = Object.values(answers)
     if (values.length > 0 && typeof values[0] === 'string' && values[0].trim()) {
       return values[0].trim()
@@ -49,7 +49,7 @@ function extractClientInfo(
   })()
 
   return {
-    name: name || fallbackName,
+    name: displayName,
     email,
     companyName,
     phone,
