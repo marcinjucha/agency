@@ -291,13 +291,12 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
 
             return (
               <div key={link.id} className="p-3 bg-muted rounded-lg border border-border">
-                {/* Header row: token + actions */}
+                {/* Row 1: token + active switch */}
                 <div className="flex items-center gap-2 mb-2">
                   <code className="text-xs bg-card px-2 py-1 rounded border border-border flex-1 truncate">
                     {link.token}
                   </code>
 
-                  {/* Always-visible is_active switch */}
                   <div className="flex items-center gap-1.5">
                     <Switch
                       checked={link.is_active}
@@ -311,39 +310,43 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
                       {link.is_active ? messages.surveys.active : messages.surveys.inactive}
                     </span>
                   </div>
+                </div>
 
+                {/* Row 2: action buttons */}
+                <div className="flex items-center gap-1.5 mb-2">
                   <Button
                     variant="outline"
                     size="sm"
+                    className="h-7 text-xs"
                     onClick={() => copyToClipboard(link.token, link.id)}
                     aria-label={messages.common.copyLink}
                   >
                     {copiedLinkId === link.id ? (
-                      <Check className="h-4 w-4 text-status-success-foreground" />
+                      <Check className="h-3.5 w-3.5 text-status-success-foreground" />
                     ) : (
-                      <Copy className="h-4 w-4" />
+                      <Copy className="h-3.5 w-3.5" />
                     )}
                   </Button>
 
-                  {!isEditing && (
+                  {!isEditing ? (
                     <Button
                       variant="outline"
                       size="sm"
+                      className="h-7 text-xs"
                       onClick={() => startEditing(link)}
                       aria-label={messages.surveys.editLink}
                     >
-                      <Pencil className="h-4 w-4" />
+                      <Pencil className="h-3.5 w-3.5" />
                     </Button>
-                  )}
-
-                  {isEditing && (
+                  ) : (
                     <Button
                       variant="outline"
                       size="sm"
+                      className="h-7 text-xs"
                       onClick={cancelEditing}
                       aria-label={messages.surveys.editLinkCancel}
                     >
-                      <X className="h-4 w-4" />
+                      <X className="h-3.5 w-3.5" />
                     </Button>
                   )}
 
@@ -352,9 +355,10 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
                       <Button
                         variant="outline"
                         size="sm"
+                        className="h-7 text-xs"
                         aria-label={messages.common.delete}
                       >
-                        <Trash2 className="h-4 w-4 text-destructive" />
+                        <Trash2 className="h-3.5 w-3.5 text-destructive" />
                       </Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent>
