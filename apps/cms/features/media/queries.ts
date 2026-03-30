@@ -5,14 +5,23 @@ import { toMediaItem, toMediaItemListItem } from './types'
 // TanStack Query key factory
 export const mediaKeys = {
   all: ['media-items'] as const,
-  list: (filters?: { type?: MediaType; search?: string }) =>
+  list: (filters?: { type?: MediaType; search?: string; folder_id?: string | null }) =>
     ['media-items', 'list', filters] as const,
   detail: (id: string) => ['media-items', 'detail', id] as const,
 }
 
+/**
+ * Fetch media items with optional filters.
+ *
+ * folder_id behavior:
+ * - undefined (default): no folder filter — returns ALL items (backward compat for InsertMediaModal)
+ * - null: items without a folder (unsorted/root)
+ * - string: items in a specific folder
+ */
 export async function getMediaItems(filters?: {
   type?: MediaType
   search?: string
+  folder_id?: string | null
 }): Promise<MediaItemListItem[]> {
   const supabase = createClient()
   let query = supabase
@@ -28,6 +37,15 @@ export async function getMediaItems(filters?: {
 
   if (filters?.search) {
     query = query.ilike('name', `%${filters.search}%`)
+  }
+
+  // folder_id filter: undefined = all items, null = unsorted, string = specific folder
+  if (filters?.folder_id !== undefined) {
+    if (filters.folder_id === null) {
+      query = query.is('folder_id', null)
+    } else {
+      query = query.eq('folder_id', filters.folder_id)
+    }
   }
 
   const { data, error } = await query

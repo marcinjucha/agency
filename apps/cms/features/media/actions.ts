@@ -42,6 +42,7 @@ export async function createMediaItem(
       width: parsed.data.width ?? null,
       height: parsed.data.height ?? null,
       thumbnail_url: parsed.data.thumbnail_url ?? null,
+      folder_id: parsed.data.folder_id ?? null,
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- media_items not in generated types

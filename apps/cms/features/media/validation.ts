@@ -33,6 +33,7 @@ export const createMediaItemSchema = z.object({
   width: z.number().int().positive().nullable().optional(),
   height: z.number().int().positive().nullable().optional(),
   thumbnail_url: z.string().url().nullable().optional(),
+  folder_id: z.string().uuid().nullable().optional(),
 })
 
 // --- Update media item (rename only) ---
