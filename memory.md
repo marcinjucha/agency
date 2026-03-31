@@ -12,7 +12,7 @@
 
 ## Workflow Engine — AAA-P-4 — IN PROGRESS (2026-03-31)
 
-**Status:** Iterations 1-4 done (DB schema, CMS types/queries/validation, execution list UI, enhanced email templates with variable system). Next: iteration 5a (Visual Builder Canvas with reactflow). Extends Core CMS (AAA-P-4). 11 Notion tasks with "Workflow:" prefix.
+**Status:** Iterations 1-5a done (DB schema, CMS types/queries/validation, execution list UI, enhanced email templates with variable system, visual builder canvas with reactflow + 4 UX improvements: horizontal flow, row-click-to-editor, gallery view, trigger-in-canvas). Next: iteration 5b. Extends Core CMS (AAA-P-4). 11 Notion tasks with "Workflow:" prefix.
 **Scope:** Per-tenant workflow automation. Two-layer: CMS (routing/config) + n8n (heavy execution). Visual builder (reactflow), explicit save, dynamic email template variables.
 **Key decisions:** Circular trigger protection (max depth=1 via triggering_execution_id self-FK), delay via n8n cron (±5 min), coexistence with current n8n email.
 **DB tables:** workflows, workflow_steps, workflow_edges (DAG), workflow_executions, workflow_step_executions (two-level execution tracking).
@@ -46,6 +46,7 @@
 - **Test after each priority level, not each fix** — Batch: fix all P0 → test → fix P1 → test → fix P2 → test. (2026-03-25)
 - **Commit per change, test later** — Individual commits, deferred manual testing. (2026-03-25)
 - **"wracamy do manuala" = switch back to manual mode** — Confirmation after each phase. "Auto" mode was session-scoped only, not permanent. (2026-03-31)
+- **"do all now" = don't defer P2 items** — When design agent recommends deferring P2 items, user overrides and wants all implemented immediately. Don't defer unless explicitly asked. (2026-03-31)
 
 ## Bugs Found (project-specific patterns)
 
@@ -57,6 +58,7 @@
 - **Label duplication between OPTIONS arrays and LABELS records** — types.ts OPTIONS and utils.ts LABELS both defined labels independently. Fix: derive OPTIONS from LABELS (single source of truth in types.ts). Watch for this pattern in future features. (2026-03-31)
 - **Dead message keys from missing type variants** — stepExecutionCancelled message defined but StepExecutionStatus type had no 'cancelled' variant. Fix: remove dead keys or add missing type variants. (2026-03-31)
 - **Partial unique index breaks ON CONFLICT upsert** — email_templates had UNIQUE(tenant_id, type) replaced with partial unique index (WHERE type != 'workflow_custom'). PostgreSQL cannot use partial indexes for ON CONFLICT targeting. Fix: replace upsert with select→maybeSingle then update/insert. (2026-03-31)
+- **Turbopack barrel re-export in email/types.ts** — `export { X } from '@agency/email'` causes SSR chunk loading failure. Same known Turbopack bug, new location. Fix: import-then-re-export (`import { X } from 'module'; export const Y = X`). (2026-03-31)
 
 ## Domain Concepts
 
@@ -77,6 +79,9 @@
 - **VariableInserterPopover in packages/ui/** — Shared component with local VariableItem interface (avoids packages→apps import boundary violation). Structurally compatible with TriggerVariable from apps/cms/. (2026-03-31)
 - **Hybrid variable architecture: registry + JSONB cache** — trigger-schemas.ts is source of truth (TypeScript). template_variables JSONB is lazy cache written on save for n8n (which can't call TypeScript). CMS always reads from registry, writes snapshot to DB. (2026-03-31)
 - **form_confirmation as registry key** — Standalone templates (form_confirmation) are just another entry in TRIGGER_VARIABLE_SCHEMAS. No special case, same variable system for workflow and non-workflow templates. (2026-03-31)
+- **NODE_TYPE_REGISTRY centralized** — node-styles.ts + WorkflowCanvas nodeTypes + AddNodeDropdown ITEMS were scattered. Centralized into node-registry.ts: NODE_TYPE_CONFIGS (config-only, safe outside dynamic boundary) and NODE_COMPONENTS (inside boundary). Adding new node type = 2 files. (2026-03-31)
+- **Dynamic import boundary: WorkflowCanvas only** — @xyflow/react (~150KB) loaded via next/dynamic({ ssr: false }). All reactflow imports confined to WorkflowCanvas + node components + CanvasControls. WorkflowEditor uses only type imports. Communication via ref (WorkflowCanvasHandle) + props. (2026-03-31)
+- **ReactFlowProvider inside dynamic boundary** — Must wrap ReactFlow from inside dynamically imported component, not outside. Importing ReactFlowProvider in parent defeats code splitting. (2026-03-31)
 
 ## Preferences
 
@@ -88,3 +93,7 @@
 - **Inline editing over Dialog for simple CRUD** — In-place editing for simple entities. Dialog = overkill for 4 fields. (2026-03-30)
 - **Combobox with inline create** — Create related entities without leaving current editor. Popover+Command pattern. (2026-03-30)
 - **Variable inserter button needs text label** — Icon-only Braces button too hard to find. Changed to ghost button with "Zmienne" text label for discoverability. (2026-03-31)
+- **Horizontal flow (left-to-right) for workflow canvas** — Handle Position.Left (input) → Position.Right (output), not top/bottom. Matches n8n mental model. (2026-03-31)
+- **Row click navigates directly to canvas editor** — List row click goes straight to canvas editor, no intermediate detail page. Reduces clicks from 3 to 1. (2026-03-31)
+- **Gallery/card view for workflows** — Card grid view option alongside table list. Grid shows workflow name, trigger badge, active dot, timestamp. Toggle persists to localStorage. (2026-03-31)
+- **Trigger creation in canvas, not dialog** — Trigger type set on canvas itself, not in CreateWorkflowDialog. Dialog simplified to name+description only. DB trigger_type defaults to 'manual'. Save syncs trigger_type from canvas. (2026-03-31)
