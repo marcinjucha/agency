@@ -866,6 +866,26 @@ export const messages = {
     noExecutionsDescription: 'Wykonania pojawią się tutaj po uruchomieniu workflow.',
     // Editor
     editorTitle: 'Edytor workflow',
+    editor: {
+      backToWorkflow: 'Wróć do workflow',
+      addNode: 'Dodaj krok',
+      save: 'Zapisz',
+      saving: 'Zapisywanie...',
+      saved: 'Zapisano',
+      unsavedChanges: 'Niezapisane zmiany',
+      canvasLoading: 'Ładowanie edytora...',
+      triggerLimitReached: 'Workflow może mieć tylko jeden wyzwalacz',
+      conditionYes: 'Tak',
+      conditionNo: 'Nie',
+      deleteHint: 'Zaznacz węzeł i naciśnij Delete',
+      saveFailed: 'Nie udało się zapisać workflow',
+      saveSuccess: 'Workflow zapisany',
+      trigger: 'Wyzwalacz',
+      addTriggerHint: 'Dodaj wyzwalacz, aby rozpocząć workflow',
+      zoomIn: 'Przybliż',
+      zoomOut: 'Oddal',
+      fitView: 'Dopasuj widok',
+    },
     // Labels
     nameLabel: 'Nazwa',
     descriptionLabel: 'Opis',
@@ -896,6 +916,8 @@ export const messages = {
     columnUpdated: 'Aktualizacja',
     columnActions: 'Akcje',
     loadFailed: 'Nie udało się załadować workflow',
+    viewList: 'Widok listy',
+    viewGrid: 'Widok siatki',
   },
 
   legalPages: {

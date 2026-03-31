@@ -1,6 +1,7 @@
 import { memo } from 'react'
 import { Handle, Position, type NodeProps } from '@xyflow/react'
 import { Zap } from 'lucide-react'
+import { messages } from '@/lib/messages'
 import { nodeBaseClasses, selectedClasses, borderColors } from './node-styles'
 
 export type TriggerNodeData = {
@@ -21,7 +22,7 @@ function TriggerNodeComponent({ data, selected }: NodeProps) {
         <Zap className="h-4 w-4 text-orange-500 shrink-0" />
         <div className="min-w-0">
           <p className="text-xs uppercase tracking-wide text-muted-foreground">
-            Wyzwalacz
+            {messages.workflows.editor.trigger}
           </p>
           <p className="text-sm font-medium text-foreground truncate">
             {nodeData.label}
@@ -30,7 +31,7 @@ function TriggerNodeComponent({ data, selected }: NodeProps) {
       </div>
       <Handle
         type="source"
-        position={Position.Bottom}
+        position={Position.Right}
         className="!bg-orange-500 !border-orange-600 !w-2.5 !h-2.5"
       />
     </div>

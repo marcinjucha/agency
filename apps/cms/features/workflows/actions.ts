@@ -33,7 +33,7 @@ export async function createWorkflow(
       tenant_id: tenantId,
       name: parsed.data.name,
       description: parsed.data.description || null,
-      trigger_type: parsed.data.trigger_type,
+      trigger_type: parsed.data.trigger_type ?? 'manual',
       trigger_config: parsed.data.trigger_config || {},
       is_active: parsed.data.is_active,
     }
@@ -234,8 +234,20 @@ export async function saveWorkflowCanvas(
       if (insertEdgesError) return { success: false, error: insertEdgesError.message }
     }
 
+    // 6. Sync trigger_type from canvas trigger node to workflow row
+    const triggerTypes = new Set(['survey_submitted', 'booking_created', 'lead_scored', 'manual'])
+    const triggerStep = parsed.data.steps.find((s) => triggerTypes.has(s.step_type))
+    if (triggerStep) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase as any)
+        .from('workflows')
+        .update({ trigger_type: triggerStep.step_type })
+        .eq('id', workflowId)
+    }
+
     revalidatePath(routes.admin.workflow(workflowId))
     revalidatePath(routes.admin.workflowEditor(workflowId))
+    revalidatePath(routes.admin.workflows)
     return { success: true }
   } catch (err) {
     const message = err instanceof Error ? err.message : messages.common.unknownError

@@ -9,9 +9,7 @@ export const createWorkflowSchema = z.object({
     .min(1, messages.validation.workflowNameRequired)
     .max(100, messages.validation.workflowNameMax),
   description: z.string().nullable().optional(),
-  trigger_type: z.enum(['survey_submitted', 'booking_created', 'lead_scored', 'manual'], {
-    required_error: messages.validation.triggerTypeRequired,
-  }),
+  trigger_type: z.enum(['survey_submitted', 'booking_created', 'lead_scored', 'manual']).optional().default('manual'),
   trigger_config: z.record(z.unknown()).optional().default({}),
   is_active: z.boolean().default(false),
 })
@@ -52,7 +50,10 @@ export const saveCanvasSchema = z.object({
   steps: z.array(
     z.object({
       id: z.string().uuid().optional(),
-      step_type: z.enum(['send_email', 'delay', 'condition', 'webhook', 'ai_action']),
+      step_type: z.enum([
+        'send_email', 'delay', 'condition', 'webhook', 'ai_action',
+        'survey_submitted', 'booking_created', 'lead_scored', 'manual',
+      ]),
       step_config: z.record(z.unknown()).optional().default({}),
       position_x: z
         .number()
