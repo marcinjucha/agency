@@ -1,0 +1,528 @@
+{
+  "name": "Workflow Action Executor",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "workflow-action-executor",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [
+        -200,
+        400
+      ],
+      "webhookId": "workflow-action-executor"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "kXK1WDkFCo7AsBSs",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/kXK1WDkFCo7AsBSs",
+          "cachedResultName": "Sentry Init"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        20,
+        400
+      ],
+      "id": "b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e",
+      "name": "Call 'Sentry Init'"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Store original webhook data for all branches\nconst webhookData = $('Webhook').first().json.body;\nreturn { json: webhookData };"
+      },
+      "id": "c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f",
+      "name": "Extract Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.stepType }}",
+                    "rightValue": "send_email",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": "send_email"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.stepType }}",
+                    "rightValue": "ai_action",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": "ai_action"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.stepType }}",
+                    "rightValue": "delay",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": "delay"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "id": "d4e5f6a7-b8c9-4d0e-1f2a-3b4c5d6e7f80",
+      "name": "Route by Step Type",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        460,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// --- send_email branch ---\n// Fetch email template from Supabase, build email payload for Send Email subworkflow.\n\nconst Sentry = require('@sentry/node');\nconst https = require('https');\n\nconst input = $('Extract Payload').first().json;\nconst { stepConfig, triggerPayload } = input;\n\nconst templateId = stepConfig.template_id;\nconst recipientField = stepConfig.recipient || 'notification_email';\n\n// Supabase config — uses service role key\nconst SUPABASE_URL = 'https://zujwhdoickvsotbrqkot.supabase.co';\nconst SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || $env.SUPABASE_SERVICE_ROLE_KEY;\n\nasync function supabaseGet(table, filters) {\n  const params = new URLSearchParams();\n  for (const [key, value] of Object.entries(filters)) {\n    params.append(key, `eq.${value}`);\n  }\n  params.append('limit', '1');\n\n  const url = `${SUPABASE_URL}/rest/v1/${table}?${params.toString()}`;\n\n  return new Promise((resolve, reject) => {\n    const req = https.request(url, {\n      method: 'GET',\n      headers: {\n        'apikey': SUPABASE_KEY,\n        'Authorization': `Bearer ${SUPABASE_KEY}`,\n        'Content-Type': 'application/json'\n      }\n    }, (res) => {\n      let body = '';\n      res.on('data', (chunk) => body += chunk);\n      res.on('end', () => {\n        try {\n          resolve(JSON.parse(body));\n        } catch (e) {\n          reject(new Error(`Parse error: ${body}`));\n        }\n      });\n    });\n    req.on('error', reject);\n    req.end();\n  });\n}\n\ntry {\n  // Fetch the response to get notification_email from survey_link\n  const responseId = triggerPayload.responseId;\n  const responses = await supabaseGet('responses', { id: responseId });\n  if (!responses.length) throw new Error(`Response ${responseId} not found`);\n  const response = responses[0];\n\n  // Fetch survey link for notification email\n  const surveyLinks = await supabaseGet('survey_links', { id: response.survey_link_id });\n  if (!surveyLinks.length) throw new Error(`Survey link ${response.survey_link_id} not found`);\n  const surveyLink = surveyLinks[0];\n\n  // Fetch email template if template_id provided\n  let subject = stepConfig.subject || 'Notification';\n  let html = stepConfig.html_body || '<p>Notification</p>';\n\n  if (templateId) {\n    const templates = await supabaseGet('email_templates', { id: templateId });\n    if (templates.length && templates[0].html_body) {\n      subject = templates[0].subject || subject;\n      html = templates[0].html_body;\n    }\n  }\n\n  // Determine recipient\n  let to = stepConfig.to;\n  if (!to) {\n    to = surveyLink[recipientField] || surveyLink.notification_email;\n  }\n\n  if (!to) throw new Error('No recipient email resolved');\n\n  return {\n    to,\n    subject,\n    html,\n    tenant_id: response.tenant_id,\n    _stepExecutionId: input.stepExecutionId,\n    _callbackUrl: input.callbackUrl\n  };\n} catch (err) {\n  Sentry.captureException(err);\n  await Sentry.flush(2000);\n  throw err;\n}\n"
+      },
+      "id": "e5f6a7b8-c9d0-4e1f-2a3b-4c5d6e7f8091",
+      "name": "Build Email Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "IL4nS-1FRcLA2IlSkvvKY",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/IL4nS-1FRcLA2IlSkvvKY",
+          "cachedResultName": "Send Email"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        960,
+        200
+      ],
+      "id": "f6a7b8c9-d0e1-4f2a-3b4c-5d6e7f809102",
+      "name": "Call 'Send Email'"
+    },
+    {
+      "parameters": {
+        "jsCode": "// --- ai_action branch ---\n// Call AI model (Anthropic API) with prompt from stepConfig.\n\nconst Sentry = require('@sentry/node');\nconst https = require('https');\n\nconst input = $('Extract Payload').first().json;\nconst { stepConfig, triggerPayload } = input;\n\nconst prompt = stepConfig.prompt || 'Analyze the following data.';\nconst model = stepConfig.model || 'claude-haiku-4-5-20250710';\nconst maxTokens = stepConfig.max_tokens || 1000;\nconst temperature = stepConfig.temperature || 0.3;\n\n// Build system + user message\nconst systemPrompt = stepConfig.system_prompt || 'You are a helpful assistant. Respond in JSON format when asked.';\nconst userMessage = `${prompt}\\n\\nContext: ${JSON.stringify(triggerPayload)}`;\n\nconst ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || $env.ANTHROPIC_API_KEY;\n\ntry {\n  const postData = JSON.stringify({\n    model,\n    max_tokens: maxTokens,\n    temperature,\n    system: systemPrompt,\n    messages: [{ role: 'user', content: userMessage }]\n  });\n\n  const result = await new Promise((resolve, reject) => {\n    const req = https.request({\n      hostname: 'api.anthropic.com',\n      path: '/v1/messages',\n      method: 'POST',\n      headers: {\n        'x-api-key': ANTHROPIC_API_KEY,\n        'anthropic-version': '2023-06-01',\n        'Content-Type': 'application/json',\n        'Content-Length': Buffer.byteLength(postData)\n      }\n    }, (res) => {\n      let body = '';\n      res.on('data', (chunk) => body += chunk);\n      res.on('end', () => {\n        try {\n          const parsed = JSON.parse(body);\n          if (res.statusCode >= 400) {\n            reject(new Error(`Anthropic API error ${res.statusCode}: ${JSON.stringify(parsed)}`));\n          } else {\n            resolve(parsed);\n          }\n        } catch (e) {\n          reject(new Error(`Parse error: ${body}`));\n        }\n      });\n    });\n    req.on('error', reject);\n    req.write(postData);\n    req.end();\n  });\n\n  // Extract text content (handle thinking blocks)\n  const textBlock = result.content.find(c => c.type === 'text');\n  const aiResponse = textBlock ? textBlock.text : JSON.stringify(result.content);\n\n  return {\n    ai_response: aiResponse,\n    model: result.model,\n    usage: result.usage,\n    _stepExecutionId: input.stepExecutionId,\n    _callbackUrl: input.callbackUrl\n  };\n} catch (err) {\n  Sentry.captureException(err);\n  await Sentry.flush(2000);\n  throw err;\n}\n"
+      },
+      "id": "a7b8c9d0-e1f2-4a3b-4c5d-6e7f80910213",
+      "name": "Call AI Model",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "amount": "={{ $('Extract Payload').first().json.stepConfig.duration_minutes || 1 }}",
+        "unit": "minutes"
+      },
+      "id": "b8c9d0e1-f2a3-4b4c-5d6e-7f8091021324",
+      "name": "Wait",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        720,
+        600
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare delay output with metadata for callback\nconst input = $('Extract Payload').first().json;\nreturn {\n  delay_completed: true,\n  duration_minutes: input.stepConfig.duration_minutes,\n  _stepExecutionId: input.stepExecutionId,\n  _callbackUrl: input.callbackUrl\n};"
+      },
+      "id": "c9d0e1f2-a3b4-4c5d-6e7f-809102132435",
+      "name": "Delay Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        600
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Merge outputs from all branches and prepare callback payload.\n// Only one branch will have data — the others will be empty.\n\nconst Sentry = require('@sentry/node');\n\nlet output = {};\nlet stepExecutionId, callbackUrl;\n\ntry {\n  // Try each branch — only one will have items\n  const branches = [\n    { name: \"Call 'Send Email'\", key: 'email_result' },\n    { name: 'Call AI Model', key: 'ai_result' },\n    { name: 'Delay Output', key: 'delay_result' }\n  ];\n\n  for (const branch of branches) {\n    try {\n      const items = $(branch.name).all();\n      if (items.length > 0) {\n        const data = items[0].json;\n        stepExecutionId = data._stepExecutionId;\n        callbackUrl = data._callbackUrl;\n        // Remove internal fields from output\n        const { _stepExecutionId, _callbackUrl, ...rest } = data;\n        output = rest;\n        break;\n      }\n    } catch (e) {\n      // Branch not executed — skip\n    }\n  }\n\n  // Fallback: get from original payload if branches didn't set it\n  if (!stepExecutionId) {\n    const original = $('Extract Payload').first().json;\n    stepExecutionId = original.stepExecutionId;\n    callbackUrl = original.callbackUrl;\n  }\n\n  return {\n    step_execution_id: stepExecutionId,\n    status: 'completed',\n    output_payload: output,\n    _callbackUrl: callbackUrl\n  };\n} catch (err) {\n  Sentry.captureException(err);\n  await Sentry.flush(2000);\n  throw err;\n}\n"
+      },
+      "id": "d0e1f2a3-b4c5-4d6e-7f80-910213243546",
+      "name": "Prepare Callback",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json._callbackUrl }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.WORKFLOW_TRIGGER_SECRET }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ step_execution_id: $json.step_execution_id, status: $json.status, output_payload: $json.output_payload }) }}"
+      },
+      "id": "e1f2a3b4-c5d6-4e7f-8091-021324354657",
+      "name": "Callback Success",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1440,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ received: true, stepExecutionId: $('Extract Payload').first().json.stepExecutionId }) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "f2a3b4c5-d6e7-4f80-9102-132435465768",
+      "name": "Respond OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        460,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Error handler — called when any branch fails.\n// Sends failure callback to CMS workflow engine.\n\nconst Sentry = require('@sentry/node');\n\nconst input = $('Extract Payload').first().json;\nconst errorMessage = $input.first().json?.error?.message\n  || $input.first().json?.message\n  || 'Unknown error in n8n workflow execution';\n\nSentry.captureException(new Error(`[Workflow Action Executor] Step failed: ${errorMessage}`));\nawait Sentry.flush(2000);\n\nreturn {\n  step_execution_id: input.stepExecutionId,\n  status: 'failed',\n  error: errorMessage,\n  _callbackUrl: input.callbackUrl\n};"
+      },
+      "id": "a3b4c5d6-e7f8-4091-0213-243546576879",
+      "name": "Handle Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        700
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json._callbackUrl }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.WORKFLOW_TRIGGER_SECRET }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ step_execution_id: $json.step_execution_id, status: $json.status, error: $json.error }) }}"
+      },
+      "id": "b4c5d6e7-f809-4102-1324-354657687980",
+      "name": "Callback Failure",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1440,
+        700
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Unsupported step type handler\nconst input = $('Extract Payload').first().json;\nreturn {\n  step_execution_id: input.stepExecutionId,\n  status: 'failed',\n  error: `Unsupported step type: ${input.stepType}`,\n  _callbackUrl: input.callbackUrl\n};"
+      },
+      "id": "c5d6e7f8-0910-4213-2435-465768798091",
+      "name": "Unsupported Type",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        800
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Call 'Sentry Init'",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call 'Sentry Init'": {
+      "main": [
+        [
+          {
+            "node": "Extract Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Payload": {
+      "main": [
+        [
+          {
+            "node": "Route by Step Type",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Respond OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by Step Type": {
+      "main": [
+        [
+          {
+            "node": "Build Email Payload",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Call AI Model",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Unsupported Type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Email Payload": {
+      "main": [
+        [
+          {
+            "node": "Call 'Send Email'",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Handle Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call 'Send Email'": {
+      "main": [
+        [
+          {
+            "node": "Prepare Callback",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Handle Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call AI Model": {
+      "main": [
+        [
+          {
+            "node": "Prepare Callback",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Handle Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Delay Output",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Handle Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delay Output": {
+      "main": [
+        [
+          {
+            "node": "Prepare Callback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Callback": {
+      "main": [
+        [
+          {
+            "node": "Callback Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Unsupported Type": {
+      "main": [
+        [
+          {
+            "node": "Callback Failure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "executionTimeout": 300,
+    "errorWorkflow": "pEvMbZGHKOsqaHmK"
+  },
+  "versionId": "a1b2c3d4-0001-4000-8000-000000000001",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "b46d0b13d69880a2fec430102877b55af4e44991549a68a3e78cd50a4dc1a09e"
+  },
+  "id": "",
+  "tags": []
+}

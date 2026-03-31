@@ -25,6 +25,7 @@ import {
   triggerConfigBookingCreatedSchema,
   triggerConfigLeadScoredSchema,
   triggerConfigManualSchema,
+  triggerConfigScheduledSchema,
 } from '../../validation'
 import type { ZodSchema } from 'zod'
 import type { ConfigPanelProps } from './index'
@@ -34,6 +35,7 @@ const triggerSchemaMap: Record<TriggerType, ZodSchema> = {
   booking_created: triggerConfigBookingCreatedSchema,
   lead_scored: triggerConfigLeadScoredSchema,
   manual: triggerConfigManualSchema,
+  scheduled: triggerConfigScheduledSchema,
 }
 
 /**
@@ -186,7 +188,7 @@ export function TriggerConfigPanel({ stepConfig, onChange }: ConfigPanelProps) {
         </div>
       )}
 
-      {(currentType === 'booking_created' || currentType === 'manual') && (
+      {(currentType === 'booking_created' || currentType === 'manual' || currentType === 'scheduled') && (
         <p className="text-sm text-muted-foreground">
           {messages.workflows.editor.triggerNoExtraConfig}
         </p>

@@ -58,5 +58,7 @@ export const routes = {
     emailTemplatesRender: '/api/email-templates/render',
     authGoogle: '/api/auth/google',
     authGoogleCallback: '/api/auth/google/callback',
+    workflowTrigger: '/api/workflows/trigger',
+    workflowCallback: '/api/workflows/callback',
   },
 } as const

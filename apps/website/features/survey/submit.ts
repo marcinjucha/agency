@@ -78,6 +78,22 @@ export async function submitResponse({
     }).catch(err => console.error('[N8N] Email confirmation webhook failed:', err))
   }
 
+  // Trigger CMS workflow engine (fire-and-forget)
+  if (process.env.CMS_WORKFLOW_TRIGGER_URL && process.env.WORKFLOW_TRIGGER_SECRET) {
+    fetch(process.env.CMS_WORKFLOW_TRIGGER_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.WORKFLOW_TRIGGER_SECRET}`,
+      },
+      body: JSON.stringify({
+        trigger_type: 'survey_submitted',
+        tenant_id: surveyData.tenant_id,
+        payload: { responseId, surveyLinkId: linkId },
+      }),
+    }).catch(err => console.error('[Workflow] Trigger failed:', err))
+  }
+
   // Step 3: Increment submission count using database function (non-critical)
   const { error: incrementError } = await supabase.rpc(
     'increment_submission_count',

@@ -183,9 +183,10 @@ features:
   - name: "Workflow Engine"
     status: in_progress
     task_id: "AAA-T-143"
-    description: "Per-tenant workflow automation. Visual builder (reactflow), CMS routing + n8n execution. 11 iterations. Iterations 1-5b done: DB schema, CMS foundation, list+CRUD, email template variables, ReactFlow canvas, config panels (6 types: trigger/send_email/condition/delay/webhook/ai_action), save/load canvas to DB, panel registry pattern, variable inserter in SendEmail, survey selector in trigger."
+    description: "Per-tenant workflow automation. Visual builder (reactflow), CMS routing + n8n execution. 11 iterations. Iterations 1-6 done: DB schema, CMS foundation, list+CRUD, email template variables, ReactFlow canvas, config panels (6 types: trigger/send_email/condition/delay/webhook/ai_action), save/load canvas to DB, panel registry pattern, variable inserter in SendEmail, survey selector in trigger, execution engine (trigger matching, topological sort step sequencing, condition branching, async n8n dispatch with callbacks, circular protection depth=1, webhook SSRF guard, optimistic lock on concurrent callbacks, fire-and-forget survey trigger from website, n8n Workflow Action Executor subworkflow)."
     why: "Automate repetitive business processes (email sequences, status updates, notifications) per tenant without code changes"
     depends_on: ["Email Notifications + Template Management", "n8n Infrastructure"]
+    completion_notes: "Iterations 1-6 complete. Tenants can design workflows visually and the engine executes them — survey submission triggers workflow, steps run via n8n, engine processes callbacks and advances state. Iterations 7-11 (monitoring, templates, advanced conditions, UI polish, production hardening) remain."
 
   # Backlog
   - name: "Multi-language Support (PL/EN)"

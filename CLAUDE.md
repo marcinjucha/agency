@@ -157,6 +157,7 @@ This monorepo contains two Notion projects with separate PROJECT_SPEC files:
 | **ui-components**        | `.claude/skills/ui-components/SKILL.md`        | React components, shadcn/ui design system, WCAG 2.1 AA accessibility, responsive design, visual design decisions (dark/moody tonality, layout/spacing/typography choices, quality gates). Controller for checkbox arrays, TanStack Query CMS-only, 4 UI states |
 | **validation-patterns**  | `.claude/skills/validation-patterns/SKILL.md`  | Two-pass validation (functional + architecture), YAML report formats, severity classification, 8-point architecture checklist. Loaded by validator-agent      |
 | **iterative-planning**   | `.claude/skills/iterative-planning/SKILL.md`   | Task size assessment (S/M/L/XL), iterative breakdown for M/L/XL tasks, dependency graph patterns (sequential/parallel/convergent), iteration sizing, parallelization identification. Used by analyst-agent in /develop Phase 2 |
+| **workflow-engine**      | `.claude/skills/ag-workflow-engine/SKILL.md`   | Workflow execution engine — trigger matching, step sequencing, condition branching, async/sync step split, n8n dispatch + callback, SSRF protection, service role client, adding new step/trigger types |
 | **agency-knowledge**     | `.claude/skills/agency-knowledge/SKILL.md`     | Halo Efekt positioning, ICP, pricing, brand voice, competitive framing, sales playbook. Dual positioning (narrow vs broad), copy decisions, marketing angles. Updated by agents after strategy sessions |
 
 ---

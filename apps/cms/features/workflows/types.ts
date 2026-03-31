@@ -3,7 +3,7 @@ import { messages } from '@/lib/messages'
 
 // --- Enums ---
 
-export type TriggerType = 'survey_submitted' | 'booking_created' | 'lead_scored' | 'manual'
+export type TriggerType = 'survey_submitted' | 'booking_created' | 'lead_scored' | 'manual' | 'scheduled'
 
 export type StepType = 'send_email' | 'delay' | 'condition' | 'webhook' | 'ai_action'
 
@@ -31,11 +31,16 @@ export type TriggerConfigManual = {
   type: 'manual'
 }
 
+export type TriggerConfigScheduled = {
+  type: 'scheduled'
+}
+
 export type TriggerConfig =
   | TriggerConfigSurveySubmitted
   | TriggerConfigBookingCreated
   | TriggerConfigLeadScored
   | TriggerConfigManual
+  | TriggerConfigScheduled
 
 // --- Step Config (discriminated union) ---
 
@@ -60,6 +65,7 @@ export type StepConfigWebhook = {
   url: string
   method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
   headers?: Record<string, string>
+  body?: string
 }
 
 export type StepConfigAiAction = {
@@ -186,6 +192,7 @@ export const TRIGGER_TYPE_LABELS: Record<TriggerType, string> = {
   booking_created: messages.workflows.triggerBookingCreated,
   lead_scored: messages.workflows.triggerLeadScored,
   manual: messages.workflows.triggerManual,
+  scheduled: messages.workflows.triggerScheduled,
 }
 
 export const STEP_TYPE_LABELS: Record<StepType, string> = {
