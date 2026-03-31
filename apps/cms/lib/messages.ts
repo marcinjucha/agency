@@ -909,6 +909,13 @@ export const messages = {
     emptyDescription: 'Strony prawne zostaną utworzone automatycznie.',
   },
 
+  variableInserter: {
+    label: 'Zmienne',
+    searchPlaceholder: 'Szukaj zmiennej...',
+    noVariables: 'Brak zmiennych',
+    insertVariable: 'Wstaw zmienną',
+  },
+
   validation: {
     titleRequired: 'Tytuł jest wymagany',
     slugRequired: 'Slug jest wymagany',

@@ -1,43 +1,59 @@
 'use client'
 
+import { useRef } from 'react'
 import { Input } from '@agency/ui'
 import { Label } from '@agency/ui'
 import { Textarea } from '@agency/ui'
+import { VariableInserter } from './VariableInserter'
 import type { Block, HeaderBlock, TextBlock, CtaBlock, DividerBlock, FooterBlock } from '../types'
+import type { TriggerVariable } from '@/lib/trigger-schemas'
 
 interface BlockEditorProps {
   block: Block
   onChange: (updated: Block) => void
+  variables?: TriggerVariable[]
 }
 
-export function BlockEditor({ block, onChange }: BlockEditorProps) {
+export function BlockEditor({ block, onChange, variables = [] }: BlockEditorProps) {
   switch (block.type) {
     case 'header':
-      return <HeaderBlockEditor block={block} onChange={onChange} />
+      return <HeaderBlockEditor block={block} onChange={onChange} variables={variables} />
     case 'text':
-      return <TextBlockEditor block={block} onChange={onChange} />
+      return <TextBlockEditor block={block} onChange={onChange} variables={variables} />
     case 'cta':
-      return <CtaBlockEditor block={block} onChange={onChange} />
+      return <CtaBlockEditor block={block} onChange={onChange} variables={variables} />
     case 'divider':
       return <DividerBlockEditor block={block} onChange={onChange} />
     case 'footer':
-      return <FooterBlockEditor block={block} onChange={onChange} />
+      return <FooterBlockEditor block={block} onChange={onChange} variables={variables} />
   }
 }
 
 // --- Sub-editors ---
 
-interface HeaderBlockEditorProps {
-  block: HeaderBlock
+interface SubEditorProps<T extends Block> {
+  block: T
   onChange: (updated: Block) => void
+  variables: TriggerVariable[]
 }
 
-function HeaderBlockEditor({ block, onChange }: HeaderBlockEditorProps) {
+function HeaderBlockEditor({ block, onChange, variables }: SubEditorProps<HeaderBlock>) {
+  const companyNameRef = useRef<HTMLInputElement>(null)
+
   return (
     <div className="space-y-3">
       <div>
-        <Label htmlFor="header-company-name">Nazwa firmy</Label>
+        <div className="flex items-center justify-between">
+          <Label htmlFor="header-company-name">Nazwa firmy</Label>
+          <VariableInserter
+            variables={variables}
+            inputRef={companyNameRef}
+            onChange={(val) => onChange({ ...block, companyName: val })}
+            currentValue={block.companyName}
+          />
+        </div>
         <Input
+          ref={companyNameRef}
           id="header-company-name"
           value={block.companyName}
           onChange={(e) => onChange({ ...block, companyName: e.target.value })}
@@ -67,50 +83,68 @@ function HeaderBlockEditor({ block, onChange }: HeaderBlockEditorProps) {
   )
 }
 
-interface TextBlockEditorProps {
-  block: TextBlock
-  onChange: (updated: Block) => void
-}
+function TextBlockEditor({ block, onChange, variables }: SubEditorProps<TextBlock>) {
+  const contentRef = useRef<HTMLTextAreaElement>(null)
 
-function TextBlockEditor({ block, onChange }: TextBlockEditorProps) {
   return (
     <div className="space-y-3">
       <div>
-        <Label htmlFor="text-content">Treść</Label>
+        <div className="flex items-center justify-between">
+          <Label htmlFor="text-content">Treść</Label>
+          <VariableInserter
+            variables={variables}
+            inputRef={contentRef}
+            onChange={(val) => onChange({ ...block, content: val })}
+            currentValue={block.content}
+          />
+        </div>
         <Textarea
+          ref={contentRef}
           id="text-content"
           rows={6}
           value={block.content}
           onChange={(e) => onChange({ ...block, content: e.target.value })}
         />
-        <p className="mt-1 text-xs text-muted-foreground">
-          Dostępne zmienne: <code>{'{{clientName}}'}</code>, <code>{'{{surveyTitle}}'}</code>,{' '}
-          <code>{'{{companyName}}'}</code>
-        </p>
       </div>
     </div>
   )
 }
 
-interface CtaBlockEditorProps {
-  block: CtaBlock
-  onChange: (updated: Block) => void
-}
+function CtaBlockEditor({ block, onChange, variables }: SubEditorProps<CtaBlock>) {
+  const labelRef = useRef<HTMLInputElement>(null)
+  const urlRef = useRef<HTMLInputElement>(null)
 
-function CtaBlockEditor({ block, onChange }: CtaBlockEditorProps) {
   return (
     <div className="space-y-3">
       <div>
-        <Label htmlFor="cta-label">Tekst przycisku</Label>
+        <div className="flex items-center justify-between">
+          <Label htmlFor="cta-label">Tekst przycisku</Label>
+          <VariableInserter
+            variables={variables}
+            inputRef={labelRef}
+            onChange={(val) => onChange({ ...block, label: val })}
+            currentValue={block.label}
+          />
+        </div>
         <Input
+          ref={labelRef}
           id="cta-label"
           value={block.label}
           onChange={(e) => onChange({ ...block, label: e.target.value })}
         />
       </div>
       <div>
-        <Label htmlFor="cta-url">URL</Label>
+        <div className="flex items-center justify-between">
+          <Label htmlFor="cta-url">URL</Label>
+          <VariableInserter
+            variables={variables}
+            inputRef={urlRef}
+            onChange={(val) => onChange({ ...block, url: val })}
+            currentValue={block.url}
+          />
+        </div>
         <Input
+          ref={urlRef}
           id="cta-url"
           type="url"
           value={block.url}
@@ -163,17 +197,23 @@ function DividerBlockEditor({ block, onChange }: DividerBlockEditorProps) {
   )
 }
 
-interface FooterBlockEditorProps {
-  block: FooterBlock
-  onChange: (updated: Block) => void
-}
+function FooterBlockEditor({ block, onChange, variables }: SubEditorProps<FooterBlock>) {
+  const textRef = useRef<HTMLTextAreaElement>(null)
 
-function FooterBlockEditor({ block, onChange }: FooterBlockEditorProps) {
   return (
     <div className="space-y-3">
       <div>
-        <Label htmlFor="footer-text">Tekst stopki</Label>
+        <div className="flex items-center justify-between">
+          <Label htmlFor="footer-text">Tekst stopki</Label>
+          <VariableInserter
+            variables={variables}
+            inputRef={textRef}
+            onChange={(val) => onChange({ ...block, text: val })}
+            currentValue={block.text}
+          />
+        </div>
         <Textarea
+          ref={textRef}
           id="footer-text"
           rows={3}
           value={block.text}

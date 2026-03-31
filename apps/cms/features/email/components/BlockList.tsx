@@ -6,13 +6,15 @@ import { ChevronUp, ChevronDown, Trash2, Plus } from 'lucide-react'
 import { BlockEditor } from './BlockEditor'
 import { AVAILABLE_BLOCKS } from '../types'
 import type { Block } from '../types'
+import type { TriggerVariable } from '@/lib/trigger-schemas'
 
 interface BlockListProps {
   blocks: Block[]
   onChange: (blocks: Block[]) => void
+  variables?: TriggerVariable[]
 }
 
-export function BlockList({ blocks, onChange }: BlockListProps) {
+export function BlockList({ blocks, onChange, variables = [] }: BlockListProps) {
   function moveUp(index: number) {
     if (index === 0) return
     const updated = [...blocks]
@@ -113,7 +115,7 @@ export function BlockList({ blocks, onChange }: BlockListProps) {
 
             {/* Block editor body */}
             <div className="p-3">
-              <BlockEditor block={block} onChange={updateBlock} />
+              <BlockEditor block={block} onChange={updateBlock} variables={variables} />
             </div>
           </Card>
         ))

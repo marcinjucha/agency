@@ -95,6 +95,9 @@ export { Collapsible, CollapsibleTrigger, CollapsibleContent } from './component
 export { CollapsibleCard } from './components/ui/collapsible-card'
 export type { CollapsibleCardProps } from './components/ui/collapsible-card'
 
+// Variable inserter
+export { VariableInserterPopover, type VariableItem } from './components/ui/variable-inserter-popover'
+
 // State components
 export { EmptyState } from './empty-state'
 export { ErrorState } from './error-state'
