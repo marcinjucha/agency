@@ -12,7 +12,7 @@
 
 ## Workflow Engine — AAA-P-4 — IN PROGRESS (2026-03-31)
 
-**Status:** Iterations 1-5a done (DB schema, CMS types/queries/validation, execution list UI, enhanced email templates with variable system, visual builder canvas with reactflow + 4 UX improvements: horizontal flow, row-click-to-editor, gallery view, trigger-in-canvas). Next: iteration 5b. Extends Core CMS (AAA-P-4). 11 Notion tasks with "Workflow:" prefix.
+**Status:** Iterations 1-5b done (DB schema, CMS types/queries/validation, execution list UI, enhanced email templates with variable system, visual builder canvas with reactflow + 4 UX improvements, config panels with save/load). Next: iteration 6. Extends Core CMS (AAA-P-4). 11 Notion tasks with "Workflow:" prefix.
 **Scope:** Per-tenant workflow automation. Two-layer: CMS (routing/config) + n8n (heavy execution). Visual builder (reactflow), explicit save, dynamic email template variables.
 **Key decisions:** Circular trigger protection (max depth=1 via triggering_execution_id self-FK), delay via n8n cron (±5 min), coexistence with current n8n email.
 **DB tables:** workflows, workflow_steps, workflow_edges (DAG), workflow_executions, workflow_step_executions (two-level execution tracking).
@@ -59,6 +59,9 @@
 - **Dead message keys from missing type variants** — stepExecutionCancelled message defined but StepExecutionStatus type had no 'cancelled' variant. Fix: remove dead keys or add missing type variants. (2026-03-31)
 - **Partial unique index breaks ON CONFLICT upsert** — email_templates had UNIQUE(tenant_id, type) replaced with partial unique index (WHERE type != 'workflow_custom'). PostgreSQL cannot use partial indexes for ON CONFLICT targeting. Fix: replace upsert with select→maybeSingle then update/insert. (2026-03-31)
 - **Turbopack barrel re-export in email/types.ts** — `export { X } from '@agency/email'` causes SSR chunk loading failure. Same known Turbopack bug, new location. Fix: import-then-re-export (`import { X } from 'module'; export const Y = X`). (2026-03-31)
+- **Debounce useEffect fires on mount → false dirty state** — onChange callback in debounced useEffect runs immediately on mount, marking form dirty before user interaction. Fix: `isFirstRender` ref mount guard that skips first execution. (2026-03-31)
+- **Stale closure in debounced useEffect** — onChange not in useEffect deps causes stale reference. Fix: `onChangeRef` pattern (useRef updated on every render, useEffect reads `.current`). (2026-03-31)
+- **revalidatePath does NOT invalidate TanStack Query cache** — Two separate cache layers: Next.js server cache (revalidatePath) and TanStack client cache (invalidateQueries). After mutations need BOTH. Workflow list didn't refresh after trigger change until both were called. (2026-03-31)
 
 ## Domain Concepts
 
@@ -82,6 +85,8 @@
 - **NODE_TYPE_REGISTRY centralized** — node-styles.ts + WorkflowCanvas nodeTypes + AddNodeDropdown ITEMS were scattered. Centralized into node-registry.ts: NODE_TYPE_CONFIGS (config-only, safe outside dynamic boundary) and NODE_COMPONENTS (inside boundary). Adding new node type = 2 files. (2026-03-31)
 - **Dynamic import boundary: WorkflowCanvas only** — @xyflow/react (~150KB) loaded via next/dynamic({ ssr: false }). All reactflow imports confined to WorkflowCanvas + node components + CanvasControls. WorkflowEditor uses only type imports. Communication via ref (WorkflowCanvasHandle) + props. (2026-03-31)
 - **ReactFlowProvider inside dynamic boundary** — Must wrap ReactFlow from inside dynamically imported component, not outside. Importing ReactFlowProvider in parent defeats code splitting. (2026-03-31)
+- **PANEL_REGISTRY for config panels** — Maps stepType → React component, mirrors NODE_TYPE_CONFIGS pattern. Adding new config panel = new file + registry entry. Config panels MUST NOT import @xyflow/react (outside dynamic boundary), communicate via parent props (WorkflowEditor → canvasRef.updateNodeData()). (2026-03-31)
+- **300ms debounced onChange for config panels** — Real-time canvas feedback without Apply button. Explicit Save persists to DB. triggerType passed in ConfigPanelProps for variable inserter context. (2026-03-31)
 
 ## Preferences
 
@@ -97,3 +102,6 @@
 - **Row click navigates directly to canvas editor** — List row click goes straight to canvas editor, no intermediate detail page. Reduces clicks from 3 to 1. (2026-03-31)
 - **Gallery/card view for workflows** — Card grid view option alongside table list. Grid shows workflow name, trigger badge, active dot, timestamp. Toggle persists to localStorage. (2026-03-31)
 - **Trigger creation in canvas, not dialog** — Trigger type set on canvas itself, not in CreateWorkflowDialog. Dialog simplified to name+description only. DB trigger_type defaults to 'manual'. Save syncs trigger_type from canvas. (2026-03-31)
+- **560px config panel width** — 480px too tight for form-heavy config panels (select dropdowns, variable inserters, expression fields). 560px confirmed as right size. (2026-03-31)
+- **VariableInserter reuse in all expression/email fields** — Reuse VariableInserterPopover from packages/ui/ in workflow config panels wherever trigger context variables are available (e.g., to_expression in send_email). (2026-03-31)
+- **Config panel registry = extensible pattern** — Easy addition of new step types without changing existing panels. UpdateStatus panel deferred from 5b — implement when needed. (2026-03-31)
