@@ -40,6 +40,13 @@ export const routes = {
     shopCategoryNew: '/admin/shop/categories/new',
     shopCategory: (id: string) => `/admin/shop/categories/${id}`,
 
+    // Automation
+    workflows: '/admin/workflows',
+    workflowNew: '/admin/workflows/new',
+    workflow: (id: string) => `/admin/workflows/${id}`,
+    workflowEditor: (id: string) => `/admin/workflows/${id}/editor`,
+    workflowExecutions: (id: string) => `/admin/workflows/${id}/executions`,
+
     // System
     emailTemplates: '/admin/email-templates',
     emailTemplate: (type: string) => `/admin/email-templates/${type}`,
