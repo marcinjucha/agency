@@ -179,6 +179,14 @@ features:
     description: "Self-hosted on VPS, 4 script extensions, typed conversion funnel (CTA Clicked→Survey Started→Survey Submitted→Booking Completed), CtaLink client component"
     why: "Privacy-friendly analytics without cookie consent"
 
+  # Workflow Engine (AAA-P-4 extension)
+  - name: "Workflow Engine"
+    status: in_progress
+    task_id: "AAA-T-143"
+    description: "Per-tenant workflow automation. Visual builder (reactflow), CMS routing + n8n execution. 11 iterations. Iteration 1/11 done: DB schema (5 tables + email_templates extension)."
+    why: "Automate repetitive business processes (email sequences, status updates, notifications) per tenant without code changes"
+    depends_on: ["Email Notifications + Template Management", "n8n Infrastructure"]
+
   # Backlog
   - name: "Multi-language Support (PL/EN)"
     status: not_started
