@@ -1,16 +1,17 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { Button } from '@agency/ui'
 import { Input } from '@agency/ui'
 import { Label } from '@agency/ui'
-import { Badge } from '@agency/ui'
 import { BlockList } from './BlockList'
 import { EmailPreview } from './EmailPreview'
-import { DEFAULT_BLOCKS, TEMPLATE_VARIABLES } from '../types'
+import { VariableInserter } from './VariableInserter'
+import { DEFAULT_BLOCKS } from '../types'
 import type { Block, EmailTemplate } from '../types'
 import { updateEmailTemplate } from '../actions'
 import { messages } from '@/lib/messages'
+import { getTriggerVariables } from '@/lib/trigger-schemas'
 
 interface EmailTemplateEditorProps {
   templateType: string
@@ -23,13 +24,8 @@ export function EmailTemplateEditor({ templateType, initialTemplate }: EmailTemp
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
-  const variables = TEMPLATE_VARIABLES[templateType as keyof typeof TEMPLATE_VARIABLES] ?? []
-
-  function copyVariable(name: string) {
-    navigator.clipboard.writeText(name).catch(() => {
-      // Non-critical — clipboard API can be blocked in some contexts
-    })
-  }
+  const variables = getTriggerVariables(templateType)
+  const subjectRef = useRef<HTMLInputElement>(null)
 
   function resetToDefaults() {
     setBlocks(DEFAULT_BLOCKS)
@@ -44,7 +40,7 @@ export function EmailTemplateEditor({ templateType, initialTemplate }: EmailTemp
       if (!result.success) setErrorMessage(result.error ?? null)
     } catch (err) {
       setSaveState('error')
-      setErrorMessage(err instanceof Error ? err.message : 'Nieoczekiwany błąd')
+      setErrorMessage(err instanceof Error ? err.message : messages.common.unknownError)
     } finally {
       // Reset to idle after 2.5s so button label returns to normal
       setTimeout(() => setSaveState('idle'), 2500)
@@ -60,34 +56,24 @@ export function EmailTemplateEditor({ templateType, initialTemplate }: EmailTemp
 
   return (
     <div className="mx-auto max-w-[1400px] flex flex-col gap-6">
-      {/* Subject + variables */}
-      <div className="space-y-3">
-        <div className="space-y-1.5">
+      {/* Subject */}
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between">
           <Label htmlFor="email-subject">{messages.email.subjectLabel}</Label>
-          <Input
-            id="email-subject"
-            value={subject}
-            onChange={(e) => setSubject(e.target.value)}
-            placeholder={messages.email.subjectPlaceholder}
+          <VariableInserter
+            variables={variables}
+            inputRef={subjectRef}
+            onChange={setSubject}
+            currentValue={subject}
           />
         </div>
-
-        {variables.length > 0 && (
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs text-muted-foreground">{messages.email.availableVariables}</span>
-            {variables.map((v) => (
-              <Badge
-                key={v.name}
-                variant="secondary"
-                className="cursor-pointer select-none hover:bg-secondary/80 transition-colors"
-                title={v.description}
-                onClick={() => copyVariable(v.name)}
-              >
-                {v.name}
-              </Badge>
-            ))}
-          </div>
-        )}
+        <Input
+          ref={subjectRef}
+          id="email-subject"
+          value={subject}
+          onChange={(e) => setSubject(e.target.value)}
+          placeholder={messages.email.subjectPlaceholder}
+        />
       </div>
 
       {/* Two-column editor + preview */}
@@ -97,7 +83,7 @@ export function EmailTemplateEditor({ templateType, initialTemplate }: EmailTemp
           <p className="text-xs font-semibold uppercase text-muted-foreground tracking-wide mb-3">
             {messages.email.blocksLabel}
           </p>
-          <BlockList blocks={blocks} onChange={setBlocks} />
+          <BlockList blocks={blocks} onChange={setBlocks} variables={variables} />
         </div>
 
         {/* Right: live preview (60% ≈ 3/5) */}
