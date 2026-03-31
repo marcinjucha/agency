@@ -4,6 +4,7 @@
   "private": true,
   "workspaces": [
     "apps/*",
+    "apps/shop/*",
     "packages/*"
   ],
   "scripts": {
@@ -17,6 +18,8 @@
     "dev:cms": "turbo run dev --filter=@agency/cms",
     "build:website": "turbo run build --filter=@agency/website",
     "build:cms": "turbo run build --filter=@agency/cms",
+    "dev:shop-jacek": "turbo run dev --filter=@agency/shop-jacek",
+    "build:shop-jacek": "turbo run build --filter=@agency/shop-jacek",
     "db:reset": "cd supabase && supabase db reset",
     "db:types": "supabase gen types typescript --local > packages/database/src/types.ts"
   },
