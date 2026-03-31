@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/client'
-import type { WorkflowListItem, WorkflowWithSteps, WorkflowExecution } from './types'
+import type { WorkflowListItem, WorkflowWithSteps, WorkflowExecution, EmailTemplateOption, SurveyOption } from './types'
 import { toWorkflow, toWorkflowListItem, toWorkflowStep, toWorkflowEdge, toWorkflowExecution } from './types'
 
 const LIST_FIELDS = 'id, name, description, trigger_type, is_active, created_at, updated_at' as const
@@ -77,4 +77,36 @@ export async function getWorkflowExecutions(
 
   if (error) throw error
   return (data || []).map(toWorkflowExecution)
+}
+
+/**
+ * Lightweight email template list for SendEmail config panel dropdown.
+ * Returns only id, type, subject — avoids loading full blocks/html_body.
+ */
+export async function getEmailTemplatesForWorkflow(): Promise<EmailTemplateOption[]> {
+  const supabase = createClient()
+
+  const { data, error } = await supabase
+    .from('email_templates')
+    .select('id, type, subject')
+    .order('type')
+
+  if (error) throw error
+  return (data || []) as EmailTemplateOption[]
+}
+
+/**
+ * Lightweight survey list for TriggerConfigPanel dropdown.
+ * Returns only id, title — avoids loading full survey data.
+ */
+export async function getSurveysForWorkflow(): Promise<SurveyOption[]> {
+  const supabase = createClient()
+
+  const { data, error } = await supabase
+    .from('surveys')
+    .select('id, title')
+    .order('title')
+
+  if (error) throw error
+  return (data || []) as SurveyOption[]
 }
