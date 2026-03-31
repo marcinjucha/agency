@@ -61,7 +61,7 @@
 - **Turbopack barrel re-export in email/types.ts** — `export { X } from '@agency/email'` causes SSR chunk loading failure. Same known Turbopack bug, new location. Fix: import-then-re-export (`import { X } from 'module'; export const Y = X`). (2026-03-31)
 - **Debounce useEffect fires on mount → false dirty state** — onChange callback in debounced useEffect runs immediately on mount, marking form dirty before user interaction. Fix: `isFirstRender` ref mount guard that skips first execution. (2026-03-31)
 - **Stale closure in debounced useEffect** — onChange not in useEffect deps causes stale reference. Fix: `onChangeRef` pattern (useRef updated on every render, useEffect reads `.current`). (2026-03-31)
-- **revalidatePath does NOT invalidate TanStack Query cache** — Two separate cache layers: Next.js server cache (revalidatePath) and TanStack client cache (invalidateQueries). After mutations need BOTH. Workflow list didn't refresh after trigger change until both were called. (2026-03-31)
+- **revalidatePath does NOT invalidate TanStack Query cache** — Need BOTH revalidatePath + invalidateQueries after mutations. (2026-03-31) [Pattern: ag-nextjs-patterns "Dual Cache Invalidation"]
 
 ## Domain Concepts
 
@@ -83,9 +83,7 @@
 - **Hybrid variable architecture: registry + JSONB cache** — trigger-schemas.ts is source of truth (TypeScript). template_variables JSONB is lazy cache written on save for n8n (which can't call TypeScript). CMS always reads from registry, writes snapshot to DB. (2026-03-31)
 - **form_confirmation as registry key** — Standalone templates (form_confirmation) are just another entry in TRIGGER_VARIABLE_SCHEMAS. No special case, same variable system for workflow and non-workflow templates. (2026-03-31)
 - **NODE_TYPE_REGISTRY centralized** — node-styles.ts + WorkflowCanvas nodeTypes + AddNodeDropdown ITEMS were scattered. Centralized into node-registry.ts: NODE_TYPE_CONFIGS (config-only, safe outside dynamic boundary) and NODE_COMPONENTS (inside boundary). Adding new node type = 2 files. (2026-03-31)
-- **Dynamic import boundary: WorkflowCanvas only** — @xyflow/react (~150KB) loaded via next/dynamic({ ssr: false }). All reactflow imports confined to WorkflowCanvas + node components + CanvasControls. WorkflowEditor uses only type imports. Communication via ref (WorkflowCanvasHandle) + props. (2026-03-31)
-- **ReactFlowProvider inside dynamic boundary** — Must wrap ReactFlow from inside dynamically imported component, not outside. Importing ReactFlowProvider in parent defeats code splitting. (2026-03-31)
-- **PANEL_REGISTRY for config panels** — Maps stepType → React component, mirrors NODE_TYPE_CONFIGS pattern. Adding new config panel = new file + registry entry. Config panels MUST NOT import @xyflow/react (outside dynamic boundary), communicate via parent props (WorkflowEditor → canvasRef.updateNodeData()). (2026-03-31)
+- **PANEL_REGISTRY for config panels** — Maps stepType → React component, mirrors NODE_TYPE_CONFIGS. Adding new config panel = new file + registry entry. (2026-03-31) [Pattern: ag-coding-practices "Naturally Extensible Systems"; boundary rules: ag-architecture "Dynamic Import Boundary"]
 - **300ms debounced onChange for config panels** — Real-time canvas feedback without Apply button. Explicit Save persists to DB. triggerType passed in ConfigPanelProps for variable inserter context. (2026-03-31)
 
 ## Preferences
