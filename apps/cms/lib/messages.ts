@@ -859,7 +859,6 @@ export const messages = {
     stepExecutionRunning: 'W toku',
     stepExecutionCompleted: 'Zakończono',
     stepExecutionFailed: 'Błąd',
-    stepExecutionCancelled: 'Anulowano',
     stepExecutionSkipped: 'Pominięto',
     // Executions page
     executionsTitle: 'Historia wykonań',
@@ -872,6 +871,31 @@ export const messages = {
     descriptionLabel: 'Opis',
     triggerTypeLabel: 'Typ wyzwalacza',
     stepTypeLabel: 'Typ kroku',
+    stepsCount: 'Kroki',
+    // Detail page
+    detailTitle: 'Szczegóły workflow',
+    openEditor: 'Otwórz edytor',
+    createdAt: 'Utworzono',
+    updatedAt: 'Ostatnia aktualizacja',
+    status: 'Status',
+    active: 'Aktywny',
+    inactive: 'Nieaktywny',
+    trigger: 'Wyzwalacz',
+    backToWorkflows: 'Workflow',
+    // Create dialog
+    createTitle: 'Nowy workflow',
+    createDescription: 'Zdefiniuj podstawowe informacje o workflow.',
+    create: 'Utwórz',
+    creating: 'Tworzenie…',
+    namePlaceholder: 'np. Potwierdzenie formularza',
+    descriptionPlaceholder: 'Opcjonalny opis workflow...',
+    // List columns
+    columnName: 'Nazwa',
+    columnTrigger: 'Wyzwalacz',
+    columnActive: 'Aktywny',
+    columnUpdated: 'Aktualizacja',
+    columnActions: 'Akcje',
+    loadFailed: 'Nie udało się załadować workflow',
   },
 
   legalPages: {
