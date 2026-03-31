@@ -28,11 +28,16 @@ export const triggerConfigManualSchema = z.object({
   type: z.literal('manual'),
 })
 
+export const triggerConfigScheduledSchema = z.object({
+  type: z.literal('scheduled'),
+})
+
 export const triggerConfigSchema = z.discriminatedUnion('type', [
   triggerConfigSurveySubmittedSchema,
   triggerConfigBookingCreatedSchema,
   triggerConfigLeadScoredSchema,
   triggerConfigManualSchema,
+  triggerConfigScheduledSchema,
 ])
 
 // Step configs
@@ -69,6 +74,7 @@ export const webhookConfigSchema = z.object({
     required_error: messages.validation.webhookMethodRequired,
   }),
   headers: z.record(z.string(), z.string()).nullable().optional(),
+  body: z.string().nullable().optional(),
 })
 
 export const aiActionConfigSchema = z.object({
@@ -96,6 +102,7 @@ export const triggerConfigSchemaMap: Record<TriggerType, ZodSchema> = {
   booking_created: triggerConfigBookingCreatedSchema,
   lead_scored: triggerConfigLeadScoredSchema,
   manual: triggerConfigManualSchema,
+  scheduled: triggerConfigScheduledSchema,
 }
 
 // --- Workflow schemas ---
@@ -106,7 +113,7 @@ export const createWorkflowSchema = z.object({
     .min(1, messages.validation.workflowNameRequired)
     .max(100, messages.validation.workflowNameMax),
   description: z.string().nullable().optional(),
-  trigger_type: z.enum(['survey_submitted', 'booking_created', 'lead_scored', 'manual']).optional().default('manual'),
+  trigger_type: z.enum(['survey_submitted', 'booking_created', 'lead_scored', 'manual', 'scheduled']).optional().default('manual'),
   trigger_config: z.record(z.unknown()).optional().default({}),
   is_active: z.boolean().default(false),
 })
@@ -149,7 +156,7 @@ export const saveCanvasSchema = z.object({
       id: z.string().uuid().optional(),
       step_type: z.enum([
         'send_email', 'delay', 'condition', 'webhook', 'ai_action',
-        'survey_submitted', 'booking_created', 'lead_scored', 'manual',
+        'survey_submitted', 'booking_created', 'lead_scored', 'manual', 'scheduled',
       ]),
       step_config: z.record(z.unknown()).optional().default({}),
       position_x: z

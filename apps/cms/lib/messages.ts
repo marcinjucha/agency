@@ -842,6 +842,11 @@ export const messages = {
     triggerBookingCreated: 'Wizyta zarezerwowana',
     triggerLeadScored: 'Lead oceniony',
     triggerManual: 'Ręczny',
+    triggerScheduled: 'Zaplanowany',
+    // Execution errors
+    notManualTrigger: 'Ten workflow nie jest typu ręcznego',
+    executionNotFound: 'Nie znaleziono wykonania',
+    cancelOnlyRunning: 'Można anulować tylko trwające wykonania',
     // Step types
     stepSendEmail: 'Wyślij email',
     stepDelay: 'Opóźnienie',

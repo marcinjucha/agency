@@ -11,6 +11,8 @@ import {
   type SaveCanvasFormData,
 } from './validation'
 import { toWorkflow, type Workflow } from './types'
+import { executeWorkflow } from './engine/executor'
+import { createServiceClient } from '@/lib/supabase/service'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
 
@@ -235,7 +237,7 @@ export async function saveWorkflowCanvas(
     }
 
     // 6. Sync trigger_type from canvas trigger node to workflow row
-    const triggerTypes = new Set(['survey_submitted', 'booking_created', 'lead_scored', 'manual'])
+    const triggerTypes = new Set(['survey_submitted', 'booking_created', 'lead_scored', 'manual', 'scheduled'])
     const triggerStep = parsed.data.steps.find((s) => triggerTypes.has(s.step_type))
     if (triggerStep) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -248,6 +250,109 @@ export async function saveWorkflowCanvas(
     revalidatePath(routes.admin.workflow(workflowId))
     revalidatePath(routes.admin.workflowEditor(workflowId))
     revalidatePath(routes.admin.workflows)
+    return { success: true }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : messages.common.unknownError
+    return { success: false, error: message }
+  }
+}
+
+// --- Manual trigger & cancel execution ---
+
+export async function triggerManualWorkflow(
+  workflowId: string
+): Promise<{ success: boolean; executionId?: string; error?: string }> {
+  try {
+    const auth = await getUserWithTenant()
+    if (isAuthError(auth)) return { success: false, error: auth.error }
+    const { supabase, tenantId } = auth
+
+    // Verify workflow belongs to user's tenant and has manual trigger
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: workflow, error: fetchError } = await (supabase as any)
+      .from('workflows')
+      .select('id, tenant_id, trigger_type')
+      .eq('id', workflowId)
+      .maybeSingle()
+
+    if (fetchError) return { success: false, error: fetchError.message }
+    if (!workflow) return { success: false, error: messages.workflows.workflowNotFound }
+
+    if (workflow.tenant_id !== tenantId) {
+      return { success: false, error: messages.workflows.workflowNotFound }
+    }
+
+    if (workflow.trigger_type !== 'manual') {
+      return { success: false, error: messages.workflows.notManualTrigger }
+    }
+
+    const result = await executeWorkflow(workflowId, { trigger_type: 'manual' })
+
+    revalidatePath(routes.admin.workflow(workflowId))
+    revalidatePath(routes.admin.workflowExecutions(workflowId))
+    return { success: true, executionId: result.executionId }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : messages.common.unknownError
+    return { success: false, error: message }
+  }
+}
+
+export async function cancelWorkflowExecution(
+  executionId: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const auth = await getUserWithTenant()
+    if (isAuthError(auth)) return { success: false, error: auth.error }
+    const { tenantId } = auth
+
+    const serviceClient = createServiceClient()
+
+    // Fetch execution and verify tenant ownership
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: execution, error: fetchError } = await (serviceClient as any)
+      .from('workflow_executions')
+      .select('id, workflow_id, tenant_id, status')
+      .eq('id', executionId)
+      .maybeSingle()
+
+    if (fetchError) return { success: false, error: fetchError.message }
+    if (!execution) return { success: false, error: messages.workflows.executionNotFound }
+
+    if (execution.tenant_id !== tenantId) {
+      return { success: false, error: messages.workflows.executionNotFound }
+    }
+
+    // Only cancel running or pending executions
+    if (!['running', 'pending'].includes(execution.status)) {
+      return { success: false, error: messages.workflows.cancelOnlyRunning }
+    }
+
+    const now = new Date().toISOString()
+
+    // Update execution status to cancelled
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error: updateError } = await (serviceClient as any)
+      .from('workflow_executions')
+      .update({ status: 'cancelled', completed_at: now })
+      .eq('id', executionId)
+
+    if (updateError) return { success: false, error: updateError.message }
+
+    // Cancel all pending and running step executions
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error: stepsError } = await (serviceClient as any)
+      .from('workflow_step_executions')
+      .update({ status: 'cancelled', completed_at: now })
+      .eq('execution_id', executionId)
+      .in('status', ['pending', 'running'])
+
+    if (stepsError) {
+      console.error('[cancelWorkflowExecution] Failed to cancel step executions:', stepsError.message)
+    }
+
+    const workflowId = execution.workflow_id as string
+    revalidatePath(routes.admin.workflow(workflowId))
+    revalidatePath(routes.admin.workflowExecutions(workflowId))
     return { success: true }
   } catch (err) {
     const message = err instanceof Error ? err.message : messages.common.unknownError
