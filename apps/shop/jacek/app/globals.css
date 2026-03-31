@@ -1,0 +1,51 @@
+@import 'tailwindcss';
+
+/* Scan UI package for Tailwind classes used in shadcn/ui components */
+@source "../../../../packages/ui/src/**/*.tsx";
+
+/* Tailwind v4 @theme — "library at night" dark + warm amber */
+@theme {
+  /* Deep charcoal backgrounds — darker than main website */
+  --color-background: hsl(20 10% 6%);
+  --color-foreground: hsl(30 15% 88%);
+  --color-card: hsl(20 10% 8%);
+  --color-card-foreground: hsl(30 15% 88%);
+  --color-popover: hsl(20 10% 8%);
+  --color-popover-foreground: hsl(30 15% 88%);
+
+  /* Warm amber primary — book/library feel */
+  --color-primary: hsl(36 90% 50%);
+  --color-primary-foreground: hsl(20 10% 6%);
+
+  --color-secondary: hsl(20 10% 12%);
+  --color-secondary-foreground: hsl(30 15% 88%);
+
+  --color-muted: hsl(20 8% 14%);
+  --color-muted-foreground: hsl(25 10% 50%);
+
+  --color-accent: hsl(36 50% 14%);
+  --color-accent-foreground: hsl(30 15% 88%);
+
+  --color-destructive: hsl(0 63% 31%);
+  --color-destructive-foreground: hsl(30 15% 88%);
+
+  --color-border: hsl(25 12% 18%);
+  --color-input: hsl(25 12% 18%);
+  --color-ring: hsl(36 90% 50%);
+
+  --radius: 0.5rem;
+
+  /* Font family variables for serif headings + sans body */
+  --font-heading: var(--font-merriweather), Georgia, 'Times New Roman', serif;
+  --font-body: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
+}
+
+/* Serif headings */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+}
+
+/* Sans-serif body */
+body {
+  font-family: var(--font-body);
+}
