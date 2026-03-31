@@ -46,5 +46,7 @@ export const queryKeys = {
     list: ['workflows', 'list'] as const,
     detail: (id: string) => ['workflows', 'detail', id] as const,
     executions: (workflowId: string) => ['workflows', 'executions', workflowId] as const,
+    emailTemplates: ['workflows', 'email-templates'] as const,
+    surveys: ['workflows', 'surveys'] as const,
   },
 } as const

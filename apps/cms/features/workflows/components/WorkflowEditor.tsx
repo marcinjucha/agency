@@ -1,9 +1,11 @@
 'use client'
 
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import dynamic from 'next/dynamic'
 import { messages } from '@/lib/messages'
 import { saveWorkflowCanvas, toggleWorkflowActive } from '../actions'
+import { queryKeys } from '@/lib/query-keys'
 import type { SaveCanvasFormData } from '../validation'
 import { WorkflowEditorHeader } from './WorkflowEditorHeader'
 import type { WorkflowCanvasHandle, CanvasNodeData, CanvasEdgeData } from './WorkflowCanvas'
@@ -14,6 +16,8 @@ import {
   type TriggerType,
   type StepType,
 } from '../types'
+import { ConfigPanelWrapper, getPanelComponent } from './panels'
+import type { ConfigPanelProps } from './panels'
 
 const WorkflowCanvas = dynamic(() => import('./WorkflowCanvas'), {
   ssr: false,
@@ -52,6 +56,8 @@ interface WorkflowEditorProps {
 }
 
 export function WorkflowEditor({ workflow }: WorkflowEditorProps) {
+  const queryClient = useQueryClient()
+
   // Stable UUID for synthetic trigger node (when no trigger step exists in DB)
   const syntheticTriggerIdRef = useRef(crypto.randomUUID())
 
@@ -113,6 +119,47 @@ export function WorkflowEditor({ workflow }: WorkflowEditorProps) {
   const [isSaving, setIsSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
 
+  // Config panel state
+  const [selectedNode, setSelectedNode] = useState<{
+    id: string
+    stepType: string
+    stepConfig: Record<string, unknown>
+  } | null>(null)
+
+  const handleNodeSelect = useCallback(
+    (nodeId: string | null, stepType: string, stepConfig: Record<string, unknown>) => {
+      if (!nodeId) {
+        setSelectedNode(null)
+        return
+      }
+      setSelectedNode({ id: nodeId, stepType, stepConfig })
+    },
+    []
+  )
+
+  const handleConfigChange = useCallback(
+    (config: Record<string, unknown>, triggerType?: TriggerType) => {
+      if (!selectedNode || !canvasRef.current) return
+
+      // Update node data on canvas
+      const label = triggerType ? getLabel(triggerType) : getLabel(selectedNode.stepType)
+      canvasRef.current.updateNodeData(selectedNode.id, {
+        stepConfig: config,
+        ...(triggerType ? { stepType: triggerType, label } : {}),
+      })
+
+      // Update local selected node state to keep panel in sync
+      setSelectedNode((prev) =>
+        prev ? { ...prev, stepConfig: config, ...(triggerType ? { stepType: triggerType } : {}) } : prev
+      )
+    },
+    [selectedNode]
+  )
+
+  const handlePanelClose = useCallback(() => {
+    setSelectedNode(null)
+  }, [])
+
   const handleDirtyChange = useCallback((dirty: boolean) => {
     setIsDirty(dirty)
   }, [])
@@ -146,6 +193,7 @@ export function WorkflowEditor({ workflow }: WorkflowEditorProps) {
 
       if (result.success) {
         canvasRef.current?.resetDirty()
+        queryClient.invalidateQueries({ queryKey: queryKeys.workflows.all })
       } else {
         setSaveError(result.error ?? messages.workflows.editor.saveFailed)
       }
@@ -179,6 +227,8 @@ export function WorkflowEditor({ workflow }: WorkflowEditorProps) {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [isDirty, isSaving, handleSave])
 
+  const PanelComponent = selectedNode ? getPanelComponent(selectedNode.stepType) : null
+
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)]">
       <WorkflowEditorHeader
@@ -196,16 +246,34 @@ export function WorkflowEditor({ workflow }: WorkflowEditorProps) {
           {saveError}
         </div>
       )}
-      <div className="flex-1 min-h-0">
-        <WorkflowCanvas
-          ref={canvasRef}
-          initialNodes={initialNodes}
-          initialEdges={initialEdges}
-          onDirtyChange={handleDirtyChange}
-          hasTriggerNode={hasTriggerNode}
-          triggerType={workflow.trigger_type}
-          getLabel={getLabel}
-        />
+      <div className="flex-1 min-h-0 flex flex-row">
+        <div className="flex-1 min-w-0">
+          <WorkflowCanvas
+            ref={canvasRef}
+            initialNodes={initialNodes}
+            initialEdges={initialEdges}
+            onDirtyChange={handleDirtyChange}
+            onNodeSelect={handleNodeSelect}
+            hasTriggerNode={hasTriggerNode}
+            triggerType={workflow.trigger_type}
+            getLabel={getLabel}
+          />
+        </div>
+        {selectedNode && PanelComponent && (
+          <ConfigPanelWrapper
+            nodeId={selectedNode.id}
+            stepType={selectedNode.stepType}
+            onClose={handlePanelClose}
+          >
+            <PanelComponent
+              nodeId={selectedNode.id}
+              stepType={selectedNode.stepType}
+              stepConfig={selectedNode.stepConfig}
+              onChange={handleConfigChange}
+              triggerType={workflow.trigger_type}
+            />
+          </ConfigPanelWrapper>
+        )}
       </div>
     </div>
   )

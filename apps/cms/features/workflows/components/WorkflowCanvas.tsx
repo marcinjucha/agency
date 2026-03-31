@@ -73,12 +73,14 @@ export interface WorkflowCanvasHandle {
   getNodes: () => CanvasNodeData[]
   getEdges: () => CanvasEdgeData[]
   resetDirty: () => void
+  updateNodeData: (nodeId: string, newData: Record<string, unknown>) => void
 }
 
 interface WorkflowCanvasProps {
   initialNodes: CanvasNodeData[]
   initialEdges: CanvasEdgeData[]
   onDirtyChange: (isDirty: boolean) => void
+  onNodeSelect?: (nodeId: string | null, stepType: string, stepConfig: Record<string, unknown>) => void
   hasTriggerNode: boolean
   triggerType: string
   getLabel: (stepType: string) => string
@@ -89,6 +91,7 @@ function CanvasInner(
     initialNodes,
     initialEdges,
     onDirtyChange,
+    onNodeSelect,
     hasTriggerNode: initialHasTrigger,
     triggerType,
     getLabel,
@@ -190,6 +193,20 @@ function CanvasInner(
     [hasTrigger, nodes.length, setNodes, triggerType, getLabel]
   )
 
+  // Node click handler — propagates selection to parent
+  const onNodeClick = useCallback(
+    (_event: React.MouseEvent, node: Node) => {
+      const data = node.data as Record<string, unknown>
+      onNodeSelect?.(node.id, data.stepType as string, data.stepConfig as Record<string, unknown> ?? {})
+    },
+    [onNodeSelect]
+  )
+
+  // Pane click handler — deselects
+  const onPaneClick = useCallback(() => {
+    onNodeSelect?.(null, '', {})
+  }, [onNodeSelect])
+
   // Expose current state to parent via ref
   useImperativeHandle(
     ref,
@@ -225,8 +242,22 @@ function CanvasInner(
         }))
         initialRef.current = JSON.stringify({ nodes: currentNodes, edges: currentEdges })
       },
+      updateNodeData: (nodeId: string, newData: Record<string, unknown>) => {
+        setNodes((nds) =>
+          nds.map((n) => {
+            if (n.id !== nodeId) return n
+            return {
+              ...n,
+              data: {
+                ...(n.data as Record<string, unknown>),
+                ...newData,
+              },
+            }
+          })
+        )
+      },
     }),
-    [nodes, edges]
+    [nodes, edges, setNodes]
   )
 
   return (
@@ -237,6 +268,8 @@ function CanvasInner(
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
+        onNodeClick={onNodeClick}
+        onPaneClick={onPaneClick}
         nodeTypes={nodeTypes}
         defaultEdgeOptions={defaultEdgeOptions}
         connectionLineType={ConnectionLineType.SmoothStep}

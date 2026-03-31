@@ -221,3 +221,31 @@ export const TRIGGER_TYPE_OPTIONS = Object.entries(TRIGGER_TYPE_LABELS).map(
 export const STEP_TYPE_OPTIONS = Object.entries(STEP_TYPE_LABELS).map(
   ([value, label]) => ({ value: value as StepType, label })
 )
+
+// --- Config panel types ---
+
+/** Lightweight email template for config panel dropdown (avoids full blocks/html_body) */
+export type EmailTemplateOption = {
+  id: string
+  type: string
+  subject: string
+}
+
+/** Lightweight survey for config panel dropdown */
+export type SurveyOption = {
+  id: string
+  title: string
+}
+
+/** All node types that have config panels (triggers + steps) */
+export type ConfigPanelNodeType = TriggerType | StepType
+
+/**
+ * HTTP methods available for webhook config.
+ * Derived from StepConfigWebhook['method'] but as a standalone constant for selects.
+ */
+export const HTTP_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'] as const
+export type HttpMethod = (typeof HTTP_METHODS)[number]
+
+/** Delay preset options (minutes) for quick selection in delay config */
+export const DELAY_PRESETS = [5, 15, 60, 1440, 4320] as const
