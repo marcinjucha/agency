@@ -9,7 +9,7 @@ architecture:
   key_decisions:
     - "Single Supabase DB — shop_ prefixed tables in same project as Halo Efekt, shared RLS patterns"
     - "CMS extended — features/shop-products/ and features/shop-categories/ in apps/cms, NOT a separate CMS"
-    - "Separate frontends per client — apps/shop/kolega/ and apps/shop/tata/ as independent Next.js apps"
+    - "Separate frontends per client — apps/shop/jacek/ and apps/shop/tata/ as independent Next.js apps"
     - "Tata: hybrid — external_link (paid books via Zolix/platform) + digital_download (free materials from S3). Kolega: external_link only (OLX/Allegro)"
     - "Reuse packages — @agency/ui, @agency/database, @agency/email, editor, media, SEO, legal pages"
     - "Sidebar 'Sklep' section — hardcoded initially, feature flags later (AAA-T-141 in Core CMS)"
@@ -83,10 +83,11 @@ features:
     task: "AAA-T-138"
     iteration: 6
     size: M
-    status: not_started
-    description: "apps/shop/kolega/ Next.js app — dark theme, @agency/ui, Supabase anon client, features/products/ foundation, turbo dev on port 3002."
-    why: "Standalone frontend app for kolega's product catalog"
+    status: done
+    description: "apps/shop/jacek/ Next.js app — dark + warm amber theme ('library at night'), Merriweather serif headings + Geist Sans body, Supabase anon client (NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY), features/products/ foundation with tenant_id filtering, lib/routes.ts + lib/messages.ts, Plausible analytics, homepage placeholder. Port 3002."
+    why: "Standalone frontend app for jacek's product catalog (user's father's shop)"
     depends_on: ["DB Schema"]
+    completion_notes: "Scaffolded apps/shop/jacek/ with 15 files. True anon client (publishable key, not service_role). TENANT_ID as server-only env var (no NEXT_PUBLIC_ prefix). shop_categories RLS USING(true) confirmed correct — anon has no tenant context. Warm amber hsl(36 90% 50%) distinct from main Halo Efekt website. Root package.json updated with apps/shop/* workspace glob + dev:shop-jacek script. Dev server runs on port 3002."
 
   # Iteration 7
   - name: "Product Catalog (Listing + Detail)"
@@ -94,8 +95,8 @@ features:
     iteration: 7
     size: M
     status: not_started
-    description: "/products grid with category filtering, /products/[slug] detail page, two layout renderers, external link buttons ('Zobacz na OLX'), responsive grid, navbar + footer."
-    why: "Public-facing catalog — the main value proposition for kolega's customers"
+    description: "/products grid with category filtering, /products/[slug] detail page, two layout renderers, external link buttons (editorial/gallery layouts), responsive grid, navbar + footer."
+    why: "Public-facing catalog — the main value proposition for jacek's customers"
     depends_on: ["CMS Product Editor", "Shop App Scaffolding"]
 
   # Iteration 8 (parallel with 7)

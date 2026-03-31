@@ -3,7 +3,7 @@
 ## Shop Platform — AAA-P-9 — IN PROGRESS (2026-03-30)
 
 **Status:** Iterations 1-5 done (DB schema, CMS foundation, product list, media folders, product editor). Side project.
-**Scope:** E-commerce: Both Kolega (pallets) AND Tata (books) are catalog-only with external links (NO Stripe). Single Supabase, CMS extended (`features/shop-*`), separate frontends under `apps/shop/tata/` and `apps/shop/kolega/` (nested, not flat). Tata first.
+**Scope:** E-commerce: Both Jacek (pallets, user's father) AND Tata (books) are catalog-only with external links (NO Stripe). Single Supabase, CMS extended (`features/shop-*`), separate frontends under `apps/shop/tata/` and `apps/shop/jacek/` (nested, not flat). Tata first. Name changed from "kolega" to "jacek" (2026-03-31).
 **Key decisions:** `shop_` prefixed tables, `listing_type` PostgreSQL ENUM, `gallery`/`editorial` display_layout (intent-based naming), `NUMERIC(10,2)` for price, `TEXT[]` for tags, flat categories.
 **Tata purchase:** Zolix for paid books (external_link), S3 for free materials (digital_download). Books are digital only. Cookie banner reused, Plausible for analytics.
 **Tata design:** Dark + warm amber ("library at night"), serif headings + sans body, editorial layout for book detail, minimal 3-link nav.
@@ -71,6 +71,7 @@
 - **deleteAppointment does NOT remove Google Calendar event** — DB row deleted only. Notion ticket created. (2026-03-28)
 - **email_configs table empty in production** — N8n uses hardcoded Resend fallback (`noreply@haloefekt.pl`). (2026-03-27)
 - **notification_email is per survey_link, not per tenant** — Each link has own notification address. (2026-03-27)
+- **RLS for anon can only filter by row properties** — is_published, UUID token, etc. Cannot filter by session context (tenant_id) because anon has no JWT. Tenant filtering must be app-level (server component). (2026-03-31)
 
 ## Architecture Decisions
 
@@ -85,6 +86,10 @@
 - **NODE_TYPE_REGISTRY centralized** — node-styles.ts + WorkflowCanvas nodeTypes + AddNodeDropdown ITEMS were scattered. Centralized into node-registry.ts: NODE_TYPE_CONFIGS (config-only, safe outside dynamic boundary) and NODE_COMPONENTS (inside boundary). Adding new node type = 2 files. (2026-03-31)
 - **PANEL_REGISTRY for config panels** — Maps stepType → React component, mirrors NODE_TYPE_CONFIGS. Adding new config panel = new file + registry entry. (2026-03-31) [Pattern: ag-coding-practices "Naturally Extensible Systems"; boundary rules: ag-architecture "Dynamic Import Boundary"]
 - **300ms debounced onChange for config panels** — Real-time canvas feedback without Apply button. Explicit Save persists to DB. triggerType passed in ConfigPanelProps for variable inserter context. (2026-03-31)
+- **TENANT_ID as server-only env var for shop frontends** — No NEXT_PUBLIC_ prefix, prevents client-side leakage of tenant context. Shop is per-tenant: env var filters products/categories. (2026-03-31)
+- **True anon Supabase client for shop frontend** — Uses NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY (not service_role like website). RLS enforces is_published for products. (2026-03-31)
+- **shop_categories RLS USING(true) is correct** — Anon has no JWT/tenant context, so tenant_id filter must be app-level (server component). Categories contain non-sensitive data. (2026-03-31)
+- **apps/shop/* workspace glob in root package.json** — apps/* doesn't match nested paths like apps/shop/jacek/. Need explicit apps/shop/* glob. (2026-03-31)
 
 ## Preferences
 
@@ -103,3 +108,4 @@
 - **560px config panel width** — 480px too tight for form-heavy config panels (select dropdowns, variable inserters, expression fields). 560px confirmed as right size. (2026-03-31)
 - **VariableInserter reuse in all expression/email fields** — Reuse VariableInserterPopover from packages/ui/ in workflow config panels wherever trigger context variables are available (e.g., to_expression in send_email). (2026-03-31)
 - **Config panel registry = extensible pattern** — Easy addition of new step types without changing existing panels. UpdateStatus panel deferred from 5b — implement when needed. (2026-03-31)
+- **Shop frontend path: apps/shop/jacek/** — Nested under apps/shop/ parent, not flat apps/shop-jacek/. User's father's shop name. (2026-03-31)
