@@ -1,3 +1,5 @@
+import { formatDistanceToNow } from 'date-fns'
+import { pl } from 'date-fns/locale'
 import type { TriggerType, StepType, ExecutionStatus, StepExecutionStatus } from './types'
 import {
   TRIGGER_TYPE_LABELS,
@@ -5,6 +7,29 @@ import {
   EXECUTION_STATUS_LABELS,
   STEP_EXECUTION_STATUS_LABELS,
 } from './types'
+
+const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000
+
+/**
+ * Format a date string as relative time (< 7 days) or localized date.
+ */
+export function formatDate(dateString: string | null): string {
+  if (!dateString) return '\u2014'
+  try {
+    const date = new Date(dateString)
+    const now = new Date()
+    if (now.getTime() - date.getTime() < SEVEN_DAYS_MS) {
+      return formatDistanceToNow(date, { addSuffix: true, locale: pl })
+    }
+    return date.toLocaleDateString('pl-PL', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    })
+  } catch {
+    return '\u2014'
+  }
+}
 
 export function getTriggerTypeLabel(type: TriggerType): string {
   return TRIGGER_TYPE_LABELS[type] ?? type

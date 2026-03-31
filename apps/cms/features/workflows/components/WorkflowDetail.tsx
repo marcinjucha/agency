@@ -97,7 +97,7 @@ export function WorkflowDetail({ workflow: initialWorkflow }: WorkflowDetailProp
           </Button>
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button variant="outline" size="sm" disabled={deleteMutation.isPending}>
+              <Button variant="outline" size="sm" disabled={deleteMutation.isPending} aria-label={messages.common.delete}>
                 <Trash2 className="h-4 w-4" />
               </Button>
             </AlertDialogTrigger>

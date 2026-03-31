@@ -1,11 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useRouter } from 'next/navigation'
 import { queryKeys } from '@/lib/query-keys'
 import { getWorkflows } from '../queries'
 import { deleteWorkflow, toggleWorkflowActive } from '../actions'
-import { getTriggerTypeLabel } from '../utils'
+import { getTriggerTypeLabel, formatDate } from '../utils'
 import type { WorkflowListItem, TriggerType } from '../types'
 import {
   Button,
@@ -25,32 +26,13 @@ import {
   AlertDialogTrigger,
 } from '@agency/ui'
 import Link from 'next/link'
-import { Zap, Plus, MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
-import { formatDistanceToNow } from 'date-fns'
-import { pl } from 'date-fns/locale'
+import { Zap, Plus, MoreHorizontal, Pencil, Trash2, LayoutGrid, List } from 'lucide-react'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
 import { CreateWorkflowDialog } from './CreateWorkflowDialog'
+import { WorkflowCard } from './WorkflowCard'
 
-const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000
-
-function formatDate(dateString: string | null): string {
-  if (!dateString) return '\u2014'
-  try {
-    const date = new Date(dateString)
-    const now = new Date()
-    if (now.getTime() - date.getTime() < SEVEN_DAYS_MS) {
-      return formatDistanceToNow(date, { addSuffix: true, locale: pl })
-    }
-    return date.toLocaleDateString('pl-PL', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-    })
-  } catch {
-    return '\u2014'
-  }
-}
+type ViewMode = 'list' | 'grid'
 
 function TriggerBadge({ type }: { type: string }) {
   return (
@@ -61,8 +43,20 @@ function TriggerBadge({ type }: { type: string }) {
 }
 
 export function WorkflowList() {
+  const router = useRouter()
   const queryClient = useQueryClient()
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
+  const [viewMode, setViewMode] = useState<ViewMode>('list')
+
+  useEffect(() => {
+    const stored = localStorage.getItem('workflow-view-mode') as ViewMode | null
+    if (stored === 'grid') setViewMode('grid')
+  }, [])
+
+  const handleViewModeChange = (mode: ViewMode) => {
+    setViewMode(mode)
+    localStorage.setItem('workflow-view-mode', mode)
+  }
 
   const {
     data: workflows,
@@ -146,48 +140,91 @@ export function WorkflowList() {
           <h1 className="text-2xl font-bold text-foreground">{messages.workflows.pageTitle}</h1>
           <p className="mt-1 text-sm text-muted-foreground">{messages.workflows.pageDescription}</p>
         </div>
-        <Button onClick={() => setCreateDialogOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          {messages.workflows.newWorkflow}
-        </Button>
+        <div className="flex items-center gap-3">
+          {/* View mode toggle */}
+          <div className="flex items-center rounded-md border border-border bg-muted/30 p-0.5">
+            <button
+              onClick={() => handleViewModeChange('list')}
+              className={`rounded-md p-1.5 transition-colors ${
+                viewMode === 'list'
+                  ? 'bg-muted text-foreground'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+              aria-label={messages.workflows.viewList}
+            >
+              <List className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => handleViewModeChange('grid')}
+              className={`rounded-md p-1.5 transition-colors ${
+                viewMode === 'grid'
+                  ? 'bg-muted text-foreground'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+              aria-label={messages.workflows.viewGrid}
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </button>
+          </div>
+          <Button onClick={() => setCreateDialogOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            {messages.workflows.newWorkflow}
+          </Button>
+        </div>
       </div>
 
-      {/* Table */}
-      <div className="overflow-x-auto rounded-lg border border-border">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-border bg-muted/50">
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                {messages.workflows.columnName}
-              </th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                {messages.workflows.columnTrigger}
-              </th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                {messages.workflows.columnActive}
-              </th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                {messages.workflows.columnUpdated}
-              </th>
-              <th className="px-4 py-3 text-right font-medium text-muted-foreground">
-                <span className="sr-only">{messages.workflows.columnActions}</span>
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {workflows.map((workflow) => (
-              <WorkflowRow
-                key={workflow.id}
-                workflow={workflow}
-                onDelete={(id) => deleteMutation.mutate(id)}
-                onToggle={(id, isActive) => toggleMutation.mutate({ id, isActive })}
-                isDeleting={deleteMutation.isPending && deleteMutation.variables === workflow.id}
-                isToggling={toggleMutation.isPending && toggleMutation.variables?.id === workflow.id}
-              />
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {viewMode === 'list' ? (
+        /* Table */
+        <div className="overflow-x-auto rounded-lg border border-border">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border bg-muted/50">
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                  {messages.workflows.columnName}
+                </th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                  {messages.workflows.columnTrigger}
+                </th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                  {messages.workflows.columnActive}
+                </th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                  {messages.workflows.columnUpdated}
+                </th>
+                <th className="px-4 py-3 text-right font-medium text-muted-foreground">
+                  <span className="sr-only">{messages.workflows.columnActions}</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {workflows.map((workflow) => (
+                <WorkflowRow
+                  key={workflow.id}
+                  workflow={workflow}
+                  onDelete={(id) => deleteMutation.mutate(id)}
+                  onToggle={(id, isActive) => toggleMutation.mutate({ id, isActive })}
+                  isDeleting={deleteMutation.isPending && deleteMutation.variables === workflow.id}
+                  isToggling={toggleMutation.isPending && toggleMutation.variables?.id === workflow.id}
+                />
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        /* Grid */
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {workflows.map((workflow) => (
+            <WorkflowCard
+              key={workflow.id}
+              workflow={workflow}
+              onDelete={(id) => deleteMutation.mutate(id)}
+              onToggle={(id, isActive) => toggleMutation.mutate({ id, isActive })}
+              isDeleting={deleteMutation.isPending && deleteMutation.variables === workflow.id}
+              isToggling={toggleMutation.isPending && toggleMutation.variables?.id === workflow.id}
+            />
+          ))}
+        </div>
+      )}
 
       <CreateWorkflowDialog
         open={createDialogOpen}
@@ -208,15 +245,25 @@ interface WorkflowRowProps {
 }
 
 function WorkflowRow({ workflow, onDelete, onToggle, isDeleting, isToggling }: WorkflowRowProps) {
+  const router = useRouter()
+
   return (
-    <tr className="border-b border-border last:border-b-0 transition-colors hover:bg-muted/30">
+    <tr
+      className="border-b border-border last:border-b-0 transition-colors hover:bg-muted/50 cursor-pointer"
+      role="link"
+      tabIndex={0}
+      onClick={() => router.push(routes.admin.workflowEditor(workflow.id))}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          router.push(routes.admin.workflowEditor(workflow.id))
+        }
+      }}
+    >
       <td className="px-4 py-3">
-        <Link
-          href={routes.admin.workflow(workflow.id)}
-          className="font-medium text-foreground hover:underline"
-        >
+        <span className="font-medium text-foreground">
           {workflow.name}
-        </Link>
+        </span>
         {workflow.description && (
           <p className="mt-0.5 text-xs text-muted-foreground line-clamp-1">
             {workflow.description}
@@ -226,7 +273,7 @@ function WorkflowRow({ workflow, onDelete, onToggle, isDeleting, isToggling }: W
       <td className="px-4 py-3">
         <TriggerBadge type={workflow.trigger_type} />
       </td>
-      <td className="px-4 py-3">
+      <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
         <Switch
           checked={workflow.is_active}
           onCheckedChange={(checked) => onToggle(workflow.id, checked)}
@@ -237,9 +284,9 @@ function WorkflowRow({ workflow, onDelete, onToggle, isDeleting, isToggling }: W
       <td className="px-4 py-3 text-muted-foreground">
         {formatDate(workflow.updated_at)}
       </td>
-      <td className="px-4 py-3 text-right">
+      <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-end gap-1">
-          <Link href={routes.admin.workflow(workflow.id)}>
+          <Link href={routes.admin.workflowEditor(workflow.id)}>
             <Button variant="ghost" size="sm" aria-label={messages.common.edit}>
               <Pencil className="h-4 w-4" />
             </Button>

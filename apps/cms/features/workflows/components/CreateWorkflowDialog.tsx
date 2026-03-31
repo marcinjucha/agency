@@ -7,7 +7,6 @@ import { useRouter } from 'next/navigation'
 import { queryKeys } from '@/lib/query-keys'
 import { createWorkflowSchema, type CreateWorkflowFormData } from '../validation'
 import { createWorkflow } from '../actions'
-import { TRIGGER_TYPE_OPTIONS } from '../types'
 import {
   Button,
   Input,
@@ -19,11 +18,6 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
 } from '@agency/ui'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
@@ -40,7 +34,6 @@ export function CreateWorkflowDialog({ open, onOpenChange }: CreateWorkflowDialo
   const {
     register,
     handleSubmit,
-    setValue,
     reset,
     formState: { errors },
   } = useForm<CreateWorkflowFormData>({
@@ -48,8 +41,6 @@ export function CreateWorkflowDialog({ open, onOpenChange }: CreateWorkflowDialo
     defaultValues: {
       name: '',
       description: '',
-      trigger_type: 'survey_submitted',
-      is_active: false,
     },
   })
 
@@ -64,7 +55,7 @@ export function CreateWorkflowDialog({ open, onOpenChange }: CreateWorkflowDialo
       reset()
       onOpenChange(false)
       if (result.data?.id) {
-        router.push(routes.admin.workflow(result.data.id))
+        router.push(routes.admin.workflowEditor(result.data.id))
       }
     },
   })
@@ -113,28 +104,6 @@ export function CreateWorkflowDialog({ open, onOpenChange }: CreateWorkflowDialo
               placeholder={messages.workflows.descriptionPlaceholder}
               rows={3}
             />
-          </div>
-
-          {/* Trigger Type */}
-          <div className="space-y-1.5">
-            <Label htmlFor="workflow-trigger-type">{messages.workflows.triggerTypeLabel} *</Label>
-            <Select
-              defaultValue="survey_submitted"
-              onValueChange={(value) =>
-                setValue('trigger_type', value as CreateWorkflowFormData['trigger_type'])
-              }
-            >
-              <SelectTrigger id="workflow-trigger-type" aria-required="true">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {TRIGGER_TYPE_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
 
           {/* Error */}
