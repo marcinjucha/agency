@@ -571,6 +571,8 @@ export const messages = {
     groupIntake: 'Intake',
     groupContent: 'Treść',
     groupShop: 'Sklep',
+    groupAutomation: 'Automatyzacja',
+    workflows: 'Workflow',
     groupSystem: 'System',
     shopProducts: 'Produkty',
     shopCategories: 'Kategorie',
@@ -808,6 +810,70 @@ export const messages = {
     lastEdited: 'Ostatnia edycja',
   },
 
+  workflows: {
+    // Page
+    pageTitle: 'Workflow',
+    pageDescription: 'Automatyzuj procesy za pomocą wizualnych przepływów pracy.',
+    newWorkflow: 'Nowy workflow',
+    editWorkflow: 'Edytuj workflow',
+    noWorkflows: 'Brak workflow',
+    noWorkflowsDescription: 'Stwórz swój pierwszy workflow aby zautomatyzować procesy.',
+    workflowNotFound: 'Nie znaleziono workflow',
+    // CRUD
+    createSuccess: 'Workflow został utworzony',
+    createFailed: 'Nie udało się utworzyć workflow',
+    updateSuccess: 'Workflow został zaktualizowany',
+    updateFailed: 'Nie udało się zaktualizować workflow',
+    deleteSuccess: 'Workflow został usunięty',
+    deleteFailed: 'Nie udało się usunąć workflow',
+    canvasSaveSuccess: 'Kanwa workflow została zapisana',
+    canvasSaveFailed: 'Nie udało się zapisać kanwy workflow',
+    deleteConfirmTitle: 'Usunąć workflow?',
+    deleteConfirmDescription: (name: string) =>
+      `Workflow "${name}" zostanie trwale usunięty wraz z historią wykonań. Tej operacji nie można cofnąć.`,
+    // Toggle
+    activated: 'Workflow aktywowany',
+    deactivated: 'Workflow dezaktywowany',
+    toggleFailed: 'Nie udało się zmienić statusu workflow',
+    activate: 'Aktywuj',
+    deactivate: 'Dezaktywuj',
+    // Trigger types
+    triggerSurveySubmitted: 'Formularz wysłany',
+    triggerBookingCreated: 'Wizyta zarezerwowana',
+    triggerLeadScored: 'Lead oceniony',
+    triggerManual: 'Ręczny',
+    // Step types
+    stepSendEmail: 'Wyślij email',
+    stepDelay: 'Opóźnienie',
+    stepCondition: 'Warunek',
+    stepWebhook: 'Webhook',
+    stepAiAction: 'Akcja AI',
+    // Execution statuses
+    executionPending: 'Oczekuje',
+    executionRunning: 'W toku',
+    executionCompleted: 'Zakończono',
+    executionFailed: 'Błąd',
+    executionCancelled: 'Anulowano',
+    // Step execution statuses
+    stepExecutionPending: 'Oczekuje',
+    stepExecutionRunning: 'W toku',
+    stepExecutionCompleted: 'Zakończono',
+    stepExecutionFailed: 'Błąd',
+    stepExecutionCancelled: 'Anulowano',
+    stepExecutionSkipped: 'Pominięto',
+    // Executions page
+    executionsTitle: 'Historia wykonań',
+    noExecutions: 'Brak wykonań',
+    noExecutionsDescription: 'Wykonania pojawią się tutaj po uruchomieniu workflow.',
+    // Editor
+    editorTitle: 'Edytor workflow',
+    // Labels
+    nameLabel: 'Nazwa',
+    descriptionLabel: 'Opis',
+    triggerTypeLabel: 'Typ wyzwalacza',
+    stepTypeLabel: 'Typ kroku',
+  },
+
   legalPages: {
     title: 'Strony prawne',
     editTitle: 'Edycja strony prawnej',
@@ -849,6 +915,13 @@ export const messages = {
     subjectRequired: 'Temat jest wymagany',
     subjectTooLong: 'Temat jest za długi',
     templateNeedsBlock: 'Szablon musi zawierać co najmniej jeden blok',
+    // Workflows
+    workflowNameRequired: 'Nazwa workflow jest wymagana',
+    workflowNameMax: 'Nazwa workflow może mieć maksymalnie 100 znaków',
+    triggerTypeRequired: 'Typ wyzwalacza jest wymagany',
+    stepTypeRequired: 'Typ kroku jest wymagany',
+    sourceStepRequired: 'Krok źródłowy jest wymagany',
+    targetStepRequired: 'Krok docelowy jest wymagany',
     // Shop
     priceMustBeNonNegative: 'Cena nie może być ujemna',
     listingTypeRequired: 'Typ oferty jest wymagany',
