@@ -12,7 +12,8 @@ function getTenantId(): string {
 const PRODUCT_SELECT = `
   id, title, slug, short_description, html_body,
   cover_image_url, images, listing_type, display_layout,
-  price, currency, external_url, tags, category_id, published_at
+  price, currency, external_url, tags, category_id, published_at,
+  seo_metadata
 ` as const
 
 /**
@@ -73,6 +74,23 @@ export async function getProductBySlug(
     throw error
   }
   return data as unknown as ShopProductPublic
+}
+
+/**
+ * Get all published product slugs — for generateStaticParams.
+ */
+export async function getProductSlugs(): Promise<string[]> {
+  const supabase = createAnonClient()
+  const tenantId = getTenantId()
+
+  const { data, error } = await supabase
+    .from('shop_products')
+    .select('slug')
+    .eq('tenant_id', tenantId)
+    .eq('is_published', true)
+
+  if (error) throw error
+  return (data ?? []).map((p) => p.slug)
 }
 
 /**

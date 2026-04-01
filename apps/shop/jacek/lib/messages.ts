@@ -1,4 +1,4 @@
-/** Polish UI strings for the Jacek shop */
+/** Polish UI strings for the Jacek bookshop */
 export const messages = {
   common: {
     loading: 'Ładowanie...',
@@ -6,12 +6,23 @@ export const messages = {
     notFound: 'Nie znaleziono',
     backToHome: 'Wróć na stronę główną',
   },
+  nav: {
+    home: 'Strona główna',
+    books: 'Książki',
+    about: 'O Autorze',
+    contact: 'Kontakt',
+  },
   products: {
-    title: 'Produkty',
+    title: 'Książki',
     empty: 'Brak produktów do wyświetlenia',
+    noProducts: 'Brak produktów',
     viewDetails: 'Zobacz szczegóły',
+    buyBook: 'Kup książkę',
+    download: 'Pobierz',
     price: 'Cena',
     free: 'Bezpłatne',
+    allCategories: 'Wszystkie',
+    backToList: 'Powrót do listy',
     externalLink: 'Kup teraz',
     digitalDownload: 'Pobierz',
   },
@@ -19,9 +30,8 @@ export const messages = {
     title: 'Kategorie',
     all: 'Wszystkie',
   },
-  nav: {
-    home: 'Strona główna',
-    products: 'Produkty',
-    categories: 'Kategorie',
+  footer: {
+    copyright: '© {year} Jacek. Wszelkie prawa zastrzeżone.',
+    rights: 'Wszelkie prawa zastrzeżone.',
   },
 } as const
