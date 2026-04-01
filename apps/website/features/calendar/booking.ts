@@ -154,6 +154,28 @@ export async function bookAppointment(
     }
   }
 
+  // Trigger CMS workflow engine (fire-and-forget)
+  if (process.env.HOST_URL && process.env.WORKFLOW_TRIGGER_SECRET) {
+    fetch(`${process.env.HOST_URL}/api/workflows/trigger`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.WORKFLOW_TRIGGER_SECRET}`,
+      },
+      body: JSON.stringify({
+        trigger_type: 'booking_created',
+        tenant_id: tenantId,
+        payload: {
+          appointmentId: newAppointment.id,
+          responseId: data.responseId,
+          surveyLinkId: data.surveyId,
+          clientEmail: data.clientEmail,
+          appointmentAt: data.startTime,
+        },
+      }),
+    }).catch(err => console.error('[Workflow] booking_created trigger failed:', err))
+  }
+
   // Step 5: Create Google Calendar event (graceful degradation)
   let googleEventId: string | null = null
 

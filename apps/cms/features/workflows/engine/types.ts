@@ -28,6 +28,9 @@ export type TriggerPayloadBookingCreated = {
   trigger_type: 'booking_created'
   appointmentId: string
   responseId?: string
+  surveyLinkId?: string
+  clientEmail?: string
+  appointmentAt?: string
 }
 
 export type TriggerPayloadLeadScored = {
@@ -35,6 +38,8 @@ export type TriggerPayloadLeadScored = {
   responseId: string
   score: number
   recommendation: 'QUALIFIED' | 'DISQUALIFIED' | 'NEEDS_MORE_INFO'
+  summary?: string
+  analyzedAt?: string
 }
 
 export type TriggerPayloadManual = {

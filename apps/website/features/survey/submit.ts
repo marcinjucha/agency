@@ -79,8 +79,8 @@ export async function submitResponse({
   }
 
   // Trigger CMS workflow engine (fire-and-forget)
-  if (process.env.CMS_WORKFLOW_TRIGGER_URL && process.env.WORKFLOW_TRIGGER_SECRET) {
-    fetch(process.env.CMS_WORKFLOW_TRIGGER_URL, {
+  if (process.env.HOST_URL && process.env.WORKFLOW_TRIGGER_SECRET) {
+    fetch(`${process.env.HOST_URL}/api/workflows/trigger`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

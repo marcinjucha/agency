@@ -148,7 +148,10 @@ export function buildTriggerContext(
       return {
         ...base,
         appointmentId: triggerPayload.appointmentId,
-        ...(triggerPayload.responseId && { responseId: triggerPayload.responseId }),
+        ...(triggerPayload.responseId !== undefined && { responseId: triggerPayload.responseId }),
+        ...(triggerPayload.surveyLinkId !== undefined && { surveyLinkId: triggerPayload.surveyLinkId }),
+        ...(triggerPayload.clientEmail !== undefined && { clientEmail: triggerPayload.clientEmail }),
+        ...(triggerPayload.appointmentAt !== undefined && { appointmentAt: triggerPayload.appointmentAt }),
       }
 
     case 'lead_scored':
@@ -157,6 +160,8 @@ export function buildTriggerContext(
         responseId: triggerPayload.responseId,
         overallScore: triggerPayload.score,
         recommendation: triggerPayload.recommendation,
+        ...(triggerPayload.summary !== undefined && { summary: triggerPayload.summary }),
+        ...(triggerPayload.analyzedAt !== undefined && { analyzedAt: triggerPayload.analyzedAt }),
       }
 
     case 'manual':

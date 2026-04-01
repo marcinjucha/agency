@@ -917,8 +917,8 @@ export const messages = {
       toExpressionHint: 'Użyj zmiennych z wyzwalacza, np. {{contact.email}}',
       // Condition config
       expressionLabel: 'Wyrażenie warunku',
-      expressionPlaceholder: 'np. lead_score >= 7',
-      expressionHint: 'Użyj zmiennych z kontekstu, np. {{lead_score}} > 7',
+      expressionPlaceholder: 'np. overallScore >= 7',
+      expressionHint: 'Użyj zmiennych z kontekstu, np. overallScore >= 7',
       // Delay config
       durationMinutesLabel: 'Opóźnienie (minuty)',
       durationMinutesPlaceholder: 'np. 60',

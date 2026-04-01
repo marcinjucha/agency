@@ -175,6 +175,40 @@
     },
     {
       "parameters": {
+        "method": "POST",
+        "url": "={{ $env.CMS_INTERNAL_URL }}/api/workflows/trigger",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.WORKFLOW_TRIGGER_SECRET }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "string",
+        "body": "={{ JSON.stringify({ trigger_type: 'lead_scored', tenant_id: $('Parse & Structure Output').first().json.tenant_id, payload: { responseId: $('Parse & Structure Output').first().json.responseId, score: $('Parse & Structure Output').first().json.qualification.overall_score, recommendation: $('Parse & Structure Output').first().json.qualification.recommendation, summary: $('Parse & Structure Output').first().json.qualification.summary, analyzedAt: $('Parse & Structure Output').first().json.qualification.analyzed_at } }) }}",
+        "options": {
+          "timeout": 10000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "a1b2c3d4-e5f6-7890-abcd-lead0scored01",
+      "name": "Fire lead_scored Trigger",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3552,
+        -16
+      ]
+    },
+    {
+      "parameters": {
         "workflowId": {
           "__rl": true,
           "value": "kXK1WDkFCo7AsBSs",
@@ -344,6 +378,17 @@
         [
           {
             "node": "Parse & Structure Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Response with summary": {
+      "main": [
+        [
+          {
+            "node": "Fire lead_scored Trigger",
             "type": "main",
             "index": 0
           }

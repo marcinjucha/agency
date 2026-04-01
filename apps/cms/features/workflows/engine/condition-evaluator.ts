@@ -57,7 +57,9 @@ function escapeRegex(str: string): string {
 
 /** Resolves a field name to its value from the variable context. */
 function resolveField(field: string, context: VariableContext): unknown {
-  return getNestedValue(context, field)
+  // Strip {{ }} wrapping so both {{lead_score}} and lead_score work in expressions
+  const cleanField = field.replace(/^\{\{|\}\}$/g, '').trim()
+  return getNestedValue(context, cleanField)
 }
 
 /**

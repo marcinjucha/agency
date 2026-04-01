@@ -12,7 +12,7 @@
 
 ## Workflow Engine — AAA-P-4 — IN PROGRESS (2026-03-31)
 
-**Status:** Iterations 1-8 done. Iter 8 (Execution Logs UI, AAA-T-151, 2026-04-01): global execution list + per-workflow execution tab, step execution timeline, status badges, duration formatting, real-time polling. Next: iteration 9 — depends on iter 8. Extends Core CMS (AAA-P-4). 11 Notion tasks with "Workflow:" prefix.
+**Status:** Iterations 1-9 done. Iter 9 (Booking + Lead Score Triggers, AAA-T-152, 2026-04-01): survey_submitted trigger wired in submit.ts, booking_confirmed trigger in booking.ts, lead_scored trigger from n8n via existing /api/workflows/trigger. Next: iteration 10. Extends Core CMS (AAA-P-4). 11 Notion tasks with "Workflow:" prefix.
 **Scope:** Per-tenant workflow automation. Two-layer: CMS (routing/config) + n8n (heavy execution). Visual builder (reactflow), explicit save, dynamic email template variables.
 **Key decisions:** Circular trigger protection (max depth=1 via triggering_execution_id self-FK), delay via n8n cron (±5 min), coexistence with current n8n email.
 **Execution engine (iter 6):** Engine in `features/workflows/engine/` (feature-local, NOT package). API `/api/workflows/trigger` with Bearer token (WORKFLOW_TRIGGER_SECRET). Sync steps (condition, webhook) in CMS, async steps (send_email, ai_action, delay) dispatch to n8n generic dispatcher. `workflow_id` param for targeting specific workflow. `is_active` check at API level (404/422 for inactive). Service role client for engine writes. Variable context accumulates — each step's outputPayload merged into context for later steps via {{mustache}}.
@@ -76,6 +76,9 @@
 - **workflow_steps has NO sort_order column** — Analyst assumed it existed. Actual order determined by `created_at`. Always verify column existence before coding. (2026-04-01, AAA-T-151)
 - **Supabase error objects are NOT Error instances** — `String(supabaseError)` returns "[object Object]". Fix: `(error as any)?.message ?? fallback`. (2026-04-01, AAA-T-151)
 - **`import { cn } from '@agency/ui/lib/utils'` wrong path** — Must be `import { cn } from '@agency/ui'`. Recurring across new components. (2026-04-01, AAA-T-151)
+- **{{variable}} syntax in condition evaluator causes silent false** — Condition expressions with `{{fieldName}}` (mustache syntax copied from email template fields) always evaluated to false. Fix: resolveField() strips `{{ }}` wrapper. Both `fieldName` and `{{fieldName}}` now work. (2026-04-01, AAA-T-152)
+- **score vs overallScore mapping mismatch in lead_scored trigger** — TriggerPayloadLeadScored has field `score` but buildTriggerContext maps it to `overallScore` in variable context. expressionHint in trigger-schemas.ts must reference `overallScore`, not `score` or `lead_score`. (2026-04-01, AAA-T-152)
+- **Turbopack barrel re-export in features/workflows/types.ts** — Same Turbopack bug (dev-only, not build). New location: features/workflows/types.ts. Pre-existing, unrelated to task. Production build passes clean. (2026-04-01, AAA-T-152)
 
 ## Domain Concepts
 
@@ -86,6 +89,9 @@
 - **email_configs table empty in production** — N8n uses hardcoded Resend fallback (`noreply@haloefekt.pl`). (2026-03-27)
 - **notification_email is per survey_link, not per tenant** — Each link has own notification address. (2026-03-27)
 - **RLS for anon can only filter by row properties** — is_published, UUID token, etc. Cannot filter by session context (tenant_id) because anon has no JWT. Tenant filtering must be app-level (server component). (2026-03-31)
+- **Booking flow is in apps/website/features/calendar/booking.ts** — NOT calendar/actions.ts as assumed. Trigger integration point for booking_confirmed. (2026-04-01, AAA-T-152)
+- **n8n HTTP Request: specifyBody "string" + JSON.stringify()** — Reliable way to send nested objects in n8n HTTP Request node. bodyParameters can't handle nested payload objects. (2026-04-01, AAA-T-152)
+- **Condition evaluator supported operators** — >=, <=, !=, ==, >, <, contains, in. NO single `=` operator. Field names without `{{ }}` wrappers. (2026-04-01, AAA-T-152)
 
 ## Architecture Decisions
 
@@ -110,6 +116,9 @@
 - **Query key separation: executions.all() vs workflows.executions(workflowId)** — Separate TanStack Query key groups for global execution list vs per-workflow executions. Prevents invalidation cross-contamination. (2026-04-01, AAA-T-151)
 - **formatDuration vs formatExecutionDuration** — Two intentionally different utils: formatDuration(seconds) for general use, formatExecutionDuration(startedAt, completedAt) for execution timeline display. (2026-04-01, AAA-T-151)
 - **step_config delay: { value, unit } zamiast duration_minutes** — Ergonomiczne dla użytkownika ("2 dni" vs "2880 minut"). Konwersja na ms w momencie wykonania, nie w schemacie. (2026-04-01, AAA-T-150)
+- **HOST_URL env var reused for website→CMS communication** — Website .env.local HOST_URL points to CMS (localhost:3001 dev, cms.haloefekt.pl prod). Path /api/workflows/trigger appended in code. Reuses CMS's existing HOST_URL convention. (2026-04-01, AAA-T-152)
+- **No separate API route per trigger type** — n8n calls existing /api/workflows/trigger with trigger_type in payload (e.g., 'lead_scored'). No /api/workflows/trigger/lead-scored/ needed. Single endpoint, multiple trigger types. (2026-04-01, AAA-T-152)
+- **Old n8n email webhook removal deferred** — survey_submitted now fires workflow engine trigger in parallel with old N8N_WEBHOOK_FORM_CONFIRM_EMAIL_URL. Removing old webhook is destructive; deferred until tenant has active workflow with send_email step confirmed working. (2026-04-01, AAA-T-152)
 
 ## Preferences
 
