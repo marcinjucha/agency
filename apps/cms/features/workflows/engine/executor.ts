@@ -246,7 +246,7 @@ export async function resumeExecution(
     if (!execution) throw new Error(`Execution ${executionId} not found`)
 
     // If execution is already completed/failed/cancelled, don't resume
-    if (['completed', 'failed', 'cancelled'].includes(execution.status)) {
+    if (['completed', 'failed', 'cancelled'].includes(execution.status as string)) {
       return
     }
 
@@ -257,7 +257,7 @@ export async function resumeExecution(
       .from('workflow_executions')
       .update({ status: 'running' })
       .eq('id', executionId)
-      .in('status', ['running', 'waiting_for_callback'])
+      .in('status', ['running', 'waiting_for_callback', 'paused'])
       .select('id')
 
     if (lockError) throw new Error(`Failed to acquire execution lock: ${lockError.message}`)
@@ -488,8 +488,12 @@ async function runPendingSteps(
         Object.assign(variableContext, result.outputPayload)
       }
 
-      // Async steps (n8n-dispatched): leave in 'running' — callback will complete them.
+      // Async steps: either dispatched to n8n (leave in 'running') or
+      // delay (handler already wrote 'waiting' on step — set execution to 'paused').
       if (result.async) {
+        if (step.step_type === 'delay') {
+          await updateExecutionStatus(serviceClient, contextBase.executionId, 'paused')
+        }
         return 'waiting_for_callback'
       }
 
@@ -718,7 +722,7 @@ async function createStepExecutions(
 async function updateExecutionStatus(
   client: SupabaseClient<Database>,
   executionId: string,
-  status: 'completed' | 'failed',
+  status: 'completed' | 'failed' | 'paused',
   errorMessage?: string
 ): Promise<void> {
   const update: Record<string, unknown> = {

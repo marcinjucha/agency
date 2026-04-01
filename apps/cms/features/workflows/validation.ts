@@ -54,12 +54,13 @@ export const conditionConfigSchema = z.object({
 
 export const delayConfigSchema = z.object({
   type: z.literal('delay'),
-  duration_minutes: z
+  value: z
     .number({
       required_error: messages.validation.durationRequired,
     })
     .positive(messages.validation.durationPositive)
     .or(z.nan().transform(() => undefined as unknown as number)),
+  unit: z.enum(['minutes', 'hours', 'days']),
 })
 
 /**

@@ -1109,6 +1109,7 @@ export type Database = {
           id: string
           input_payload: Json | null
           output_payload: Json | null
+          resume_at: string | null
           started_at: string | null
           status: string
           step_id: string
@@ -1121,6 +1122,7 @@ export type Database = {
           id?: string
           input_payload?: Json | null
           output_payload?: Json | null
+          resume_at?: string | null
           started_at?: string | null
           status?: string
           step_id: string
@@ -1133,6 +1135,7 @@ export type Database = {
           id?: string
           input_payload?: Json | null
           output_payload?: Json | null
+          resume_at?: string | null
           started_at?: string | null
           status?: string
           step_id?: string
@@ -1215,7 +1218,7 @@ export type Database = {
           name: string
           tenant_id: string
           trigger_config?: Json
-          trigger_type: string
+          trigger_type?: string
           updated_at?: string
         }
         Update: {
@@ -1244,6 +1247,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      claim_due_delay_steps: {
+        Args: { p_limit?: number }
+        Returns: {
+          execution_id: string
+          id: string
+        }[]
+      }
       current_user_role: { Args: never; Returns: string }
       current_user_tenant_id: { Args: never; Returns: string }
       increment_submission_count: {

@@ -31,6 +31,7 @@ const TRIGGER_TYPES = new Set<string>([
   'booking_created',
   'lead_scored',
   'manual',
+  'scheduled',
 ])
 
 /**

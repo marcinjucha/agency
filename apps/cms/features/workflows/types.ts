@@ -7,9 +7,9 @@ export type TriggerType = 'survey_submitted' | 'booking_created' | 'lead_scored'
 
 export type StepType = 'send_email' | 'delay' | 'condition' | 'webhook' | 'ai_action'
 
-export type ExecutionStatus = 'pending' | 'running' | 'completed' | 'failed' | 'cancelled'
+export type ExecutionStatus = 'pending' | 'running' | 'completed' | 'failed' | 'cancelled' | 'paused'
 
-export type StepExecutionStatus = 'pending' | 'running' | 'completed' | 'failed' | 'skipped'
+export type StepExecutionStatus = 'pending' | 'running' | 'completed' | 'failed' | 'skipped' | 'waiting' | 'processing'
 
 // --- Trigger Config (discriminated union) ---
 
@@ -52,7 +52,8 @@ export type StepConfigSendEmail = {
 
 export type StepConfigDelay = {
   type: 'delay'
-  duration_minutes: number
+  value: number
+  unit: 'minutes' | 'hours' | 'days'
 }
 
 export type StepConfigCondition = {
@@ -209,6 +210,7 @@ export const EXECUTION_STATUS_LABELS: Record<ExecutionStatus, string> = {
   completed: messages.workflows.executionCompleted,
   failed: messages.workflows.executionFailed,
   cancelled: messages.workflows.executionCancelled,
+  paused: messages.workflows.executionPaused,
 }
 
 export const STEP_EXECUTION_STATUS_LABELS: Record<StepExecutionStatus, string> = {
@@ -217,6 +219,8 @@ export const STEP_EXECUTION_STATUS_LABELS: Record<StepExecutionStatus, string> =
   completed: messages.workflows.stepExecutionCompleted,
   failed: messages.workflows.stepExecutionFailed,
   skipped: messages.workflows.stepExecutionSkipped,
+  waiting: messages.workflows.stepExecutionWaiting,
+  processing: messages.workflows.stepExecutionProcessing,
 }
 
 // --- Options for select dropdowns (derived from label records) ---
@@ -254,5 +258,3 @@ export type ConfigPanelNodeType = TriggerType | StepType
 export const HTTP_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'] as const
 export type HttpMethod = (typeof HTTP_METHODS)[number]
 
-/** Delay preset options (minutes) for quick selection in delay config */
-export const DELAY_PRESETS = [5, 15, 60, 1440, 4320] as const
