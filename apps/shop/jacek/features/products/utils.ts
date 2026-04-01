@@ -32,7 +32,7 @@ export function buildProductJsonLd(
     name: product.title,
     description: product.short_description ?? undefined,
     image: product.cover_image_url ?? undefined,
-    url: `${siteUrl}/ksiazki/${product.slug}`,
+    url: `${siteUrl}/produkty/${product.slug}`,
   }
 
   if (product.price != null && product.price > 0) {

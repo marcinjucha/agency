@@ -9,7 +9,7 @@ type EditorialLayoutProps = {
 }
 
 export function EditorialLayout({ product }: EditorialLayoutProps) {
-  const price = formatPrice(Number(product.price), product.currency ?? 'PLN')
+  const price = formatPrice(product.price, product.currency ?? 'PLN')
 
   return (
     <div className="space-y-12">
@@ -60,7 +60,7 @@ export function EditorialLayout({ product }: EditorialLayoutProps) {
         {/* Rich text content */}
         {product.html_body && (
           <div
-            className="prose prose-invert max-w-none prose-headings:font-serif prose-headings:text-foreground prose-p:text-muted-foreground prose-a:text-primary prose-strong:text-foreground"
+            className="product-prose max-w-none"
             dangerouslySetInnerHTML={{ __html: product.html_body }}
           />
         )}
@@ -70,7 +70,7 @@ export function EditorialLayout({ product }: EditorialLayoutProps) {
           {product.tags && product.tags.length > 0 && (
             <div className="space-y-3">
               <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider">
-                Tagi
+                {messages.products.tags}
               </h3>
               <div className="flex flex-wrap gap-2">
                 {(product.tags as string[]).map((tag) => (

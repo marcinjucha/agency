@@ -12,6 +12,7 @@ export function ProductSearch() {
   const initialQuery = searchParams.get('q') ?? ''
   const [value, setValue] = useState(initialQuery)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const isFirstRender = useRef(true)
 
   const pushQuery = useCallback(
     (q: string) => {
@@ -28,6 +29,10 @@ export function ProductSearch() {
   )
 
   useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false
+      return
+    }
     if (timerRef.current) clearTimeout(timerRef.current)
     timerRef.current = setTimeout(() => {
       pushQuery(value)

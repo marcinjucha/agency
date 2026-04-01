@@ -10,7 +10,7 @@ type ProductCardProps = {
 }
 
 export function ProductCard({ product }: ProductCardProps) {
-  const price = formatPrice(Number(product.price), product.currency ?? 'PLN')
+  const price = formatPrice(product.price, product.currency ?? 'PLN')
 
   return (
     <Link

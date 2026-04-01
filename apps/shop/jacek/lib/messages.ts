@@ -31,6 +31,7 @@ export const messages = {
     backToList: 'Powrót do listy',
     externalLink: 'Kup teraz',
     digitalDownload: 'Pobierz',
+    tags: 'Tagi',
   },
   search: {
     placeholder: 'Szukaj książek...',
@@ -44,6 +45,10 @@ export const messages = {
     title: 'O Autorze',
     description:
       'Pisarz, edukator i pasjonat literatury. Od lat dzieli się swoimi przemyśleniami na temat świata, natury i ludzkiej kondycji — zarówno w formie powieści, jak i materiałów edukacyjnych. Każda książka to zaproszenie do wspólnej podróży przez wyobraźnię i refleksję.',
+    paragraph1:
+      'Wierzę, że dobra literatura nie musi być trudna — wystarczy, że jest szczera. Moje książki powstają z codziennych obserwacji, rozmów i\u00a0ciszy, która pozwala usłyszeć to, co naprawdę ważne.',
+    paragraph2:
+      'Materiały edukacyjne, które tworzę, są dostępne bezpłatnie — bo wiedza powinna być dostępna dla każdego.',
   },
   contact: {
     title: 'Kontakt',

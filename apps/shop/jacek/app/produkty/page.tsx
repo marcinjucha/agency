@@ -44,7 +44,9 @@ export default async function ProductsPage({ searchParams }: Props) {
         </div>
 
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <CategoryFilter categories={categories} />
+          <Suspense>
+            <CategoryFilter categories={categories} />
+          </Suspense>
           <div className="w-full sm:max-w-xs">
             <Suspense>
               <ProductSearch />

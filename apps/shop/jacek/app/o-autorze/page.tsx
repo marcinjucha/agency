@@ -14,15 +14,8 @@ export default function AboutPage() {
       </h1>
       <div className="mt-8 space-y-6 text-base leading-relaxed text-muted-foreground">
         <p>{messages.about.description}</p>
-        <p>
-          Wierzę, że dobra literatura nie musi być trudna — wystarczy, że jest
-          szczera. Moje książki powstają z codziennych obserwacji, rozmów
-          i&nbsp;ciszy, która pozwala usłyszeć to, co naprawdę ważne.
-        </p>
-        <p>
-          Materiały edukacyjne, które tworzę, są dostępne bezpłatnie — bo wiedza
-          powinna być dostępna dla każdego.
-        </p>
+        <p>{messages.about.paragraph1}</p>
+        <p>{messages.about.paragraph2}</p>
       </div>
     </main>
   )

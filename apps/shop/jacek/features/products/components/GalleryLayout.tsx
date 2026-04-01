@@ -19,7 +19,7 @@ export function GalleryLayout({ product }: GalleryLayoutProps) {
 
   const [activeIndex, setActiveIndex] = useState(0)
   const activeImage = allImages[activeIndex] ?? null
-  const price = formatPrice(Number(product.price), product.currency ?? 'PLN')
+  const price = formatPrice(product.price, product.currency ?? 'PLN')
 
   return (
     <div className="grid gap-8 lg:grid-cols-2 lg:gap-12">
