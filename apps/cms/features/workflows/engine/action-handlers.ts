@@ -2,7 +2,7 @@ import type { StepHandlerRegistry, ActionResult, ExecutionContext } from './type
 import type { WorkflowStep, StepType } from '../types'
 import { resolveVariables } from './utils'
 
-// --- N8n dispatch (shared by send_email, ai_action, delay) ---
+// --- N8n dispatch (shared by send_email, ai_action) ---
 
 /**
  * Dispatches a step to n8n for async execution.
@@ -65,11 +65,14 @@ async function dispatchToN8n(
 }
 
 // --- Step types that are dispatched to n8n (async) ---
+// NOTE: 'delay' is intentionally absent — it has its own handleDelay that writes
+// resume_at directly to workflow_step_executions via the service client,
+// instead of dispatching to n8n. The n8n "Workflow Delay Processor" cron polls
+// for waiting steps whose resume_at has passed and calls /api/workflows/resume.
 
 const N8N_ASYNC_STEP_TYPES: ReadonlySet<StepType> = new Set([
   'send_email',
   'ai_action',
-  'delay',
 ])
 
 /**
@@ -84,7 +87,7 @@ export function isAsyncStepType(stepType: string): boolean {
 // --- Individual handlers ---
 
 /**
- * Shared handler for all n8n-dispatched step types (send_email, ai_action, delay).
+ * Shared handler for all n8n-dispatched step types (send_email, ai_action).
  * Each type gets its own entry in the registry for future differentiation,
  * but currently they all delegate to dispatchToN8n identically.
  */
@@ -95,6 +98,61 @@ const handleN8nStep: StepHandlerRegistry[string] = async (
   variableContext
 ) => {
   return dispatchToN8n(step, context, variableContext as Record<string, unknown>)
+}
+
+/**
+ * delay — Executes synchronously in CMS (no n8n needed).
+ * Reads value + unit from step_config, computes resume_at timestamp,
+ * writes it directly to workflow_step_executions via service client,
+ * and returns async=true so the executor pauses the execution.
+ *
+ * The n8n "Workflow Delay Processor" cron workflow polls for waiting steps
+ * whose resume_at has passed and calls /api/workflows/resume to unblock them.
+ */
+const handleDelay: StepHandlerRegistry[string] = async (
+  step,
+  context,
+  serviceClient,
+  _variableContext
+) => {
+  if (step.step_config.type !== 'delay') {
+    return { success: false, error: 'Step config type mismatch: expected delay' }
+  }
+
+  const { value, unit } = step.step_config
+
+  if (!value || !unit) {
+    return { success: false, error: 'Delay step config missing value or unit' }
+  }
+
+  const unitMs: Record<string, number> = {
+    minutes: 60_000,
+    hours: 3_600_000,
+    days: 86_400_000,
+  }
+
+  const durationMs = value * (unitMs[unit] ?? 60_000)
+  const resumeAt = new Date(Date.now() + durationMs).toISOString()
+
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (serviceClient as any)
+      .from('workflow_step_executions')
+      .update({ status: 'waiting', resume_at: resumeAt })
+      .eq('id', context.stepExecutionId)
+
+    if (error) {
+      return {
+        success: false,
+        error: `Failed to write resume_at for delay step: ${error.message}`,
+      }
+    }
+
+    return { success: true, async: true }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error'
+    return { success: false, error: `Delay handler error: ${message}` }
+  }
 }
 
 /**
@@ -205,6 +263,7 @@ export const stepHandlers: StepHandlerRegistry = {
   // n8n-dispatched steps — each type gets its own entry for future differentiation
   send_email: handleN8nStep,
   ai_action: handleN8nStep,
-  delay: handleN8nStep,
+  // delay is handled in CMS directly — writes resume_at and signals async pause
+  delay: handleDelay,
   webhook: handleWebhook,
 }

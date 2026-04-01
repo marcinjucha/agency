@@ -1,0 +1,86 @@
+{
+  "name": "Workflow Delay Processor",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "*/5 * * * *"
+            }
+          ]
+        }
+      },
+      "id": "d1e2f3a4-b5c6-4d7e-8f9a-0b1c2d3e4f5a",
+      "name": "Every 5 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -200,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.CMS_INTERNAL_URL }}/api/workflows/process-due-delays",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.WORKFLOW_TRIGGER_SECRET }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "e2f3a4b5-c6d7-4e8f-9a0b-1c2d3e4f5a6b",
+      "name": "Trigger Process Due Delays",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        40,
+        400
+      ],
+      "continueOnFail": true
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Every 5 Minutes": {
+      "main": [
+        [
+          {
+            "node": "Trigger Process Due Delays",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "executionTimeout": 300,
+    "errorWorkflow": "pEvMbZGHKOsqaHmK"
+  },
+  "versionId": "b2c3d4e5-0003-4000-8000-000000000003",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "b46d0b13d69880a2fec430102877b55af4e44991549a68a3e78cd50a4dc1a09e"
+  },
+  "id": "",
+  "tags": []
+}

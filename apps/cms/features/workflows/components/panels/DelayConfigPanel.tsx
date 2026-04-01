@@ -3,22 +3,29 @@
 import { useEffect, useRef } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Button, Label, Input } from '@agency/ui'
+import { Button, Label, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@agency/ui'
 import { messages } from '@/lib/messages'
 import { delayConfigSchema } from '../../validation'
-import { DELAY_PRESETS, type StepConfigDelay } from '../../types'
+import { type StepConfigDelay } from '../../types'
 import type { ConfigPanelProps } from './index'
 
 type DelayFormData = StepConfigDelay
 
-/** Map preset minutes to their display labels */
-const PRESET_LABELS: Record<number, string> = {
-  5: messages.workflows.editor.delayPreset5m,
-  15: messages.workflows.editor.delayPreset15m,
-  60: messages.workflows.editor.delayPreset1h,
-  1440: messages.workflows.editor.delayPreset24h,
-  4320: messages.workflows.editor.delayPreset72h,
-}
+type DelayPreset = { value: number; unit: 'minutes' | 'hours' | 'days'; label: string }
+
+const PRESETS: DelayPreset[] = [
+  { value: 5, unit: 'minutes', label: messages.workflows.editor.delayPreset5m },
+  { value: 15, unit: 'minutes', label: messages.workflows.editor.delayPreset15m },
+  { value: 1, unit: 'hours', label: messages.workflows.editor.delayPreset1h },
+  { value: 24, unit: 'hours', label: messages.workflows.editor.delayPreset24h },
+  { value: 3, unit: 'days', label: messages.workflows.editor.delayPreset72h },
+]
+
+const UNIT_OPTIONS: { value: 'minutes' | 'hours' | 'days'; label: string }[] = [
+  { value: 'minutes', label: messages.workflows.editor.delayUnitMinutes },
+  { value: 'hours', label: messages.workflows.editor.delayUnitHours },
+  { value: 'days', label: messages.workflows.editor.delayUnitDays },
+]
 
 export function DelayConfigPanel({ stepConfig, onChange }: ConfigPanelProps) {
   const isFirstRender = useRef(true)
@@ -34,7 +41,8 @@ export function DelayConfigPanel({ stepConfig, onChange }: ConfigPanelProps) {
     resolver: zodResolver(delayConfigSchema),
     defaultValues: {
       type: 'delay',
-      duration_minutes: (stepConfig?.duration_minutes as number) ?? undefined,
+      value: (stepConfig?.value as number) ?? undefined,
+      unit: (stepConfig?.unit as 'minutes' | 'hours' | 'days') ?? 'minutes',
     },
   })
 
@@ -46,12 +54,19 @@ export function DelayConfigPanel({ stepConfig, onChange }: ConfigPanelProps) {
       onChangeRef.current(formValues as Record<string, unknown>)
     }, 300)
     return () => clearTimeout(timeoutId)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [JSON.stringify(formValues)])
 
-  const currentDuration = formValues.duration_minutes
+  const currentValue = formValues.value
+  const currentUnit = formValues.unit
 
-  function handlePresetClick(minutes: number) {
-    setValue('duration_minutes', minutes, { shouldValidate: true, shouldDirty: true })
+  function handlePresetClick(preset: DelayPreset) {
+    setValue('value', preset.value, { shouldValidate: true, shouldDirty: true })
+    setValue('unit', preset.unit, { shouldValidate: true, shouldDirty: true })
+  }
+
+  function isPresetActive(preset: DelayPreset) {
+    return currentValue === preset.value && currentUnit === preset.unit
   }
 
   return (
@@ -59,51 +74,75 @@ export function DelayConfigPanel({ stepConfig, onChange }: ConfigPanelProps) {
       {/* Preset buttons */}
       <div className="space-y-1.5">
         <Label className="text-sm font-medium">
-          {messages.workflows.editor.durationMinutesLabel}
+          {messages.workflows.editor.delayPresetsLabel}
         </Label>
         <div className="flex flex-wrap gap-2">
-          {DELAY_PRESETS.map((minutes) => (
+          {PRESETS.map((preset) => (
             <Button
-              key={minutes}
+              key={`${preset.value}-${preset.unit}`}
               type="button"
-              variant={currentDuration === minutes ? 'default' : 'outline'}
+              variant={isPresetActive(preset) ? 'default' : 'outline'}
               size="sm"
-              onClick={() => handlePresetClick(minutes)}
-              aria-pressed={currentDuration === minutes}
+              onClick={() => handlePresetClick(preset)}
+              aria-pressed={isPresetActive(preset)}
             >
-              {PRESET_LABELS[minutes] ?? `${minutes}m`}
+              {preset.label}
             </Button>
           ))}
         </div>
       </div>
 
-      {/* Custom input */}
+      {/* Custom value + unit */}
       <div className="space-y-1.5">
-        <Label htmlFor="duration-custom" className="text-sm font-medium">
+        <Label className="text-sm font-medium">
           {messages.workflows.editor.delayCustomLabel}
         </Label>
-        <Controller
-          name="duration_minutes"
-          control={control}
-          render={({ field }) => (
-            <Input
-              id="duration-custom"
-              type="number"
-              min={1}
-              placeholder={messages.workflows.editor.durationMinutesPlaceholder}
-              value={field.value ?? ''}
-              onChange={(e) => {
-                const val = e.target.value
-                field.onChange(val === '' ? undefined : Number(val))
-              }}
-              aria-invalid={!!errors.duration_minutes}
-              aria-describedby={errors.duration_minutes ? 'duration-error' : undefined}
-            />
-          )}
-        />
-        {errors.duration_minutes && (
-          <p id="duration-error" role="alert" className="text-xs text-destructive">
-            {errors.duration_minutes.message}
+        <div className="flex gap-2">
+          <Controller
+            name="value"
+            control={control}
+            render={({ field }) => (
+              <Input
+                id="delay-value"
+                type="number"
+                min={1}
+                placeholder={messages.workflows.editor.delayValuePlaceholder}
+                value={field.value ?? ''}
+                onChange={(e) => {
+                  const val = e.target.value
+                  field.onChange(val === '' ? undefined : Number(val))
+                }}
+                aria-invalid={!!errors.value}
+                aria-describedby={errors.value ? 'delay-error' : undefined}
+                className="flex-1"
+              />
+            )}
+          />
+          <Controller
+            name="unit"
+            control={control}
+            render={({ field }) => (
+              <Select
+                value={field.value}
+                onValueChange={(val) => field.onChange(val)}
+              >
+                <SelectTrigger className="w-32" aria-label={messages.workflows.editor.delayUnitLabel}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {UNIT_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          />
+        </div>
+        {errors.value && (
+          <p id="delay-error" role="alert" className="text-xs text-destructive">
+            {errors.value.message}
           </p>
         )}
       </div>

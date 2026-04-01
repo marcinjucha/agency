@@ -12,7 +12,7 @@
 
 ## Workflow Engine — AAA-P-4 — IN PROGRESS (2026-03-31)
 
-**Status:** Iterations 1-6 done (DB schema, CMS types/queries/validation, execution list UI, enhanced email templates with variable system, visual builder canvas with reactflow + 4 UX improvements, config panels with save/load, execution engine). Next: iteration 7. Extends Core CMS (AAA-P-4). 11 Notion tasks with "Workflow:" prefix.
+**Status:** Iterations 1-7 done. Iter 7 (Delay Step AAA-T-150, 2026-04-01): resume_at column, waiting/paused/processing statuses, handleDelay (CMS-local, no n8n dispatch), /api/workflows/resume, /api/workflows/process-due-delays (batch, atomic RPC), n8n Delay Processor (2-node cron). Next: iteration 8 (Execution Logs UI, AAA-T-151) — depends on iter 7. Extends Core CMS (AAA-P-4). 11 Notion tasks with "Workflow:" prefix.
 **Scope:** Per-tenant workflow automation. Two-layer: CMS (routing/config) + n8n (heavy execution). Visual builder (reactflow), explicit save, dynamic email template variables.
 **Key decisions:** Circular trigger protection (max depth=1 via triggering_execution_id self-FK), delay via n8n cron (±5 min), coexistence with current n8n email.
 **Execution engine (iter 6):** Engine in `features/workflows/engine/` (feature-local, NOT package). API `/api/workflows/trigger` with Bearer token (WORKFLOW_TRIGGER_SECRET). Sync steps (condition, webhook) in CMS, async steps (send_email, ai_action, delay) dispatch to n8n generic dispatcher. `workflow_id` param for targeting specific workflow. `is_active` check at API level (404/422 for inactive). Service role client for engine writes. Variable context accumulates — each step's outputPayload merged into context for later steps via {{mustache}}.
@@ -69,6 +69,9 @@
 - **Race condition on concurrent n8n callbacks** — Multiple n8n steps completing simultaneously can corrupt execution state. Fix: optimistic lock + idempotency guard on callback route. (2026-03-31, AAA-T-149)
 - **Circular protection depth off-by-one** — depth=1 is valid (A triggers B). Block at depth>=2 (A→B→C). Initial impl blocked depth=1 too aggressively. (2026-03-31, AAA-T-149)
 - **SSRF in webhook handler** — User-configured webhook URLs could target private IPs. Fix: private IP blocklist before fetch + AbortSignal.timeout(10_000). (2026-03-31, AAA-T-149)
+- **claim_due_delay_steps() had updated_at which doesn't exist on table** — RPC function generated with `updated_at = now()` but workflow_step_executions has no updated_at column. Fix: remove from function. (2026-04-01, AAA-T-150)
+- **Supabase JS .update().eq().lte().select() is NOT atomic** — Chained methods are separate HTTP request parts, not a single UPDATE...RETURNING SQL. Two concurrent callers can claim same rows. Fix: PostgreSQL RPC with FOR UPDATE SKIP LOCKED. (2026-04-01, AAA-T-150)
+- **New status missing from CHECK constraint on remote DB** — 'processing' added in migration but migration only pushed to local. RPC UPDATE failed with CHECK violation. Fix: apply ALTER TABLE directly via supabase db query --linked. (2026-04-01, AAA-T-150)
 
 ## Domain Concepts
 
@@ -97,6 +100,10 @@
 - **True anon Supabase client for shop frontend** — Uses NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY (not service_role like website). RLS enforces is_published for products. (2026-03-31)
 - **shop_categories RLS USING(true) is correct** — Anon has no JWT/tenant context, so tenant_id filter must be app-level (server component). Categories contain non-sensitive data. (2026-03-31)
 - **apps/shop/* workspace glob in root package.json** — apps/* doesn't match nested paths like apps/shop/jacek/. Need explicit apps/shop/* glob. (2026-03-31)
+- **Delay step nie dispatchuje do n8n — CMS pisze resume_at bezpośrednio do DB** — n8n nie "trzyma" kroków przez godziny/dni. Wzorzec: handleDelay zapisuje resume_at + status='waiting', n8n cron co 5 min wywołuje /api/workflows/process-due-delays. (2026-04-01, AAA-T-150)
+- **n8n Delay Processor: POST do CMS, nie bezpośrednio do Supabase** — Nawet gdy n8n ma Supabase credentials (ma, bo form_confirmation je używa), logika orkiestracji (który krok wznowić) należy do CMS, nie n8n. n8n = głupi timer. (2026-04-01, AAA-T-150)
+- **Atomic claim z FOR UPDATE SKIP LOCKED dla batch processing** — Supabase JS chain nie jest atomowy. Dla batch endpoint gdzie concurrent calls mogą się nałożyć: PostgreSQL RPC z FOR UPDATE SKIP LOCKED + status przejściowy 'processing'. (2026-04-01, AAA-T-150)
+- **step_config delay: { value, unit } zamiast duration_minutes** — Ergonomiczne dla użytkownika ("2 dni" vs "2880 minut"). Konwersja na ms w momencie wykonania, nie w schemacie. (2026-04-01, AAA-T-150)
 
 ## Preferences
 
