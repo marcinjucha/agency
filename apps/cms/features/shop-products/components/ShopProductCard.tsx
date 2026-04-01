@@ -46,7 +46,7 @@ export function ShopProductCard({ product, categoryName, onDelete, isDeleting }:
       }}
     >
       {/* Cover image */}
-      <div className="relative aspect-[16/10] w-full overflow-hidden bg-muted">
+      <div className="relative aspect-[16/7] w-full overflow-hidden bg-muted">
         {product.cover_image_url ? (
           <img
             src={product.cover_image_url}
@@ -55,7 +55,7 @@ export function ShopProductCard({ product, categoryName, onDelete, isDeleting }:
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-muted to-muted-foreground/10">
-            <span className="text-3xl font-semibold text-muted-foreground/20">
+            <span className="text-lg font-semibold text-muted-foreground/20">
               {product.title.charAt(0).toUpperCase()}
             </span>
           </div>
@@ -102,13 +102,13 @@ export function ShopProductCard({ product, categoryName, onDelete, isDeleting }:
       </div>
 
       {/* Content */}
-      <CardContent className="p-4 space-y-2">
-        <h3 className="font-semibold text-foreground truncate text-sm">
+      <CardContent className="p-2.5 space-y-1.5">
+        <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-foreground">
           {product.title}
         </h3>
 
         {product.short_description && (
-          <p className="text-sm text-muted-foreground line-clamp-2">
+          <p className="text-xs text-muted-foreground line-clamp-2">
             {product.short_description}
           </p>
         )}
@@ -119,7 +119,7 @@ export function ShopProductCard({ product, categoryName, onDelete, isDeleting }:
         )}
 
         {/* Footer: price + badges */}
-        <div className="flex items-center gap-2 pt-1 flex-wrap">
+        <div className="flex items-center gap-2 pt-0.5 flex-wrap">
           <span className="text-sm font-medium text-foreground">
             {formatPrice(product.price, product.currency)}
           </span>

@@ -35,6 +35,8 @@ export const messages = {
     errorOccurred: 'Wystąpił błąd',
     retryAnalysis: 'Ponów analizę',
     close: 'Zamknij',
+    viewGrid: 'Widok siatki',
+    viewList: 'Widok listy',
   },
 
   surveys: {
@@ -332,6 +334,8 @@ export const messages = {
     templatesDescription: 'Dostosuj wygląd automatycznych wiadomości email do swoich klientów.',
     subjectPrefix: 'Temat:',
     noTemplate: 'Brak szablonu — zostanie użyty domyślny',
+    active: 'Aktywny',
+    inactive: 'Nieaktywny',
   },
 
   landing: {
@@ -718,6 +722,8 @@ export const messages = {
     deleteCategoryConfirmTitle: 'Usunąć kategorię?',
     deleteCategoryConfirmDescription: (name: string) =>
       `Kategoria "${name}" zostanie trwale usunięta. Tej operacji nie można cofnąć.`,
+    // Categories gallery view
+    sortOrderBadge: (n: number) => `Kolejność: ${n}`,
     // Form labels
     nameLabel: 'Nazwa',
     slugLabel: 'Slug',
@@ -1019,6 +1025,8 @@ export const messages = {
     stepNoPayload: 'Brak danych',
     stepPayloadExpand: 'Rozwiń',
     stepPayloadCollapse: 'Zwiń',
+    expandAll: 'Rozwiń wszystkie',
+    collapseAll: 'Zwiń wszystkie',
     // Duration formatting
     durationSeconds: (s: number) => `${s}s`,
     durationMinutes: (m: number) => `${m}m`,
@@ -1060,6 +1068,7 @@ export const messages = {
     draft: 'Szkic',
     empty: 'Brak stron prawnych',
     emptyDescription: 'Strony prawne zostaną utworzone automatycznie.',
+    updatedLabel: 'Zaktualizowano',
   },
 
   variableInserter: {
