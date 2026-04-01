@@ -573,6 +573,7 @@ export const messages = {
     groupShop: 'Sklep',
     groupAutomation: 'Automatyzacja',
     workflows: 'Workflow',
+    workflowExecutions: 'Historia',
     groupSystem: 'System',
     shopProducts: 'Produkty',
     shopCategories: 'Kategorie',
@@ -860,6 +861,7 @@ export const messages = {
     executionFailed: 'Błąd',
     executionCancelled: 'Anulowano',
     executionPaused: 'Wstrzymano',
+    executionWaitingForCallback: 'Czeka na odpowiedź',
     // Step execution statuses
     stepExecutionPending: 'Oczekuje',
     stepExecutionRunning: 'W toku',
@@ -979,6 +981,52 @@ export const messages = {
     loadFailed: 'Nie udało się załadować workflow',
     viewList: 'Widok listy',
     viewGrid: 'Widok siatki',
+    // Execution list page
+    executionsPageDescription: 'Historia wykonań wszystkich workflow.',
+    executionsMetaTitle: 'Historia wykonań | Halo Efekt CMS',
+    // Table columns
+    executionsColWorkflow: 'Workflow',
+    executionsColStatus: 'Status',
+    executionsColTrigger: 'Wyzwalacz',
+    executionsColStarted: 'Start',
+    executionsColCompleted: 'Koniec',
+    executionsColDuration: 'Czas trwania',
+    // Filters
+    filterByWorkflow: 'Filtruj po workflow',
+    filterByStatus: 'Filtruj po statusie',
+    filterAllStatuses: 'Wszystkie statusy',
+    filterAllWorkflows: 'Wszystkie workflow',
+    filterStatusPlaceholder: 'Status',
+    // Detail page
+    executionDetailTitle: 'Szczegóły wykonania',
+    executionDetailMetaTitle: 'Szczegóły wykonania | Halo Efekt CMS',
+    backToExecutions: 'Powrót do historii',
+    executionWorkflow: 'Workflow',
+    executionTriggerPayload: 'Dane wyzwalacza',
+    executionDetailError: 'Błąd wykonania',
+    executionDetailStarted: 'Rozpoczęto',
+    executionDetailCompleted: 'Zakończono',
+    executionDetailDuration: 'Czas trwania',
+    // Step timeline
+    stepTimelineTitle: 'Kroki',
+    stepStarted: 'Rozpoczęto',
+    stepCompleted: 'Zakończono',
+    stepDuration: 'Czas',
+    stepResumeAt: 'Wznowienie o',
+    stepInput: 'Dane wejściowe',
+    stepOutput: 'Dane wyjściowe',
+    stepError: 'Błąd',
+    stepNoPayload: 'Brak danych',
+    stepPayloadExpand: 'Rozwiń',
+    stepPayloadCollapse: 'Zwiń',
+    // Duration formatting
+    durationSeconds: (s: number) => `${s}s`,
+    durationMinutes: (m: number) => `${m}m`,
+    durationHours: (h: number) => `${h}g ${Math.round((h % 1) * 60)}m`,
+    // Open editor link
+    openInEditor: 'Otwórz w edytorze',
+    // Nav
+    navExecutions: 'Historia',
   },
 
   legalPages: {

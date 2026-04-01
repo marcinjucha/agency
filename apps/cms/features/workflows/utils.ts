@@ -61,3 +61,19 @@ export function formatDuration(seconds: number): string {
   if (minutes === 0) return `${hours} godz`
   return `${hours} godz ${minutes} min`
 }
+
+/**
+ * Format elapsed time between two ISO timestamp strings.
+ * Used in execution list/detail/timeline to show step durations.
+ * Examples: "5s", "2m 30s", "1g 15m"
+ */
+export function formatExecutionDuration(startedAt: string | null, completedAt: string | null): string {
+  if (!startedAt || !completedAt) return '\u2013'
+  const ms = new Date(completedAt).getTime() - new Date(startedAt).getTime()
+  const s = Math.round(ms / 1000)
+  if (s < 60) return `${s}s`
+  const m = Math.floor(s / 60)
+  if (m < 60) return `${m}m ${s % 60}s`
+  const h = Math.floor(m / 60)
+  return `${h}g ${m % 60}m`
+}
