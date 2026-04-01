@@ -92,6 +92,15 @@ export type StepHandlerRegistry = Record<string, StepHandler>
 /** Flat key-value map used for {{variable}} resolution in templates */
 export type VariableContext = Record<string, unknown>
 
+// --- Execution Limits ---
+
+export const DEFAULT_EXECUTION_LIMITS = {
+  maxSteps: 50,
+  stepTimeoutMs: 5 * 60 * 1000, // 5 minutes
+} as const
+
+export type ExecutionLimits = typeof DEFAULT_EXECUTION_LIMITS
+
 // --- Type guard helpers ---
 
 export function isTriggerType(value: string): value is TriggerType {

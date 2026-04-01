@@ -93,20 +93,18 @@ sequenceDiagram
 
 ---
 
-## Component Map
-
-### Engine (`features/workflows/engine/`)
+## Engine Files (`features/workflows/engine/`)
 
 | File | Purpose |
 |------|---------|
 | `executor.ts` | Core loop — `executeWorkflow()`, `resumeExecution()`, `runPendingSteps()` |
 | `trigger-matcher.ts` | `findMatchingWorkflows(triggerType, tenantId)` — indexed query on active workflows |
-| `condition-evaluator.ts` | Parses `"field operator value"` expressions (==, !=, >, <, contains, in). No `eval()` |
+| `condition-evaluator.ts` | Parses `"field operator value"` expressions (==, !=, >, <, >=, <=, contains, in). No `eval()`. Strips `{{}}` from field names |
 | `action-handlers.ts` | Step handler registry — `dispatchToN8n()` for async, `handleWebhook()` for sync |
-| `utils.ts` | `topologicalSort()` (Kahn's algorithm), `resolveVariables()` for `{{mustache}}` templates |
+| `utils.ts` | `topologicalSort()` (Kahn's algorithm), `resolveVariables()` for `{{mustache}}` templates, `buildTriggerContext()` |
 | `types.ts` | `ExecutionContext`, `TriggerPayload` (discriminated union), `ActionResult` |
 
-### API Routes
+## API Routes
 
 | Route | Method | Purpose |
 |-------|--------|---------|
@@ -114,26 +112,6 @@ sequenceDiagram
 | `/api/workflows/callback` | POST | n8n calls this when async step completes. Idempotent (ignores re-delivery) |
 | `/api/workflows/process-due-delays` | POST | Batch endpoint — claims and resumes delay steps where `resume_at <= now()` |
 | `/api/workflows/resume` | POST | Single-step resume — accepts `step_execution_id`, resumes immediately |
-
-### Visual Builder (`features/workflows/components/`)
-
-| Component | Purpose |
-|-----------|---------|
-| `WorkflowCanvas.tsx` | ReactFlow canvas — nodes, edges, connections. Dynamic import (~150KB) |
-| `nodes/node-registry.ts` | `NODE_TYPE_CONFIGS` — icon, label, border color per step type |
-| `nodes/{Trigger,Action,Condition,Delay}Node.tsx` | Custom ReactFlow node components |
-| `panels/ConfigPanelWrapper.tsx` | Routes selected node → correct config panel |
-| `panels/{SendEmail,Condition,Delay,Webhook,AiAction,Trigger}ConfigPanel.tsx` | Per-type configuration forms |
-
-### CMS Foundation (`features/workflows/`)
-
-| File | Purpose |
-|------|---------|
-| `types.ts` | Domain types — `TriggerType`, `StepType`, `ExecutionStatus`, config unions, label records |
-| `queries.ts` | TanStack Query hooks (browser) |
-| `queries.server.ts` | Server-side data fetching |
-| `actions.ts` | Server Actions — CRUD + canvas bulk save |
-| `validation.ts` | Zod schemas for trigger/step configs |
 
 ---
 
@@ -198,15 +176,11 @@ erDiagram
 
 ---
 
-## Types at a Glance
+## Execution Statuses
 
-**Trigger types:** `survey_submitted` | `booking_created` | `lead_scored` | `manual` | `scheduled`
+**Execution:** `pending` → `running` → `completed` | `failed` | `cancelled` | `paused`
 
-**Step types:** `send_email` (async/n8n) | `delay` (async/n8n) | `ai_action` (async/n8n) | `condition` (sync) | `webhook` (sync)
-
-**Execution statuses:** `pending` → `running` → `completed` | `failed` | `cancelled` | `paused`
-
-**Step statuses:** `pending` → `running` → `completed` | `failed` | `skipped` | `waiting` → `processing`
+**Step:** `pending` → `running` → `completed` | `failed` | `skipped` | `waiting` → `processing`
 
 ---
 
@@ -237,27 +211,7 @@ Context for Step 2: { responseId: "abc", surveyLinkId: "xyz", statusCode: 200, s
 
 Templates use `{{mustache}}` syntax: `{{responseId}}`, `{{responseBody.score}}`. Resolved by `resolveVariables()` in `engine/utils.ts`.
 
----
-
-## Adding a New Step Type
-
-1. **`types.ts`** — add to `StepType` union + `StepConfig` discriminated union + labels
-2. **`validation.ts`** — add Zod schema for the new config
-3. **`engine/action-handlers.ts`** — add handler to `stepHandlers` registry
-4. **`components/nodes/node-registry.ts`** — add to `NODE_TYPE_CONFIGS`
-5. **`components/panels/`** — create config panel + register in `PANEL_REGISTRY`
-
-That's it — 5 files, no changes to executor or canvas logic.
-
----
-
-## Adding a New Trigger Type
-
-1. **`types.ts`** — add to `TriggerType` union + `TriggerConfig` union + labels
-2. **`validation.ts`** — add Zod schema
-3. **`engine/types.ts`** — add to `TriggerPayload` discriminated union
-4. **`engine/utils.ts`** — add case in `buildTriggerContext()`
-5. **Caller** — add fire-and-forget POST to `/api/workflows/trigger` from the event source
+Condition expressions use bare field names (no `{{}}`): `overallScore >= 7`. The evaluator strips `{{}}` if present (users copy mustache syntax from email fields).
 
 ---
 
@@ -265,65 +219,28 @@ That's it — 5 files, no changes to executor or canvas logic.
 
 ### Problem
 
-Workflows need to "wait" (e.g. 2 days before sending a follow-up email). `setTimeout` is not an option -- it dies on server restart. Blocking an n8n worker for days wastes resources and blocks the queue.
+Workflows need to "wait" (e.g. 2 days before sending a follow-up email). `setTimeout` dies on server restart. Blocking an n8n worker for days wastes resources.
 
-### Solution -- 3 Components
+### Solution — 3 Components
 
-The delay is **persisted to database**, not held in memory. Three components cooperate to pause and resume execution:
+The delay is **persisted to database**, not held in memory.
 
 #### 1. handleDelay (`engine/action-handlers.ts`)
 
-When the executor hits a step of type `delay`:
-
-1. Computes `resume_at = now() + (value x unit)` from `step_config`
+When the executor hits a `delay` step:
+1. Computes `resume_at = now() + (value × unit)` from `step_config`
 2. Writes to DB: `workflow_step_executions.status = 'waiting'`, `resume_at = computed timestamp`
 3. Sets `workflow_executions.status = 'paused'`
-4. Does **NOT** dispatch to n8n (unlike `send_email` / `ai_action`)
-5. Stops execution -- the workflow "goes to sleep"
+4. Does **NOT** dispatch to n8n — workflow "goes to sleep"
 
-#### 2. n8n Workflow: Delay Processor (cron every 5 min)
+#### 2. n8n Delay Processor (cron every 5 min)
 
-A minimal n8n workflow that fires on a 5-minute cron schedule. It does one thing:
+Fires `POST /api/workflows/process-due-delays`. That's it — n8n is a dumb timer, all logic lives in CMS.
 
-- `POST /api/workflows/process-due-delays`
+#### 3. POST `/api/workflows/process-due-delays`
 
-That's it -- n8n is a dumb timer. All logic lives in CMS.
-
-#### 3. POST `/api/workflows/process-due-delays` (batch endpoint in CMS)
-
-This route wakes up sleeping workflows:
-
-1. Calls `claim_due_delay_steps(limit)` -- a PostgreSQL RPC function that **atomically** claims steps where `status = 'waiting' AND resume_at <= now()` using `FOR UPDATE SKIP LOCKED`
-2. For each claimed step:
-   - Marks `workflow_step_executions.status = 'completed'`
-   - Sets `workflow_executions.status = 'running'`
-   - Calls `resumeExecution()` from the engine -- workflow continues from the next step
-
-### Bonus: POST `/api/workflows/resume` (single-step endpoint)
-
-For manual testing or future use cases. Accepts a specific `step_execution_id` and resumes that one step immediately (ignores `resume_at`). Useful for debugging or admin "force resume" actions.
-
-### Why FOR UPDATE SKIP LOCKED?
-
-If two n8n cron calls overlap (e.g. n8n fires two instances simultaneously), without locking both would claim the same rows and process them twice (duplicate emails, duplicate AI calls). `SKIP LOCKED` ensures each worker only picks up rows that no other transaction is holding -- safe concurrent processing without duplicates.
-
-### Flow Diagram
-
-```
-Trigger workflow
-    -> executor hits delay step
-    -> handleDelay writes resume_at to DB
-    -> step: 'waiting', execution: 'paused'
-    -> [workflow sleeps]
-
-n8n cron (every 5 min)
-    -> POST /api/workflows/process-due-delays
-    -> claim_due_delay_steps() finds resume_at <= now()
-    -> step: 'processing' -> 'completed'
-    -> execution: 'paused' -> 'running'
-    -> resumeExecution() continues workflow
-    -> [workflow wakes up, next step runs]
-```
+1. Calls `claim_due_delay_steps(limit)` — PostgreSQL RPC with `FOR UPDATE SKIP LOCKED` (prevents double-processing on concurrent cron calls)
+2. For each claimed step: marks step `completed`, sets execution `running`, calls `resumeExecution()`
 
 ### step_config Format
 
@@ -333,21 +250,18 @@ n8n cron (every 5 min)
 
 Supported units: `"minutes"` | `"hours"` | `"days"`
 
-### DB Changes (AAA-T-150)
+### DB Changes
 
 | Change | Purpose |
 |--------|---------|
 | `workflow_step_executions.resume_at TIMESTAMPTZ` | When to wake up the step |
-| New status: `waiting` (step) | Step is sleeping, waiting for `resume_at` |
-| New status: `processing` (step) | Step has been claimed by `claim_due_delay_steps()`, being processed |
-| New status: `paused` (execution) | Entire workflow execution is paused (waiting for a delay) |
-| `idx_wse_waiting_resume` partial index | `WHERE status = 'waiting'` -- fast polling queries for due steps |
-| `claim_due_delay_steps(limit INT)` RPC | Atomic claim with `FOR UPDATE SKIP LOCKED` -- prevents double-processing |
-
-### Key Design Decision: Delay Runs in CMS, Not n8n
-
-Unlike `send_email` and `ai_action` which dispatch to n8n for execution, `delay` is handled entirely in CMS + database. n8n only provides the cron trigger. This avoids tying up an n8n worker for hours/days and keeps delay state queryable in the CMS database (important for the Execution Logs UI in iteration 8).
+| Status `waiting` (step) | Step is sleeping |
+| Status `processing` (step) | Claimed by `claim_due_delay_steps()`, being processed |
+| Status `paused` (execution) | Workflow paused on a delay |
+| `idx_wse_waiting_resume` partial index | `WHERE status = 'waiting'` — fast polling queries |
+| `claim_due_delay_steps(limit INT)` RPC | Atomic claim with `FOR UPDATE SKIP LOCKED` |
 
 ---
 
+> **Nodes & triggers reference:** See [WORKFLOW_NODES.md](./WORKFLOW_NODES.md)
 > **Remaining plan:** See [WORKFLOW_PLAN.md](./WORKFLOW_PLAN.md)

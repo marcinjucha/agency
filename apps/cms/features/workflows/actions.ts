@@ -6,6 +6,7 @@ import {
   createWorkflowSchema,
   updateWorkflowSchema,
   saveCanvasSchema,
+  createWorkflowFromTemplateSchema,
   type CreateWorkflowFormData,
   type UpdateWorkflowFormData,
   type SaveCanvasFormData,
@@ -15,6 +16,7 @@ import { executeWorkflow } from './engine/executor'
 import { createServiceClient } from '@/lib/supabase/service'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
+import { WORKFLOW_TEMPLATES } from './templates/workflow-templates'
 
 // --- Workflow CRUD ---
 
@@ -291,6 +293,96 @@ export async function triggerManualWorkflow(
     revalidatePath(routes.admin.workflow(workflowId))
     revalidatePath(routes.admin.workflowExecutions(workflowId))
     return { success: true, executionId: result.executionId }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : messages.common.unknownError
+    return { success: false, error: message }
+  }
+}
+
+// --- Template-based workflow creation ---
+
+export async function createWorkflowFromTemplate(
+  templateId: string
+): Promise<{ success: boolean; data?: { id: string }; error?: string }> {
+  try {
+    const parsed = createWorkflowFromTemplateSchema.safeParse({ templateId })
+    if (!parsed.success) {
+      return { success: false, error: parsed.error.errors[0]?.message ?? messages.common.invalidData }
+    }
+
+    const template = WORKFLOW_TEMPLATES.find((t) => t.id === parsed.data.templateId)
+    if (!template) {
+      return { success: false, error: messages.workflows.templateNotFound }
+    }
+
+    const auth = await getUserWithTenant()
+    if (isAuthError(auth)) return { success: false, error: auth.error }
+    const { supabase, tenantId } = auth
+
+    // 1. Insert workflow row
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JS v2.95.2 incompatibility
+    const { data: created, error: workflowError } = await (supabase as any)
+      .from('workflows')
+      .insert({
+        tenant_id: tenantId,
+        name: template.name,
+        description: template.description,
+        trigger_type: template.trigger_type,
+        trigger_config: template.trigger_config,
+        is_active: false,
+      })
+      .select('id')
+      .single()
+
+    if (workflowError) return { success: false, error: workflowError.message }
+
+    const workflowId = created.id as string
+
+    // 2. Build UUID remapping: stable tempId → new UUID
+    const idMap = new Map<string, string>()
+    for (const step of template.steps) {
+      idMap.set(step.tempId, crypto.randomUUID())
+    }
+
+    // 3. Insert workflow_steps with fresh UUIDs
+    if (template.steps.length > 0) {
+      const stepsPayload = template.steps.map((step) => ({
+        id: idMap.get(step.tempId)!,
+        workflow_id: workflowId,
+        step_type: step.step_type,
+        step_config: step.step_config,
+        position_x: step.position_x,
+        position_y: step.position_y,
+      }))
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error: stepsError } = await (supabase as any)
+        .from('workflow_steps')
+        .insert(stepsPayload)
+
+      if (stepsError) return { success: false, error: stepsError.message }
+    }
+
+    // 4. Insert workflow_edges with remapped source/target IDs
+    if (template.edges.length > 0) {
+      const edgesPayload = template.edges.map((edge, index) => ({
+        workflow_id: workflowId,
+        source_step_id: idMap.get(edge.source_temp_id)!,
+        target_step_id: idMap.get(edge.target_temp_id)!,
+        condition_branch: edge.condition_branch ?? null,
+        sort_order: edge.sort_order ?? index,
+      }))
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error: edgesError } = await (supabase as any)
+        .from('workflow_edges')
+        .insert(edgesPayload)
+
+      if (edgesError) return { success: false, error: edgesError.message }
+    }
+
+    revalidatePath(routes.admin.workflows)
+    return { success: true, data: { id: workflowId } }
   } catch (err) {
     const message = err instanceof Error ? err.message : messages.common.unknownError
     return { success: false, error: message }

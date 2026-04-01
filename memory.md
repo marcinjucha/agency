@@ -79,6 +79,9 @@
 - **{{variable}} syntax in condition evaluator causes silent false** — Condition expressions with `{{fieldName}}` (mustache syntax copied from email template fields) always evaluated to false. Fix: resolveField() strips `{{ }}` wrapper. Both `fieldName` and `{{fieldName}}` now work. (2026-04-01, AAA-T-152)
 - **score vs overallScore mapping mismatch in lead_scored trigger** — TriggerPayloadLeadScored has field `score` but buildTriggerContext maps it to `overallScore` in variable context. expressionHint in trigger-schemas.ts must reference `overallScore`, not `score` or `lead_score`. (2026-04-01, AAA-T-152)
 - **Turbopack barrel re-export in features/workflows/types.ts** — Same Turbopack bug (dev-only, not build). New location: features/workflows/types.ts. Pre-existing, unrelated to task. Production build passes clean. (2026-04-01, AAA-T-152)
+- **ConditionNode handle ID mismatch** — ConditionNode source handles used `id="yes"`/`id="no"` but executor + templates use `'true'`/`'false'` for condition_branch. ReactFlow silently drops edges when sourceHandle doesn't match. Fix: handles changed to `id="true"`/`id="false"`. (2026-04-01, AAA-T-153)
+- **Template trigger node was synthetic (UUID lost on remount)** — Templates had no trigger step in workflow_steps. Trigger created as synthetic node with `crypto.randomUUID()` on every mount — UUIDs change, so edges referencing trigger can't persist in DB. Fix: add trigger as real workflow_step in templates. (2026-04-01, AAA-T-153)
+- **WORKFLOW_CALLBACK_URL was duplicate of HOST_URL** — action-handlers.ts used separate env var but HOST_URL already points to CMS base. Removed WORKFLOW_CALLBACK_URL, use HOST_URL instead. (2026-04-01, AAA-T-153)
 
 ## Domain Concepts
 
@@ -92,6 +95,8 @@
 - **Booking flow is in apps/website/features/calendar/booking.ts** — NOT calendar/actions.ts as assumed. Trigger integration point for booking_confirmed. (2026-04-01, AAA-T-152)
 - **n8n HTTP Request: specifyBody "string" + JSON.stringify()** — Reliable way to send nested objects in n8n HTTP Request node. bodyParameters can't handle nested payload objects. (2026-04-01, AAA-T-152)
 - **Condition evaluator supported operators** — >=, <=, !=, ==, >, <, contains, in. NO single `=` operator. Field names without `{{ }}` wrappers. (2026-04-01, AAA-T-152)
+- **ConditionNode handle IDs must match executor condition_branch values** — Visual "Tak"/"Nie" labels are display-only. ReactFlow Handle `id` props must be `"true"`/`"false"` to match condition evaluator returns, edge condition_branch in DB, and executor branching logic. (2026-04-01, AAA-T-153)
+- **Synthetic trigger node pattern** — When workflow has no trigger step in workflow_steps, WorkflowEditor adds synthetic node with random UUID per mount. After first Save, trigger becomes real step. Templates bypass this by including trigger as real step from creation. (2026-04-01, AAA-T-153)
 
 ## Architecture Decisions
 
@@ -119,6 +124,9 @@
 - **HOST_URL env var reused for website→CMS communication** — Website .env.local HOST_URL points to CMS (localhost:3001 dev, cms.haloefekt.pl prod). Path /api/workflows/trigger appended in code. Reuses CMS's existing HOST_URL convention. (2026-04-01, AAA-T-152)
 - **No separate API route per trigger type** — n8n calls existing /api/workflows/trigger with trigger_type in payload (e.g., 'lead_scored'). No /api/workflows/trigger/lead-scored/ needed. Single endpoint, multiple trigger types. (2026-04-01, AAA-T-152)
 - **Old n8n email webhook removal deferred** — survey_submitted now fires workflow engine trigger in parallel with old N8N_WEBHOOK_FORM_CONFIRM_EMAIL_URL. Removing old webhook is destructive; deferred until tenant has active workflow with send_email step confirmed working. (2026-04-01, AAA-T-152)
+- **In-code JSON constants for workflow templates (copy-on-use)** — Templates stored as TypeScript constants in `features/workflows/templates/workflow-templates.ts`. On "Use template", server action materialises real workflow+steps+edges with fresh UUIDs. Zero DB overhead for non-users. Same pattern as n8n/Make.com. (2026-04-01, AAA-T-153)
+- **Trigger as real workflow_step in templates** — Including trigger_type step in template step arrays allows fully-connected canvas on load (trigger→condition edge stored in DB). Executor safely skips trigger steps (no handler → logs warning, marks completed). (2026-04-01, AAA-T-153)
+- **MAX_STEPS = 50 + 5-min sync step timeout in executor** — DEFAULT_EXECUTION_LIMITS in engine/types.ts. Timeout applies only to sync steps (condition, webhook). Async steps timeout in n8n. (2026-04-01, AAA-T-153)
 
 ## Preferences
 
@@ -139,3 +147,4 @@
 - **Config panel registry = extensible pattern** — Easy addition of new step types without changing existing panels. UpdateStatus panel deferred from 5b — implement when needed. (2026-03-31)
 - **Shop frontend path: apps/shop/jacek/** — Nested under apps/shop/ parent, not flat apps/shop-jacek/. User's father's shop name. (2026-03-31)
 - **Inline workflow name editing on list page** — User wants inline editing of workflow names directly on the workflow list page. Next task after AAA-T-151 merge. (2026-04-01)
+- **"impl i validacje rob auto, zatrzymaj sie przy testach"** — Auto mode through implementation + validation phases, stop at manual testing phase. (2026-04-01, AAA-T-153)
