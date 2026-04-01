@@ -20,10 +20,26 @@ const geistSans = Geist({
 export const metadata: Metadata = {
   metadataBase: new URL('https://jacek.haloefekt.pl'),
   title: {
-    template: '%s | Jacek',
-    default: 'Jacek — Księgarnia',
+    template: '%s | Książki Jacka',
+    default: 'Książki Jacka — Autorskie publikacje i materiały edukacyjne',
   },
-  description: 'Książki i materiały edukacyjne',
+  description:
+    'Autorskie książki i materiały edukacyjne. Publikacje od praktyki do teorii.',
+  openGraph: {
+    type: 'website',
+    locale: 'pl_PL',
+    siteName: 'Książki Jacka',
+    title: 'Książki Jacka — Autorskie publikacje i materiały edukacyjne',
+    description:
+      'Autorskie książki i materiały edukacyjne. Publikacje od praktyki do teorii.',
+  },
+  twitter: {
+    card: 'summary_large_image',
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 }
 
 export default function RootLayout({
