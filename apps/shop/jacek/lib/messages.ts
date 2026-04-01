@@ -40,6 +40,20 @@ export const messages = {
     title: 'Kategorie',
     all: 'Wszystkie',
   },
+  about: {
+    title: 'O Autorze',
+    description:
+      'Pisarz, edukator i pasjonat literatury. Od lat dzieli się swoimi przemyśleniami na temat świata, natury i ludzkiej kondycji — zarówno w formie powieści, jak i materiałów edukacyjnych. Każda książka to zaproszenie do wspólnej podróży przez wyobraźnię i refleksję.',
+  },
+  contact: {
+    title: 'Kontakt',
+    description: 'Masz pytanie dotyczące publikacji lub chcesz nawiązać współpracę? Napisz do mnie.',
+    email: 'kontakt@haloefekt.pl',
+  },
+  notFound: {
+    title: 'Nie znaleziono strony',
+    description: 'Strona, której szukasz, nie istnieje lub została przeniesiona.',
+  },
   footer: {
     copyright: '© {year} Jacek. Wszelkie prawa zastrzeżone.',
     rights: 'Wszelkie prawa zastrzeżone.',
