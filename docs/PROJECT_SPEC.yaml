@@ -38,8 +38,8 @@ features:
 
   - name: "CMS Admin Layout"
     status: done
-    description: "Responsive sidebar (grouped: Intake/Content/System), dashboard with real-time stats"
-    why: "Navigation hub for business users"
+    description: "Responsive sidebar (grouped: Intake/Content/System), dashboard with real-time stats. All CMS list pages have gallery/list toggle with localStorage persistence (useViewMode hook). Gallery is default view; unified grid breakpoints: 1col/<768px, 2col/<1280px, 3col/<1536px, 4col/>=1536px."
+    why: "Navigation hub for business users; gallery-first views reduce cognitive load for visual content"
 
   # Phase 1: Survey System
   - name: "Survey Builder"

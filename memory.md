@@ -82,6 +82,8 @@
 - **ConditionNode handle ID mismatch** — ConditionNode source handles used `id="yes"`/`id="no"` but executor + templates use `'true'`/`'false'` for condition_branch. ReactFlow silently drops edges when sourceHandle doesn't match. Fix: handles changed to `id="true"`/`id="false"`. (2026-04-01, AAA-T-153)
 - **Template trigger node was synthetic (UUID lost on remount)** — Templates had no trigger step in workflow_steps. Trigger created as synthetic node with `crypto.randomUUID()` on every mount — UUIDs change, so edges referencing trigger can't persist in DB. Fix: add trigger as real workflow_step in templates. (2026-04-01, AAA-T-153)
 - **WORKFLOW_CALLBACK_URL was duplicate of HOST_URL** — action-handlers.ts used separate env var but HOST_URL already points to CMS base. Removed WORKFLOW_CALLBACK_URL, use HOST_URL instead. (2026-04-01, AAA-T-153)
+- **`max-w-[Npx]` on grid cards creates gaps** — grid cells are wider than the card. Fix: remove `max-w` from cards, control size via grid column count instead. (2026-04-01, AAA-T-159)
+- **EmailTemplateList is a server component — cannot add useState** — Adding client-side state (e.g., view toggle) requires extracting a client wrapper component. Direct useState in server component causes build error. (2026-04-01, AAA-T-159)
 
 ## Domain Concepts
 
@@ -127,6 +129,9 @@
 - **In-code JSON constants for workflow templates (copy-on-use)** — Templates stored as TypeScript constants in `features/workflows/templates/workflow-templates.ts`. On "Use template", server action materialises real workflow+steps+edges with fresh UUIDs. Zero DB overhead for non-users. Same pattern as n8n/Make.com. (2026-04-01, AAA-T-153)
 - **Trigger as real workflow_step in templates** — Including trigger_type step in template step arrays allows fully-connected canvas on load (trigger→condition edge stored in DB). Executor safely skips trigger steps (no handler → logs warning, marks completed). (2026-04-01, AAA-T-153)
 - **MAX_STEPS = 50 + 5-min sync step timeout in executor** — DEFAULT_EXECUTION_LIMITS in engine/types.ts. Timeout applies only to sync steps (condition, webhook). Async steps timeout in n8n. (2026-04-01, AAA-T-153)
+- **`useViewMode(key, defaultMode)` hook in `apps/cms/hooks/use-view-mode.ts`** — shared localStorage-persisted view toggle. Uses `useState` initializer (not useEffect) to avoid flash-of-wrong-view. All CMS gallery toggles use this. (2026-04-01, AAA-T-159)
+- **Unified gallery grid breakpoints: `grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4`** — standard for all CMS list pages. 1col(<768px) / 2col(<1280px) / 3col(<1536px) / 4col(≥1536px). (2026-04-01, AAA-T-159)
+- **Unified card style: `aspect-[16/7]` for image cards, `p-2.5`/`p-3` content padding, `line-clamp-2` titles, `hover:-translate-y-0.5` lift.** (2026-04-01, AAA-T-159)
 
 ## Preferences
 
@@ -148,3 +153,6 @@
 - **Shop frontend path: apps/shop/jacek/** — Nested under apps/shop/ parent, not flat apps/shop-jacek/. User's father's shop name. (2026-03-31)
 - **Inline workflow name editing on list page** — User wants inline editing of workflow names directly on the workflow list page. Next task after AAA-T-151 merge. (2026-04-01)
 - **"impl i validacje rob auto, zatrzymaj sie przy testach"** — Auto mode through implementation + validation phases, stop at manual testing phase. (2026-04-01, AAA-T-153)
+- **Gallery (grid) as default view for all CMS list pages** — list is secondary. (2026-04-01, AAA-T-159)
+- **Stacked card layout (image-top, text-below), not horizontal** — User rejected image-left/text-right card layout for blog and media galleries ("nie wygląda tak jak sobie to wyobrażałem"). Stacked is the standard. (2026-04-01, AAA-T-159)
+- **Single expand/collapse button for paired panels** — In workflow step execution detail, one button toggles both input+output panels together, not separate buttons per panel. (2026-04-01, AAA-T-159)
