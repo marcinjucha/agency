@@ -203,35 +203,31 @@
     },
     {
       "parameters": {
-        "modelId": {
+        "workflowId": {
           "__rl": true,
-          "value": "MiniMax-M2.7",
-          "mode": "id"
+          "value": "xaU50vf4eiNTeqSf",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/xaU50vf4eiNTeqSf",
+          "cachedResultName": "MiniMax Agent"
         },
-        "messages": {
-          "values": [
-            {
-              "content": "={{ JSON.stringify($json) }}"
-            }
-          ]
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
         },
-        "simplify": false,
         "options": {}
       },
-      "type": "@n8n/n8n-nodes-langchain.anthropic",
-      "typeVersion": 1,
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
       "position": [
-        2752,
+        2800,
         -16
       ],
-      "id": "b8cebf3d-6821-4a4c-8352-74d5aa268a1c",
-      "name": "Message a MiniMax Model",
-      "credentials": {
-        "anthropicApi": {
-          "id": "VRQ2lqbk56wZ2woA",
-          "name": "MiniMax"
-        }
-      }
+      "name": "Call MiniMax Agent",
+      "id": "690b555b-8ec7-46c6-9f37-7ad4e3cb0445"
     }
   ],
   "pinData": {
@@ -281,7 +277,7 @@
       "main": [
         [
           {
-            "node": "Message a MiniMax Model",
+            "node": "Call MiniMax Agent",
             "type": "main",
             "index": 0
           }
@@ -343,7 +339,7 @@
         ]
       ]
     },
-    "Message a MiniMax Model": {
+    "Call MiniMax Agent": {
       "main": [
         [
           {
@@ -364,7 +360,7 @@
     "binaryMode": "separate",
     "availableInMCP": false
   },
-  "versionId": "daf2e0fa-4493-4513-bf22-b78f3dab1e7a",
+  "versionId": "945654ed-edfd-473e-8464-9a6b709d5ee4",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "b46d0b13d69880a2fec430102877b55af4e44991549a68a3e78cd50a4dc1a09e"

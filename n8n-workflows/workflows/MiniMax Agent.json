@@ -1,0 +1,83 @@
+{
+  "name": "MiniMax Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "MiniMax-M2.7",
+          "mode": "id"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "={{ JSON.stringify($json) }}"
+            }
+          ]
+        },
+        "simplify": false,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.anthropic",
+      "typeVersion": 1,
+      "position": [
+        2752,
+        -16
+      ],
+      "id": "b8cebf3d-6821-4a4c-8352-74d5aa268a1c",
+      "name": "Message a MiniMax Model",
+      "credentials": {
+        "anthropicApi": {
+          "id": "VRQ2lqbk56wZ2woA",
+          "name": "MiniMax"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "f1fe8d33-6a37-4c2f-b40c-f661f8e15ec4",
+      "typeVersion": 1.1,
+      "name": "Start",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "position": [
+        2544,
+        -16
+      ]
+    }
+  ],
+  "pinData": {
+    "Start": [
+      {
+        "json": {
+          "prompt": "Przeanalizuj poniższe zgłoszenie klienta i oceń jego kwalifikację do konsultacji prawnej.\n\nTYTUŁ FORMULARZA: ${surveyTitle}\n\nODPOWIEDZI KLIENTA:\n${qaContext.map((qa, i) => `${i + 1}. ${qa.question}\\n   Odpowiedź: ${qa.answer}`).join('\\n\\n')}\n\nZADANIE:\nOceń to zgłoszenie pod kątem:\n1. Pilność sprawy - czy wymaga natychmiastowej reakcji (0-10)\n2. Złożoność - jak skomplikowana jest sprawa (0-10)\n3. Wartość sprawy - potencjalna wartość ekonomiczna dla kancelarii (0-10)\n4. Prawdopodobieństwo sukcesu - czy sprawa ma solidne podstawy (0-10)\n5. Krótkie podsumowanie - 1-2 zdania o sprawie\n6. Rekomendacja - czy warto umówić konsultację (QUALIFIED / DISQUALIFIED / NEEDS_MORE_INFO)\n7. Uwagi dla prawnika - maksymalnie 3 kluczowe punkty do omówienia na spotkaniu\n\nOdpowiedź TYLKO w formacie JSON:\n{\n  \"urgency_score\": 0-10,\n  \"complexity_score\": 0-10,\n  \"value_score\": 0-10,\n  \"success_probability\": 0-10,\n  \"summary\": \"krótkie podsumowanie\",\n  \"recommendation\": \"QUALIFIED | DISQUALIFIED | NEEDS_MORE_INFO\",\n  \"notes_for_lawyer\": [\"punkt 1\", \"punkt 2\", \"punkt 3\"]\n}"
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Start": {
+      "main": [
+        [
+          {
+            "node": "Message a MiniMax Model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "b21edd42-730f-4b56-b04d-e6e9eab2b07d",
+  "meta": {
+    "instanceId": "b46d0b13d69880a2fec430102877b55af4e44991549a68a3e78cd50a4dc1a09e"
+  },
+  "id": "xaU50vf4eiNTeqSf",
+  "tags": []
+}

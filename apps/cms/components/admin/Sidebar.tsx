@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, FileText, Inbox, Calendar, Settings, LogOut, Mail, Globe, Newspaper, Images, Scale, ShoppingBag, Tags, Zap } from 'lucide-react'
+import { LayoutDashboard, FileText, Inbox, Calendar, Settings, LogOut, Mail, Globe, Newspaper, Images, Scale, ShoppingBag, Tags, Zap, History } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { messages } from '@/lib/messages'
@@ -45,6 +45,7 @@ const menuGroups: MenuGroup[] = [
     label: messages.nav.groupAutomation,
     items: [
       { href: routes.admin.workflows, label: messages.nav.workflows, icon: Zap },
+      { href: routes.admin.executionsList, label: messages.nav.workflowExecutions, icon: History },
     ],
   },
   {
@@ -85,7 +86,10 @@ export function Sidebar() {
             <div className="space-y-0.5">
               {group.items.map((item) => {
                 const Icon = item.icon
-                const isActive = pathname === item.href
+                const isActive =
+                  item.href === routes.admin.executionsList
+                    ? pathname.startsWith(routes.admin.executionsList)
+                    : pathname === item.href
 
                 return (
                   <Link

@@ -49,4 +49,9 @@ export const queryKeys = {
     emailTemplates: ['workflows', 'email-templates'] as const,
     surveys: ['workflows', 'surveys'] as const,
   },
+  executions: {
+    all: (filters?: { workflowId?: string; status?: string }) =>
+      filters ? (['executions', filters] as const) : (['executions'] as const),
+    detail: (id: string) => ['executions', 'detail', id] as const,
+  },
 } as const

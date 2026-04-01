@@ -148,35 +148,11 @@ https://[key]@glitchtip.trustcode.pl/[project_id]
 
 **Time wasted:** 30 minutes reading Sentry cloud docs before realizing GlitchTip already exists.
 
-### Anthropic API Version Header Required
+### ~~Anthropic API Version Header Required~~ [OBSOLETE — MiniMax Agent uses LangChain node]
 
-**Problem:** Claude API returns 400 Bad Request with unhelpful message.
+**Why obsolete:** We no longer call Claude via HTTP node. All AI invocations go through the MiniMax Agent subworkflow which uses `@n8n/n8n-nodes-langchain.anthropic` — that node handles `anthropic-version` headers automatically.
 
-**Root cause:** Missing `anthropic-version` header (n8n HTTP node doesn't add automatically).
-
-**Fix:**
-```json
-{
-  "headers": {
-    "anthropic-version": "2023-06-01",
-    "content-type": "application/json"
-  }
-}
-```
-
-**Why easy to miss:** Claude API docs mention header, but not as REQUIRED (looks optional).
-
-**Symptom without header:**
-```json
-{
-  "error": {
-    "type": "invalid_request_error",
-    "message": "Missing required parameter"
-  }
-}
-```
-
-**Impact:** 45 minutes debugging before finding missing header in network inspector.
+**Why kept:** Shows what happened before MiniMax Agent was extracted. If you ever add a raw HTTP node calling Claude directly, this issue will resurface.
 
 ### JSONB Update Syntax Trap
 
@@ -204,6 +180,36 @@ https://[key]@glitchtip.trustcode.pl/[project_id]
 **Why confusing:** Supabase client in JavaScript accepts objects (auto-converts). N8n node requires strings.
 
 **Impact:** 20 minutes testing different formats before finding stringify solution.
+
+## MiniMax Agent Subworkflow Pattern
+
+**File:** `n8n-workflows/workflows/MiniMax Agent.json` (workflow ID: `xaU50vf4eiNTeqSf`)
+
+Reusable subworkflow that wraps all AI invocations. Any workflow needing to call Claude uses `Execute Workflow` node pointing here — never calls Claude directly.
+
+**Why extracted:** Before this, each workflow had its own Claude HTTP node with credentials, headers, model config. This duplicated config and caused the `anthropic-version` header issue. Now config lives in one place.
+
+**How to call:**
+```json
+{
+  "type": "n8n-nodes-base.executeWorkflow",
+  "workflowId": "xaU50vf4eiNTeqSf"
+}
+```
+
+Pass input data (mappingMode: `defineBelow`) with prompt and any context the node needs (e.g., `surveyTitle`, `qaContext`, `responseId`, `tenant_id`).
+
+**Output:** `content[0].text` — Claude's raw text response. Caller is responsible for parsing (JSON extraction, error handling).
+
+**Credential:** `MiniMax` (Anthropic credential, LangChain node) — NOT HTTP Header Auth. No need for `anthropic-version` header management.
+
+**Current callers:**
+- `Survey Response AI Analysis.json` — calls after building Q&A context, parses scored JSON from response
+- `Workflow Action Executor.json` — calls as `ai_action` branch in Switch node
+
+**Adding new AI workflow:** Add `Execute Workflow` node → `xaU50vf4eiNTeqSf`. Do NOT add new Anthropic credential nodes or raw HTTP calls to Claude.
+
+---
 
 ## Role in Workflow Engine Architecture
 
@@ -236,9 +242,10 @@ N8N_ENCRYPTION_KEY=[generated]         # openssl rand -hex 32
 ```
 
 **Credentials Required:**
-1. **Anthropic API** (HTTP Header Auth)
-   - Header: `x-api-key`
+1. **MiniMax** (Anthropic LangChain credential) — used inside MiniMax Agent subworkflow
+   - Type: `@n8n/n8n-nodes-langchain.anthropic`
    - Value: `sk-ant-...`
+   - Note: LangChain node handles `anthropic-version` headers automatically
 
 2. **Halo-Efekt Supabase** (Supabase credential)
    - Host: `[project].supabase.co`

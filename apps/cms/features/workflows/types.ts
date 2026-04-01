@@ -7,7 +7,7 @@ export type TriggerType = 'survey_submitted' | 'booking_created' | 'lead_scored'
 
 export type StepType = 'send_email' | 'delay' | 'condition' | 'webhook' | 'ai_action'
 
-export type ExecutionStatus = 'pending' | 'running' | 'completed' | 'failed' | 'cancelled' | 'paused'
+export type ExecutionStatus = 'pending' | 'running' | 'completed' | 'failed' | 'cancelled' | 'paused' | 'waiting_for_callback'
 
 export type StepExecutionStatus = 'pending' | 'running' | 'completed' | 'failed' | 'skipped' | 'waiting' | 'processing'
 
@@ -211,6 +211,7 @@ export const EXECUTION_STATUS_LABELS: Record<ExecutionStatus, string> = {
   failed: messages.workflows.executionFailed,
   cancelled: messages.workflows.executionCancelled,
   paused: messages.workflows.executionPaused,
+  waiting_for_callback: messages.workflows.executionWaitingForCallback,
 }
 
 export const STEP_EXECUTION_STATUS_LABELS: Record<StepExecutionStatus, string> = {
@@ -257,4 +258,42 @@ export type ConfigPanelNodeType = TriggerType | StepType
  */
 export const HTTP_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'] as const
 export type HttpMethod = (typeof HTTP_METHODS)[number]
+
+// --- Execution with workflow name (for global list) ---
+export type ExecutionWithWorkflow = WorkflowExecution & {
+  workflow_name: string
+  workflow_trigger_type: string
+}
+
+export function toExecutionWithWorkflow(raw: unknown): ExecutionWithWorkflow {
+  const row = raw as Tables<'workflow_executions'> & {
+    workflows: { name: string; trigger_type: string } | null
+  }
+  return {
+    ...toWorkflowExecution(row),
+    workflow_name: row.workflows?.name ?? '',
+    workflow_trigger_type: row.workflows?.trigger_type ?? '',
+  }
+}
+
+// --- Execution detail with step executions joined to step metadata ---
+export type StepExecutionWithMeta = WorkflowStepExecution & {
+  step_type: string
+  resume_at: string | null
+}
+
+export function toStepExecutionWithMeta(raw: unknown): StepExecutionWithMeta {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- resume_at added in iter 7, not yet in generated types
+  const row = raw as any
+  return {
+    ...toWorkflowStepExecution(row),
+    step_type: row.workflow_steps?.step_type ?? '',
+    resume_at: row.resume_at ?? null,
+  }
+}
+
+export type ExecutionWithSteps = WorkflowExecution & {
+  workflow_name: string
+  step_executions: StepExecutionWithMeta[]
+}
 
