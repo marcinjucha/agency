@@ -7,8 +7,13 @@ import { routes } from '@/lib/routes'
 export const revalidate = 3600
 
 export default async function HomePage() {
-  const products = await getPublishedProducts()
-  const featured = products.slice(0, 6)
+  let featured: Awaited<ReturnType<typeof getPublishedProducts>> = []
+  try {
+    const products = await getPublishedProducts()
+    featured = products.slice(0, 6)
+  } catch {
+    // Supabase unreachable at build time — render empty
+  }
 
   return (
     <main>
