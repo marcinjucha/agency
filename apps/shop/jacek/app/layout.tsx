@@ -2,6 +2,8 @@ import type { Metadata } from 'next'
 import PlausibleProvider from 'next-plausible'
 import { Merriweather } from 'next/font/google'
 import { Geist } from 'next/font/google'
+import { Navbar } from '@/features/layout/components/Navbar'
+import { Footer } from '@/features/layout/components/Footer'
 import './globals.css'
 
 const merriweather = Merriweather({
@@ -42,7 +44,11 @@ export default function RootLayout({
           trackFileDownloads
           enabled
         >
-          {children}
+          <Navbar />
+          <div className="min-h-screen">
+            {children}
+          </div>
+          <Footer />
         </PlausibleProvider>
       </body>
     </html>
