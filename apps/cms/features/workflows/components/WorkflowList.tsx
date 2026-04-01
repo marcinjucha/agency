@@ -31,6 +31,7 @@ import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
 import { CreateWorkflowDialog } from './CreateWorkflowDialog'
 import { WorkflowCard } from './WorkflowCard'
+import { WorkflowTemplateSelector } from './WorkflowTemplateSelector'
 
 type ViewMode = 'list' | 'grid'
 
@@ -112,6 +113,7 @@ export function WorkflowList() {
             <p className="mt-1 text-sm text-muted-foreground">{messages.workflows.pageDescription}</p>
           </div>
         </div>
+        <WorkflowTemplateSelector workflowCount={0} />
         <EmptyState
           icon={Zap}
           title={messages.workflows.noWorkflows}
@@ -172,6 +174,8 @@ export function WorkflowList() {
           </Button>
         </div>
       </div>
+
+      <WorkflowTemplateSelector workflowCount={workflows.length} />
 
       {viewMode === 'list' ? (
         /* Table */

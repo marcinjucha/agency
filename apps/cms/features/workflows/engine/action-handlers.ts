@@ -24,11 +24,11 @@ async function dispatchToN8n(
     }
   }
 
-  const callbackUrl = process.env.WORKFLOW_CALLBACK_URL
+  const callbackUrl = process.env.HOST_URL
   if (!callbackUrl) {
     return {
       success: false,
-      error: 'WORKFLOW_CALLBACK_URL environment variable is not configured.',
+      error: 'HOST_URL environment variable is not configured.',
     }
   }
 

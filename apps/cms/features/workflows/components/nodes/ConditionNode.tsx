@@ -41,13 +41,13 @@ function ConditionNodeComponent({ data, selected }: NodeProps) {
       <Handle
         type="source"
         position={Position.Right}
-        id="yes"
+        id="true"
         className="!bg-emerald-500 !border-emerald-600 !w-2.5 !h-2.5 !top-[33%]"
       />
       <Handle
         type="source"
         position={Position.Right}
-        id="no"
+        id="false"
         className="!bg-red-500 !border-red-600 !w-2.5 !h-2.5 !top-[67%]"
       />
     </div>

@@ -8,6 +8,7 @@ import type {
   ExecutionContext,
   VariableContext,
 } from './types'
+import { DEFAULT_EXECUTION_LIMITS } from './types'
 import { createServiceClient } from '@/lib/supabase/service'
 import { topologicalSort, buildTriggerContext } from './utils'
 import { evaluateCondition } from './condition-evaluator'
@@ -420,6 +421,20 @@ async function runPendingSteps(
   steps: WorkflowStep[],
   serviceClient: SupabaseClient<Database>
 ): Promise<'completed' | 'failed' | 'waiting_for_callback'> {
+  // MAX_STEPS guard: fail fast to prevent runaway workflows
+  const pendingSteps = sortedSteps.filter((s) => {
+    const lookup = stepExecLookup.get(s.id)
+    if (!lookup) return false
+    const status = typeof lookup === 'string' ? null : lookup.status
+    return !status || status === 'pending'
+  })
+
+  if (pendingSteps.length > DEFAULT_EXECUTION_LIMITS.maxSteps) {
+    const errorMessage = `Workflow exceeded maximum step limit (${DEFAULT_EXECUTION_LIMITS.maxSteps})`
+    await updateExecutionStatus(serviceClient, contextBase.executionId, 'failed', errorMessage)
+    return 'failed'
+  }
+
   for (const step of sortedSteps) {
     const lookup = stepExecLookup.get(step.id)
     if (!lookup) continue
@@ -453,17 +468,40 @@ async function runPendingSteps(
       input_payload: variableContext as unknown as Record<string, unknown>,
     })
 
-    // --- Condition step ---
+    // --- Condition step (sync, with per-step timeout + try/catch) ---
     if (step.step_config.type === 'condition') {
-      const branch = evaluateCondition(step.step_config.expression, variableContext)
+      try {
+        const branch = await Promise.race([
+          Promise.resolve(evaluateCondition(step.step_config.expression, variableContext)),
+          new Promise<never>((_, reject) =>
+            setTimeout(
+              () => reject(new Error('Condition step timed out')),
+              DEFAULT_EXECUTION_LIMITS.stepTimeoutMs
+            )
+          ),
+        ])
 
-      await updateStepExecution(serviceClient, stepExecId, {
-        status: 'completed',
-        completed_at: new Date().toISOString(),
-        output_payload: { branch },
-      })
+        await updateStepExecution(serviceClient, stepExecId, {
+          status: 'completed',
+          completed_at: new Date().toISOString(),
+          output_payload: { branch },
+        })
 
-      markSkippedBranch(step.id, branch, edges, steps, skippedStepIds)
+        markSkippedBranch(step.id, branch, edges, steps, skippedStepIds)
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Condition step failed'
+
+        await updateStepExecution(serviceClient, stepExecId, {
+          status: 'failed',
+          completed_at: new Date().toISOString(),
+          error_message: errorMessage,
+        })
+
+        await skipRemainingSteps(serviceClient, sortedSteps, step.id, stepExecLookup, skippedStepIds)
+        await updateExecutionStatus(serviceClient, contextBase.executionId, 'failed', errorMessage)
+
+        return 'failed'
+      }
       continue
     }
 
@@ -481,7 +519,39 @@ async function runPendingSteps(
       continue
     }
 
-    const result = await handler(step, context, serviceClient, variableContext)
+    // Per-step try/catch: catches unhandled errors from any handler.
+    // Sync step types (webhook) also get a timeout via Promise.race.
+    // Async step types (send_email, ai_action, delay) are fire-and-forget — no timeout applied here.
+    let result
+    try {
+      const isSyncStep = step.step_type === 'webhook'
+      if (isSyncStep) {
+        result = await Promise.race([
+          handler(step, context, serviceClient, variableContext),
+          new Promise<never>((_, reject) =>
+            setTimeout(
+              () => reject(new Error(`Step "${step.step_type}" timed out after ${DEFAULT_EXECUTION_LIMITS.stepTimeoutMs / 1000}s`)),
+              DEFAULT_EXECUTION_LIMITS.stepTimeoutMs
+            )
+          ),
+        ])
+      } else {
+        result = await handler(step, context, serviceClient, variableContext)
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : `Step "${step.step_type}" failed unexpectedly`
+
+      await updateStepExecution(serviceClient, stepExecId, {
+        status: 'failed',
+        completed_at: new Date().toISOString(),
+        error_message: errorMessage,
+      })
+
+      await skipRemainingSteps(serviceClient, sortedSteps, step.id, stepExecLookup, skippedStepIds)
+      await updateExecutionStatus(serviceClient, contextBase.executionId, 'failed', errorMessage)
+
+      return 'failed'
+    }
 
     if (result.success) {
       if (result.outputPayload) {

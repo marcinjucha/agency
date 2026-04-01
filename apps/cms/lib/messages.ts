@@ -1027,6 +1027,28 @@ export const messages = {
     openInEditor: 'Otwórz w edytorze',
     // Nav
     navExecutions: 'Historia',
+    // Templates
+    templatesSectionTitle: 'Zacznij od szablonu',
+    useTemplate: 'Użyj szablonu',
+    templateHide: 'Ukryj szablony',
+    templateShow: 'Pokaż szablony',
+    templateCreateSuccess: 'Workflow został utworzony z szablonu',
+    templateCreateFailed: 'Nie udało się utworzyć workflow z szablonu',
+    templateNotFound: 'Nie znaleziono szablonu',
+    templates: {
+      form_confirmation: {
+        name: 'Potwierdzenie formularza',
+        description: 'Automatycznie wyślij email po wypełnieniu formularza. Opcjonalnie tylko dla kwalifikowanych leadów.',
+      },
+      booking_notification: {
+        name: 'Powiadomienie o rezerwacji',
+        description: 'Wyślij email potwierdzający po złożeniu rezerwacji.',
+      },
+      follow_up: {
+        name: 'Follow-up po kwalifikacji',
+        description: 'Czekaj 2 dni po wycenie leada i wyślij email do wysoko punktowanych.',
+      },
+    },
   },
 
   legalPages: {

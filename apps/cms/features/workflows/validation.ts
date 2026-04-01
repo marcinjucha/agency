@@ -181,6 +181,12 @@ export const saveCanvasSchema = z.object({
   ),
 })
 
+// --- Template schema ---
+
+export const createWorkflowFromTemplateSchema = z.object({
+  templateId: z.string().min(1),
+})
+
 // --- Inferred types ---
 
 export type CreateWorkflowFormData = z.infer<typeof createWorkflowSchema>
@@ -189,3 +195,4 @@ export type CreateStepFormData = z.infer<typeof createStepSchema>
 export type UpdateStepFormData = z.infer<typeof updateStepSchema>
 export type CreateEdgeFormData = z.infer<typeof createEdgeSchema>
 export type SaveCanvasFormData = z.infer<typeof saveCanvasSchema>
+export type CreateWorkflowFromTemplateFormData = z.infer<typeof createWorkflowFromTemplateSchema>
