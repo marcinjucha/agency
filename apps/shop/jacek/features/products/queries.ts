@@ -1,3 +1,4 @@
+import { unstable_cache } from 'next/cache'
 import { createAnonClient } from '@/lib/supabase/anon-server'
 import type { ShopProductPublic, ShopCategoryPublic } from './types'
 
@@ -19,37 +20,47 @@ const PRODUCT_SELECT = `
 /**
  * Get all published products for this tenant.
  * Optionally filter by category slug.
+ * Cached via Next.js unstable_cache (1h, revalidated with ISR).
  */
 export async function getPublishedProducts(
   categorySlug?: string
 ): Promise<ShopProductPublic[]> {
-  const supabase = createAnonClient()
   const tenantId = getTenantId()
+  const cacheKey = categorySlug
+    ? `products-${tenantId}-${categorySlug}`
+    : `products-${tenantId}-all`
 
-  let query = supabase
-    .from('shop_products')
-    .select(PRODUCT_SELECT)
-    .eq('tenant_id', tenantId)
-    .eq('is_published', true)
-    .order('sort_order', { ascending: true })
-    .order('published_at', { ascending: false })
+  return unstable_cache(
+    async () => {
+      const supabase = createAnonClient()
 
-  if (categorySlug) {
-    // Join through shop_categories to filter by slug
-    const { data: category } = await supabase
-      .from('shop_categories')
-      .select('id')
-      .eq('tenant_id', tenantId)
-      .eq('slug', categorySlug)
-      .single()
+      let query = supabase
+        .from('shop_products')
+        .select(PRODUCT_SELECT)
+        .eq('tenant_id', tenantId)
+        .eq('is_published', true)
+        .order('sort_order', { ascending: true })
+        .order('published_at', { ascending: false })
 
-    if (!category) return []
-    query = query.eq('category_id', category.id)
-  }
+      if (categorySlug) {
+        const { data: category } = await supabase
+          .from('shop_categories')
+          .select('id')
+          .eq('tenant_id', tenantId)
+          .eq('slug', categorySlug)
+          .single()
 
-  const { data, error } = await query
-  if (error) throw error
-  return (data ?? []) as unknown as ShopProductPublic[]
+        if (!category) return []
+        query = query.eq('category_id', category.id)
+      }
+
+      const { data, error } = await query
+      if (error) throw error
+      return (data ?? []) as unknown as ShopProductPublic[]
+    },
+    [cacheKey],
+    { revalidate: 3600, tags: ['products'] }
+  )()
 }
 
 /**
@@ -95,18 +106,26 @@ export async function getProductSlugs(): Promise<string[]> {
 
 /**
  * Get all categories for this tenant that have published products.
+ * Cached via Next.js unstable_cache (1h).
  */
 export async function getCategories(): Promise<ShopCategoryPublic[]> {
-  const supabase = createAnonClient()
   const tenantId = getTenantId()
 
-  const { data, error } = await supabase
-    .from('shop_categories')
-    .select('id, name, slug, description')
-    .eq('tenant_id', tenantId)
-    .order('sort_order', { ascending: true })
-    .order('name', { ascending: true })
+  return unstable_cache(
+    async () => {
+      const supabase = createAnonClient()
 
-  if (error) throw error
-  return (data ?? []) as unknown as ShopCategoryPublic[]
+      const { data, error } = await supabase
+        .from('shop_categories')
+        .select('id, name, slug, description')
+        .eq('tenant_id', tenantId)
+        .order('sort_order', { ascending: true })
+        .order('name', { ascending: true })
+
+      if (error) throw error
+      return (data ?? []) as unknown as ShopCategoryPublic[]
+    },
+    [`categories-${tenantId}`],
+    { revalidate: 3600, tags: ['categories'] }
+  )()
 }
