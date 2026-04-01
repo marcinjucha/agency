@@ -94,20 +94,22 @@ features:
     task: "AAA-T-139"
     iteration: 7
     size: M
-    status: not_started
-    description: "/products grid with category filtering, /products/[slug] detail page, two layout renderers, external link buttons (editorial/gallery layouts), responsive grid, navbar + footer."
+    status: done
+    description: "/produkty grid with category filtering (URL-based), /produkty/[slug] detail with gallery+editorial layouts, ProductCta (buy/download), responsive grid, Navbar (3-link) + Footer, SEO metadata + JSON-LD. Also: /o-autorze, /kontakt placeholder pages, custom 404."
     why: "Public-facing catalog — the main value proposition for jacek's customers"
     depends_on: ["CMS Product Editor", "Shop App Scaffolding"]
+    completion_notes: "11 new components, 2 route pages + 2 placeholder pages + not-found. Category filtering via searchParams (server-side). GalleryLayout uses client-side thumbnail state. Build passes clean."
 
   # Iteration 8 (parallel with 7)
   - name: "Homepage + Search + SEO"
     task: "AAA-T-140"
     iteration: 8
     size: M
-    status: not_started
-    description: "Homepage with featured/recent products, product search, robots.ts + sitemap.ts, OG images, Plausible Analytics."
+    status: done
+    description: "Homepage with hero + featured 6 products, URL-based product search (?q=), robots.ts, dynamic sitemap.ts, OG image generation (Edge), title template, Plausible Analytics."
     why: "Discoverability — search engines and users find products"
     depends_on: ["Shop App Scaffolding", "Product Catalog (Listing + Detail)"]
+    completion_notes: "ProductSearch with 300ms debounce + router.replace. Sitemap force-dynamic. OG image uses theme HSL values. Sample data: 3 categories, 6 books seeded to production."
 
   # Iteration 9 — lives in Core CMS (AAA-P-4)
   # AAA-T-141: Tenant feature flags + conditional sidebar — cross-project dependency
