@@ -1,6 +1,5 @@
 'use client'
 
-import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '@/lib/query-keys'
 import { getShopProducts } from '../queries'
@@ -13,26 +12,16 @@ import {
   EmptyState,
 } from '@agency/ui'
 import Link from 'next/link'
-import { ShoppingBag, Plus, LayoutGrid, List } from 'lucide-react'
+import { ShoppingBag, Plus } from 'lucide-react'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
+import { useViewMode } from '@/hooks/use-view-mode'
+import { ViewModeToggle } from '@/components/shared/ViewModeToggle'
 import { ShopProductListView } from './ShopProductListView'
-
-type ViewMode = 'grid' | 'list'
 
 export function ShopProductList() {
   const queryClient = useQueryClient()
-  const [viewMode, setViewMode] = useState<ViewMode>(() => {
-    if (typeof window !== 'undefined') {
-      return (localStorage.getItem('shop-products-view') as ViewMode) ?? 'grid'
-    }
-    return 'grid'
-  })
-
-  const handleViewModeChange = (mode: ViewMode) => {
-    setViewMode(mode)
-    localStorage.setItem('shop-products-view', mode)
-  }
+  const [viewMode, setViewMode] = useViewMode('shop-products-view', 'grid')
 
   const {
     data: products,
@@ -105,32 +94,7 @@ export function ShopProductList() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold text-foreground">{messages.shop.productsTitle}</h1>
         <div className="flex items-center gap-2">
-          {/* View toggle */}
-          <div className="flex items-center rounded-lg border border-border p-0.5">
-            <button
-              onClick={() => handleViewModeChange('grid')}
-              className={`rounded-md p-1.5 transition-colors ${
-                viewMode === 'grid'
-                  ? 'bg-muted text-foreground'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-              aria-label={messages.shop.viewGrid}
-            >
-              <LayoutGrid className="h-4 w-4" />
-            </button>
-            <button
-              onClick={() => handleViewModeChange('list')}
-              className={`rounded-md p-1.5 transition-colors ${
-                viewMode === 'list'
-                  ? 'bg-muted text-foreground'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-              aria-label={messages.shop.viewList}
-            >
-              <List className="h-4 w-4" />
-            </button>
-          </div>
-
+          <ViewModeToggle value={viewMode} onChange={setViewMode} />
           <Link href={routes.admin.shopProductNew}>
             <Button>
               <Plus className="mr-2 h-4 w-4" />
@@ -171,7 +135,7 @@ function ShopProductListSkeleton() {
         <Skeleton className="h-9 w-44" />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
         {Array.from({ length: 8 }).map((_, i) => (
           <div key={i} className="space-y-3 rounded-lg border border-border p-0">
             <Skeleton className="h-40 w-full rounded-t-lg rounded-b-none" />

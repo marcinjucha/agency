@@ -48,7 +48,7 @@ export function WorkflowCard({
 
   return (
     <div
-      className={`bg-card border border-border rounded-lg p-4 cursor-pointer hover:border-primary/50 transition-colors ${borderColor}`}
+      className={`bg-card border border-border rounded-lg p-3 cursor-pointer hover:border-primary/50 transition-transform hover:-translate-y-0.5 ${borderColor}`}
       role="link"
       tabIndex={0}
       onClick={() => router.push(routes.admin.workflowEditor(workflow.id))}
@@ -61,7 +61,7 @@ export function WorkflowCard({
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <p className="font-medium text-foreground truncate">{workflow.name}</p>
+          <p className="text-sm font-semibold text-foreground line-clamp-2 leading-snug">{workflow.name}</p>
           {workflow.description && (
             <p className="mt-0.5 text-xs text-muted-foreground line-clamp-2">
               {workflow.description}
@@ -78,17 +78,17 @@ export function WorkflowCard({
         </div>
       </div>
 
-      <div className="mt-3 flex items-center gap-2">
+      <div className="mt-2 flex items-center gap-2">
         <Badge variant="outline" className="text-xs font-normal">
           {getTriggerTypeLabel(workflow.trigger_type as TriggerType)}
         </Badge>
       </div>
 
-      <div className="mt-3 flex items-center justify-between">
+      <div className="mt-2 flex items-center justify-between">
         <span className="text-xs text-muted-foreground">
           {formatDate(workflow.updated_at)}
         </span>
-        <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
           <Switch
             checked={workflow.is_active}
             onCheckedChange={(checked) => onToggle(workflow.id, checked)}
@@ -100,10 +100,11 @@ export function WorkflowCard({
               <Button
                 variant="ghost"
                 size="sm"
+                className="h-7 w-7 p-0"
                 disabled={isDeleting}
                 aria-label={messages.common.delete}
               >
-                <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
+                <Trash2 className="h-3.5 w-3.5 text-muted-foreground hover:text-destructive" />
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>

@@ -9,6 +9,9 @@ import type { CreateShopCategoryFormData } from '../validation'
 import type { ShopCategory } from '../types'
 import {
   Button,
+  Badge,
+  Card,
+  CardContent,
   Input,
   Textarea,
   Skeleton,
@@ -27,6 +30,8 @@ import {
 import { Tags, Plus, Pencil, Trash2, Check, X } from 'lucide-react'
 import { messages } from '@/lib/messages'
 import { generateSlug } from '@/lib/utils/slug'
+import { useViewMode } from '@/hooks/use-view-mode'
+import { ViewModeToggle } from '@/components/shared/ViewModeToggle'
 
 type EditingRow =
   | { type: 'none' }
@@ -48,6 +53,7 @@ export function CategoryManager() {
   const [formData, setFormData] = useState<RowFormData>(emptyRow)
   const [autoSlug, setAutoSlug] = useState(true)
   const nameInputRef = useRef<HTMLInputElement>(null)
+  const [viewMode, setViewMode] = useViewMode('shop-categories-view-mode', 'grid')
 
   const {
     data: categories,
@@ -188,13 +194,16 @@ export function CategoryManager() {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold text-foreground">{messages.shop.categoriesTitle}</h1>
-        <Button
-          onClick={startNew}
-          disabled={editing.type === 'new'}
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          {messages.shop.newCategory}
-        </Button>
+        <div className="flex items-center gap-3">
+          <ViewModeToggle value={viewMode} onChange={setViewMode} />
+          <Button
+            onClick={startNew}
+            disabled={editing.type === 'new'}
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            {messages.shop.newCategory}
+          </Button>
+        </div>
       </div>
 
       {/* Category list */}
@@ -211,7 +220,70 @@ export function CategoryManager() {
             </Button>
           }
         />
+      ) : viewMode === 'grid' ? (
+        /* Gallery view */
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
+          {categories?.map((cat) => (
+            <Card key={cat.id} className="overflow-hidden transition-transform hover:-translate-y-0.5">
+              <CardContent className="p-3 space-y-1.5">
+                <div className="flex items-start justify-between gap-2">
+                  <p className="line-clamp-2 font-semibold text-foreground">{cat.name}</p>
+                  <Badge variant="outline" className="shrink-0 text-xs text-muted-foreground">
+                    {messages.shop.sortOrderBadge(cat.sort_order)}
+                  </Badge>
+                </div>
+                <p className="text-xs font-mono text-muted-foreground truncate">{cat.slug}</p>
+                {cat.description && (
+                  <p className="text-xs text-muted-foreground line-clamp-2">{cat.description}</p>
+                )}
+                <div className="flex items-center gap-1 pt-0.5">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
+                    onClick={() => startEdit(cat)}
+                    disabled={editing.type !== 'none'}
+                    aria-label={messages.common.edit}
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                        disabled={deleteMutation.isPending || editing.type !== 'none'}
+                        aria-label={messages.common.delete}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>{messages.shop.deleteCategoryConfirmTitle}</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          {messages.shop.deleteCategoryConfirmDescription(cat.name)}
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>{messages.common.cancel}</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => deleteMutation.mutate(cat.id)}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          {messages.common.delete}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       ) : (
+        /* List view */
         <div className="divide-y divide-border rounded-lg border border-border">
           {/* Table header */}
           <div className="hidden sm:flex items-center gap-4 px-4 py-2.5 text-xs font-medium text-muted-foreground uppercase tracking-wider">

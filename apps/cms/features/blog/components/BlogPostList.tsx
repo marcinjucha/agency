@@ -16,7 +16,10 @@ import { FileText, Plus } from 'lucide-react'
 import { startOfDay, isSameDay } from 'date-fns'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
+import { useViewMode } from '@/hooks/use-view-mode'
+import { ViewModeToggle } from '@/components/shared/ViewModeToggle'
 import { BlogPostListView } from './BlogPostListView'
+import { BlogPostGridView } from './BlogPostGridView'
 import { BlogCalendarView } from './BlogCalendarView'
 import type { BlogPostListItem } from '../types'
 
@@ -31,6 +34,7 @@ function getCalendarDate(post: BlogPostListItem): Date {
 export function BlogPostList() {
   const queryClient = useQueryClient()
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined)
+  const [viewMode, setViewMode] = useViewMode('blog-view-mode', 'grid')
 
   const {
     data: posts,
@@ -111,17 +115,19 @@ export function BlogPostList() {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold text-foreground">{messages.blog.blog}</h1>
-        <Link href={routes.admin.blogNew}>
-          <Button>
-            <Plus className="mr-2 h-4 w-4" />
-            {messages.blog.newPostButton}
-          </Button>
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link href={routes.admin.blogNew}>
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              {messages.blog.newPostButton}
+            </Button>
+          </Link>
+        </div>
       </div>
 
-      {/* Unified layout: calendar + list */}
+      {/* Unified layout: calendar + content */}
       <div className="flex flex-col lg:flex-row gap-6">
-        {/* Calendar panel */}
+        {/* Calendar panel — always visible */}
         <div className="shrink-0">
           <BlogCalendarView
             posts={posts}
@@ -130,16 +136,29 @@ export function BlogPostList() {
           />
         </div>
 
-        {/* List panel */}
-        <div className="min-w-0 flex-1">
-          <BlogPostListView
-            posts={filteredPosts}
-            totalCount={posts.length}
-            selectedDate={selectedDate}
-            onClearDate={() => setSelectedDate(undefined)}
-            onDelete={(id) => deleteMutation.mutate(id)}
-            isDeleting={deleteMutation.isPending}
-          />
+        {/* Right panel: toggle + view */}
+        <div className="min-w-0 flex-1 space-y-4">
+          {/* Toggle in right panel header */}
+          <div className="flex items-center justify-end">
+            <ViewModeToggle value={viewMode} onChange={setViewMode} />
+          </div>
+
+          {viewMode === 'grid' ? (
+            <BlogPostGridView
+              posts={filteredPosts}
+              onDelete={(id) => deleteMutation.mutate(id)}
+              isDeleting={deleteMutation.isPending}
+            />
+          ) : (
+            <BlogPostListView
+              posts={filteredPosts}
+              totalCount={posts.length}
+              selectedDate={selectedDate}
+              onClearDate={() => setSelectedDate(undefined)}
+              onDelete={(id) => deleteMutation.mutate(id)}
+              isDeleting={deleteMutation.isPending}
+            />
+          )}
         </div>
       </div>
     </div>

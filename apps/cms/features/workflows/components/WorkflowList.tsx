@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
 import { queryKeys } from '@/lib/query-keys'
@@ -26,14 +26,14 @@ import {
   AlertDialogTrigger,
 } from '@agency/ui'
 import Link from 'next/link'
-import { Zap, Plus, MoreHorizontal, Pencil, Trash2, LayoutGrid, List } from 'lucide-react'
+import { Zap, Plus, Pencil, Trash2 } from 'lucide-react'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
+import { useViewMode } from '@/hooks/use-view-mode'
+import { ViewModeToggle } from '@/components/shared/ViewModeToggle'
 import { CreateWorkflowDialog } from './CreateWorkflowDialog'
 import { WorkflowCard } from './WorkflowCard'
 import { WorkflowTemplateSelector } from './WorkflowTemplateSelector'
-
-type ViewMode = 'list' | 'grid'
 
 function TriggerBadge({ type }: { type: string }) {
   return (
@@ -47,17 +47,7 @@ export function WorkflowList() {
   const router = useRouter()
   const queryClient = useQueryClient()
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
-  const [viewMode, setViewMode] = useState<ViewMode>('list')
-
-  useEffect(() => {
-    const stored = localStorage.getItem('workflow-view-mode') as ViewMode | null
-    if (stored === 'grid') setViewMode('grid')
-  }, [])
-
-  const handleViewModeChange = (mode: ViewMode) => {
-    setViewMode(mode)
-    localStorage.setItem('workflow-view-mode', mode)
-  }
+  const [viewMode, setViewMode] = useViewMode('workflow-view-mode', 'list')
 
   const {
     data: workflows,
@@ -144,30 +134,7 @@ export function WorkflowList() {
         </div>
         <div className="flex items-center gap-3">
           {/* View mode toggle */}
-          <div className="flex items-center rounded-md border border-border bg-muted/30 p-0.5">
-            <button
-              onClick={() => handleViewModeChange('list')}
-              className={`rounded-md p-1.5 transition-colors ${
-                viewMode === 'list'
-                  ? 'bg-muted text-foreground'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-              aria-label={messages.workflows.viewList}
-            >
-              <List className="h-4 w-4" />
-            </button>
-            <button
-              onClick={() => handleViewModeChange('grid')}
-              className={`rounded-md p-1.5 transition-colors ${
-                viewMode === 'grid'
-                  ? 'bg-muted text-foreground'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-              aria-label={messages.workflows.viewGrid}
-            >
-              <LayoutGrid className="h-4 w-4" />
-            </button>
-          </div>
+          <ViewModeToggle value={viewMode} onChange={setViewMode} />
           <Button onClick={() => setCreateDialogOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
             {messages.workflows.newWorkflow}
@@ -216,7 +183,7 @@ export function WorkflowList() {
         </div>
       ) : (
         /* Grid */
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
           {workflows.map((workflow) => (
             <WorkflowCard
               key={workflow.id}

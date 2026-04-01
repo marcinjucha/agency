@@ -6,7 +6,6 @@ import {
   Badge,
   Collapsible,
   CollapsibleContent,
-  CollapsibleTrigger,
   Button,
 } from '@agency/ui'
 import { cn } from '@agency/ui'
@@ -39,7 +38,6 @@ const STEP_STATUS_BADGE_CLASSES: Record<StepExecutionStatus, string> = {
   pending:    'border-border bg-muted/50 text-muted-foreground',
 }
 
-
 // --- JSON payload collapsible block ---
 
 interface PayloadBlockProps {
@@ -47,11 +45,11 @@ interface PayloadBlockProps {
   payload: Record<string, unknown> | null | undefined
   /** When true, renders in red-tinted block (error display) */
   isError?: boolean
+  /** Controlled open state — driven by parent expand/collapse all */
+  open: boolean
 }
 
-function PayloadBlock({ label, payload, isError = false }: PayloadBlockProps) {
-  const [open, setOpen] = useState(false)
-
+function PayloadBlock({ label, payload, isError = false, open }: PayloadBlockProps) {
   const isEmpty =
     payload === null ||
     payload === undefined ||
@@ -67,37 +65,15 @@ function PayloadBlock({ label, payload, isError = false }: PayloadBlockProps) {
   }
 
   return (
-    <Collapsible open={open} onOpenChange={setOpen}>
-      <div className="flex items-center justify-between">
-        <p
-          className={cn(
-            'text-xs font-medium',
-            isError ? 'text-red-400' : 'text-muted-foreground'
-          )}
-        >
-          {label}
-        </p>
-        <CollapsibleTrigger asChild>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-auto px-1.5 py-0.5 text-xs text-muted-foreground hover:text-foreground"
-            aria-label={open ? messages.workflows.stepPayloadCollapse : messages.workflows.stepPayloadExpand}
-          >
-            {open ? (
-              <>
-                {messages.workflows.stepPayloadCollapse}
-                <ChevronUp className="ml-1 h-3 w-3" aria-hidden="true" />
-              </>
-            ) : (
-              <>
-                {messages.workflows.stepPayloadExpand}
-                <ChevronDown className="ml-1 h-3 w-3" aria-hidden="true" />
-              </>
-            )}
-          </Button>
-        </CollapsibleTrigger>
-      </div>
+    <Collapsible open={open}>
+      <p
+        className={cn(
+          'text-xs font-medium',
+          isError ? 'text-red-400' : 'text-muted-foreground'
+        )}
+      >
+        {label}
+      </p>
       <CollapsibleContent>
         <pre
           className={cn(
@@ -117,7 +93,14 @@ function PayloadBlock({ label, payload, isError = false }: PayloadBlockProps) {
 
 // --- Individual step card ---
 
-function StepCard({ step }: { step: StepExecutionWithMeta }) {
+interface StepCardProps {
+  step: StepExecutionWithMeta
+  /** When true, both payload blocks are expanded */
+  allExpanded: boolean
+}
+
+function StepCard({ step, allExpanded }: StepCardProps) {
+
   const stepTypeLabel =
     STEP_TYPE_LABELS[step.step_type as keyof typeof STEP_TYPE_LABELS] ?? step.step_type
   const statusLabel =
@@ -178,27 +161,32 @@ function StepCard({ step }: { step: StepExecutionWithMeta }) {
         </div>
       )}
 
-      {/* Payload section */}
-      <div className="mt-4 space-y-3 border-t border-border/60 pt-3">
-        {/* Input */}
-        <PayloadBlock
-          label={messages.workflows.stepInput}
-          payload={step.input_payload}
-        />
+      {/* Payload section — side-by-side on md+ */}
+      <div className="mt-4 border-t border-border/60 pt-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Input */}
+          <PayloadBlock
+            label={messages.workflows.stepInput}
+            payload={step.input_payload}
+            open={allExpanded}
+          />
 
-        {/* Error block (failed step) or Output */}
-        {errorPayload ? (
-          <PayloadBlock
-            label={messages.workflows.stepError}
-            payload={errorPayload}
-            isError
-          />
-        ) : (
-          <PayloadBlock
-            label={messages.workflows.stepOutput}
-            payload={step.output_payload}
-          />
-        )}
+          {/* Error block (failed step) or Output */}
+          {errorPayload ? (
+            <PayloadBlock
+              label={messages.workflows.stepError}
+              payload={errorPayload}
+              isError
+              open={allExpanded}
+            />
+          ) : (
+            <PayloadBlock
+              label={messages.workflows.stepOutput}
+              payload={step.output_payload}
+              open={allExpanded}
+            />
+          )}
+        </div>
       </div>
     </div>
   )
@@ -213,19 +201,56 @@ interface StepExecutionTimelineProps {
 // --- Main export ---
 
 export function StepExecutionTimeline({ stepExecutions }: StepExecutionTimelineProps) {
+  const [allExpanded, setAllExpanded] = useState(false)
+  // Key increments on each expand/collapse-all to force StepCard re-mount
+  // so the child useState initializers re-run with the new allExpanded value.
+  const [expandKey, setExpandKey] = useState(0)
+
+  const handleToggleAll = () => {
+    const next = !allExpanded
+    setAllExpanded(next)
+    setExpandKey((k) => k + 1)
+  }
+
   return (
     <section aria-label={messages.workflows.stepTimelineTitle}>
-      <h2 className="mb-4 text-lg font-semibold text-foreground">
-        {messages.workflows.stepTimelineTitle}
-      </h2>
+      <div className="mb-4 flex items-center justify-between">
+        <h2 className="text-lg font-semibold text-foreground">
+          {messages.workflows.stepTimelineTitle}
+        </h2>
+        {stepExecutions.length > 0 && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleToggleAll}
+            className="text-xs text-muted-foreground hover:text-foreground"
+            aria-label={allExpanded ? messages.workflows.collapseAll : messages.workflows.expandAll}
+          >
+            {allExpanded ? (
+              <>
+                <ChevronUp className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
+                {messages.workflows.collapseAll}
+              </>
+            ) : (
+              <>
+                <ChevronDown className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
+                {messages.workflows.expandAll}
+              </>
+            )}
+          </Button>
+        )}
+      </div>
 
       {stepExecutions.length === 0 ? (
         <p className="text-sm text-muted-foreground">{messages.workflows.stepNoPayload}</p>
       ) : (
         <ol className="space-y-3" aria-label={messages.workflows.stepTimelineTitle}>
           {stepExecutions.map((step) => (
-            <li key={step.id}>
-              <StepCard step={step} />
+            <li key={`${step.id}-${expandKey}`}>
+              <StepCard
+                step={step}
+                allExpanded={allExpanded}
+              />
             </li>
           ))}
         </ol>
