@@ -12,7 +12,7 @@
 
 ## Workflow Engine — AAA-P-4 — IN PROGRESS (2026-03-31)
 
-**Status:** Iterations 1-7 done. Iter 7 (Delay Step AAA-T-150, 2026-04-01): resume_at column, waiting/paused/processing statuses, handleDelay (CMS-local, no n8n dispatch), /api/workflows/resume, /api/workflows/process-due-delays (batch, atomic RPC), n8n Delay Processor (2-node cron). Next: iteration 8 (Execution Logs UI, AAA-T-151) — depends on iter 7. Extends Core CMS (AAA-P-4). 11 Notion tasks with "Workflow:" prefix.
+**Status:** Iterations 1-8 done. Iter 8 (Execution Logs UI, AAA-T-151, 2026-04-01): global execution list + per-workflow execution tab, step execution timeline, status badges, duration formatting, real-time polling. Next: iteration 9 — depends on iter 8. Extends Core CMS (AAA-P-4). 11 Notion tasks with "Workflow:" prefix.
 **Scope:** Per-tenant workflow automation. Two-layer: CMS (routing/config) + n8n (heavy execution). Visual builder (reactflow), explicit save, dynamic email template variables.
 **Key decisions:** Circular trigger protection (max depth=1 via triggering_execution_id self-FK), delay via n8n cron (±5 min), coexistence with current n8n email.
 **Execution engine (iter 6):** Engine in `features/workflows/engine/` (feature-local, NOT package). API `/api/workflows/trigger` with Bearer token (WORKFLOW_TRIGGER_SECRET). Sync steps (condition, webhook) in CMS, async steps (send_email, ai_action, delay) dispatch to n8n generic dispatcher. `workflow_id` param for targeting specific workflow. `is_active` check at API level (404/422 for inactive). Service role client for engine writes. Variable context accumulates — each step's outputPayload merged into context for later steps via {{mustache}}.
@@ -72,6 +72,10 @@
 - **claim_due_delay_steps() had updated_at which doesn't exist on table** — RPC function generated with `updated_at = now()` but workflow_step_executions has no updated_at column. Fix: remove from function. (2026-04-01, AAA-T-150)
 - **Supabase JS .update().eq().lte().select() is NOT atomic** — Chained methods are separate HTTP request parts, not a single UPDATE...RETURNING SQL. Two concurrent callers can claim same rows. Fix: PostgreSQL RPC with FOR UPDATE SKIP LOCKED. (2026-04-01, AAA-T-150)
 - **New status missing from CHECK constraint on remote DB** — 'processing' added in migration but migration only pushed to local. RPC UPDATE failed with CHECK violation. Fix: apply ALTER TABLE directly via supabase db query --linked. (2026-04-01, AAA-T-150)
+- **PostgREST .order() cannot sort by foreign table columns** — `.order('workflow_steps(sort_order)')` fails silently. Fix: sort client-side after `.map()`. (2026-04-01, AAA-T-151)
+- **workflow_steps has NO sort_order column** — Analyst assumed it existed. Actual order determined by `created_at`. Always verify column existence before coding. (2026-04-01, AAA-T-151)
+- **Supabase error objects are NOT Error instances** — `String(supabaseError)` returns "[object Object]". Fix: `(error as any)?.message ?? fallback`. (2026-04-01, AAA-T-151)
+- **`import { cn } from '@agency/ui/lib/utils'` wrong path** — Must be `import { cn } from '@agency/ui'`. Recurring across new components. (2026-04-01, AAA-T-151)
 
 ## Domain Concepts
 
@@ -103,6 +107,8 @@
 - **Delay step nie dispatchuje do n8n — CMS pisze resume_at bezpośrednio do DB** — n8n nie "trzyma" kroków przez godziny/dni. Wzorzec: handleDelay zapisuje resume_at + status='waiting', n8n cron co 5 min wywołuje /api/workflows/process-due-delays. (2026-04-01, AAA-T-150)
 - **n8n Delay Processor: POST do CMS, nie bezpośrednio do Supabase** — Nawet gdy n8n ma Supabase credentials (ma, bo form_confirmation je używa), logika orkiestracji (który krok wznowić) należy do CMS, nie n8n. n8n = głupi timer. (2026-04-01, AAA-T-150)
 - **Atomic claim z FOR UPDATE SKIP LOCKED dla batch processing** — Supabase JS chain nie jest atomowy. Dla batch endpoint gdzie concurrent calls mogą się nałożyć: PostgreSQL RPC z FOR UPDATE SKIP LOCKED + status przejściowy 'processing'. (2026-04-01, AAA-T-150)
+- **Query key separation: executions.all() vs workflows.executions(workflowId)** — Separate TanStack Query key groups for global execution list vs per-workflow executions. Prevents invalidation cross-contamination. (2026-04-01, AAA-T-151)
+- **formatDuration vs formatExecutionDuration** — Two intentionally different utils: formatDuration(seconds) for general use, formatExecutionDuration(startedAt, completedAt) for execution timeline display. (2026-04-01, AAA-T-151)
 - **step_config delay: { value, unit } zamiast duration_minutes** — Ergonomiczne dla użytkownika ("2 dni" vs "2880 minut"). Konwersja na ms w momencie wykonania, nie w schemacie. (2026-04-01, AAA-T-150)
 
 ## Preferences
@@ -123,3 +129,4 @@
 - **VariableInserter reuse in all expression/email fields** — Reuse VariableInserterPopover from packages/ui/ in workflow config panels wherever trigger context variables are available (e.g., to_expression in send_email). (2026-03-31)
 - **Config panel registry = extensible pattern** — Easy addition of new step types without changing existing panels. UpdateStatus panel deferred from 5b — implement when needed. (2026-03-31)
 - **Shop frontend path: apps/shop/jacek/** — Nested under apps/shop/ parent, not flat apps/shop-jacek/. User's father's shop name. (2026-03-31)
+- **Inline workflow name editing on list page** — User wants inline editing of workflow names directly on the workflow list page. Next task after AAA-T-151 merge. (2026-04-01)
