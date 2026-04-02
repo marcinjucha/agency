@@ -994,6 +994,10 @@ export const messages = {
     notImplemented: 'Funkcja marketplace nie jest jeszcze zaimplementowana',
     connectionDeleted: 'Połączenie z marketplace zostało usunięte',
     connectionNotFound: 'Nie znaleziono połączenia z marketplace',
+    oauthFailed: 'Nie udało się połączyć z marketplace',
+    oauthDenied: 'Autoryzacja została odrzucona',
+    connected: 'Połączono z marketplace',
+    adapterNotAvailable: 'Integracja z tym marketplace nie jest jeszcze dostępna',
   },
 
   validation: {
