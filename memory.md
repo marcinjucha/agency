@@ -1,14 +1,14 @@
 # Project Memory: Halo Efekt
 
-## Shop Platform — AAA-P-9 — IN PROGRESS (2026-03-30)
+## Shop Platform — AAA-P-9 — IN PROGRESS (2026-04-02)
 
-**Status:** Iterations 1-5 done (DB schema, CMS foundation, product list, media folders, product editor). Side project.
-**Scope:** E-commerce: Both Jacek (pallets, user's father) AND Tata (books) are catalog-only with external links (NO Stripe). Single Supabase, CMS extended (`features/shop-*`), separate frontends under `apps/shop/tata/` and `apps/shop/jacek/` (nested, not flat). Tata first. Name changed from "kolega" to "jacek" (2026-03-31).
-**Key decisions:** `shop_` prefixed tables, `listing_type` PostgreSQL ENUM, `gallery`/`editorial` display_layout (intent-based naming), `NUMERIC(10,2)` for price, `TEXT[]` for tags, flat categories.
-**Tata purchase:** Zolix for paid books (external_link), S3 for free materials (digital_download). Books are digital only. Cookie banner reused, Plausible for analytics.
-**Tata design:** Dark + warm amber ("library at night"), serif headings + sans body, editorial layout for book detail, minimal 3-link nav.
+**Status:** Iterations 1-8 done + kolega shop done. Jacek (tata) iterations 7+8 done (product catalog + homepage + SEO). Kolega (Oleg) complete frontend done (2026-04-02). Remaining: iteration 9 (feature flags, Core CMS blocker) + iteration 10 (polish/deploy).
+**Scope:** E-commerce: Jacek (user's father, books) AND Kolega (Oleg, user's friend, general merchandise — furniture, electronics). Catalog-only with external links (NO Stripe). Single Supabase, CMS extended (`features/shop-*`), separate frontends under `apps/shop/jacek/` and `apps/shop/kolega/`.
+**Key decisions:** `shop_` prefixed tables, `listing_type` PostgreSQL ENUM, `gallery`/`editorial` display_layout, `NUMERIC(10,2)` for price, `TEXT[]` for tags, flat categories. `is_featured BOOLEAN` on shop_products (2026-04-02) for homepage featured products.
+**Jacek (tata):** Dark + warm amber ("library at night"), Merriweather serif + Geist Sans, editorial layout for books, minimal 3-link nav, port 3002. Zolix for paid books, S3 for free materials.
+**Kolega (Oleg):** Light warm linen (`hsl(40 30% 97%)`), steel blue primary (`hsl(215 45% 42%)`), Inter only (no serif), sidebar category filters (240px, server component), featured products section, `aspect-[4/5]` product cards with hover shadow, `max-w-7xl`, port 3003.
+**CMS is_featured toggle:** Prominent card with Star icon + Switch in ProductSettingsSidebar. Amber accent border.
 **Dual PROJECT_SPEC:** `docs/PROJECT_SPEC.yaml` (AAA-P-4) + `docs/SHOP_PROJECT_SPEC.yaml` (AAA-P-9).
-**Plan:** 10 iterations. Graph: 1→2→[3+4]→5→[7+8]→9→10. Critical: 1→2→5→7→10.
 
 ## Workflow Engine — AAA-P-4 — IN PROGRESS (2026-03-31)
 
@@ -156,3 +156,7 @@
 - **Gallery (grid) as default view for all CMS list pages** — list is secondary. (2026-04-01, AAA-T-159)
 - **Stacked card layout (image-top, text-below), not horizontal** — User rejected image-left/text-right card layout for blog and media galleries ("nie wygląda tak jak sobie to wyobrażałem"). Stacked is the standard. (2026-04-01, AAA-T-159)
 - **Single expand/collapse button for paired panels** — In workflow step execution detail, one button toggles both input+output panels together, not separate buttons per panel. (2026-04-01, AAA-T-159)
+- **Light theme for Oleg's shop** — "dla odmiany bardziej jasny styl, nie bijąca w oczy biel, jakiś odcień." Warm linen off-white, not pure white. (2026-04-02)
+- **Sidebar filters for e-commerce shops** — When shop has many categories, use sidebar category filter (240px), not horizontal pill bar. More standard e-commerce pattern. (2026-04-02)
+- **Prominent is_featured toggle** — User wanted "more prominent" than a simple checkbox. Card with Star icon + Switch + description text + amber accent border. (2026-04-02)
+- **Self-reflection iteration in auto mode** — User wants orchestrator to ask itself clarifying questions and answer them before implementing, even in auto mode. Deepens understanding at key decision points. (2026-04-02)
