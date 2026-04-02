@@ -1,4 +1,4 @@
-import { ArrowRight } from 'lucide-react'
+import { ArrowRight, ShieldCheck } from 'lucide-react'
 import type { HeroBlock } from '@agency/database'
 import { CtaLink } from './CtaLink'
 
@@ -45,9 +45,12 @@ export function Hero({ headline, subheadline, cta, trustLine }: HeroBlock) {
               </CtaLink>
             </div>
 
-            <p className="text-sm text-muted-foreground/60 mt-6 animate-fade-in-up animate-delay-400">
-              {trustLine}
-            </p>
+            <div className="inline-flex items-center gap-3 border border-primary/20 bg-primary/5 rounded-xl px-4 py-3 mt-6 animate-fade-in-up animate-delay-400">
+              <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                <ShieldCheck className="w-3.5 h-3.5 text-primary" />
+              </div>
+              <p className="text-sm text-foreground/70">{trustLine}</p>
+            </div>
           </div>
 
           {/* Decorative element — abstract geometric shape */}

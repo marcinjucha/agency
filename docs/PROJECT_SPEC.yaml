@@ -50,7 +50,7 @@ features:
 
   - name: "Survey Link Generation"
     status: done
-    description: "UUID tokens with expiration, submission limits, inline editing, is_active toggle. Atomic counter via PostgreSQL function"
+    description: "UUID tokens with expiration, submission limits, inline editing, is_active toggle. Atomic counter via PostgreSQL function. Survey cards show computed Aktywna/Nieaktywna indicator derived from survey_links activity (not raw DB status). getSurveys() embeds survey_links; hasActiveLink() util drives badge; all 4 SurveyLinks mutations invalidate surveys.all for immediate badge refresh."
     why: "Secure, shareable links with expiration and submission controls"
 
   - name: "Dynamic Survey Form"
@@ -118,7 +118,7 @@ features:
 
   - name: "Media Library"
     status: done
-    description: "Multi-tenant media management (S3), drag-drop upload, 6 types (image, video, youtube, vimeo, instagram, tiktok), Tiptap extensions for all types, Insert Media modal in blog editor (unified layout: upload zone → link input → filters → grid, no tabs). Inline rename via pencil icon or clicking the file name, available in both card and list row views."
+    description: "Multi-tenant media management (S3), drag-drop upload, 6 types (image, video, youtube, vimeo, instagram, tiktok), Tiptap extensions for all types, Insert Media modal in blog editor (unified layout: upload zone → link input → filters → grid, no tabs). Inline rename via pencil icon or clicking the file name, available in both card and list row views. MediaPreviewDialog shows portrait iframe previews (aspect-[9/16]) for Instagram and TikTok using buildEmbedUrl(); vt.tiktok.com share URL format recognized in extractVideoId() and TikTokExtension paste rule. DialogDescription added for a11y compliance."
     why: "Centralized asset management, reuse across blog posts, no duplicate uploads"
     depends_on: ["Blog / Articles with WYSIWYG Editor"]
 

@@ -11,7 +11,7 @@ import {
 } from '@agency/ui'
 import Link from 'next/link'
 import { FileText, Plus, Trash2 } from 'lucide-react'
-import { getSurveyStatusColor, type SurveyStatus } from '@/lib/utils/status'
+import { hasActiveLink } from '../utils'
 import { queryKeys } from '@/lib/query-keys'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
@@ -102,11 +102,15 @@ export function SurveyList() {
                       {messages.surveys.questionsCount(Array.isArray(survey.questions) ? survey.questions.length : 0)}
                     </span>
                     <span
-                      className={`px-2 py-1 rounded-full text-xs font-medium ${getSurveyStatusColor(
-                        survey.status as SurveyStatus
-                      )}`}
+                      className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        hasActiveLink(survey.survey_links)
+                          ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                          : 'bg-muted text-muted-foreground border border-border'
+                      }`}
                     >
-                      {survey.status}
+                      {hasActiveLink(survey.survey_links)
+                        ? messages.surveys.statusActive
+                        : messages.surveys.statusInactive}
                     </span>
                   </div>
                 </Link>

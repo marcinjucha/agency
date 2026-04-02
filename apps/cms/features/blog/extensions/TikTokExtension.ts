@@ -13,7 +13,7 @@ declare module '@tiptap/core' {
   }
 }
 
-const TIKTOK_URL_REGEX = /(?:https?:\/\/)?(?:www\.)?(?:tiktok\.com\/@[\w.-]+\/video\/(\d+)|vm\.tiktok\.com\/([\w-]+)|tiktok\.com\/t\/([\w-]+))/g
+const TIKTOK_URL_REGEX = /(?:https?:\/\/)?(?:www\.)?(?:tiktok\.com\/@[\w.-]+\/video\/(\d+)|vm\.tiktok\.com\/([\w-]+)|vt\.tiktok\.com\/([\w-]+)|tiktok\.com\/t\/([\w-]+))/g
 
 import { IFRAME_ALLOW, TIKTOK_INLINE_STYLE } from './constants'
 

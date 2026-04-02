@@ -16,13 +16,13 @@ import {
   AlertDialogCancel,
 } from '@agency/ui'
 import { FileText, Trash2 } from 'lucide-react'
-import { getSurveyStatusColor, type SurveyStatus } from '@/lib/utils/status'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
-import type { Tables } from '@agency/database'
+import type { SurveyWithLinks } from '../types'
+import { hasActiveLink } from '../utils'
 
 interface SurveyCardProps {
-  survey: Tables<'surveys'>
+  survey: SurveyWithLinks
   onDelete: (id: string) => void
   isDeleting: boolean
 }
@@ -96,11 +96,15 @@ export function SurveyCard({ survey, onDelete, isDeleting }: SurveyCardProps) {
             {messages.surveys.questionsCount(questionCount)}
           </span>
           <span
-            className={`ml-auto px-2 py-0.5 rounded-full text-xs font-medium ${getSurveyStatusColor(
-              survey.status as SurveyStatus
-            )}`}
+            className={`ml-auto px-2 py-0.5 rounded-full text-xs font-medium ${
+              hasActiveLink(survey.survey_links)
+                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                : 'bg-muted text-muted-foreground border border-border'
+            }`}
           >
-            {survey.status}
+            {hasActiveLink(survey.survey_links)
+              ? messages.surveys.statusActive
+              : messages.surveys.statusInactive}
           </span>
         </div>
       </CardContent>
