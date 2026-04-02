@@ -20,13 +20,16 @@ import {
 export async function connectMarketplace(
   _data: ConnectMarketplaceFormData
 ): Promise<{ success: boolean; error?: string }> {
+  const auth = await getUserWithTenant()
+  if (isAuthError(auth)) return { success: false, error: auth.error }
+
   const parsed = connectMarketplaceSchema.safeParse(_data)
   if (!parsed.success) {
     return { success: false, error: parsed.error.errors[0]?.message ?? messages.common.invalidData }
   }
 
   // Stub — OAuth flow implemented in iteration 3
-  return { success: false, error: 'Nie zaimplementowano — flow OAuth w iteracji 3' }
+  return { success: false, error: messages.marketplace.notImplemented }
 }
 
 export async function disconnectMarketplace(
@@ -56,43 +59,55 @@ export async function disconnectMarketplace(
 export async function publishToMarketplace(
   _data: PublishListingFormData
 ): Promise<{ success: boolean; error?: string }> {
+  const auth = await getUserWithTenant()
+  if (isAuthError(auth)) return { success: false, error: auth.error }
+
   const parsed = publishListingSchema.safeParse(_data)
   if (!parsed.success) {
     return { success: false, error: parsed.error.errors[0]?.message ?? messages.common.invalidData }
   }
 
   // Stub — publishing implemented in iteration 4
-  return { success: false, error: 'Nie zaimplementowano — publikacja w iteracji 4' }
+  return { success: false, error: messages.marketplace.notImplemented }
 }
 
 export async function updateMarketplaceListing(
   _listingId: string,
   _data: UpdateListingFormData
 ): Promise<{ success: boolean; error?: string }> {
+  const auth = await getUserWithTenant()
+  if (isAuthError(auth)) return { success: false, error: auth.error }
+
   const parsed = updateListingSchema.safeParse(_data)
   if (!parsed.success) {
     return { success: false, error: parsed.error.errors[0]?.message ?? messages.common.invalidData }
   }
 
   // Stub — listing update implemented in iteration 4
-  return { success: false, error: 'Nie zaimplementowano — aktualizacja w iteracji 4' }
+  return { success: false, error: messages.marketplace.notImplemented }
 }
 
 export async function removeMarketplaceListing(
   _listingId: string
 ): Promise<{ success: boolean; error?: string }> {
+  const auth = await getUserWithTenant()
+  if (isAuthError(auth)) return { success: false, error: auth.error }
+
   // Stub — listing removal implemented in iteration 4
-  return { success: false, error: 'Nie zaimplementowano — usuwanie w iteracji 4' }
+  return { success: false, error: messages.marketplace.notImplemented }
 }
 
 export async function startMarketplaceImport(
   _data: CreateImportFormData
 ): Promise<{ success: boolean; error?: string }> {
+  const auth = await getUserWithTenant()
+  if (isAuthError(auth)) return { success: false, error: auth.error }
+
   const parsed = createImportSchema.safeParse(_data)
   if (!parsed.success) {
     return { success: false, error: parsed.error.errors[0]?.message ?? messages.common.invalidData }
   }
 
   // Stub — import implemented in iteration 5
-  return { success: false, error: 'Nie zaimplementowano — import w iteracji 5' }
+  return { success: false, error: messages.marketplace.notImplemented }
 }

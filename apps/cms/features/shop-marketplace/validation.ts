@@ -42,7 +42,9 @@ export type PublishListingFormData = z.infer<typeof publishListingSchema>
 
 // --- Update listing ---
 
-export const updateListingSchema = publishListingSchema.partial()
+export const updateListingSchema = publishListingSchema
+  .omit({ productId: true, connectionId: true })
+  .partial()
 
 export type UpdateListingFormData = z.infer<typeof updateListingSchema>
 

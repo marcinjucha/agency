@@ -990,6 +990,12 @@ export const messages = {
     insertVariable: 'Wstaw zmienną',
   },
 
+  marketplace: {
+    notImplemented: 'Funkcja marketplace nie jest jeszcze zaimplementowana',
+    connectionDeleted: 'Połączenie z marketplace zostało usunięte',
+    connectionNotFound: 'Nie znaleziono połączenia z marketplace',
+  },
+
   validation: {
     titleRequired: 'Tytuł jest wymagany',
     slugRequired: 'Slug jest wymagany',
