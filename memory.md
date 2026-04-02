@@ -26,7 +26,7 @@
 
 ## Marketplace Integration — AAA-P-9 — IN PROGRESS (2026-04-02)
 
-**Status:** Iterations 1-3 done (DB schema migration, CMS foundation: types/queries/validation/actions + adapter interface/registry, OAuth flow). AAA-T-157 repurposed from investigation to full XL feature (10 iterations, High priority).
+**Status:** Iterations 1-4 done (DB schema migration, CMS foundation: types/queries/validation/actions + adapter interface/registry, OAuth flow, OLX + Allegro adapter implementations). AAA-T-157 repurposed from investigation to full XL feature (10 iterations, High priority).
 **Scope:** OLX + Allegro integration — publish products, sync status (sold/expired), import existing listings. Bidirectional sync.
 **DB tables:** shop_marketplace_connections (OAuth creds per tenant) + shop_marketplace_listings (1 product → N listings, marketplace_params JSONB) + shop_marketplace_imports. TEXT for marketplace type (not ENUM, same reasoning as trigger_type/step_type).
 **Key decisions:** MarketplaceAdapter interface in `features/shop-marketplace/adapters/` (feature-local, not package). MARKETPLACE_REGISTRY pattern (like NODE_TYPE_REGISTRY). Per-tenant pgcrypto-encrypted OAuth tokens (same as email_configs). OLX location data on listings only (marketplace_params JSONB), not on shop_products.
@@ -94,6 +94,8 @@
 - **notification_email is per survey_link, not per tenant** — Each link has own notification address. (2026-03-27)
 - **OLX.pl API** — developer.olx.pl, OAuth 2.0, manual verification required (delays possible), CRUD listings/photos/categories/locations. Free to use. (2026-04-02)
 - **Allegro REST API** — developer.allegro.pl, OAuth 2.0 + JWT, sandbox available, POST-only token endpoint (since Aug 2025). ADVERTISEMENT format for classifieds. (2026-04-02)
+- **Allegro removeListing uses PATCH not DELETE** — Allegro ends offers by setting `publication.status: 'END'`, not HTTP DELETE. (2026-04-02)
+- **Allegro token exchange uses Basic auth** — base64(client_id:client_secret) in Authorization header, unlike OLX which sends credentials in POST body. (2026-04-02)
 - **AAA-T-157 repurposed** — Originally "Sprawdzanie statusu produktu na Allegro/OLX" (Inbox, investigation). Expanded to full "Marketplace Integration (OLX + Allegro)" (To Do, High, XL, 10 iterations). (2026-04-02)
 
 ## Architecture Decisions
@@ -119,6 +121,10 @@
 - **jose for JWT state (not jsonwebtoken)** — jose is Edge-compatible, jsonwebtoken requires Node.js crypto. State JWT = { tenantId, marketplace, nonce }, 10min expiry, HS256. (2026-04-02, AAA-T-157)
 - **connectMarketplace returns authUrl for client redirect** — Server Actions can't redirect to external URLs. Action returns { authUrl }, client does window.location redirect. (2026-04-02, AAA-T-157)
 - **Service role client only in OAuth callback** — Initiation uses cookie-based server client (user must be logged in). Callback uses service role (no user session after external redirect back). (2026-04-02, AAA-T-157)
+- **Standalone functions over this-binding in object literals** — Object literal methods using `this.otherMethod()` break when destructured. Fix: extract standalone functions, assign to adapter property. Applied to getListingStatuses->fetchOlxListingStatus pattern. (2026-04-02, AAA-T-157)
+- **Shared HTTP wrapper (marketplaceFetch)** — All external marketplace API calls through one wrapper with AbortSignal.timeout(15s), response.ok check, MarketplaceApiError. No raw fetch in adapters. (2026-04-02, AAA-T-157)
+- **Allegro sandbox toggle at module load** — ALLEGRO_SANDBOX env var evaluated at top-level const. All 3 URLs (auth, token, API) switch together. Fine for production, may confuse hot-reload in dev. (2026-04-02, AAA-T-157)
+- **Credential access isolated to credentials.ts** — Single file with service role client, reads from decrypted view. Adapters never touch DB directly. (2026-04-02, AAA-T-157)
 
 ## Preferences
 
