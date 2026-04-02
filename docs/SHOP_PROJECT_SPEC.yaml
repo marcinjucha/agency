@@ -9,8 +9,9 @@ architecture:
   key_decisions:
     - "Single Supabase DB — shop_ prefixed tables in same project as Halo Efekt, shared RLS patterns"
     - "CMS extended — features/shop-products/ and features/shop-categories/ in apps/cms, NOT a separate CMS"
-    - "Separate frontends per client — apps/shop/jacek/ and apps/shop/tata/ as independent Next.js apps"
+    - "Separate frontends per client — apps/shop/jacek/ and apps/shop/kolega/ as independent Next.js apps (apps/shop/tata/ planned but not built)"
     - "Tata: hybrid — external_link (paid books via Zolix/platform) + digital_download (free materials from S3). Kolega: external_link only (OLX/Allegro)"
+    - "is_featured BOOLEAN on shop_products — homepage featured products, CMS toggle with Star icon. Affects all shops (shared table), DEFAULT false."
     - "Reuse packages — @agency/ui, @agency/database, @agency/email, editor, media, SEO, legal pages"
     - "Sidebar 'Sklep' section — hardcoded initially, feature flags later (AAA-T-141 in Core CMS)"
     - "apps/shop/ parent folder — shared config/components possible, each client subfolder is a standalone Next.js app"
@@ -110,6 +111,17 @@ features:
     why: "Discoverability — search engines and users find products"
     depends_on: ["Shop App Scaffolding", "Product Catalog (Listing + Detail)"]
     completion_notes: "ProductSearch with 300ms debounce + router.replace. Sitemap force-dynamic. OG image uses theme HSL values. Sample data: 3 categories, 6 books seeded to production."
+
+  # Kolega Shop (Oleg) — no Notion task
+  - name: "Kolega Shop Frontend (Oleg)"
+    task: "N/A"
+    iteration: "kolega-1"
+    size: L
+    status: done
+    description: "apps/shop/kolega/ — full e-commerce frontend for general merchandise. Light warm linen theme (hsl(40 30% 97%)), steel blue primary, Inter font. Sidebar category filters (240px, server component), featured products via is_featured flag, ProductCard (aspect-[4/5], hover shadow), responsive grid, homepage hero + featured section, sitemap, OG image, JSON-LD. Port 3003."
+    why: "Second shop client — validates multi-tenant shop architecture and different visual direction from jacek (dark amber) vs kolega (light linen)"
+    depends_on: ["DB Schema", "CMS Product Editor", "Shop App Scaffolding"]
+    completion_notes: "28 new files. is_featured migration added to shared shop_products table. CMS product editor has prominent 'Polecane' toggle with Star icon (validation, actions, editor, sidebar, messages updated). Build passes clean (kolega + CMS). Validated: 0 blocking issues."
 
   # Iteration 9 — lives in Core CMS (AAA-P-4)
   # AAA-T-141: Tenant feature flags + conditional sidebar — cross-project dependency
