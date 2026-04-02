@@ -26,7 +26,7 @@
 
 ## Marketplace Integration — AAA-P-9 — IN PROGRESS (2026-04-02)
 
-**Status:** Iterations 1-2 done (DB schema migration, CMS foundation: types/queries/validation/actions + adapter interface/registry). AAA-T-157 repurposed from investigation to full XL feature (10 iterations, High priority).
+**Status:** Iterations 1-3 done (DB schema migration, CMS foundation: types/queries/validation/actions + adapter interface/registry, OAuth flow). AAA-T-157 repurposed from investigation to full XL feature (10 iterations, High priority).
 **Scope:** OLX + Allegro integration — publish products, sync status (sold/expired), import existing listings. Bidirectional sync.
 **DB tables:** shop_marketplace_connections (OAuth creds per tenant) + shop_marketplace_listings (1 product → N listings, marketplace_params JSONB) + shop_marketplace_imports. TEXT for marketplace type (not ENUM, same reasoning as trigger_type/step_type).
 **Key decisions:** MarketplaceAdapter interface in `features/shop-marketplace/adapters/` (feature-local, not package). MARKETPLACE_REGISTRY pattern (like NODE_TYPE_REGISTRY). Per-tenant pgcrypto-encrypted OAuth tokens (same as email_configs). OLX location data on listings only (marketplace_params JSONB), not on shop_products.
@@ -82,6 +82,7 @@
 - **Decrypted view bypasses RLS without security_invoker** — PostgreSQL views execute as view owner (postgres) by default, bypassing RLS on base table. Fix: `WITH (security_invoker = true)` on PostgreSQL 17+ (Supabase). Critical for multi-tenant security. (2026-04-02, AAA-T-157)
 - **Type/DB column name mismatch in manually written types** — When DB types aren't generated, manually written TypeScript types had 3 critical mismatches: phantom columns (sync_status/sync_error on wrong table), wrong column names (total_count vs total_items), missing columns (marketplace on imports). Fix: always cross-reference migration SQL when writing manual types. (2026-04-02, AAA-T-157)
 - **updateSchema.partial() makes IDs optional** — Using `.partial()` on a schema with required UUID fields makes them optional, bypassing NOT NULL DB constraints. Fix: `.omit({ field: true }).partial()` to exclude non-updatable fields before partial. (2026-04-02, AAA-T-157)
+- **VALID_MARKETPLACES duplicated MarketplaceId** — Hardcoded array in API route duplicated type union already defined in types.ts. Fix: derive from MARKETPLACE_LABELS keys (single source of truth). Same pattern as Label duplication bug. (2026-04-02, AAA-T-157)
 
 ## Domain Concepts
 
@@ -114,6 +115,10 @@
 - **Per-tenant marketplace OAuth via pgcrypto** — BYTEA columns for encrypted tokens (pgp_sym_encrypt returns bytea natively, no encode/decode roundtrip). Decrypted view with `security_invoker = true` for n8n. `app.encryption_key` PostgreSQL GUC for passphrase (set via ALTER DATABASE or Supabase Dashboard). First real pgcrypto usage in codebase. (2026-04-02)
 - **OLX location data on listings only** — Platform-specific data stays on shop_marketplace_listings.marketplace_params JSONB, not polluting shop_products. (2026-04-02)
 - **Stub Server Actions must include auth guard** — Stubs without getUserWithTenant() risk being copied without auth when implemented. All stubs now call getUserWithTenant() + isAuthError before returning stub error. (2026-04-02, AAA-T-157)
+- **PostgreSQL function for encrypted token upsert** — Supabase JS .insert() can't call pgp_sym_encrypt. Created SECURITY DEFINER function `upsert_marketplace_connection()` with two code paths for NULL/non-NULL account_id. Callable via `.rpc()`. (2026-04-02, AAA-T-157)
+- **jose for JWT state (not jsonwebtoken)** — jose is Edge-compatible, jsonwebtoken requires Node.js crypto. State JWT = { tenantId, marketplace, nonce }, 10min expiry, HS256. (2026-04-02, AAA-T-157)
+- **connectMarketplace returns authUrl for client redirect** — Server Actions can't redirect to external URLs. Action returns { authUrl }, client does window.location redirect. (2026-04-02, AAA-T-157)
+- **Service role client only in OAuth callback** — Initiation uses cookie-based server client (user must be logged in). Callback uses service role (no user session after external redirect back). (2026-04-02, AAA-T-157)
 
 ## Preferences
 
