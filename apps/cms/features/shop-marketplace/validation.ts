@@ -6,7 +6,7 @@ export const connectMarketplaceSchema = z.object({
   marketplace: z.enum(['olx', 'allegro'], {
     required_error: 'Wybierz marketplace',
   }),
-  displayName: z.string().optional(),
+  displayName: z.string().nullable().optional(),
 })
 
 export type ConnectMarketplaceFormData = z.infer<typeof connectMarketplaceSchema>
@@ -14,7 +14,7 @@ export type ConnectMarketplaceFormData = z.infer<typeof connectMarketplaceSchema
 // --- Update connection ---
 
 export const updateConnectionSchema = z.object({
-  displayName: z.string().optional(),
+  displayName: z.string().nullable().optional(),
   isActive: z.boolean().optional(),
 })
 

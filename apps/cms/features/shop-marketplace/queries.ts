@@ -3,7 +3,7 @@ import type { MarketplaceConnection, MarketplaceListing, MarketplaceImport } fro
 import { toMarketplaceConnection, toMarketplaceListing, toMarketplaceImport } from './types'
 
 // EXCLUDE encrypted columns — never fetch tokens to the client
-const CONNECTION_FIELDS = 'id, tenant_id, marketplace, display_name, is_active, token_expires_at, last_sync_at, sync_status, sync_error, created_at, updated_at' as const
+const CONNECTION_FIELDS = 'id, tenant_id, marketplace, display_name, is_active, token_expires_at, account_id, account_name, scopes, last_synced_at, created_at, updated_at' as const
 
 export async function getMarketplaceConnections(): Promise<MarketplaceConnection[]> {
   const supabase = createClient()
