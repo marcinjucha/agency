@@ -30,6 +30,7 @@ import {
   Checkbox,
   DatePicker,
 } from '@agency/ui'
+import Link from 'next/link'
 import type { Question, SurveyAnswers } from '../types'
 import { messages } from '@/lib/messages'
 
@@ -53,39 +54,45 @@ export function QuestionField({
 
   return (
     <div className="space-y-3">
-      {/* Question Label */}
-      <Label htmlFor={id} className="text-base font-medium text-foreground">
-        {number != null && (
-          <span className="text-muted-foreground mr-2">{number}.</span>
-        )}
-        {text}
-        {required && <span className="text-destructive ml-1">*</span>}
-      </Label>
+      {/* Question Label — hidden for consent type (label is inside the checkbox card) */}
+      {type !== 'consent' && (
+        <Label htmlFor={id} className="text-base font-medium text-foreground">
+          {number != null && (
+            <span className="text-muted-foreground mr-2">{number}.</span>
+          )}
+          {text}
+          {required && <span className="text-destructive ml-1">*</span>}
+        </Label>
+      )}
 
       {/* TEXT / EMAIL / TEL - Use Input component with register */}
       {(type === 'text' || type === 'email' || type === 'tel') && (
-        <Input
-          id={id}
-          type={type}
-          placeholder={placeholder}
-          {...register(id)}
-          aria-invalid={error ? 'true' : 'false'}
-          aria-describedby={error ? `${id}-error` : undefined}
-          className={error ? 'border-destructive' : ''}
-        />
+        <div className="mt-4">
+          <Input
+            id={id}
+            type={type}
+            placeholder={placeholder}
+            {...register(id)}
+            aria-invalid={error ? 'true' : 'false'}
+            aria-describedby={error ? `${id}-error` : undefined}
+            className={error ? 'border-destructive' : ''}
+          />
+        </div>
       )}
 
       {/* TEXTAREA - shadcn/ui Textarea with register */}
       {type === 'textarea' && (
-        <Textarea
-          id={id}
-          rows={4}
-          placeholder={placeholder}
-          {...register(id)}
-          aria-invalid={error ? 'true' : 'false'}
-          aria-describedby={error ? `${id}-error` : undefined}
-          className={error ? 'border-destructive' : ''}
-        />
+        <div className="mt-4">
+          <Textarea
+            id={id}
+            rows={4}
+            placeholder={placeholder}
+            {...register(id)}
+            aria-invalid={error ? 'true' : 'false'}
+            aria-describedby={error ? `${id}-error` : undefined}
+            className={error ? 'border-destructive' : ''}
+          />
+        </div>
       )}
 
       {/* SELECT - shadcn/ui Select with Controller */}
@@ -94,30 +101,32 @@ export function QuestionField({
           name={id}
           control={control}
           render={({ field }) => (
-            <Select
-              value={field.value as string}
-              onValueChange={field.onChange}
-            >
-              <SelectTrigger
-                id={id}
-                aria-invalid={error ? 'true' : 'false'}
-                aria-describedby={error ? `${id}-error` : undefined}
-                className={error ? 'border-destructive' : ''}
+            <div className="mt-4">
+              <Select
+                value={field.value as string}
+                onValueChange={field.onChange}
               >
-                <SelectValue
-                  placeholder={
-                    placeholder || messages.validation.selectPlaceholder
-                  }
-                />
-              </SelectTrigger>
-              <SelectContent>
-                {options?.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {option}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+                <SelectTrigger
+                  id={id}
+                  aria-invalid={error ? 'true' : 'false'}
+                  aria-describedby={error ? `${id}-error` : undefined}
+                  className={error ? 'border-destructive' : ''}
+                >
+                  <SelectValue
+                    placeholder={
+                      placeholder || messages.validation.selectPlaceholder
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {options?.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {option}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           )}
         />
       )}
@@ -132,6 +141,7 @@ export function QuestionField({
               value={field.value as string}
               onValueChange={field.onChange}
               aria-describedby={error ? `${id}-error` : undefined}
+              className="mt-4"
             >
               {options?.map((option) => (
                 <div key={option} className="flex items-center space-x-2">
@@ -161,7 +171,7 @@ export function QuestionField({
           defaultValue={[]}
           render={({ field }) => (
             <div
-              className="space-y-2"
+              className="space-y-2 mt-4"
               role="group"
               aria-describedby={error ? `${id}-error` : undefined}
             >
@@ -199,15 +209,72 @@ export function QuestionField({
           name={id}
           control={control}
           render={({ field }) => (
-            <DatePicker
-              id={id}
-              value={field.value ? new Date(field.value as string) : undefined}
-              onChange={(date) => field.onChange(date ? date.toISOString().split('T')[0] : '')}
-              placeholder={placeholder || messages.survey.datePickerPlaceholder}
-              error={!!error}
-              aria-describedby={error ? `${id}-error` : undefined}
-            />
+            <div className="mt-4">
+              <DatePicker
+                id={id}
+                value={field.value ? new Date(field.value as string) : undefined}
+                onChange={(date) => field.onChange(date ? date.toISOString().split('T')[0] : '')}
+                placeholder={placeholder || messages.survey.datePickerPlaceholder}
+                error={!!error}
+                aria-describedby={error ? `${id}-error` : undefined}
+              />
+            </div>
           )}
+        />
+      )}
+
+      {/* CONSENT - required RODO checkbox with privacy policy link */}
+      {type === 'consent' && (
+        <Controller
+          name={id}
+          control={control}
+          defaultValue=""
+          render={({ field }) => {
+            const consentUrl = question.consent_url || '/polityka-prywatnosci'
+            const isExternal = consentUrl.startsWith('http')
+
+            return (
+              <div
+                className={`flex items-start gap-3 rounded-md border p-4 bg-muted/30 mt-4 ${error ? 'border-destructive' : 'border-border'}`}
+                aria-describedby={error ? `${id}-error` : undefined}
+              >
+                <Checkbox
+                  id={id}
+                  checked={field.value === 'true'}
+                  onCheckedChange={(checked) => field.onChange(checked ? 'true' : 'false')}
+                  aria-required="true"
+                  aria-invalid={error ? 'true' : 'false'}
+                  className="mt-0.5 shrink-0"
+                />
+                <label htmlFor={id} className="text-sm leading-relaxed text-foreground cursor-pointer select-none">
+                  {text}
+                  {' '}
+                  {isExternal ? (
+                    <a
+                      href={consentUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary underline underline-offset-2 hover:text-primary/80 transition-colors"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {messages.survey.privacyPolicyLinkText}
+                    </a>
+                  ) : (
+                    <Link
+                      href={consentUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary underline underline-offset-2 hover:text-primary/80 transition-colors"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {messages.survey.privacyPolicyLinkText}
+                    </Link>
+                  )}
+                  <span className="text-destructive ml-1" aria-hidden="true">*</span>
+                </label>
+              </div>
+            )
+          }}
         />
       )}
 

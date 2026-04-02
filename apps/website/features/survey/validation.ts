@@ -103,6 +103,18 @@ export function generateSurveySchema(questions: Question[]) {
         break
       }
 
+      case 'consent': {
+        // Consent is ALWAYS required regardless of question.required — GDPR compliance.
+        // Value is string "true" when checked (set by QuestionField checkbox).
+        // Early return to bypass the optional() wrap below.
+        schemaShape[question.id] = z
+          .string()
+          .refine((val) => val === 'true', {
+            message: messages.validation.consentRequired,
+          })
+        return
+      }
+
       default:
         fieldSchema = z.string()
     }

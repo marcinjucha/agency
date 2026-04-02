@@ -23,6 +23,7 @@ export type QuestionType =
   | 'radio'
   | 'checkbox'
   | 'date'
+  | 'consent'
 
 /**
  * Semantic role for a question field
@@ -63,6 +64,9 @@ export interface Question {
 
   /** Placeholder text displayed in the input field */
   placeholder?: string
+
+  /** URL to privacy policy, shown as a clickable link in the consent checkbox label */
+  consent_url?: string
 }
 
 /**

@@ -100,6 +100,8 @@
 - **Type/DB column name mismatch in manually written types** — When DB types aren't generated, manually written TypeScript types had 3 critical mismatches: phantom columns (sync_status/sync_error on wrong table), wrong column names (total_count vs total_items), missing columns (marketplace on imports). Fix: always cross-reference migration SQL when writing manual types. (2026-04-02, AAA-T-157)
 - **updateSchema.partial() makes IDs optional** — Using `.partial()` on a schema with required UUID fields makes them optional, bypassing NOT NULL DB constraints. Fix: `.omit({ field: true }).partial()` to exclude non-updatable fields before partial. (2026-04-02, AAA-T-157)
 - **VALID_MARKETPLACES duplicated MarketplaceId** — Hardcoded array in API route duplicated type union already defined in types.ts. Fix: derive from MARKETPLACE_LABELS keys (single source of truth). Same pattern as Label duplication bug. (2026-04-02, AAA-T-157)
+- **SurveyBuilder.tsx local QuestionType duplication** — Component defined local `type QuestionType` duplicating shared type from types.ts. Local type lacked 'consent' value, causing build error when consent question added. HIGH severity: any new question type will hit this. Fix: import from shared types.ts. (2026-04-02)
+- **CMS label swap: radio labeled "Wielokrotny wybor"** — QUESTION_TYPE_LABELS had radio mapped to multi-choice label and checkbox to single-choice label (swapped). Fix: radio="Jednokrotny wybor", checkbox="Wielokrotny wybor". (2026-04-02)
 
 ## Domain Concepts
 
@@ -120,6 +122,8 @@
 - **Allegro removeListing uses PATCH not DELETE** — Allegro ends offers by setting `publication.status: 'END'`, not HTTP DELETE. (2026-04-02)
 - **Allegro token exchange uses Basic auth** — base64(client_id:client_secret) in Authorization header, unlike OLX which sends credentials in POST body. (2026-04-02)
 - **AAA-T-157 repurposed** — Originally "Sprawdzanie statusu produktu na Allegro/OLX" (Inbox, investigation). Expanded to full "Marketplace Integration (OLX + Allegro)" (To Do, High, XL, 10 iterations). (2026-04-02)
+- **Consent question type = string "true" stored in DB** — `question_type: 'consent'`, renders as checkbox, stores string `"true"` (not boolean) in survey_answers.answer TEXT column. Always required (is_required forced true, toggle disabled in builder). (2026-04-02)
+- **Cookie banner wording: general "analytics" not "Plausible"** — Cookie/analytics consent banner uses general wording ("anonimowe dane analityczne") without naming specific tool. Avoids updating banner when analytics provider changes. (2026-04-02)
 
 ## Architecture Decisions
 
@@ -200,3 +204,5 @@
 - **Auto-publish option for marketplace** — User wants product.published → auto-publish to connected marketplaces. Planned as workflow engine trigger for future. (2026-04-02)
 - **CMS configures n8n marketplace access** — Marketplace n8n config managed from CMS, not directly in n8n. (2026-04-02)
 - **Polish labels in types.ts deferred to iteration 10** — LISTING_STATUS_LABELS, SYNC_STATUS_LABELS etc. hardcoded Polish in types.ts. Technically should be in messages.ts but works as type-level constants. Consolidate during Polish pass (iter 10). (2026-04-02, AAA-T-157)
+- **Explicit mt-* on each input over space-y on wrapper** — space-y applies uniform gaps but consent checkbox needs different spacing than text inputs. Fix: explicit mt-4/mt-6 per input type for fine control. (2026-04-02)
+- **Consent question always required (is_required forced)** — Consent checkbox must always be required (legal obligation). SurveyBuilder forces is_required=true and disables toggle when question_type='consent'. Prevents accidental optional consent. (2026-04-02)

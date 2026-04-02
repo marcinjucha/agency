@@ -14,11 +14,11 @@ import {
 } from '@agency/ui'
 import {
   ArrowLeft, Plus, Trash2, Save, HelpCircle, UserPlus,
-  GripVertical, Copy, Type, AlignLeft, Mail, Phone, ChevronDown, Circle, CheckSquare, Calendar,
+  GripVertical, Copy, Type, AlignLeft, Mail, Phone, ChevronDown, Circle, CheckSquare, Calendar, ShieldCheck,
 } from 'lucide-react'
 import Link from 'next/link'
 import { queryKeys } from '@/lib/query-keys'
-import type { Tables } from '@agency/database'
+import type { Tables, Json } from '@agency/database'
 import { SurveyLinks } from './SurveyLinks'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
@@ -41,18 +41,7 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import { restrictToVerticalAxis } from '@dnd-kit/modifiers'
 
-import type { SemanticRole } from '@agency/validators'
-
-type Question = {
-  id: string
-  type: 'text' | 'textarea' | 'email' | 'tel' | 'select' | 'radio' | 'checkbox' | 'date'
-  question: string
-  required: boolean
-  options?: string[]
-  order: number
-  semantic_role?: SemanticRole | null
-  placeholder?: string
-}
+import type { SemanticRole, Question } from '@agency/validators'
 
 type SurveyBuilderProps = {
   survey: Tables<'surveys'>
@@ -67,6 +56,7 @@ const QUESTION_TYPE_ICONS: Record<Question['type'], typeof Type> = {
   radio: Circle,
   checkbox: CheckSquare,
   date: Calendar,
+  consent: ShieldCheck,
 }
 
 const QUESTION_TYPE_LABELS: Record<Question['type'], string> = {
@@ -78,6 +68,7 @@ const QUESTION_TYPE_LABELS: Record<Question['type'], string> = {
   radio: messages.surveys.typeMultipleChoice,
   checkbox: messages.surveys.typeCheckboxes,
   date: messages.surveys.typeDate,
+  consent: messages.surveys.typeConsent,
 }
 
 function parseQuestions(survey: Tables<'surveys'>): Question[] {
@@ -91,6 +82,7 @@ function parseQuestions(survey: Tables<'surveys'>): Question[] {
     order: q.order !== undefined ? q.order : index,
     semantic_role: q.semantic_role ?? null,
     placeholder: q.placeholder ?? '',
+    consent_url: q.consent_url ?? '',
   }))
 }
 
@@ -178,9 +170,14 @@ function SortableQuestionCard({ question, index, onUpdate, onDelete, onDuplicate
             <Label htmlFor={`question-type-${index}`}>{messages.surveys.questionType}</Label>
             <Select
               value={question.type}
-              onValueChange={(value) =>
-                onUpdate(question.id, { type: value as Question['type'] })
-              }
+              onValueChange={(value) => {
+                const updates: Partial<Question> = { type: value as Question['type'] }
+                if (value === 'consent') {
+                  updates.question = messages.surveys.consentDefaultText
+                  updates.required = true
+                }
+                onUpdate(question.id, updates)
+              }}
             >
               <SelectTrigger id={`question-type-${index}`}>
                 <SelectValue placeholder={messages.surveys.selectQuestionType} />
@@ -194,67 +191,87 @@ function SortableQuestionCard({ question, index, onUpdate, onDelete, onDuplicate
                 <SelectItem value="radio">{messages.surveys.typeMultipleChoice}</SelectItem>
                 <SelectItem value="checkbox">{messages.surveys.typeCheckboxes}</SelectItem>
                 <SelectItem value="date">{messages.surveys.typeDate}</SelectItem>
+                <SelectItem value="consent">{messages.surveys.typeConsent}</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
-          <div className="flex items-end">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <Checkbox
-                checked={question.required}
-                onCheckedChange={(checked) =>
-                  onUpdate(question.id, { required: checked === true })
-                }
-              />
-              <span className="text-sm">{messages.surveys.required}</span>
-            </label>
-          </div>
+          {question.type !== 'consent' && (
+            <div className="flex items-end">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <Checkbox
+                  checked={question.required}
+                  onCheckedChange={(checked) =>
+                    onUpdate(question.id, { required: checked === true })
+                  }
+                />
+                <span className="text-sm">{messages.surveys.required}</span>
+              </label>
+            </div>
+          )}
         </div>
 
-        <div>
-          <Label htmlFor={`question-placeholder-${index}`}>{messages.surveys.placeholderLabel}</Label>
-          <Input
-            id={`question-placeholder-${index}`}
-            value={question.placeholder || ''}
-            onChange={(e) => onUpdate(question.id, { placeholder: e.target.value })}
-            placeholder={messages.surveys.placeholderHint}
-          />
-        </div>
-
-        <div>
-          <div className="flex items-center gap-1.5 mb-1.5">
-            <Label htmlFor={`question-role-${index}`}>{messages.surveys.semanticRole}</Label>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <HelpCircle className="h-3.5 w-3.5 text-muted-foreground" />
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{messages.surveys.semanticRoleHint}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+        {question.type === 'consent' && (
+          <div className="space-y-1.5">
+            <Label htmlFor={`question-consent-url-${index}`}>{messages.surveys.consentUrlLabel}</Label>
+            <Input
+              id={`question-consent-url-${index}`}
+              value={question.consent_url || ''}
+              onChange={(e) => onUpdate(question.id, { consent_url: e.target.value })}
+              placeholder={messages.surveys.consentUrlPlaceholder}
+            />
+            <p className="text-xs text-muted-foreground">{messages.surveys.consentUrlHint}</p>
           </div>
-          <Select
-            value={question.semantic_role || 'none'}
-            onValueChange={(value) =>
-              onUpdate(question.id, {
-                semantic_role: value === 'none' ? null : (value as Question['semantic_role']),
-              })
-            }
-          >
-            <SelectTrigger id={`question-role-${index}`}>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">{messages.surveys.semanticRoleNone}</SelectItem>
-              <SelectItem value="client_name">{messages.surveys.semanticRoleClientName}</SelectItem>
-              <SelectItem value="client_email">{messages.surveys.semanticRoleClientEmail}</SelectItem>
-              <SelectItem value="company_name">{messages.surveys.semanticRoleCompanyName}</SelectItem>
-              <SelectItem value="phone">{messages.surveys.semanticRolePhone}</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+        )}
+
+        {question.type !== 'consent' && (
+          <div>
+            <Label htmlFor={`question-placeholder-${index}`}>{messages.surveys.placeholderLabel}</Label>
+            <Input
+              id={`question-placeholder-${index}`}
+              value={question.placeholder || ''}
+              onChange={(e) => onUpdate(question.id, { placeholder: e.target.value })}
+              placeholder={messages.surveys.placeholderHint}
+            />
+          </div>
+        )}
+
+        {question.type !== 'consent' && (
+          <div>
+            <div className="flex items-center gap-1.5 mb-1.5">
+              <Label htmlFor={`question-role-${index}`}>{messages.surveys.semanticRole}</Label>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <HelpCircle className="h-3.5 w-3.5 text-muted-foreground" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{messages.surveys.semanticRoleHint}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+            <Select
+              value={question.semantic_role || 'none'}
+              onValueChange={(value) =>
+                onUpdate(question.id, {
+                  semantic_role: value === 'none' ? null : (value as Question['semantic_role']),
+                })
+              }
+            >
+              <SelectTrigger id={`question-role-${index}`}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">{messages.surveys.semanticRoleNone}</SelectItem>
+                <SelectItem value="client_name">{messages.surveys.semanticRoleClientName}</SelectItem>
+                <SelectItem value="client_email">{messages.surveys.semanticRoleClientEmail}</SelectItem>
+                <SelectItem value="company_name">{messages.surveys.semanticRoleCompanyName}</SelectItem>
+                <SelectItem value="phone">{messages.surveys.semanticRolePhone}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
         {(question.type === 'select' ||
           question.type === 'radio' ||
@@ -399,7 +416,7 @@ export function SurveyBuilder({ survey }: SurveyBuilderProps) {
     const result = await updateSurvey(survey.id, {
       title,
       description: description || null,
-      questions,
+      questions: questions as unknown as Json,
     })
 
     if (result.success) {

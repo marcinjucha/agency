@@ -18,6 +18,7 @@ architecture:
     - "Centralized routes in lib/routes.ts — prevents typos in hrefs, revalidatePath, API fetch calls"
     - "Fire-and-forget webhook pattern for n8n — don't block user requests, workflow runs async"
     - "TiptapEditor extracted to features/editor/ with dependency injection — blog and legal pages share editor, no duplication"
+    - "consent question type always required — enforced in website validation (always-required Zod refine), not in shared schema (packages/validators); CMS builder uses it like any other question type"
 
 features:
   # Phase 1: Foundation
@@ -131,9 +132,11 @@ features:
 
   - name: "Legal Pages & Cookie Banner"
     status: done
-    description: "CMS-managed /regulamin and /polityka-prywatnosci with shared Tiptap editor (dependency injection), cookie consent via localStorage, sitemap integration"
+    task_id: "AAA-T-162"
+    description: "CMS-managed /polityka-prywatnosci with shared Tiptap editor (dependency injection), cookie consent via localStorage, sitemap integration. Simplified cookie banner (Plausible-only, no marketing cookies). New 'consent' question type in survey builder — required RODO checkbox with configurable consent_url linking to privacy policy. /regulamin removed from website footer (hidden when unpublished). Privacy policy markdown file at docs/polityka-prywatnosci.md ready for CMS. Pre-existing CMS bugs fixed: radio/checkbox label swap in messages.ts, disabled submit when form invalid (mode: onChange), question spacing improvements."
     why: "RODO compliance before analytics and lead collection go live"
-    depends_on: ["Landing Page CMS"]
+    depends_on: ["Landing Page CMS", "Survey Builder"]
+    completion_notes: "Visitors see an accurate privacy policy (Plausible-only, no marketing cookies). Survey forms include a required RODO consent checkbox with link to privacy policy, blocking submission without consent. Cookie banner copy simplified to reflect reality. Regulamin removed from footer."
 
   - name: "SEO Foundations"
     status: done

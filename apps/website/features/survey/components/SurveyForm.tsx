@@ -57,9 +57,10 @@ export function SurveyForm({ survey, linkId, token }: SurveyFormProps) {
     control,
     handleSubmit,
     watch,
-    formState: { errors },
+    formState: { errors, isValid },
   } = useForm<SurveyAnswers>({
     resolver: zodResolver(schema as any),
+    mode: 'onChange',
   })
 
   // Sort questions by order field to ensure correct display sequence
@@ -180,7 +181,7 @@ export function SurveyForm({ survey, linkId, token }: SurveyFormProps) {
               <div className="pt-6">
                 <Button
                   type="submit"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || !isValid}
                   className="w-full h-12 text-lg font-semibold"
                 >
                   {isSubmitting ? (
