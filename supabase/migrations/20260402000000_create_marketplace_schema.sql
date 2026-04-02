@@ -43,7 +43,7 @@ CREATE INDEX idx_shop_marketplace_connections_active
   ON shop_marketplace_connections (tenant_id, marketplace) WHERE is_active = true;
 
 -- updated_at trigger (reuses existing update_updated_at() from initial schema)
-CREATE TRIGGER update_shop_marketplace_connections_updated_at
+CREATE TRIGGER set_updated_at
   BEFORE UPDATE ON shop_marketplace_connections
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
@@ -77,7 +77,32 @@ CREATE POLICY "Tenant users can delete marketplace connections"
 -- SECTION 2: shop_marketplace_connections_decrypted (VIEW)
 -- ============================================================
 
-CREATE VIEW shop_marketplace_connections_decrypted AS
+-- PREREQUISITE: app.encryption_key GUC
+-- This view uses current_setting('app.encryption_key') for pgp_sym_decrypt.
+-- The key MUST be set before SELECT on this view, otherwise PostgreSQL throws:
+--   ERROR: unrecognized configuration parameter "app.encryption_key"
+--
+-- Production (Supabase Cloud):
+--   ALTER DATABASE postgres SET "app.encryption_key" = 'your-secret-key-here';
+--   Or: Supabase Dashboard > Database > Postgres Config > Custom Postgres Config
+--
+-- Local dev:
+--   Add to supabase/config.toml under [db.settings]:
+--     "app.encryption_key" = "local-dev-key"
+--   Or run: ALTER DATABASE postgres SET "app.encryption_key" = 'local-dev-key';
+
+-- HOW TO INSERT ENCRYPTED TOKENS:
+-- INSERT INTO shop_marketplace_connections (
+--   tenant_id, marketplace, access_token_encrypted, refresh_token_encrypted, ...
+-- ) VALUES (
+--   $1, $2,
+--   pgp_sym_encrypt($access_token, current_setting('app.encryption_key')),
+--   pgp_sym_encrypt($refresh_token, current_setting('app.encryption_key')),
+--   ...
+-- );
+
+CREATE VIEW shop_marketplace_connections_decrypted
+WITH (security_invoker = true) AS
 SELECT
   id,
   tenant_id,
@@ -134,7 +159,7 @@ CREATE INDEX idx_shop_marketplace_listings_external
   ON shop_marketplace_listings (marketplace, external_listing_id) WHERE external_listing_id IS NOT NULL;
 
 -- updated_at trigger (reuses existing update_updated_at() from initial schema)
-CREATE TRIGGER update_shop_marketplace_listings_updated_at
+CREATE TRIGGER set_updated_at
   BEFORE UPDATE ON shop_marketplace_listings
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
