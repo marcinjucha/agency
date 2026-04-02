@@ -24,6 +24,8 @@ export type PublishPayload = {
   categoryId?: string
   location?: MarketplaceLocation
   params?: Record<string, unknown>
+  contact?: { name: string; phone?: string }
+  duration?: number
 }
 
 export type PublishResult = {
