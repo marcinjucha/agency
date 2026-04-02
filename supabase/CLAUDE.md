@@ -249,6 +249,24 @@ Already enabled in migration: `CREATE EXTENSION IF NOT EXISTS "pgcrypto";`
 **Cause:** Database schema changed but types not regenerated
 **Fix:** `npm run db:types`
 
+## Gotchas (Supabase JS / PostgREST Limitations)
+
+### Supabase JS `.update().eq().lte().select()` is NOT atomic
+
+Chained methods are separate HTTP request parts, not a single `UPDATE...RETURNING` SQL statement. Two concurrent callers can claim the same rows.
+
+**Fix:** PostgreSQL RPC with `FOR UPDATE SKIP LOCKED` for any batch processing endpoint where concurrent calls may overlap (e.g., `claim_due_delay_steps`).
+
+**Why:** Supabase JS translates method chains into a single PostgREST HTTP request, but PostgREST does not wrap the read-filter + update into a single atomic SQL transaction with row locking. For single-caller endpoints this is fine; for batch endpoints called by cron or parallel workers, it causes double-claiming.
+
+### PostgREST `.order()` cannot sort by foreign table columns
+
+`.order('foreign_table(column)')` fails silently — returns data unsorted, no error thrown.
+
+**Fix:** Sort client-side after `.map()` or use a PostgreSQL view/RPC that joins and sorts server-side.
+
+**Why:** PostgREST limitation. The embedded resource syntax works for `.select()` but not for `.order()`. No error is thrown, making this hard to debug.
+
 ## Related Documentation
 
 - [Supabase Setup Guide](./README.md)

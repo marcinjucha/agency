@@ -191,6 +191,7 @@ This monorepo contains two Notion projects with separate PROJECT_SPEC files:
 - **All docs commits before merge** — memory.md, PROJECT_SPEC.yaml updates go on the feature branch BEFORE merging to main.
 - **Commit before side-quests** — When user requests work outside current task scope (skill updates, visual audit), commit current progress first.
 - **Worktree needs .env.local** — Git worktrees don't include .env.local (gitignored). Copy from main: `cp apps/cms/.env.local worktree/apps/cms/.env.local` (same for website).
+- **Stage agent-created files explicitly** — The Write tool creates files on disk but does NOT `git add` them. After any file creation step, verify the file appears in `git status` and stage it before committing. WHY: docs/polityka-prywatnosci.md was created during AAA-T-162 but never staged — untracked files are lost on branch switch.
 
 **When writing code:**
 

@@ -12,17 +12,10 @@
 
 ## Workflow Engine — AAA-P-4 — IN PROGRESS (2026-03-31)
 
-**Status:** Iterations 1-9 done. Iter 9 (Booking + Lead Score Triggers, AAA-T-152, 2026-04-01): survey_submitted trigger wired in submit.ts, booking_confirmed trigger in booking.ts, lead_scored trigger from n8n via existing /api/workflows/trigger. Next: iteration 10. Extends Core CMS (AAA-P-4). 11 Notion tasks with "Workflow:" prefix.
-**Scope:** Per-tenant workflow automation. Two-layer: CMS (routing/config) + n8n (heavy execution). Visual builder (reactflow), explicit save, dynamic email template variables.
-**Key decisions:** Circular trigger protection (max depth=1 via triggering_execution_id self-FK), delay via n8n cron (±5 min), coexistence with current n8n email.
-**Execution engine (iter 6):** Engine in `features/workflows/engine/` (feature-local, NOT package). API `/api/workflows/trigger` with Bearer token (WORKFLOW_TRIGGER_SECRET). Sync steps (condition, webhook) in CMS, async steps (send_email, ai_action, delay) dispatch to n8n generic dispatcher. `workflow_id` param for targeting specific workflow. `is_active` check at API level (404/422 for inactive). Service role client for engine writes. Variable context accumulates — each step's outputPayload merged into context for later steps via {{mustache}}.
-**DB tables:** workflows, workflow_steps, workflow_edges (DAG), workflow_executions, workflow_step_executions (two-level execution tracking).
-**Type strategy:** trigger_type and step_type as TEXT (not ENUM) — ENUMs can't be extended inside transactions, TEXT + Zod validation more extensible for growing type sets. (2026-03-31)
-**Email template linking:** Partial unique index on email_templates — system types (form_confirmation) 1-per-tenant, workflow_custom unlimited. Steps link by template ID in step_config. (2026-03-31)
-**Execution RLS:** workflow_executions.tenant_id denormalized from workflows for direct RLS without join. Execution tables SELECT-only for CMS users, n8n writes via service_role. (2026-03-31)
-**Canvas save:** Delete-all-edges + re-insert (edges lightweight, no identity); steps use ID-based upsert diffing. (2026-03-31)
-**Backlog:** Manual cancel/retry executions, manual triggers — nice-to-have, not MVP.
-**Plan:** 11 iterations. Graph: 1→2→[3+4]→5a→5b→[6+7]→[8+9]→10. Critical: 1→2→5a→5b→6→10.
+**Status:** Iterations 1-10 done. 11 Notion tasks with "Workflow:" prefix. Iter 11 (cancel/retry/real-time) = backlog.
+**Scope:** Per-tenant workflow automation. CMS routing/config + n8n heavy execution. ReactFlow visual builder.
+**Key decisions:** trigger_type/step_type as TEXT not ENUM (can't extend ENUM in transactions); circular protection max depth=1 via triggering_execution_id self-FK; delay step writes resume_at to DB directly (not n8n), n8n cron polls /api/workflows/process-due-delays every 5 min.
+**Engine:** `features/workflows/engine/` (feature-local). API `/api/workflows/trigger` Bearer token. Sync steps in CMS, async dispatch to n8n. Variable context accumulates via {{mustache}}.
 
 ## Marketplace Integration — AAA-P-9 — IN PROGRESS (2026-04-02)
 
@@ -59,32 +52,22 @@
 - **"wracamy do manuala" = switch back to manual mode** — Confirmation after each phase. "Auto" mode was session-scoped only, not permanent. (2026-03-31)
 - **"do all now" = don't defer P2 items** — When design agent recommends deferring P2 items, user overrides and wants all implemented immediately. Don't defer unless explicitly asked. (2026-03-31)
 - **workflow_id targeting over "all matching"** — User didn't want all matching workflows to fire on trigger. API accepts workflow_id for specific execution. (2026-03-31, AAA-T-149)
-- **Explicit errors for inactive workflows** — API returns 404/422 for inactive workflows instead of silent 202. User wants clear feedback. (2026-03-31, AAA-T-149)
 
 ## Bugs Found (project-specific patterns)
 
-- **Zod .nullable().optional() for DB nullable** — `z.string().optional()` accepts undefined but NOT null. DB stores null. Fix: `.nullable().optional()`. Recurring across features. (2026-03-27)
-- **useMutation + Server Action structured return = silent failure** — TanStack Query treats non-thrown results as success. Fix: throw on `!result.success`. Recurring. (2026-03-27)
 - **supabase gen types prepends "Initialising login role..."** — Corrupts types.ts. Workaround: `grep -v "^Initialising"`. Also: `db:types` uses --local, need --linked when local not running. (2026-03-28)
 - **Supabase JS v2.95.2 `as any` needed even for SELECT** — `.from('shop_products')` resolves to `never` in complex chains. Upgrade may fix. (2026-03-30)
-- **handleSubmit needs onFormError callback** — Without it, validation errors silently swallowed. Also: empty number inputs send NaN → add Zod transforms NaN/''→null. (2026-03-30)
-- **Label duplication between OPTIONS arrays and LABELS records** — types.ts OPTIONS and utils.ts LABELS both defined labels independently. Fix: derive OPTIONS from LABELS (single source of truth in types.ts). Watch for this pattern in future features. (2026-03-31)
-- **Dead message keys from missing type variants** — stepExecutionCancelled message defined but StepExecutionStatus type had no 'cancelled' variant. Fix: remove dead keys or add missing type variants. (2026-03-31)
-- **Debounce useEffect fires on mount → false dirty state** — onChange callback in debounced useEffect runs immediately on mount, marking form dirty before user interaction. Fix: `isFirstRender` ref mount guard that skips first execution. (2026-03-31)
-- **Stale closure in debounced useEffect** — onChange not in useEffect deps causes stale reference. Fix: `onChangeRef` pattern (useRef updated on every render, useEffect reads `.current`). (2026-03-31)
-- **revalidatePath does NOT invalidate TanStack Query cache** — Need BOTH revalidatePath + invalidateQueries after mutations. (2026-03-31) [Pattern: ag-nextjs-patterns "Dual Cache Invalidation"]
-- **Race condition on concurrent n8n callbacks** — Multiple n8n steps completing simultaneously can corrupt execution state. Fix: optimistic lock + idempotency guard on callback route. (2026-03-31, AAA-T-149)
-- **SSRF in webhook handler** — User-configured webhook URLs could target private IPs. Fix: private IP blocklist before fetch + AbortSignal.timeout(10_000). (2026-03-31, AAA-T-149)
-- **Supabase JS .update().eq().lte().select() is NOT atomic** — Chained methods are separate HTTP request parts, not a single UPDATE...RETURNING SQL. Two concurrent callers can claim same rows. Fix: PostgreSQL RPC with FOR UPDATE SKIP LOCKED. (2026-04-01, AAA-T-150)
-- **PostgREST .order() cannot sort by foreign table columns** — `.order('workflow_steps(sort_order)')` fails silently. Fix: sort client-side after `.map()`. (2026-04-01, AAA-T-151)
-- **Supabase error objects are NOT Error instances** — `String(supabaseError)` returns "[object Object]". Fix: `(error as any)?.message ?? fallback`. (2026-04-01, AAA-T-151)
-- **`import { cn } from '@agency/ui/lib/utils'` wrong path** — Must be `import { cn } from '@agency/ui'`. Recurring across new components. (2026-04-01, AAA-T-151)
-- **{{variable}} syntax in condition evaluator causes silent false** — Condition expressions with `{{fieldName}}` (mustache syntax copied from email template fields) always evaluated to false. Fix: resolveField() strips `{{ }}` wrapper. Both `fieldName` and `{{fieldName}}` now work. (2026-04-01, AAA-T-152)
-- **ConditionNode handle ID mismatch** — ConditionNode source handles used `id="yes"`/`id="no"` but executor + templates use `'true'`/`'false'` for condition_branch. ReactFlow silently drops edges when sourceHandle doesn't match. Fix: handles changed to `id="true"`/`id="false"`. (2026-04-01, AAA-T-153)
-- **Template trigger node was synthetic (UUID lost on remount)** — Templates had no trigger step in workflow_steps. Trigger created as synthetic node with `crypto.randomUUID()` on every mount — UUIDs change, so edges referencing trigger can't persist in DB. Fix: add trigger as real workflow_step in templates. (2026-04-01, AAA-T-153)
-- **`max-w-[Npx]` on grid cards creates gaps** — grid cells are wider than the card. Fix: remove `max-w` from cards, control size via grid column count instead. (2026-04-01, AAA-T-159)
-- **Type/DB column name mismatch in manually written types** — When DB types aren't generated, manually written TypeScript types had 3 critical mismatches: phantom columns (sync_status/sync_error on wrong table), wrong column names (total_count vs total_items), missing columns (marketplace on imports). Fix: always cross-reference migration SQL when writing manual types. (2026-04-02, AAA-T-157)
-- **updateSchema.partial() makes IDs optional** — Using `.partial()` on a schema with required UUID fields makes them optional, bypassing NOT NULL DB constraints. Fix: `.omit({ field: true }).partial()` to exclude non-updatable fields before partial. (2026-04-02, AAA-T-157)
+- **Label duplication between OPTIONS arrays and LABELS records** — types.ts OPTIONS and utils.ts LABELS both defined labels independently. Fix: derive OPTIONS from LABELS (single source of truth in types.ts). (2026-03-31)
+- **Dead message keys from missing type variants** — message key defined but type had no matching variant. Fix: remove dead keys or add missing type variants. (2026-03-31)
+- **Debounce useEffect fires on mount → false dirty state** — Fix: `isFirstRender` ref mount guard. Stale closure fix: `onChangeRef` pattern (useRef updated on every render). (2026-03-31)
+- **Race condition on concurrent n8n callbacks** — Fix: optimistic lock + idempotency guard on callback route. (2026-03-31, AAA-T-149)
+- **SSRF in webhook handler** — User-configured webhook URLs could target private IPs. Fix: private IP blocklist + AbortSignal.timeout(10_000). (2026-03-31, AAA-T-149)
+- **{{variable}} syntax in condition evaluator causes silent false** — Mustache syntax `{{fieldName}}` always evaluates to false. Fix: resolveField() strips `{{ }}` wrapper. (2026-04-01, AAA-T-152)
+- **ConditionNode handle ID mismatch** — `id="yes"`/`id="no"` handles vs executor `'true'`/`'false'`. ReactFlow silently drops edges. Fix: use `id="true"`/`id="false"`. (2026-04-01, AAA-T-153)
+- **Template trigger node synthetic (UUID lost on remount)** — Synthetic trigger UUID changes each mount → edges can't persist. Fix: add trigger as real workflow_step in templates. (2026-04-01, AAA-T-153)
+- **Type/DB column name mismatch in manually written types** — Always cross-reference migration SQL when writing manual types. 3 mismatch types: phantom columns, wrong names, missing columns. (2026-04-02, AAA-T-157)
+- **Child component duplicate filter silently drops items** — BlogPostListView had its own status filter useState, double-filtering an already-filtered parent list. Fix: remove child-level filter when parent already filters. (2026-04-02)
+- **Component receives prop but never wires it up (dead prop)** — MediaGridRow accepted onRename but silently ignored it. Fix: audit prop usage when adding callback props to existing components. (2026-04-02)
 - **Child component duplicate filter silently drops items** — BlogPostListView had its own useState status filter, double-filtering an already-filtered list from parent. Items matching parent filter but not child's default state vanished silently. Fix: remove child-level filter when parent already filters. Watch for this in any parent→child list passing. (2026-04-02)
 - **Component receives prop but never wires it up (dead prop)** — MediaGridRow accepted onRename prop but silently ignored it (never called). Rename button existed in UI but did nothing. Fix: audit prop usage when adding callback props to existing components. (2026-04-02)
 
@@ -115,7 +98,6 @@
 - **`features/email-config/` separate from `features/email/`** — Config (ops) vs templates (content). Different actors, different change frequency. (2026-03-27)
 - **pgcrypto for API key encryption (aspirational, not implemented in email_configs)** — email_configs stores api_key as plain TEXT despite docs claiming encryption. No `email_configs_decrypted` view exists. Marketplace integration (AAA-T-157) is the first actual pgcrypto usage in codebase (BYTEA columns + decrypted view + `app.encryption_key` GUC). (2026-03-27, corrected 2026-04-02)
 - **Cross-project update rule** — When AAA-P-9 tasks affect core CMS, update BOTH PROJECT_SPECs. (2026-03-30)
-- **getMediaItems folder_id filter: undefined=all, null=root, string=folder** — Critical backward compat: default undefined returns ALL items. null ≠ default. (2026-03-30)
 - **trigger-schemas.ts in lib/ (not features/)** — Cross-feature variable registry shared between email and workflow features. lib/ is correct for shared infrastructure. features/email imports from lib/trigger-schemas.ts. (2026-03-31)
 - **VariableInserterPopover in packages/ui/** — Shared component with local VariableItem interface (avoids packages→apps import boundary violation). Structurally compatible with TriggerVariable from apps/cms/. (2026-03-31)
 - **Hybrid variable architecture: registry + JSONB cache** — trigger-schemas.ts is source of truth (TypeScript). template_variables JSONB is lazy cache written on save for n8n (which can't call TypeScript). CMS always reads from registry, writes snapshot to DB. (2026-03-31)
@@ -139,21 +121,12 @@
 - **In-code JSON constants for workflow templates (copy-on-use)** — Templates stored as TypeScript constants in `features/workflows/templates/workflow-templates.ts`. On "Use template", server action materialises real workflow+steps+edges with fresh UUIDs. Zero DB overhead for non-users. Same pattern as n8n/Make.com. (2026-04-01, AAA-T-153)
 - **Trigger as real workflow_step in templates** — Including trigger_type step in template step arrays allows fully-connected canvas on load (trigger→condition edge stored in DB). Executor safely skips trigger steps (no handler → logs warning, marks completed). (2026-04-01, AAA-T-153)
 - **MAX_STEPS = 50 + 5-min sync step timeout in executor** — DEFAULT_EXECUTION_LIMITS in engine/types.ts. Timeout applies only to sync steps (condition, webhook). Async steps timeout in n8n. (2026-04-01, AAA-T-153)
-- **Marketplace adapter pattern in features/shop-marketplace/adapters/** — MarketplaceAdapter interface, feature-local (not package). Same reasoning as workflow engine. New marketplace = new file + registry entry. (2026-04-02)
-- **Standalone n8n workflows for marketplace (not workflow engine)** — Marketplace sync is infrastructure-level (cron polling, token refresh), not user-configurable automation. Workflow engine = tenant event-driven flows. Marketplace = system background ops. (2026-04-02)
-- **Unified Marketplace CollapsibleCard in product editor** — One card with overview (toggle + badge per platform) + per-platform collapsible sub-sections. NOT separate cards per marketplace. MARKETPLACE_REGISTRY pattern. (2026-04-02)
-- **Per-tenant marketplace OAuth via pgcrypto** — BYTEA columns for encrypted tokens (pgp_sym_encrypt returns bytea natively, no encode/decode roundtrip). Decrypted view with `security_invoker = true` for n8n. `app.encryption_key` PostgreSQL GUC for passphrase (set via ALTER DATABASE or Supabase Dashboard). First real pgcrypto usage in codebase. (2026-04-02)
-- **OLX location data on listings only** — Platform-specific data stays on shop_marketplace_listings.marketplace_params JSONB, not polluting shop_products. (2026-04-02)
-- **Stub Server Actions must include auth guard** — Stubs without getUserWithTenant() risk being copied without auth when implemented. All stubs now call getUserWithTenant() + isAuthError before returning stub error. (2026-04-02, AAA-T-157)
-- **PostgreSQL function for encrypted token upsert** — Supabase JS .insert() can't call pgp_sym_encrypt. Created SECURITY DEFINER function `upsert_marketplace_connection()` with two code paths for NULL/non-NULL account_id. Callable via `.rpc()`. (2026-04-02, AAA-T-157)
-- **jose for JWT state (not jsonwebtoken)** — jose is Edge-compatible, jsonwebtoken requires Node.js crypto. State JWT = { tenantId, marketplace, nonce }, 10min expiry, HS256. (2026-04-02, AAA-T-157)
-- **connectMarketplace returns authUrl for client redirect** — Server Actions can't redirect to external URLs. Action returns { authUrl }, client does window.location redirect. (2026-04-02, AAA-T-157)
-- **Service role client only in OAuth callback** — Initiation uses cookie-based server client (user must be logged in). Callback uses service role (no user session after external redirect back). (2026-04-02, AAA-T-157)
-- **Standalone functions over this-binding in object literals** — Object literal methods using `this.otherMethod()` break when destructured. Fix: extract standalone functions, assign to adapter property. Applied to getListingStatuses->fetchOlxListingStatus pattern. (2026-04-02, AAA-T-157)
-- **Shared HTTP wrapper (marketplaceFetch)** — All external marketplace API calls through one wrapper with AbortSignal.timeout(15s), response.ok check, MarketplaceApiError. No raw fetch in adapters. (2026-04-02, AAA-T-157)
-- **Allegro sandbox toggle at module load** — ALLEGRO_SANDBOX env var evaluated at top-level const. All 3 URLs (auth, token, API) switch together. Fine for production, may confuse hot-reload in dev. (2026-04-02, AAA-T-157)
-- **Credential access isolated to credentials.ts** — Single file with service role client, reads from decrypted view. Adapters never touch DB directly. (2026-04-02, AAA-T-157)
-- **FeedbackBanner instead of toast for OAuth callback** — No toast library (sonner/react-hot-toast) in project. Used inline dismissible alert banner reading URL query params (?connected=, ?error=). URL cleaned via router.replace after reading. (2026-04-02, AAA-T-157)
+- **Marketplace adapter pattern** — `features/shop-marketplace/adapters/`, feature-local (not package). MARKETPLACE_REGISTRY pattern. New marketplace = new file + registry entry. (2026-04-02)
+- **Standalone n8n workflows for marketplace (not workflow engine)** — Marketplace sync is infrastructure/system-level. Workflow engine = user-configurable event flows. Marketplace = background cron ops. (2026-04-02)
+- **pgcrypto BYTEA for OAuth tokens** — `pgp_sym_encrypt` returns BYTEA natively. SECURITY DEFINER function `upsert_marketplace_connection()` needed because Supabase JS can't call pgp_sym_encrypt directly. `app.encryption_key` GUC = passphrase. First real pgcrypto usage in codebase. (2026-04-02)
+- **FeedbackBanner instead of toast for OAuth callback** — No toast library in project. Inline dismissible alert reads URL query params (?connected=, ?error=), cleaned via router.replace. (2026-04-02, AAA-T-157)
+- **connectMarketplace returns authUrl for client redirect** — Server Actions can't redirect to external URLs. Returns { authUrl }, client does window.location redirect. (2026-04-02, AAA-T-157)
+- **jose for JWT state (not jsonwebtoken)** — jose is Edge-compatible. State JWT = { tenantId, marketplace, nonce }, 10min expiry, HS256. (2026-04-02, AAA-T-157)
 
 ## Preferences
 

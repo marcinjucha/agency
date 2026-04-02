@@ -208,8 +208,24 @@ export async function getSurveys(): Promise<Tables<'surveys'>[]> {
 **Recurring patterns (see skills for details):**
 - Tiptap renderHTML: inline styles only → see `ag-ui-components` skill
 - TanStack Query: root key invalidation → see `ag-ui-components` skill
-- useMutation + Server Action silent failure → see `ag-ui-components` skill
-- Zod `.nullable().optional()` for DB nullable → see `ag-database-patterns` skill
+
+### Common Bugs & Gotchas
+
+**Zod `.nullable().optional()` for DB nullable** — `z.string().optional()` accepts undefined but NOT null. DB stores null. Fix: `.nullable().optional()`. **WHY:** Supabase returns null for optional columns, Zod rejects it silently. Recurring across features.
+
+**useMutation + Server Action = silent failure** — TanStack Query treats non-thrown results as success. Fix: throw on `!result.success` inside mutationFn. **WHY:** If you return `{ success: false }` without throwing, onSuccess fires instead of onError. Recurring pattern.
+
+**revalidatePath does NOT invalidate TanStack Query cache** — Need BOTH `revalidatePath` (Next.js RSC cache) AND `queryClient.invalidateQueries()` (TanStack cache) after mutations. **WHY:** Two separate cache layers; revalidatePath only clears RSC cache, not client query cache.
+
+**`import { cn } from '@agency/ui'` NOT `'@agency/ui/lib/utils'`** — Deep path import fails. Always use the package root export. **WHY:** Recurring across new components — the deep path is not exposed.
+
+**handleSubmit needs onFormError callback** — Without onFormError, RHF validation errors are silently swallowed. Also: empty number inputs send NaN → add Zod transform: `z.coerce.number().transform(v => isNaN(v) ? null : v)`. **WHY:** Two silent failure modes in RHF+Zod combination.
+
+**updateSchema.partial() makes IDs optional** — Using `.partial()` on a schema with required UUID fields makes them optional, bypassing NOT NULL DB constraints. Fix: `.omit({ id: true }).partial()` to exclude IDs before partial. **WHY:** Caught at DB level, not Zod level — silent in TypeScript.
+
+**getMediaItems folder_id: undefined=all, null=root, string=folder** — Three-way distinction: default undefined returns ALL items (backward compat); null=root folder only; string=specific folder. **WHY:** Critical backward compat — null ≠ undefined ≠ string. Breaking this distinction silently filters out items.
+
+**Never redefine types locally if they exist in shared packages** -- Always import `QuestionType`, `Question`, `SemanticRole` (and any survey/form types) from `@agency/validators`, never define local type aliases. **Why:** SurveyBuilder.tsx had a local `type QuestionType` duplicating the shared union from `@agency/validators`. The local type lacked `'consent'` -- causing a build error when the new question type was added to the shared package. Any new type variant added to the shared package will silently diverge from local copies. Same risk applies to any feature importing from `@agency/validators`, `@agency/database`, or `@agency/ui`. (2026-04-02)
 
 **datetime-local vs Zod .datetime() mismatch** — HTML `datetime-local` input produces `"2026-03-28T14:30"` (no seconds, no timezone) but `z.string().datetime()` requires full ISO 8601. Fix: use `z.string().min(1)` — PostgreSQL `timestamptz` handles parsing. **Why:** Pre-existing bug in generate + update survey link schemas (AAA-T-88).
 
