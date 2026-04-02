@@ -46,6 +46,7 @@ export async function createShopProduct(
       tags: parsed.data.tags || null,
       sort_order: parsed.data.sort_order ?? 0,
       seo_metadata: parsed.data.seo_metadata || null,
+      is_featured: parsed.data.is_featured ?? false,
       is_published: parsed.data.is_published,
       published_at: parsed.data.is_published
         ? (parsed.data.published_at || new Date().toISOString())
@@ -127,6 +128,7 @@ export async function updateShopProduct(
     if (parsed.data.tags !== undefined) updatePayload.tags = parsed.data.tags || null
     if (parsed.data.sort_order !== undefined) updatePayload.sort_order = parsed.data.sort_order
     if (parsed.data.seo_metadata !== undefined) updatePayload.seo_metadata = parsed.data.seo_metadata || null
+    if (parsed.data.is_featured !== undefined) updatePayload.is_featured = parsed.data.is_featured
     if (parsed.data.is_published !== undefined) updatePayload.is_published = parsed.data.is_published
     if (published_at !== undefined) updatePayload.published_at = published_at
 

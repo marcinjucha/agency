@@ -811,6 +811,9 @@ export const messages = {
     coverImageAlt: 'Zdjęcie główne produktu',
     coverImageClickToSelect: 'Kliknij aby wybrać',
     coverImageSelectAriaLabel: 'Wybierz zdjęcie główne',
+    // Featured toggle
+    featured: 'Polecane',
+    featuredDescription: 'Produkt będzie wyróżniony na stronie głównej sklepu.',
     // Status card
     formValidationError: 'Formularz zawiera błędy walidacji. Sprawdź pola formularza.',
     publishDate: 'Data publikacji',

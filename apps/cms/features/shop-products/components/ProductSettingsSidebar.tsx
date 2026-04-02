@@ -5,8 +5,11 @@ import type { UseFormRegister, UseFormWatch, UseFormSetValue, Control, FieldErro
 import { Controller } from 'react-hook-form'
 import {
   CollapsibleCard,
+  Card,
+  CardContent,
   Input,
   Label,
+  Switch,
   Textarea,
   Select,
   SelectContent,
@@ -15,7 +18,7 @@ import {
   SelectValue,
   Button,
 } from '@agency/ui'
-import { X } from 'lucide-react'
+import { X, Star } from 'lucide-react'
 import { messages } from '@/lib/messages'
 import { createMediaProxyEditor } from '@/lib/utils/media-proxy'
 import { InsertMediaModal } from '@/features/media/components/InsertMediaModal'
@@ -87,6 +90,25 @@ export function ProductSettingsSidebar({
   )
 
   return (
+    <>
+    {/* Featured toggle — prominent card */}
+    <Card className="shadow-sm border-amber-500/20">
+      <CardContent className="flex items-center gap-4 py-4">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-amber-500/10">
+          <Star className="h-5 w-5 text-amber-400" />
+        </div>
+        <div className="flex-1 space-y-0.5">
+          <p className="text-sm font-semibold text-foreground">{messages.shop.featured}</p>
+          <p className="text-xs text-muted-foreground">{messages.shop.featuredDescription}</p>
+        </div>
+        <Switch
+          checked={watch('is_featured')}
+          onCheckedChange={(v) => setValue('is_featured', v, { shouldDirty: true })}
+          aria-label={messages.shop.featured}
+        />
+      </CardContent>
+    </Card>
+
     <CollapsibleCard title={messages.shop.settingsTitle} defaultOpen>
       <div className="space-y-5">
         {/* Listing Type */}
@@ -345,5 +367,6 @@ export function ProductSettingsSidebar({
         </div>
       </div>
     </CollapsibleCard>
+    </>
   )
 }

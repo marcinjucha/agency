@@ -70,6 +70,7 @@ export const createShopProductSchema = z.object({
     })
     .nullable()
     .optional(),
+  is_featured: z.boolean().default(false),
   is_published: z.boolean().default(false),
   published_at: z.string().nullable().optional(),
 })
