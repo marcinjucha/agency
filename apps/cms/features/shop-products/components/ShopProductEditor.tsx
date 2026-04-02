@@ -97,6 +97,7 @@ export function ShopProductEditor({ product }: ShopProductEditorProps) {
         ogImage: product?.seo_metadata?.ogImage ?? '',
         keywords: product?.seo_metadata?.keywords ?? [],
       },
+      is_featured: product?.is_featured ?? false,
       is_published: product?.is_published ?? false,
     },
   })
