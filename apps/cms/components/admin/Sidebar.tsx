@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, FileText, Inbox, Calendar, Settings, LogOut, Mail, Globe, Newspaper, Images, Scale, ShoppingBag, Tags, Zap, History } from 'lucide-react'
+import { LayoutDashboard, FileText, Inbox, Calendar, Settings, LogOut, Mail, Globe, Newspaper, Images, Scale, ShoppingBag, Tags, Store, Zap, History } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { messages } from '@/lib/messages'
@@ -39,6 +39,7 @@ const menuGroups: MenuGroup[] = [
     items: [
       { href: routes.admin.shopProducts, label: messages.nav.shopProducts, icon: ShoppingBag },
       { href: routes.admin.shopCategories, label: messages.nav.shopCategories, icon: Tags },
+      { href: routes.admin.shopMarketplace, label: messages.nav.shopMarketplace, icon: Store },
     ],
   },
   {

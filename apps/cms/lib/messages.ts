@@ -581,6 +581,7 @@ export const messages = {
     groupSystem: 'System',
     shopProducts: 'Produkty',
     shopCategories: 'Kategorie',
+    shopMarketplace: 'Marketplace',
     adminPanel: 'Panel administracyjny',
     logout: 'Wyloguj',
     skipToContent: 'Przejdź do treści',
@@ -1081,6 +1082,26 @@ export const messages = {
     insertVariable: 'Wstaw zmienną',
   },
 
+  marketplace: {
+    notImplemented: 'Funkcja marketplace nie jest jeszcze zaimplementowana',
+    connectionDeleted: 'Połączenie z marketplace zostało usunięte',
+    connectionNotFound: 'Nie znaleziono połączenia z marketplace',
+    oauthFailed: 'Nie udało się połączyć z marketplace',
+    oauthDenied: 'Autoryzacja została odrzucona',
+    connected: 'Połączono z marketplace',
+    adapterNotAvailable: 'Integracja z tym marketplace nie jest jeszcze dostępna',
+    pageTitle: 'Marketplace',
+    pageSubtitle: 'Zarządzaj połączeniami z platformami sprzedażowymi',
+    notConnected: 'Niepołączony',
+    connectButton: 'Połącz',
+    disconnectButton: 'Rozłącz',
+    disconnectSuccess: 'Rozłączono z marketplace',
+    lastSync: 'Ostatnia synchronizacja',
+    accountName: 'Konto',
+    active: 'Aktywne',
+    inactive: 'Nieaktywne',
+  },
+
   validation: {
     titleRequired: 'Tytuł jest wymagany',
     slugRequired: 'Slug jest wymagany',
@@ -1125,6 +1146,10 @@ export const messages = {
     webhookUrlInvalid: 'Nieprawidłowy URL webhooka',
     webhookMethodRequired: 'Metoda HTTP jest wymagana',
     promptRequired: 'Prompt jest wymagany',
+    // Shop — Marketplace
+    marketplaceRequired: 'Wybierz marketplace',
+    invalidProductId: 'Nieprawidłowy identyfikator produktu',
+    invalidConnectionId: 'Nieprawidłowy identyfikator połączenia',
     // Shop
     priceMustBeNonNegative: 'Cena nie może być ujemna',
     listingTypeRequired: 'Typ oferty jest wymagany',

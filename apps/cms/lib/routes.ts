@@ -40,6 +40,10 @@ export const routes = {
     shopCategoryNew: '/admin/shop/categories/new',
     shopCategory: (id: string) => `/admin/shop/categories/${id}`,
 
+    // Marketplace
+    shopMarketplace: '/admin/shop/marketplace',
+    shopMarketplaceConnection: (id: string) => `/admin/shop/marketplace/${id}`,
+
     // Automation
     workflows: '/admin/workflows',
     workflowNew: '/admin/workflows/new',

@@ -24,6 +24,16 @@
 **Backlog:** Manual cancel/retry executions, manual triggers — nice-to-have, not MVP.
 **Plan:** 11 iterations. Graph: 1→2→[3+4]→5a→5b→[6+7]→[8+9]→10. Critical: 1→2→5a→5b→6→10.
 
+## Marketplace Integration — AAA-P-9 — IN PROGRESS (2026-04-02)
+
+**Status:** Iterations 1-4 done (DB schema migration, CMS foundation: types/queries/validation/actions + adapter interface/registry, OAuth flow, OLX + Allegro adapter implementations). AAA-T-157 repurposed from investigation to full XL feature (10 iterations, High priority).
+**Scope:** OLX + Allegro integration — publish products, sync status (sold/expired), import existing listings. Bidirectional sync.
+**DB tables:** shop_marketplace_connections (OAuth creds per tenant) + shop_marketplace_listings (1 product → N listings, marketplace_params JSONB) + shop_marketplace_imports. TEXT for marketplace type (not ENUM, same reasoning as trigger_type/step_type).
+**Key decisions:** MarketplaceAdapter interface in `features/shop-marketplace/adapters/` (feature-local, not package). MARKETPLACE_REGISTRY pattern (like NODE_TYPE_REGISTRY). Per-tenant pgcrypto-encrypted OAuth tokens (same as email_configs). OLX location data on listings only (marketplace_params JSONB), not on shop_products.
+**n8n strategy:** Standalone n8n workflows (cron polling, token refresh) — NOT workflow engine. Marketplace sync = system infrastructure, not user-configurable automation. CMS configures n8n marketplace access (not directly in n8n).
+**UI:** Unified Marketplace CollapsibleCard in product editor — one card with overview (toggle + badge per platform) + per-platform collapsible sub-sections. NOT separate cards per marketplace.
+**Future:** Auto-publish via workflow engine trigger (product.published → auto-publish to connected marketplaces).
+
 ## Roadmap & Planning (2026-03-30)
 
 **Priority order:** workflow engine → email triggers → client onboarding.
@@ -84,6 +94,12 @@
 - **WORKFLOW_CALLBACK_URL was duplicate of HOST_URL** — action-handlers.ts used separate env var but HOST_URL already points to CMS base. Removed WORKFLOW_CALLBACK_URL, use HOST_URL instead. (2026-04-01, AAA-T-153)
 - **`max-w-[Npx]` on grid cards creates gaps** — grid cells are wider than the card. Fix: remove `max-w` from cards, control size via grid column count instead. (2026-04-01, AAA-T-159)
 - **EmailTemplateList is a server component — cannot add useState** — Adding client-side state (e.g., view toggle) requires extracting a client wrapper component. Direct useState in server component causes build error. (2026-04-01, AAA-T-159)
+- **useSearchParams requires Suspense boundary in Next.js 15+** — Build fails without `<Suspense>` wrapper around client components using useSearchParams. Pattern: route page.tsx wraps client component in Suspense with LoadingState fallback. (2026-04-02, AAA-T-157)
+- **EmptyState redundant with fixed-set configuration pages** — Card grid showing all options (connected/not-connected) already communicates state. EmptyState on top is redundant for fixed-option pages (vs dynamic lists where empty = nothing to show). (2026-04-02, AAA-T-157)
+- **Decrypted view bypasses RLS without security_invoker** — PostgreSQL views execute as view owner (postgres) by default, bypassing RLS on base table. Fix: `WITH (security_invoker = true)` on PostgreSQL 17+ (Supabase). Critical for multi-tenant security. (2026-04-02, AAA-T-157)
+- **Type/DB column name mismatch in manually written types** — When DB types aren't generated, manually written TypeScript types had 3 critical mismatches: phantom columns (sync_status/sync_error on wrong table), wrong column names (total_count vs total_items), missing columns (marketplace on imports). Fix: always cross-reference migration SQL when writing manual types. (2026-04-02, AAA-T-157)
+- **updateSchema.partial() makes IDs optional** — Using `.partial()` on a schema with required UUID fields makes them optional, bypassing NOT NULL DB constraints. Fix: `.omit({ field: true }).partial()` to exclude non-updatable fields before partial. (2026-04-02, AAA-T-157)
+- **VALID_MARKETPLACES duplicated MarketplaceId** — Hardcoded array in API route duplicated type union already defined in types.ts. Fix: derive from MARKETPLACE_LABELS keys (single source of truth). Same pattern as Label duplication bug. (2026-04-02, AAA-T-157)
 
 ## Domain Concepts
 
@@ -99,11 +115,16 @@
 - **Condition evaluator supported operators** — >=, <=, !=, ==, >, <, contains, in. NO single `=` operator. Field names without `{{ }}` wrappers. (2026-04-01, AAA-T-152)
 - **ConditionNode handle IDs must match executor condition_branch values** — Visual "Tak"/"Nie" labels are display-only. ReactFlow Handle `id` props must be `"true"`/`"false"` to match condition evaluator returns, edge condition_branch in DB, and executor branching logic. (2026-04-01, AAA-T-153)
 - **Synthetic trigger node pattern** — When workflow has no trigger step in workflow_steps, WorkflowEditor adds synthetic node with random UUID per mount. After first Save, trigger becomes real step. Templates bypass this by including trigger as real step from creation. (2026-04-01, AAA-T-153)
+- **OLX.pl API** — developer.olx.pl, OAuth 2.0, manual verification required (delays possible), CRUD listings/photos/categories/locations. Free to use. (2026-04-02)
+- **Allegro REST API** — developer.allegro.pl, OAuth 2.0 + JWT, sandbox available, POST-only token endpoint (since Aug 2025). ADVERTISEMENT format for classifieds. (2026-04-02)
+- **Allegro removeListing uses PATCH not DELETE** — Allegro ends offers by setting `publication.status: 'END'`, not HTTP DELETE. (2026-04-02)
+- **Allegro token exchange uses Basic auth** — base64(client_id:client_secret) in Authorization header, unlike OLX which sends credentials in POST body. (2026-04-02)
+- **AAA-T-157 repurposed** — Originally "Sprawdzanie statusu produktu na Allegro/OLX" (Inbox, investigation). Expanded to full "Marketplace Integration (OLX + Allegro)" (To Do, High, XL, 10 iterations). (2026-04-02)
 
 ## Architecture Decisions
 
 - **`features/email-config/` separate from `features/email/`** — Config (ops) vs templates (content). Different actors, different change frequency. (2026-03-27)
-- **pgcrypto for API key encryption** — `email_configs_decrypted` view for n8n. API key masked in client. (2026-03-27)
+- **pgcrypto for API key encryption (aspirational, not implemented in email_configs)** — email_configs stores api_key as plain TEXT despite docs claiming encryption. No `email_configs_decrypted` view exists. Marketplace integration (AAA-T-157) is the first actual pgcrypto usage in codebase (BYTEA columns + decrypted view + `app.encryption_key` GUC). (2026-03-27, corrected 2026-04-02)
 - **Cross-project update rule** — When AAA-P-9 tasks affect core CMS, update BOTH PROJECT_SPECs. (2026-03-30)
 - **getMediaItems folder_id filter: undefined=all, null=root, string=folder** — Critical backward compat: default undefined returns ALL items. null ≠ default. (2026-03-30)
 - **trigger-schemas.ts in lib/ (not features/)** — Cross-feature variable registry shared between email and workflow features. lib/ is correct for shared infrastructure. features/email imports from lib/trigger-schemas.ts. (2026-03-31)
@@ -132,6 +153,21 @@
 - **`useViewMode(key, defaultMode)` hook in `apps/cms/hooks/use-view-mode.ts`** — shared localStorage-persisted view toggle. Uses `useState` initializer (not useEffect) to avoid flash-of-wrong-view. All CMS gallery toggles use this. (2026-04-01, AAA-T-159)
 - **Unified gallery grid breakpoints: `grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4`** — standard for all CMS list pages. 1col(<768px) / 2col(<1280px) / 3col(<1536px) / 4col(≥1536px). (2026-04-01, AAA-T-159)
 - **Unified card style: `aspect-[16/7]` for image cards, `p-2.5`/`p-3` content padding, `line-clamp-2` titles, `hover:-translate-y-0.5` lift.** (2026-04-01, AAA-T-159)
+- **Marketplace adapter pattern in features/shop-marketplace/adapters/** — MarketplaceAdapter interface, feature-local (not package). Same reasoning as workflow engine. New marketplace = new file + registry entry. (2026-04-02)
+- **Standalone n8n workflows for marketplace (not workflow engine)** — Marketplace sync is infrastructure-level (cron polling, token refresh), not user-configurable automation. Workflow engine = tenant event-driven flows. Marketplace = system background ops. (2026-04-02)
+- **Unified Marketplace CollapsibleCard in product editor** — One card with overview (toggle + badge per platform) + per-platform collapsible sub-sections. NOT separate cards per marketplace. MARKETPLACE_REGISTRY pattern. (2026-04-02)
+- **Per-tenant marketplace OAuth via pgcrypto** — BYTEA columns for encrypted tokens (pgp_sym_encrypt returns bytea natively, no encode/decode roundtrip). Decrypted view with `security_invoker = true` for n8n. `app.encryption_key` PostgreSQL GUC for passphrase (set via ALTER DATABASE or Supabase Dashboard). First real pgcrypto usage in codebase. (2026-04-02)
+- **OLX location data on listings only** — Platform-specific data stays on shop_marketplace_listings.marketplace_params JSONB, not polluting shop_products. (2026-04-02)
+- **Stub Server Actions must include auth guard** — Stubs without getUserWithTenant() risk being copied without auth when implemented. All stubs now call getUserWithTenant() + isAuthError before returning stub error. (2026-04-02, AAA-T-157)
+- **PostgreSQL function for encrypted token upsert** — Supabase JS .insert() can't call pgp_sym_encrypt. Created SECURITY DEFINER function `upsert_marketplace_connection()` with two code paths for NULL/non-NULL account_id. Callable via `.rpc()`. (2026-04-02, AAA-T-157)
+- **jose for JWT state (not jsonwebtoken)** — jose is Edge-compatible, jsonwebtoken requires Node.js crypto. State JWT = { tenantId, marketplace, nonce }, 10min expiry, HS256. (2026-04-02, AAA-T-157)
+- **connectMarketplace returns authUrl for client redirect** — Server Actions can't redirect to external URLs. Action returns { authUrl }, client does window.location redirect. (2026-04-02, AAA-T-157)
+- **Service role client only in OAuth callback** — Initiation uses cookie-based server client (user must be logged in). Callback uses service role (no user session after external redirect back). (2026-04-02, AAA-T-157)
+- **Standalone functions over this-binding in object literals** — Object literal methods using `this.otherMethod()` break when destructured. Fix: extract standalone functions, assign to adapter property. Applied to getListingStatuses->fetchOlxListingStatus pattern. (2026-04-02, AAA-T-157)
+- **Shared HTTP wrapper (marketplaceFetch)** — All external marketplace API calls through one wrapper with AbortSignal.timeout(15s), response.ok check, MarketplaceApiError. No raw fetch in adapters. (2026-04-02, AAA-T-157)
+- **Allegro sandbox toggle at module load** — ALLEGRO_SANDBOX env var evaluated at top-level const. All 3 URLs (auth, token, API) switch together. Fine for production, may confuse hot-reload in dev. (2026-04-02, AAA-T-157)
+- **Credential access isolated to credentials.ts** — Single file with service role client, reads from decrypted view. Adapters never touch DB directly. (2026-04-02, AAA-T-157)
+- **FeedbackBanner instead of toast for OAuth callback** — No toast library (sonner/react-hot-toast) in project. Used inline dismissible alert banner reading URL query params (?connected=, ?error=). URL cleaned via router.replace after reading. (2026-04-02, AAA-T-157)
 
 ## Preferences
 
@@ -160,3 +196,7 @@
 - **Sidebar filters for e-commerce shops** — When shop has many categories, use sidebar category filter (240px), not horizontal pill bar. More standard e-commerce pattern. (2026-04-02)
 - **Prominent is_featured toggle** — User wanted "more prominent" than a simple checkbox. Card with Star icon + Switch + description text + amber accent border. (2026-04-02)
 - **Self-reflection iteration in auto mode** — User wants orchestrator to ask itself clarifying questions and answer them before implementing, even in auto mode. Deepens understanding at key decision points. (2026-04-02)
+- **Bidirectional marketplace sync** — Not just publish, also status sync (sold/expired → grayed out in CMS) + import existing listings from marketplace into CMS as products. (2026-04-02)
+- **Auto-publish option for marketplace** — User wants product.published → auto-publish to connected marketplaces. Planned as workflow engine trigger for future. (2026-04-02)
+- **CMS configures n8n marketplace access** — Marketplace n8n config managed from CMS, not directly in n8n. (2026-04-02)
+- **Polish labels in types.ts deferred to iteration 10** — LISTING_STATUS_LABELS, SYNC_STATUS_LABELS etc. hardcoded Polish in types.ts. Technically should be in messages.ts but works as type-level constants. Consolidate during Polish pass (iter 10). (2026-04-02, AAA-T-157)
