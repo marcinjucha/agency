@@ -14,6 +14,9 @@
 --   SET ROLE authenticated; SELECT * FROM shop_marketplace_imports; RESET ROLE; -- SELECT only
 --   SET ROLE anon; SELECT * FROM shop_marketplace_imports; RESET ROLE; -- should return 0 rows
 
+-- Ensure pgcrypto is available (needed for decrypted view)
+CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions;
+
 -- ============================================================
 -- SECTION 1: shop_marketplace_connections
 -- ============================================================
@@ -108,8 +111,8 @@ SELECT
   tenant_id,
   marketplace,
   display_name,
-  pgp_sym_decrypt(access_token_encrypted, current_setting('app.encryption_key')) AS access_token,
-  pgp_sym_decrypt(refresh_token_encrypted, current_setting('app.encryption_key')) AS refresh_token,
+  extensions.pgp_sym_decrypt(access_token_encrypted, current_setting('app.encryption_key')) AS access_token,
+  extensions.pgp_sym_decrypt(refresh_token_encrypted, current_setting('app.encryption_key')) AS refresh_token,
   token_expires_at,
   account_id,
   account_name,

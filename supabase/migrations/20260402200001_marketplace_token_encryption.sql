@@ -57,7 +57,7 @@ CREATE OR REPLACE FUNCTION upsert_marketplace_connection(
 ) RETURNS UUID
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, extensions
 AS $$
 DECLARE
   v_connection_id UUID;
