@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useRef, useEffect } from 'react'
 import {
   Badge,
   Card,
@@ -13,8 +14,9 @@ import {
   AlertDialogAction,
   AlertDialogCancel,
   Button,
+  Input,
 } from '@agency/ui'
-import { Trash2, Video, Play, Image as ImageIcon } from 'lucide-react'
+import { Trash2, Video, Play, Image as ImageIcon, Edit2 } from 'lucide-react'
 import type { MediaItemListItem } from '../types'
 import { formatBytes } from '../utils'
 
@@ -94,8 +96,25 @@ type MediaGridRowProps = {
   draggable?: boolean
 }
 
-function MediaGridRow({ item, onPreview, onDelete, selectable }: MediaGridRowProps) {
+function MediaGridRow({ item, onPreview, onDelete, onRename, selectable }: MediaGridRowProps) {
   const size = formatBytes(item.size_bytes)
+  const [editing, setEditing] = useState(false)
+  const [nameValue, setNameValue] = useState(item.name)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (editing) inputRef.current?.select()
+  }, [editing])
+
+  function commitRename() {
+    const trimmed = nameValue.trim()
+    if (trimmed && trimmed !== item.name && onRename) {
+      onRename(item.id, trimmed)
+    } else {
+      setNameValue(item.name)
+    }
+    setEditing(false)
+  }
 
   return (
     <Card className="group overflow-hidden">
@@ -104,7 +123,45 @@ function MediaGridRow({ item, onPreview, onDelete, selectable }: MediaGridRowPro
 
       {/* File info below thumbnail */}
       <div className="p-2.5">
-        <p className="line-clamp-2 text-sm font-medium leading-snug text-foreground">{item.name}</p>
+        {/* Filename row: inline edit or static + pencil */}
+        {editing ? (
+          <Input
+            ref={inputRef}
+            value={nameValue}
+            onChange={(e) => setNameValue(e.target.value)}
+            onBlur={commitRename}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') { e.preventDefault(); commitRename() }
+              if (e.key === 'Escape') { setNameValue(item.name); setEditing(false) }
+            }}
+            className="h-6 px-1 py-0 text-sm font-medium"
+            aria-label="Zmień nazwę pliku"
+          />
+        ) : (
+          <div className="flex items-center gap-1 min-w-0">
+            <p
+              className={`line-clamp-2 text-sm font-medium leading-snug text-foreground flex-1 min-w-0${!selectable && onRename ? ' cursor-pointer hover:text-foreground/80' : ''}`}
+              onClick={!selectable && onRename ? () => setEditing(true) : undefined}
+              role={!selectable && onRename ? 'button' : undefined}
+              tabIndex={!selectable && onRename ? 0 : undefined}
+              title={!selectable && onRename ? 'Kliknij, aby zmienić nazwę' : undefined}
+              onKeyDown={!selectable && onRename ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setEditing(true) } } : undefined}
+            >
+              {item.name}
+            </p>
+            {!selectable && onRename && (
+              <button
+                type="button"
+                onClick={() => setEditing(true)}
+                aria-label="Zmień nazwę"
+                className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded"
+              >
+                <Edit2 className="h-3 w-3" aria-hidden="true" />
+              </button>
+            )}
+          </div>
+        )}
+
         <div className="mt-1.5 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <TypeLabel type={item.type} />
