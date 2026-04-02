@@ -8,9 +8,10 @@ import {
   createOAuthState,
   getCallbackRedirectUri,
 } from '@/lib/marketplace-oauth'
+import { MARKETPLACE_LABELS } from '@/features/shop-marketplace/types'
 import type { MarketplaceId } from '@/features/shop-marketplace/types'
 
-const VALID_MARKETPLACES: MarketplaceId[] = ['olx', 'allegro']
+const VALID_MARKETPLACES = Object.keys(MARKETPLACE_LABELS)
 
 /**
  * GET /api/marketplace/auth/[marketplace]

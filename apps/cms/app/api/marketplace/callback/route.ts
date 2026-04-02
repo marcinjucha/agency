@@ -5,6 +5,7 @@ import {
 } from '@/lib/marketplace-oauth'
 import { getMarketplaceAdapter } from '@/features/shop-marketplace/adapters/registry'
 import { createServiceClient } from '@/lib/supabase/service'
+import { revalidatePath } from 'next/cache'
 import { routes } from '@/lib/routes'
 
 /**
@@ -73,6 +74,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(settingsUrl.toString())
     }
 
+    revalidatePath(routes.admin.shopMarketplace)
     settingsUrl.searchParams.set('connected', stateData.marketplace)
     return NextResponse.redirect(settingsUrl.toString())
   } catch (err) {
