@@ -1,5 +1,7 @@
 import { SignJWT, jwtVerify } from 'jose'
-import type { MarketplaceId } from '@/features/shop-marketplace/types'
+
+/** Marketplace identifier — defined inline to avoid lib/ → features/ import (ADR-005) */
+type MarketplaceId = 'olx' | 'allegro'
 
 type OAuthState = {
   tenantId: string

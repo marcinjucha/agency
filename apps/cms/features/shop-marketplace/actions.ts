@@ -37,7 +37,10 @@ export async function connectMarketplace(
   }
 
   // Return auth URL for client-side redirect (Server Actions can't redirect to external URLs)
-  const host = process.env.HOST_URL || process.env.NEXT_PUBLIC_APP_URL || ''
+  const host = process.env.HOST_URL || process.env.NEXT_PUBLIC_APP_URL
+  if (!host) {
+    return { success: false, error: 'Missing HOST_URL or NEXT_PUBLIC_APP_URL environment variable' }
+  }
   const authUrl = `${host}/api/marketplace/auth/${marketplace}`
 
   return { success: true, data: { authUrl } }

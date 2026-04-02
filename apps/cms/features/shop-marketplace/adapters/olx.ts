@@ -136,7 +136,6 @@ export const olxAdapter: MarketplaceAdapter = {
       response_type: 'code',
       redirect_uri: redirectUri,
       scope: 'read write v2',
-      state: tenantId,
     })
     return `${OLX_AUTH_URL}?${params.toString()}`
   },

@@ -29,6 +29,9 @@ const ALLEGRO_API_BASE = isSandbox
   ? 'https://api.allegro.pl.allegrosandbox.pl'
   : 'https://api.allegro.pl'
 
+/** Allegro root category ID — used as fallback when no parent category is specified */
+const ALLEGRO_ROOT_CATEGORY_ID = '954b95b6-43cf-4104-8354-dea4d9b10f31'
+
 const ALLEGRO_ACCEPT = 'application/vnd.allegro.public.v1+json'
 const ALLEGRO_CONTENT_TYPE = 'application/vnd.allegro.public.v1+json'
 
@@ -174,7 +177,6 @@ export const allegroAdapter: MarketplaceAdapter = {
       response_type: 'code',
       client_id: getClientId(),
       redirect_uri: redirectUri,
-      state: tenantId,
     })
     return `${ALLEGRO_AUTH_URL}?${params.toString()}`
   },
@@ -356,7 +358,7 @@ export const allegroAdapter: MarketplaceAdapter = {
     credentials: MarketplaceCredentials,
     parentId?: string
   ): Promise<MarketplaceCategory[]> {
-    const categoryParam = parentId ?? '954b95b6-43cf-4104-8354-dea4d9b10f31'
+    const categoryParam = parentId ?? ALLEGRO_ROOT_CATEGORY_ID
     const data = await marketplaceJson<{
       categories: Array<{
         id: string
