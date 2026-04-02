@@ -228,6 +228,22 @@ export const messages = {
     sortOldest: 'Najstarsze',
     noScheduledPosts: 'Brak zaplanowanych artykułów',
     postsOnDate: (count: number) => count === 1 ? '1 artykuł' : `${count} artykułów`,
+    // Filtering
+    filter: {
+      statusLabel: 'Wszystkie statusy',
+      allStatuses: 'Wszystkie statusy',
+      published: 'Opublikowane',
+      draft: 'Szkice',
+      scheduled: 'Zaplanowane',
+    },
+    // Sorting
+    sort: {
+      label: 'Sortuj',
+      newest: 'Najnowsze',
+      oldest: 'Najstarsze',
+      titleAZ: 'Tytuł A–Z',
+      titleZA: 'Tytuł Z–A',
+    },
   },
 
   media: {

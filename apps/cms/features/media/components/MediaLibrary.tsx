@@ -50,13 +50,26 @@ import { messages } from '@/lib/messages'
 // Inline grid skeleton -- matches the media grid layout
 function MediaGridSkeleton() {
   return (
-    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
       {Array.from({ length: 8 }).map((_, i) => (
         <Card key={i} className="overflow-hidden">
-          <Skeleton className="aspect-square w-full" />
-          <div className="px-3 py-2 space-y-1">
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-3 w-1/2" />
+          {/* Image area — matches aspect-[16/7] used in MediaGrid */}
+          <Skeleton className="aspect-[16/7] w-full" />
+          {/* Footer — matches p-2.5 in MediaGridRow */}
+          <div className="p-2.5 space-y-1.5">
+            {/* Name row: text + pencil icon placeholder */}
+            <div className="flex items-center gap-1">
+              <Skeleton className="h-4 flex-1" />
+              <Skeleton className="h-3 w-3 shrink-0" />
+            </div>
+            {/* Bottom row: type badge + size + delete icon */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Skeleton className="h-5 w-14 rounded-full" />
+                <Skeleton className="h-3 w-10" />
+              </div>
+              <Skeleton className="h-7 w-7 shrink-0" />
+            </div>
           </div>
         </Card>
       ))}

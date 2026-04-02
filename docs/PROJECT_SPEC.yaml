@@ -108,7 +108,7 @@ features:
   # Phase 6: Marketing & Content
   - name: "Blog / Articles with WYSIWYG Editor"
     status: done
-    description: "Tiptap editor (JSON+HTML), S3 images, categories, SEO metadata, scheduled publishing (draft/scheduled/published derived from is_published+published_at), ISR revalidate=60. Website: /blog listing + /blog/[slug] detail + /blog/preview/[token]"
+    description: "Tiptap editor (JSON+HTML), S3 images, categories, SEO metadata, scheduled publishing (draft/scheduled/published derived from is_published+published_at), ISR revalidate=60. Website: /blog listing + /blog/[slug] detail + /blog/preview/[token]. Blog list page has sort control (Najnowsze/Najstarsze/Tytuł A-Z/Z-A) with localStorage persistence (useSortMode hook). Status filter moved to shared toolbar visible in both gallery and list views."
     why: "CMS-managed blog for agency marketing, SEO-optimized public pages"
 
   - name: "Landing Page CMS"
@@ -118,7 +118,7 @@ features:
 
   - name: "Media Library"
     status: done
-    description: "Multi-tenant media management (S3), drag-drop upload, 6 types (image, video, youtube, vimeo, instagram, tiktok), Tiptap extensions for all types, Insert Media modal in blog editor"
+    description: "Multi-tenant media management (S3), drag-drop upload, 6 types (image, video, youtube, vimeo, instagram, tiktok), Tiptap extensions for all types, Insert Media modal in blog editor (unified layout: upload zone → link input → filters → grid, no tabs). Inline rename via pencil icon or clicking the file name, available in both card and list row views."
     why: "Centralized asset management, reuse across blog posts, no duplicate uploads"
     depends_on: ["Blog / Articles with WYSIWYG Editor"]
 

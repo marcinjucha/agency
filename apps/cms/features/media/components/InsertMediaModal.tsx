@@ -6,10 +6,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  Tabs,
-  TabsList,
-  TabsTrigger,
-  TabsContent,
   Button,
   Input,
   Progress,
@@ -197,9 +193,11 @@ function EmbedTab({
 function LibraryTab({
   editor,
   onInserted,
+  middleSlot,
 }: {
   editor: Editor | null
   onInserted: () => void
+  middleSlot?: React.ReactNode
 }) {
   const [typeFilter, setTypeFilter] = useState<MediaType | undefined>(undefined)
   const [folderFilter, setFolderFilter] = useState<string | null | undefined>(undefined)
@@ -305,6 +303,8 @@ function LibraryTab({
       />
       {uploadProgress !== null && <Progress value={uploadProgress} className="h-1.5" />}
       {uploadError && <p className="text-xs text-destructive" role="alert">{uploadError}</p>}
+
+      {middleSlot}
 
       <div className="flex items-center gap-2">
         {folders && folders.length > 0 && (
@@ -425,26 +425,13 @@ export function InsertMediaModal({
           <DialogTitle>Wstaw media</DialogTitle>
         </DialogHeader>
 
-        <Tabs defaultValue="library" className="flex-1 overflow-hidden flex flex-col">
-          <TabsList className="shrink-0">
-            <TabsTrigger value="library">Biblioteka</TabsTrigger>
-            <TabsTrigger value="embed">Social Media</TabsTrigger>
-          </TabsList>
-
-          <TabsContent
-            value="embed"
-            className="flex-1 overflow-y-auto mt-4 pr-1"
-          >
-            <EmbedTab editor={editor} onInserted={handleInserted} />
-          </TabsContent>
-
-          <TabsContent
-            value="library"
-            className="flex-1 overflow-y-auto mt-4 pr-1"
-          >
-            <LibraryTab editor={editor} onInserted={handleInserted} />
-          </TabsContent>
-        </Tabs>
+        <div className="flex-1 overflow-y-auto pr-1 pb-2">
+          <LibraryTab
+            editor={editor}
+            onInserted={handleInserted}
+            middleSlot={<EmbedTab editor={editor} onInserted={handleInserted} />}
+          />
+        </div>
       </DialogContent>
     </Dialog>
   )

@@ -16,7 +16,7 @@ import {
   AlertDialogCancel,
   Button,
 } from '@agency/ui'
-import { Trash2, Video, Play, Image as ImageIcon } from 'lucide-react'
+import { Trash2, Video, Play, Image as ImageIcon, Edit2 } from 'lucide-react'
 import type { MediaItemListItem } from '../types'
 import { formatBytes } from '../utils'
 
@@ -125,23 +125,35 @@ function InlineName({
     if (editing) inputRef.current?.select()
   }, [editing])
 
-  if (!onRename || !editing) {
+  if (!editing) {
     return (
-      <p
-        className="truncate text-sm font-medium text-foreground"
-        role={onRename ? 'button' : undefined}
-        tabIndex={onRename ? 0 : undefined}
-        title={onRename ? 'Kliknij, aby zmienić nazwę' : undefined}
-        onClick={() => onRename && setEditing(true)}
-        onKeyDown={(e) => {
-          if (onRename && (e.key === 'Enter' || e.key === ' ')) {
-            e.preventDefault()
-            setEditing(true)
-          }
-        }}
-      >
-        {name}
-      </p>
+      <div className="flex items-center gap-1 min-w-0">
+        <p
+          className={`truncate text-sm font-medium text-foreground flex-1 min-w-0${onRename ? ' cursor-pointer hover:text-foreground/80' : ''}`}
+          role={onRename ? 'button' : undefined}
+          tabIndex={onRename ? 0 : undefined}
+          title={onRename ? 'Kliknij, aby zmienić nazwę' : undefined}
+          onClick={() => onRename && setEditing(true)}
+          onKeyDown={(e) => {
+            if (onRename && (e.key === 'Enter' || e.key === ' ')) {
+              e.preventDefault()
+              setEditing(true)
+            }
+          }}
+        >
+          {name}
+        </p>
+        {onRename && (
+          <button
+            type="button"
+            onClick={() => setEditing(true)}
+            aria-label="Zmień nazwę"
+            className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded"
+          >
+            <Edit2 className="h-3 w-3" aria-hidden="true" />
+          </button>
+        )}
+      </div>
     )
   }
 

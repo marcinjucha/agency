@@ -10,13 +10,20 @@ import {
   LoadingState,
   ErrorState,
   EmptyState,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from '@agency/ui'
 import Link from 'next/link'
 import { FileText, Plus } from 'lucide-react'
 import { startOfDay, isSameDay } from 'date-fns'
+import { getPostStatus } from '../types'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
 import { useViewMode } from '@/hooks/use-view-mode'
+import { useSortMode } from '@/hooks/use-sort-mode'
 import { ViewModeToggle } from '@/components/shared/ViewModeToggle'
 import { BlogPostListView } from './BlogPostListView'
 import { BlogPostGridView } from './BlogPostGridView'
@@ -35,6 +42,8 @@ export function BlogPostList() {
   const queryClient = useQueryClient()
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined)
   const [viewMode, setViewMode] = useViewMode('blog-view-mode', 'grid')
+  const [sortMode, setSortMode] = useSortMode('blog-sort-mode', 'newest')
+  const [statusFilter, setStatusFilter] = useState<string>('all')
 
   const {
     data: posts,
@@ -69,14 +78,37 @@ export function BlogPostList() {
     [selectedDate]
   )
 
-  /** Filter posts by selected date, or return all if no date selected. */
+  /** Filter posts by selected date and status, then sort. */
   const filteredPosts = useMemo(() => {
     if (!posts) return []
-    if (!selectedDate) return posts
-    return posts.filter((post) =>
-      isSameDay(getCalendarDate(post), selectedDate)
-    )
-  }, [posts, selectedDate])
+    const dateFiltered = selectedDate
+      ? posts.filter((post) => isSameDay(getCalendarDate(post), selectedDate))
+      : posts
+
+    const statusFiltered =
+      statusFilter === 'all'
+        ? dateFiltered
+        : dateFiltered.filter(
+            (post) => getPostStatus(post.is_published, post.published_at) === statusFilter
+          )
+
+    return [...statusFiltered].sort((a, b) => {
+      switch (sortMode) {
+        case 'newest':
+          return new Date(b.published_at ?? b.created_at).getTime()
+            - new Date(a.published_at ?? a.created_at).getTime()
+        case 'oldest':
+          return new Date(a.published_at ?? a.created_at).getTime()
+            - new Date(b.published_at ?? b.created_at).getTime()
+        case 'title-az':
+          return (a.title ?? '').localeCompare(b.title ?? '', 'pl')
+        case 'title-za':
+          return (b.title ?? '').localeCompare(a.title ?? '', 'pl')
+        default:
+          return 0
+      }
+    })
+  }, [posts, selectedDate, sortMode, statusFilter])
 
   if (isLoading) return <BlogPostListSkeleton />
 
@@ -138,8 +170,30 @@ export function BlogPostList() {
 
         {/* Right panel: toggle + view */}
         <div className="min-w-0 flex-1 space-y-4">
-          {/* Toggle in right panel header */}
-          <div className="flex items-center justify-end">
+          {/* Toolbar: status filter + sort + view toggle */}
+          <div className="flex items-center justify-end gap-2">
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="h-9 w-44" aria-label={messages.blog.filter.statusLabel}>
+                <SelectValue placeholder={messages.blog.filter.statusLabel} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{messages.blog.filter.allStatuses}</SelectItem>
+                <SelectItem value="published">{messages.blog.filter.published}</SelectItem>
+                <SelectItem value="draft">{messages.blog.filter.draft}</SelectItem>
+                <SelectItem value="scheduled">{messages.blog.filter.scheduled}</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={sortMode} onValueChange={(v) => setSortMode(v as typeof sortMode)}>
+              <SelectTrigger className="h-9 w-40" aria-label={messages.blog.sort.label}>
+                <SelectValue placeholder={messages.blog.sort.label} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="newest">{messages.blog.sort.newest}</SelectItem>
+                <SelectItem value="oldest">{messages.blog.sort.oldest}</SelectItem>
+                <SelectItem value="title-az">{messages.blog.sort.titleAZ}</SelectItem>
+                <SelectItem value="title-za">{messages.blog.sort.titleZA}</SelectItem>
+              </SelectContent>
+            </Select>
             <ViewModeToggle value={viewMode} onChange={setViewMode} />
           </div>
 

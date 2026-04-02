@@ -1,14 +1,9 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useMemo } from 'react'
 import {
   Button,
   Badge,
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
   AlertDialog,
   AlertDialogTrigger,
   AlertDialogContent,
@@ -20,7 +15,7 @@ import {
   AlertDialogCancel,
 } from '@agency/ui'
 import { useRouter } from 'next/navigation'
-import { Trash2, ArrowUpDown, X, CalendarDays } from 'lucide-react'
+import { Trash2, X, CalendarDays } from 'lucide-react'
 import { formatDistanceToNow, format } from 'date-fns'
 import { pl } from 'date-fns/locale'
 import { messages } from '@/lib/messages'
@@ -75,27 +70,13 @@ export function BlogPostListView({
   isDeleting,
 }: BlogPostListViewProps) {
   const router = useRouter()
-  const [statusFilter, setStatusFilter] = useState<string>('all')
-  const [sortNewest, setSortNewest] = useState(true)
 
   const filteredAndSorted = useMemo(() => {
-    let result = posts.map((post) => ({
+    return posts.map((post) => ({
       ...post,
       status: getPostStatus(post.is_published, post.published_at),
     }))
-
-    if (statusFilter !== 'all') {
-      result = result.filter((p) => p.status === statusFilter)
-    }
-
-    result.sort((a, b) => {
-      const dateA = new Date(getDisplayDate(a) ?? a.created_at).getTime()
-      const dateB = new Date(getDisplayDate(b) ?? b.created_at).getTime()
-      return sortNewest ? dateB - dateA : dateA - dateB
-    })
-
-    return result
-  }, [posts, statusFilter, sortNewest])
+  }, [posts])
 
   return (
     <div className="space-y-4">
@@ -119,33 +100,6 @@ export function BlogPostListView({
           </div>
         </div>
       )}
-
-      {/* Filters */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder={messages.blog.allStatuses} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{messages.blog.allStatuses}</SelectItem>
-            <SelectItem value="draft">{messages.common.draft}</SelectItem>
-            <SelectItem value="scheduled">{messages.blog.scheduled}</SelectItem>
-            <SelectItem value="published">
-              {messages.common.published}
-            </SelectItem>
-          </SelectContent>
-        </Select>
-
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setSortNewest((prev) => !prev)}
-          className="gap-2 text-muted-foreground"
-        >
-          <ArrowUpDown className="h-4 w-4" aria-hidden="true" />
-          {sortNewest ? messages.blog.sortNewest : messages.blog.sortOldest}
-        </Button>
-      </div>
 
       {/* List */}
       <div className="divide-y divide-border rounded-lg border border-border">

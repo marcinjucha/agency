@@ -233,6 +233,8 @@ Only for admin operations that bypass RLS.
 
 **View persistence:** List/grid view toggles persist to localStorage to survive navigation.
 
+**No EmptyState on fixed-option pages:** Pages that always show all N options regardless of state (marketplace connections, calendar settings, email config) should NOT use EmptyState. Card grids with connected/not-connected states already communicate state visually. **Why:** EmptyState is for dynamic lists where empty = nothing to show. Fixed-option pages always render all options — adding EmptyState on top is redundant noise.
+
 ## Development
 
 ```bash
