@@ -1,10 +1,11 @@
 import { z } from 'zod'
+import { messages } from '@/lib/messages'
 
 // --- Connect marketplace ---
 
 export const connectMarketplaceSchema = z.object({
   marketplace: z.enum(['olx', 'allegro'], {
-    required_error: 'Wybierz marketplace',
+    required_error: messages.validation.marketplaceRequired,
   }),
   displayName: z.string().nullable().optional(),
 })
@@ -23,8 +24,8 @@ export type UpdateConnectionFormData = z.infer<typeof updateConnectionSchema>
 // --- Publish listing ---
 
 export const publishListingSchema = z.object({
-  productId: z.string().uuid('Nieprawidlowy identyfikator produktu'),
-  connectionId: z.string().uuid('Nieprawidlowy identyfikator polaczenia'),
+  productId: z.string().uuid(messages.validation.invalidProductId),
+  connectionId: z.string().uuid(messages.validation.invalidConnectionId),
   marketplaceCategoryId: z.string().nullable().optional(),
   marketplaceLocation: z
     .object({
@@ -51,7 +52,7 @@ export type UpdateListingFormData = z.infer<typeof updateListingSchema>
 // --- Create import ---
 
 export const createImportSchema = z.object({
-  connectionId: z.string().uuid('Nieprawidlowy identyfikator polaczenia'),
+  connectionId: z.string().uuid(messages.validation.invalidConnectionId),
 })
 
 export type CreateImportFormData = z.infer<typeof createImportSchema>

@@ -1055,6 +1055,10 @@ export const messages = {
     webhookUrlInvalid: 'Nieprawidłowy URL webhooka',
     webhookMethodRequired: 'Metoda HTTP jest wymagana',
     promptRequired: 'Prompt jest wymagany',
+    // Shop — Marketplace
+    marketplaceRequired: 'Wybierz marketplace',
+    invalidProductId: 'Nieprawidłowy identyfikator produktu',
+    invalidConnectionId: 'Nieprawidłowy identyfikator połączenia',
     // Shop
     priceMustBeNonNegative: 'Cena nie może być ujemna',
     listingTypeRequired: 'Typ oferty jest wymagany',

@@ -3,8 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams, usePathname, useRouter } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
-import { Store } from 'lucide-react'
-import { EmptyState, ErrorState, LoadingState } from '@agency/ui'
+import { ErrorState, LoadingState } from '@agency/ui'
 import { queryKeys } from '@/lib/query-keys'
 import { messages } from '@/lib/messages'
 import { getMarketplaceConnections } from '../queries'
@@ -83,15 +82,6 @@ export function MarketplaceSettingsPage() {
           onDismiss={() => setFeedback(null)}
         />
       )}
-
-      {!connections?.length && !feedback ? (
-        <EmptyState
-          icon={Store}
-          title={messages.marketplace.pageTitle}
-          description={messages.marketplace.pageSubtitle}
-          variant="card"
-        />
-      ) : null}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {MARKETPLACE_OPTIONS.map((opt) => (
