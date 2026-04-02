@@ -27,15 +27,18 @@ export function Process({
   proof,
 }: ProcessBlock) {
   return (
-    <section className="relative py-20 md:py-32 bg-gradient-to-b from-background to-muted/20 overflow-hidden">
+    <section className="relative py-16 md:py-24 bg-gradient-to-b from-background to-muted/20 overflow-hidden">
       {/* Gradient divider */}
       <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-border/50 to-transparent" />
 
       <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Badge */}
+        {/* Guarantee callout — prominent accent block */}
         <ScrollReveal>
-          <div className="inline-flex items-center bg-primary/10 text-primary text-xs font-semibold px-4 py-2 rounded-full mb-8 uppercase tracking-[0.15em] border border-primary/20">
-            {badge}
+          <div className="inline-flex items-center gap-3 bg-primary/10 border border-primary/30 rounded-xl px-5 py-3.5 mb-10">
+            <div className="flex-shrink-0 w-2 h-2 rounded-full bg-primary" />
+            <p className="text-sm md:text-base font-semibold text-primary leading-snug">
+              {badge}
+            </p>
           </div>
         </ScrollReveal>
 
@@ -82,18 +85,18 @@ export function Process({
           </div>
         </div>
 
-        {/* Zero-risk box */}
+        {/* Zero-risk box — high-prominence accent panel */}
         <ScrollReveal delay={600}>
-          <div className="glass-card rounded-xl p-6 mb-6">
-            <div className="flex items-start gap-4">
-              <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center border border-primary/20">
-                <Shield className="w-5 h-5 text-primary" />
+          <div className="rounded-xl border border-primary/40 bg-primary/8 p-6 md:p-8 mb-6">
+            <div className="flex items-start gap-5">
+              <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-primary/15 border border-primary/30 flex items-center justify-center">
+                <Shield className="w-6 h-6 text-primary" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-foreground mb-2">
+                <h3 className="text-xl md:text-2xl font-bold text-foreground mb-2 tracking-tight">
                   {riskTitle}
                 </h3>
-                <p className="text-sm md:text-base text-muted-foreground leading-relaxed">
+                <p className="text-sm md:text-base text-foreground/80 leading-relaxed">
                   {riskDescription}
                 </p>
               </div>
@@ -101,11 +104,14 @@ export function Process({
           </div>
         </ScrollReveal>
 
-        {/* Proof line */}
+        {/* Proof line — social proof with stronger visual weight */}
         <ScrollReveal delay={700}>
-          <p className="text-sm text-muted-foreground/80 leading-relaxed max-w-3xl">
-            {proof}
-          </p>
+          <div className="flex items-start gap-3">
+            <div className="flex-shrink-0 w-1 h-full min-h-[1.25rem] rounded-full bg-primary/40 self-stretch" />
+            <p className="text-sm md:text-base text-foreground/70 font-medium leading-relaxed max-w-3xl">
+              {proof}
+            </p>
+          </div>
         </ScrollReveal>
       </div>
     </section>

@@ -7,7 +7,7 @@ export function FinalCTA({ headline, description, button, trustLine }: CtaBlock)
   return (
     <section
       id="contact"
-      className="relative py-24 md:py-32 lg:py-40 bg-background overflow-hidden noise-overlay"
+      className="relative py-16 md:py-24 bg-background overflow-hidden noise-overlay"
       aria-label="Sekcja kontaktowa"
     >
       {/* Ambient glow orbs */}

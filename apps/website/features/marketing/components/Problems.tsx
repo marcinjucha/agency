@@ -6,7 +6,7 @@ const PROBLEM_ICONS = [RefreshCw, FileSpreadsheet, Mail, UserX]
 
 export function Problems({ title, stat, items }: ProblemsBlock) {
   return (
-    <section className="relative py-20 md:py-32 bg-background overflow-hidden">
+    <section className="relative py-16 md:py-24 bg-background overflow-hidden">
       {/* Subtle top gradient divider */}
       <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-border/50 to-transparent" />
 

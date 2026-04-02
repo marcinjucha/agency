@@ -4,7 +4,7 @@ import { CtaLink } from './CtaLink'
 
 export function Hero({ headline, subheadline, cta, trustLine }: HeroBlock) {
   return (
-    <section className="relative pt-16 pb-20 md:pt-24 md:pb-32 lg:pt-32 lg:pb-40 bg-background overflow-hidden">
+    <section className="relative pt-16 pb-16 md:pt-24 md:pb-24 lg:pt-32 lg:pb-24 bg-background overflow-hidden">
       {/* Ambient glow orbs */}
       <div className="absolute top-[-200px] right-[-100px] w-[600px] h-[600px] rounded-full bg-primary/8 blur-[120px] animate-glow-pulse pointer-events-none" />
       <div className="absolute bottom-[-150px] left-[-80px] w-[500px] h-[500px] rounded-full bg-primary/5 blur-[100px] animate-glow-pulse pointer-events-none" style={{ animationDelay: '2s' }} />
