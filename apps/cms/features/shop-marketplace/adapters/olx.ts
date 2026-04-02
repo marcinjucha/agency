@@ -91,6 +91,37 @@ function buildAdvertBody(payload: PublishPayload): Record<string, unknown> {
   return body
 }
 
+// --- Standalone status fetch (avoids `this` binding issues) ---
+
+async function fetchOlxListingStatus(
+  externalId: string,
+  credentials: MarketplaceCredentials
+): Promise<ListingStatusResult> {
+  try {
+    const data = await marketplaceJson<{
+      id: number
+      status: string
+      valid_to: string
+    }>(`${OLX_API_BASE}/adverts/${externalId}`, {
+      method: 'GET',
+      headers: authHeaders(credentials.accessToken),
+    })
+
+    return {
+      externalListingId: String(data.id),
+      status: mapOlxStatus(data.status),
+      expiresAt: data.valid_to || undefined,
+    }
+  } catch (err) {
+    return {
+      externalListingId: externalId,
+      status: 'removed',
+      error:
+        err instanceof Error ? err.message : 'Failed to fetch OLX status',
+    }
+  }
+}
+
 // --- Adapter implementation ---
 
 export const olxAdapter: MarketplaceAdapter = {
@@ -256,34 +287,7 @@ export const olxAdapter: MarketplaceAdapter = {
 
   // --- Status ---
 
-  async getListingStatus(
-    externalId: string,
-    credentials: MarketplaceCredentials
-  ): Promise<ListingStatusResult> {
-    try {
-      const data = await marketplaceJson<{
-        id: number
-        status: string
-        valid_to: string
-      }>(`${OLX_API_BASE}/adverts/${externalId}`, {
-        method: 'GET',
-        headers: authHeaders(credentials.accessToken),
-      })
-
-      return {
-        externalListingId: String(data.id),
-        status: mapOlxStatus(data.status),
-        expiresAt: data.valid_to || undefined,
-      }
-    } catch (err) {
-      return {
-        externalListingId: externalId,
-        status: 'removed',
-        error:
-          err instanceof Error ? err.message : 'Failed to fetch OLX status',
-      }
-    }
-  },
+  getListingStatus: fetchOlxListingStatus,
 
   async getListingStatuses(
     externalIds: string[],
@@ -291,7 +295,7 @@ export const olxAdapter: MarketplaceAdapter = {
   ): Promise<ListingStatusResult[]> {
     // OLX has no batch status endpoint — fetch individually
     return Promise.all(
-      externalIds.map((id) => this.getListingStatus(id, credentials))
+      externalIds.map((id) => fetchOlxListingStatus(id, credentials))
     )
   },
 

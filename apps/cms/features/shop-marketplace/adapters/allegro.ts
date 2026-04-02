@@ -129,6 +129,38 @@ function buildOfferBody(payload: PublishPayload): Record<string, unknown> {
   return body
 }
 
+// --- Standalone status fetch (avoids `this` binding issues) ---
+
+async function fetchAllegroListingStatus(
+  externalId: string,
+  credentials: MarketplaceCredentials
+): Promise<ListingStatusResult> {
+  try {
+    const data = await marketplaceJson<{
+      id: string
+      publication: { status: string; endingAt?: string }
+    }>(`${ALLEGRO_API_BASE}/sale/product-offers/${externalId}`, {
+      method: 'GET',
+      headers: allegroHeaders(credentials.accessToken),
+    })
+
+    return {
+      externalListingId: data.id,
+      status: mapAllegroStatus(data.publication?.status ?? 'INACTIVE'),
+      expiresAt: data.publication?.endingAt || undefined,
+    }
+  } catch (err) {
+    return {
+      externalListingId: externalId,
+      status: 'removed',
+      error:
+        err instanceof Error
+          ? err.message
+          : 'Failed to fetch Allegro status',
+    }
+  }
+}
+
 // --- Adapter implementation ---
 
 export const allegroAdapter: MarketplaceAdapter = {
@@ -306,35 +338,7 @@ export const allegroAdapter: MarketplaceAdapter = {
 
   // --- Status ---
 
-  async getListingStatus(
-    externalId: string,
-    credentials: MarketplaceCredentials
-  ): Promise<ListingStatusResult> {
-    try {
-      const data = await marketplaceJson<{
-        id: string
-        publication: { status: string; endingAt?: string }
-      }>(`${ALLEGRO_API_BASE}/sale/product-offers/${externalId}`, {
-        method: 'GET',
-        headers: allegroHeaders(credentials.accessToken),
-      })
-
-      return {
-        externalListingId: data.id,
-        status: mapAllegroStatus(data.publication?.status ?? 'INACTIVE'),
-        expiresAt: data.publication?.endingAt || undefined,
-      }
-    } catch (err) {
-      return {
-        externalListingId: externalId,
-        status: 'removed',
-        error:
-          err instanceof Error
-            ? err.message
-            : 'Failed to fetch Allegro status',
-      }
-    }
-  },
+  getListingStatus: fetchAllegroListingStatus,
 
   async getListingStatuses(
     externalIds: string[],
@@ -342,7 +346,7 @@ export const allegroAdapter: MarketplaceAdapter = {
   ): Promise<ListingStatusResult[]> {
     // Allegro has no batch status endpoint — fetch individually
     return Promise.all(
-      externalIds.map((id) => this.getListingStatus(id, credentials))
+      externalIds.map((id) => fetchAllegroListingStatus(id, credentials))
     )
   },
 
