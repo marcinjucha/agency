@@ -24,6 +24,16 @@
 **Backlog:** Manual cancel/retry executions, manual triggers — nice-to-have, not MVP.
 **Plan:** 11 iterations. Graph: 1→2→[3+4]→5a→5b→[6+7]→[8+9]→10. Critical: 1→2→5a→5b→6→10.
 
+## Marketplace Integration — AAA-P-9 — PLANNED (2026-04-02)
+
+**Status:** Planning done. AAA-T-157 repurposed from investigation to full XL feature (10 iterations, High priority).
+**Scope:** OLX + Allegro integration — publish products, sync status (sold/expired), import existing listings. Bidirectional sync.
+**DB tables:** shop_marketplace_connections (OAuth creds per tenant) + shop_marketplace_listings (1 product → N listings, marketplace_params JSONB) + shop_marketplace_imports. TEXT for marketplace type (not ENUM, same reasoning as trigger_type/step_type).
+**Key decisions:** MarketplaceAdapter interface in `features/shop-marketplace/adapters/` (feature-local, not package). MARKETPLACE_REGISTRY pattern (like NODE_TYPE_REGISTRY). Per-tenant pgcrypto-encrypted OAuth tokens (same as email_configs). OLX location data on listings only (marketplace_params JSONB), not on shop_products.
+**n8n strategy:** Standalone n8n workflows (cron polling, token refresh) — NOT workflow engine. Marketplace sync = system infrastructure, not user-configurable automation. CMS configures n8n marketplace access (not directly in n8n).
+**UI:** Unified Marketplace CollapsibleCard in product editor — one card with overview (toggle + badge per platform) + per-platform collapsible sub-sections. NOT separate cards per marketplace.
+**Future:** Auto-publish via workflow engine trigger (product.published → auto-publish to connected marketplaces).
+
 ## Roadmap & Planning (2026-03-30)
 
 **Priority order:** workflow engine → email triggers → client onboarding.
@@ -78,6 +88,9 @@
 - **deleteAppointment does NOT remove Google Calendar event** — DB row deleted only. Notion ticket created. (2026-03-28)
 - **email_configs table empty in production** — N8n uses hardcoded Resend fallback (`noreply@haloefekt.pl`). (2026-03-27)
 - **notification_email is per survey_link, not per tenant** — Each link has own notification address. (2026-03-27)
+- **OLX.pl API** — developer.olx.pl, OAuth 2.0, manual verification required (delays possible), CRUD listings/photos/categories/locations. Free to use. (2026-04-02)
+- **Allegro REST API** — developer.allegro.pl, OAuth 2.0 + JWT, sandbox available, POST-only token endpoint (since Aug 2025). ADVERTISEMENT format for classifieds. (2026-04-02)
+- **AAA-T-157 repurposed** — Originally "Sprawdzanie statusu produktu na Allegro/OLX" (Inbox, investigation). Expanded to full "Marketplace Integration (OLX + Allegro)" (To Do, High, XL, 10 iterations). (2026-04-02)
 
 ## Architecture Decisions
 
@@ -92,6 +105,11 @@
 - **NODE_TYPE_REGISTRY centralized** — node-styles.ts + WorkflowCanvas nodeTypes + AddNodeDropdown ITEMS were scattered. Centralized into node-registry.ts: NODE_TYPE_CONFIGS (config-only, safe outside dynamic boundary) and NODE_COMPONENTS (inside boundary). Adding new node type = 2 files. (2026-03-31)
 - **PANEL_REGISTRY for config panels** — Maps stepType → React component, mirrors NODE_TYPE_CONFIGS. Adding new config panel = new file + registry entry. (2026-03-31) [Pattern: ag-coding-practices "Naturally Extensible Systems"; boundary rules: ag-architecture "Dynamic Import Boundary"]
 - **300ms debounced onChange for config panels** — Real-time canvas feedback without Apply button. Explicit Save persists to DB. triggerType passed in ConfigPanelProps for variable inserter context. (2026-03-31)
+- **Marketplace adapter pattern in features/shop-marketplace/adapters/** — MarketplaceAdapter interface, feature-local (not package). Same reasoning as workflow engine. New marketplace = new file + registry entry. (2026-04-02)
+- **Standalone n8n workflows for marketplace (not workflow engine)** — Marketplace sync is infrastructure-level (cron polling, token refresh), not user-configurable automation. Workflow engine = tenant event-driven flows. Marketplace = system background ops. (2026-04-02)
+- **Unified Marketplace CollapsibleCard in product editor** — One card with overview (toggle + badge per platform) + per-platform collapsible sub-sections. NOT separate cards per marketplace. MARKETPLACE_REGISTRY pattern. (2026-04-02)
+- **Per-tenant marketplace OAuth via pgcrypto** — Encrypted tokens same pattern as email_configs. Decrypted view for n8n. (2026-04-02)
+- **OLX location data on listings only** — Platform-specific data stays on shop_marketplace_listings.marketplace_params JSONB, not polluting shop_products. (2026-04-02)
 
 ## Preferences
 
@@ -110,3 +128,6 @@
 - **560px config panel width** — 480px too tight for form-heavy config panels (select dropdowns, variable inserters, expression fields). 560px confirmed as right size. (2026-03-31)
 - **VariableInserter reuse in all expression/email fields** — Reuse VariableInserterPopover from packages/ui/ in workflow config panels wherever trigger context variables are available (e.g., to_expression in send_email). (2026-03-31)
 - **Config panel registry = extensible pattern** — Easy addition of new step types without changing existing panels. UpdateStatus panel deferred from 5b — implement when needed. (2026-03-31)
+- **Bidirectional marketplace sync** — Not just publish, also status sync (sold/expired → grayed out in CMS) + import existing listings from marketplace into CMS as products. (2026-04-02)
+- **Auto-publish option for marketplace** — User wants product.published → auto-publish to connected marketplaces. Planned as workflow engine trigger for future. (2026-04-02)
+- **CMS configures n8n marketplace access** — Marketplace n8n config managed from CMS, not directly in n8n. (2026-04-02)
