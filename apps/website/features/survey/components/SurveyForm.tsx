@@ -50,17 +50,29 @@ export function SurveyForm({ survey, linkId, token }: SurveyFormProps) {
   }, [])
 
   // Generate dynamic Zod schema from survey questions
-  const schema = generateSurveySchema(survey.questions)
+  const schema = useMemo(
+    () => generateSurveySchema(survey.questions),
+    [survey.questions]
+  )
+
+  // Default values ensure zodResolver receives strings (not undefined)
+  const defaultValues = useMemo(() => {
+    const values: SurveyAnswers = {}
+    survey.questions.forEach((q) => {
+      values[q.id] = q.type === 'checkbox' ? [] : ''
+    })
+    return values
+  }, [survey.questions])
 
   const {
-    register,
     control,
     handleSubmit,
     watch,
-    formState: { errors, isValid },
+    formState: { isValid },
   } = useForm<SurveyAnswers>({
     resolver: zodResolver(schema as any),
-    mode: 'onChange',
+    defaultValues,
+    mode: 'onTouched',
   })
 
   // Sort questions by order field to ensure correct display sequence
@@ -157,9 +169,7 @@ export function SurveyForm({ survey, linkId, token }: SurveyFormProps) {
                 <QuestionField
                   key={question.id}
                   question={question}
-                  register={register}
                   control={control}
-                  error={errors[question.id]?.message as string | undefined}
                   number={index + 1}
                 />
               ))}

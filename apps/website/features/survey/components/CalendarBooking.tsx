@@ -65,8 +65,8 @@ const bookingFormSchema = z.object({
     .max(100, messages.validation.nameTooLong),
   clientEmail: z
     .string()
-    .email(messages.validation.invalidEmail)
-    .min(1, messages.validation.emailRequired),
+    .min(1, messages.validation.emailRequired)
+    .email(messages.validation.invalidEmail),
   notes: z
     .string()
     .max(500, messages.validation.notesTooLong)

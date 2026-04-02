@@ -71,6 +71,8 @@
 - **`vt.tiktok.com` short URL missing from extractVideoId regex** — TikTok short links (`vt.tiktok.com/XXX/`) not matched by video embed URL parser. Fix: add `vt\.tiktok\.com` to URL regex pattern. (2026-04-02)
 - **`submission_count` is `number | null` in Supabase generated types despite DB DEFAULT 0** — Supabase codegen marks columns with defaults as nullable in Insert types. Always null-guard computed/default columns even when DB guarantees non-null. Pattern: `count ?? 0`. (2026-04-02)
 - **TanStack Query cross-entity invalidation miss** — SurveyLinks mutations (toggle active, delete) didn't invalidate parent `surveys.all` query key. Stale badge/count on survey list. Fix: always invalidate parent entity queries when child mutations affect parent-visible aggregates. (2026-04-02)
+- **Survey email validation ignored `semantic_role`** — Question had `type: 'text'` in DB but `semantic_role: 'client_email'`. Validation schema only checked `question.type`, so email field got text validation (no format check). Multiple RHF fixes (useFormState, Controller, mode changes) were red herrings. Root cause only found via `[DEBUG]` visible line in component revealing the actual data. Fix: `effectiveType` pattern where `semantic_role` overrides `question.type` for both validation and input rendering. (2026-04-02)
+- **RHF `register` swallows per-field errors silently** — QuestionField inputs using `register` didn't surface `fieldState.error` from react-hook-form. Migrated all inputs to `Controller` with `fieldState.error` for consistent error display. (2026-04-02)
 
 ## Domain Concepts
 
@@ -129,6 +131,7 @@
 - **FeedbackBanner instead of toast for OAuth callback** — No toast library in project. Inline dismissible alert reads URL query params (?connected=, ?error=), cleaned via router.replace. (2026-04-02, AAA-T-157)
 - **connectMarketplace returns authUrl for client redirect** — Server Actions can't redirect to external URLs. Returns { authUrl }, client does window.location redirect. (2026-04-02, AAA-T-157)
 - **jose for JWT state (not jsonwebtoken)** — jose is Edge-compatible. State JWT = { tenantId, marketplace, nonce }, 10min expiry, HS256. (2026-04-02, AAA-T-157)
+- **`semantic_role` overrides `question.type` via `effectiveType`/`inputType` pattern** — Survey questions have both `type` (DB storage type: text/number/date) and `semantic_role` (business meaning: client_email/client_name/client_phone). When `semantic_role` implies a specific type, it overrides `question.type` for validation schema generation and input rendering. (2026-04-02)
 
 ## Preferences
 

@@ -38,7 +38,14 @@ export function generateSurveySchema(questions: Question[]) {
   questions.forEach((question) => {
     let fieldSchema: any
 
-    switch (question.type) {
+    // Effective type: semantic_role overrides type for validation
+    // Existing surveys may have type:'text' with semantic_role:'client_email'
+    const effectiveType =
+      question.semantic_role === 'client_email' ? 'email' :
+      question.semantic_role === 'phone' ? 'tel' :
+      question.type
+
+    switch (effectiveType) {
       case 'text':
       case 'textarea': {
         const textSchema = z.string()
@@ -49,25 +56,28 @@ export function generateSurveySchema(questions: Question[]) {
       }
 
       case 'email': {
-        const emailSchema = z.string().email(messages.validation.invalidEmail)
+        const emailSchema = z
+          .string()
+          .min(1, messages.validation.emailRequired)
+          .email(messages.validation.invalidEmail)
         fieldSchema = question.required
-          ? emailSchema.min(1, messages.validation.emailRequired)
-          : emailSchema
+          ? emailSchema
+          : z.string().email(messages.validation.invalidEmail).or(z.literal(''))
         break
       }
 
       case 'tel': {
-        const telSchema = z
-          .string()
-          .regex(
-            /^[+]?[(]?[0-9]{1,4}[)]?[-\s\.]?[(]?[0-9]{1,4}[)]?[-\s\.]?[0-9]{1,9}$/,
-            {
-              message: messages.validation.invalidPhone,
-            }
-          )
+        const telRegex =
+          /^[+]?[(]?[0-9]{1,4}[)]?[-\s\.]?[(]?[0-9]{1,4}[)]?[-\s\.]?[0-9]{1,9}$/
         fieldSchema = question.required
-          ? telSchema.min(1, messages.validation.phoneRequired)
-          : telSchema
+          ? z
+              .string()
+              .min(1, messages.validation.phoneRequired)
+              .regex(telRegex, { message: messages.validation.invalidPhone })
+          : z
+              .string()
+              .regex(telRegex, { message: messages.validation.invalidPhone })
+              .or(z.literal(''))
         break
       }
 
