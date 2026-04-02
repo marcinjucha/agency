@@ -30,6 +30,7 @@ export const messages = {
     errorExpired: 'Link do tej ankiety wygasł.',
     errorMaxSubmissions: 'Ta ankieta osiągnęła limit wypełnień.',
     errorSurveyNotFound: 'Nie znaleziono ankiety.',
+    privacyPolicyLinkText: 'Polityka Prywatności',
   },
 
   calendar: {
@@ -93,9 +94,11 @@ export const messages = {
   },
 
   cookie: {
-    message: 'Ta strona korzysta z analityki na potrzeby własne.',
+    message:
+      'Używamy plików cookies niezbędnych do działania strony oraz narzędzi analitycznych — za Twoją zgodą. ' +
+      'Korzystając ze strony, akceptujesz te zasady.',
     privacyLink: 'Polityka prywatności',
-    accept: 'Akceptuję',
+    accept: 'Rozumiem',
     moreInfo: 'Więcej info',
   },
 
@@ -107,6 +110,7 @@ export const messages = {
     phoneRequired: 'Numer telefonu jest wymagany',
     selectOption: 'Wybierz opcję',
     selectAtLeastOne: 'Wybierz co najmniej jedną opcję',
+    consentRequired: 'Musisz wyrazić zgodę, aby wysłać formularz',
     nameTooShort: 'Imię musi mieć co najmniej 2 znaki',
     nameTooLong: 'Imię jest za długie',
     notesTooLong: 'Notatki nie mogą przekraczać 500 znaków',

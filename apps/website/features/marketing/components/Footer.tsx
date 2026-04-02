@@ -28,12 +28,6 @@ export function Footer({ description, privacy, terms, copyright }: FooterBlock) 
             >
               {privacy}
             </Link>
-            <Link
-              href={routes.regulamin}
-              className="text-muted-foreground hover:text-foreground transition-colors duration-300"
-            >
-              {terms}
-            </Link>
           </div>
         </div>
 

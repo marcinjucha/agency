@@ -83,8 +83,8 @@ export const messages = {
     typeEmail: 'Email',
     typePhone: 'Telefon',
     typeDropdown: 'Lista rozwijana',
-    typeMultipleChoice: 'Wielokrotny wybór',
-    typeCheckboxes: 'Pola wyboru',
+    typeMultipleChoice: 'Jednokrotny wybór',
+    typeCheckboxes: 'Wielokrotny wybór',
     typeDate: 'Data',
     semanticRole: 'Rola pola',
     semanticRoleHint: 'Używane w Intake Hub do identyfikacji leadów',
@@ -147,6 +147,12 @@ export const messages = {
     dragToReorder: 'Przeciągnij aby zmienić kolejność',
     deleteLinkConfirmTitle: 'Usunąć link?',
     deleteLinkConfirmDescription: 'Ten link ankiety zostanie trwale usunięty. Tej operacji nie można cofnąć.',
+    // SurveyBuilder — consent type
+    typeConsent: 'Zgoda RODO',
+    consentUrlLabel: 'Link do polityki prywatności',
+    consentUrlPlaceholder: '/polityka-prywatnosci',
+    consentUrlHint: 'Ścieżka względna (/polityka-prywatnosci) otworzy stronę na Twojej witrynie. Pełny URL (https://...) otworzy zewnętrzny link.',
+    consentDefaultText: 'Wyrażam zgodę na przetwarzanie moich danych osobowych zgodnie z Polityką Prywatności',
   },
 
   blog: {

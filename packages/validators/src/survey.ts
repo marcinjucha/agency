@@ -18,6 +18,7 @@ const QUESTION_TYPES = [
   'radio',
   'checkbox',
   'date',
+  'consent',
 ] as const satisfies readonly QuestionType[]
 
 const SEMANTIC_ROLES = ['client_name', 'client_email', 'company_name', 'phone'] as const
@@ -31,6 +32,10 @@ export const questionSchema = z.object({
   order: z.number(),
   semantic_role: z.enum(SEMANTIC_ROLES).nullable().optional(),
   placeholder: z.string().optional(),
+  consent_url: z.string().refine(
+    v => !v || v.startsWith('/') || v.startsWith('http'),
+    { message: 'Link musi być ścieżką względną (/...) lub pełnym URL (https://...)' }
+  ).optional(),
 })
 
 export const surveySchema = z.object({
