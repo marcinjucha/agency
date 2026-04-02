@@ -63,4 +63,4 @@ export async function uploadMediaToS3(
 }
 
 // Re-export video utils from shared lib (used by both media + blog features)
-export { extractVideoId, generateThumbnailUrl } from '@/lib/video-utils'
+export { extractVideoId, generateThumbnailUrl, buildEmbedUrl } from '@/lib/video-utils'

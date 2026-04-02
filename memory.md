@@ -68,8 +68,9 @@
 - **Type/DB column name mismatch in manually written types** — Always cross-reference migration SQL when writing manual types. 3 mismatch types: phantom columns, wrong names, missing columns. (2026-04-02, AAA-T-157)
 - **Child component duplicate filter silently drops items** — BlogPostListView had its own status filter useState, double-filtering an already-filtered parent list. Fix: remove child-level filter when parent already filters. (2026-04-02)
 - **Component receives prop but never wires it up (dead prop)** — MediaGridRow accepted onRename but silently ignored it. Fix: audit prop usage when adding callback props to existing components. (2026-04-02)
-- **Child component duplicate filter silently drops items** — BlogPostListView had its own useState status filter, double-filtering an already-filtered list from parent. Items matching parent filter but not child's default state vanished silently. Fix: remove child-level filter when parent already filters. Watch for this in any parent→child list passing. (2026-04-02)
-- **Component receives prop but never wires it up (dead prop)** — MediaGridRow accepted onRename prop but silently ignored it (never called). Rename button existed in UI but did nothing. Fix: audit prop usage when adding callback props to existing components. (2026-04-02)
+- **`vt.tiktok.com` short URL missing from extractVideoId regex** — TikTok short links (`vt.tiktok.com/XXX/`) not matched by video embed URL parser. Fix: add `vt\.tiktok\.com` to URL regex pattern. (2026-04-02)
+- **`submission_count` is `number | null` in Supabase generated types despite DB DEFAULT 0** — Supabase codegen marks columns with defaults as nullable in Insert types. Always null-guard computed/default columns even when DB guarantees non-null. Pattern: `count ?? 0`. (2026-04-02)
+- **TanStack Query cross-entity invalidation miss** — SurveyLinks mutations (toggle active, delete) didn't invalidate parent `surveys.all` query key. Stale badge/count on survey list. Fix: always invalidate parent entity queries when child mutations affect parent-visible aggregates. (2026-04-02)
 
 ## Domain Concepts
 
@@ -92,6 +93,7 @@
 - **AAA-T-157 repurposed** — Originally "Sprawdzanie statusu produktu na Allegro/OLX" (Inbox, investigation). Expanded to full "Marketplace Integration (OLX + Allegro)" (To Do, High, XL, 10 iterations). (2026-04-02)
 - **Consent question type = string "true" stored in DB** — `question_type: 'consent'`, renders as checkbox, stores string `"true"` (not boolean) in survey_answers.answer TEXT column. Always required (is_required forced true, toggle disabled in builder). (2026-04-02)
 - **Cookie banner wording: general "analytics" not "Plausible"** — Cookie/analytics consent banner uses general wording ("anonimowe dane analityczne") without naming specific tool. Avoids updating banner when analytics provider changes. (2026-04-02)
+- **surveys.status DB column is vestigial** — Status should be computed from survey_links (has active links = active, no links = draft, all expired = closed). Manual enum management on surveys table is wrong model. User wants computed status, not stored status. (2026-04-02)
 
 ## Architecture Decisions
 

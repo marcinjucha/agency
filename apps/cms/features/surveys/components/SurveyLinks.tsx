@@ -61,6 +61,7 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.surveys.links(surveyId) })
+      queryClient.invalidateQueries({ queryKey: queryKeys.surveys.all })
       setShowForm(false)
       setFormData({ notificationEmail: '', expiresAt: '', maxSubmissions: '', isActive: true })
       setError(null)
@@ -79,6 +80,7 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.surveys.links(surveyId) })
+      queryClient.invalidateQueries({ queryKey: queryKeys.surveys.all })
       setError(null)
     },
     onError: (err: Error) => {
@@ -101,6 +103,7 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.surveys.links(surveyId) })
+      queryClient.invalidateQueries({ queryKey: queryKeys.surveys.all })
       setError(null)
     },
     onError: (err: Error) => {
@@ -123,6 +126,7 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.surveys.links(surveyId) })
+      queryClient.invalidateQueries({ queryKey: queryKeys.surveys.all })
       setEditingLinkId(null)
       setError(null)
     },

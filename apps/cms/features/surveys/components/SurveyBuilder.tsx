@@ -582,7 +582,6 @@ export function SurveyBuilder({ survey }: SurveyBuilderProps) {
                 <p className="text-sm text-muted-foreground">
                   {messages.surveys.questionsCount(questions.length)}
                 </p>
-                <p className="text-sm text-muted-foreground mt-1">Status: {survey.status}</p>
               </div>
             </div>
           </CollapsibleCard>

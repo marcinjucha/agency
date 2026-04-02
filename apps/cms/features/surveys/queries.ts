@@ -1,20 +1,22 @@
 import { createClient } from '@/lib/supabase/client'
 import type { Tables } from '@agency/database'
+import type { SurveyWithLinks } from './types'
+
+export type { SurveyWithLinks }
 
 /**
- * Fetch all surveys for the current user's tenant
- * Type-safe query with full TypeScript autocomplete
+ * Fetch all surveys for the current user's tenant, with embedded survey_links
  */
-export async function getSurveys(): Promise<Tables<'surveys'>[]> {
+export async function getSurveys(): Promise<SurveyWithLinks[]> {
   const supabase = createClient()
 
   const { data, error } = await supabase
     .from('surveys')
-    .select('*')
+    .select('*, survey_links(id, is_active, expires_at, max_submissions, submission_count)')
     .order('created_at', { ascending: false })
 
   if (error) throw error
-  return data || []
+  return (data as any as SurveyWithLinks[]) || []
 }
 
 /**

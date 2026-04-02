@@ -53,7 +53,7 @@ export function extractVideoId(
   }
 
   const ttShortMatch = url.match(
-    /(?:vm\.tiktok\.com|tiktok\.com\/t)\/([\w-]+)/
+    /(?:vm\.tiktok\.com|vt\.tiktok\.com|tiktok\.com\/t)\/([\w-]+)/
   )
   if (ttShortMatch?.[1]) {
     return { platform: 'tiktok', id: ttShortMatch[1] }

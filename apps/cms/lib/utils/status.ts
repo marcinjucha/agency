@@ -18,11 +18,6 @@ export type ResponseStatus = 'new' | 'qualified' | 'disqualified' | 'contacted' 
 export type AppointmentStatus = 'scheduled' | 'completed' | 'cancelled' | 'no_show' | null
 
 /**
- * Survey status types from surveys table
- */
-export type SurveyStatus = 'draft' | 'active' | 'archived' | null
-
-/**
  * Returns Tailwind CSS classes for response status badges
  *
  * Color scheme:
@@ -82,27 +77,3 @@ export function getAppointmentStatusColor(status: AppointmentStatus): string {
   }
 }
 
-/**
- * Returns Tailwind CSS classes for survey status badges
- *
- * Color scheme:
- * - active: Green (published surveys)
- * - draft: Warning (unpublished surveys)
- * - archived: Gray (archived surveys)
- * - default: Gray (unknown/null)
- *
- * @param status - Survey status from database
- * @returns Tailwind CSS classes string (e.g., "bg-status-success text-status-success-foreground")
- */
-export function getSurveyStatusColor(status: SurveyStatus): string {
-  switch (status) {
-    case 'active':
-      return 'bg-status-success text-status-success-foreground'
-    case 'draft':
-      return 'bg-status-warning text-status-warning-foreground'
-    case 'archived':
-      return 'bg-status-neutral text-status-neutral-foreground'
-    default:
-      return 'bg-status-neutral text-status-neutral-foreground'
-  }
-}

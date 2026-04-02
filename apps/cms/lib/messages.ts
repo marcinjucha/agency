@@ -153,6 +153,9 @@ export const messages = {
     consentUrlPlaceholder: '/polityka-prywatnosci',
     consentUrlHint: 'Ścieżka względna (/polityka-prywatnosci) otworzy stronę na Twojej witrynie. Pełny URL (https://...) otworzy zewnętrzny link.',
     consentDefaultText: 'Wyrażam zgodę na przetwarzanie moich danych osobowych zgodnie z Polityką Prywatności',
+    // SurveyCard — status badges
+    statusActive: 'Aktywna',
+    statusInactive: 'Nieaktywna',
   },
 
   blog: {

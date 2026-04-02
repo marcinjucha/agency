@@ -3,11 +3,12 @@
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@agency/ui'
 import type { MediaItem } from '../types'
-import { extractVideoId, formatBytes } from '../utils'
+import { extractVideoId, formatBytes, buildEmbedUrl } from '../utils'
 
 type MediaPreviewDialogProps = {
   item: MediaItem | null
@@ -76,6 +77,32 @@ function PreviewContent({ item }: { item: MediaItem }) {
     )
   }
 
+  if (item.type === 'instagram') {
+    const parsed = extractVideoId(item.url)
+    if (!parsed) return <p className="text-sm text-muted-foreground">Nie można załadować podglądu.</p>
+    return (
+      <iframe
+        src={buildEmbedUrl('instagram', parsed.id)}
+        title={item.name}
+        className="aspect-[9/16] w-full max-w-[360px] rounded"
+        allowFullScreen
+      />
+    )
+  }
+
+  if (item.type === 'tiktok') {
+    const parsed = extractVideoId(item.url)
+    if (!parsed) return <p className="text-sm text-muted-foreground">Nie można załadować podglądu.</p>
+    return (
+      <iframe
+        src={buildEmbedUrl('tiktok', parsed.id)}
+        title={item.name}
+        className="aspect-[9/16] w-full max-w-[360px] rounded"
+        allowFullScreen
+      />
+    )
+  }
+
   return null
 }
 
@@ -85,6 +112,7 @@ export function MediaPreviewDialog({ item, open, onClose }: MediaPreviewDialogPr
       <DialogContent className="max-w-3xl">
         <DialogHeader>
           <DialogTitle className="truncate">{item?.name ?? 'Podgląd'}</DialogTitle>
+          <DialogDescription className="sr-only">Podgląd pliku multimedialnego</DialogDescription>
         </DialogHeader>
 
         {item && (
