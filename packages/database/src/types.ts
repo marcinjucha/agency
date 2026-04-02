@@ -646,6 +646,7 @@ export type Database = {
           html_body: string | null
           id: string
           images: Json | null
+          is_featured: boolean
           is_published: boolean
           listing_type: Database["public"]["Enums"]["listing_type"]
           price: number | null
@@ -673,6 +674,7 @@ export type Database = {
           html_body?: string | null
           id?: string
           images?: Json | null
+          is_featured?: boolean
           is_published?: boolean
           listing_type?: Database["public"]["Enums"]["listing_type"]
           price?: number | null
@@ -700,6 +702,7 @@ export type Database = {
           html_body?: string | null
           id?: string
           images?: Json | null
+          is_featured?: boolean
           is_published?: boolean
           listing_type?: Database["public"]["Enums"]["listing_type"]
           price?: number | null
