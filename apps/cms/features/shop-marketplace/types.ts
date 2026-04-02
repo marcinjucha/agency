@@ -54,6 +54,7 @@ export type MarketplaceImport = {
   id: string
   tenant_id: string
   connection_id: string
+  marketplace: MarketplaceId
   status: ImportStatus
   total_items: number | null
   imported_items: number | null
@@ -158,6 +159,7 @@ export function toMarketplaceImport(raw: unknown): MarketplaceImport {
     id: row.id as string,
     tenant_id: row.tenant_id as string,
     connection_id: row.connection_id as string,
+    marketplace: row.marketplace as MarketplaceId,
     status: row.status as ImportStatus,
     total_items: (row.total_items as number) ?? null,
     imported_items: (row.imported_items as number) ?? null,
