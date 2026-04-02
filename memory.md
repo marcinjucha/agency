@@ -26,7 +26,7 @@
 
 ## Marketplace Integration — AAA-P-9 — IN PROGRESS (2026-04-02)
 
-**Status:** Iteration 1 done (DB schema migration). AAA-T-157 repurposed from investigation to full XL feature (10 iterations, High priority).
+**Status:** Iterations 1-2 done (DB schema migration, CMS foundation: types/queries/validation/actions + adapter interface/registry). AAA-T-157 repurposed from investigation to full XL feature (10 iterations, High priority).
 **Scope:** OLX + Allegro integration — publish products, sync status (sold/expired), import existing listings. Bidirectional sync.
 **DB tables:** shop_marketplace_connections (OAuth creds per tenant) + shop_marketplace_listings (1 product → N listings, marketplace_params JSONB) + shop_marketplace_imports. TEXT for marketplace type (not ENUM, same reasoning as trigger_type/step_type).
 **Key decisions:** MarketplaceAdapter interface in `features/shop-marketplace/adapters/` (feature-local, not package). MARKETPLACE_REGISTRY pattern (like NODE_TYPE_REGISTRY). Per-tenant pgcrypto-encrypted OAuth tokens (same as email_configs). OLX location data on listings only (marketplace_params JSONB), not on shop_products.
@@ -80,6 +80,8 @@
 - **Circular protection depth off-by-one** — depth=1 is valid (A triggers B). Block at depth>=2 (A→B→C). Initial impl blocked depth=1 too aggressively. (2026-03-31, AAA-T-149)
 - **SSRF in webhook handler** — User-configured webhook URLs could target private IPs. Fix: private IP blocklist before fetch + AbortSignal.timeout(10_000). (2026-03-31, AAA-T-149)
 - **Decrypted view bypasses RLS without security_invoker** — PostgreSQL views execute as view owner (postgres) by default, bypassing RLS on base table. Fix: `WITH (security_invoker = true)` on PostgreSQL 17+ (Supabase). Critical for multi-tenant security. (2026-04-02, AAA-T-157)
+- **Type/DB column name mismatch in manually written types** — When DB types aren't generated, manually written TypeScript types had 3 critical mismatches: phantom columns (sync_status/sync_error on wrong table), wrong column names (total_count vs total_items), missing columns (marketplace on imports). Fix: always cross-reference migration SQL when writing manual types. (2026-04-02, AAA-T-157)
+- **updateSchema.partial() makes IDs optional** — Using `.partial()` on a schema with required UUID fields makes them optional, bypassing NOT NULL DB constraints. Fix: `.omit({ field: true }).partial()` to exclude non-updatable fields before partial. (2026-04-02, AAA-T-157)
 
 ## Domain Concepts
 
@@ -111,6 +113,7 @@
 - **Unified Marketplace CollapsibleCard in product editor** — One card with overview (toggle + badge per platform) + per-platform collapsible sub-sections. NOT separate cards per marketplace. MARKETPLACE_REGISTRY pattern. (2026-04-02)
 - **Per-tenant marketplace OAuth via pgcrypto** — BYTEA columns for encrypted tokens (pgp_sym_encrypt returns bytea natively, no encode/decode roundtrip). Decrypted view with `security_invoker = true` for n8n. `app.encryption_key` PostgreSQL GUC for passphrase (set via ALTER DATABASE or Supabase Dashboard). First real pgcrypto usage in codebase. (2026-04-02)
 - **OLX location data on listings only** — Platform-specific data stays on shop_marketplace_listings.marketplace_params JSONB, not polluting shop_products. (2026-04-02)
+- **Stub Server Actions must include auth guard** — Stubs without getUserWithTenant() risk being copied without auth when implemented. All stubs now call getUserWithTenant() + isAuthError before returning stub error. (2026-04-02, AAA-T-157)
 
 ## Preferences
 
