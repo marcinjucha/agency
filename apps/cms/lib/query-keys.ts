@@ -49,4 +49,12 @@ export const queryKeys = {
     emailTemplates: ['workflows', 'email-templates'] as const,
     surveys: ['workflows', 'surveys'] as const,
   },
+  marketplace: {
+    all: ['marketplace'] as const,
+    connections: ['marketplace', 'connections'] as const,
+    connection: (id: string) => ['marketplace', 'connections', id] as const,
+    listings: (productId: string) => ['marketplace', 'listings', productId] as const,
+    listingsByConnection: (connectionId: string) => ['marketplace', 'listings-by-connection', connectionId] as const,
+    imports: (connectionId: string) => ['marketplace', 'imports', connectionId] as const,
+  },
 } as const
