@@ -79,6 +79,8 @@
 - **Race condition on concurrent n8n callbacks** — Multiple n8n steps completing simultaneously can corrupt execution state. Fix: optimistic lock + idempotency guard on callback route. (2026-03-31, AAA-T-149)
 - **Circular protection depth off-by-one** — depth=1 is valid (A triggers B). Block at depth>=2 (A→B→C). Initial impl blocked depth=1 too aggressively. (2026-03-31, AAA-T-149)
 - **SSRF in webhook handler** — User-configured webhook URLs could target private IPs. Fix: private IP blocklist before fetch + AbortSignal.timeout(10_000). (2026-03-31, AAA-T-149)
+- **useSearchParams requires Suspense boundary in Next.js 15+** — Build fails without `<Suspense>` wrapper around client components using useSearchParams. Pattern: route page.tsx wraps client component in Suspense with LoadingState fallback. (2026-04-02, AAA-T-157)
+- **EmptyState redundant with fixed-set configuration pages** — Card grid showing all options (connected/not-connected) already communicates state. EmptyState on top is redundant for fixed-option pages (vs dynamic lists where empty = nothing to show). (2026-04-02, AAA-T-157)
 - **Decrypted view bypasses RLS without security_invoker** — PostgreSQL views execute as view owner (postgres) by default, bypassing RLS on base table. Fix: `WITH (security_invoker = true)` on PostgreSQL 17+ (Supabase). Critical for multi-tenant security. (2026-04-02, AAA-T-157)
 - **Type/DB column name mismatch in manually written types** — When DB types aren't generated, manually written TypeScript types had 3 critical mismatches: phantom columns (sync_status/sync_error on wrong table), wrong column names (total_count vs total_items), missing columns (marketplace on imports). Fix: always cross-reference migration SQL when writing manual types. (2026-04-02, AAA-T-157)
 - **updateSchema.partial() makes IDs optional** — Using `.partial()` on a schema with required UUID fields makes them optional, bypassing NOT NULL DB constraints. Fix: `.omit({ field: true }).partial()` to exclude non-updatable fields before partial. (2026-04-02, AAA-T-157)
@@ -125,6 +127,7 @@
 - **Shared HTTP wrapper (marketplaceFetch)** — All external marketplace API calls through one wrapper with AbortSignal.timeout(15s), response.ok check, MarketplaceApiError. No raw fetch in adapters. (2026-04-02, AAA-T-157)
 - **Allegro sandbox toggle at module load** — ALLEGRO_SANDBOX env var evaluated at top-level const. All 3 URLs (auth, token, API) switch together. Fine for production, may confuse hot-reload in dev. (2026-04-02, AAA-T-157)
 - **Credential access isolated to credentials.ts** — Single file with service role client, reads from decrypted view. Adapters never touch DB directly. (2026-04-02, AAA-T-157)
+- **FeedbackBanner instead of toast for OAuth callback** — No toast library (sonner/react-hot-toast) in project. Used inline dismissible alert banner reading URL query params (?connected=, ?error=). URL cleaned via router.replace after reading. (2026-04-02, AAA-T-157)
 
 ## Preferences
 
@@ -146,3 +149,4 @@
 - **Bidirectional marketplace sync** — Not just publish, also status sync (sold/expired → grayed out in CMS) + import existing listings from marketplace into CMS as products. (2026-04-02)
 - **Auto-publish option for marketplace** — User wants product.published → auto-publish to connected marketplaces. Planned as workflow engine trigger for future. (2026-04-02)
 - **CMS configures n8n marketplace access** — Marketplace n8n config managed from CMS, not directly in n8n. (2026-04-02)
+- **Polish labels in types.ts deferred to iteration 10** — LISTING_STATUS_LABELS, SYNC_STATUS_LABELS etc. hardcoded Polish in types.ts. Technically should be in messages.ts but works as type-level constants. Consolidate during Polish pass (iter 10). (2026-04-02, AAA-T-157)
