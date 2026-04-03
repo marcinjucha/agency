@@ -19,6 +19,9 @@ architecture:
     - "Fire-and-forget webhook pattern for n8n — don't block user requests, workflow runs async"
     - "TiptapEditor extracted to features/editor/ with dependency injection — blog and legal pages share editor, no duplication"
     - "consent question type always required — enforced in website validation (always-required Zod refine), not in shared schema (packages/validators); CMS builder uses it like any other question type"
+    - "google-calendar OAuth helpers moved to features/calendar/oauth.ts — lib/ is for cross-feature utilities, not feature-specific business logic (ADR-005)"
+    - "LandingPage type canonical in @agency/database (seo_metadata included) — removed 2 duplicate definitions in CMS + website"
+    - "ResponseStatus single source of truth in @agency/validators — status.ts re-exports with | null extension"
 
 features:
   # Phase 1: Foundation

@@ -73,6 +73,9 @@
 - **TanStack Query cross-entity invalidation miss** — SurveyLinks mutations (toggle active, delete) didn't invalidate parent `surveys.all` query key. Stale badge/count on survey list. Fix: always invalidate parent entity queries when child mutations affect parent-visible aggregates. (2026-04-02)
 - **Survey email validation ignored `semantic_role`** — Question had `type: 'text'` in DB but `semantic_role: 'client_email'`. Validation schema only checked `question.type`, so email field got text validation (no format check). Multiple RHF fixes (useFormState, Controller, mode changes) were red herrings. Root cause only found via `[DEBUG]` visible line in component revealing the actual data. Fix: `effectiveType` pattern where `semantic_role` overrides `question.type` for both validation and input rendering. (2026-04-02)
 - **RHF `register` swallows per-field errors silently** — QuestionField inputs using `register` didn't surface `fieldState.error` from react-hook-form. Migrated all inputs to `Controller` with `fieldState.error` for consistent error display. (2026-04-02)
+- **Dead code survives as "move" items in audit plans** — `lib/google-calendar/events.ts` had zero imports anywhere in codebase. Audit plan said "move to feature/" but correct action was delete. Always verify import count before deciding move vs delete. (2026-04-03)
+- **`db:types` workaround needs multiple grep filters** — Beyond `"^Initialising"`, Supabase CLI can prepend other diagnostic lines. Current `grep -v "^Initialising"` is incomplete. Verify output starts with valid TypeScript after generation. (2026-04-03)
+- **Audit plans drift: BlogPostEditor 674L→871L since audit** — Component grew ~200 lines between audit snapshot and current state. Re-measure before acting on audit recommendations; stale line counts change refactoring strategy. (2026-04-03)
 
 ## Domain Concepts
 
@@ -132,6 +135,7 @@
 - **connectMarketplace returns authUrl for client redirect** — Server Actions can't redirect to external URLs. Returns { authUrl }, client does window.location redirect. (2026-04-02, AAA-T-157)
 - **jose for JWT state (not jsonwebtoken)** — jose is Edge-compatible. State JWT = { tenantId, marketplace, nonce }, 10min expiry, HS256. (2026-04-02, AAA-T-157)
 - **`semantic_role` overrides `question.type` via `effectiveType`/`inputType` pattern** — Survey questions have both `type` (DB storage type: text/number/date) and `semantic_role` (business meaning: client_email/client_name/client_phone). When `semantic_role` implies a specific type, it overrides `question.type` for validation schema generation and input rendering. (2026-04-02)
+- **`packages/database` has known deferred violations** — BLOCK_TYPE_LABELS and DEFAULT_BLOCKS in packages/database are pre-existing architecture violations (business constants in infrastructure package). Known deferred items — don't re-flag in audits. (2026-04-03)
 
 ## Preferences
 
