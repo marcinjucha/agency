@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/client'
 import type { Tables } from '@agency/database'
-import type { ResponseListItem, ResponseWithRelations, ResponseSurveyLinkContext } from './types'
+import type { ResponseListItem, ResponseWithRelations, ResponseSurveyLinkContext, Question } from './types'
 
 /**
  * Raw Supabase response structure from nested join query
@@ -92,7 +92,7 @@ function transformToDetailResponse(data: SupabaseDetailResponseRow): ResponseWit
           id: data.survey_links.surveys.id,
           title: data.survey_links.surveys.title,
           description: data.survey_links.surveys.description,
-          questions: (data.survey_links.surveys.questions ?? []) as any[],
+          questions: (data.survey_links.surveys.questions ?? []) as unknown as Question[],
         } as ResponseWithRelations['surveys'])
       : undefined,
     has_appointment: !!(data.appointments && data.appointments.length > 0),

@@ -283,8 +283,9 @@ export type StepExecutionWithMeta = WorkflowStepExecution & {
 }
 
 export function toStepExecutionWithMeta(raw: unknown): StepExecutionWithMeta {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- resume_at added in iter 7, not yet in generated types
-  const row = raw as any
+  const row = raw as unknown as Tables<'workflow_step_executions'> & {
+    workflow_steps?: { step_type?: string }
+  }
   return {
     ...toWorkflowStepExecution(row),
     step_type: row.workflow_steps?.step_type ?? '',
