@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { getAuthUrl } from '@/lib/google-calendar/oauth'
+import { getAuthUrl } from '@/features/calendar/oauth'
 import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 

@@ -1,10 +1,10 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
-import { revokeAccess } from '@/lib/google-calendar/oauth'
+import { revokeAccess } from '@/features/calendar/oauth'
 import { revalidatePath } from 'next/cache'
 import { getValidAccessToken, refreshAccessToken } from '@agency/calendar'
-import type { GoogleCalendarToken } from '@/lib/google-calendar/oauth'
+import type { GoogleCalendarToken } from '@/features/calendar/oauth'
 import type { CalendarSettingsFormValues } from './types'
 import { calendarSettingsSchema } from './validation'
 import { messages } from '@/lib/messages'

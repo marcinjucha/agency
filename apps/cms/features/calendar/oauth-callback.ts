@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { handleCallback, revokeAccess } from '@/lib/google-calendar/oauth'
+import { handleCallback, revokeAccess } from '@/features/calendar/oauth'
 import { cookies } from 'next/headers'
 import { routes } from '@/lib/routes'
 
