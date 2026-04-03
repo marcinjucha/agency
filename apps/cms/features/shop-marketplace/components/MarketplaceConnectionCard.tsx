@@ -19,7 +19,7 @@ import {
 } from '@agency/ui'
 import { Store, AlertTriangle } from 'lucide-react'
 import { queryKeys } from '@/lib/query-keys'
-import { messages } from '@/lib/messages'
+import { messages, templates } from '@/lib/messages'
 import { disconnectMarketplace } from '../actions'
 import { MARKETPLACE_LABELS } from '../types'
 import type { MarketplaceId, MarketplaceConnection } from '../types'
@@ -178,7 +178,7 @@ export function MarketplaceConnectionCard({
                 {messages.marketplace.disconnectButton} {label}
               </AlertDialogTitle>
               <AlertDialogDescription>
-                {`Czy na pewno chcesz odłączyć ${label}? Wszystkie opublikowane ogłoszenia pozostaną aktywne.`}
+                {templates.marketplace.disconnectConfirmDescription(label)}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

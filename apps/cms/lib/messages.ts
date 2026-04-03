@@ -1312,6 +1312,8 @@ export const templates = {
       `Ogłoszenie zostanie usunięte z platformy ${label}. Tej operacji nie można cofnąć.`,
     categoryNoResults: (search: string) => `Brak wyników dla "${search}"`,
     openListingAriaLabel: (label: string) => `Otwórz ogłoszenie na ${label}`,
+    disconnectConfirmDescription: (label: string) =>
+      `Czy na pewno chcesz odłączyć ${label}? Wszystkie opublikowane ogłoszenia pozostaną aktywne.`,
     importMoreErrors: (n: number) => `…i ${n} więcej błędów`,
     olxExpiryDays: (n: number) =>
       `Ogłoszenie OLX wygaśnie za ${n} ${n === 1 ? 'dzień' : 'dni'}. Zaktualizuj ogłoszenie, aby je odświeżyć.`,
