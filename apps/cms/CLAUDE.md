@@ -79,7 +79,6 @@ apps/cms/
 │   ├── supabase/
 │   │   ├── client.ts        # Browser Supabase client (TanStack Query)
 │   │   └── server.ts        # Server Supabase client (Server Components, Actions)
-│   ├── google-calendar/     # Google Calendar OAuth + event management
 │   ├── n8n/                 # n8n webhook helpers
 │   └── utils/
 │       ├── slug.ts          # Polish slug generation (shared by blog + shop)
