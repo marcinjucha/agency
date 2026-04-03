@@ -46,7 +46,7 @@ apps/website/
 │
 ├── features/                # Business logic
 │   ├── survey/              # Survey form logic (TODO)
-│   │   ├── components/      # SurveyForm, CalendarBooking
+│   │   ├── components/      # SurveyForm, CalendarBooking (+ DateSlotPicker, BookingForm, TimeSlotsGrid, BookingSuccess)
 │   │   ├── actions.ts       # Form submission
 │   │   └── queries.ts       # Fetch survey by token
 │   │

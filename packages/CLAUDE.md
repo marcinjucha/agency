@@ -73,6 +73,8 @@ const { data } = await supabase.from('surveys').select('*')
 
 **SeoMetadata type** — Canonical `SeoMetadata` interface lives in `packages/database/src/landing-blocks.ts`. All fields optional (JSONB storage). Required-ness enforced via Zod validation in each app. Do NOT define local SeoMetadata types. **Why:** Duplicate definitions caused type drift between CMS and Website, discovered during AAA-T-83 consolidation.
 
+**LandingPage type** — Canonical `LandingPage` type and `toLandingPage()` helper live in `packages/database/src/landing-blocks.ts` (includes `seo_metadata` field). CMS re-exports via `features/landing/types.ts`. Do NOT define local LandingPage types. **Why:** Was defined in 3 places (package + CMS + website) with diverging `seo_metadata` field — consolidated in AAA-T-97.
+
 **Regenerate types:**
 ```bash
 npm run db:types
