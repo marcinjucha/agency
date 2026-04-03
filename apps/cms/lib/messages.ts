@@ -1131,6 +1131,46 @@ export const messages = {
     accountName: 'Konto',
     active: 'Aktywne',
     inactive: 'Nieaktywne',
+    // Publish flow
+    productNotFound: 'Nie znaleziono produktu',
+    listingNotFound: 'Nie znaleziono ogłoszenia',
+    publishFailed: 'Nie udało się opublikować ogłoszenia',
+    publishSuccess: 'Ogłoszenie wysłane do publikacji',
+    updateFailed: 'Nie udało się zaktualizować ogłoszenia',
+    updateSuccess: 'Ogłoszenie zaktualizowane',
+    removeFailed: 'Nie udało się usunąć ogłoszenia',
+    removeSuccess: 'Ogłoszenie usunięte',
+    categoriesLoadFailed: 'Nie udało się pobrać kategorii',
+    // Publish panel UI
+    saveProductFirst: 'Najpierw zapisz produkt, żeby opublikować na marketplace.',
+    loadingData: 'Ładowanie...',
+    loadingFailed: 'Nie udało się pobrać danych marketplace.',
+    retryLoad: 'Spróbuj ponownie',
+    noConnections: 'Brak połączonych platform. Połącz OLX lub Allegro w',
+    noConnectionsLinkText: 'ustawieniach marketplace',
+    publishingInProgress: 'Trwa publikacja...',
+    openListing: 'Otwórz ogłoszenie',
+    removingListing: 'Usuwanie...',
+    removeListing: 'Usuń ogłoszenie',
+    removeListingConfirm: 'Usuń',
+    connectionInactive: 'Połączenie jest nieaktywne. Sprawdź konfigurację marketplace.',
+    publishing: 'Publikowanie...',
+    publish: 'Opublikuj',
+    updating: 'Aktualizowanie...',
+    update: 'Aktualizuj',
+    goToSettings: 'Przejdź do ustawień marketplace',
+    // Category selector
+    categoryLabel: 'Kategoria',
+    categoryPlaceholder: 'Wybierz kategorię...',
+    categoryLoadingError: 'Błąd pobierania kategorii',
+    categoryLoading: 'Ładowanie kategorii...',
+    categoryLoadError: 'Błąd ładowania kategorii. Spróbuj ponownie.',
+    categoryRetry: 'Ponów',
+    categoryEmpty: 'Brak kategorii',
+    categorySearchPlaceholder: 'Szukaj kategorii...',
+    // Location selector
+    locationLabel: 'Miasto',
+    locationPlaceholder: 'np. Wrocław',
   },
 
   validation: {
@@ -1194,5 +1234,12 @@ export const templates = {
   media: {
     fileTooLarge: (limitMB: number) => `Plik za duży. Max: ${limitMB}MB.`,
     fileTypeNotAllowed: (types: string) => `Niedozwolony typ pliku. Dozwolone: ${types}`,
+  },
+  marketplace: {
+    removeListingTitle: (label: string) => `Usuń ogłoszenie z ${label}?`,
+    removeListingDescription: (label: string) =>
+      `Ogłoszenie zostanie usunięte z platformy ${label}. Tej operacji nie można cofnąć.`,
+    categoryNoResults: (search: string) => `Brak wyników dla "${search}"`,
+    openListingAriaLabel: (label: string) => `Otwórz ogłoszenie na ${label}`,
   },
 } as const

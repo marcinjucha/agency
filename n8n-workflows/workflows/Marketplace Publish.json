@@ -1,0 +1,404 @@
+{
+  "name": "Marketplace Publish",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "marketplace-publish",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "a1b2c3d4-0001-4001-8001-000000000001",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [-800, 288],
+      "webhookId": "marketplace-publish"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "kXK1WDkFCo7AsBSs",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/kXK1WDkFCo7AsBSs",
+          "cachedResultName": "Sentry Init"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [-592, 288],
+      "id": "a1b2c3d4-0002-4001-8001-000000000002",
+      "name": "Call 'Sentry Init'"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract and validate incoming webhook payload.\n// Expected fields:\n//   listing_id: string (UUID) — shop_marketplace_listings row\n//   action: 'publish' | 'update' | 'remove'\n//   connection_id: string (UUID) — shop_marketplace_connections row\n//   publish_payload?: object — product data for publish/update\n\nconst body = $('Webhook').first().json.body;\n\nif (!body.listing_id || !body.action || !body.connection_id) {\n  throw new Error(`Missing required fields: listing_id=${body.listing_id}, action=${body.action}, connection_id=${body.connection_id}`);\n}\n\nconst validActions = ['publish', 'update', 'remove'];\nif (!validActions.includes(body.action)) {\n  throw new Error(`Invalid action: ${body.action}. Must be one of: ${validActions.join(', ')}`);\n}\n\nreturn {\n  listing_id: body.listing_id,\n  action: body.action,\n  connection_id: body.connection_id,\n  publish_payload: body.publish_payload || null,\n};"
+      },
+      "id": "a1b2c3d4-0003-4001-8001-000000000003",
+      "name": "Extract Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-384, 288]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ received: true, listing_id: $('Extract Payload').first().json.listing_id }) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "a1b2c3d4-0004-4001-8001-000000000004",
+      "name": "Respond OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [-384, 80]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Fetch listing + decrypted connection credentials from Supabase.\n// Two requests:\n//   1. shop_marketplace_listings — listing data + external_listing_id\n//   2. shop_marketplace_connections_decrypted — decrypted access/refresh tokens + marketplace type\n\nconst Sentry = require('@sentry/node');\nconst https = require('https');\n\nconst input = $('Extract Payload').first().json;\nconst SUPABASE_URL = 'https://zsrpdslhnuwmzewwoexr.supabase.co';\nconst SUPABASE_KEY = $env.SUPABASE_SERVICE_ROLE_KEY;\n\nasync function supabaseGet(table, filterKey, filterValue, select) {\n  const params = new URLSearchParams();\n  params.append(filterKey, `eq.${filterValue}`);\n  if (select) params.append('select', select);\n  params.append('limit', '1');\n\n  const url = `${SUPABASE_URL}/rest/v1/${table}?${params.toString()}`;\n\n  return new Promise((resolve, reject) => {\n    const req = https.request(url, {\n      method: 'GET',\n      headers: {\n        'apikey': SUPABASE_KEY,\n        'Authorization': `Bearer ${SUPABASE_KEY}`,\n        'Content-Type': 'application/json',\n      }\n    }, (res) => {\n      let body = '';\n      res.on('data', (chunk) => body += chunk);\n      res.on('end', () => {\n        try { resolve(JSON.parse(body)); } catch (e) { reject(new Error(`Parse error: ${body}`)); }\n      });\n    });\n    req.on('error', reject);\n    req.end();\n  });\n}\n\ntry {\n  // 1. Fetch listing\n  const listings = await supabaseGet(\n    'shop_marketplace_listings',\n    'id', input.listing_id,\n    'id,product_id,connection_id,marketplace,external_listing_id,status,marketplace_params,marketplace_category_id,marketplace_location'\n  );\n  if (!listings.length) throw new Error(`Listing not found: ${input.listing_id}`);\n  const listing = listings[0];\n\n  // 2. Fetch decrypted credentials\n  const connections = await supabaseGet(\n    'shop_marketplace_connections_decrypted',\n    'id', input.connection_id,\n    'id,marketplace,access_token,refresh_token,token_expires_at,account_id'\n  );\n  if (!connections.length) throw new Error(`Connection not found: ${input.connection_id}`);\n  const connection = connections[0];\n\n  return {\n    listing_id: listing.id,\n    product_id: listing.product_id,\n    external_listing_id: listing.external_listing_id || null,\n    marketplace: connection.marketplace,\n    access_token: connection.access_token,\n    refresh_token: connection.refresh_token || null,\n    token_expires_at: connection.token_expires_at || null,\n    marketplace_params: listing.marketplace_params || {},\n    marketplace_category_id: listing.marketplace_category_id || null,\n    marketplace_location: listing.marketplace_location || null,\n    action: input.action,\n    publish_payload: input.publish_payload,\n  };\n} catch (err) {\n  Sentry.captureException(err);\n  await Sentry.flush(2000);\n  throw err;\n}\n"
+      },
+      "id": "a1b2c3d4-0005-4001-8001-000000000005",
+      "name": "Fetch Listing + Credentials",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-160, 288]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.marketplace }}",
+                    "rightValue": "olx",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "mp-switch-olx"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.marketplace }}",
+                    "rightValue": "allegro",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "mp-switch-allegro"
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "id": "a1b2c3d4-0006-4001-8001-000000000006",
+      "name": "Route by Marketplace",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [64, 288]
+    },
+    {
+      "parameters": {
+        "jsCode": "// OLX API dispatcher — handles publish / update / remove.\n// OLX REST API: https://developer.olx.pl/api/doc\n// Auth: Bearer access_token in Authorization header\n//\n// Credential reconnect needed after import:\n//   No n8n credential used here — token from DB decrypted view.\n\nconst Sentry = require('@sentry/node');\nconst https = require('https');\n\nconst input = $('Fetch Listing + Credentials').first().json;\nconst publish_payload = $('Extract Payload').first().json.publish_payload;\n\nconst OLX_API = 'https://www.olx.pl/api/partner';\nconst token = input.access_token;\n\nasync function olxRequest(method, path, body) {\n  const url = `${OLX_API}${path}`;\n  const bodyStr = body ? JSON.stringify(body) : null;\n\n  return new Promise((resolve, reject) => {\n    const options = {\n      method,\n      headers: {\n        'Authorization': `Bearer ${token}`,\n        'Content-Type': 'application/json',\n        'Version': '2.0',\n      },\n    };\n\n    const req = https.request(url, options, (res) => {\n      let data = '';\n      res.on('data', (chunk) => data += chunk);\n      res.on('end', () => {\n        try {\n          const parsed = data ? JSON.parse(data) : {};\n          resolve({ status: res.statusCode, body: parsed });\n        } catch (e) {\n          resolve({ status: res.statusCode, body: data });\n        }\n      });\n    });\n    req.on('error', reject);\n    if (bodyStr) req.write(bodyStr);\n    req.end();\n  });\n}\n\ntry {\n  let result;\n\n  if (input.action === 'remove') {\n    if (!input.external_listing_id) throw new Error('Cannot remove listing: external_listing_id is missing');\n    result = await olxRequest('DELETE', `/offers/${input.external_listing_id}`, null);\n    if (result.status >= 400) throw new Error(`OLX remove failed: HTTP ${result.status} — ${JSON.stringify(result.body)}`);\n    return { success: true, action: 'remove', marketplace: 'olx' };\n  }\n\n  if (!publish_payload) throw new Error('publish_payload required for publish/update action');\n\n  // Build OLX offer body from publish_payload + marketplace_params\n  const params = input.marketplace_params || {};\n  const offerBody = {\n    advertiser_type: 'private',\n    contact: publish_payload.contact || {},\n    description: { networking: false },\n    external_id: input.listing_id,\n    images: (publish_payload.images || []).map((url) => ({ url })),\n    price: {\n      currency: publish_payload.currency || 'PLN',\n      negotiable: params.negotiable || false,\n      type: 'fixed',\n      value: Math.round((publish_payload.price || 0) * 100),\n    },\n    title: publish_payload.title,\n    category: { id: parseInt(input.marketplace_category_id || params.category_id || '0', 10) },\n    location: input.marketplace_location\n      ? {\n          city_id: input.marketplace_location.city_id,\n          district_id: input.marketplace_location.district_id || null,\n          lat: input.marketplace_location.lat || null,\n          lon: input.marketplace_location.lon || null,\n        }\n      : undefined,\n    attributes: params.attributes || [],\n  };\n\n  if (input.action === 'update' && input.external_listing_id) {\n    result = await olxRequest('PUT', `/offers/${input.external_listing_id}`, offerBody);\n  } else {\n    result = await olxRequest('POST', '/offers', offerBody);\n  }\n\n  if (result.status >= 400) {\n    throw new Error(`OLX ${input.action} failed: HTTP ${result.status} — ${JSON.stringify(result.body)}`);\n  }\n\n  const externalId = result.body.id?.toString() || input.external_listing_id || null;\n  const externalUrl = result.body.url || null;\n\n  return {\n    success: true,\n    action: input.action,\n    marketplace: 'olx',\n    external_listing_id: externalId,\n    external_url: externalUrl,\n  };\n} catch (err) {\n  Sentry.captureException(err);\n  await Sentry.flush(2000);\n  throw err;\n}\n"
+      },
+      "id": "a1b2c3d4-0007-4001-8001-000000000007",
+      "name": "OLX API Call",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [288, 80],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Allegro API dispatcher — handles publish / update / remove.\n// Allegro REST API: https://developer.allegro.pl/documentation\n// Auth: Bearer access_token in Authorization header\n// Note: removeListing uses PATCH with publication.status='END' (not HTTP DELETE)\n//\n// Credential reconnect needed after import:\n//   No n8n credential used here — token from DB decrypted view.\n\nconst Sentry = require('@sentry/node');\nconst https = require('https');\n\nconst input = $('Fetch Listing + Credentials').first().json;\nconst publish_payload = $('Extract Payload').first().json.publish_payload;\n\nconst ALLEGRO_API = 'https://api.allegro.pl';\nconst token = input.access_token;\n\nasync function allegroRequest(method, path, body) {\n  const url = `${ALLEGRO_API}${path}`;\n  const bodyStr = body ? JSON.stringify(body) : null;\n\n  return new Promise((resolve, reject) => {\n    const options = {\n      method,\n      headers: {\n        'Authorization': `Bearer ${token}`,\n        'Content-Type': 'application/vnd.allegro.public.v1+json',\n        'Accept': 'application/vnd.allegro.public.v1+json',\n      },\n    };\n\n    const req = https.request(url, options, (res) => {\n      let data = '';\n      res.on('data', (chunk) => data += chunk);\n      res.on('end', () => {\n        try {\n          const parsed = data ? JSON.parse(data) : {};\n          resolve({ status: res.statusCode, body: parsed });\n        } catch (e) {\n          resolve({ status: res.statusCode, body: data });\n        }\n      });\n    });\n    req.on('error', reject);\n    if (bodyStr) req.write(bodyStr);\n    req.end();\n  });\n}\n\ntry {\n  let result;\n\n  if (input.action === 'remove') {\n    if (!input.external_listing_id) throw new Error('Cannot remove listing: external_listing_id is missing');\n    // Allegro uses PATCH with publication.status='END' — no HTTP DELETE\n    result = await allegroRequest('PATCH', `/sale/offers/${input.external_listing_id}`, {\n      publication: { status: 'END' }\n    });\n    if (result.status >= 400) throw new Error(`Allegro remove failed: HTTP ${result.status} — ${JSON.stringify(result.body)}`);\n    return { success: true, action: 'remove', marketplace: 'allegro' };\n  }\n\n  if (!publish_payload) throw new Error('publish_payload required for publish/update action');\n\n  const params = input.marketplace_params || {};\n\n  // Build Allegro offer object\n  const offerBody = {\n    name: publish_payload.title,\n    description: {\n      sections: [\n        {\n          items: [\n            { type: 'TEXT', content: publish_payload.description || '' }\n          ]\n        }\n      ]\n    },\n    category: { id: input.marketplace_category_id || params.category_id },\n    images: (publish_payload.images || []).map((url) => ({ url })),\n    sellingMode: {\n      format: 'ADVERTISEMENT',\n      price: {\n        amount: (publish_payload.price || 0).toFixed(2),\n        currency: publish_payload.currency || 'PLN',\n      }\n    },\n    location: input.marketplace_location\n      ? {\n          city: input.marketplace_location.city || '',\n          postCode: input.marketplace_location.postCode || '',\n          province: { id: input.marketplace_location.province_id || '' },\n          countryCode: { id: 'PL' },\n        }\n      : undefined,\n    delivery: params.delivery || { shippingRates: { id: null }, handlingTime: 'PT0S' },\n    payments: params.payments || { invoice: 'NO_INVOICE' },\n    afterSalesServices: params.afterSalesServices || {},\n    parameters: params.attributes || [],\n    publication: { status: 'ACTIVE' },\n  };\n\n  if (input.action === 'update' && input.external_listing_id) {\n    result = await allegroRequest('PUT', `/sale/offers/${input.external_listing_id}`, offerBody);\n  } else {\n    result = await allegroRequest('POST', '/sale/offers', offerBody);\n  }\n\n  if (result.status >= 400) {\n    throw new Error(`Allegro ${input.action} failed: HTTP ${result.status} — ${JSON.stringify(result.body)}`);\n  }\n\n  const externalId = result.body.id?.toString() || input.external_listing_id || null;\n  const externalUrl = externalId ? `https://allegro.pl/oferta/${externalId}` : null;\n\n  return {\n    success: true,\n    action: input.action,\n    marketplace: 'allegro',\n    external_listing_id: externalId,\n    external_url: externalUrl,\n  };\n} catch (err) {\n  Sentry.captureException(err);\n  await Sentry.flush(2000);\n  throw err;\n}\n"
+      },
+      "id": "a1b2c3d4-0008-4001-8001-000000000008",
+      "name": "Allegro API Call",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [288, 480],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Unsupported marketplace fallback — routes to error callback.\nconst input = $('Fetch Listing + Credentials').first().json;\nreturn {\n  listing_id: input.listing_id,\n  error_message: `Unsupported marketplace: ${input.marketplace}`,\n};"
+      },
+      "id": "a1b2c3d4-0009-4001-8001-000000000009",
+      "name": "Unsupported Marketplace",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [288, 688]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Merge success results from OLX / Allegro branches.\n// Only one branch will have produced items — others are empty.\n\nconst Sentry = require('@sentry/node');\n\nconst input = $('Extract Payload').first().json;\nlet apiResult = null;\n\ntry {\n  const branches = [\n    'OLX API Call',\n    'Allegro API Call',\n  ];\n\n  for (const branch of branches) {\n    try {\n      const items = $(branch).all();\n      if (items.length > 0) {\n        apiResult = items[0].json;\n        break;\n      }\n    } catch (e) {\n      // Branch not executed — skip\n    }\n  }\n\n  if (!apiResult) throw new Error('No marketplace API branch produced output');\n\n  const payload = {\n    listing_id: input.listing_id,\n    action: input.action,\n    result: 'success',\n  };\n\n  if (apiResult.external_listing_id !== undefined) {\n    payload.external_listing_id = apiResult.external_listing_id;\n  }\n  if (apiResult.external_url !== undefined) {\n    payload.external_url = apiResult.external_url;\n  }\n\n  return payload;\n} catch (err) {\n  Sentry.captureException(err);\n  await Sentry.flush(2000);\n  throw err;\n}\n"
+      },
+      "id": "a1b2c3d4-0010-4001-8001-000000000010",
+      "name": "Prepare Success Callback",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [512, 288]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.HOST_URL }}/api/marketplace/publish",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.WORKFLOW_TRIGGER_SECRET }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "string",
+        "body": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "a1b2c3d4-0011-4001-8001-000000000011",
+      "name": "Callback Success",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [736, 288]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Error handler — called when any branch throws.\n// Sends failure callback to CMS.\n\nconst Sentry = require('@sentry/node');\n\nconst input = $('Extract Payload').first().json;\n\n// Try to get error from current input, fallback to unknown\nlet errorMessage;\ntry {\n  const errorItem = $input.first().json;\n  errorMessage =\n    errorItem?.error?.message ||\n    errorItem?.message ||\n    errorItem?.error ||\n    'Unknown error in Marketplace Publish workflow';\n} catch {\n  errorMessage = 'Unknown error in Marketplace Publish workflow';\n}\n\nSentry.captureException(new Error(`[Marketplace Publish] Failed: ${errorMessage}`));\nawait Sentry.flush(2000);\n\nreturn {\n  listing_id: input.listing_id,\n  action: input.action,\n  result: 'error',\n  error_message: errorMessage,\n};"
+      },
+      "id": "a1b2c3d4-0012-4001-8001-000000000012",
+      "name": "Handle Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [512, 688]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.HOST_URL }}/api/marketplace/publish",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.WORKFLOW_TRIGGER_SECRET }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "string",
+        "body": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "a1b2c3d4-0013-4001-8001-000000000013",
+      "name": "Callback Error",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [736, 688]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Call 'Sentry Init'",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call 'Sentry Init'": {
+      "main": [
+        [
+          {
+            "node": "Extract Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Payload": {
+      "main": [
+        [
+          {
+            "node": "Fetch Listing + Credentials",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Respond OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Listing + Credentials": {
+      "main": [
+        [
+          {
+            "node": "Route by Marketplace",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by Marketplace": {
+      "main": [
+        [
+          {
+            "node": "OLX API Call",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Allegro API Call",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Unsupported Marketplace",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OLX API Call": {
+      "main": [
+        [
+          {
+            "node": "Prepare Success Callback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ],
+      "error": [
+        [
+          {
+            "node": "Handle Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Allegro API Call": {
+      "main": [
+        [
+          {
+            "node": "Prepare Success Callback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ],
+      "error": [
+        [
+          {
+            "node": "Handle Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Success Callback": {
+      "main": [
+        [
+          {
+            "node": "Callback Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Unsupported Marketplace": {
+      "main": [
+        [
+          {
+            "node": "Handle Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Handle Error": {
+      "main": [
+        [
+          {
+            "node": "Callback Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "pEvMbZGHKOsqaHmK",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "marketplace-publish-v1",
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "instanceId": "b46d0b13d69880a2fec430102877b55af4e44991549a68a3e78cd50a4dc1a09e"
+  },
+  "id": "marketplace-publish-workflow",
+  "tags": []
+}

@@ -61,5 +61,6 @@ export const queryKeys = {
     listings: (productId: string) => ['marketplace', 'listings', productId] as const,
     listingsByConnection: (connectionId: string) => ['marketplace', 'listings-by-connection', connectionId] as const,
     imports: (connectionId: string) => ['marketplace', 'imports', connectionId] as const,
+    categories: (connectionId: string) => ['marketplace', 'categories', connectionId] as const,
   },
 } as const
