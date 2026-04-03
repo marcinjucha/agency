@@ -19,12 +19,15 @@
 
 ## Marketplace Integration — AAA-P-9 — IN PROGRESS (2026-04-02)
 
-**Status:** Iterations 1-4 done (DB schema migration, CMS foundation: types/queries/validation/actions + adapter interface/registry, OAuth flow, OLX + Allegro adapter implementations). AAA-T-157 repurposed from investigation to full XL feature (10 iterations, High priority).
+**Status:** Iterations 1-10 done (2026-04-03). Manual testing remaining. DB schema, CMS foundation, OAuth flow, adapter implementations, settings page, publish flow, status sync, bidirectional feedback, import wizard, polish pass. Full accessibility + architecture + UI/UX review done.
 **Scope:** OLX + Allegro integration — publish products, sync status (sold/expired), import existing listings. Bidirectional sync.
-**DB tables:** shop_marketplace_connections (OAuth creds per tenant) + shop_marketplace_listings (1 product → N listings, marketplace_params JSONB) + shop_marketplace_imports. TEXT for marketplace type (not ENUM, same reasoning as trigger_type/step_type).
-**Key decisions:** MarketplaceAdapter interface in `features/shop-marketplace/adapters/` (feature-local, not package). MARKETPLACE_REGISTRY pattern (like NODE_TYPE_REGISTRY). Per-tenant pgcrypto-encrypted OAuth tokens (same as email_configs). OLX location data on listings only (marketplace_params JSONB), not on shop_products.
-**n8n strategy:** Standalone n8n workflows (cron polling, token refresh) — NOT workflow engine. Marketplace sync = system infrastructure, not user-configurable automation. CMS configures n8n marketplace access (not directly in n8n).
-**UI:** Unified Marketplace CollapsibleCard in product editor — one card with overview (toggle + badge per platform) + per-platform collapsible sub-sections. NOT separate cards per marketplace.
+**DB tables:** shop_marketplace_connections (OAuth creds per tenant) + shop_marketplace_listings (1 product → N listings, marketplace_params JSONB) + shop_marketplace_imports. TEXT for marketplace type (not ENUM, same reasoning as trigger_type/step_type). Unique index on (product_id, connection_id) for correct upsert.
+**Key decisions:** MarketplaceAdapter interface in `features/shop-marketplace/adapters/` (feature-local, not package). MARKETPLACE_REGISTRY pattern (like NODE_TYPE_REGISTRY). Per-tenant pgcrypto-encrypted OAuth tokens. OLX location data on listings only (marketplace_params JSONB), not on shop_products.
+**n8n strategy:** 4 standalone n8n workflows (Publish, Token Refresh 30min, Status Sync 15min, Import) — NOT workflow engine. CMS dispatch → n8n heavy lifting → CMS callback. `$env.SUPABASE_URL` (nie hardcoded). `specifyBody: 'string'` + `JSON.stringify()` dla callbacków.
+**Publish flow:** CMS `publishToMarketplace` upserts listing (status='publishing') → fire-and-forget n8n dispatch z `publish_payload` → n8n calls adapter → callback `/api/marketplace/publish` → status='active'. WORKFLOW_TRIGGER_SECRET reused (nie nowy secret).
+**Import flow:** 3-step wizard (select → preview z duplicate detection → progress polling 3s). 200-item cap. n8n processes per-listing with error isolation. Progress callback co 10 items.
+**Token management:** `update_marketplace_tokens()` SECURITY DEFINER function (UPDATE by PK, nie upsert). Token Refresh deaktywuje connection jeśli refresh fail.
+**UI:** MarketplacePublishPanel w product editor sidebar (CollapsibleCard). CategorySelector = search/autocomplete (nie tree drill-down). LocationSelector = OLX only. MarketplaceStatusDots batch query (nie per-card). Token health indicators w ConnectionCard. AlertDialog confirmation na disconnect.
 **Future:** Auto-publish via workflow engine trigger (product.published → auto-publish to connected marketplaces).
 
 ## Roadmap & Planning (2026-03-30)
@@ -99,6 +102,13 @@
 - **Consent question type = string "true" stored in DB** — `question_type: 'consent'`, renders as checkbox, stores string `"true"` (not boolean) in survey_answers.answer TEXT column. Always required (is_required forced true, toggle disabled in builder). (2026-04-02)
 - **Cookie banner wording: general "analytics" not "Plausible"** — Cookie/analytics consent banner uses general wording ("anonimowe dane analityczne") without naming specific tool. Avoids updating banner when analytics provider changes. (2026-04-02)
 - **surveys.status DB column is vestigial** — Status should be computed from survey_links (has active links = active, no links = draft, all expired = closed). Manual enum management on surveys table is wrong model. User wants computed status, not stored status. (2026-04-02)
+- **n8n SplitInBatches MUST have loop-back connection** — Without connection from last node back to SplitInBatches (output 0), only first item is processed. Silent bug — n8n completes without error. Found in Token Refresh + Status Sync workflows. (2026-04-03, AAA-T-157)
+- **n8n Code node onError needs explicit error output wiring** — Setting `"onError": "continueErrorOutput"` is not enough — must ALSO add error connection in `connections` JSON (output index 1 → error handler). Without wiring, errors fall to global errorWorkflow and CMS callback never fires. (2026-04-03, AAA-T-157)
+- **CMS→n8n payload field name contract must match exactly** — CMS `dispatchMarketplaceWebhook` sent `params` but n8n Extract Payload read `body.publish_payload`. Silent null — n8n processes with empty product data. Fix: single source of truth for payload key names. (2026-04-03, AAA-T-157)
+- **Supabase upsert onConflict requires actual unique constraint** — `.upsert({}, { onConflict: 'col1,col2' })` silently INSERTs duplicates if no unique constraint/index exists on those columns. PostgREST does not error. Must verify migration SQL before using onConflict. (2026-04-03, AAA-T-157)
+- **RPC function parameter names must match migration SQL exactly** — n8n called `upsert_marketplace_connection` with `p_connection_id` but function expected `p_tenant_id`. PostgreSQL error at runtime. Created dedicated `update_marketplace_tokens(p_connection_id)` for token refresh use case. (2026-04-03, AAA-T-157)
+- **Raw `<button>` lacks focus-visible ring — always use shadcn Button** — Design review found 5 raw buttons without focus-visible:ring-2. shadcn Button from @agency/ui guarantees consistent focus styling. P0 accessibility violation (WCAG 2.4.7). (2026-04-03, AAA-T-157)
+- **aria-label on generic div ignored by screen readers** — Must add `role="group"` or use semantic element. Status dots had colors conveying info with no text alternative. Fix: role="group" + sr-only spans. (2026-04-03, AAA-T-157)
 
 ## Architecture Decisions
 
