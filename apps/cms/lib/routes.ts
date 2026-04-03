@@ -43,6 +43,7 @@ export const routes = {
     // Marketplace
     shopMarketplace: '/admin/shop/marketplace',
     shopMarketplaceConnection: (id: string) => `/admin/shop/marketplace/${id}`,
+    shopMarketplaceImport: '/admin/shop/marketplace/import',
 
     // Automation
     workflows: '/admin/workflows',

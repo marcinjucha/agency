@@ -1,0 +1,277 @@
+{
+  "name": "Marketplace Import",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "marketplace-import",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "b2c3d4e5-0001-4001-8001-000000000001",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [-800, 288],
+      "webhookId": "marketplace-import"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "kXK1WDkFCo7AsBSs",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/kXK1WDkFCo7AsBSs",
+          "cachedResultName": "Sentry Init"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [-592, 288],
+      "id": "b2c3d4e5-0002-4001-8001-000000000002",
+      "name": "Call 'Sentry Init'"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract and validate incoming webhook payload.\n// Expected fields:\n//   action: 'import'\n//   import_id: string (UUID) — shop_marketplace_imports row\n//   connection_id: string (UUID) — shop_marketplace_connections row\n//   listing_ids: string[] — external listing IDs to import\n//   tenant_id: string (UUID)\n\nconst body = $('Webhook').first().json.body;\n\nif (!body.import_id || !body.connection_id || !body.listing_ids || !body.tenant_id) {\n  throw new Error(`Missing required fields: import_id=${body.import_id}, connection_id=${body.connection_id}, listing_ids=${JSON.stringify(body.listing_ids)}, tenant_id=${body.tenant_id}`);\n}\n\nif (!Array.isArray(body.listing_ids)) {\n  throw new Error(`listing_ids must be an array, got: ${typeof body.listing_ids}`);\n}\n\nreturn {\n  import_id: body.import_id,\n  connection_id: body.connection_id,\n  listing_ids: body.listing_ids,\n  tenant_id: body.tenant_id,\n};"
+      },
+      "id": "b2c3d4e5-0003-4001-8001-000000000003",
+      "name": "Extract Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-384, 288]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ received: true, import_id: $('Extract Payload').first().json.import_id }) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "b2c3d4e5-0004-4001-8001-000000000004",
+      "name": "Respond OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [-384, 80]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Fetch decrypted connection credentials from Supabase.\n// Retrieves access_token + marketplace type for API calls.\n\nconst Sentry = require('@sentry/node');\nconst https = require('https');\n\nconst input = $('Extract Payload').first().json;\nconst SUPABASE_URL = 'https://zsrpdslhnuwmzewwoexr.supabase.co';\nconst SUPABASE_KEY = $env.SUPABASE_SERVICE_ROLE_KEY;\n\nasync function supabaseGet(table, filterKey, filterValue, select) {\n  const params = new URLSearchParams();\n  params.append(filterKey, `eq.${filterValue}`);\n  if (select) params.append('select', select);\n  params.append('limit', '1');\n\n  const url = `${SUPABASE_URL}/rest/v1/${table}?${params.toString()}`;\n\n  return new Promise((resolve, reject) => {\n    const req = https.request(url, {\n      method: 'GET',\n      headers: {\n        'apikey': SUPABASE_KEY,\n        'Authorization': `Bearer ${SUPABASE_KEY}`,\n        'Content-Type': 'application/json',\n      }\n    }, (res) => {\n      let body = '';\n      res.on('data', (chunk) => body += chunk);\n      res.on('end', () => {\n        try { resolve(JSON.parse(body)); } catch (e) { reject(new Error(`Parse error: ${body}`)); }\n      });\n    });\n    req.on('error', reject);\n    req.end();\n  });\n}\n\ntry {\n  const connections = await supabaseGet(\n    'shop_marketplace_connections_decrypted',\n    'id', input.connection_id,\n    'id,marketplace,access_token,refresh_token,token_expires_at,account_id'\n  );\n  if (!connections.length) throw new Error(`Connection not found: ${input.connection_id}`);\n  const connection = connections[0];\n\n  // Mark import as running\n  await new Promise((resolve, reject) => {\n    const body = JSON.stringify({ status: 'running', started_at: new Date().toISOString() });\n    const url = `${SUPABASE_URL}/rest/v1/shop_marketplace_imports?id=eq.${input.import_id}`;\n    const req = https.request(url, {\n      method: 'PATCH',\n      headers: {\n        'apikey': SUPABASE_KEY,\n        'Authorization': `Bearer ${SUPABASE_KEY}`,\n        'Content-Type': 'application/json',\n        'Prefer': 'return=minimal',\n      }\n    }, (res) => {\n      res.on('data', () => {});\n      res.on('end', resolve);\n    });\n    req.on('error', reject);\n    req.write(body);\n    req.end();\n  });\n\n  return {\n    import_id: input.import_id,\n    connection_id: input.connection_id,\n    listing_ids: input.listing_ids,\n    tenant_id: input.tenant_id,\n    marketplace: connection.marketplace,\n    access_token: connection.access_token,\n    refresh_token: connection.refresh_token || null,\n    token_expires_at: connection.token_expires_at || null,\n  };\n} catch (err) {\n  Sentry.captureException(err);\n  await Sentry.flush(2000);\n  throw err;\n}\n"
+      },
+      "id": "b2c3d4e5-0005-4001-8001-000000000005",
+      "name": "Fetch Credentials + Mark Running",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-160, 288],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Batch import listings from marketplace.\n// For each listing_id in listing_ids:\n//   1. Call marketplace getMyListings equivalent (fetch listing details)\n//   2. Duplicate check via shop_marketplace_listings (connection_id + external_listing_id)\n//   3. If duplicate: skipped_items++\n//   4. If new: create shop_products + shop_marketplace_listings record\n//   5. Progress callback every 10 items\n//\n// Rate limiting: 100ms delay between API calls\n\nconst Sentry = require('@sentry/node');\nconst https = require('https');\n\nconst input = $('Fetch Credentials + Mark Running').first().json;\nconst { import_id, connection_id, listing_ids, tenant_id, marketplace, access_token } = input;\n\nconst SUPABASE_URL = 'https://zsrpdslhnuwmzewwoexr.supabase.co';\nconst SUPABASE_KEY = $env.SUPABASE_SERVICE_ROLE_KEY;\nconst HOST_URL = $env.HOST_URL;\nconst SECRET = $env.WORKFLOW_TRIGGER_SECRET;\n\nfunction delay(ms) {\n  return new Promise(resolve => setTimeout(resolve, ms));\n}\n\nasync function supabaseRequest(method, path, body) {\n  const url = `${SUPABASE_URL}/rest/v1/${path}`;\n  const bodyStr = body ? JSON.stringify(body) : null;\n\n  return new Promise((resolve, reject) => {\n    const options = {\n      method,\n      headers: {\n        'apikey': SUPABASE_KEY,\n        'Authorization': `Bearer ${SUPABASE_KEY}`,\n        'Content-Type': 'application/json',\n        'Prefer': 'return=representation',\n      },\n    };\n\n    const req = https.request(url, options, (res) => {\n      let data = '';\n      res.on('data', (chunk) => data += chunk);\n      res.on('end', () => {\n        try {\n          resolve({ status: res.statusCode, body: data ? JSON.parse(data) : null });\n        } catch (e) {\n          resolve({ status: res.statusCode, body: data });\n        }\n      });\n    });\n    req.on('error', reject);\n    if (bodyStr) req.write(bodyStr);\n    req.end();\n  });\n}\n\nasync function marketplaceGetListing(externalListingId) {\n  const baseUrl = marketplace === 'olx'\n    ? 'https://www.olx.pl/api/partner'\n    : 'https://api.allegro.pl';\n\n  const path = marketplace === 'olx'\n    ? `/offers/${externalListingId}`\n    : `/sale/offers/${externalListingId}`;\n\n  const headers = marketplace === 'olx'\n    ? { 'Authorization': `Bearer ${access_token}`, 'Version': '2.0' }\n    : {\n        'Authorization': `Bearer ${access_token}`,\n        'Accept': 'application/vnd.allegro.public.v1+json',\n        'Content-Type': 'application/vnd.allegro.public.v1+json',\n      };\n\n  return new Promise((resolve, reject) => {\n    const req = https.request(`${baseUrl}${path}`, { method: 'GET', headers }, (res) => {\n      let data = '';\n      res.on('data', (chunk) => data += chunk);\n      res.on('end', () => {\n        try {\n          resolve({ status: res.statusCode, body: data ? JSON.parse(data) : null });\n        } catch (e) {\n          resolve({ status: res.statusCode, body: data });\n        }\n      });\n    });\n    req.on('error', reject);\n    req.end();\n  });\n}\n\nfunction extractListingData(listingBody, externalListingId) {\n  // Normalise OLX and Allegro response shapes into a common structure\n  if (marketplace === 'olx') {\n    const offer = listingBody?.data || listingBody || {};\n    return {\n      title: offer.title || `OLX listing ${externalListingId}`,\n      description: offer.description?.networking === false ? '' : (offer.description || ''),\n      price: offer.price?.value ? offer.price.value / 100 : 0,\n      currency: offer.price?.currency || 'PLN',\n      external_url: offer.url || null,\n    };\n  }\n  // Allegro\n  const offer = listingBody || {};\n  const priceAmount = offer.sellingMode?.price?.amount;\n  return {\n    title: offer.name || `Allegro listing ${externalListingId}`,\n    description: offer.description?.sections?.[0]?.items?.[0]?.content || '',\n    price: priceAmount ? parseFloat(priceAmount) : 0,\n    currency: offer.sellingMode?.price?.currency || 'PLN',\n    external_url: externalListingId ? `https://allegro.pl/oferta/${externalListingId}` : null,\n  };\n}\n\nasync function sendProgressCallback(importedItems, skippedItems) {\n  const payload = JSON.stringify({\n    import_id,\n    event: 'progress',\n    imported_items: importedItems,\n    skipped_items: skippedItems,\n  });\n\n  return new Promise((resolve) => {\n    const req = https.request(`${HOST_URL}/api/marketplace/import`, {\n      method: 'POST',\n      headers: {\n        'Authorization': `Bearer ${SECRET}`,\n        'Content-Type': 'application/json',\n      },\n    }, (res) => {\n      res.on('data', () => {});\n      res.on('end', resolve);\n    });\n    req.on('error', resolve); // never reject — fire-and-forget\n    req.write(payload);\n    req.end();\n  });\n}\n\ntry {\n  let importedItems = 0;\n  let skippedItems = 0;\n  const errorLog = [];\n\n  for (let i = 0; i < listing_ids.length; i++) {\n    const externalListingId = listing_ids[i];\n\n    try {\n      // Duplicate check: does this external_listing_id already exist for this connection?\n      const existingResult = await supabaseRequest(\n        'GET',\n        `shop_marketplace_listings?connection_id=eq.${connection_id}&external_listing_id=eq.${externalListingId}&select=id&limit=1`,\n        null\n      );\n\n      if (existingResult.body && Array.isArray(existingResult.body) && existingResult.body.length > 0) {\n        // Already imported — skip\n        skippedItems++;\n      } else {\n        // Fetch listing details from marketplace API\n        await delay(100); // rate limiting\n        const listingResult = await marketplaceGetListing(externalListingId);\n\n        if (listingResult.status >= 400) {\n          errorLog.push({ listingId: externalListingId, message: `API error: HTTP ${listingResult.status}` });\n          skippedItems++;\n        } else {\n          const listingData = extractListingData(listingResult.body, externalListingId);\n\n          // Create shop_products record\n          const productResult = await supabaseRequest('POST', 'shop_products', {\n            tenant_id,\n            title: listingData.title,\n            short_description: listingData.description,\n            price: listingData.price,\n            currency: listingData.currency,\n            listing_type: 'direct',\n            is_published: false,\n          });\n\n          if (productResult.status >= 400 || !productResult.body?.[0]?.id) {\n            errorLog.push({ listingId: externalListingId, message: 'Failed to create product' });\n            skippedItems++;\n          } else {\n            const productId = productResult.body[0].id;\n\n            // Create shop_marketplace_listings record linking product to marketplace\n            await supabaseRequest('POST', 'shop_marketplace_listings', {\n              tenant_id,\n              product_id: productId,\n              connection_id,\n              marketplace,\n              external_listing_id: externalListingId,\n              external_url: listingData.external_url,\n              status: 'active',\n              last_sync_status: 'ok',\n              last_synced_at: new Date().toISOString(),\n              published_at: new Date().toISOString(),\n            });\n\n            importedItems++;\n          }\n        }\n      }\n    } catch (itemErr) {\n      Sentry.captureException(itemErr);\n      errorLog.push({ listingId: externalListingId, message: itemErr.message || 'Unknown error' });\n      skippedItems++;\n    }\n\n    // Progress callback every 10 items\n    if ((i + 1) % 10 === 0) {\n      await sendProgressCallback(importedItems, skippedItems);\n    }\n  }\n\n  return {\n    import_id,\n    imported_items: importedItems,\n    skipped_items: skippedItems,\n    error_log: errorLog,\n  };\n} catch (err) {\n  Sentry.captureException(err);\n  await Sentry.flush(2000);\n  throw err;\n}\n"
+      },
+      "id": "b2c3d4e5-0006-4001-8001-000000000006",
+      "name": "Process Listings",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [64, 288],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare completed callback payload\nconst result = $('Process Listings').first().json;\n\nreturn {\n  import_id: result.import_id,\n  event: 'completed',\n  imported_items: result.imported_items,\n  skipped_items: result.skipped_items,\n  error_log: result.error_log,\n};"
+      },
+      "id": "b2c3d4e5-0007-4001-8001-000000000007",
+      "name": "Prepare Completed Callback",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [288, 288]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.HOST_URL }}/api/marketplace/import",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.WORKFLOW_TRIGGER_SECRET }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "string",
+        "body": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "b2c3d4e5-0008-4001-8001-000000000008",
+      "name": "Callback Completed",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [512, 288]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Error handler — called when Fetch Credentials or Process Listings throws.\n// Sends failure callback to CMS.\n\nconst Sentry = require('@sentry/node');\n\nconst input = $('Extract Payload').first().json;\n\nlet errorMessage;\ntry {\n  const errorItem = $input.first().json;\n  errorMessage =\n    errorItem?.error?.message ||\n    errorItem?.message ||\n    errorItem?.error ||\n    'Unknown error in Marketplace Import workflow';\n} catch {\n  errorMessage = 'Unknown error in Marketplace Import workflow';\n}\n\nSentry.captureException(new Error(`[Marketplace Import] Failed: ${errorMessage}`));\nawait Sentry.flush(2000);\n\nreturn {\n  import_id: input.import_id,\n  event: 'error',\n  error_log: [{ message: errorMessage }],\n};"
+      },
+      "id": "b2c3d4e5-0009-4001-8001-000000000009",
+      "name": "Handle Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [288, 576]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.HOST_URL }}/api/marketplace/import",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.WORKFLOW_TRIGGER_SECRET }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "string",
+        "body": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "b2c3d4e5-0010-4001-8001-000000000010",
+      "name": "Callback Error",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [512, 576]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Call 'Sentry Init'",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call 'Sentry Init'": {
+      "main": [
+        [
+          {
+            "node": "Extract Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Payload": {
+      "main": [
+        [
+          {
+            "node": "Fetch Credentials + Mark Running",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Respond OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Credentials + Mark Running": {
+      "main": [
+        [
+          {
+            "node": "Process Listings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ],
+      "error": [
+        [
+          {
+            "node": "Handle Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Listings": {
+      "main": [
+        [
+          {
+            "node": "Prepare Completed Callback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ],
+      "error": [
+        [
+          {
+            "node": "Handle Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Completed Callback": {
+      "main": [
+        [
+          {
+            "node": "Callback Completed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Handle Error": {
+      "main": [
+        [
+          {
+            "node": "Callback Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "pEvMbZGHKOsqaHmK",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "marketplace-import-v1",
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "instanceId": "b46d0b13d69880a2fec430102877b55af4e44991549a68a3e78cd50a4dc1a09e"
+  },
+  "id": "marketplace-import-workflow",
+  "tags": []
+}

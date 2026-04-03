@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { getUserWithTenant, isAuthError } from '@/lib/auth'
+import { createServiceClient } from '@/lib/supabase/service'
 import { routes } from '@/lib/routes'
 import { messages } from '@/lib/messages'
 import { isMarketplaceRegistered } from './adapters/registry'
@@ -319,16 +320,69 @@ export async function removeMarketplaceListing(
 }
 
 export async function startMarketplaceImport(
-  _data: CreateImportFormData
-): Promise<{ success: boolean; error?: string }> {
-  const auth = await getUserWithTenant()
-  if (isAuthError(auth)) return { success: false, error: auth.error }
+  data: CreateImportFormData,
+  selectedListingIds: string[]
+): Promise<{ success: boolean; importId?: string; error?: string }> {
+  try {
+    const auth = await getUserWithTenant()
+    if (isAuthError(auth)) return { success: false, error: auth.error }
+    const { supabase, tenantId } = auth
 
-  const parsed = createImportSchema.safeParse(_data)
-  if (!parsed.success) {
-    return { success: false, error: parsed.error.errors[0]?.message ?? messages.common.invalidData }
+    const parsed = createImportSchema.safeParse(data)
+    if (!parsed.success) {
+      return { success: false, error: parsed.error.errors[0]?.message ?? messages.common.invalidData }
+    }
+
+    const { connectionId } = parsed.data
+
+    // Validate connection belongs to this tenant + get marketplace type for import record
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- shop_marketplace_connections not in generated types
+    const { data: connection, error: connError } = await (supabase as any)
+      .from('shop_marketplace_connections')
+      .select('id, marketplace, is_active')
+      .eq('id', connectionId)
+      .eq('tenant_id', tenantId)
+      .maybeSingle()
+
+    if (connError || !connection) {
+      return { success: false, error: messages.marketplace.connectionNotFound }
+    }
+
+    // Create import record using service role — shop_marketplace_imports has SELECT-only RLS policy
+    // service_role bypasses RLS for the INSERT
+    const serviceSupabase = createServiceClient()
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- shop_marketplace_imports not in generated types
+    const { data: importRecord, error: insertError } = await (serviceSupabase as any)
+      .from('shop_marketplace_imports')
+      .insert({
+        tenant_id: tenantId,
+        connection_id: connectionId,
+        marketplace: connection.marketplace,
+        status: 'pending',
+        total_items: selectedListingIds.length,
+      })
+      .select('id')
+      .single()
+
+    if (insertError || !importRecord) {
+      console.error('[marketplace-import] Failed to create import record:', insertError?.message)
+      return { success: false, error: messages.marketplace.importFailed }
+    }
+
+    // Fire-and-forget dispatch to n8n
+    dispatchMarketplaceWebhook({
+      action: 'import',
+      import_id: importRecord.id,
+      connection_id: connectionId,
+      listing_ids: selectedListingIds,
+      tenant_id: tenantId,
+    })
+
+    revalidatePath(routes.admin.shopMarketplace)
+    return { success: true, importId: importRecord.id }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : messages.common.unknownError
+    return { success: false, error: message }
   }
-
-  // Stub — import implemented in iteration 5
-  return { success: false, error: messages.marketplace.notImplemented }
 }
