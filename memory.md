@@ -2,33 +2,22 @@
 
 ## Shop Platform — AAA-P-9 — IN PROGRESS (2026-04-02)
 
-**Status:** Iterations 1-8 done + kolega shop done. Jacek (tata) iterations 7+8 done (product catalog + homepage + SEO). Kolega (Oleg) complete frontend done (2026-04-02). Remaining: iteration 9 (feature flags, Core CMS blocker) + iteration 10 (polish/deploy).
-**Scope:** E-commerce: Jacek (user's father, books) AND Kolega (Oleg, user's friend, general merchandise — furniture, electronics). Catalog-only with external links (NO Stripe). Single Supabase, CMS extended (`features/shop-*`), separate frontends under `apps/shop/jacek/` and `apps/shop/kolega/`.
-**Key decisions:** `shop_` prefixed tables, `listing_type` PostgreSQL ENUM, `gallery`/`editorial` display_layout, `NUMERIC(10,2)` for price, `TEXT[]` for tags, flat categories. `is_featured BOOLEAN` on shop_products (2026-04-02) for homepage featured products.
-**Jacek (tata):** Dark + warm amber ("library at night"), Merriweather serif + Geist Sans, editorial layout for books, minimal 3-link nav, port 3002. Zolix for paid books, S3 for free materials.
-**Kolega (Oleg):** Light warm linen (`hsl(40 30% 97%)`), steel blue primary (`hsl(215 45% 42%)`), Inter only (no serif), sidebar category filters (240px, server component), featured products section, `aspect-[4/5]` product cards with hover shadow, `max-w-7xl`, port 3003.
-**CMS is_featured toggle:** Prominent card with Star icon + Switch in ProductSettingsSidebar. Amber accent border.
-**Dual PROJECT_SPEC:** `docs/PROJECT_SPEC.yaml` (AAA-P-4) + `docs/SHOP_PROJECT_SPEC.yaml` (AAA-P-9).
+**Status:** Iterations 1-8 done + kolega done. Remaining: iteration 9 (feature flags, Core CMS blocker) + iteration 10 (polish/deploy).
+**Scope:** Two shops: Jacek (books, dark amber theme) + Kolega (general merchandise, light linen theme). Catalog-only, NO Stripe. Single Supabase (`shop_` prefix), CMS extended, separate frontends (`apps/shop/jacek/`, `apps/shop/kolega/`).
+**Key decisions:** `listing_type` ENUM, `gallery`/`editorial` display_layout, `is_featured BOOLEAN`, flat categories. Dual PROJECT_SPEC: `docs/PROJECT_SPEC.yaml` (AAA-P-4) + `docs/SHOP_PROJECT_SPEC.yaml` (AAA-P-9).
 
 ## Workflow Engine — AAA-P-4 — IN PROGRESS (2026-03-31)
 
-**Status:** Iterations 1-10 done. 11 Notion tasks with "Workflow:" prefix. Iter 11 (cancel/retry/real-time) = backlog.
+**Status:** Iterations 1-10 done. Iter 11 (cancel/retry/real-time) = backlog.
 **Scope:** Per-tenant workflow automation. CMS routing/config + n8n heavy execution. ReactFlow visual builder.
-**Key decisions:** trigger_type/step_type as TEXT not ENUM (can't extend ENUM in transactions); circular protection max depth=1 via triggering_execution_id self-FK; delay step writes resume_at to DB directly (not n8n), n8n cron polls /api/workflows/process-due-delays every 5 min.
-**Engine:** `features/workflows/engine/` (feature-local). API `/api/workflows/trigger` Bearer token. Sync steps in CMS, async dispatch to n8n. Variable context accumulates via {{mustache}}.
+**Key decisions:** trigger_type/step_type as TEXT not ENUM; delay step writes resume_at to DB directly (not n8n); sync steps in CMS, async dispatch to n8n.
 
 ## Marketplace Integration — AAA-P-9 — IN PROGRESS (2026-04-02)
 
-**Status:** Iterations 1-10 done (2026-04-03). Manual testing remaining. DB schema, CMS foundation, OAuth flow, adapter implementations, settings page, publish flow, status sync, bidirectional feedback, import wizard, polish pass. Full accessibility + architecture + UI/UX review done.
-**Scope:** OLX + Allegro integration — publish products, sync status (sold/expired), import existing listings. Bidirectional sync.
-**DB tables:** shop_marketplace_connections (OAuth creds per tenant) + shop_marketplace_listings (1 product → N listings, marketplace_params JSONB) + shop_marketplace_imports. TEXT for marketplace type (not ENUM, same reasoning as trigger_type/step_type). Unique index on (product_id, connection_id) for correct upsert.
-**Key decisions:** MarketplaceAdapter interface in `features/shop-marketplace/adapters/` (feature-local, not package). MARKETPLACE_REGISTRY pattern (like NODE_TYPE_REGISTRY). Per-tenant pgcrypto-encrypted OAuth tokens. OLX location data on listings only (marketplace_params JSONB), not on shop_products.
-**n8n strategy:** 4 standalone n8n workflows (Publish, Token Refresh 30min, Status Sync 15min, Import) — NOT workflow engine. CMS dispatch → n8n heavy lifting → CMS callback. `$env.SUPABASE_URL` (nie hardcoded). `specifyBody: 'string'` + `JSON.stringify()` dla callbacków.
-**Publish flow:** CMS `publishToMarketplace` upserts listing (status='publishing') → fire-and-forget n8n dispatch z `publish_payload` → n8n calls adapter → callback `/api/marketplace/publish` → status='active'. WORKFLOW_TRIGGER_SECRET reused (nie nowy secret).
-**Import flow:** 3-step wizard (select → preview z duplicate detection → progress polling 3s). 200-item cap. n8n processes per-listing with error isolation. Progress callback co 10 items.
-**Token management:** `update_marketplace_tokens()` SECURITY DEFINER function (UPDATE by PK, nie upsert). Token Refresh deaktywuje connection jeśli refresh fail.
-**UI:** MarketplacePublishPanel w product editor sidebar (CollapsibleCard). CategorySelector = search/autocomplete (nie tree drill-down). LocationSelector = OLX only. MarketplaceStatusDots batch query (nie per-card). Token health indicators w ConnectionCard. AlertDialog confirmation na disconnect.
-**Future:** Auto-publish via workflow engine trigger (product.published → auto-publish to connected marketplaces).
+**Status:** Iterations 1-10 done (2026-04-03). Manual testing remaining.
+**Scope:** OLX + Allegro — publish, sync status, import listings. Bidirectional. Adapter pattern (extensible).
+**Key decisions:** 4 standalone n8n workflows (NOT workflow engine). MARKETPLACE_REGISTRY pattern. Per-tenant pgcrypto OAuth. Unique index on (product_id, connection_id). CategorySelector = search/autocomplete. `update_marketplace_tokens()` for token refresh (UPDATE by PK).
+**Future:** Auto-publish via workflow engine trigger.
 
 ## Roadmap & Planning (2026-03-30)
 
@@ -60,25 +49,14 @@
 
 - **supabase gen types prepends "Initialising login role..."** — Corrupts types.ts. Workaround: `grep -v "^Initialising"`. Also: `db:types` uses --local, need --linked when local not running. (2026-03-28)
 - **Supabase JS v2.95.2 `as any` needed even for SELECT** — `.from('shop_products')` resolves to `never` in complex chains. Upgrade may fix. (2026-03-30)
-- **Label duplication between OPTIONS arrays and LABELS records** — types.ts OPTIONS and utils.ts LABELS both defined labels independently. Fix: derive OPTIONS from LABELS (single source of truth in types.ts). (2026-03-31)
-- **Dead message keys from missing type variants** — message key defined but type had no matching variant. Fix: remove dead keys or add missing type variants. (2026-03-31)
-- **Debounce useEffect fires on mount → false dirty state** — Fix: `isFirstRender` ref mount guard. Stale closure fix: `onChangeRef` pattern (useRef updated on every render). (2026-03-31)
 - **Race condition on concurrent n8n callbacks** — Fix: optimistic lock + idempotency guard on callback route. (2026-03-31, AAA-T-149)
 - **SSRF in webhook handler** — User-configured webhook URLs could target private IPs. Fix: private IP blocklist + AbortSignal.timeout(10_000). (2026-03-31, AAA-T-149)
 - **{{variable}} syntax in condition evaluator causes silent false** — Mustache syntax `{{fieldName}}` always evaluates to false. Fix: resolveField() strips `{{ }}` wrapper. (2026-04-01, AAA-T-152)
 - **ConditionNode handle ID mismatch** — `id="yes"`/`id="no"` handles vs executor `'true'`/`'false'`. ReactFlow silently drops edges. Fix: use `id="true"`/`id="false"`. (2026-04-01, AAA-T-153)
 - **Template trigger node synthetic (UUID lost on remount)** — Synthetic trigger UUID changes each mount → edges can't persist. Fix: add trigger as real workflow_step in templates. (2026-04-01, AAA-T-153)
 - **Type/DB column name mismatch in manually written types** — Always cross-reference migration SQL when writing manual types. 3 mismatch types: phantom columns, wrong names, missing columns. (2026-04-02, AAA-T-157)
-- **Child component duplicate filter silently drops items** — BlogPostListView had its own status filter useState, double-filtering an already-filtered parent list. Fix: remove child-level filter when parent already filters. (2026-04-02)
-- **Component receives prop but never wires it up (dead prop)** — MediaGridRow accepted onRename but silently ignored it. Fix: audit prop usage when adding callback props to existing components. (2026-04-02)
-- **`vt.tiktok.com` short URL missing from extractVideoId regex** — TikTok short links (`vt.tiktok.com/XXX/`) not matched by video embed URL parser. Fix: add `vt\.tiktok\.com` to URL regex pattern. (2026-04-02)
-- **`submission_count` is `number | null` in Supabase generated types despite DB DEFAULT 0** — Supabase codegen marks columns with defaults as nullable in Insert types. Always null-guard computed/default columns even when DB guarantees non-null. Pattern: `count ?? 0`. (2026-04-02)
-- **TanStack Query cross-entity invalidation miss** — SurveyLinks mutations (toggle active, delete) didn't invalidate parent `surveys.all` query key. Stale badge/count on survey list. Fix: always invalidate parent entity queries when child mutations affect parent-visible aggregates. (2026-04-02)
 - **Survey email validation ignored `semantic_role`** — Question had `type: 'text'` in DB but `semantic_role: 'client_email'`. Validation schema only checked `question.type`, so email field got text validation (no format check). Multiple RHF fixes (useFormState, Controller, mode changes) were red herrings. Root cause only found via `[DEBUG]` visible line in component revealing the actual data. Fix: `effectiveType` pattern where `semantic_role` overrides `question.type` for both validation and input rendering. (2026-04-02)
 - **RHF `register` swallows per-field errors silently** — QuestionField inputs using `register` didn't surface `fieldState.error` from react-hook-form. Migrated all inputs to `Controller` with `fieldState.error` for consistent error display. (2026-04-02)
-- **Dead code survives as "move" items in audit plans** — `lib/google-calendar/events.ts` had zero imports anywhere in codebase. Audit plan said "move to feature/" but correct action was delete. Always verify import count before deciding move vs delete. (2026-04-03)
-- **`db:types` workaround needs multiple grep filters** — Beyond `"^Initialising"`, Supabase CLI can prepend other diagnostic lines. Current `grep -v "^Initialising"` is incomplete. Verify output starts with valid TypeScript after generation. (2026-04-03)
-- **Audit plans drift: BlogPostEditor 674L→871L since audit** — Component grew ~200 lines between audit snapshot and current state. Re-measure before acting on audit recommendations; stale line counts change refactoring strategy. (2026-04-03)
 
 ## Domain Concepts
 
@@ -92,23 +70,11 @@
 - **Booking flow is in apps/website/features/calendar/booking.ts** — NOT calendar/actions.ts as assumed. Trigger integration point for booking_confirmed. (2026-04-01, AAA-T-152)
 - **n8n HTTP Request: specifyBody "string" + JSON.stringify()** — Reliable way to send nested objects in n8n HTTP Request node. bodyParameters can't handle nested payload objects. (2026-04-01, AAA-T-152)
 - **Condition evaluator supported operators** — >=, <=, !=, ==, >, <, contains, in. NO single `=` operator. Field names without `{{ }}` wrappers. (2026-04-01, AAA-T-152)
-- **ConditionNode handle IDs must match executor condition_branch values** — Visual "Tak"/"Nie" labels are display-only. ReactFlow Handle `id` props must be `"true"`/`"false"` to match condition evaluator returns, edge condition_branch in DB, and executor branching logic. (2026-04-01, AAA-T-153)
-- **Synthetic trigger node pattern** — When workflow has no trigger step in workflow_steps, WorkflowEditor adds synthetic node with random UUID per mount. After first Save, trigger becomes real step. Templates bypass this by including trigger as real step from creation. (2026-04-01, AAA-T-153)
-- **OLX.pl API** — developer.olx.pl, OAuth 2.0, manual verification required (delays possible), CRUD listings/photos/categories/locations. Free to use. (2026-04-02)
-- **Allegro REST API** — developer.allegro.pl, OAuth 2.0 + JWT, sandbox available, POST-only token endpoint (since Aug 2025). ADVERTISEMENT format for classifieds. (2026-04-02)
-- **Allegro removeListing uses PATCH not DELETE** — Allegro ends offers by setting `publication.status: 'END'`, not HTTP DELETE. (2026-04-02)
-- **Allegro token exchange uses Basic auth** — base64(client_id:client_secret) in Authorization header, unlike OLX which sends credentials in POST body. (2026-04-02)
-- **AAA-T-157 repurposed** — Originally "Sprawdzanie statusu produktu na Allegro/OLX" (Inbox, investigation). Expanded to full "Marketplace Integration (OLX + Allegro)" (To Do, High, XL, 10 iterations). (2026-04-02)
+- **OLX/Allegro API quirks** — OLX: offset pagination, credentials in POST body. Allegro: cursor pagination, Basic auth for token exchange, `publication.status: 'END'` for removeListing (PATCH not DELETE). (2026-04-02)
 - **Consent question type = string "true" stored in DB** — `question_type: 'consent'`, renders as checkbox, stores string `"true"` (not boolean) in survey_answers.answer TEXT column. Always required (is_required forced true, toggle disabled in builder). (2026-04-02)
 - **Cookie banner wording: general "analytics" not "Plausible"** — Cookie/analytics consent banner uses general wording ("anonimowe dane analityczne") without naming specific tool. Avoids updating banner when analytics provider changes. (2026-04-02)
 - **surveys.status DB column is vestigial** — Status should be computed from survey_links (has active links = active, no links = draft, all expired = closed). Manual enum management on surveys table is wrong model. User wants computed status, not stored status. (2026-04-02)
-- **n8n SplitInBatches MUST have loop-back connection** — Without connection from last node back to SplitInBatches (output 0), only first item is processed. Silent bug — n8n completes without error. Found in Token Refresh + Status Sync workflows. (2026-04-03, AAA-T-157)
-- **n8n Code node onError needs explicit error output wiring** — Setting `"onError": "continueErrorOutput"` is not enough — must ALSO add error connection in `connections` JSON (output index 1 → error handler). Without wiring, errors fall to global errorWorkflow and CMS callback never fires. (2026-04-03, AAA-T-157)
-- **CMS→n8n payload field name contract must match exactly** — CMS `dispatchMarketplaceWebhook` sent `params` but n8n Extract Payload read `body.publish_payload`. Silent null — n8n processes with empty product data. Fix: single source of truth for payload key names. (2026-04-03, AAA-T-157)
-- **Supabase upsert onConflict requires actual unique constraint** — `.upsert({}, { onConflict: 'col1,col2' })` silently INSERTs duplicates if no unique constraint/index exists on those columns. PostgREST does not error. Must verify migration SQL before using onConflict. (2026-04-03, AAA-T-157)
 - **RPC function parameter names must match migration SQL exactly** — n8n called `upsert_marketplace_connection` with `p_connection_id` but function expected `p_tenant_id`. PostgreSQL error at runtime. Created dedicated `update_marketplace_tokens(p_connection_id)` for token refresh use case. (2026-04-03, AAA-T-157)
-- **Raw `<button>` lacks focus-visible ring — always use shadcn Button** — Design review found 5 raw buttons without focus-visible:ring-2. shadcn Button from @agency/ui guarantees consistent focus styling. P0 accessibility violation (WCAG 2.4.7). (2026-04-03, AAA-T-157)
-- **aria-label on generic div ignored by screen readers** — Must add `role="group"` or use semantic element. Status dots had colors conveying info with no text alternative. Fix: role="group" + sr-only spans. (2026-04-03, AAA-T-157)
 
 ## Architecture Decisions
 
@@ -125,13 +91,9 @@
 - **TENANT_ID as server-only env var for shop frontends** — No NEXT_PUBLIC_ prefix, prevents client-side leakage of tenant context. Shop is per-tenant: env var filters products/categories. (2026-03-31)
 - **True anon Supabase client for shop frontend** — Uses NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY (not service_role like website). RLS enforces is_published for products. (2026-03-31)
 - **shop_categories RLS USING(true) is correct** — Anon has no JWT/tenant context, so tenant_id filter must be app-level (server component). Categories contain non-sensitive data. (2026-03-31)
-- **apps/shop/* workspace glob in root package.json** — apps/* doesn't match nested paths like apps/shop/jacek/. Need explicit apps/shop/* glob. (2026-03-31)
 - **Delay step nie dispatchuje do n8n — CMS pisze resume_at bezpośrednio do DB** — n8n nie "trzyma" kroków przez godziny/dni. Wzorzec: handleDelay zapisuje resume_at + status='waiting', n8n cron co 5 min wywołuje /api/workflows/process-due-delays. (2026-04-01, AAA-T-150)
 - **n8n Delay Processor: POST do CMS, nie bezpośrednio do Supabase** — Nawet gdy n8n ma Supabase credentials (ma, bo form_confirmation je używa), logika orkiestracji (który krok wznowić) należy do CMS, nie n8n. n8n = głupi timer. (2026-04-01, AAA-T-150)
 - **Atomic claim z FOR UPDATE SKIP LOCKED dla batch processing** — Supabase JS chain nie jest atomowy. Dla batch endpoint gdzie concurrent calls mogą się nałożyć: PostgreSQL RPC z FOR UPDATE SKIP LOCKED + status przejściowy 'processing'. (2026-04-01, AAA-T-150)
-- **Query key separation: executions.all() vs workflows.executions(workflowId)** — Separate TanStack Query key groups for global execution list vs per-workflow executions. Prevents invalidation cross-contamination. (2026-04-01, AAA-T-151)
-- **formatDuration vs formatExecutionDuration** — Two intentionally different utils: formatDuration(seconds) for general use, formatExecutionDuration(startedAt, completedAt) for execution timeline display. (2026-04-01, AAA-T-151)
-- **step_config delay: { value, unit } zamiast duration_minutes** — Ergonomiczne dla użytkownika ("2 dni" vs "2880 minut"). Konwersja na ms w momencie wykonania, nie w schemacie. (2026-04-01, AAA-T-150)
 - **HOST_URL env var reused for website→CMS communication** — Website .env.local HOST_URL points to CMS (localhost:3001 dev, cms.haloefekt.pl prod). Path /api/workflows/trigger appended in code. Reuses CMS's existing HOST_URL convention. (2026-04-01, AAA-T-152)
 - **No separate API route per trigger type** — n8n calls existing /api/workflows/trigger with trigger_type in payload (e.g., 'lead_scored'). No /api/workflows/trigger/lead-scored/ needed. Single endpoint, multiple trigger types. (2026-04-01, AAA-T-152)
 - **Old n8n email webhook removal deferred** — survey_submitted now fires workflow engine trigger in parallel with old N8N_WEBHOOK_FORM_CONFIRM_EMAIL_URL. Removing old webhook is destructive; deferred until tenant has active workflow with send_email step confirmed working. (2026-04-01, AAA-T-152)
@@ -167,17 +129,11 @@
 - **Shop frontend path: apps/shop/jacek/** — Nested under apps/shop/ parent, not flat apps/shop-jacek/. User's father's shop name. (2026-03-31)
 - **Inline workflow name editing on list page** — User wants inline editing of workflow names directly on the workflow list page. Next task after AAA-T-151 merge. (2026-04-01)
 - **"impl i validacje rob auto, zatrzymaj sie przy testach"** — Auto mode through implementation + validation phases, stop at manual testing phase. (2026-04-01, AAA-T-153)
-- **Gallery (grid) as default view for all CMS list pages** — list is secondary. (2026-04-01, AAA-T-159)
-- **Stacked card layout (image-top, text-below), not horizontal** — User rejected horizontal card layout for blog/media. Stacked is the standard. (2026-04-01, AAA-T-159)
-- **Single expand/collapse button for paired panels** — One button toggles both input+output panels together, not separate buttons. (2026-04-01, AAA-T-159)
+- **Gallery (grid) as default view, stacked cards (image-top, text-below)** — list is secondary. Horizontal cards rejected. (2026-04-01)
 - **Light theme for Oleg's shop** — Warm linen off-white, not pure white. (2026-04-02)
 - **Sidebar filters for e-commerce shops** — 240px sidebar category filter, not horizontal pill bar. (2026-04-02)
 - **Prominent is_featured toggle** — Card with Star icon + Switch + amber accent border, not simple checkbox. (2026-04-02)
 - **Self-reflection iteration in auto mode** — Orchestrator asks itself clarifying questions even in auto mode. (2026-04-02)
-- **Bidirectional marketplace sync** — Publish + status sync + import existing listings. (2026-04-02)
-- **Auto-publish option for marketplace** — product.published → auto-publish. Planned as workflow engine trigger. (2026-04-02)
-- **CMS configures n8n marketplace access** — Not directly in n8n. (2026-04-02)
-- **Polish labels in types.ts deferred to iteration 10** — Consolidate during Polish pass. (2026-04-02, AAA-T-157)
 - **Consent question always required (is_required forced)** — Legal obligation. SurveyBuilder forces is_required=true for consent type. (2026-04-02)
 - **Landing page section spacing: golden ratio py-24 base** — py-24 (96px) base, scaled with phi 1.618 for hero/CTA. (2026-04-02)
 - **User workflow: docx design notes -> extract -> design agent** — New input channel for design feedback. (2026-04-02)

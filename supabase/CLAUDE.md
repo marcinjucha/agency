@@ -290,6 +290,14 @@ Chained methods are separate HTTP request parts, not a single `UPDATE...RETURNIN
 
 **Why:** PostgREST limitation. The embedded resource syntax works for `.select()` but not for `.order()`. No error is thrown, making this hard to debug.
 
+### Supabase `.upsert()` `onConflict` requires actual unique constraint
+
+`.upsert({}, { onConflict: 'col1,col2' })` silently INSERTs duplicates if no unique constraint or unique index exists on those columns. PostgREST does not error — it falls back to plain INSERT.
+
+**Fix:** Always verify the migration SQL has a matching `UNIQUE(col1, col2)` constraint or unique index before using `onConflict`. Check with: `\d table_name` in psql or inspect migration file.
+
+**Why:** Found in AAA-T-157 (marketplace listings). `onConflict: 'product_id,marketplace'` created duplicate listings silently because the unique constraint was missing from the migration. No error at any layer — Supabase JS, PostgREST, and PostgreSQL all succeed (as a regular INSERT).
+
 ## Related Documentation
 
 - [Supabase Setup Guide](./README.md)
