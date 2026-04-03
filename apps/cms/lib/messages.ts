@@ -1220,6 +1220,20 @@ export const messages = {
     importListingsCount: (count: number) => `${count} ogłoszeń`,
     importActiveListings: (count: number) => `${count} aktywnych ogłoszeń`,
     importNotConnectedNote: 'Brak połączenia — skonfiguruj w ustawieniach marketplace',
+    // Import wizard — stats row labels
+    importTotal: 'Do importu',
+    importImported: 'Zaimportowano',
+    importSkipped: 'Pominięto',
+    // Import wizard — syncing spinner
+    importSyncing: 'Trwa synchronizacja z marketplace...',
+    // Import wizard — stuck import warning
+    importStuckWarning: 'Import zajmuje dłużej niż oczekiwano. Sprawdź logi n8n.',
+    // Import preview table — listing status
+    listingStatusActive: 'Aktywne',
+    // OLX expiry warning
+    olxExpiryWarning: 'Ogłoszenie OLX wygaśnie wkrótce. Zaktualizuj ogłoszenie, aby je odświeżyć.',
+    // Sold listing badge (shown when listing.status === 'sold' and no form is shown)
+    listingStatusSold: 'Sprzedano',
   },
 
   validation: {
@@ -1290,5 +1304,8 @@ export const templates = {
       `Ogłoszenie zostanie usunięte z platformy ${label}. Tej operacji nie można cofnąć.`,
     categoryNoResults: (search: string) => `Brak wyników dla "${search}"`,
     openListingAriaLabel: (label: string) => `Otwórz ogłoszenie na ${label}`,
+    importMoreErrors: (n: number) => `…i ${n} więcej błędów`,
+    olxExpiryDays: (n: number) =>
+      `Ogłoszenie OLX wygaśnie za ${n} ${n === 1 ? 'dzień' : 'dni'}. Zaktualizuj ogłoszenie, aby je odświeżyć.`,
   },
 } as const

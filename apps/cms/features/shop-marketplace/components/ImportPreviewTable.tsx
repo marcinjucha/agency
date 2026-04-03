@@ -5,6 +5,7 @@ import { Badge, Checkbox } from '@agency/ui'
 import { LoadingState, ErrorState, EmptyState } from '@agency/ui'
 import { ShoppingBag, AlertCircle } from 'lucide-react'
 import { messages } from '@/lib/messages'
+import { LISTING_STATUS_LABELS } from '../types'
 import type { ImportPreviewListing } from '../actions.import'
 
 type ImportPreviewTableProps = {
@@ -187,7 +188,7 @@ export function ImportPreviewTable({
                       variant="outline"
                       className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
                     >
-                      Aktywne
+                      {LISTING_STATUS_LABELS.active}
                     </Badge>
                   </td>
 

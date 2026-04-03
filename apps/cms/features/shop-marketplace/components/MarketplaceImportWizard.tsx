@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Card, CardContent, Badge, Button, Progress, LoadingState } from '@agency/ui'
 import { Store, CheckCircle2, AlertTriangle, ChevronRight, ChevronLeft } from 'lucide-react'
-import { messages } from '@/lib/messages'
+import { messages, templates } from '@/lib/messages'
+import { differenceInMinutes } from 'date-fns'
 import { routes } from '@/lib/routes'
 import { queryKeys } from '@/lib/query-keys'
 import { startMarketplaceImport } from '../actions'
@@ -409,15 +410,15 @@ function Step3Progress({ importId }: Step3Props) {
             <div className="grid grid-cols-3 gap-4 rounded-lg bg-muted/30 px-4 py-3">
               <div className="text-center">
                 <p className="text-lg font-semibold text-foreground">{totalItems}</p>
-                <p className="text-xs text-muted-foreground">Do importu</p>
+                <p className="text-xs text-muted-foreground">{messages.marketplace.importTotal}</p>
               </div>
               <div className="text-center">
                 <p className="text-lg font-semibold text-emerald-400">{importedItems}</p>
-                <p className="text-xs text-muted-foreground">Zaimportowano</p>
+                <p className="text-xs text-muted-foreground">{messages.marketplace.importImported}</p>
               </div>
               <div className="text-center">
                 <p className="text-lg font-semibold text-amber-400">{skippedItems}</p>
-                <p className="text-xs text-muted-foreground">Pominięto</p>
+                <p className="text-xs text-muted-foreground">{messages.marketplace.importSkipped}</p>
               </div>
             </div>
           )}
@@ -439,7 +440,7 @@ function Step3Progress({ importId }: Step3Props) {
                   </li>
                 ))}
                 {errorLog.length > 5 && (
-                  <li className="opacity-70">…i {errorLog.length - 5} więcej błędów</li>
+                  <li className="opacity-70">{templates.marketplace.importMoreErrors(errorLog.length - 5)}</li>
                 )}
               </ul>
             </div>
@@ -449,9 +450,22 @@ function Step3Progress({ importId }: Step3Props) {
           {(status === 'pending' || status === 'running') && (
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" aria-hidden="true" />
-              Trwa synchronizacja z marketplace...
+              {messages.marketplace.importSyncing}
             </div>
           )}
+
+          {/* Stuck import warning — shown after 10 minutes without completion */}
+          {(status === 'pending' || status === 'running') &&
+            importRecord?.created_at &&
+            differenceInMinutes(new Date(), new Date(importRecord.created_at)) >= 10 && (
+              <div
+                role="alert"
+                className="flex items-start gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2.5"
+              >
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" aria-hidden="true" />
+                <p className="text-xs text-amber-400">{messages.marketplace.importStuckWarning}</p>
+              </div>
+            )}
         </CardContent>
       </Card>
 

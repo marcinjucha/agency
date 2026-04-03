@@ -25,7 +25,9 @@ import {
   AlertTriangle,
   Loader2,
   ExternalLink,
+  Clock,
 } from 'lucide-react'
+import { differenceInDays, addDays } from 'date-fns'
 import { queryKeys } from '@/lib/query-keys'
 import { messages, templates } from '@/lib/messages'
 import { getMarketplaceConnections, getMarketplaceListings } from '../queries'
@@ -179,6 +181,40 @@ function MarketplaceSection({
           {messages.marketplace.openListing}
         </a>
       )}
+
+      {/* OLX expiry warning — shown when active listing expires within 7 days */}
+      {connection.is_active &&
+        isOlx &&
+        listing?.status === 'active' &&
+        listing.published_at &&
+        (() => {
+          const daysUntilExpiry = differenceInDays(
+            addDays(new Date(listing.published_at), 30),
+            new Date()
+          )
+          if (daysUntilExpiry > 7 || daysUntilExpiry < 0) return null
+          return (
+            <div
+              role="alert"
+              className="flex items-start gap-2.5 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2.5"
+            >
+              <Clock className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" aria-hidden="true" />
+              <div className="flex-1 space-y-2">
+                <p className="text-sm text-amber-400">
+                  {templates.marketplace.olxExpiryDays(daysUntilExpiry)}
+                </p>
+                <button
+                  type="button"
+                  onClick={handleUpdate}
+                  disabled={isMutating}
+                  className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-400 underline underline-offset-2 hover:text-amber-300 disabled:opacity-50"
+                >
+                  {messages.marketplace.update}
+                </button>
+              </div>
+            </div>
+          )
+        })()}
 
       {/* Form — shown for both new listing and edit (hidden when connection inactive) */}
       {connection.is_active && (!listing || listing.status === 'active' || listing.status === 'error') && !isPublishing && (
