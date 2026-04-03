@@ -6,6 +6,10 @@ import type { TiptapContent } from '../editor/types'
 
 export type BlogPostStatus = 'draft' | 'scheduled' | 'published'
 
+// --- Editor save state ---
+
+export type SaveState = 'idle' | 'saving' | 'saved' | 'error'
+
 export function getPostStatus(isPublished: boolean, publishedAt: string | null): BlogPostStatus {
   if (!isPublished) return 'draft'
   if (publishedAt && new Date(publishedAt) > new Date()) return 'scheduled'

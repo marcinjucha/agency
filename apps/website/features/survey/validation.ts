@@ -11,6 +11,26 @@ import { z } from 'zod'
 import type { Question } from './types'
 import { messages } from '@/lib/messages'
 
+// --- Booking form ---
+
+export const bookingFormSchema = z.object({
+  clientName: z
+    .string()
+    .min(2, messages.validation.nameTooShort)
+    .max(100, messages.validation.nameTooLong),
+  clientEmail: z
+    .string()
+    .min(1, messages.validation.emailRequired)
+    .email(messages.validation.invalidEmail),
+  notes: z
+    .string()
+    .max(500, messages.validation.notesTooLong)
+    .optional()
+    .default(''),
+})
+
+export type BookingFormData = z.infer<typeof bookingFormSchema>
+
 /**
  * Dynamically generate Zod schema from survey questions
  *
