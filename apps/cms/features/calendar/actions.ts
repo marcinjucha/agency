@@ -42,7 +42,7 @@ export async function getGoogleCalendarStatus(): Promise<{
       return { connected: false, error: messages.calendar.fetchSettingsFailed }
     }
 
-    const tokenData = (userData as any)?.google_calendar_token
+    const tokenData = (userData as unknown as { google_calendar_token: unknown })?.google_calendar_token
 
     if (!tokenData) {
       return { connected: false }
@@ -92,7 +92,7 @@ export async function disconnectGoogleCalendar(): Promise<{
     }
 
     // Revoke access with Google if refresh token exists
-    const tokenData = (userData as any)?.google_calendar_token
+    const tokenData = (userData as unknown as { google_calendar_token: unknown })?.google_calendar_token
     if (tokenData) {
       const token = tokenData as GoogleCalendarToken
       if (token.refresh_token) {
@@ -199,7 +199,7 @@ export async function getCalendarTokenStatus(): Promise<{
       return { status: 'disconnected', expiresAt: null, hasRefreshToken: false }
     }
 
-    const tokenData = (userData as any)?.google_calendar_token
+    const tokenData = (userData as unknown as { google_calendar_token: unknown })?.google_calendar_token
 
     if (!tokenData) {
       return { status: 'disconnected', expiresAt: null, hasRefreshToken: false }

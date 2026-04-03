@@ -7,10 +7,13 @@
  * @module status
  */
 
+import type { ResponseStatus as ValidatorResponseStatus } from '@agency/validators'
+
 /**
- * Response status types from survey_responses table
+ * Response status — imported from @agency/validators (single source of truth)
+ * Re-exported here so existing consumers of this module don't need to change imports.
  */
-export type ResponseStatus = 'new' | 'qualified' | 'disqualified' | 'contacted' | 'client' | 'rejected' | null
+export type ResponseStatus = ValidatorResponseStatus | null
 
 /**
  * Appointment status types from appointments table

@@ -85,7 +85,20 @@ export type LandingBlock =
 
 export type LandingBlockType = LandingBlock['type']
 
-export type LandingPage = Omit<Tables<'landing_pages'>, 'blocks'> & { blocks: LandingBlock[] }
+export type LandingPage = Omit<Tables<'landing_pages'>, 'blocks' | 'seo_metadata'> & {
+  blocks: LandingBlock[]
+  seo_metadata: SeoMetadata | null
+}
+
+// Supabase returns blocks/seo_metadata as generic Json (JSONB) — cast to typed LandingPage once here
+export function toLandingPage(raw: unknown): LandingPage {
+  const row = raw as Tables<'landing_pages'>
+  return {
+    ...row,
+    blocks: Array.isArray(row.blocks) ? (row.blocks as unknown as LandingBlock[]) : [],
+    seo_metadata: row.seo_metadata as unknown as SeoMetadata | null,
+  }
+}
 
 export const BLOCK_TYPE_LABELS: Record<LandingBlockType, string> = {
   navbar: 'Nawigacja',

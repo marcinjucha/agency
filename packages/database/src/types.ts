@@ -631,6 +631,224 @@ export type Database = {
           },
         ]
       }
+      shop_marketplace_connections: {
+        Row: {
+          access_token_encrypted: string
+          account_id: string | null
+          account_name: string | null
+          created_at: string
+          display_name: string | null
+          id: string
+          is_active: boolean
+          last_synced_at: string | null
+          marketplace: string
+          refresh_token_encrypted: string | null
+          scopes: string[] | null
+          tenant_id: string
+          token_expires_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          access_token_encrypted: string
+          account_id?: string | null
+          account_name?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          is_active?: boolean
+          last_synced_at?: string | null
+          marketplace: string
+          refresh_token_encrypted?: string | null
+          scopes?: string[] | null
+          tenant_id: string
+          token_expires_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          access_token_encrypted?: string
+          account_id?: string | null
+          account_name?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          is_active?: boolean
+          last_synced_at?: string | null
+          marketplace?: string
+          refresh_token_encrypted?: string | null
+          scopes?: string[] | null
+          tenant_id?: string
+          token_expires_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shop_marketplace_connections_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shop_marketplace_imports: {
+        Row: {
+          completed_at: string | null
+          connection_id: string
+          created_at: string
+          error_log: Json | null
+          id: string
+          imported_items: number
+          marketplace: string
+          skipped_items: number
+          started_at: string | null
+          status: string
+          tenant_id: string
+          total_items: number | null
+        }
+        Insert: {
+          completed_at?: string | null
+          connection_id: string
+          created_at?: string
+          error_log?: Json | null
+          id?: string
+          imported_items?: number
+          marketplace: string
+          skipped_items?: number
+          started_at?: string | null
+          status?: string
+          tenant_id: string
+          total_items?: number | null
+        }
+        Update: {
+          completed_at?: string | null
+          connection_id?: string
+          created_at?: string
+          error_log?: Json | null
+          id?: string
+          imported_items?: number
+          marketplace?: string
+          skipped_items?: number
+          started_at?: string | null
+          status?: string
+          tenant_id?: string
+          total_items?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shop_marketplace_imports_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "shop_marketplace_connections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_marketplace_imports_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "shop_marketplace_connections_decrypted"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_marketplace_imports_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shop_marketplace_listings: {
+        Row: {
+          connection_id: string
+          created_at: string
+          expires_at: string | null
+          external_listing_id: string | null
+          external_url: string | null
+          id: string
+          last_sync_error: string | null
+          last_sync_status: string | null
+          last_synced_at: string | null
+          marketplace: string
+          marketplace_category_id: string | null
+          marketplace_location: Json | null
+          marketplace_params: Json | null
+          product_id: string
+          published_at: string | null
+          status: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          connection_id: string
+          created_at?: string
+          expires_at?: string | null
+          external_listing_id?: string | null
+          external_url?: string | null
+          id?: string
+          last_sync_error?: string | null
+          last_sync_status?: string | null
+          last_synced_at?: string | null
+          marketplace: string
+          marketplace_category_id?: string | null
+          marketplace_location?: Json | null
+          marketplace_params?: Json | null
+          product_id: string
+          published_at?: string | null
+          status?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          connection_id?: string
+          created_at?: string
+          expires_at?: string | null
+          external_listing_id?: string | null
+          external_url?: string | null
+          id?: string
+          last_sync_error?: string | null
+          last_sync_status?: string | null
+          last_synced_at?: string | null
+          marketplace?: string
+          marketplace_category_id?: string | null
+          marketplace_location?: Json | null
+          marketplace_params?: Json | null
+          product_id?: string
+          published_at?: string | null
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shop_marketplace_listings_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "shop_marketplace_connections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_marketplace_listings_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "shop_marketplace_connections_decrypted"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_marketplace_listings_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "shop_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_marketplace_listings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       shop_products: {
         Row: {
           category_id: string | null
@@ -1247,7 +1465,65 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      shop_marketplace_connections_decrypted: {
+        Row: {
+          access_token: string | null
+          account_id: string | null
+          account_name: string | null
+          created_at: string | null
+          display_name: string | null
+          id: string | null
+          is_active: boolean | null
+          last_synced_at: string | null
+          marketplace: string | null
+          refresh_token: string | null
+          scopes: string[] | null
+          tenant_id: string | null
+          token_expires_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          access_token?: never
+          account_id?: string | null
+          account_name?: string | null
+          created_at?: string | null
+          display_name?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          last_synced_at?: string | null
+          marketplace?: string | null
+          refresh_token?: never
+          scopes?: string[] | null
+          tenant_id?: string | null
+          token_expires_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          access_token?: never
+          account_id?: string | null
+          account_name?: string | null
+          created_at?: string | null
+          display_name?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          last_synced_at?: string | null
+          marketplace?: string | null
+          refresh_token?: never
+          scopes?: string[] | null
+          tenant_id?: string | null
+          token_expires_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shop_marketplace_connections_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       claim_due_delay_steps: {
@@ -1262,6 +1538,20 @@ export type Database = {
       increment_submission_count: {
         Args: { link_id: string }
         Returns: undefined
+      }
+      upsert_marketplace_connection: {
+        Args: {
+          p_access_token: string
+          p_account_id?: string
+          p_account_name?: string
+          p_display_name?: string
+          p_marketplace: string
+          p_refresh_token?: string
+          p_scopes?: string[]
+          p_tenant_id: string
+          p_token_expires_at?: string
+        }
+        Returns: string
       }
       verify_docforge_license: { Args: { license_key: string }; Returns: Json }
     }
