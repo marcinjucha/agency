@@ -6,8 +6,11 @@ This directory contains the two Next.js applications that make up AI Agency.
 
 ```
 apps/
-├── website/     # Public-facing application
-└── cms/         # Admin panel application
+├── website/     # Public-facing marketing website (Halo Efekt)
+├── cms/         # Admin panel application
+└── shop/        # E-commerce frontends (per-client)
+    ├── jacek/   # Jacek's book shop (port 3002)
+    └── kolega/  # Oleg's general merchandise shop (port 3003)
 ```
 
 ## Applications

@@ -42,9 +42,11 @@ apps/cms/
 │       ├── auth/            # Auth callbacks
 │       ├── calendar/        # Google Calendar
 │       ├── email-templates/ # Email template rendering
+│       ├── marketplace/     # OAuth callbacks (OLX, Allegro)
 │       ├── responses/       # Response API
 │       ├── surveys/         # Survey CRUD
-│       └── upload/          # S3 file upload
+│       ├── upload/          # S3 file upload
+│       └── workflows/       # Workflow trigger + delay processing
 │
 ├── features/                # BUSINESS LOGIC (ADR-005 pattern)
 │   ├── appointments/        # Appointment management (Google Calendar sync)
@@ -58,9 +60,11 @@ apps/cms/
 │   ├── media/               # Media library — S3 upload, 6 types, folder tree, DnD, InsertMediaModal
 │   ├── responses/           # Response list + detail view
 │   ├── shop-categories/     # Shop category CRUD (inline editing, combobox with create)
+│   ├── shop-marketplace/    # Marketplace integration (OLX + Allegro adapters, OAuth)
 │   ├── shop-products/       # Shop product editor (Tiptap, media gallery, SEO, layout selector)
 │   ├── site-settings/       # Site settings (org-level config, SEO defaults, keywords)
 │   ├── surveys/             # Survey builder + link management
+│   ├── workflows/           # Workflow engine — visual builder (ReactFlow), templates, execution
 │   └── CLAUDE.md            # Features pattern documentation
 │
 ├── components/              # SHARED UI COMPONENTS
@@ -191,6 +195,9 @@ Only for admin operations that bypass RLS.
 /admin/shop/products/new     - Create product
 /admin/shop/products/[id]    - Edit product (Tiptap, media, SEO)
 /admin/shop/categories       - Category management (inline CRUD)
+/admin/shop/marketplace      - Marketplace connections (OLX, Allegro)
+/admin/workflows             - Workflow list (gallery/table toggle)
+/admin/workflows/[id]        - Workflow canvas editor (ReactFlow)
 ```
 
 ## Adding New Features

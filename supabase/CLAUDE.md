@@ -13,7 +13,7 @@ This directory contains Supabase configuration and database migrations.
 ```
 supabase/
 ├── config.toml                           # Local Supabase config
-├── migrations/                           # 28 migration files (as of 2026-03-30)
+├── migrations/                           # 36 migration files (as of 2026-04-03)
 │   ├── 20250105000001_initial_schema.sql # Initial schema
 │   └── ...                               # See migrations/ for full list
 ├── seed_first_user.sql                   # User creation guide
@@ -22,7 +22,7 @@ supabase/
 
 ## Database Schema
 
-### Tables (19 total)
+### Tables (27 total)
 
 **tenants** - Organizations/firms (multi-tenant root)
 - Each organization = 1 tenant
@@ -60,7 +60,7 @@ supabase/
 - Tiptap JSONB content
 
 **email_configs** - Per-tenant email provider config (Resend)
-- Encrypted API keys via pgcrypto, `email_configs_decrypted` view for n8n
+- api_key stored as plain TEXT (no encryption). n8n reads directly.
 
 **email_templates** - Per-tenant email templates
 - JSONB blocks + pre-rendered html_body, UNIQUE(tenant_id, type)
@@ -74,10 +74,18 @@ supabase/
 
 **shop_products** - Product catalog (25 cols)
 - listing_type enum, display_layout CHECK, Tiptap description
-- NUMERIC price, JSONB images/seo
+- NUMERIC price, JSONB images/seo, is_featured BOOLEAN
 
 **shop_categories** - Product categories (flat, no nesting)
 - Tenant-isolated
+
+**shop_marketplace_connections** - OAuth credentials per tenant per marketplace
+- pgcrypto BYTEA encrypted tokens, `shop_marketplace_connections_decrypted` view
+
+**shop_marketplace_listings** - Product-to-marketplace mapping (1 product to N listings)
+- marketplace_params JSONB, external_id, status sync
+
+**shop_marketplace_imports** - Imported listings from external marketplaces
 
 **site_settings** - One row per tenant, org-level config
 - Name, logo, SEO defaults, keywords
@@ -85,6 +93,21 @@ supabase/
 **calendar_settings** - Per-user Google Calendar OAuth tokens + booking settings
 
 **tenant_domains** - Custom domain mapping per tenant
+
+**workflows** - Per-tenant workflow definitions (visual builder)
+- ReactFlow-based, trigger_type TEXT
+
+**workflow_steps** - Individual steps within a workflow
+- step_type TEXT, step_config JSONB, position JSONB
+
+**workflow_edges** - Connections between workflow steps
+- source_step_id, target_step_id, condition_branch
+
+**workflow_executions** - Workflow run instances
+- status, started_at, completed_at, context JSONB
+
+**workflow_step_executions** - Per-step execution records
+- status, result JSONB, started_at, completed_at
 
 **docforge_licenses** - DocForge desktop app license keys (cross-project)
 

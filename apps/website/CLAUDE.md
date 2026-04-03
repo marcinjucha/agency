@@ -24,43 +24,45 @@ Public application for:
 apps/website/
 ├── app/                      # Next.js App Router
 │   ├── layout.tsx           # Root layout
-│   ├── page.tsx             # Homepage (default Next.js template, TODO)
+│   ├── page.tsx             # Homepage redirect
+│   ├── not-found.tsx        # 404 page
+│   ├── robots.ts            # Robots.txt generation
+│   ├── sitemap.ts           # Sitemap generation
 │   │
 │   ├── (marketing)/         # Route group - marketing pages
 │   │   ├── layout.tsx       # Marketing layout (Navbar, Footer)
-│   │   ├── page.tsx         # Homepage (TODO)
-│   │   ├── pricing/         # Pricing page (TODO)
-│   │   ├── o-nas/           # About page (TODO)
-│   │   └── kontakt/         # Contact page (TODO)
+│   │   ├── page.tsx         # Homepage (landing page)
+│   │   └── ...
 │   │
+│   ├── blog/                # Public blog
 │   ├── survey/              # Client survey forms
-│   │   └── [token]/
-│   │       ├── page.tsx     # Survey form + Calendar (TODO)
-│   │       └── success/     # Thank you page (TODO)
+│   │   └── [token]/page.tsx # Survey form + Calendar booking
+│   ├── regulamin/           # Terms of service
+│   ├── polityka-prywatnosci/# Privacy policy
 │   │
 │   └── api/                 # Public API routes
-│       ├── survey/
-│       │   └── submit/      # Form submission (TODO)
+│       ├── survey/submit/   # Form submission (service role)
 │       └── calendar/
-│           └── slots/       # Available slots (TODO)
+│           ├── slots/       # Available slots
+│           └── book/        # Book appointment
 │
-├── features/                # Business logic
-│   ├── survey/              # Survey form logic (TODO)
-│   │   ├── components/      # SurveyForm, CalendarBooking (+ DateSlotPicker, BookingForm, TimeSlotsGrid, BookingSuccess)
-│   │   ├── actions.ts       # Form submission
-│   │   └── queries.ts       # Fetch survey by token
-│   │
-│   └── marketing/           # Marketing components (TODO)
-│       └── components/      # Hero, Features, Pricing
-│
-├── components/              # Shared UI components
-│   ├── layout/              # Navbar, Footer (TODO)
-│   └── shared/              # Reusable UI
+├── features/                # Business logic (see features/CLAUDE.md)
+│   ├── blog/               # Blog queries + components
+│   ├── calendar/           # Booking logic, slot calculator
+│   ├── legal/              # Legal page queries + components
+│   ├── marketing/          # Landing page components
+│   ├── site-settings/      # Site settings queries
+│   └── survey/             # Survey form + submission + booking flow
 │
 └── lib/                     # Utilities
+    ├── messages.ts          # Polish strings
+    ├── plausible.ts         # Plausible analytics
+    ├── routes.ts            # Route constants
+    ├── layout-defaults.ts   # Layout configuration
     ├── supabase/
+    │   ├── anon-server.ts   # createAnonClient() — service role for submissions
     │   ├── client.ts        # Browser Supabase client
-    │   └── server.ts        # Server Supabase client
+    │   └── server.ts        # Server Supabase client (cookies-based)
     └── utils/               # Helper functions
 ```
 
@@ -88,91 +90,32 @@ Always use Next.js `<Link>` for same-domain routes (`/survey/[uuid]`, `/blog/[sl
 
 ## Database Access
 
-**Public access via RLS:**
-```typescript
-// Fetch survey by token (allowed by RLS policy)
-const { data: survey } = await supabase
-  .from('surveys')
-  .select('*')
-  .eq('token', token)
+**`createAnonClient()` for all server queries** — NOT `createClient()` from server.ts. **Why:** `createClient()` uses `cookies()` which fails at ISR build time. `createAnonClient()` (in `lib/supabase/anon-server.ts`) creates a service role client without cookies. Safe because website only reads public data (RLS on `is_published`) or writes submissions (tenant_id from survey, not user input).
 
-// Submit response (allowed by RLS policy)
-await supabase.from('responses').insert({
-  survey_link_id: linkId,
-  answers: formData,
-  tenant_id: survey.tenant_id
-})
-```
-
-**No auth checks needed** - RLS policies handle security.
+**`cache()` wrapper for request deduplication** — Server queries in `features/*/queries.ts` wrap functions with React `cache()`. Prevents duplicate DB calls when multiple server components call the same query during a single render pass. NOT TanStack Query (that is CMS-only).
 
 ## State Management
 
-**No TanStack Query** - simple forms don't need it.
+**No TanStack Query** — TanStack Query is CMS-only. Website uses `cache()` from React for request deduplication in server components.
 
-**React Hook Form:**
-```typescript
-const { handleSubmit } = useForm()
-const onSubmit = async (data) => {
-  await fetch('/api/survey/submit', {
-    method: 'POST',
-    body: JSON.stringify(data)
-  })
-}
-```
+**React Hook Form** for survey forms.
 
-## Routes (Planned)
+## Routes
 
 ```
-/                        - Homepage (marketing)
-/pricing                 - Pricing page
-/o-nas                   - About us
-/kontakt                 - Contact
-/survey/[token]          - Client survey form (dynamic)
-/survey/[token]/success  - Thank you page
+/                          - Homepage (landing page from CMS)
+/blog                      - Blog listing
+/blog/[slug]               - Blog post
+/survey/[token]            - Client survey form + calendar booking
+/regulamin                 - Terms of service
+/polityka-prywatnosci      - Privacy policy
 ```
 
-## Adding Marketing Pages
+## Survey + Booking Flow
 
-1. **Create page:**
-   ```bash
-   touch app/(marketing)/pricing/page.tsx
-   ```
+Survey submission uses API Route (not Server Action). **Why:** API route runs with service role key server-side, safe for anonymous submissions. Server Actions require cookies context which anonymous users don't have.
 
-2. **Create feature components:**
-   ```bash
-   mkdir -p features/marketing/components
-   touch features/marketing/components/Pricing.tsx
-   ```
-
-3. **Import in page:**
-   ```typescript
-   import { Pricing } from '@/features/marketing/components/Pricing'
-
-   export default function PricingPage() {
-     return <Pricing />
-   }
-   ```
-
-## Adding Survey Form
-
-1. **Create component:**
-   ```bash
-   mkdir -p features/survey/components
-   touch features/survey/components/SurveyForm.tsx
-   ```
-
-2. **Create page:**
-   ```typescript
-   // app/survey/[token]/page.tsx
-   import { getSurveyByToken } from '@/features/survey/queries'
-   import { SurveyForm } from '@/features/survey/components/SurveyForm'
-
-   export default async function SurveyPage({ params }) {
-     const survey = await getSurveyByToken(params.token)
-     return <SurveyForm survey={survey} />
-   }
-   ```
+**CalendarBooking** split into sub-components: `DateSlotPicker` (owns slot-fetch state, accepts `surveyId` prop), `BookingForm`, `TimeSlotsGrid`, `BookingSuccess`. **Why:** Original monolithic component was 400+ lines mixing 4 concerns.
 
 ## Development
 
@@ -192,7 +135,9 @@ Auto-deploys to: https://agency-website.vercel.app
 **Environment Variables (Vercel):**
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY` (for createAnonClient submissions)
 - `N8N_WEBHOOK_URL`
+- `HOST_URL` (points to CMS for workflow trigger API)
 
 ## Related Files
 

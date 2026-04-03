@@ -23,7 +23,7 @@ if (isExpired) {
 
 ### Dependency Injection for refreshAccessToken
 
-**Why:** `token-manager.ts` needs to call `refreshAccessToken()` from apps/cms/lib/google-calendar/, but packages can't import from apps (circular dependency).
+**Why:** `token-manager.ts` needs to call `refreshAccessToken()` from apps/cms/features/calendar/oauth.ts, but packages can't import from apps (circular dependency).
 
 **Solution:** Pass `refreshAccessToken` as parameter instead of importing.
 
@@ -32,7 +32,7 @@ if (isExpired) {
 getValidAccessToken(userId, supabase, refreshAccessToken)
 
 // ❌ WRONG (circular dependency)
-import { refreshAccessToken } from '../../../apps/cms/lib/google-calendar/oauth'
+import { refreshAccessToken } from '../../../apps/cms/features/calendar/oauth'
 ```
 
 ### Graceful Degradation in Booking (Not Slots)

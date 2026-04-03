@@ -210,6 +210,7 @@ Index of all CLAUDE.md files and their scope:
 - `./apps/cms/CLAUDE.md` — CMS admin panel (auth, routes, TanStack Query)
 - `./apps/cms/features/CLAUDE.md` — CMS features pattern (ADR-005, queries naming)
 - `./apps/website/CLAUDE.md` — Public website (survey flow, marketing pages)
+- `./apps/website/features/CLAUDE.md` — Website features (createAnonClient, cache(), survey submission, booking flow)
 - `./packages/CLAUDE.md` — Shared packages (ui, database, validators)
 - `./packages/calendar/CLAUDE.md` — Google Calendar integration
 - `./supabase/CLAUDE.md` — Database config and migrations

@@ -15,16 +15,22 @@ Keep `app/` clean (routing only) and put all business logic here:
 
 ```
 features/
-├── surveys/         # Survey management
-│   ├── components/  # SurveyList, SurveyBuilder
-│   ├── actions.ts   # createSurvey, updateSurvey, deleteSurvey
-│   ├── queries.ts   # getSurveys, getSurvey, getSurveyByToken
-│   ├── validations.ts # Zod schemas (future)
-│   └── types.ts     # TypeScript types (future)
-│
-├── responses/       # Response management (TODO)
-├── calendar/        # Calendar integration (TODO)
-└── auth/            # Auth helpers (TODO)
+├── appointments/        # Appointment management (Google Calendar sync)
+├── blog/                # Blog with Tiptap WYSIWYG, S3 images, SEO, ISR
+├── calendar/            # Calendar booking UI + settings + Google OAuth
+├── editor/              # Shared Tiptap editor base (used by blog, shop, legal-pages)
+├── email/               # Email template editor + live preview
+├── intake/              # Unified intake hub — @dnd-kit kanban, split view
+├── landing/             # Landing page block editor + live preview
+├── legal-pages/         # Legal pages (regulamin, polityka prywatnosci) with shared Tiptap
+├── media/               # Media library — S3 upload, 6 types, folder tree, DnD, InsertMediaModal
+├── responses/           # Response list + detail view
+├── shop-categories/     # Shop category CRUD (inline editing, combobox with create)
+├── shop-marketplace/    # Marketplace integration (OLX + Allegro adapters, OAuth)
+├── shop-products/       # Shop product editor (Tiptap, media gallery, SEO, layout selector)
+├── site-settings/       # Site settings (org-level config, SEO defaults, keywords)
+├── surveys/             # Survey builder + link management
+└── workflows/           # Workflow engine — visual builder (ReactFlow), templates, execution
 ```
 
 ## Pattern (ADR-005)
