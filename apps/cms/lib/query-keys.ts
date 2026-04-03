@@ -59,7 +59,10 @@ export const queryKeys = {
     connections: ['marketplace', 'connections'] as const,
     connection: (id: string) => ['marketplace', 'connections', id] as const,
     listings: (productId: string) => ['marketplace', 'listings', productId] as const,
+    listingsByProducts: (productIds: string[]) => ['marketplace', 'listings-by-products', productIds.slice().sort().join(',')] as const,
     listingsByConnection: (connectionId: string) => ['marketplace', 'listings-by-connection', connectionId] as const,
     imports: (connectionId: string) => ['marketplace', 'imports', connectionId] as const,
+    categories: (connectionId: string) => ['marketplace', 'categories', connectionId] as const,
+    importProgress: (importId: string) => ['marketplace', 'import-progress', importId] as const,
   },
 } as const

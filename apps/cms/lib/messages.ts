@@ -1131,6 +1131,117 @@ export const messages = {
     accountName: 'Konto',
     active: 'Aktywne',
     inactive: 'Nieaktywne',
+    // Publish flow
+    productNotFound: 'Nie znaleziono produktu',
+    listingNotFound: 'Nie znaleziono ogłoszenia',
+    publishFailed: 'Nie udało się opublikować ogłoszenia',
+    publishSuccess: 'Ogłoszenie wysłane do publikacji',
+    updateFailed: 'Nie udało się zaktualizować ogłoszenia',
+    updateSuccess: 'Ogłoszenie zaktualizowane',
+    removeFailed: 'Nie udało się usunąć ogłoszenia',
+    removeSuccess: 'Ogłoszenie usunięte',
+    categoriesLoadFailed: 'Nie udało się pobrać kategorii',
+    // Publish panel UI
+    saveProductFirst: 'Najpierw zapisz produkt, żeby opublikować na marketplace.',
+    loadingData: 'Ładowanie...',
+    loadingFailed: 'Nie udało się pobrać danych marketplace.',
+    retryLoad: 'Spróbuj ponownie',
+    noConnections: 'Brak połączonych platform. Połącz OLX lub Allegro w',
+    noConnectionsLinkText: 'ustawieniach marketplace',
+    publishingInProgress: 'Trwa publikacja...',
+    openListing: 'Otwórz ogłoszenie',
+    removingListing: 'Usuwanie...',
+    removeListing: 'Usuń ogłoszenie',
+    removeListingConfirm: 'Usuń',
+    connectionInactive: 'Połączenie jest nieaktywne. Sprawdź konfigurację marketplace.',
+    publishing: 'Publikowanie...',
+    publish: 'Opublikuj',
+    updating: 'Aktualizowanie...',
+    update: 'Aktualizuj',
+    goToSettings: 'Przejdź do ustawień marketplace',
+    // Category selector
+    categoryLabel: 'Kategoria',
+    categoryPlaceholder: 'Wybierz kategorię...',
+    categoryLoadingError: 'Błąd pobierania kategorii',
+    categoryLoading: 'Ładowanie kategorii...',
+    categoryLoadError: 'Błąd ładowania kategorii. Spróbuj ponownie.',
+    categoryRetry: 'Ponów',
+    categoryEmpty: 'Brak kategorii',
+    categorySearchPlaceholder: 'Szukaj kategorii...',
+    // Location selector
+    locationLabel: 'Miasto',
+    locationPlaceholder: 'np. Wrocław',
+    // Connection health
+    disconnected: 'Rozłączono',
+    tokenExpiringSoon: 'Token wygasa wkrótce',
+    tokenExpiringSoonDescription: 'Token autoryzacji wygaśnie w ciągu 2 godzin. Rozłącz i połącz ponownie, aby odświeżyć.',
+    tokenExpiredDescription: 'Token autoryzacji wygasł. Rozłącz i połącz ponownie, aby kontynuować.',
+    // Error retry
+    retryPublish: 'Spróbuj ponownie',
+    // Import flow
+    importStarted: 'Import rozpoczęty',
+    importFailed: 'Nie udało się rozpocząć importu',
+    importConnectionRequired: 'Wybierz połączenie marketplace, aby importować oferty',
+    importNoListingsSelected: 'Wybierz co najmniej jedną ofertę do importu',
+    // Import wizard UI
+    importPageTitle: 'Import z marketplace',
+    importPageSubtitle: 'Zaimportuj ogłoszenia z OLX lub Allegro do sklepu',
+    importBackToMarketplace: 'Powrót do marketplace',
+    importStep1Title: 'Wybierz marketplace',
+    importStep1Subtitle: 'Wybierz platformę, z której chcesz zaimportować ogłoszenia',
+    importStep2Title: 'Wybierz ogłoszenia',
+    importStep2Subtitle: 'Zaznacz ogłoszenia do zaimportowania',
+    importStep3Title: 'Import',
+    importStep3Subtitle: 'Trwa importowanie wybranych ogłoszeń',
+    importNext: 'Dalej',
+    importBack: 'Wstecz',
+    importStart: 'Importuj zaznaczone',
+    importStarting: 'Importowanie...',
+    importFinished: 'Wróć do marketplace',
+    importNoConnections: 'Brak aktywnych połączeń z marketplace',
+    importNoConnectionsDescription: 'Połącz się z OLX lub Allegro, aby importować ogłoszenia.',
+    importSelectAll: 'Zaznacz wszystkie',
+    importDeselectAll: 'Odznacz wszystkie',
+    importSelectedCount: (selected: number, total: number) => `Zaznaczono ${selected} z ${total} ogłoszeń`,
+    importColumnTitle: 'Tytuł',
+    importColumnPrice: 'Cena',
+    importColumnStatus: 'Status',
+    importColumnDuplicate: 'Duplikat',
+    importDuplicateBadge: 'Już zaimportowano',
+    importNoListings: 'Brak ogłoszeń',
+    importNoListingsDescription: 'Na tym koncie nie ma ogłoszeń do zaimportowania.',
+    importLoadError: 'Nie udało się pobrać ogłoszeń',
+    importCappedInfo: (limit: number) => `Pokazano pierwsze ${limit} ogłoszeń. Zaznacz wszystkie nowe i zaimportuj porcjami.`,
+    importProgressRunning: (imported: number, total: number) => `Importowanie... ${imported}/${total}`,
+    importProgressCompleted: (imported: number, skipped: number) =>
+      `Zaimportowano ${imported}${skipped > 0 ? `, pominięto ${skipped} duplikatów` : ''}`,
+    importProgressFailed: 'Import nie powiódł się',
+    importProgressPending: 'Oczekiwanie na start importu...',
+    importListingsCount: (count: number) => `${count} ogłoszeń`,
+    importActiveListings: (count: number) => `${count} aktywnych ogłoszeń`,
+    importNotConnectedNote: 'Brak połączenia — skonfiguruj w ustawieniach marketplace',
+    // Import wizard — stats row labels
+    importTotal: 'Do importu',
+    importImported: 'Zaimportowano',
+    importSkipped: 'Pominięto',
+    // Import wizard — syncing spinner
+    importSyncing: 'Trwa synchronizacja z marketplace...',
+    // Import wizard — stuck import warning
+    importStuckWarning: 'Import zajmuje dłużej niż oczekiwano. Sprawdź logi n8n.',
+    // Import preview table — listing status
+    listingStatusActive: 'Aktywne',
+    // OLX expiry warning
+    olxExpiryWarning: 'Ogłoszenie OLX wygaśnie wkrótce. Zaktualizuj ogłoszenie, aby je odświeżyć.',
+    // Sold listing badge (shown when listing.status === 'sold' and no form is shown)
+    listingStatusSold: 'Sprzedano',
+    // Import wizard step labels
+    importStepMarketplace: 'Marketplace',
+    importStepListings: 'Ogłoszenia',
+    importStepImport: 'Import',
+    // Publish panel
+    panelTitle: 'Marketplace',
+    // Status dots — no listing fallback
+    noListing: 'Brak ogłoszenia',
   },
 
   validation: {
@@ -1194,5 +1305,17 @@ export const templates = {
   media: {
     fileTooLarge: (limitMB: number) => `Plik za duży. Max: ${limitMB}MB.`,
     fileTypeNotAllowed: (types: string) => `Niedozwolony typ pliku. Dozwolone: ${types}`,
+  },
+  marketplace: {
+    removeListingTitle: (label: string) => `Usuń ogłoszenie z ${label}?`,
+    removeListingDescription: (label: string) =>
+      `Ogłoszenie zostanie usunięte z platformy ${label}. Tej operacji nie można cofnąć.`,
+    categoryNoResults: (search: string) => `Brak wyników dla "${search}"`,
+    openListingAriaLabel: (label: string) => `Otwórz ogłoszenie na ${label}`,
+    disconnectConfirmDescription: (label: string) =>
+      `Czy na pewno chcesz odłączyć ${label}? Wszystkie opublikowane ogłoszenia pozostaną aktywne.`,
+    importMoreErrors: (n: number) => `…i ${n} więcej błędów`,
+    olxExpiryDays: (n: number) =>
+      `Ogłoszenie OLX wygaśnie za ${n} ${n === 1 ? 'dzień' : 'dni'}. Zaktualizuj ogłoszenie, aby je odświeżyć.`,
   },
 } as const

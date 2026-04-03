@@ -215,6 +215,34 @@ Pass input data (mappingMode: `defineBelow`) with prompt and any context the nod
 
 - **N8n = execution layer only (2026-03-29)** — Workflow Engine (Supabase + CMS) handles routing, config, conditions, sequences — what the client sees and configures. N8n handles heavy execution only: email sending, AI processing, external API calls. Pattern: CMS workflow engine → triggers n8n webhook with payload → n8n executes → callback to CMS with result. **WHY:** N8n has Redis queue, retry logic, rate limiting, scheduled jobs — rebuilding this in-house would take months. But routing logic ("if score > 10 then email A") belongs in Supabase because clients configure it via CMS UI.
 
+## Gotchas (n8n Workflow Authoring)
+
+### SplitInBatches MUST Have Loop-Back Connection
+
+**Problem:** Without connection from last node back to SplitInBatches (output 0), only first item is processed. N8n completes without error — silent data loss.
+
+**Why:** Found twice in AAA-T-157 (Token Refresh + Status Sync). Silent and hard to debug because n8n shows successful execution with no warnings.
+
+**Fix:** Always wire last node in batch loop back to SplitInBatches output 0.
+
+### Code Node onError Needs Explicit Error Output Wiring
+
+**Problem:** Setting `onError: continueErrorOutput` is not enough. Must ALSO add error connection in connections JSON (output index 1 to error handler). Without wiring, errors fall to global errorWorkflow.
+
+**Why:** CMS callback never fires without this — listing stuck in publishing state forever. The onError setting only enables the second output port, but n8n won't route errors there unless connections JSON explicitly maps output index 1 to a downstream node.
+
+**Fix:** In workflow JSON, add connection from Code node output index 1 to your error handler node.
+
+### CMS-n8n Payload Field Name Contract Must Match Exactly
+
+**Problem:** CMS dispatch payload key names must match n8n Extract Payload node reads. Silent null if mismatch — n8n processes with empty data, no error.
+
+**Why:** `publish_payload` vs `params` mismatch caused silent data loss in AAA-T-157. N8n expressions like `{{ $json.params }}` return `undefined` silently when the actual key is `publish_payload`.
+
+**Fix:** Verify field names match between CMS `dispatchToN8n()` payload and n8n Set/Code node reads. No runtime validation exists — must be checked manually.
+
+---
+
 ## Quick Reference
 
 **Key Facts:**

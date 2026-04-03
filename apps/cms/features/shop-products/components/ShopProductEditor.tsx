@@ -35,6 +35,7 @@ import { ProductTiptapEditor } from './ProductTiptapEditor'
 import { ProductSettingsSidebar } from './ProductSettingsSidebar'
 import { ProductImageManager } from './ProductImageManager'
 import { ProductSeoSidebar } from './ProductSeoSidebar'
+import { MarketplacePublishPanel } from '../../shop-marketplace/components/MarketplacePublishPanel'
 
 // --- Types ---
 
@@ -386,6 +387,9 @@ export function ShopProductEditor({ product }: ShopProductEditorProps) {
               control={control}
               errors={errors as Record<string, { message?: string }>}
             />
+
+            {/* Marketplace Publish */}
+            <MarketplacePublishPanel productId={product?.id ?? null} />
 
             {/* Status card */}
             <Card className="shadow-sm">

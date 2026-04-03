@@ -34,7 +34,7 @@ export type MarketplaceListing = {
   tenant_id: string
   product_id: string
   connection_id: string
-  marketplace: string
+  marketplace: MarketplaceId
   external_listing_id: string | null
   external_url: string | null
   status: ListingStatus
@@ -136,7 +136,7 @@ export function toMarketplaceListing(raw: unknown): MarketplaceListing {
     tenant_id: row.tenant_id as string,
     product_id: row.product_id as string,
     connection_id: row.connection_id as string,
-    marketplace: row.marketplace as string,
+    marketplace: row.marketplace as MarketplaceId,
     external_listing_id: (row.external_listing_id as string) ?? null,
     external_url: (row.external_url as string) ?? null,
     status: row.status as ListingStatus,

@@ -5,6 +5,7 @@ import { queryKeys } from '@/lib/query-keys'
 import { getShopProducts } from '../queries'
 import { getShopCategories } from '@/features/shop-categories/queries'
 import { deleteShopProduct } from '../actions'
+import { getMarketplaceConnections, getMarketplaceListingsForProducts } from '@/features/shop-marketplace/queries'
 import {
   Button,
   Skeleton,
@@ -18,6 +19,7 @@ import { routes } from '@/lib/routes'
 import { useViewMode } from '@/hooks/use-view-mode'
 import { ViewModeToggle } from '@/components/shared/ViewModeToggle'
 import { ShopProductListView } from './ShopProductListView'
+import type { MarketplaceId } from '@/features/shop-marketplace/types'
 
 export function ShopProductList() {
   const queryClient = useQueryClient()
@@ -39,6 +41,24 @@ export function ShopProductList() {
     queryKey: queryKeys.shopCategories.list,
     queryFn: getShopCategories,
   })
+
+  // Batch-fetch marketplace connections (to know which marketplaces are connected)
+  const { data: connections } = useQuery({
+    queryKey: queryKeys.marketplace.connections,
+    queryFn: getMarketplaceConnections,
+  })
+
+  // Batch-fetch all listings for current page products (1 query, not N)
+  const productIds = products?.map((p) => p.id) ?? []
+  const { data: listingsBatch } = useQuery({
+    queryKey: queryKeys.marketplace.listingsByProducts(productIds),
+    queryFn: () => getMarketplaceListingsForProducts(productIds),
+    enabled: productIds.length > 0,
+  })
+
+  const connectedMarketplaces: MarketplaceId[] = (connections ?? [])
+    .filter((c) => c.is_active)
+    .map((c) => c.marketplace)
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -111,6 +131,8 @@ export function ShopProductList() {
         onDelete={(id) => deleteMutation.mutate(id)}
         deletingId={deleteMutation.isPending ? (deleteMutation.variables as string | undefined) : undefined}
         viewMode={viewMode}
+        marketplaceListings={listingsBatch ?? []}
+        connectedMarketplaces={connectedMarketplaces}
       />
     </div>
   )

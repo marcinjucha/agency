@@ -1,0 +1,337 @@
+{
+  "name": "Marketplace Status Sync",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "*/15 * * * *"
+            }
+          ]
+        }
+      },
+      "id": "ss-0001-4001-8001-000000000001",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [-800, 288]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "kXK1WDkFCo7AsBSs",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/kXK1WDkFCo7AsBSs",
+          "cachedResultName": "Sentry Init"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [-592, 288],
+      "id": "ss-0002-4001-8001-000000000002",
+      "name": "Call 'Sentry Init'"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Fetch all active marketplace listings joined with their connection credentials.\n// Two-phase approach:\n//   1. Fetch active listings with connection_id + marketplace\n//   2. Fetch unique connection credentials from decrypted view\n// Returns flat list: one item per listing with embedded access_token.\n\nconst Sentry = require('@sentry/node');\nconst https = require('https');\n\nconst SUPABASE_URL = $env.SUPABASE_URL;\nconst SUPABASE_KEY = $env.SUPABASE_SERVICE_ROLE_KEY;\n\nasync function supabaseGet(table, queryParams) {\n  const params = new URLSearchParams(queryParams);\n  const url = `${SUPABASE_URL}/rest/v1/${table}?${params.toString()}`;\n\n  return new Promise((resolve, reject) => {\n    const req = https.request(url, {\n      method: 'GET',\n      headers: {\n        'apikey': SUPABASE_KEY,\n        'Authorization': `Bearer ${SUPABASE_KEY}`,\n        'Content-Type': 'application/json',\n      }\n    }, (res) => {\n      let body = '';\n      res.on('data', (chunk) => body += chunk);\n      res.on('end', () => {\n        try { resolve(JSON.parse(body)); } catch (e) { reject(new Error(`Parse error: ${body}`)); }\n      });\n    });\n    req.on('error', reject);\n    req.end();\n  });\n}\n\ntry {\n  // Phase 1: Fetch active listings\n  const listings = await supabaseGet('shop_marketplace_listings', {\n    select: 'id,external_listing_id,connection_id,marketplace,status',\n    status: 'eq.active',\n  });\n\n  if (!Array.isArray(listings)) {\n    throw new Error(`Unexpected listings response: ${JSON.stringify(listings)}`);\n  }\n\n  if (listings.length === 0) {\n    Sentry.addBreadcrumb({ message: 'Status sync: no active listings found', level: 'info' });\n    return [];\n  }\n\n  // Phase 2: Fetch unique connection credentials (decrypted)\n  const uniqueConnectionIds = [...new Set(listings.map((l) => l.connection_id))];\n  const connectionMap = {};\n\n  for (const connId of uniqueConnectionIds) {\n    const connections = await supabaseGet('shop_marketplace_connections_decrypted', {\n      select: 'id,marketplace,access_token,token_expires_at,is_active',\n      id: `eq.${connId}`,\n      is_active: 'eq.true',\n      limit: '1',\n    });\n\n    if (Array.isArray(connections) && connections.length > 0) {\n      connectionMap[connId] = connections[0];\n    }\n  }\n\n  Sentry.addBreadcrumb({\n    message: `Status sync: ${listings.length} active listing(s), ${Object.keys(connectionMap).length} connection(s)`,\n    level: 'info',\n  });\n\n  // Combine: one flat item per listing with embedded credentials\n  return listings\n    .filter((listing) => {\n      if (!listing.external_listing_id) return false; // skip unpublished\n      const conn = connectionMap[listing.connection_id];\n      if (!conn) return false; // skip if connection inactive or not found\n      return true;\n    })\n    .map((listing) => {\n      const conn = connectionMap[listing.connection_id];\n      return {\n        listing_id: listing.id,\n        external_listing_id: listing.external_listing_id,\n        connection_id: listing.connection_id,\n        marketplace: listing.marketplace || conn.marketplace,\n        current_db_status: listing.status,\n        access_token: conn.access_token,\n        token_expires_at: conn.token_expires_at,\n      };\n    });\n} catch (err) {\n  Sentry.captureException(err);\n  await Sentry.flush(2000);\n  throw err;\n}\n"
+      },
+      "id": "ss-0003-4001-8001-000000000003",
+      "name": "Fetch Active Listings",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-384, 288]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "ss-0004-4001-8001-000000000004",
+      "name": "Split Listings",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [-160, 288]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.marketplace }}",
+                    "rightValue": "olx",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "ss-switch-olx"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.marketplace }}",
+                    "rightValue": "allegro",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "ss-switch-allegro"
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "id": "ss-0005-4001-8001-000000000005",
+      "name": "Route by Marketplace",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [64, 288]
+    },
+    {
+      "parameters": {
+        "jsCode": "// OLX status check.\n// Endpoint: GET /api/partner/adverts/{external_listing_id}\n// OLX status → our DB status:\n//   active/limited → 'active'\n//   removed_by_user/disabled/moderated → 'removed' (mapped to 'expired' in DB per spec)\n//   outdated → 'expired'\n// Note: spec says 'removed'→'expired', following OLX_STATUS_MAP from adapter code.\n\nconst Sentry = require('@sentry/node');\nconst https = require('https');\n\nconst input = $input.first().json;\n\nconst isSandbox = $env.OLX_USE_SANDBOX === 'true';\nconst OLX_API = isSandbox\n  ? 'https://www-sandbox.olx.pl/api/partner'\n  : 'https://www.olx.pl/api/partner';\n\n// OLX status map (mirrors adapter/olx.ts OLX_STATUS_MAP)\nconst OLX_STATUS_MAP = {\n  active: 'active',\n  limited: 'active',\n  removed_by_user: 'expired',\n  outdated: 'expired',\n  disabled: 'expired',\n  moderated: 'expired',\n};\n\nasync function olxGet(path, token) {\n  const url = `${OLX_API}${path}`;\n  return new Promise((resolve, reject) => {\n    const req = https.request(url, {\n      method: 'GET',\n      headers: {\n        'Authorization': `Bearer ${token}`,\n        'Content-Type': 'application/json',\n        'Version': '2.0',\n      },\n    }, (res) => {\n      let data = '';\n      res.on('data', (chunk) => data += chunk);\n      res.on('end', () => {\n        try { resolve({ status: res.statusCode, body: JSON.parse(data) }); }\n        catch (e) { resolve({ status: res.statusCode, body: data }); }\n      });\n    });\n    req.on('error', reject);\n    req.end();\n  });\n}\n\ntry {\n  const result = await olxGet(`/adverts/${input.external_listing_id}`, input.access_token);\n\n  if (result.status === 404) {\n    // Listing no longer exists on OLX\n    return {\n      listing_id: input.listing_id,\n      current_db_status: input.current_db_status,\n      new_status: 'expired',\n      status_changed: input.current_db_status !== 'expired',\n      expires_at: null,\n    };\n  }\n\n  if (result.status >= 400) {\n    throw new Error(`OLX status check failed: HTTP ${result.status} — ${JSON.stringify(result.body)}`);\n  }\n\n  const olxStatus = result.body.status || 'unknown';\n  const newStatus = OLX_STATUS_MAP[olxStatus] || 'expired';\n  const expiresAt = result.body.valid_to || null;\n\n  return {\n    listing_id: input.listing_id,\n    current_db_status: input.current_db_status,\n    new_status: newStatus,\n    status_changed: input.current_db_status !== newStatus,\n    expires_at: expiresAt,\n  };\n} catch (err) {\n  Sentry.captureException(new Error(`[OLX Status] listing ${input.listing_id}: ${err.message}`));\n  await Sentry.flush(2000);\n  return {\n    listing_id: input.listing_id,\n    current_db_status: input.current_db_status,\n    sync_error: err.message,\n  };\n}\n"
+      },
+      "id": "ss-0006-4001-8001-000000000006",
+      "name": "OLX Status Check",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [288, 80],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Allegro status check.\n// Endpoint: GET /sale/product-offers/{external_listing_id}\n// Allegro publication.status → our DB status:\n//   ACTIVE/ACTIVATING → 'active'\n//   ENDED → 'expired'\n//   INACTIVE → 'expired'\n// Note: endpoint is product-offers (not sale/offers) — matches adapter code.\n\nconst Sentry = require('@sentry/node');\nconst https = require('https');\n\nconst input = $input.first().json;\n\nconst isSandbox = $env.ALLEGRO_USE_SANDBOX === 'true';\nconst ALLEGRO_API = isSandbox\n  ? 'https://api.allegro.pl.allegrosandbox.pl'\n  : 'https://api.allegro.pl';\n\nconst ALLEGRO_ACCEPT = 'application/vnd.allegro.public.v1+json';\n\n// Allegro status map (mirrors adapter/allegro.ts ALLEGRO_STATUS_MAP)\nconst ALLEGRO_STATUS_MAP = {\n  ACTIVE: 'active',\n  ACTIVATING: 'active',\n  INACTIVE: 'expired',\n  ENDED: 'expired',\n};\n\nasync function allegroGet(path, token) {\n  const url = `${ALLEGRO_API}${path}`;\n  return new Promise((resolve, reject) => {\n    const req = https.request(url, {\n      method: 'GET',\n      headers: {\n        'Authorization': `Bearer ${token}`,\n        'Accept': ALLEGRO_ACCEPT,\n        'Content-Type': ALLEGRO_ACCEPT,\n      },\n    }, (res) => {\n      let data = '';\n      res.on('data', (chunk) => data += chunk);\n      res.on('end', () => {\n        try { resolve({ status: res.statusCode, body: JSON.parse(data) }); }\n        catch (e) { resolve({ status: res.statusCode, body: data }); }\n      });\n    });\n    req.on('error', reject);\n    req.end();\n  });\n}\n\ntry {\n  const result = await allegroGet(`/sale/product-offers/${input.external_listing_id}`, input.access_token);\n\n  if (result.status === 404) {\n    // Listing no longer exists on Allegro\n    return {\n      listing_id: input.listing_id,\n      current_db_status: input.current_db_status,\n      new_status: 'expired',\n      status_changed: input.current_db_status !== 'expired',\n      expires_at: null,\n    };\n  }\n\n  if (result.status >= 400) {\n    throw new Error(`Allegro status check failed: HTTP ${result.status} — ${JSON.stringify(result.body)}`);\n  }\n\n  const publicationStatus = result.body.publication?.status || 'INACTIVE';\n  const newStatus = ALLEGRO_STATUS_MAP[publicationStatus] || 'expired';\n  const expiresAt = result.body.publication?.endingAt || null;\n\n  return {\n    listing_id: input.listing_id,\n    current_db_status: input.current_db_status,\n    new_status: newStatus,\n    status_changed: input.current_db_status !== newStatus,\n    expires_at: expiresAt,\n  };\n} catch (err) {\n  Sentry.captureException(new Error(`[Allegro Status] listing ${input.listing_id}: ${err.message}`));\n  await Sentry.flush(2000);\n  return {\n    listing_id: input.listing_id,\n    current_db_status: input.current_db_status,\n    sync_error: err.message,\n  };\n}\n"
+      },
+      "id": "ss-0007-4001-8001-000000000007",
+      "name": "Allegro Status Check",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [288, 480],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Unsupported marketplace — log and pass through as error.\nconst Sentry = require('@sentry/node');\nconst input = $input.first().json;\nconst msg = `Status sync skipped: unsupported marketplace '${input.marketplace}' for listing ${input.listing_id}`;\nSentry.captureException(new Error(msg));\nawait Sentry.flush(2000);\nreturn { listing_id: input.listing_id, current_db_status: input.current_db_status, sync_error: msg };\n"
+      },
+      "id": "ss-0008-4001-8001-000000000008",
+      "name": "Unsupported Marketplace",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [288, 688]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Merge status results from OLX and Allegro branches.\nconst branches = ['OLX Status Check', 'Allegro Status Check', 'Unsupported Marketplace'];\nlet result = null;\nfor (const branch of branches) {\n  try {\n    const items = $(branch).all();\n    if (items.length > 0) { result = items[0].json; break; }\n  } catch (e) { /* branch not executed */ }\n}\nif (!result) throw new Error('No marketplace status branch produced output');\nreturn result;\n"
+      },
+      "id": "ss-0009-4001-8001-000000000009",
+      "name": "Merge Status Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [512, 288]
+    },
+    {
+      "parameters": {
+        "amount": 200,
+        "unit": "milliseconds"
+      },
+      "id": "ss-0010-4001-8001-000000000010",
+      "name": "Rate Limit Wait",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [736, 288]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Update listing status in DB when:\n//   a) status_changed=true → update status + last_synced_at + expires_at\n//   b) sync_error present → update last_sync_error + last_sync_status='error'\n// Skip DB write when status unchanged (reduces write load).\n\nconst Sentry = require('@sentry/node');\nconst https = require('https');\n\nconst SUPABASE_URL = $env.SUPABASE_URL;\nconst SUPABASE_KEY = $env.SUPABASE_SERVICE_ROLE_KEY;\n\nconst input = $input.first().json;\nconst now = new Date().toISOString();\n\nasync function supabasePatch(listingId, patchBody) {\n  const url = `${SUPABASE_URL}/rest/v1/shop_marketplace_listings?id=eq.${listingId}`;\n  const bodyStr = JSON.stringify(patchBody);\n\n  return new Promise((resolve, reject) => {\n    const options = {\n      method: 'PATCH',\n      headers: {\n        'apikey': SUPABASE_KEY,\n        'Authorization': `Bearer ${SUPABASE_KEY}`,\n        'Content-Type': 'application/json',\n        'Prefer': 'return=minimal',\n      },\n    };\n    const req = https.request(url, options, (res) => {\n      let data = '';\n      res.on('data', (chunk) => data += chunk);\n      res.on('end', () => resolve({ status: res.statusCode, body: data }));\n    });\n    req.on('error', reject);\n    req.write(bodyStr);\n    req.end();\n  });\n}\n\ntry {\n  if (input.sync_error) {\n    // Sync failed — record error on listing\n    const patchResult = await supabasePatch(input.listing_id, {\n      last_sync_status: 'error',\n      last_sync_error: input.sync_error,\n      last_synced_at: now,\n    });\n\n    if (patchResult.status >= 400) {\n      throw new Error(`Failed to record sync error: HTTP ${patchResult.status}`);\n    }\n\n    return {\n      listing_id: input.listing_id,\n      result: 'error_recorded',\n      sync_error: input.sync_error,\n    };\n  }\n\n  if (!input.status_changed) {\n    // Status unchanged — update last_synced_at only (lightweight)\n    const patchResult = await supabasePatch(input.listing_id, {\n      last_sync_status: 'ok',\n      last_sync_error: null,\n      last_synced_at: now,\n    });\n\n    if (patchResult.status >= 400) {\n      throw new Error(`Failed to update last_synced_at: HTTP ${patchResult.status}`);\n    }\n\n    return {\n      listing_id: input.listing_id,\n      result: 'no_change',\n      status: input.current_db_status,\n    };\n  }\n\n  // Status changed — update status + sync metadata\n  const patch = {\n    status: input.new_status,\n    last_sync_status: 'ok',\n    last_sync_error: null,\n    last_synced_at: now,\n  };\n\n  if (input.expires_at) {\n    patch.expires_at = input.expires_at;\n  }\n\n  const patchResult = await supabasePatch(input.listing_id, patch);\n\n  if (patchResult.status >= 400) {\n    throw new Error(`Failed to update listing status: HTTP ${patchResult.status}`);\n  }\n\n  Sentry.addBreadcrumb({\n    message: `Status updated: listing ${input.listing_id} ${input.current_db_status} → ${input.new_status}`,\n    level: 'info',\n  });\n\n  return {\n    listing_id: input.listing_id,\n    result: 'status_updated',\n    old_status: input.current_db_status,\n    new_status: input.new_status,\n  };\n} catch (err) {\n  Sentry.captureException(err);\n  await Sentry.flush(2000);\n  throw err;\n}\n"
+      },
+      "id": "ss-0011-4001-8001-000000000011",
+      "name": "Update Listing Status",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [960, 288]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Call 'Sentry Init'",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call 'Sentry Init'": {
+      "main": [
+        [
+          {
+            "node": "Fetch Active Listings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Active Listings": {
+      "main": [
+        [
+          {
+            "node": "Split Listings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Listings": {
+      "main": [
+        [
+          {
+            "node": "Route by Marketplace",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by Marketplace": {
+      "main": [
+        [
+          {
+            "node": "OLX Status Check",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Allegro Status Check",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Unsupported Marketplace",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OLX Status Check": {
+      "main": [
+        [
+          {
+            "node": "Merge Status Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Allegro Status Check": {
+      "main": [
+        [
+          {
+            "node": "Merge Status Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Unsupported Marketplace": {
+      "main": [
+        [
+          {
+            "node": "Merge Status Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Status Result": {
+      "main": [
+        [
+          {
+            "node": "Rate Limit Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rate Limit Wait": {
+      "main": [
+        [
+          {
+            "node": "Update Listing Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Listing Status": {
+      "main": [[{ "node": "Split Listings", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "pEvMbZGHKOsqaHmK",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "marketplace-status-sync-v1",
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "instanceId": "b46d0b13d69880a2fec430102877b55af4e44991549a68a3e78cd50a4dc1a09e"
+  },
+  "id": "marketplace-status-sync-workflow",
+  "tags": []
+}

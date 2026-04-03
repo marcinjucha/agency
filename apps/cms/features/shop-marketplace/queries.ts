@@ -57,6 +57,23 @@ export async function getMarketplaceListingsByConnection(connectionId: string): 
   return (data || []).map(toMarketplaceListing)
 }
 
+/**
+ * Batch fetch listings for multiple products at once.
+ * Used in product list view to avoid N+1 per-card queries.
+ */
+export async function getMarketplaceListingsForProducts(productIds: string[]): Promise<MarketplaceListing[]> {
+  if (productIds.length === 0) return []
+  const supabase = createClient()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- shop_marketplace_listings not in generated types
+  const { data, error } = await (supabase as any)
+    .from('shop_marketplace_listings')
+    .select('id, product_id, connection_id, marketplace, status, last_sync_error')
+    .in('product_id', productIds)
+
+  if (error) throw error
+  return (data || []).map(toMarketplaceListing)
+}
+
 export async function getMarketplaceImports(connectionId: string): Promise<MarketplaceImport[]> {
   const supabase = createClient()
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- shop_marketplace_imports not in generated types
@@ -68,4 +85,22 @@ export async function getMarketplaceImports(connectionId: string): Promise<Marke
 
   if (error) throw error
   return (data || []).map(toMarketplaceImport)
+}
+
+/**
+ * Fetch a single import record by ID for progress polling.
+ * Used by the import wizard Step 3 via TanStack Query (polls every 3s).
+ */
+export async function getImportProgress(importId: string): Promise<MarketplaceImport> {
+  const supabase = createClient()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- shop_marketplace_imports not in generated types
+  const { data, error } = await (supabase as any)
+    .from('shop_marketplace_imports')
+    .select('*')
+    .eq('id', importId)
+    .maybeSingle()
+
+  if (error) throw error
+  if (!data) throw new Error('Import record not found')
+  return toMarketplaceImport(data)
 }

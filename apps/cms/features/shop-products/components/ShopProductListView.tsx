@@ -25,8 +25,10 @@ import { routes } from '@/lib/routes'
 import { formatPrice } from '../utils'
 import { StatusBadge, ListingTypeBadge } from './badges'
 import { ShopProductCard } from './ShopProductCard'
+import { MarketplaceStatusDots } from '@/features/shop-marketplace/components/MarketplaceStatusDots'
 import type { ShopProductListItem } from '../types'
 import type { ShopCategory } from '@/features/shop-categories/types'
+import type { MarketplaceListing, MarketplaceId } from '@/features/shop-marketplace/types'
 
 interface ShopProductListViewProps {
   products: ShopProductListItem[]
@@ -34,6 +36,8 @@ interface ShopProductListViewProps {
   onDelete: (id: string) => void
   deletingId: string | undefined
   viewMode: 'grid' | 'list'
+  marketplaceListings: MarketplaceListing[]
+  connectedMarketplaces: MarketplaceId[]
 }
 
 function formatDate(dateString: string | null): string {
@@ -61,6 +65,8 @@ export function ShopProductListView({
   onDelete,
   deletingId,
   viewMode,
+  marketplaceListings,
+  connectedMarketplaces,
 }: ShopProductListViewProps) {
   const router = useRouter()
   const [statusFilter, setStatusFilter] = useState<string>('all')
@@ -151,7 +157,7 @@ export function ShopProductListView({
           {messages.shop.noMatchingProducts}
         </div>
       ) : viewMode === 'grid' ? (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
           {filteredAndSorted.map((product) => (
             <ShopProductCard
               key={product.id}
@@ -159,6 +165,8 @@ export function ShopProductListView({
               categoryName={getCategoryName(product.category_id, categories)}
               onDelete={() => onDelete(product.id)}
               isDeleting={deletingId === product.id}
+              marketplaceListings={marketplaceListings.filter((l) => l.product_id === product.id)}
+              connectedMarketplaces={connectedMarketplaces}
             />
           ))}
         </div>
@@ -172,6 +180,8 @@ export function ShopProductListView({
               onNavigate={() => router.push(routes.admin.shopProduct(product.id))}
               onDelete={() => onDelete(product.id)}
               isDeleting={deletingId === product.id}
+              marketplaceListings={marketplaceListings.filter((l) => l.product_id === product.id)}
+              connectedMarketplaces={connectedMarketplaces}
             />
           ))}
         </div>
@@ -193,12 +203,16 @@ function ProductRow({
   onNavigate,
   onDelete,
   isDeleting,
+  marketplaceListings,
+  connectedMarketplaces,
 }: {
   product: ShopProductListItem
   categoryName: string
   onNavigate: () => void
   onDelete: () => void
   isDeleting: boolean
+  marketplaceListings: MarketplaceListing[]
+  connectedMarketplaces: MarketplaceId[]
 }) {
   return (
     <div
@@ -239,6 +253,16 @@ function ProductRow({
           </p>
         )}
       </div>
+
+      {/* Marketplace status dots */}
+      {connectedMarketplaces.length > 0 && (
+        <div className="hidden sm:block flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+          <MarketplaceStatusDots
+            listings={marketplaceListings}
+            connectedMarketplaces={connectedMarketplaces}
+          />
+        </div>
+      )}
 
       {/* Category */}
       <div className="hidden lg:block flex-shrink-0">

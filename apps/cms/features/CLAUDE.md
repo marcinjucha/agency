@@ -235,6 +235,10 @@ export async function getSurveys(): Promise<Tables<'surveys'>[]> {
 
 **datetime-local vs Zod .datetime() mismatch** — HTML `datetime-local` input produces `"2026-03-28T14:30"` (no seconds, no timezone) but `z.string().datetime()` requires full ISO 8601. Fix: use `z.string().min(1)` — PostgreSQL `timestamptz` handles parsing. **Why:** Pre-existing bug in generate + update survey link schemas (AAA-T-88).
 
+**Raw `<button>` lacks focus-visible ring — always use shadcn Button from `@agency/ui`** — Button guarantees `focus-visible:ring-2`. Raw `<button>` has no visible focus indicator = P0 accessibility violation (WCAG 2.4.7). **WHY:** Design review found 5 instances in AAA-T-157 where keyboard users couldn't see focus.
+
+**`aria-label` on generic `<div>` ignored by screen readers — add `role="group"` or use semantic element** — For status indicators conveyed by color alone, add `sr-only` text spans. **WHY:** MarketplaceStatusDots had no screen reader alternative for color-coded status (AAA-T-157).
+
 **Trigger payload schemas as cross-feature contract** — Each workflow trigger type (survey_submitted, booking_created, lead_scored) declares a payload schema in `lib/trigger-schemas.ts`. This schema defines what `{{variables}}` are available in email templates. Adding a new trigger = adding one payload schema → variables auto-appear in email template editor. **WHY:** Decouples triggers from email templates — no hardcoded variable lists per template type. Features communicate through schema contracts, not direct imports.
 
 ## Related Documentation

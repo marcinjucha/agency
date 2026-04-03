@@ -123,6 +123,68 @@ features:
     depends_on: ["DB Schema", "CMS Product Editor", "Shop App Scaffolding"]
     completion_notes: "28 new files. is_featured migration added to shared shop_products table. CMS product editor has prominent 'Polecane' toggle with Star icon (validation, actions, editor, sidebar, messages updated). Build passes clean (kolega + CMS). Validated: 0 blocking issues."
 
+  # Marketplace Integration — AAA-T-157
+  - name: "Marketplace Integration (OLX + Allegro)"
+    task: "AAA-T-157"
+    iteration: "marketplace"
+    size: XL
+    status: in_progress
+    description: "Bidirectional CMS ↔ marketplace sync: OAuth connections, publish flow, status sync (cron), import wizard, adapter pattern (OLX + Allegro). Per-tenant pgcrypto-encrypted OAuth tokens. 4 n8n workflows."
+    why: "Enables publishing products from CMS directly to OLX/Allegro and importing existing listings — removes manual copy-paste workflow for shop operators"
+    depends_on: ["CMS Product Editor"]
+    iterations:
+      - name: "DB Schema"
+        iteration: 1
+        size: M
+        status: done
+        completion_notes: "shop_marketplace_connections (pgcrypto BYTEA), shop_marketplace_listings (1:N product→listing, status tracking), shop_marketplace_imports (job tracking). Decrypted view (security_invoker=true), RLS, upsert_marketplace_connection() SECURITY DEFINER function."
+      - name: "CMS Foundation"
+        iteration: 2
+        size: M
+        status: done
+        completion_notes: "types.ts (MarketplaceAdapter interface, labels/options), adapters/registry.ts (MARKETPLACE_REGISTRY), queries.ts, validation.ts, actions.ts (auth guard), query-keys + routes. 3 critical type/DB mismatches caught and fixed by validator."
+      - name: "OAuth Flow"
+        iteration: 3
+        size: M
+        status: done
+        completion_notes: "API routes /api/marketplace/auth/[marketplace] + /api/marketplace/callback. JWT state (jose, HS256, 10min, CSRF). Token encryption via upsert_marketplace_connection(). connectMarketplace returns authUrl for client-side redirect."
+      - name: "Adapter Implementations"
+        iteration: 4
+        size: L
+        status: done
+        completion_notes: "adapters/olx.ts + adapters/allegro.ts — 10 methods each. Shared http.ts wrapper (AbortSignal.timeout 15s), credentials.ts (service role + decrypted view). Allegro PATCH for removeListing, Basic auth for token exchange."
+      - name: "Marketplace Settings Page"
+        iteration: 5
+        size: M
+        status: done
+        completion_notes: "Operators can connect/disconnect OLX and Allegro OAuth from /admin/shop/marketplace. MarketplaceConnectionCard, ConnectMarketplaceButton, ListingStatusBadge, FeedbackBanner. Sidebar nav entry added."
+      - name: "Publish Flow"
+        iteration: 6
+        size: L
+        status: done
+        completion_notes: "Operators can publish any product to OLX/Allegro from the product editor sidebar. MarketplacePublishPanel (CollapsibleCard), CategorySelector (search/autocomplete), LocationSelector (OLX). Server actions: publish/update/remove with n8n fire-and-forget. /api/marketplace/publish callback updates listing status. Unique index migration on (product_id, connection_id)."
+      - name: "Status Sync"
+        iteration: 7
+        size: M
+        status: done
+        completion_notes: "n8n Token Refresh workflow (cron 30 min) + Status Sync workflow (cron 15 min). update_marketplace_tokens() SECURITY DEFINER PostgreSQL function (pgcrypto). Detects sold/expired/active changes, updates shop_marketplace_listings."
+      - name: "Bidirectional Status Feedback"
+        iteration: 8
+        size: S
+        status: done
+        completion_notes: "MarketplaceStatusDots component (batch query, no N+1) shows per-marketplace icons on product list and cards. Token health indicator on ConnectionCard. Retry button in PublishPanel for error-state listings."
+      - name: "Import Wizard"
+        iteration: 9
+        size: L
+        status: done
+        completion_notes: "Operators can import existing marketplace listings as CMS products. 3-step wizard (select → preview → progress) at /admin/shop/marketplace/import. ImportPreviewTable with duplicate detection by external_listing_id. n8n Marketplace Import workflow paginates marketplace API."
+      - name: "Polish"
+        iteration: 10
+        size: S
+        status: done
+        completion_notes: "All UI strings in messages.ts (Polish). OLX listing expiry warning. Stuck import detection. P0 accessibility fixes (5), P1 visual fixes (4), code quality fixes (4). All 4 UI states covered."
+    remaining: "Manual testing (E2E flow with real OLX/Allegro API keys) — blocker for Done status"
+
   # Iteration 9 — lives in Core CMS (AAA-P-4)
   # AAA-T-141: Tenant feature flags + conditional sidebar — cross-project dependency
 
