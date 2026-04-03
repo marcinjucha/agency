@@ -2,13 +2,27 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Card, CardContent, CardHeader, Badge } from '@agency/ui'
-import { Store } from 'lucide-react'
+import { Store, AlertTriangle } from 'lucide-react'
 import { queryKeys } from '@/lib/query-keys'
 import { messages } from '@/lib/messages'
 import { disconnectMarketplace } from '../actions'
 import { MARKETPLACE_LABELS } from '../types'
 import type { MarketplaceId, MarketplaceConnection } from '../types'
 import { ConnectMarketplaceButton } from './ConnectMarketplaceButton'
+
+/** Returns true if token expires within 2 hours */
+function isTokenExpiringSoon(tokenExpiresAt: string | null): boolean {
+  if (!tokenExpiresAt) return false
+  const expiresAt = new Date(tokenExpiresAt).getTime()
+  const twoHoursFromNow = Date.now() + 2 * 60 * 60 * 1000
+  return expiresAt < twoHoursFromNow && expiresAt > Date.now()
+}
+
+/** Returns true if token is already expired */
+function isTokenExpired(tokenExpiresAt: string | null): boolean {
+  if (!tokenExpiresAt) return false
+  return new Date(tokenExpiresAt).getTime() < Date.now()
+}
 
 type MarketplaceConnectionCardProps = {
   marketplace: MarketplaceId
@@ -56,12 +70,28 @@ export function MarketplaceConnectionCard({
 
   const displayName = connection.account_name ?? label
   const isActive = connection.is_active
+  const tokenExpiringSoon = isTokenExpiringSoon(connection.token_expires_at)
+  const tokenExpired = isTokenExpired(connection.token_expires_at)
   const lastSynced = connection.last_synced_at
     ? new Intl.DateTimeFormat('pl-PL', {
         dateStyle: 'medium',
         timeStyle: 'short',
       }).format(new Date(connection.last_synced_at))
     : null
+
+  // Determine connection badge
+  let connectionBadgeClass: string
+  let connectionBadgeLabel: string
+  if (!isActive || tokenExpired) {
+    connectionBadgeClass = 'bg-destructive/10 text-destructive border-destructive/20'
+    connectionBadgeLabel = messages.marketplace.disconnected
+  } else if (tokenExpiringSoon) {
+    connectionBadgeClass = 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+    connectionBadgeLabel = messages.marketplace.tokenExpiringSoon
+  } else {
+    connectionBadgeClass = 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+    connectionBadgeLabel = messages.marketplace.active
+  }
 
   return (
     <Card>
@@ -80,22 +110,41 @@ export function MarketplaceConnectionCard({
           </div>
           <Badge
             variant="outline"
-            className={
-              isActive
-                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
-            }
+            className={connectionBadgeClass}
           >
-            {isActive ? messages.marketplace.active : messages.marketplace.inactive}
+            {connectionBadgeLabel}
           </Badge>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Token expiry warning */}
+        {isActive && tokenExpiringSoon && !tokenExpired && (
+          <div
+            role="alert"
+            className="flex items-start gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2.5"
+          >
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" aria-hidden="true" />
+            <p className="text-xs text-amber-400">{messages.marketplace.tokenExpiringSoonDescription}</p>
+          </div>
+        )}
+
+        {/* Expired token warning */}
+        {tokenExpired && (
+          <div
+            role="alert"
+            className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2.5"
+          >
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" aria-hidden="true" />
+            <p className="text-xs text-destructive">{messages.marketplace.tokenExpiredDescription}</p>
+          </div>
+        )}
+
         {lastSynced && (
           <p className="text-xs text-muted-foreground">
             {messages.marketplace.lastSync}: {lastSynced}
           </p>
         )}
+
         <button
           onClick={() => disconnect.mutate(connection.id)}
           disabled={disconnect.isPending}

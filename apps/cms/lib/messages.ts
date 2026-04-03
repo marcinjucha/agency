@@ -1171,6 +1171,13 @@ export const messages = {
     // Location selector
     locationLabel: 'Miasto',
     locationPlaceholder: 'np. Wrocław',
+    // Connection health
+    disconnected: 'Rozłączono',
+    tokenExpiringSoon: 'Token wygasa wkrótce',
+    tokenExpiringSoonDescription: 'Token autoryzacji wygaśnie w ciągu 2 godzin. Rozłącz i połącz ponownie, aby odświeżyć.',
+    tokenExpiredDescription: 'Token autoryzacji wygasł. Rozłącz i połącz ponownie, aby kontynuować.',
+    // Error retry
+    retryPublish: 'Spróbuj ponownie',
   },
 
   validation: {

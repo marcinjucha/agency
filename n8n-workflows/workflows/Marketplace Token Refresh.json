@@ -1,0 +1,337 @@
+{
+  "name": "Marketplace Token Refresh",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "*/30 * * * *"
+            }
+          ]
+        }
+      },
+      "id": "tr-0001-4001-8001-000000000001",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [-800, 288]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "kXK1WDkFCo7AsBSs",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/kXK1WDkFCo7AsBSs",
+          "cachedResultName": "Sentry Init"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [-592, 288],
+      "id": "tr-0002-4001-8001-000000000002",
+      "name": "Call 'Sentry Init'"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Fetch marketplace connections whose tokens expire within 1 hour.\n// Uses shop_marketplace_connections_decrypted view to get plaintext tokens.\n// Filters: is_active=true AND token_expires_at < now() + 1 hour.\n\nconst Sentry = require('@sentry/node');\nconst https = require('https');\n\nconst SUPABASE_URL = $env.SUPABASE_URL;\nconst SUPABASE_KEY = $env.SUPABASE_SERVICE_ROLE_KEY;\n\n// Timestamp: now + 1 hour (ISO 8601)\nconst expiryThreshold = new Date(Date.now() + 60 * 60 * 1000).toISOString();\n\nasync function supabaseGet(table, queryParams) {\n  const params = new URLSearchParams(queryParams);\n  const url = `${SUPABASE_URL}/rest/v1/${table}?${params.toString()}`;\n\n  return new Promise((resolve, reject) => {\n    const req = https.request(url, {\n      method: 'GET',\n      headers: {\n        'apikey': SUPABASE_KEY,\n        'Authorization': `Bearer ${SUPABASE_KEY}`,\n        'Content-Type': 'application/json',\n      }\n    }, (res) => {\n      let body = '';\n      res.on('data', (chunk) => body += chunk);\n      res.on('end', () => {\n        try { resolve(JSON.parse(body)); } catch (e) { reject(new Error(`Parse error: ${body}`)); }\n      });\n    });\n    req.on('error', reject);\n    req.end();\n  });\n}\n\ntry {\n  // Use decrypted view to get plaintext tokens for refresh\n  const connections = await supabaseGet('shop_marketplace_connections_decrypted', {\n    select: 'id,marketplace,account_id,access_token,refresh_token,token_expires_at',\n    is_active: 'eq.true',\n    token_expires_at: `lt.${expiryThreshold}`,\n  });\n\n  if (!Array.isArray(connections)) {\n    throw new Error(`Unexpected response: ${JSON.stringify(connections)}`);\n  }\n\n  Sentry.addBreadcrumb({\n    message: `Token refresh: found ${connections.length} expiring connection(s)`,\n    level: 'info',\n  });\n\n  if (connections.length === 0) {\n    return [];\n  }\n\n  // Return one item per connection for SplitInBatches\n  return connections.map((conn) => ({\n    connection_id: conn.id,\n    marketplace: conn.marketplace,\n    account_id: conn.account_id || null,\n    access_token: conn.access_token,\n    refresh_token: conn.refresh_token || null,\n    token_expires_at: conn.token_expires_at,\n  }));\n} catch (err) {\n  Sentry.captureException(err);\n  await Sentry.flush(2000);\n  throw err;\n}\n"
+      },
+      "id": "tr-0003-4001-8001-000000000003",
+      "name": "Fetch Expiring Connections",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-384, 288]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "tr-0004-4001-8001-000000000004",
+      "name": "Split Connections",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [-160, 288]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.marketplace }}",
+                    "rightValue": "olx",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "tr-switch-olx"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.marketplace }}",
+                    "rightValue": "allegro",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "tr-switch-allegro"
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "id": "tr-0005-4001-8001-000000000005",
+      "name": "Route by Marketplace",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [64, 288]
+    },
+    {
+      "parameters": {
+        "jsCode": "// OLX token refresh.\n// OLX token endpoint: https://www.olx.pl/api/open/oauth/token\n// Credentials sent in POST body (not Basic auth).\n// Sandbox: OLX_USE_SANDBOX=true → https://www-sandbox.olx.pl/api/open/oauth/token\n\nconst Sentry = require('@sentry/node');\nconst https = require('https');\n\nconst input = $input.first().json;\n\nconst isSandbox = $env.OLX_USE_SANDBOX === 'true';\nconst OLX_TOKEN_URL = isSandbox\n  ? 'https://www-sandbox.olx.pl/api/open/oauth/token'\n  : 'https://www.olx.pl/api/open/oauth/token';\n\nif (!input.refresh_token) {\n  throw new Error(`OLX connection ${input.connection_id} has no refresh token — cannot refresh`);\n}\n\nconst body = new URLSearchParams({\n  grant_type: 'refresh_token',\n  client_id: $env.OLX_CLIENT_ID,\n  client_secret: $env.OLX_CLIENT_SECRET,\n  refresh_token: input.refresh_token,\n}).toString();\n\nasync function postFormUrl(url, body) {\n  return new Promise((resolve, reject) => {\n    const options = {\n      method: 'POST',\n      headers: {\n        'Content-Type': 'application/x-www-form-urlencoded',\n        'Content-Length': Buffer.byteLength(body),\n      },\n    };\n    const req = https.request(url, options, (res) => {\n      let data = '';\n      res.on('data', (chunk) => data += chunk);\n      res.on('end', () => {\n        try {\n          resolve({ status: res.statusCode, body: JSON.parse(data) });\n        } catch (e) {\n          resolve({ status: res.statusCode, body: data });\n        }\n      });\n    });\n    req.on('error', reject);\n    req.write(body);\n    req.end();\n  });\n}\n\ntry {\n  const result = await postFormUrl(OLX_TOKEN_URL, body);\n\n  if (result.status >= 400 || !result.body.access_token) {\n    throw new Error(`OLX token refresh failed: HTTP ${result.status} — ${JSON.stringify(result.body)}`);\n  }\n\n  const expiresAt = new Date(\n    Date.now() + (result.body.expires_in || 3600) * 1000\n  ).toISOString();\n\n  Sentry.addBreadcrumb({\n    message: `OLX token refreshed for connection ${input.connection_id}`,\n    level: 'info',\n  });\n\n  return {\n    connection_id: input.connection_id,\n    marketplace: 'olx',\n    new_access_token: result.body.access_token,\n    new_refresh_token: result.body.refresh_token || input.refresh_token,\n    new_expires_at: expiresAt,\n  };\n} catch (err) {\n  Sentry.captureException(err);\n  await Sentry.flush(2000);\n  return {\n    connection_id: input.connection_id,\n    marketplace: 'olx',\n    refresh_error: err.message,\n  };\n}\n"
+      },
+      "id": "tr-0006-4001-8001-000000000006",
+      "name": "OLX Refresh Token",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [288, 80],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Allegro token refresh.\n// Allegro token endpoint: https://allegro.pl/auth/oauth/token\n// Uses Basic auth (base64 client_id:client_secret).\n// Sandbox: ALLEGRO_USE_SANDBOX=true → https://allegro.pl.allegrosandbox.pl/auth/oauth/token\n\nconst Sentry = require('@sentry/node');\nconst https = require('https');\n\nconst input = $input.first().json;\n\nconst isSandbox = $env.ALLEGRO_USE_SANDBOX === 'true';\nconst ALLEGRO_TOKEN_URL = isSandbox\n  ? 'https://allegro.pl.allegrosandbox.pl/auth/oauth/token'\n  : 'https://allegro.pl/auth/oauth/token';\n\nif (!input.refresh_token) {\n  throw new Error(`Allegro connection ${input.connection_id} has no refresh token — cannot refresh`);\n}\n\nconst body = new URLSearchParams({\n  grant_type: 'refresh_token',\n  refresh_token: input.refresh_token,\n}).toString();\n\n// Allegro uses Basic auth: base64(client_id:client_secret)\nconst basicAuth = Buffer.from(\n  `${$env.ALLEGRO_CLIENT_ID}:${$env.ALLEGRO_CLIENT_SECRET}`\n).toString('base64');\n\nasync function postFormUrl(url, body, authHeader) {\n  return new Promise((resolve, reject) => {\n    const options = {\n      method: 'POST',\n      headers: {\n        'Content-Type': 'application/x-www-form-urlencoded',\n        'Content-Length': Buffer.byteLength(body),\n        'Authorization': authHeader,\n      },\n    };\n    const req = https.request(url, options, (res) => {\n      let data = '';\n      res.on('data', (chunk) => data += chunk);\n      res.on('end', () => {\n        try {\n          resolve({ status: res.statusCode, body: JSON.parse(data) });\n        } catch (e) {\n          resolve({ status: res.statusCode, body: data });\n        }\n      });\n    });\n    req.on('error', reject);\n    req.write(body);\n    req.end();\n  });\n}\n\ntry {\n  const result = await postFormUrl(ALLEGRO_TOKEN_URL, body, `Basic ${basicAuth}`);\n\n  if (result.status >= 400 || !result.body.access_token) {\n    throw new Error(`Allegro token refresh failed: HTTP ${result.status} — ${JSON.stringify(result.body)}`);\n  }\n\n  const expiresAt = new Date(\n    Date.now() + (result.body.expires_in || 43200) * 1000\n  ).toISOString();\n\n  Sentry.addBreadcrumb({\n    message: `Allegro token refreshed for connection ${input.connection_id}`,\n    level: 'info',\n  });\n\n  return {\n    connection_id: input.connection_id,\n    marketplace: 'allegro',\n    new_access_token: result.body.access_token,\n    new_refresh_token: result.body.refresh_token || input.refresh_token,\n    new_expires_at: expiresAt,\n  };\n} catch (err) {\n  Sentry.captureException(err);\n  await Sentry.flush(2000);\n  return {\n    connection_id: input.connection_id,\n    marketplace: 'allegro',\n    refresh_error: err.message,\n  };\n}\n"
+      },
+      "id": "tr-0007-4001-8001-000000000007",
+      "name": "Allegro Refresh Token",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [288, 480],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Unsupported marketplace — log and skip.\nconst Sentry = require('@sentry/node');\nconst input = $input.first().json;\nconst msg = `Token refresh skipped: unsupported marketplace '${input.marketplace}' for connection ${input.connection_id}`;\nSentry.captureException(new Error(msg));\nawait Sentry.flush(2000);\nreturn { connection_id: input.connection_id, marketplace: input.marketplace, refresh_error: msg };\n"
+      },
+      "id": "tr-0008-4001-8001-000000000008",
+      "name": "Unsupported Marketplace",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [288, 688]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Merge refresh results from OLX and Allegro branches.\n// Passes through whichever branch produced output.\nconst branches = ['OLX Refresh Token', 'Allegro Refresh Token', 'Unsupported Marketplace'];\nlet result = null;\nfor (const branch of branches) {\n  try {\n    const items = $(branch).all();\n    if (items.length > 0) { result = items[0].json; break; }\n  } catch (e) { /* branch not executed */ }\n}\nif (!result) throw new Error('No marketplace refresh branch produced output');\nreturn result;\n"
+      },
+      "id": "tr-0009-4001-8001-000000000009",
+      "name": "Merge Refresh Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [512, 288]
+    },
+    {
+      "parameters": {
+        "amount": 200,
+        "unit": "milliseconds"
+      },
+      "id": "tr-0010-4001-8001-000000000010",
+      "name": "Rate Limit Wait",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [736, 288]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Persist refreshed tokens via upsert_marketplace_connection RPC.\n// The SECURITY DEFINER RPC handles pgcrypto encryption (pgp_sym_encrypt).\n// On refresh failure, mark connection as is_active=false to prevent retry loops.\n\nconst Sentry = require('@sentry/node');\nconst https = require('https');\n\nconst SUPABASE_URL = $env.SUPABASE_URL;\nconst SUPABASE_KEY = $env.SUPABASE_SERVICE_ROLE_KEY;\n\nconst input = $input.first().json;\n\nasync function supabaseRequest(method, path, body) {\n  const url = `${SUPABASE_URL}${path}`;\n  const bodyStr = body ? JSON.stringify(body) : null;\n\n  return new Promise((resolve, reject) => {\n    const options = {\n      method,\n      headers: {\n        'apikey': SUPABASE_KEY,\n        'Authorization': `Bearer ${SUPABASE_KEY}`,\n        'Content-Type': 'application/json',\n        'Prefer': 'return=representation',\n      },\n    };\n    const req = https.request(url, options, (res) => {\n      let data = '';\n      res.on('data', (chunk) => data += chunk);\n      res.on('end', () => {\n        try { resolve({ status: res.statusCode, body: JSON.parse(data) }); }\n        catch (e) { resolve({ status: res.statusCode, body: data }); }\n      });\n    });\n    req.on('error', reject);\n    if (bodyStr) req.write(bodyStr);\n    req.end();\n  });\n}\n\ntry {\n  if (input.refresh_error) {\n    // Refresh failed — deactivate connection to prevent retry loops\n    Sentry.captureException(new Error(`[Token Refresh] Failed for ${input.marketplace} connection ${input.connection_id}: ${input.refresh_error}`));\n\n    const deactivateResult = await supabaseRequest(\n      'PATCH',\n      `/rest/v1/shop_marketplace_connections?id=eq.${input.connection_id}`,\n      { is_active: false }\n    );\n\n    if (deactivateResult.status >= 400) {\n      throw new Error(`Failed to deactivate connection: HTTP ${deactivateResult.status}`);\n    }\n\n    await Sentry.flush(2000);\n    return {\n      connection_id: input.connection_id,\n      marketplace: input.marketplace,\n      result: 'deactivated',\n      reason: input.refresh_error,\n    };\n  }\n\n  // Call update_marketplace_tokens RPC (handles encryption internally)\n  const rpcResult = await supabaseRequest(\n    'POST',\n    '/rest/v1/rpc/update_marketplace_tokens',\n    {\n      p_connection_id: input.connection_id,\n      p_access_token: input.new_access_token,\n      p_refresh_token: input.new_refresh_token,\n      p_token_expires_at: input.new_expires_at,\n    }\n  );\n\n  if (rpcResult.status >= 400) {\n    throw new Error(`update_marketplace_tokens RPC failed: HTTP ${rpcResult.status} — ${JSON.stringify(rpcResult.body)}`);\n  }\n\n  Sentry.addBreadcrumb({\n    message: `Tokens persisted for ${input.marketplace} connection ${input.connection_id}`,\n    level: 'info',\n  });\n\n  return {\n    connection_id: input.connection_id,\n    marketplace: input.marketplace,\n    result: 'refreshed',\n    new_expires_at: input.new_expires_at,\n  };\n} catch (err) {\n  Sentry.captureException(err);\n  await Sentry.flush(2000);\n  throw err;\n}\n"
+      },
+      "id": "tr-0011-4001-8001-000000000011",
+      "name": "Persist Refreshed Tokens",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [960, 288]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Call 'Sentry Init'",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call 'Sentry Init'": {
+      "main": [
+        [
+          {
+            "node": "Fetch Expiring Connections",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Expiring Connections": {
+      "main": [
+        [
+          {
+            "node": "Split Connections",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Connections": {
+      "main": [
+        [
+          {
+            "node": "Route by Marketplace",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by Marketplace": {
+      "main": [
+        [
+          {
+            "node": "OLX Refresh Token",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Allegro Refresh Token",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Unsupported Marketplace",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OLX Refresh Token": {
+      "main": [
+        [
+          {
+            "node": "Merge Refresh Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Allegro Refresh Token": {
+      "main": [
+        [
+          {
+            "node": "Merge Refresh Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Unsupported Marketplace": {
+      "main": [
+        [
+          {
+            "node": "Merge Refresh Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Refresh Result": {
+      "main": [
+        [
+          {
+            "node": "Rate Limit Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rate Limit Wait": {
+      "main": [
+        [
+          {
+            "node": "Persist Refreshed Tokens",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Persist Refreshed Tokens": {
+      "main": [[{ "node": "Split Connections", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "pEvMbZGHKOsqaHmK",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "marketplace-token-refresh-v1",
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "instanceId": "b46d0b13d69880a2fec430102877b55af4e44991549a68a3e78cd50a4dc1a09e"
+  },
+  "id": "marketplace-token-refresh-workflow",
+  "tags": []
+}

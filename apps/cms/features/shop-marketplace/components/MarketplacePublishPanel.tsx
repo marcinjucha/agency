@@ -283,11 +283,32 @@ function MarketplaceSection({
         </AlertDialog>
       )}
 
-      {/* Error state on listing */}
+      {/* Error state on listing — show error detail + retry action */}
       {listing?.status === 'error' && listing.last_sync_error && (
-        <p className="text-xs text-destructive" role="alert">
-          {listing.last_sync_error}
-        </p>
+        <div className="space-y-2">
+          <div
+            className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2.5"
+            role="alert"
+          >
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" aria-hidden="true" />
+            <p className="text-xs text-destructive break-words">{listing.last_sync_error}</p>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handlePublish}
+            disabled={isMutating}
+            className="h-7 gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+            aria-label={`Spróbuj ponownie opublikować na ${label}`}
+          >
+            {publishPending ? (
+              <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
+            ) : (
+              <RefreshCw className="h-3 w-3" aria-hidden="true" />
+            )}
+            {messages.marketplace.retryPublish}
+          </Button>
+        </div>
       )}
     </div>
   )

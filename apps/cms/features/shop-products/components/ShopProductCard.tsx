@@ -20,16 +20,20 @@ import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
 import { formatPrice } from '../utils'
 import { StatusBadge, ListingTypeBadge } from './badges'
+import { MarketplaceStatusDots } from '@/features/shop-marketplace/components/MarketplaceStatusDots'
 import type { ShopProductListItem } from '../types'
+import type { MarketplaceListing, MarketplaceId } from '@/features/shop-marketplace/types'
 
 interface ShopProductCardProps {
   product: ShopProductListItem
   categoryName: string
   onDelete: () => void
   isDeleting: boolean
+  marketplaceListings: MarketplaceListing[]
+  connectedMarketplaces: MarketplaceId[]
 }
 
-export function ShopProductCard({ product, categoryName, onDelete, isDeleting }: ShopProductCardProps) {
+export function ShopProductCard({ product, categoryName, onDelete, isDeleting, marketplaceListings, connectedMarketplaces }: ShopProductCardProps) {
   const router = useRouter()
 
   return (
@@ -127,6 +131,16 @@ export function ShopProductCard({ product, categoryName, onDelete, isDeleting }:
           <ListingTypeBadge listingType={product.listing_type} />
           <StatusBadge isPublished={product.is_published} />
         </div>
+
+        {/* Marketplace status dots */}
+        {connectedMarketplaces.length > 0 && (
+          <div onClick={(e) => e.stopPropagation()}>
+            <MarketplaceStatusDots
+              listings={marketplaceListings}
+              connectedMarketplaces={connectedMarketplaces}
+            />
+          </div>
+        )}
       </CardContent>
     </Card>
   )
