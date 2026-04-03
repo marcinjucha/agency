@@ -38,6 +38,14 @@ export interface LinkValidation {
 
 
 /**
+ * Calendar time slot returned from /api/calendar/slots
+ */
+export interface CalendarSlot {
+  start: string // ISO 8601 datetime
+  end: string // ISO 8601 datetime
+}
+
+/**
  * Survey submission result
  * Returned from submitSurvey mutation
  */
