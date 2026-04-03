@@ -98,7 +98,12 @@ export function ImportPreviewTable({
       </div>
 
       {/* Table */}
-      <div className="overflow-hidden rounded-md border border-border">
+      <div
+        className="overflow-x-auto rounded-md border border-border"
+        tabIndex={0}
+        role="region"
+        aria-label="Tabela ogłoszeń do importu"
+      >
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-muted/30">
@@ -182,7 +187,9 @@ export function ImportPreviewTable({
                     </span>
                   </td>
 
-                  {/* Status — hidden on mobile */}
+                  {/* Status — hidden on mobile.
+                      Always "Aktywne" because marketplace APIs (OLX/Allegro)
+                      only return live listings in their import endpoints. */}
                   <td className="hidden px-4 py-3 sm:table-cell">
                     <Badge
                       variant="outline"

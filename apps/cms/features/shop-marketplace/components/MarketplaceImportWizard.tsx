@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Card, CardContent, Badge, Button, Progress, LoadingState } from '@agency/ui'
-import { Store, CheckCircle2, AlertTriangle, ChevronRight, ChevronLeft } from 'lucide-react'
+import { Store, CheckCircle2, AlertTriangle, ChevronRight, ChevronLeft, Loader2 } from 'lucide-react'
 import { messages, templates } from '@/lib/messages'
 import { differenceInMinutes } from 'date-fns'
 import { routes } from '@/lib/routes'
@@ -28,7 +28,7 @@ type StepIndicatorProps = {
 
 function StepIndicator({ steps, currentStep }: StepIndicatorProps) {
   return (
-    <nav aria-label="Kroki importu">
+    <nav aria-label="Kroki importu" aria-live="polite">
       <ol className="flex items-center gap-0">
         {steps.map((step, index) => {
           const stepNumber = index + 1
@@ -75,7 +75,7 @@ function StepIndicator({ steps, currentStep }: StepIndicatorProps) {
               {!isLast && (
                 <div
                   className={[
-                    'mb-5 h-px w-16 transition-colors sm:w-24',
+                    'self-start mt-4 h-px w-16 transition-colors sm:w-24',
                     index + 1 < currentStep ? 'bg-emerald-500' : 'bg-border',
                   ].join(' ')}
                   aria-hidden="true"
@@ -99,10 +99,16 @@ type Step1Props = {
 }
 
 function Step1MarketplaceSelect({ connections, selectedConnectionId, onSelect, onNext }: Step1Props) {
+  const headingRef = useRef<HTMLHeadingElement>(null)
+
+  useEffect(() => {
+    headingRef.current?.focus()
+  }, [])
+
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-semibold text-foreground">
+        <h2 ref={headingRef} tabIndex={-1} className="text-lg font-semibold text-foreground outline-none">
           {messages.marketplace.importStep1Title}
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -221,6 +227,7 @@ type Step2Props = {
 }
 
 function Step2ListingPreview({ connectionId, onBack, onImport, isImporting }: Step2Props) {
+  const headingRef = useRef<HTMLHeadingElement>(null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [listingsData, setListingsData] = useState<{
     listings: ImportPreviewListing[]
@@ -228,6 +235,10 @@ function Step2ListingPreview({ connectionId, onBack, onImport, isImporting }: St
   } | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    headingRef.current?.focus()
+  }, [])
 
   // Fetch listings on mount — Server Action called directly (not TanStack Query)
   // WHY: getImportPreviewListings is a Server Action (not a browser query function).
@@ -290,7 +301,7 @@ function Step2ListingPreview({ connectionId, onBack, onImport, isImporting }: St
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-semibold text-foreground">
+        <h2 ref={headingRef} tabIndex={-1} className="text-lg font-semibold text-foreground outline-none">
           {messages.marketplace.importStep2Title}
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -334,6 +345,11 @@ type Step3Props = {
 
 function Step3Progress({ importId }: Step3Props) {
   const router = useRouter()
+  const headingRef = useRef<HTMLHeadingElement>(null)
+
+  useEffect(() => {
+    headingRef.current?.focus()
+  }, [])
 
   const { data: importRecord } = useQuery({
     queryKey: queryKeys.marketplace.importProgress(importId),
@@ -370,7 +386,7 @@ function Step3Progress({ importId }: Step3Props) {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-semibold text-foreground">
+        <h2 ref={headingRef} tabIndex={-1} className="text-lg font-semibold text-foreground outline-none">
           {messages.marketplace.importStep3Title}
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -449,7 +465,7 @@ function Step3Progress({ importId }: Step3Props) {
           {/* Pending spinner */}
           {(status === 'pending' || status === 'running') && (
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" aria-hidden="true" />
+              <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
               {messages.marketplace.importSyncing}
             </div>
           )}
@@ -493,9 +509,9 @@ type MarketplaceImportWizardProps = {
 }
 
 const STEPS = [
-  { label: 'Marketplace' },
-  { label: 'Ogłoszenia' },
-  { label: 'Import' },
+  { label: messages.marketplace.importStepMarketplace },
+  { label: messages.marketplace.importStepListings },
+  { label: messages.marketplace.importStepImport },
 ]
 
 export function MarketplaceImportWizard({ connections }: MarketplaceImportWizardProps) {
@@ -510,15 +526,13 @@ export function MarketplaceImportWizard({ connections }: MarketplaceImportWizard
         { connectionId },
         listingIds
       )
-      if (!result.success) throw new Error(result.error ?? messages.common.unknownError)
+      if (!result.success) throw new Error(result.error)
       return result
     },
     onSuccess: (result) => {
-      if (result.importId) {
-        setImportId(result.importId)
-        setStep(3)
-        queryClient.invalidateQueries({ queryKey: queryKeys.marketplace.all })
-      }
+      setImportId(result.data.importId)
+      setStep(3)
+      queryClient.invalidateQueries({ queryKey: queryKeys.marketplace.all })
     },
   })
 

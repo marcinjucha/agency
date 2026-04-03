@@ -203,14 +203,15 @@ function MarketplaceSection({
                 <p className="text-sm text-amber-400">
                   {templates.marketplace.olxExpiryDays(daysUntilExpiry)}
                 </p>
-                <button
-                  type="button"
+                <Button
+                  variant="link"
+                  size="sm"
                   onClick={handleUpdate}
                   disabled={isMutating}
-                  className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-400 underline underline-offset-2 hover:text-amber-300 disabled:opacity-50"
+                  className="h-auto p-0 text-xs font-medium text-amber-400 hover:text-amber-300"
                 >
                   {messages.marketplace.update}
-                </button>
+                </Button>
               </div>
             </div>
           )
@@ -285,10 +286,11 @@ function MarketplaceSection({
       {connection.is_active && listing && listing.status !== 'removed' && !isPublishing && (
         <AlertDialog>
           <AlertDialogTrigger asChild>
-            <button
-              type="button"
+            <Button
+              variant="ghost"
+              size="sm"
               disabled={isMutating}
-              className="inline-flex items-center gap-1.5 text-sm font-medium text-destructive transition-colors hover:text-destructive/80 disabled:opacity-50"
+              className="gap-1.5 text-destructive hover:text-destructive/80"
               aria-label={`Usuń ogłoszenie z ${label}`}
             >
               {removePending === listing.id ? (
@@ -297,7 +299,7 @@ function MarketplaceSection({
                 <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
               )}
               {removePending === listing.id ? messages.marketplace.removingListing : messages.marketplace.removeListing}
-            </button>
+            </Button>
           </AlertDialogTrigger>
           <AlertDialogContent>
             <AlertDialogHeader>
@@ -491,7 +493,7 @@ export function MarketplacePublishPanel({ productId }: MarketplacePublishPanelPr
   const isError = connectionsError || (!!productId && listingsError)
 
   return (
-    <CollapsibleCard title="Marketplace" defaultOpen={false}>
+    <CollapsibleCard title={messages.marketplace.panelTitle} defaultOpen={false}>
       <div className="space-y-5">
         {/* New product — save first */}
         {!productId && (
@@ -519,17 +521,17 @@ export function MarketplacePublishPanel({ productId }: MarketplacePublishPanelPr
           <div className="flex flex-col items-center gap-3 py-4 text-center">
             <AlertCircle className="h-5 w-5 text-destructive" aria-hidden="true" />
             <p className="text-sm text-destructive">{messages.marketplace.loadingFailed}</p>
-            <button
-              type="button"
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => {
                 void refetchConnections()
                 if (productId) void refetchListings()
               }}
-              className="text-sm font-medium text-foreground underline-offset-2 hover:underline"
               aria-label="Ponów ładowanie marketplace"
             >
               {messages.marketplace.retryLoad}
-            </button>
+            </Button>
           </div>
         )}
 

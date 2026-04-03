@@ -1234,6 +1234,14 @@ export const messages = {
     olxExpiryWarning: 'Ogłoszenie OLX wygaśnie wkrótce. Zaktualizuj ogłoszenie, aby je odświeżyć.',
     // Sold listing badge (shown when listing.status === 'sold' and no form is shown)
     listingStatusSold: 'Sprzedano',
+    // Import wizard step labels
+    importStepMarketplace: 'Marketplace',
+    importStepListings: 'Ogłoszenia',
+    importStepImport: 'Import',
+    // Publish panel
+    panelTitle: 'Marketplace',
+    // Status dots — no listing fallback
+    noListing: 'Brak ogłoszenia',
   },
 
   validation: {

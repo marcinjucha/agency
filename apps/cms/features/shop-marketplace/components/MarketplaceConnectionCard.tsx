@@ -1,7 +1,22 @@
 'use client'
 
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Card, CardContent, CardHeader, Badge } from '@agency/ui'
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  Badge,
+  Button,
+  AlertDialog,
+  AlertDialogTrigger,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogFooter,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from '@agency/ui'
 import { Store, AlertTriangle } from 'lucide-react'
 import { queryKeys } from '@/lib/query-keys'
 import { messages } from '@/lib/messages'
@@ -145,14 +160,38 @@ export function MarketplaceConnectionCard({
           </p>
         )}
 
-        <button
-          onClick={() => disconnect.mutate(connection.id)}
-          disabled={disconnect.isPending}
-          className="text-sm font-medium text-destructive hover:text-destructive/80 transition-colors disabled:opacity-50"
-          aria-label={`${messages.marketplace.disconnectButton} ${label}`}
-        >
-          {disconnect.isPending ? messages.common.loading : messages.marketplace.disconnectButton}
-        </button>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={disconnect.isPending}
+              className="text-destructive hover:text-destructive/80"
+              aria-label={`${messages.marketplace.disconnectButton} ${label}`}
+            >
+              {disconnect.isPending ? messages.common.loading : messages.marketplace.disconnectButton}
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                {messages.marketplace.disconnectButton} {label}
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                {`Czy na pewno chcesz odłączyć ${label}? Wszystkie opublikowane ogłoszenia pozostaną aktywne.`}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>{messages.common.cancel}</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => disconnect.mutate(connection.id)}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {messages.marketplace.disconnectButton}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
         {disconnect.error && (
           <p className="text-xs text-destructive" role="alert">
             {disconnect.error instanceof Error ? disconnect.error.message : messages.common.unknownError}

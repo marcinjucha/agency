@@ -322,7 +322,7 @@ export async function removeMarketplaceListing(
 export async function startMarketplaceImport(
   data: CreateImportFormData,
   selectedListingIds: string[]
-): Promise<{ success: boolean; importId?: string; error?: string }> {
+): Promise<{ success: true; data: { importId: string } } | { success: false; error: string }> {
   try {
     const auth = await getUserWithTenant()
     if (isAuthError(auth)) return { success: false, error: auth.error }
@@ -380,7 +380,7 @@ export async function startMarketplaceImport(
     })
 
     revalidatePath(routes.admin.shopMarketplace)
-    return { success: true, importId: importRecord.id }
+    return { success: true, data: { importId: importRecord.id } }
   } catch (err) {
     const message = err instanceof Error ? err.message : messages.common.unknownError
     return { success: false, error: message }
