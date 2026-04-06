@@ -145,6 +145,9 @@ export function UserList() {
               <TableRow className="hover:bg-transparent">
                 <TableHead className="text-xs font-medium uppercase tracking-wider">{messages.users.fullName}</TableHead>
                 <TableHead className="text-xs font-medium uppercase tracking-wider">{messages.users.email}</TableHead>
+                {viewerIsSuperAdmin && (
+                  <TableHead className="text-xs font-medium uppercase tracking-wider whitespace-nowrap hidden md:table-cell">Tenant</TableHead>
+                )}
                 <TableHead className="text-xs font-medium uppercase tracking-wider whitespace-nowrap">{messages.users.role}</TableHead>
                 <TableHead className="text-xs font-medium uppercase tracking-wider whitespace-nowrap hidden lg:table-cell">{messages.users.createdAt}</TableHead>
                 <TableHead />
@@ -233,6 +236,13 @@ function UserRow({
       <TableCell className="hidden sm:table-cell">
         <p className="text-sm text-muted-foreground truncate">{user.email}</p>
       </TableCell>
+
+      {/* Tenant — super admin only */}
+      {viewerIsSuperAdmin && (
+        <TableCell className="hidden md:table-cell whitespace-nowrap">
+          <span className="text-sm text-muted-foreground">{user.tenant?.name ?? '\u2014'}</span>
+        </TableCell>
+      )}
 
       {/* Role — colored badge by role type */}
       <TableCell className="whitespace-nowrap">

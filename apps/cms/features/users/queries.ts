@@ -22,6 +22,10 @@ export async function getUsers(): Promise<UserWithRole[]> {
       is_super_admin,
       created_at,
       updated_at,
+      tenants (
+        id,
+        name
+      ),
       user_roles (
         role_id,
         tenant_roles (
@@ -65,6 +69,7 @@ type RawUserRow = {
   is_super_admin: boolean
   created_at: string
   updated_at: string
+  tenants: { id: string; name: string } | null
   user_roles: {
     role_id: string
     tenant_roles: { id: string; name: string } | null
@@ -82,5 +87,6 @@ function transformUserRow(row: RawUserRow): UserWithRole {
     created_at: row.created_at,
     updated_at: row.updated_at,
     tenant_role: userRole?.tenant_roles ?? null,
+    tenant: row.tenants ?? null,
   }
 }

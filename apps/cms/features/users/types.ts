@@ -17,6 +17,10 @@ export type UserWithRole = {
     id: string
     name: string
   } | null
+  tenant: {
+    id: string
+    name: string
+  } | null
 }
 
 export type TenantRole = {
