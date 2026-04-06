@@ -205,7 +205,7 @@ function RoleRow({
 
       {/* User count */}
       <TableCell className="text-center whitespace-nowrap">
-        <Badge variant="outline" className="text-xs">
+        <Badge variant="outline" className="text-">
           {role.user_count}
         </Badge>
       </TableCell>

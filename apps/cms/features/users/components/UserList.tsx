@@ -104,7 +104,11 @@ export function UserList() {
     )
   }
 
-  const hasUsers = users && users.length > 0
+  // Non-super-admins should not see super admin users in the list
+  const visibleUsers = viewerIsSuperAdmin
+    ? users
+    : users?.filter((u) => !u.is_super_admin)
+  const hasUsers = visibleUsers && visibleUsers.length > 0
 
   return (
     <div className="space-y-6">
@@ -147,7 +151,7 @@ export function UserList() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {users.map((user) => (
+              {visibleUsers!.map((user) => (
                 <UserRow
                   key={user.id}
                   user={user}
