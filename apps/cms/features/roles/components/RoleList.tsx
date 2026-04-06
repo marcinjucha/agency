@@ -221,7 +221,7 @@ function RoleRow({
       {/* Permission count */}
       <div className="w-28 text-center">
         <span className="text-xs text-muted-foreground">
-          {messages.roles.permissionCount(role.permissions.length)}
+          {messages.roles.permissionCount((role.permissions ?? []).length)}
         </span>
       </div>
 
