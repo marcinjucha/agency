@@ -89,10 +89,46 @@ export async function deleteUser(userId: string) {
   )
 }
 
+/**
+ * Toggle super_admin status on a user.
+ * Only callable by super_admin users. Cannot toggle own status.
+ */
+export async function toggleSuperAdmin(userId: string, isSuperAdmin: boolean) {
+  const result = await authResult()
+    .andThen((auth) => {
+      if (!auth.isSuperAdmin) {
+        return errAsync(messages.users.onlySuperAdminCanToggle)
+      }
+      if (userId === auth.userId) {
+        return errAsync(messages.users.cannotToggleOwnSuperAdmin)
+      }
+      return updateSuperAdminStatus(userId, isSuperAdmin)
+    })
+
+  return result.match(
+    () => {
+      revalidatePath(routes.admin.users)
+      return { success: true as const }
+    },
+    (error) => ({ success: false as const, error }),
+  )
+}
+
 // --- DB helpers (feature-local) ---
 
 const dbError = (e: unknown) =>
   e instanceof Error ? e.message : messages.common.unknownError
+
+function updateSuperAdminStatus(userId: string, isSuperAdmin: boolean) {
+  return ResultAsync.fromPromise(
+    (createServiceClient() as any)
+      .from('users')
+      .update({ is_super_admin: isSuperAdmin })
+      .eq('id', userId)
+      .then(checkSupabaseError),
+    dbError,
+  )
+}
 
 function createAuthUser(email: string, password: string) {
   return ResultAsync.fromPromise(

@@ -4,6 +4,7 @@ import { createContext, useContext, type ReactNode } from 'react'
 import { hasPermission as checkPermission, type PermissionKey } from '@/lib/permissions'
 
 type PermissionsContextValue = {
+  userId: string | null
   permissions: PermissionKey[]
   isSuperAdmin: boolean
   roleName: string | null
@@ -13,6 +14,7 @@ type PermissionsContextValue = {
 const PermissionsContext = createContext<PermissionsContextValue | null>(null)
 
 type PermissionsProviderProps = {
+  userId: string | null
   permissions: PermissionKey[]
   isSuperAdmin: boolean
   roleName: string | null
@@ -20,12 +22,14 @@ type PermissionsProviderProps = {
 }
 
 export function PermissionsProvider({
+  userId,
   permissions,
   isSuperAdmin,
   roleName,
   children,
 }: PermissionsProviderProps) {
   const value: PermissionsContextValue = {
+    userId,
     permissions,
     isSuperAdmin,
     roleName,

@@ -1141,6 +1141,12 @@ export const messages = {
     hidePassword: 'Ukryj hasło',
     cannotDeleteSuperAdminTooltip: 'Super admin nie może zostać usunięty',
     superAdmin: 'Super Admin',
+    superAdminToggle: 'Super Admin',
+    superAdminDescription: 'Super admin ma dostęp do wszystkich tenantów i pełne uprawnienia systemowe',
+    superAdminToggleSuccess: 'Status super admina został zmieniony',
+    superAdminToggleFailed: 'Nie udało się zmienić statusu super admina',
+    cannotToggleOwnSuperAdmin: 'Nie możesz zmienić własnego statusu super admina',
+    onlySuperAdminCanToggle: 'Tylko super admin może zarządzać tym ustawieniem',
   },
 
   roles: {

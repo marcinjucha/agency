@@ -1,10 +1,12 @@
 'use client'
 
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '@/lib/query-keys'
-import { updateUser } from '../actions'
+import { usePermissions } from '@/contexts/permissions-context'
+import { updateUser, toggleSuperAdmin } from '../actions'
 import { getTenantRoles } from '../queries'
 import { updateUserSchema, type UpdateUserFormData } from '../validation'
 import type { UserWithRole } from '../types'
@@ -24,6 +26,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  Switch,
 } from '@agency/ui'
 
 interface EditUserDialogProps {
@@ -34,6 +37,9 @@ interface EditUserDialogProps {
 
 export function EditUserDialog({ user, open, onOpenChange }: EditUserDialogProps) {
   const queryClient = useQueryClient()
+  const { isSuperAdmin: currentUserIsSuperAdmin, userId: currentUserId } = usePermissions()
+  const [superAdminToggling, setSuperAdminToggling] = useState(false)
+  const [superAdminError, setSuperAdminError] = useState<string | null>(null)
 
   const { data: roles } = useQuery({
     queryKey: queryKeys.roles.all,
@@ -74,8 +80,24 @@ export function EditUserDialog({ user, open, onOpenChange }: EditUserDialogProps
     },
   })
 
+  const isEditingSelf = user?.id === currentUserId
+
+  async function handleSuperAdminToggle(checked: boolean) {
+    if (!user) return
+    setSuperAdminToggling(true)
+    setSuperAdminError(null)
+    const result = await toggleSuperAdmin(user.id, checked)
+    setSuperAdminToggling(false)
+    if (!result.success) {
+      setSuperAdminError(result.error)
+    } else {
+      queryClient.invalidateQueries({ queryKey: queryKeys.users.all })
+    }
+  }
+
   function handleClose() {
     reset()
+    setSuperAdminError(null)
     onOpenChange(false)
   }
 
@@ -133,6 +155,37 @@ export function EditUserDialog({ user, open, onOpenChange }: EditUserDialogProps
               </p>
             )}
           </div>
+
+          {/* Super Admin Toggle — only visible to super admins */}
+          {currentUserIsSuperAdmin && (
+            <>
+              <div className="border-t border-border" />
+              <div className="flex items-center justify-between gap-4">
+                <div className="space-y-0.5">
+                  <Label className="text-sm font-medium">{messages.users.superAdminToggle}</Label>
+                  <p className="text-xs text-muted-foreground">
+                    {messages.users.superAdminDescription}
+                  </p>
+                </div>
+                <Switch
+                  checked={user?.is_super_admin ?? false}
+                  onCheckedChange={handleSuperAdminToggle}
+                  disabled={isEditingSelf || superAdminToggling}
+                  aria-label={messages.users.superAdminToggle}
+                />
+              </div>
+              {isEditingSelf && (
+                <p className="text-xs text-muted-foreground">
+                  {messages.users.cannotToggleOwnSuperAdmin}
+                </p>
+              )}
+              {superAdminError && (
+                <p role="alert" className="text-xs text-destructive">
+                  {superAdminError}
+                </p>
+              )}
+            </>
+          )}
 
           {/* Error display */}
           {mutation.error && (

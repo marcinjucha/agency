@@ -84,11 +84,7 @@ export function RoleList() {
     return (
       <ErrorState
         title={messages.roles.loadFailed}
-        message={
-          error instanceof Error
-            ? error.message
-            : messages.common.errorOccurred
-        }
+        message={error instanceof Error ? error.message : messages.common.errorOccurred}
         onRetry={() => refetch()}
         variant="card"
       />
@@ -102,12 +98,8 @@ export function RoleList() {
       {/* Page header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">
-            {messages.roles.title}
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            {messages.roles.subtitle}
-          </p>
+          <h1 className="text-2xl font-bold text-foreground">{messages.roles.title}</h1>
+          <p className="text-sm text-muted-foreground mt-1">{messages.roles.subtitle}</p>
         </div>
         <Button onClick={handleCreate}>
           <Plus className="mr-2 h-4 w-4" />
@@ -153,11 +145,7 @@ export function RoleList() {
       )}
 
       {/* Editor dialog */}
-      <RoleEditor
-        open={editorOpen}
-        onOpenChange={setEditorOpen}
-        role={editingRole}
-      />
+      <RoleEditor open={editorOpen} onOpenChange={setEditorOpen} role={editingRole} />
     </div>
   )
 }
@@ -184,9 +172,7 @@ function RoleRow({
       {/* Name + default badge */}
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <p className="text-sm font-medium text-foreground truncate">
-            {role.name}
-          </p>
+          <p className="text-sm font-medium text-foreground truncate">{role.name}</p>
           {role.is_default && (
             <Badge
               variant="outline"
@@ -198,28 +184,24 @@ function RoleRow({
         </div>
         {/* Mobile: show description below name */}
         {role.description && (
-          <p className="text-xs text-muted-foreground truncate sm:hidden mt-0.5">
-            {role.description}
-          </p>
+          <p className="text-xs text-muted-foreground sm:hidden mt-0.5">{role.description}</p>
         )}
       </div>
 
       {/* Description — desktop only */}
       <div className="hidden md:block w-48">
-        <p className="text-sm text-muted-foreground truncate">
-          {role.description || '\u2014'}
-        </p>
+        <p className="text-sm text-muted-foreground">{role.description || '\u2014'}</p>
       </div>
 
       {/* User count */}
-      <div className="w-28 text-center">
+      <div className="w-48 text-center">
         <Badge variant="outline" className="text-xs">
           {role.user_count}
         </Badge>
       </div>
 
       {/* Permission count */}
-      <div className="w-28 text-center">
+      <div className="w-48 text-center">
         <span className="text-xs text-muted-foreground">
           {messages.roles.permissionCount((role.permissions ?? []).length)}
         </span>
@@ -255,17 +237,13 @@ function RoleRow({
                   </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
-                      <AlertDialogTitle>
-                        {messages.roles.deleteRole}
-                      </AlertDialogTitle>
+                      <AlertDialogTitle>{messages.roles.deleteRole}</AlertDialogTitle>
                       <AlertDialogDescription>
                         {messages.roles.deleteConfirm}
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                      <AlertDialogCancel>
-                        {messages.common.cancel}
-                      </AlertDialogCancel>
+                      <AlertDialogCancel>{messages.common.cancel}</AlertDialogCancel>
                       <AlertDialogAction
                         onClick={onDelete}
                         className="bg-destructive text-destructive-foreground hover:bg-destructive/90"

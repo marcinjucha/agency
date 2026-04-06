@@ -14,9 +14,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     : authResult.permissions
   const isSuperAdmin = isAuthError(authResult) ? false : authResult.isSuperAdmin
   const roleName = isAuthError(authResult) ? null : authResult.roleName
+  const userId = isAuthError(authResult) ? null : authResult.userId
 
   return (
     <PermissionsProvider
+      userId={userId}
       permissions={permissions}
       isSuperAdmin={isSuperAdmin}
       roleName={roleName}
