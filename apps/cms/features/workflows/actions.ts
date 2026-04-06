@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { getUserWithTenant, isAuthError } from '@/lib/auth'
+import { hasPermission } from '@/lib/permissions'
 import {
   createWorkflowSchema,
   updateWorkflowSchema,
@@ -31,6 +32,9 @@ export async function createWorkflow(
 
     const auth = await getUserWithTenant()
     if (isAuthError(auth)) return { success: false, error: auth.error }
+    if (!hasPermission('workflows', auth.permissions)) {
+      return { success: false, error: messages.common.noPermission }
+    }
     const { supabase, tenantId } = auth
 
     const insertPayload = {
@@ -71,6 +75,9 @@ export async function updateWorkflow(
 
     const auth = await getUserWithTenant()
     if (isAuthError(auth)) return { success: false, error: auth.error }
+    if (!hasPermission('workflows', auth.permissions)) {
+      return { success: false, error: messages.common.noPermission }
+    }
     const { supabase } = auth
 
     const updatePayload: Record<string, unknown> = {}
@@ -106,6 +113,9 @@ export async function deleteWorkflow(
   try {
     const auth = await getUserWithTenant()
     if (isAuthError(auth)) return { success: false, error: auth.error }
+    if (!hasPermission('workflows', auth.permissions)) {
+      return { success: false, error: messages.common.noPermission }
+    }
     const { supabase } = auth
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JS v2.95.2 incompatibility
@@ -131,6 +141,9 @@ export async function toggleWorkflowActive(
   try {
     const auth = await getUserWithTenant()
     if (isAuthError(auth)) return { success: false, error: auth.error }
+    if (!hasPermission('workflows', auth.permissions)) {
+      return { success: false, error: messages.common.noPermission }
+    }
     const { supabase } = auth
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JS v2.95.2 incompatibility
@@ -164,6 +177,9 @@ export async function saveWorkflowCanvas(
 
     const auth = await getUserWithTenant()
     if (isAuthError(auth)) return { success: false, error: auth.error }
+    if (!hasPermission('workflows', auth.permissions)) {
+      return { success: false, error: messages.common.noPermission }
+    }
     const { supabase } = auth
 
     // 1. Get existing step IDs for this workflow
@@ -267,6 +283,9 @@ export async function triggerManualWorkflow(
   try {
     const auth = await getUserWithTenant()
     if (isAuthError(auth)) return { success: false, error: auth.error }
+    if (!hasPermission('workflows', auth.permissions)) {
+      return { success: false, error: messages.common.noPermission }
+    }
     const { supabase, tenantId } = auth
 
     // Verify workflow belongs to user's tenant and has manual trigger
@@ -317,6 +336,9 @@ export async function createWorkflowFromTemplate(
 
     const auth = await getUserWithTenant()
     if (isAuthError(auth)) return { success: false, error: auth.error }
+    if (!hasPermission('workflows', auth.permissions)) {
+      return { success: false, error: messages.common.noPermission }
+    }
     const { supabase, tenantId } = auth
 
     // 1. Insert workflow row
@@ -395,6 +417,9 @@ export async function cancelWorkflowExecution(
   try {
     const auth = await getUserWithTenant()
     if (isAuthError(auth)) return { success: false, error: auth.error }
+    if (!hasPermission('workflows', auth.permissions)) {
+      return { success: false, error: messages.common.noPermission }
+    }
     const { tenantId } = auth
 
     const serviceClient = createServiceClient()

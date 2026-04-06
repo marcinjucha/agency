@@ -14,6 +14,7 @@ export const messages = {
     userNotFound: 'Nie znaleziono użytkownika',
     invalidData: 'Nieprawidłowe dane',
     unknownError: 'Nieznany błąd',
+    noPermission: 'Brak uprawnień do wykonania tej operacji',
     save: 'Zapisz',
     saving: 'Zapisywanie…',
     saved: 'Zapisano',

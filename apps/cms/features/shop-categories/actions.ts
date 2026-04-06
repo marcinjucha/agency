@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { getUserWithTenant, isAuthError } from '@/lib/auth'
+import { hasPermission } from '@/lib/permissions'
 import { createShopCategorySchema, updateShopCategorySchema, type CreateShopCategoryFormData } from './validation'
 import type { ShopCategory } from './types'
 import { messages } from '@/lib/messages'
@@ -20,6 +21,9 @@ export async function createShopCategory(
 
     const auth = await getUserWithTenant()
     if (isAuthError(auth)) return { success: false, error: auth.error }
+    if (!hasPermission('shop.categories', auth.permissions)) {
+      return { success: false, error: messages.common.noPermission }
+    }
     const { supabase, tenantId } = auth
 
     const insertPayload = {
@@ -59,6 +63,9 @@ export async function updateShopCategory(
 
     const auth = await getUserWithTenant()
     if (isAuthError(auth)) return { success: false, error: auth.error }
+    if (!hasPermission('shop.categories', auth.permissions)) {
+      return { success: false, error: messages.common.noPermission }
+    }
     const { supabase } = auth
 
     const updatePayload: Record<string, unknown> = {}
@@ -93,6 +100,9 @@ export async function deleteShopCategory(
   try {
     const auth = await getUserWithTenant()
     if (isAuthError(auth)) return { success: false, error: auth.error }
+    if (!hasPermission('shop.categories', auth.permissions)) {
+      return { success: false, error: messages.common.noPermission }
+    }
     const { supabase } = auth
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TablesInsert resolves to never

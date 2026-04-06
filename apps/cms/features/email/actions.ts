@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { getUserWithTenant, isAuthError } from '@/lib/auth'
+import { hasPermission } from '@/lib/permissions'
 import { renderEmailBlocks, DEFAULT_BLOCKS } from '@agency/email'
 import type { Block } from '@agency/email'
 import { updateEmailTemplateSchema } from './validation'
@@ -65,6 +66,9 @@ export async function updateEmailTemplate(
 
     const auth = await getUserWithTenant()
     if (isAuthError(auth)) return { success: false, error: auth.error }
+    if (!hasPermission('system.email_templates', auth.permissions)) {
+      return { success: false, error: messages.common.noPermission }
+    }
     const { supabase, tenantId } = auth
 
     // Check if template already exists (cannot use upsert — partial unique index

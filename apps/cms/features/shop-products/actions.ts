@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { getUserWithTenant, isAuthError } from '@/lib/auth'
+import { hasPermission } from '@/lib/permissions'
 import { createShopProductSchema, updateShopProductSchema, type CreateShopProductFormData } from './validation'
 import { toShopProduct, type ShopProduct } from './types'
 import { generateSlug } from './utils'
@@ -21,6 +22,9 @@ export async function createShopProduct(
 
     const auth = await getUserWithTenant()
     if (isAuthError(auth)) return { success: false, error: auth.error }
+    if (!hasPermission('shop.products', auth.permissions)) {
+      return { success: false, error: messages.common.noPermission }
+    }
     const { supabase, tenantId } = auth
 
     const slug = parsed.data.slug || generateSlug(parsed.data.title)
@@ -82,6 +86,9 @@ export async function updateShopProduct(
 
     const auth = await getUserWithTenant()
     if (isAuthError(auth)) return { success: false, error: auth.error }
+    if (!hasPermission('shop.products', auth.permissions)) {
+      return { success: false, error: messages.common.noPermission }
+    }
     const { supabase } = auth
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- shop_products type resolves to never (Supabase JS v2.95.2 incompatibility)
@@ -157,6 +164,9 @@ export async function deleteShopProduct(
   try {
     const auth = await getUserWithTenant()
     if (isAuthError(auth)) return { success: false, error: auth.error }
+    if (!hasPermission('shop.products', auth.permissions)) {
+      return { success: false, error: messages.common.noPermission }
+    }
     const { supabase } = auth
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TablesInsert resolves to never
@@ -182,6 +192,9 @@ export async function toggleShopProductPublished(
   try {
     const auth = await getUserWithTenant()
     if (isAuthError(auth)) return { success: false, error: auth.error }
+    if (!hasPermission('shop.products', auth.permissions)) {
+      return { success: false, error: messages.common.noPermission }
+    }
     const { supabase } = auth
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- shop_products type resolves to never (Supabase JS v2.95.2 incompatibility)
