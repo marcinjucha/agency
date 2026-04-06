@@ -590,6 +590,32 @@ export type Database = {
           },
         ]
       }
+      role_permissions: {
+        Row: {
+          id: string
+          permission_key: string
+          role_id: string
+        }
+        Insert: {
+          id?: string
+          permission_key: string
+          role_id: string
+        }
+        Update: {
+          id?: string
+          permission_key?: string
+          role_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "role_permissions_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "tenant_roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       shop_categories: {
         Row: {
           created_at: string
@@ -1137,6 +1163,44 @@ export type Database = {
           },
         ]
       }
+      tenant_roles: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_default: boolean
+          name: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_default?: boolean
+          name: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_default?: boolean
+          name?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_roles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenants: {
         Row: {
           created_at: string | null
@@ -1167,6 +1231,46 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles: {
+        Row: {
+          role_id: string
+          tenant_id: string
+          user_id: string
+        }
+        Insert: {
+          role_id: string
+          tenant_id: string
+          user_id: string
+        }
+        Update: {
+          role_id?: string
+          tenant_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "tenant_roles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_roles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_roles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       users: {
         Row: {
           created_at: string | null
@@ -1174,6 +1278,7 @@ export type Database = {
           full_name: string | null
           google_calendar_token: Json | null
           id: string
+          is_super_admin: boolean
           role: string | null
           tenant_id: string
           updated_at: string | null
@@ -1184,6 +1289,7 @@ export type Database = {
           full_name?: string | null
           google_calendar_token?: Json | null
           id?: string
+          is_super_admin?: boolean
           role?: string | null
           tenant_id: string
           updated_at?: string | null
@@ -1194,6 +1300,7 @@ export type Database = {
           full_name?: string | null
           google_calendar_token?: Json | null
           id?: string
+          is_super_admin?: boolean
           role?: string | null
           tenant_id?: string
           updated_at?: string | null
@@ -1539,6 +1646,7 @@ export type Database = {
         Args: { link_id: string }
         Returns: undefined
       }
+      is_super_admin: { Args: never; Returns: boolean }
       upsert_marketplace_connection: {
         Args: {
           p_access_token: string
