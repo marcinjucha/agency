@@ -27,6 +27,12 @@ import {
   TooltipTrigger,
   TooltipContent,
   TooltipProvider,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from '@agency/ui'
 import { Users, Plus, Pencil, Trash2, ShieldCheck } from 'lucide-react'
 import { AddUserDialog } from './AddUserDialog'
@@ -127,26 +133,30 @@ export function UserList() {
           }
         />
       ) : (
-        <div className="divide-y divide-border rounded-lg border border-border">
-          {/* Table header */}
-          <div className="hidden sm:flex items-center gap-4 px-4 py-2.5 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-            <div className="flex-1">{messages.users.fullName}</div>
-            <div className="w-56">{messages.users.email}</div>
-            <div className="w-32">{messages.users.role}</div>
-            <div className="hidden lg:block w-32">{messages.users.createdAt}</div>
-            <div className="w-20" />
-          </div>
-
-          {users.map((user) => (
-            <UserRow
-              key={user.id}
-              user={user}
-              onEdit={() => setEditingUser(user)}
-              onDelete={() => deleteMutation.mutate(user.id)}
-              isDeleting={deletingUserId === user.id}
-              isCurrentUser={currentUserId === user.id}
-            />
-          ))}
+        <div className="rounded-lg border border-border">
+          <Table>
+            <TableHeader className="hidden sm:table-header-group">
+              <TableRow className="hover:bg-transparent">
+                <TableHead className="text-xs font-medium uppercase tracking-wider">{messages.users.fullName}</TableHead>
+                <TableHead className="text-xs font-medium uppercase tracking-wider w-56">{messages.users.email}</TableHead>
+                <TableHead className="text-xs font-medium uppercase tracking-wider w-32">{messages.users.role}</TableHead>
+                <TableHead className="text-xs font-medium uppercase tracking-wider w-32 hidden lg:table-cell">{messages.users.createdAt}</TableHead>
+                <TableHead className="w-20" />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {users.map((user) => (
+                <UserRow
+                  key={user.id}
+                  user={user}
+                  onEdit={() => setEditingUser(user)}
+                  onDelete={() => deleteMutation.mutate(user.id)}
+                  isDeleting={deletingUserId === user.id}
+                  isCurrentUser={currentUserId === user.id}
+                />
+              ))}
+            </TableBody>
+          </Table>
         </div>
       )}
 
@@ -187,9 +197,9 @@ function UserRow({
   const canDelete = !isDeleting && !user.is_super_admin && !isCurrentUser
 
   return (
-    <div className="flex flex-col gap-2 px-4 py-3 transition-colors hover:bg-muted/50 sm:flex-row sm:items-center sm:gap-4">
+    <TableRow>
       {/* Name + super admin badge */}
-      <div className="min-w-0 flex-1">
+      <TableCell>
         <div className="flex items-center gap-2">
           <p className="text-sm font-medium text-foreground truncate">
             {user.full_name || '\u2014'}
@@ -208,86 +218,88 @@ function UserRow({
         <p className="text-xs text-muted-foreground truncate sm:hidden mt-0.5">
           {user.email}
         </p>
-      </div>
+      </TableCell>
 
       {/* Email — desktop only */}
-      <div className="hidden sm:block w-56">
+      <TableCell className="hidden sm:table-cell w-56">
         <p className="text-sm text-muted-foreground truncate">{user.email}</p>
-      </div>
+      </TableCell>
 
       {/* Role — colored badge by role type */}
-      <div className="w-32">
+      <TableCell className="w-32">
         <Badge variant="outline" className={`text-xs ${roleBadgeClasses}`}>
           {roleName ?? '\u2014'}
         </Badge>
-      </div>
+      </TableCell>
 
       {/* Created */}
-      <div className="hidden lg:block w-32">
+      <TableCell className="hidden lg:table-cell w-32">
         <p className="text-xs text-muted-foreground">{formattedDate}</p>
-      </div>
+      </TableCell>
 
       {/* Actions */}
-      <div className="flex items-center gap-1 w-20 justify-end flex-shrink-0">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
-          onClick={onEdit}
-          aria-label={messages.users.editUser}
-        >
-          <Pencil className="h-4 w-4" />
-        </Button>
+      <TableCell className="w-20 text-right">
+        <div className="flex items-center gap-1 justify-end">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+            onClick={onEdit}
+            aria-label={messages.users.editUser}
+          >
+            <Pencil className="h-4 w-4" />
+          </Button>
 
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span className="inline-flex">
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
-                      disabled={!canDelete}
-                      aria-label={messages.users.deleteUser}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>{messages.users.deleteUser}</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        {messages.users.deleteConfirm}
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>{messages.common.cancel}</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={onDelete}
-                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="inline-flex">
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                        disabled={!canDelete}
+                        aria-label={messages.users.deleteUser}
                       >
-                        {messages.common.delete}
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </span>
-            </TooltipTrigger>
-            {(user.is_super_admin || isCurrentUser) && (
-              <TooltipContent>
-                <p>
-                  {user.is_super_admin
-                    ? messages.users.cannotDeleteSuperAdminTooltip
-                    : messages.users.cannotDeleteSelf}
-                </p>
-              </TooltipContent>
-            )}
-          </Tooltip>
-        </TooltipProvider>
-      </div>
-    </div>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>{messages.users.deleteUser}</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          {messages.users.deleteConfirm}
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>{messages.common.cancel}</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={onDelete}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          {messages.common.delete}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </span>
+              </TooltipTrigger>
+              {(user.is_super_admin || isCurrentUser) && (
+                <TooltipContent>
+                  <p>
+                    {user.is_super_admin
+                      ? messages.users.cannotDeleteSuperAdminTooltip
+                      : messages.users.cannotDeleteSelf}
+                  </p>
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+      </TableCell>
+    </TableRow>
   )
 }
 

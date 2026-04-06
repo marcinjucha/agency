@@ -26,6 +26,12 @@ import {
   TooltipTrigger,
   TooltipContent,
   TooltipProvider,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from '@agency/ui'
 import { Shield, Plus, Pencil, Trash2 } from 'lucide-react'
 import { RoleEditor } from './RoleEditor'
@@ -122,25 +128,29 @@ export function RoleList() {
           }
         />
       ) : (
-        <div className="divide-y divide-border rounded-lg border border-border">
-          {/* Table header */}
-          <div className="hidden sm:flex items-center gap-4 px-4 py-2.5 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-            <div className="flex-1">{messages.roles.name}</div>
-            <div className="hidden md:block w-48">{messages.roles.description}</div>
-            <div className="w-28 text-center">{messages.roles.userCount}</div>
-            <div className="w-28 text-center">{messages.roles.permissions}</div>
-            <div className="w-20" />
-          </div>
-
-          {roles.map((role) => (
-            <RoleRow
-              key={role.id}
-              role={role}
-              onEdit={() => handleEdit(role)}
-              onDelete={() => deleteMutation.mutate(role.id)}
-              isDeleting={deletingRoleId === role.id}
-            />
-          ))}
+        <div className="rounded-lg border border-border">
+          <Table>
+            <TableHeader className="hidden sm:table-header-group">
+              <TableRow className="hover:bg-transparent">
+                <TableHead className="text-xs font-medium uppercase tracking-wider">{messages.roles.name}</TableHead>
+                <TableHead className="text-xs font-medium uppercase tracking-wider w-48 hidden md:table-cell">{messages.roles.description}</TableHead>
+                <TableHead className="text-xs font-medium uppercase tracking-wider w-28 text-center">{messages.roles.userCount}</TableHead>
+                <TableHead className="text-xs font-medium uppercase tracking-wider w-28 text-center">{messages.roles.permissions}</TableHead>
+                <TableHead className="w-20" />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {roles.map((role) => (
+                <RoleRow
+                  key={role.id}
+                  role={role}
+                  onEdit={() => handleEdit(role)}
+                  onDelete={() => deleteMutation.mutate(role.id)}
+                  isDeleting={deletingRoleId === role.id}
+                />
+              ))}
+            </TableBody>
+          </Table>
         </div>
       )}
 
@@ -168,9 +178,9 @@ function RoleRow({
   const canDelete = !isDeleting && !role.is_default && role.user_count === 0
 
   return (
-    <div className="flex flex-col gap-2 px-4 py-3 transition-colors hover:bg-muted/50 sm:flex-row sm:items-center sm:gap-4">
+    <TableRow>
       {/* Name + default badge */}
-      <div className="min-w-0 flex-1">
+      <TableCell>
         <div className="flex items-center gap-2">
           <p className="text-sm font-medium text-foreground truncate">{role.name}</p>
           {role.is_default && (
@@ -186,88 +196,90 @@ function RoleRow({
         {role.description && (
           <p className="text-xs text-muted-foreground sm:hidden mt-0.5">{role.description}</p>
         )}
-      </div>
+      </TableCell>
 
       {/* Description — desktop only */}
-      <div className="hidden md:block w-48">
+      <TableCell className="hidden md:table-cell w-48">
         <p className="text-sm text-muted-foreground">{role.description || '\u2014'}</p>
-      </div>
+      </TableCell>
 
       {/* User count */}
-      <div className="w-48 text-center">
+      <TableCell className="w-28 text-center">
         <Badge variant="outline" className="text-xs">
           {role.user_count}
         </Badge>
-      </div>
+      </TableCell>
 
       {/* Permission count */}
-      <div className="w-48 text-center">
+      <TableCell className="w-28 text-center">
         <span className="text-xs text-muted-foreground">
           {messages.roles.permissionCount((role.permissions ?? []).length)}
         </span>
-      </div>
+      </TableCell>
 
       {/* Actions */}
-      <div className="flex items-center gap-1 w-20 justify-end flex-shrink-0">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
-          onClick={onEdit}
-          aria-label={messages.roles.editRole}
-        >
-          <Pencil className="h-4 w-4" />
-        </Button>
+      <TableCell className="w-20 text-right">
+        <div className="flex items-center gap-1 justify-end">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+            onClick={onEdit}
+            aria-label={messages.roles.editRole}
+          >
+            <Pencil className="h-4 w-4" />
+          </Button>
 
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span className="inline-flex">
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
-                      disabled={!canDelete}
-                      aria-label={messages.roles.deleteRole}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>{messages.roles.deleteRole}</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        {messages.roles.deleteConfirm}
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>{messages.common.cancel}</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={onDelete}
-                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="inline-flex">
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                        disabled={!canDelete}
+                        aria-label={messages.roles.deleteRole}
                       >
-                        {messages.common.delete}
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </span>
-            </TooltipTrigger>
-            {(role.is_default || role.user_count > 0) && (
-              <TooltipContent>
-                <p>
-                  {role.is_default
-                    ? messages.roles.cannotDeleteDefault
-                    : messages.roles.cannotDeleteWithUsers}
-                </p>
-              </TooltipContent>
-            )}
-          </Tooltip>
-        </TooltipProvider>
-      </div>
-    </div>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>{messages.roles.deleteRole}</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          {messages.roles.deleteConfirm}
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>{messages.common.cancel}</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={onDelete}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          {messages.common.delete}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </span>
+              </TooltipTrigger>
+              {(role.is_default || role.user_count > 0) && (
+                <TooltipContent>
+                  <p>
+                    {role.is_default
+                      ? messages.roles.cannotDeleteDefault
+                      : messages.roles.cannotDeleteWithUsers}
+                  </p>
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+      </TableCell>
+    </TableRow>
   )
 }
 
