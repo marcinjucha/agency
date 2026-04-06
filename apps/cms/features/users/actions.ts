@@ -123,19 +123,61 @@ export async function changeUserPassword(input: ChangePasswordFormData) {
   const result = await zodParse(changePasswordSchema, input)
     .asyncAndThen((parsed) => authResult().map((auth) => ({ parsed, auth })))
     .andThen(({ parsed, auth }) => {
+      const isSelf = parsed.userId === auth.userId
+
+      // Self-change: anyone can change their own password
+      if (isSelf) {
+        return updateAuthPassword(parsed.userId, parsed.newPassword)
+      }
+
+      // Changing other's password requires system.users permission
       if (!hasPermission('system.users', auth.permissions)) {
         return errAsync(messages.users.changePasswordFailed)
       }
-      if (parsed.userId === auth.userId) {
-        return errAsync(messages.users.cannotChangeOwnPassword)
-      }
-      return updateAuthPassword(parsed.userId, parsed.newPassword)
+
+      // Hierarchical check: must outrank target user
+      return canChangePasswordFor(auth, parsed.userId)
+        .andThen(() => updateAuthPassword(parsed.userId, parsed.newPassword))
     })
 
   return result.match(
     () => ({ success: true as const }),
     (error) => ({ success: false as const, error }),
   )
+}
+
+// --- Hierarchy helpers ---
+
+/** Role rank: super_admin=3, owner/admin=2, member/other=1 */
+function getRoleRank(user: { is_super_admin: boolean; role: string | null }): number {
+  if (user.is_super_admin) return 3
+  if (user.role === 'owner' || user.role === 'admin') return 2
+  return 1
+}
+
+/**
+ * Check if current user can change target user's password.
+ * Rule: must strictly outrank target (same level = denied).
+ * Super admin can change anyone. Admin can change members. Members can't change others.
+ */
+function canChangePasswordFor(auth: AuthSuccess, targetUserId: string) {
+  return ResultAsync.fromPromise(
+    (createServiceClient() as any)
+      .from('users')
+      .select('is_super_admin, role')
+      .eq('id', targetUserId)
+      .single(),
+    dbError,
+  )
+    .andThen(fromSupabase<{ is_super_admin: boolean; role: string | null }>())
+    .andThen((target) => {
+      const myRank = getRoleRank({ is_super_admin: auth.isSuperAdmin, role: auth.roleName })
+      const targetRank = getRoleRank(target)
+      if (myRank <= targetRank) {
+        return errAsync(messages.users.cannotChangeHigherRankPassword)
+      }
+      return okAsync(undefined)
+    })
 }
 
 // --- DB helpers (feature-local) ---

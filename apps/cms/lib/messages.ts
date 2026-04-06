@@ -1155,6 +1155,7 @@ export const messages = {
     changePasswordSuccess: 'Hasło zostało zmienione',
     changePasswordFailed: 'Nie udało się zmienić hasła',
     cannotChangeOwnPassword: 'Nie możesz zmienić własnego hasła tutaj',
+    cannotChangeHigherRankPassword: 'Nie możesz zmienić hasła użytkownikowi o wyższej lub równej roli',
   },
 
   roles: {

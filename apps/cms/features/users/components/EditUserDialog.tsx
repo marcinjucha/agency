@@ -194,10 +194,8 @@ export function EditUserDialog({ user, open, onOpenChange }: EditUserDialogProps
             )}
           </div>
 
-          {/* Change Password — only for other users */}
-          {!isEditingSelf && (
-            <>
-              <div className="border-t border-border" />
+          {/* Change Password */}
+          <div className="border-t border-border" />
               {!showPasswordForm ? (
                 <div className="flex items-center justify-between">
                   <p className="text-sm text-muted-foreground">{messages.users.changePassword}</p>
@@ -265,8 +263,6 @@ export function EditUserDialog({ user, open, onOpenChange }: EditUserDialogProps
                   {passwordResult.message}
                 </p>
               )}
-            </>
-          )}
 
           {/* Super Admin Toggle — only visible to super admins */}
           {currentUserIsSuperAdmin && (
