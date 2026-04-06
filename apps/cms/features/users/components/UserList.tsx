@@ -97,23 +97,11 @@ export function UserList() {
     },
   })
 
-  if (isLoading) return <UserListSkeleton />
-
-  if (error) {
-    return (
-      <ErrorState
-        title={messages.users.loadFailed}
-        message={error instanceof Error ? error.message : messages.common.errorOccurred}
-        onRetry={() => refetch()}
-        variant="card"
-      />
-    )
-  }
-
   // Non-super-admins should not see super admin users in the list
-  const visibleUsers = viewerIsSuperAdmin
-    ? users
-    : users?.filter((u) => !u.is_super_admin)
+  const visibleUsers = useMemo(
+    () => (viewerIsSuperAdmin ? users : users?.filter((u) => !u.is_super_admin)),
+    [users, viewerIsSuperAdmin],
+  )
 
   // Extract unique tenants for filter dropdown (super admin only)
   const tenantOptions = useMemo(() => {
@@ -134,6 +122,19 @@ export function UserList() {
     ? visibleUsers?.filter((u) => u.tenant?.id === selectedTenantId)
     : visibleUsers
   const hasUsers = filteredUsers && filteredUsers.length > 0
+
+  if (isLoading) return <UserListSkeleton />
+
+  if (error) {
+    return (
+      <ErrorState
+        title={messages.users.loadFailed}
+        message={error instanceof Error ? error.message : messages.common.errorOccurred}
+        onRetry={() => refetch()}
+        variant="card"
+      />
+    )
+  }
 
   return (
     <div className="space-y-6">
