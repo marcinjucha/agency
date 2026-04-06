@@ -22,7 +22,7 @@ export async function getUsers(): Promise<UserWithRole[]> {
       is_super_admin,
       created_at,
       updated_at,
-      tenants (
+      tenants!tenant_id (
         id,
         name
       ),
