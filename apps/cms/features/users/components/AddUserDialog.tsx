@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -24,6 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@agency/ui'
+import { Eye, EyeOff } from 'lucide-react'
 
 interface AddUserDialogProps {
   open: boolean
@@ -32,6 +34,7 @@ interface AddUserDialogProps {
 
 export function AddUserDialog({ open, onOpenChange }: AddUserDialogProps) {
   const queryClient = useQueryClient()
+  const [showPassword, setShowPassword] = useState(false)
 
   const { data: roles } = useQuery({
     queryKey: queryKeys.roles.all,
@@ -68,12 +71,13 @@ export function AddUserDialog({ open, onOpenChange }: AddUserDialogProps) {
 
   function handleClose() {
     reset()
+    setShowPassword(false)
     onOpenChange(false)
   }
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{messages.users.addUser}</DialogTitle>
           <DialogDescription>
@@ -102,16 +106,29 @@ export function AddUserDialog({ open, onOpenChange }: AddUserDialogProps) {
             )}
           </div>
 
-          {/* Password */}
+          {/* Password with show/hide toggle */}
           <div className="space-y-1.5">
             <Label htmlFor="user-password">{messages.users.password}</Label>
-            <Input
-              id="user-password"
-              type="password"
-              {...register('password')}
-              aria-invalid={!!errors.password}
-              aria-describedby={errors.password ? 'user-password-error' : undefined}
-            />
+            <div className="relative">
+              <Input
+                id="user-password"
+                type={showPassword ? 'text' : 'password'}
+                {...register('password')}
+                className="pr-10"
+                aria-invalid={!!errors.password}
+                aria-describedby={errors.password ? 'user-password-error' : undefined}
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="absolute right-0 top-0 h-full px-3 text-muted-foreground hover:text-foreground"
+                onClick={() => setShowPassword((prev) => !prev)}
+                aria-label={showPassword ? messages.users.hidePassword : messages.users.showPassword}
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </Button>
+            </div>
             {errors.password && (
               <p id="user-password-error" role="alert" className="text-xs text-destructive">
                 {errors.password.message}

@@ -1136,6 +1136,9 @@ export const messages = {
     noUsersDescription: 'Dodaj pierwszego użytkownika do organizacji',
     loadFailed: 'Nie udało się załadować użytkowników',
     passwordMinLength: 'Hasło musi mieć minimum 8 znaków',
+    showPassword: 'Pokaż hasło',
+    hidePassword: 'Ukryj hasło',
+    cannotDeleteSuperAdminTooltip: 'Super admin nie może zostać usunięty',
   },
 
   variableInserter: {

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@supabase/supabase-js'
-import { ResultAsync } from 'neverthrow'
+import { ResultAsync, errAsync, okAsync } from 'neverthrow'
 import { authResult, zodParse, fromSupabase } from '@/lib/result-helpers'
 import { type AuthSuccess } from '@/lib/auth'
 import { hasPermission } from '@/lib/permissions'
@@ -33,9 +33,7 @@ export async function createUser(input: CreateUserInput) {
     .asyncAndThen((parsed) => authResult().map((auth) => ({ parsed, auth })))
     .andThen(({ parsed, auth }) => {
       if (!hasPermission('system.users', auth.permissions)) {
-        return ResultAsync.fromSafePromise(
-          Promise.resolve({ success: false as const, error: messages.users.createFailed })
-        )
+        return errAsync(messages.users.createFailed)
       }
       return createAuthUser(parsed.email, parsed.password)
         .andThen((authUser) =>
@@ -61,9 +59,7 @@ export async function updateUser(input: UpdateUserInput) {
     .asyncAndThen((parsed) => authResult().map((auth) => ({ parsed, auth })))
     .andThen(({ parsed, auth }) => {
       if (!hasPermission('system.users', auth.permissions)) {
-        return ResultAsync.fromSafePromise(
-          Promise.resolve({ success: false as const, error: messages.users.updateFailed })
-        )
+        return errAsync(messages.users.updateFailed)
       }
       return updateUserFields(auth, parsed)
     })
@@ -85,9 +81,7 @@ export async function deleteUser(userId: string) {
   const result = await authResult()
     .andThen((auth) => {
       if (!hasPermission('system.users', auth.permissions)) {
-        return ResultAsync.fromSafePromise(
-          Promise.resolve({ success: false as const, error: messages.users.deleteFailed })
-        )
+        return errAsync(messages.users.deleteFailed)
       }
       return validateDeleteTarget(auth, userId)
         .andThen(() => removeUserRoles(auth, userId))
@@ -118,9 +112,9 @@ function createAuthUser(email: string, password: string) {
     }),
     dbError,
   ).andThen((res) => {
-    if (res.error) return ResultAsync.fromSafePromise(Promise.reject(res.error.message))
-    if (!res.data.user) return ResultAsync.fromSafePromise(Promise.reject(messages.users.createFailed))
-    return ResultAsync.fromSafePromise(Promise.resolve(res.data.user))
+    if (res.error) return errAsync(res.error.message)
+    if (!res.data.user) return errAsync(messages.users.createFailed)
+    return okAsync(res.data.user)
   })
 }
 
@@ -202,7 +196,7 @@ function updateUserFields(auth: AuthSuccess, parsed: { userId: string; fullName?
   }
 
   if (tasks.length === 0) {
-    return ResultAsync.fromSafePromise(Promise.resolve(undefined))
+    return okAsync(undefined)
   }
 
   return ResultAsync.fromPromise(
@@ -216,9 +210,7 @@ function updateUserFields(auth: AuthSuccess, parsed: { userId: string; fullName?
 
 function validateDeleteTarget(auth: AuthSuccess, userId: string) {
   if (userId === auth.userId) {
-    return ResultAsync.fromSafePromise<never, string>(
-      Promise.reject(messages.users.cannotDeleteSelf),
-    )
+    return errAsync(messages.users.cannotDeleteSelf)
   }
 
   return ResultAsync.fromPromise(
@@ -232,10 +224,8 @@ function validateDeleteTarget(auth: AuthSuccess, userId: string) {
     .andThen(fromSupabase<{ is_super_admin: boolean }>())
     .andThen((user) =>
       user.is_super_admin
-        ? ResultAsync.fromSafePromise<never, string>(
-            Promise.reject(messages.users.cannotDeleteSuperAdmin),
-          )
-        : ResultAsync.fromSafePromise(Promise.resolve(undefined)),
+        ? errAsync(messages.users.cannotDeleteSuperAdmin)
+        : okAsync(undefined),
     )
 }
 
@@ -265,8 +255,8 @@ function removeAuthUser(userId: string) {
     getAdminClient().auth.admin.deleteUser(userId),
     dbError,
   ).andThen((res) => {
-    if (res.error) return ResultAsync.fromSafePromise(Promise.reject(res.error.message))
-    return ResultAsync.fromSafePromise(Promise.resolve(undefined))
+    if (res.error) return errAsync(res.error.message)
+    return okAsync(undefined)
   })
 }
 

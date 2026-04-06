@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '@/lib/query-keys'
+import { createClient } from '@/lib/supabase/client'
 import { getUsers } from '../queries'
 import { deleteUser } from '../actions'
 import type { UserWithRole } from '../types'
@@ -22,15 +23,40 @@ import {
   AlertDialogDescription,
   AlertDialogAction,
   AlertDialogCancel,
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+  TooltipProvider,
 } from '@agency/ui'
 import { Users, Plus, Pencil, Trash2, ShieldCheck } from 'lucide-react'
 import { AddUserDialog } from './AddUserDialog'
 import { EditUserDialog } from './EditUserDialog'
 
+// --- Role badge color mapping (consistent with Status Badge Colors in design system) ---
+
+const ROLE_BADGE_STYLES: Record<string, string> = {
+  owner: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+  admin: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+  member: 'bg-slate-500/10 text-slate-400 border-slate-500/20',
+}
+
+function getRoleBadgeClassName(role: string | null): string {
+  if (!role) return ''
+  return ROLE_BADGE_STYLES[role.toLowerCase()] ?? ''
+}
+
 export function UserList() {
   const queryClient = useQueryClient()
   const [addDialogOpen, setAddDialogOpen] = useState(false)
   const [editingUser, setEditingUser] = useState<UserWithRole | null>(null)
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+  const [deletingUserId, setDeletingUserId] = useState<string | null>(null)
+
+  useEffect(() => {
+    createClient().auth.getUser().then(({ data }) => {
+      if (data.user) setCurrentUserId(data.user.id)
+    })
+  }, [])
 
   const {
     data: users,
@@ -44,12 +70,16 @@ export function UserList() {
 
   const deleteMutation = useMutation({
     mutationFn: async (userId: string) => {
+      setDeletingUserId(userId)
       const result = await deleteUser(userId)
       if (!result.success) throw new Error(result.error)
       return result
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.users.all })
+    },
+    onSettled: () => {
+      setDeletingUserId(null)
     },
   })
 
@@ -113,7 +143,8 @@ export function UserList() {
               user={user}
               onEdit={() => setEditingUser(user)}
               onDelete={() => deleteMutation.mutate(user.id)}
-              isDeleting={deleteMutation.isPending}
+              isDeleting={deletingUserId === user.id}
+              isCurrentUser={currentUserId === user.id}
             />
           ))}
         </div>
@@ -137,11 +168,13 @@ function UserRow({
   onEdit,
   onDelete,
   isDeleting,
+  isCurrentUser,
 }: {
   user: UserWithRole
   onEdit: () => void
   onDelete: () => void
   isDeleting: boolean
+  isCurrentUser: boolean
 }) {
   const formattedDate = new Date(user.created_at).toLocaleDateString('pl-PL', {
     day: 'numeric',
@@ -149,8 +182,12 @@ function UserRow({
     year: 'numeric',
   })
 
+  const roleName = user.tenant_role?.name ?? user.role
+  const roleBadgeClasses = getRoleBadgeClassName(user.role)
+  const canDelete = !isDeleting && !user.is_super_admin && !isCurrentUser
+
   return (
-    <div className="flex items-center gap-4 px-4 py-3 transition-colors hover:bg-muted/50">
+    <div className="flex flex-col gap-2 px-4 py-3 transition-colors hover:bg-muted/50 sm:flex-row sm:items-center sm:gap-4">
       {/* Name + super admin badge */}
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
@@ -160,24 +197,28 @@ function UserRow({
           {user.is_super_admin && (
             <Badge
               variant="outline"
-              className="shrink-0 text-xs bg-amber-500/10 text-amber-400 border-amber-500/20"
+              className="shrink-0 text-xs bg-red-500/10 text-red-400 border-red-500/20"
             >
               <ShieldCheck className="mr-1 h-3 w-3" />
               Super Admin
             </Badge>
           )}
         </div>
+        {/* Mobile: show email below name */}
+        <p className="text-xs text-muted-foreground truncate sm:hidden mt-0.5">
+          {user.email}
+        </p>
       </div>
 
-      {/* Email */}
+      {/* Email — desktop only */}
       <div className="hidden sm:block w-56">
         <p className="text-sm text-muted-foreground truncate">{user.email}</p>
       </div>
 
-      {/* Role */}
+      {/* Role — colored badge by role type */}
       <div className="w-32">
-        <Badge variant="outline" className="text-xs">
-          {user.tenant_role?.name ?? user.role ?? '\u2014'}
+        <Badge variant="outline" className={`text-xs ${roleBadgeClasses}`}>
+          {roleName ?? '\u2014'}
         </Badge>
       </div>
 
@@ -198,36 +239,53 @@ function UserRow({
           <Pencil className="h-4 w-4" />
         </Button>
 
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
-              disabled={isDeleting || user.is_super_admin}
-              aria-label={messages.users.deleteUser}
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>{messages.users.deleteUser}</AlertDialogTitle>
-              <AlertDialogDescription>
-                {messages.users.deleteConfirm}
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>{messages.common.cancel}</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={onDelete}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              >
-                {messages.common.delete}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="inline-flex">
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                      disabled={!canDelete}
+                      aria-label={messages.users.deleteUser}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>{messages.users.deleteUser}</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        {messages.users.deleteConfirm}
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>{messages.common.cancel}</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={onDelete}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      >
+                        {messages.common.delete}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </span>
+            </TooltipTrigger>
+            {(user.is_super_admin || isCurrentUser) && (
+              <TooltipContent>
+                <p>
+                  {user.is_super_admin
+                    ? messages.users.cannotDeleteSuperAdminTooltip
+                    : messages.users.cannotDeleteSelf}
+                </p>
+              </TooltipContent>
+            )}
+          </Tooltip>
+        </TooltipProvider>
       </div>
     </div>
   )
@@ -238,8 +296,11 @@ function UserRow({
 function UserListSkeleton() {
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <Skeleton className="h-8 w-40" />
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <Skeleton className="h-8 w-40" />
+          <Skeleton className="h-4 w-64 mt-1" />
+        </div>
         <Skeleton className="h-9 w-44" />
       </div>
       <div className="divide-y divide-border rounded-lg border border-border">

@@ -81,7 +81,7 @@ export function EditUserDialog({ user, open, onOpenChange }: EditUserDialogProps
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{messages.users.editUser}</DialogTitle>
           <DialogDescription>
