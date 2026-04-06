@@ -84,6 +84,7 @@ export const DEFAULT_MEMBER_PERMISSIONS: PermissionKey[] = [
   'intake',
   'calendar',
   'content.blog',
+  'content.media',
   'workflows',
   'workflows.executions',
 ]
