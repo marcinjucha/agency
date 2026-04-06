@@ -60,6 +60,7 @@ export const queryKeys = {
   },
   roles: {
     all: ['roles'] as const,
+    detail: (id: string) => ['roles', id] as const,
   },
   marketplace: {
     all: ['marketplace'] as const,
