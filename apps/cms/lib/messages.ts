@@ -1171,8 +1171,11 @@ export const messages = {
     loadFailed: 'Nie udało się załadować ról',
     namePlaceholder: 'np. Redaktor, Menedżer',
     descriptionPlaceholder: 'Opcjonalny opis roli',
-    permissionCount: (count: number) =>
-      count === 1 ? '1 uprawnienie' : `${count} uprawnień`,
+    permissionCount: (count: number) => {
+      if (count === 1) return '1 uprawnienie'
+      if (count >= 2 && count <= 4) return `${count} uprawnienia`
+      return `${count} uprawnień`
+    },
   },
 
   permissions: {

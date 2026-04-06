@@ -133,7 +133,8 @@ function deletePermissions(auth: AuthSuccess, roleId: string) {
     (auth.supabase as any)
       .from('role_permissions')
       .delete()
-      .eq('role_id', roleId),
+      .eq('role_id', roleId)
+      .then(checkSupabaseError),
     dbError,
   ).map(() => undefined)
 }
