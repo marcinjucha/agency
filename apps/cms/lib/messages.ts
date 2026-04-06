@@ -1147,6 +1147,14 @@ export const messages = {
     superAdminToggleFailed: 'Nie udało się zmienić statusu super admina',
     cannotToggleOwnSuperAdmin: 'Nie możesz zmienić własnego statusu super admina',
     onlySuperAdminCanToggle: 'Tylko super admin może zarządzać tym ustawieniem',
+    allTenants: 'Wszystkie organizacje',
+    filterByTenant: 'Filtruj po organizacji',
+    tenant: 'Organizacja',
+    changePassword: 'Zmień hasło',
+    newPassword: 'Nowe hasło',
+    changePasswordSuccess: 'Hasło zostało zmienione',
+    changePasswordFailed: 'Nie udało się zmienić hasła',
+    cannotChangeOwnPassword: 'Nie możesz zmienić własnego hasła tutaj',
   },
 
   roles: {

@@ -5,8 +5,9 @@ import { ResultAsync, errAsync, okAsync } from 'neverthrow'
 import { authResult, zodParse, fromSupabase } from '@/lib/result-helpers'
 import { type AuthSuccess } from '@/lib/auth'
 import { hasPermission } from '@/lib/permissions'
-import { createUserSchema, updateUserSchema } from './validation'
+import { createUserSchema, updateUserSchema, changePasswordSchema } from './validation'
 import type { CreateUserInput, UpdateUserInput } from './types'
+import type { ChangePasswordFormData } from './validation'
 import { routes } from '@/lib/routes'
 import { messages } from '@/lib/messages'
 import { createServiceClient } from '@/lib/supabase/service'
@@ -110,6 +111,29 @@ export async function toggleSuperAdmin(userId: string, isSuperAdmin: boolean) {
       revalidatePath(routes.admin.users)
       return { success: true as const }
     },
+    (error) => ({ success: false as const, error }),
+  )
+}
+
+/**
+ * Change password for another user (not yourself).
+ * Uses service client admin API to update auth.users password.
+ */
+export async function changeUserPassword(input: ChangePasswordFormData) {
+  const result = await zodParse(changePasswordSchema, input)
+    .asyncAndThen((parsed) => authResult().map((auth) => ({ parsed, auth })))
+    .andThen(({ parsed, auth }) => {
+      if (!hasPermission('system.users', auth.permissions)) {
+        return errAsync(messages.users.changePasswordFailed)
+      }
+      if (parsed.userId === auth.userId) {
+        return errAsync(messages.users.cannotChangeOwnPassword)
+      }
+      return updateAuthPassword(parsed.userId, parsed.newPassword)
+    })
+
+  return result.match(
+    () => ({ success: true as const }),
     (error) => ({ success: false as const, error }),
   )
 }
@@ -276,6 +300,16 @@ function removeUserRow(auth: AuthSuccess, userId: string) {
 function removeAuthUser(userId: string) {
   return ResultAsync.fromPromise(
     createServiceClient().auth.admin.deleteUser(userId),
+    dbError,
+  ).andThen((res) => {
+    if (res.error) return errAsync(res.error.message)
+    return okAsync(undefined)
+  })
+}
+
+function updateAuthPassword(userId: string, newPassword: string) {
+  return ResultAsync.fromPromise(
+    createServiceClient().auth.admin.updateUserById(userId, { password: newPassword }),
     dbError,
   ).andThen((res) => {
     if (res.error) return errAsync(res.error.message)

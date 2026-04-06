@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '@/lib/query-keys'
 import { usePermissions } from '@/contexts/permissions-context'
-import { updateUser, toggleSuperAdmin } from '../actions'
+import { updateUser, toggleSuperAdmin, changeUserPassword } from '../actions'
 import { getTenantRoles } from '../queries'
 import { updateUserSchema, type UpdateUserFormData } from '../validation'
 import type { UserWithRole } from '../types'
@@ -28,6 +28,7 @@ import {
   SelectValue,
   Switch,
 } from '@agency/ui'
+import { Eye, EyeOff } from 'lucide-react'
 
 interface EditUserDialogProps {
   user: UserWithRole | null
@@ -41,10 +42,19 @@ export function EditUserDialog({ user, open, onOpenChange }: EditUserDialogProps
   const [superAdminToggling, setSuperAdminToggling] = useState(false)
   const [superAdminError, setSuperAdminError] = useState<string | null>(null)
   const [localIsSuperAdmin, setLocalIsSuperAdmin] = useState(user?.is_super_admin ?? false)
+  const [showPasswordForm, setShowPasswordForm] = useState(false)
+  const [newPassword, setNewPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [passwordChanging, setPasswordChanging] = useState(false)
+  const [passwordResult, setPasswordResult] = useState<{ success: boolean; message: string } | null>(null)
 
   // Sync local state when dialog opens with different user
   useEffect(() => {
     setLocalIsSuperAdmin(user?.is_super_admin ?? false)
+    setShowPasswordForm(false)
+    setNewPassword('')
+    setShowPassword(false)
+    setPasswordResult(null)
   }, [user?.id, user?.is_super_admin])
 
   const { data: roles } = useQuery({
@@ -103,9 +113,28 @@ export function EditUserDialog({ user, open, onOpenChange }: EditUserDialogProps
     }
   }
 
+  async function handleChangePassword() {
+    if (!user || newPassword.length < 8) return
+    setPasswordChanging(true)
+    setPasswordResult(null)
+    const result = await changeUserPassword({ userId: user.id, newPassword })
+    setPasswordChanging(false)
+    if (result.success) {
+      setPasswordResult({ success: true, message: messages.users.changePasswordSuccess })
+      setNewPassword('')
+      setShowPasswordForm(false)
+    } else {
+      setPasswordResult({ success: false, message: result.error })
+    }
+  }
+
   function handleClose() {
     reset()
     setSuperAdminError(null)
+    setShowPasswordForm(false)
+    setNewPassword('')
+    setShowPassword(false)
+    setPasswordResult(null)
     onOpenChange(false)
   }
 
@@ -163,6 +192,80 @@ export function EditUserDialog({ user, open, onOpenChange }: EditUserDialogProps
               </p>
             )}
           </div>
+
+          {/* Change Password — only for other users */}
+          {!isEditingSelf && (
+            <>
+              <div className="border-t border-border" />
+              {!showPasswordForm ? (
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-muted-foreground">{messages.users.changePassword}</p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowPasswordForm(true)}
+                  >
+                    {messages.users.changePassword}
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <Label htmlFor="edit-user-new-password">{messages.users.newPassword}</Label>
+                  <div className="relative">
+                    <Input
+                      id="edit-user-new-password"
+                      type={showPassword ? 'text' : 'password'}
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      className="pr-10"
+                      placeholder={messages.users.passwordMinLength}
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-0 top-0 h-full px-3 text-muted-foreground hover:text-foreground"
+                      onClick={() => setShowPassword((prev) => !prev)}
+                      aria-label={showPassword ? messages.users.hidePassword : messages.users.showPassword}
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      disabled={newPassword.length < 8 || passwordChanging}
+                      onClick={handleChangePassword}
+                    >
+                      {passwordChanging ? messages.common.saving : messages.users.changePassword}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setShowPasswordForm(false)
+                        setNewPassword('')
+                        setPasswordResult(null)
+                      }}
+                    >
+                      {messages.common.cancel}
+                    </Button>
+                  </div>
+                </div>
+              )}
+              {passwordResult && (
+                <p
+                  role="alert"
+                  className={`text-xs ${passwordResult.success ? 'text-emerald-400' : 'text-destructive'}`}
+                >
+                  {passwordResult.message}
+                </p>
+              )}
+            </>
+          )}
 
           {/* Super Admin Toggle — only visible to super admins */}
           {currentUserIsSuperAdmin && (

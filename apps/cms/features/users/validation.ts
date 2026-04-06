@@ -14,5 +14,11 @@ export const updateUserSchema = z.object({
   roleId: z.string().uuid().optional(),
 })
 
+export const changePasswordSchema = z.object({
+  userId: z.string().uuid(),
+  newPassword: z.string().min(8, messages.users.passwordMinLength),
+})
+
 export type CreateUserFormData = z.infer<typeof createUserSchema>
 export type UpdateUserFormData = z.infer<typeof updateUserSchema>
+export type ChangePasswordFormData = z.infer<typeof changePasswordSchema>

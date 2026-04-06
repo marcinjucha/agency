@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '@/lib/query-keys'
 import { createClient } from '@/lib/supabase/client'
@@ -33,6 +33,11 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from '@agency/ui'
 import { Users, Plus, Pencil, Trash2, ShieldCheck } from 'lucide-react'
 import { usePermissions } from '@/contexts/permissions-context'
@@ -59,6 +64,7 @@ export function UserList() {
   const [editingUser, setEditingUser] = useState<UserWithRole | null>(null)
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null)
+  const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null)
 
   useEffect(() => {
     createClient().auth.getUser().then(({ data }) => {
@@ -108,7 +114,26 @@ export function UserList() {
   const visibleUsers = viewerIsSuperAdmin
     ? users
     : users?.filter((u) => !u.is_super_admin)
-  const hasUsers = visibleUsers && visibleUsers.length > 0
+
+  // Extract unique tenants for filter dropdown (super admin only)
+  const tenantOptions = useMemo(() => {
+    if (!visibleUsers) return []
+    const seen = new Map<string, string>()
+    for (const u of visibleUsers) {
+      if (u.tenant?.id && !seen.has(u.tenant.id)) {
+        seen.set(u.tenant.id, u.tenant.name)
+      }
+    }
+    return Array.from(seen, ([id, name]) => ({ id, name })).sort((a, b) =>
+      a.name.localeCompare(b.name, 'pl-PL'),
+    )
+  }, [visibleUsers])
+
+  // Apply tenant filter
+  const filteredUsers = selectedTenantId
+    ? visibleUsers?.filter((u) => u.tenant?.id === selectedTenantId)
+    : visibleUsers
+  const hasUsers = filteredUsers && filteredUsers.length > 0
 
   return (
     <div className="space-y-6">
@@ -118,10 +143,30 @@ export function UserList() {
           <h1 className="text-2xl font-bold text-foreground">{messages.users.title}</h1>
           <p className="text-sm text-muted-foreground mt-1">{messages.users.subtitle}</p>
         </div>
-        <Button onClick={() => setAddDialogOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          {messages.users.addUser}
-        </Button>
+        <div className="flex items-center gap-3">
+          {viewerIsSuperAdmin && tenantOptions.length > 1 && (
+            <Select
+              value={selectedTenantId ?? 'all'}
+              onValueChange={(v) => setSelectedTenantId(v === 'all' ? null : v)}
+            >
+              <SelectTrigger className="w-48" aria-label={messages.users.filterByTenant}>
+                <SelectValue placeholder={messages.users.allTenants} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{messages.users.allTenants}</SelectItem>
+                {tenantOptions.map((t) => (
+                  <SelectItem key={t.id} value={t.id}>
+                    {t.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          <Button onClick={() => setAddDialogOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            {messages.users.addUser}
+          </Button>
+        </div>
       </div>
 
       {/* User table */}
@@ -154,7 +199,7 @@ export function UserList() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {visibleUsers!.map((user) => (
+              {filteredUsers!.map((user) => (
                 <UserRow
                   key={user.id}
                   user={user}
