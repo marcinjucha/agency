@@ -1,7 +1,6 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { createClient } from '@supabase/supabase-js'
 import { ResultAsync, errAsync, okAsync } from 'neverthrow'
 import { authResult, zodParse, fromSupabase } from '@/lib/result-helpers'
 import { type AuthSuccess } from '@/lib/auth'
@@ -10,15 +9,7 @@ import { createUserSchema, updateUserSchema } from './validation'
 import type { CreateUserInput, UpdateUserInput } from './types'
 import { routes } from '@/lib/routes'
 import { messages } from '@/lib/messages'
-
-// --- Admin Supabase client (service_role, bypasses RLS) ---
-
-function getAdminClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!url || !key) throw new Error('Missing Supabase admin credentials')
-  return createClient(url, key)
-}
+import { createServiceClient } from '@/lib/supabase/service'
 
 // --- Server Actions (public API) ---
 
@@ -105,7 +96,7 @@ const dbError = (e: unknown) =>
 
 function createAuthUser(email: string, password: string) {
   return ResultAsync.fromPromise(
-    getAdminClient().auth.admin.createUser({
+    createServiceClient().auth.admin.createUser({
       email,
       password,
       email_confirm: true,
@@ -199,13 +190,7 @@ function updateUserFields(auth: AuthSuccess, parsed: { userId: string; fullName?
     return okAsync(undefined)
   }
 
-  return ResultAsync.fromPromise(
-    Promise.all(tasks.map((t) => t.match(
-      () => undefined,
-      (err) => { throw new Error(err) },
-    ))),
-    dbError,
-  ).map(() => undefined)
+  return ResultAsync.combine(tasks).map(() => undefined)
 }
 
 function validateDeleteTarget(auth: AuthSuccess, userId: string) {
@@ -252,7 +237,7 @@ function removeUserRow(auth: AuthSuccess, userId: string) {
 
 function removeAuthUser(userId: string) {
   return ResultAsync.fromPromise(
-    getAdminClient().auth.admin.deleteUser(userId),
+    createServiceClient().auth.admin.deleteUser(userId),
     dbError,
   ).andThen((res) => {
     if (res.error) return errAsync(res.error.message)

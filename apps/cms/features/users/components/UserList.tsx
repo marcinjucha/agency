@@ -200,7 +200,7 @@ function UserRow({
               className="shrink-0 text-xs bg-red-500/10 text-red-400 border-red-500/20"
             >
               <ShieldCheck className="mr-1 h-3 w-3" />
-              Super Admin
+              {messages.users.superAdmin}
             </Badge>
           )}
         </div>

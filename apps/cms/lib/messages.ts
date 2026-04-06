@@ -1139,6 +1139,7 @@ export const messages = {
     showPassword: 'Pokaż hasło',
     hidePassword: 'Ukryj hasło',
     cannotDeleteSuperAdminTooltip: 'Super admin nie może zostać usunięty',
+    superAdmin: 'Super Admin',
   },
 
   variableInserter: {

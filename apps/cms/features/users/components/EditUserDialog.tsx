@@ -127,6 +127,11 @@ export function EditUserDialog({ user, open, onOpenChange }: EditUserDialogProps
                 ))}
               </SelectContent>
             </Select>
+            {errors.roleId && (
+              <p role="alert" className="text-xs text-destructive">
+                {errors.roleId.message}
+              </p>
+            )}
           </div>
 
           {/* Error display */}
