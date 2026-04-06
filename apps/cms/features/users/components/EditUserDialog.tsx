@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -40,6 +40,12 @@ export function EditUserDialog({ user, open, onOpenChange }: EditUserDialogProps
   const { isSuperAdmin: currentUserIsSuperAdmin, userId: currentUserId } = usePermissions()
   const [superAdminToggling, setSuperAdminToggling] = useState(false)
   const [superAdminError, setSuperAdminError] = useState<string | null>(null)
+  const [localIsSuperAdmin, setLocalIsSuperAdmin] = useState(user?.is_super_admin ?? false)
+
+  // Sync local state when dialog opens with different user
+  useEffect(() => {
+    setLocalIsSuperAdmin(user?.is_super_admin ?? false)
+  }, [user?.id, user?.is_super_admin])
 
   const { data: roles } = useQuery({
     queryKey: queryKeys.roles.all,
@@ -84,11 +90,13 @@ export function EditUserDialog({ user, open, onOpenChange }: EditUserDialogProps
 
   async function handleSuperAdminToggle(checked: boolean) {
     if (!user) return
+    setLocalIsSuperAdmin(checked) // optimistic UI update
     setSuperAdminToggling(true)
     setSuperAdminError(null)
     const result = await toggleSuperAdmin(user.id, checked)
     setSuperAdminToggling(false)
     if (!result.success) {
+      setLocalIsSuperAdmin(!checked) // revert on error
       setSuperAdminError(result.error)
     } else {
       queryClient.invalidateQueries({ queryKey: queryKeys.users.all })
@@ -168,7 +176,7 @@ export function EditUserDialog({ user, open, onOpenChange }: EditUserDialogProps
                   </p>
                 </div>
                 <Switch
-                  checked={user?.is_super_admin ?? false}
+                  checked={localIsSuperAdmin}
                   onCheckedChange={handleSuperAdminToggle}
                   disabled={isEditingSelf || superAdminToggling}
                   aria-label={messages.users.superAdminToggle}

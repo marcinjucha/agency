@@ -132,10 +132,18 @@ export function RoleList() {
           <Table>
             <TableHeader className="hidden sm:table-header-group">
               <TableRow className="hover:bg-transparent">
-                <TableHead className="text-xs font-medium uppercase tracking-wider">{messages.roles.name}</TableHead>
-                <TableHead className="text-xs font-medium uppercase tracking-wider hidden md:table-cell">{messages.roles.description}</TableHead>
-                <TableHead className="text-xs font-medium uppercase tracking-wider text-center whitespace-nowrap">{messages.roles.userCount}</TableHead>
-                <TableHead className="text-xs font-medium uppercase tracking-wider text-center whitespace-nowrap">{messages.roles.permissions}</TableHead>
+                <TableHead className="text-xs font-medium uppercase tracking-wider">
+                  {messages.roles.name}
+                </TableHead>
+                <TableHead className="text-xs font-medium uppercase tracking-wider hidden md:table-cell">
+                  {messages.roles.description}
+                </TableHead>
+                <TableHead className="text-xs font-medium uppercase tracking-wider text-center whitespace-nowrap">
+                  {messages.roles.userCount}
+                </TableHead>
+                <TableHead className="text-xs font-medium uppercase tracking-wider text-center whitespace-nowrap">
+                  {messages.roles.permissions}
+                </TableHead>
                 <TableHead />
               </TableRow>
             </TableHeader>
@@ -205,14 +213,12 @@ function RoleRow({
 
       {/* User count */}
       <TableCell className="text-center whitespace-nowrap">
-        <Badge variant="outline" className="text-">
-          {role.user_count}
-        </Badge>
+        <Badge variant="outline">{role.user_count}</Badge>
       </TableCell>
 
       {/* Permission count */}
       <TableCell className="text-center whitespace-nowrap">
-        <span className="text-xs text-muted-foreground">
+        <span className="  text-muted-foreground">
           {messages.roles.permissionCount((role.permissions ?? []).length)}
         </span>
       </TableCell>
