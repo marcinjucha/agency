@@ -1,7 +1,6 @@
 'use server'
 
-import { getUserWithTenant, isAuthError } from '@/lib/auth'
-import { hasPermission } from '@/lib/permissions'
+import { requireAuth } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
 import { routes } from '@/lib/routes'
 import { messages } from '@/lib/messages'
@@ -16,16 +15,13 @@ export async function updateResponseStatus(
   newStatus: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const auth = await getUserWithTenant()
-    if (isAuthError(auth)) return { success: false, error: auth.error }
-    if (!hasPermission('intake', auth.permissions)) {
-      return { success: false, error: messages.common.noPermission }
-    }
+    const auth = await requireAuth('intake')
+    if (!auth.success) return auth
 
     const parsed = updateStatusSchema.safeParse({ responseId, status: newStatus })
     if (!parsed.success) return { success: false, error: messages.common.invalidData }
 
-    const { supabase } = auth
+    const { supabase } = auth.data
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase type inference issue with update payload
     const { error } = await (supabase as any)
@@ -54,16 +50,13 @@ export async function updateInternalNotes(
   notes: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const auth = await getUserWithTenant()
-    if (isAuthError(auth)) return { success: false, error: auth.error }
-    if (!hasPermission('intake', auth.permissions)) {
-      return { success: false, error: messages.common.noPermission }
-    }
+    const auth = await requireAuth('intake')
+    if (!auth.success) return auth
 
     const parsed = updateNotesSchema.safeParse({ responseId, notes })
     if (!parsed.success) return { success: false, error: messages.common.invalidData }
 
-    const { supabase } = auth
+    const { supabase } = auth.data
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase type inference issue with update payload
     const { error } = await (supabase as any)

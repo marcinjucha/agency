@@ -1,8 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { getUserWithTenant, isAuthError } from '@/lib/auth'
-import { hasPermission } from '@/lib/permissions'
+import { requireAuth } from '@/lib/auth'
 import { landingPageSchema } from './validation'
 import type { LandingBlock, SeoMetadata } from '@agency/database'
 import { messages } from '@/lib/messages'
@@ -22,12 +21,9 @@ export async function updateLandingPage(
       return { success: false, error: parsed.error.errors[0]?.message ?? messages.common.invalidData }
     }
 
-    const auth = await getUserWithTenant()
-    if (isAuthError(auth)) return { success: false, error: auth.error }
-    if (!hasPermission('content.landing_page', auth.permissions)) {
-      return { success: false, error: messages.common.noPermission }
-    }
-    const { supabase } = auth
+    const auth = await requireAuth('content.landing_page')
+    if (!auth.success) return auth
+    const { supabase } = auth.data
 
     const updatePayload = {
       ...(parsed.data.blocks !== undefined && { blocks: parsed.data.blocks }),

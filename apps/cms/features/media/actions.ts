@@ -1,8 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { getUserWithTenant, isAuthError } from '@/lib/auth'
-import { hasPermission } from '@/lib/permissions'
+import { requireAuth } from '@/lib/auth'
 import { DeleteObjectCommand } from '@aws-sdk/client-s3'
 import { getS3Client, S3_BUCKET } from '@/lib/s3'
 import {
@@ -27,12 +26,9 @@ export async function createMediaItem(
       }
     }
 
-    const auth = await getUserWithTenant()
-    if (isAuthError(auth)) return { success: false, error: auth.error }
-    if (!hasPermission('content.media', auth.permissions)) {
-      return { success: false, error: messages.common.noPermission }
-    }
-    const { supabase, tenantId } = auth
+    const auth = await requireAuth('content.media')
+    if (!auth.success) return auth
+    const { supabase, tenantId } = auth.data
 
     const insertPayload = {
       tenant_id: tenantId,
@@ -78,12 +74,9 @@ export async function updateMediaItem(
       }
     }
 
-    const auth = await getUserWithTenant()
-    if (isAuthError(auth)) return { success: false, error: auth.error }
-    if (!hasPermission('content.media', auth.permissions)) {
-      return { success: false, error: messages.common.noPermission }
-    }
-    const { supabase } = auth
+    const auth = await requireAuth('content.media')
+    if (!auth.success) return auth
+    const { supabase } = auth.data
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- media_items not in generated types
     const { error } = await (supabase as any)
@@ -105,12 +98,9 @@ export async function deleteMediaItem(
   id: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const auth = await getUserWithTenant()
-    if (isAuthError(auth)) return { success: false, error: auth.error }
-    if (!hasPermission('content.media', auth.permissions)) {
-      return { success: false, error: messages.common.noPermission }
-    }
-    const { supabase } = auth
+    const auth = await requireAuth('content.media')
+    if (!auth.success) return auth
+    const { supabase } = auth.data
 
     // Fetch the item first to get s3_key for S3 cleanup
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- media_items not in generated types

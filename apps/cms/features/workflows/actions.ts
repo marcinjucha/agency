@@ -1,8 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { getUserWithTenant, isAuthError } from '@/lib/auth'
-import { hasPermission } from '@/lib/permissions'
+import { requireAuth } from '@/lib/auth'
 import {
   createWorkflowSchema,
   updateWorkflowSchema,
@@ -30,12 +29,9 @@ export async function createWorkflow(
       return { success: false, error: parsed.error.errors[0]?.message ?? messages.common.invalidData }
     }
 
-    const auth = await getUserWithTenant()
-    if (isAuthError(auth)) return { success: false, error: auth.error }
-    if (!hasPermission('workflows', auth.permissions)) {
-      return { success: false, error: messages.common.noPermission }
-    }
-    const { supabase, tenantId } = auth
+    const auth = await requireAuth('workflows')
+    if (!auth.success) return auth
+    const { supabase, tenantId } = auth.data
 
     const insertPayload = {
       tenant_id: tenantId,
@@ -73,12 +69,9 @@ export async function updateWorkflow(
       return { success: false, error: parsed.error.errors[0]?.message ?? messages.common.invalidData }
     }
 
-    const auth = await getUserWithTenant()
-    if (isAuthError(auth)) return { success: false, error: auth.error }
-    if (!hasPermission('workflows', auth.permissions)) {
-      return { success: false, error: messages.common.noPermission }
-    }
-    const { supabase } = auth
+    const auth = await requireAuth('workflows')
+    if (!auth.success) return auth
+    const { supabase } = auth.data
 
     const updatePayload: Record<string, unknown> = {}
 
@@ -111,12 +104,9 @@ export async function deleteWorkflow(
   id: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const auth = await getUserWithTenant()
-    if (isAuthError(auth)) return { success: false, error: auth.error }
-    if (!hasPermission('workflows', auth.permissions)) {
-      return { success: false, error: messages.common.noPermission }
-    }
-    const { supabase } = auth
+    const auth = await requireAuth('workflows')
+    if (!auth.success) return auth
+    const { supabase } = auth.data
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JS v2.95.2 incompatibility
     const { error } = await (supabase as any)
@@ -139,12 +129,9 @@ export async function toggleWorkflowActive(
   isActive: boolean
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const auth = await getUserWithTenant()
-    if (isAuthError(auth)) return { success: false, error: auth.error }
-    if (!hasPermission('workflows', auth.permissions)) {
-      return { success: false, error: messages.common.noPermission }
-    }
-    const { supabase } = auth
+    const auth = await requireAuth('workflows')
+    if (!auth.success) return auth
+    const { supabase } = auth.data
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JS v2.95.2 incompatibility
     const { error } = await (supabase as any)
@@ -175,12 +162,9 @@ export async function saveWorkflowCanvas(
       return { success: false, error: parsed.error.errors[0]?.message ?? messages.common.invalidData }
     }
 
-    const auth = await getUserWithTenant()
-    if (isAuthError(auth)) return { success: false, error: auth.error }
-    if (!hasPermission('workflows', auth.permissions)) {
-      return { success: false, error: messages.common.noPermission }
-    }
-    const { supabase } = auth
+    const auth = await requireAuth('workflows')
+    if (!auth.success) return auth
+    const { supabase } = auth.data
 
     // 1. Get existing step IDs for this workflow
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -281,12 +265,9 @@ export async function triggerManualWorkflow(
   workflowId: string
 ): Promise<{ success: boolean; executionId?: string; error?: string }> {
   try {
-    const auth = await getUserWithTenant()
-    if (isAuthError(auth)) return { success: false, error: auth.error }
-    if (!hasPermission('workflows', auth.permissions)) {
-      return { success: false, error: messages.common.noPermission }
-    }
-    const { supabase, tenantId } = auth
+    const auth = await requireAuth('workflows')
+    if (!auth.success) return auth
+    const { supabase, tenantId } = auth.data
 
     // Verify workflow belongs to user's tenant and has manual trigger
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -334,12 +315,9 @@ export async function createWorkflowFromTemplate(
       return { success: false, error: messages.workflows.templateNotFound }
     }
 
-    const auth = await getUserWithTenant()
-    if (isAuthError(auth)) return { success: false, error: auth.error }
-    if (!hasPermission('workflows', auth.permissions)) {
-      return { success: false, error: messages.common.noPermission }
-    }
-    const { supabase, tenantId } = auth
+    const auth = await requireAuth('workflows')
+    if (!auth.success) return auth
+    const { supabase, tenantId } = auth.data
 
     // 1. Insert workflow row
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JS v2.95.2 incompatibility
@@ -415,12 +393,9 @@ export async function cancelWorkflowExecution(
   executionId: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const auth = await getUserWithTenant()
-    if (isAuthError(auth)) return { success: false, error: auth.error }
-    if (!hasPermission('workflows', auth.permissions)) {
-      return { success: false, error: messages.common.noPermission }
-    }
-    const { tenantId } = auth
+    const auth = await requireAuth('workflows')
+    if (!auth.success) return auth
+    const { tenantId } = auth.data
 
     const serviceClient = createServiceClient()
 

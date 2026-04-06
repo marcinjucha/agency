@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { messages } from '@/lib/messages'
 import {
   ALL_PERMISSION_KEYS,
+  hasPermission,
   validatePermissionKeys,
   type PermissionKey,
 } from '@/lib/permissions'
@@ -87,6 +88,28 @@ export async function getUserWithTenant(): Promise<AuthResult> {
     roleName,
     permissions,
   }
+}
+
+/**
+ * Auth + permission check in one call. Replaces the repeated pattern:
+ *   const auth = await getUserWithTenant()
+ *   if (isAuthError(auth)) return { success: false, error: auth.error }
+ *   if (!hasPermission('key', auth.permissions)) return { success: false, error: messages.common.noPermission }
+ *
+ * Usage:
+ *   const auth = await requireAuth('intake')
+ *   if (!auth.success) return auth
+ *   // auth.data is AuthSuccess
+ */
+export async function requireAuth(permission?: PermissionKey): Promise<
+  { success: true; data: AuthSuccess } | { success: false; error: string }
+> {
+  const result = await getUserWithTenant()
+  if (isAuthError(result)) return { success: false, error: result.error }
+  if (permission && !hasPermission(permission, result.permissions)) {
+    return { success: false, error: messages.common.noPermission }
+  }
+  return { success: true, data: result }
 }
 
 // ---------------------------------------------------------------------------

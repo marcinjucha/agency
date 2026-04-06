@@ -1,8 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { getUserWithTenant, isAuthError } from '@/lib/auth'
-import { hasPermission } from '@/lib/permissions'
+import { requireAuth } from '@/lib/auth'
 import { siteSettingsSchema } from './validation'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
@@ -17,12 +16,9 @@ export async function saveSiteSettings(
       return { success: false, error: parsed.error.errors[0]?.message ?? messages.common.invalidData }
     }
 
-    const auth = await getUserWithTenant()
-    if (isAuthError(auth)) return { success: false, error: auth.error }
-    if (!hasPermission('system.settings', auth.permissions)) {
-      return { success: false, error: messages.common.noPermission }
-    }
-    const { supabase, tenantId } = auth
+    const auth = await requireAuth('system.settings')
+    if (!auth.success) return auth
+    const { supabase, tenantId } = auth.data
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TablesInsert<'site_settings'> resolves to `never` in Supabase JS v2.95.2 (known bug). Cast required for upsert.
     const { data, error } = await (supabase as any)

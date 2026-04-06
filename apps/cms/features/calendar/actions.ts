@@ -1,8 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
-import { getUserWithTenant, isAuthError } from '@/lib/auth'
-import { hasPermission } from '@/lib/permissions'
+import { requireAuth } from '@/lib/auth'
 import { revokeAccess } from '@/features/calendar/oauth'
 import { revalidatePath } from 'next/cache'
 import { getValidAccessToken, refreshAccessToken } from '@agency/calendar'
@@ -71,12 +70,9 @@ export async function disconnectGoogleCalendar(): Promise<{
   error?: string
 }> {
   try {
-    const auth = await getUserWithTenant()
-    if (isAuthError(auth)) return { success: false, error: auth.error }
-    if (!hasPermission('calendar', auth.permissions)) {
-      return { success: false, error: messages.common.noPermission }
-    }
-    const { supabase, userId } = auth
+    const auth = await requireAuth('calendar')
+    if (!auth.success) return auth
+    const { supabase, userId } = auth.data
 
     // Get current tokens for revocation
     const { data: userData, error: userError } = await supabase
@@ -138,16 +134,13 @@ export async function updateCalendarSettings(
       return { success: false, error: parsed.error.errors[0].message }
     }
 
-    const auth = await getUserWithTenant()
-    if (isAuthError(auth)) return { success: false, error: auth.error }
-    if (!hasPermission('calendar', auth.permissions)) {
-      return { success: false, error: messages.common.noPermission }
-    }
+    const auth = await requireAuth('calendar')
+    if (!auth.success) return auth
 
-    const { error } = await auth.supabase
+    const { error } = await auth.data.supabase
       .from('calendar_settings')
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .upsert({ user_id: auth.userId, ...data } as any, { onConflict: 'user_id' })
+      .upsert({ user_id: auth.data.userId, ...data } as any, { onConflict: 'user_id' })
 
     if (error) {
       return { success: false, error: error.message }

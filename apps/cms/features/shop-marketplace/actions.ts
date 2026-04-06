@@ -1,8 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { getUserWithTenant, isAuthError } from '@/lib/auth'
-import { hasPermission } from '@/lib/permissions'
+import { requireAuth } from '@/lib/auth'
 import { createServiceClient } from '@/lib/supabase/service'
 import { routes } from '@/lib/routes'
 import { messages } from '@/lib/messages'
@@ -45,11 +44,8 @@ function dispatchMarketplaceWebhook(payload: Record<string, unknown>): void {
 export async function connectMarketplace(
   data: ConnectMarketplaceFormData
 ): Promise<{ success: true; data: { authUrl: string } } | { success: false; error: string }> {
-  const auth = await getUserWithTenant()
-  if (isAuthError(auth)) return { success: false, error: auth.error }
-  if (!hasPermission('shop.marketplace', auth.permissions)) {
-    return { success: false, error: messages.common.noPermission }
-  }
+  const auth = await requireAuth('shop.marketplace')
+  if (!auth.success) return auth
 
   const parsed = connectMarketplaceSchema.safeParse(data)
   if (!parsed.success) {
@@ -77,12 +73,9 @@ export async function disconnectMarketplace(
   connectionId: string
 ): Promise<{ success: true } | { success: false; error: string }> {
   try {
-    const auth = await getUserWithTenant()
-    if (isAuthError(auth)) return { success: false, error: auth.error }
-    if (!hasPermission('shop.marketplace', auth.permissions)) {
-      return { success: false, error: messages.common.noPermission }
-    }
-    const { supabase } = auth
+    const auth = await requireAuth('shop.marketplace')
+    if (!auth.success) return auth
+    const { supabase } = auth.data
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- shop_marketplace_connections not in generated types
     const { error } = await (supabase as any)
@@ -104,12 +97,9 @@ export async function publishToMarketplace(
   data: PublishListingFormData
 ): Promise<{ success: true; data: { listingId: string } } | { success: false; error: string }> {
   try {
-    const auth = await getUserWithTenant()
-    if (isAuthError(auth)) return { success: false, error: auth.error }
-    if (!hasPermission('shop.marketplace', auth.permissions)) {
-      return { success: false, error: messages.common.noPermission }
-    }
-    const { supabase, tenantId } = auth
+    const auth = await requireAuth('shop.marketplace')
+    if (!auth.success) return auth
+    const { supabase, tenantId } = auth.data
 
     const parsed = publishListingSchema.safeParse(data)
     if (!parsed.success) {
@@ -199,12 +189,9 @@ export async function updateMarketplaceListing(
   data: UpdateListingFormData
 ): Promise<{ success: true } | { success: false; error: string }> {
   try {
-    const auth = await getUserWithTenant()
-    if (isAuthError(auth)) return { success: false, error: auth.error }
-    if (!hasPermission('shop.marketplace', auth.permissions)) {
-      return { success: false, error: messages.common.noPermission }
-    }
-    const { supabase, tenantId } = auth
+    const auth = await requireAuth('shop.marketplace')
+    if (!auth.success) return auth
+    const { supabase, tenantId } = auth.data
 
     const parsed = updateListingSchema.safeParse(data)
     if (!parsed.success) {
@@ -286,12 +273,9 @@ export async function removeMarketplaceListing(
   listingId: string
 ): Promise<{ success: true } | { success: false; error: string }> {
   try {
-    const auth = await getUserWithTenant()
-    if (isAuthError(auth)) return { success: false, error: auth.error }
-    if (!hasPermission('shop.marketplace', auth.permissions)) {
-      return { success: false, error: messages.common.noPermission }
-    }
-    const { supabase, tenantId } = auth
+    const auth = await requireAuth('shop.marketplace')
+    if (!auth.success) return auth
+    const { supabase, tenantId } = auth.data
 
     // Fetch listing — verify it belongs to tenant and get external_listing_id for n8n
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- shop_marketplace_listings not in generated types
@@ -340,12 +324,9 @@ export async function startMarketplaceImport(
   selectedListingIds: string[]
 ): Promise<{ success: true; data: { importId: string } } | { success: false; error: string }> {
   try {
-    const auth = await getUserWithTenant()
-    if (isAuthError(auth)) return { success: false, error: auth.error }
-    if (!hasPermission('shop.marketplace', auth.permissions)) {
-      return { success: false, error: messages.common.noPermission }
-    }
-    const { supabase, tenantId } = auth
+    const auth = await requireAuth('shop.marketplace')
+    if (!auth.success) return auth
+    const { supabase, tenantId } = auth.data
 
     const parsed = createImportSchema.safeParse(data)
     if (!parsed.success) {
