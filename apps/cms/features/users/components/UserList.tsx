@@ -35,6 +35,7 @@ import {
   TableRow,
 } from '@agency/ui'
 import { Users, Plus, Pencil, Trash2, ShieldCheck } from 'lucide-react'
+import { usePermissions } from '@/contexts/permissions-context'
 import { AddUserDialog } from './AddUserDialog'
 import { EditUserDialog } from './EditUserDialog'
 
@@ -53,6 +54,7 @@ function getRoleBadgeClassName(role: string | null): string {
 
 export function UserList() {
   const queryClient = useQueryClient()
+  const { isSuperAdmin: viewerIsSuperAdmin } = usePermissions()
   const [addDialogOpen, setAddDialogOpen] = useState(false)
   const [editingUser, setEditingUser] = useState<UserWithRole | null>(null)
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
@@ -153,6 +155,7 @@ export function UserList() {
                   onDelete={() => deleteMutation.mutate(user.id)}
                   isDeleting={deletingUserId === user.id}
                   isCurrentUser={currentUserId === user.id}
+                  viewerIsSuperAdmin={viewerIsSuperAdmin}
                 />
               ))}
             </TableBody>
@@ -179,12 +182,14 @@ function UserRow({
   onDelete,
   isDeleting,
   isCurrentUser,
+  viewerIsSuperAdmin,
 }: {
   user: UserWithRole
   onEdit: () => void
   onDelete: () => void
   isDeleting: boolean
   isCurrentUser: boolean
+  viewerIsSuperAdmin: boolean
 }) {
   const formattedDate = new Date(user.created_at).toLocaleDateString('pl-PL', {
     day: 'numeric',
@@ -204,7 +209,7 @@ function UserRow({
           <p className="text-sm font-medium text-foreground truncate">
             {user.full_name || '\u2014'}
           </p>
-          {user.is_super_admin && (
+          {viewerIsSuperAdmin && user.is_super_admin && (
             <Badge
               variant="outline"
               className="shrink-0 text-xs bg-red-500/10 text-red-400 border-red-500/20"
