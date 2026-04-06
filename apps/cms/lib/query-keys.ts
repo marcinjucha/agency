@@ -54,6 +54,13 @@ export const queryKeys = {
       filters ? (['executions', filters] as const) : (['executions'] as const),
     detail: (id: string) => ['executions', 'detail', id] as const,
   },
+  users: {
+    all: ['users'] as const,
+    detail: (id: string) => ['users', id] as const,
+  },
+  roles: {
+    all: ['roles'] as const,
+  },
   marketplace: {
     all: ['marketplace'] as const,
     connections: ['marketplace', 'connections'] as const,
