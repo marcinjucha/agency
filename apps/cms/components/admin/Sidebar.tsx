@@ -2,14 +2,40 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, FileText, Inbox, Calendar, Settings, LogOut, Mail, Globe, Newspaper, Images, Scale, ShoppingBag, Tags, Store, Zap, History } from 'lucide-react'
+import {
+  LayoutDashboard,
+  FileText,
+  Inbox,
+  Calendar,
+  Settings,
+  LogOut,
+  Mail,
+  Globe,
+  Newspaper,
+  Images,
+  Scale,
+  ShoppingBag,
+  Tags,
+  Store,
+  Zap,
+  History,
+  Users,
+  Shield,
+} from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
+import { usePermissions } from '@/contexts/permissions-context'
+import { getRequiredPermission, type PermissionKey } from '@/lib/permissions'
 
 type MenuItem = { href: string; label: string; icon: typeof LayoutDashboard }
-type MenuGroup = { label?: string; items: MenuItem[] }
+type MenuGroup = {
+  label?: string
+  items: MenuItem[]
+  /** If set, group is visible only when user has ANY of these permissions. */
+  requiredPermissions?: PermissionKey[]
+}
 
 const menuGroups: MenuGroup[] = [
   {
@@ -56,18 +82,48 @@ const menuGroups: MenuGroup[] = [
       { href: routes.admin.settings, label: messages.nav.settings, icon: Settings },
     ],
   },
+  {
+    label: messages.nav.groupManagement,
+    requiredPermissions: ['system.users', 'system.roles'],
+    items: [
+      { href: routes.admin.users, label: messages.nav.users, icon: Users },
+      { href: routes.admin.roles, label: messages.nav.roles, icon: Shield },
+    ],
+  },
 ]
 
 export function Sidebar() {
   const pathname = usePathname()
   const router = useRouter()
   const supabase = createClient()
+  const { hasPermission } = usePermissions()
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
     router.push(routes.login)
     router.refresh()
   }
+
+  /** Filter menu items based on user permissions. Dashboard is always visible (alwaysGranted). */
+  const filteredGroups = menuGroups
+    .map((group) => {
+      const visibleItems = group.items.filter((item) => {
+        const required = getRequiredPermission(item.href)
+        // No permission mapping (e.g. dashboard) or alwaysGranted -> show
+        if (!required) return true
+        return hasPermission(required)
+      })
+      return { ...group, items: visibleItems }
+    })
+    .filter((group) => {
+      // Hide group if no visible items
+      if (group.items.length === 0) return false
+      // Hide group if requiredPermissions set and user has none
+      if (group.requiredPermissions) {
+        return group.requiredPermissions.some((p) => hasPermission(p))
+      }
+      return true
+    })
 
   return (
     <aside className="w-64 bg-card border-r border-border flex flex-col h-screen">
@@ -77,7 +133,7 @@ export function Sidebar() {
       </div>
 
       <nav className="flex-1 overflow-y-auto px-3 space-y-4">
-        {menuGroups.map((group, groupIdx) => (
+        {filteredGroups.map((group, groupIdx) => (
           <div key={group.label ?? groupIdx}>
             {group.label && (
               <p className="px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">
