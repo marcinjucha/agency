@@ -3,8 +3,8 @@ import { messages } from '@/lib/messages'
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>
 
-type AuthSuccess = { supabase: SupabaseServerClient; userId: string; tenantId: string }
-type AuthError = { error: string }
+export type AuthSuccess = { supabase: SupabaseServerClient; userId: string; tenantId: string }
+export type AuthError = { error: string }
 
 export type AuthResult = AuthSuccess | AuthError
 

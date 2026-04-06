@@ -108,6 +108,8 @@
 - **jose for JWT state (not jsonwebtoken)** — jose is Edge-compatible. State JWT = { tenantId, marketplace, nonce }, 10min expiry, HS256. (2026-04-02, AAA-T-157)
 - **`semantic_role` overrides `question.type` via `effectiveType`/`inputType` pattern** — Survey questions have both `type` (DB storage type: text/number/date) and `semantic_role` (business meaning: client_email/client_name/client_phone). When `semantic_role` implies a specific type, it overrides `question.type` for validation schema generation and input rendering. (2026-04-02)
 - **`packages/database` has known deferred violations** — BLOCK_TYPE_LABELS and DEFAULT_BLOCKS in packages/database are pre-existing architecture violations (business constants in infrastructure package). Known deferred items — don't re-flag in audits. (2026-04-03)
+- **remeda + neverthrow as project FP stack** — remeda for data pipelines (pipe, map, filter, etc.), neverthrow for typed error handling (Result, ResultAsync). Effect.js explicitly rejected — too heavy for Next.js CRUD app. (2026-04-06)
+- **result-helpers.ts shared infrastructure in lib/** — `authResult()`, `zodParse()`, `fromSupabase()` wrappers that convert auth/validation/DB calls into neverthrow Results. Located in `apps/cms/lib/result-helpers.ts`. (2026-04-06)
 
 ## Preferences
 
@@ -138,3 +140,5 @@
 - **Landing page section spacing: golden ratio py-24 base** — py-24 (96px) base, scaled with phi 1.618 for hero/CTA. (2026-04-02)
 - **User workflow: docx design notes -> extract -> design agent** — New input channel for design feedback. (2026-04-02)
 - **InsertMediaModal: link input above filters, not below** — User corrected layout order: URL link input must appear between upload zone and filter bar, not after filters. middleSlot prop pattern for injecting content into LibraryTab. (2026-04-02)
+- **Readability: named functions over inline closures** — User's strongest signal during FP adoption. Extract `.map(fn)` callbacks to named functions. File organization: public API → internal helpers → private functions. (2026-04-06)
+- **Boy Scout Rule for FP migration (not big-bang refactor)** — Adopt remeda + neverthrow incrementally: refactor files when you touch them, don't rewrite existing working code in bulk. (2026-04-06)
