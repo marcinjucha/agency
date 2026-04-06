@@ -200,6 +200,7 @@ This monorepo contains two Notion projects with separate PROJECT_SPEC files:
 - **Turbopack barrel re-export bug** — `export { X } from 'module'` in files used by Server Actions causes "Expected export to be in eval context". Fix: `import { X } from 'module'; export const Y = X`.
 - **Functional patterns: `remeda` + `neverthrow`** — Project adopts `remeda` for `pipe()`/functional composition and `neverthrow` for typed `Result<T, E>` error handling. **New Server Actions** use `ok().andThen().asyncAndThen().match()` instead of `try/catch`. Key patterns: `pipe()` for data transformations, `Result`/`ResultAsync` for error handling, `andThen` chaining with final `.match()`, `fromThrowable`/`ResultAsync.fromPromise` for wrapping unsafe code. **Not Effect.js** — lightweight (~5KB neverthrow + tree-shakeable remeda).
 - **Boy Scout Rule** — Always leave code better than you found it. When touching a file: migrate try/catch → Result types, imperative loops → `pipe()`, fix naming, add missing types. Only in files you're already changing — don't refactor untouched code proactively.
+- **Type-safe domain modeling** — Never pass plain `string` where a domain type exists. Derive typed unions from `as const` objects (single source of truth), validate at DB boundary with a validator function. Applied in RBAC (`PermissionKey`), should extend to all enum-like domain values (workflow step types, blog statuses, etc.). See `ag-coding-practices` skill for full pattern.
 
 ---
 

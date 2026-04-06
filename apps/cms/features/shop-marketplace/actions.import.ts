@@ -1,6 +1,6 @@
 'use server'
 
-import { getUserWithTenant, isAuthError } from '@/lib/auth'
+import { requireAuth } from '@/lib/auth'
 import { messages } from '@/lib/messages'
 import { getMarketplaceCredentials } from './adapters/credentials'
 import { getMarketplaceAdapter } from './adapters/registry'
@@ -33,9 +33,9 @@ export async function getImportPreviewListings(
   error?: string
 }> {
   try {
-    const auth = await getUserWithTenant()
-    if (isAuthError(auth)) return { success: false, error: auth.error }
-    const { supabase, tenantId } = auth
+    const auth = await requireAuth('shop.marketplace')
+    if (!auth.success) return auth
+    const { supabase, tenantId } = auth.data
 
     // Verify connection belongs to tenant
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- shop_marketplace_connections not in generated types

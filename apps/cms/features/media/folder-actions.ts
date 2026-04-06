@@ -1,7 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { getUserWithTenant, isAuthError } from '@/lib/auth'
+import { requireAuth } from '@/lib/auth'
 import {
   createFolderSchema,
   renameFolderSchema,
@@ -24,9 +24,9 @@ export async function createFolder(
       }
     }
 
-    const auth = await getUserWithTenant()
-    if (isAuthError(auth)) return { success: false, error: auth.error }
-    const { supabase, tenantId } = auth
+    const auth = await requireAuth('content.media')
+    if (!auth.success) return auth
+    const { supabase, tenantId } = auth.data
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- media_folders not in generated client types
     const { data: created, error } = await (supabase as any)
@@ -63,9 +63,9 @@ export async function renameFolder(
       }
     }
 
-    const auth = await getUserWithTenant()
-    if (isAuthError(auth)) return { success: false, error: auth.error }
-    const { supabase } = auth
+    const auth = await requireAuth('content.media')
+    if (!auth.success) return auth
+    const { supabase } = auth.data
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- media_folders not in generated client types
     const { error } = await (supabase as any)
@@ -88,9 +88,9 @@ export async function deleteFolder(
   id: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const auth = await getUserWithTenant()
-    if (isAuthError(auth)) return { success: false, error: auth.error }
-    const { supabase } = auth
+    const auth = await requireAuth('content.media')
+    if (!auth.success) return auth
+    const { supabase } = auth.data
 
     // Items in this folder get folder_id=NULL via ON DELETE SET NULL
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- media_folders not in generated client types
@@ -115,9 +115,9 @@ export async function moveMediaToFolder(
   folderId: string | null
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const auth = await getUserWithTenant()
-    if (isAuthError(auth)) return { success: false, error: auth.error }
-    const { supabase } = auth
+    const auth = await requireAuth('content.media')
+    if (!auth.success) return auth
+    const { supabase } = auth.data
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- media_items not in generated client types
     const { error } = await (supabase as any)

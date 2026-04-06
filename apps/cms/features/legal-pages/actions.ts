@@ -1,7 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { getUserWithTenant, isAuthError } from '@/lib/auth'
+import { requireAuth } from '@/lib/auth'
 import { legalPageSchema, type LegalPageFormData } from './validation'
 import { parseContent, generateHtmlFromContent } from '../editor/utils'
 import { messages } from '@/lib/messages'
@@ -19,9 +19,9 @@ export async function updateLegalPage(
       return { success: false, error: parsed.error.errors[0]?.message ?? messages.common.invalidData }
     }
 
-    const auth = await getUserWithTenant()
-    if (isAuthError(auth)) return { success: false, error: auth.error }
-    const { supabase } = auth
+    const auth = await requireAuth('content.legal_pages')
+    if (!auth.success) return auth
+    const { supabase } = auth.data
 
     const content = parseContent(parsed.data.content) as TiptapContent
     const htmlBody = generateHtmlFromContent(content)

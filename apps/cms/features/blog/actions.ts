@@ -1,9 +1,10 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { ResultAsync } from 'neverthrow'
+import { err, ResultAsync } from 'neverthrow'
 import { authResult, zodParse, fromSupabase } from '@/lib/result-helpers'
 import { type AuthSuccess } from '@/lib/auth'
+import { hasPermission } from '@/lib/permissions'
 import { blogPostSchema, type BlogPostFormData } from './validation'
 import { toBlogPost, type BlogPost } from './types'
 import { parseContent } from './utils'
@@ -21,7 +22,10 @@ export async function createBlogPost(
 ): Promise<{ success: boolean; data?: BlogPost; error?: string }> {
   const result = await zodParse(blogPostSchema, data)
     .asyncAndThen((parsed) => authResult().map((auth) => ({ parsed, auth })))
-    .andThen(({ parsed, auth }) => insertPost(auth, buildCreatePayload(parsed, data)))
+    .andThen(({ parsed, auth }) => {
+      if (!hasPermission('content.blog', auth.permissions)) return err(messages.common.noPermission)
+      return insertPost(auth, buildCreatePayload(parsed, data))
+    })
 
   return result.match(
     (created) => {
@@ -38,9 +42,10 @@ export async function updateBlogPost(
 ): Promise<{ success: boolean; data?: BlogPost; error?: string }> {
   const result = await zodParse(blogPostSchema, data)
     .asyncAndThen((parsed) => authResult().map((auth) => ({ parsed, auth })))
-    .andThen(({ parsed, auth }) =>
-      fetchPublishedAt(auth, id).map((existing) => ({ parsed, auth, existing }))
-    )
+    .andThen(({ parsed, auth }) => {
+      if (!hasPermission('content.blog', auth.permissions)) return err(messages.common.noPermission)
+      return fetchPublishedAt(auth, id).map((existing) => ({ parsed, auth, existing }))
+    })
     .andThen(({ parsed, auth, existing }) =>
       updatePost(auth, id, buildUpdatePayload(parsed, data, existing))
     )
@@ -59,7 +64,10 @@ export async function deleteBlogPost(
   id: string
 ): Promise<{ success: boolean; error?: string }> {
   const result = await authResult()
-    .andThen((auth) => deletePost(auth, id))
+    .andThen((auth) => {
+      if (!hasPermission('content.blog', auth.permissions)) return err(messages.common.noPermission)
+      return deletePost(auth, id)
+    })
 
   return result.match(
     () => {

@@ -1,6 +1,8 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { routes } from '@/lib/routes'
+import { getRequiredPermission, hasPermission } from '@/lib/permissions'
+import { fetchMiddlewareUser } from '@/lib/middleware-auth'
 
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
@@ -41,7 +43,7 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  // Protect /admin routes
+  // Protect /admin routes — redirect unauthenticated to login
   if (request.nextUrl.pathname.startsWith(routes.admin.root) && !user) {
     return NextResponse.redirect(new URL(routes.login, request.url))
   }
@@ -49,6 +51,23 @@ export async function middleware(request: NextRequest) {
   // Redirect logged-in users away from login page
   if (request.nextUrl.pathname === routes.login && user) {
     return NextResponse.redirect(new URL(routes.admin.root, request.url))
+  }
+
+  // --- Permission-based route protection ---
+  if (user && request.nextUrl.pathname.startsWith(routes.admin.root)) {
+    const requiredPermission = getRequiredPermission(request.nextUrl.pathname)
+
+    // No permission mapping for this route (e.g. /admin dashboard) — allow
+    if (requiredPermission) {
+      const middlewareUser = await fetchMiddlewareUser(supabase, user.id)
+
+      // User not found in users table — allow through (edge case, auth.ts handles)
+      if (middlewareUser && !hasPermission(requiredPermission, middlewareUser.permissions)) {
+        const unauthorizedUrl = new URL(routes.admin.root, request.url)
+        unauthorizedUrl.searchParams.set('unauthorized', '1')
+        return NextResponse.redirect(unauthorizedUrl)
+      }
+    }
   }
 
   return supabaseResponse

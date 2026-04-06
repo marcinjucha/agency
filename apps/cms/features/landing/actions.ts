@@ -1,7 +1,7 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { requireAuth } from '@/lib/auth'
 import { landingPageSchema } from './validation'
 import type { LandingBlock, SeoMetadata } from '@agency/database'
 import { messages } from '@/lib/messages'
@@ -21,9 +21,9 @@ export async function updateLandingPage(
       return { success: false, error: parsed.error.errors[0]?.message ?? messages.common.invalidData }
     }
 
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return { success: false, error: messages.common.notLoggedIn }
+    const auth = await requireAuth('content.landing_page')
+    if (!auth.success) return auth
+    const { supabase } = auth.data
 
     const updatePayload = {
       ...(parsed.data.blocks !== undefined && { blocks: parsed.data.blocks }),

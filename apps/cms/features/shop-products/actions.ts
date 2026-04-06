@@ -1,7 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { getUserWithTenant, isAuthError } from '@/lib/auth'
+import { requireAuth } from '@/lib/auth'
 import { createShopProductSchema, updateShopProductSchema, type CreateShopProductFormData } from './validation'
 import { toShopProduct, type ShopProduct } from './types'
 import { generateSlug } from './utils'
@@ -19,9 +19,9 @@ export async function createShopProduct(
       return { success: false, error: parsed.error.errors[0]?.message ?? messages.common.invalidData }
     }
 
-    const auth = await getUserWithTenant()
-    if (isAuthError(auth)) return { success: false, error: auth.error }
-    const { supabase, tenantId } = auth
+    const auth = await requireAuth('shop.products')
+    if (!auth.success) return auth
+    const { supabase, tenantId } = auth.data
 
     const slug = parsed.data.slug || generateSlug(parsed.data.title)
 
@@ -80,9 +80,9 @@ export async function updateShopProduct(
       return { success: false, error: parsed.error.errors[0]?.message ?? messages.common.invalidData }
     }
 
-    const auth = await getUserWithTenant()
-    if (isAuthError(auth)) return { success: false, error: auth.error }
-    const { supabase } = auth
+    const auth = await requireAuth('shop.products')
+    if (!auth.success) return auth
+    const { supabase } = auth.data
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- shop_products type resolves to never (Supabase JS v2.95.2 incompatibility)
     const { data: existing, error: fetchError } = await (supabase as any)
@@ -155,9 +155,9 @@ export async function deleteShopProduct(
   id: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const auth = await getUserWithTenant()
-    if (isAuthError(auth)) return { success: false, error: auth.error }
-    const { supabase } = auth
+    const auth = await requireAuth('shop.products')
+    if (!auth.success) return auth
+    const { supabase } = auth.data
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TablesInsert resolves to never
     const { error } = await (supabase as any)
@@ -180,9 +180,9 @@ export async function toggleShopProductPublished(
   isPublished: boolean
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const auth = await getUserWithTenant()
-    if (isAuthError(auth)) return { success: false, error: auth.error }
-    const { supabase } = auth
+    const auth = await requireAuth('shop.products')
+    if (!auth.success) return auth
+    const { supabase } = auth.data
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- shop_products type resolves to never (Supabase JS v2.95.2 incompatibility)
     const { data: existing, error: fetchError } = await (supabase as any)

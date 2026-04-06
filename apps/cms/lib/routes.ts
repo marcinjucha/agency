@@ -58,6 +58,9 @@ export const routes = {
     emailTemplates: '/admin/email-templates',
     emailTemplate: (type: string) => `/admin/email-templates/${type}`,
     settings: '/admin/settings',
+    users: '/admin/users',
+    roles: '/admin/roles',
+    role: (id: string) => `/admin/roles/${id}`,
   },
 
   api: {

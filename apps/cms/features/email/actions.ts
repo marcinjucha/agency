@@ -1,7 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { getUserWithTenant, isAuthError } from '@/lib/auth'
+import { requireAuth } from '@/lib/auth'
 import { renderEmailBlocks, DEFAULT_BLOCKS } from '@agency/email'
 import type { Block } from '@agency/email'
 import { updateEmailTemplateSchema } from './validation'
@@ -63,9 +63,9 @@ export async function updateEmailTemplate(
     // Extract variable keys used in blocks (scan all string values for {{...}} pattern)
     const template_variables = extractTemplateVariables(parsed.data.subject, parsed.data.blocks)
 
-    const auth = await getUserWithTenant()
-    if (isAuthError(auth)) return { success: false, error: auth.error }
-    const { supabase, tenantId } = auth
+    const auth = await requireAuth('system.email_templates')
+    if (!auth.success) return auth
+    const { supabase, tenantId } = auth.data
 
     // Check if template already exists (cannot use upsert — partial unique index
     // on tenant_id+type WHERE type != 'workflow_custom' breaks ON CONFLICT)

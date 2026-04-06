@@ -98,6 +98,18 @@ export type { CollapsibleCardProps } from './components/ui/collapsible-card'
 // Variable inserter
 export { VariableInserterPopover, type VariableItem } from './components/ui/variable-inserter-popover'
 
+// Table
+export {
+  Table,
+  TableHeader,
+  TableBody,
+  TableFooter,
+  TableHead,
+  TableRow,
+  TableCell,
+  TableCaption,
+} from './components/ui/table'
+
 // State components
 export { EmptyState } from './empty-state'
 export { ErrorState } from './error-state'

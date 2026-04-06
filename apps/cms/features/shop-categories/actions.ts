@@ -1,7 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { getUserWithTenant, isAuthError } from '@/lib/auth'
+import { requireAuth } from '@/lib/auth'
 import { createShopCategorySchema, updateShopCategorySchema, type CreateShopCategoryFormData } from './validation'
 import type { ShopCategory } from './types'
 import { messages } from '@/lib/messages'
@@ -18,9 +18,9 @@ export async function createShopCategory(
       return { success: false, error: parsed.error.errors[0]?.message ?? messages.common.invalidData }
     }
 
-    const auth = await getUserWithTenant()
-    if (isAuthError(auth)) return { success: false, error: auth.error }
-    const { supabase, tenantId } = auth
+    const auth = await requireAuth('shop.categories')
+    if (!auth.success) return auth
+    const { supabase, tenantId } = auth.data
 
     const insertPayload = {
       tenant_id: tenantId,
@@ -57,9 +57,9 @@ export async function updateShopCategory(
       return { success: false, error: parsed.error.errors[0]?.message ?? messages.common.invalidData }
     }
 
-    const auth = await getUserWithTenant()
-    if (isAuthError(auth)) return { success: false, error: auth.error }
-    const { supabase } = auth
+    const auth = await requireAuth('shop.categories')
+    if (!auth.success) return auth
+    const { supabase } = auth.data
 
     const updatePayload: Record<string, unknown> = {}
 
@@ -91,9 +91,9 @@ export async function deleteShopCategory(
   id: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const auth = await getUserWithTenant()
-    if (isAuthError(auth)) return { success: false, error: auth.error }
-    const { supabase } = auth
+    const auth = await requireAuth('shop.categories')
+    if (!auth.success) return auth
+    const { supabase } = auth.data
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TablesInsert resolves to never
     const { error } = await (supabase as any)

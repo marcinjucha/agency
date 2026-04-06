@@ -1,8 +1,7 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
-import { getUserWithTenant, isAuthError } from '@/lib/auth'
+import { requireAuth } from '@/lib/auth'
 import type { Tables, TablesInsert } from '@agency/database'
 import {
   createSurveySchema,
@@ -28,9 +27,9 @@ export async function createSurvey(formData: {
       return { success: false, error: parsed.error.errors[0].message }
     }
 
-    const auth = await getUserWithTenant()
-    if (isAuthError(auth)) return { success: false, error: auth.error }
-    const { supabase, userId, tenantId } = auth
+    const auth = await requireAuth('surveys')
+    if (!auth.success) return auth
+    const { supabase, userId, tenantId } = auth.data
 
     // Create survey
     const surveyData: TablesInsert<'surveys'> = {
@@ -72,10 +71,11 @@ export async function updateSurvey(
       return { success: false, error: parsed.error.errors[0].message }
     }
 
-    const supabase = await createClient()
+    const auth = await requireAuth('surveys')
+    if (!auth.success) return auth
 
     // @ts-expect-error - Supabase type inference issue with Server Actions
-    const { error } = await supabase.from('surveys').update(data).eq('id', id)
+    const { error } = await auth.data.supabase.from('surveys').update(data).eq('id', id)
 
     if (error) {
       return { success: false, error: error.message }
@@ -94,10 +94,10 @@ export async function updateSurvey(
  */
 export async function deleteSurvey(id: string): Promise<{ success: boolean; error?: string }> {
   try {
-    const auth = await getUserWithTenant()
-    if (isAuthError(auth)) return { success: false, error: auth.error }
+    const auth = await requireAuth('surveys')
+    if (!auth.success) return auth
 
-    const { error } = await auth.supabase.from('surveys').delete().eq('id', id)
+    const { error } = await auth.data.supabase.from('surveys').delete().eq('id', id)
 
     if (error) {
       return { success: false, error: error.message }
@@ -136,7 +136,9 @@ export async function generateSurveyLink(
       return { success: false, error: parsed.error.errors[0].message }
     }
 
-    const supabase = await createClient()
+    const auth = await requireAuth('surveys')
+    if (!auth.success) return auth
+    const supabase = auth.data.supabase
 
     // Verify user has access to this survey (via tenant_id RLS)
     const { data: survey } = await supabase
@@ -192,10 +194,11 @@ export async function deleteSurveyLink(
   surveyId: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const supabase = await createClient()
+    const auth = await requireAuth('surveys')
+    if (!auth.success) return auth
 
     // RLS will ensure user can only delete links for their tenant's surveys
-    const { error } = await supabase.from('survey_links').delete().eq('id', linkId)
+    const { error } = await auth.data.supabase.from('survey_links').delete().eq('id', linkId)
 
     if (error) {
       return { success: false, error: error.message }
@@ -224,10 +227,11 @@ export async function updateSurveyLink(
       return { success: false, error: parsed.error.errors[0].message }
     }
 
-    const supabase = await createClient()
+    const auth = await requireAuth('surveys')
+    if (!auth.success) return auth
 
     // RLS will ensure user can only update links for their tenant's surveys
-    const { error } = await supabase
+    const { error } = await auth.data.supabase
       .from('survey_links')
       // @ts-expect-error - Supabase type inference issue with update payload
       .update({

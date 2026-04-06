@@ -209,6 +209,19 @@ export async function getSurveys(): Promise<Tables<'surveys'>[]> {
 }
 ```
 
+**Derive typed unions from `as const` objects in `types.ts`** — When a feature has enum-like domain values (status, type, kind), define them as `as const` objects and derive the union type. Never hand-maintain string unions that duplicate a const object. DB stores TEXT — validate at query boundary.
+
+```typescript
+// ✅ types.ts — single source of truth
+const STEP_TYPES = { condition: 'condition', delay: 'delay', webhook: 'webhook' } as const
+type StepType = (typeof STEP_TYPES)[keyof typeof STEP_TYPES]
+
+// ❌ Avoid — hand-maintained union drifts from runtime values
+type StepType = 'condition' | 'delay' | 'webhook'
+```
+
+**Why:** RBAC (`PermissionKey`) proved this pattern catches typos at compile time and provides full autocomplete. Applies to any feature with domain constants: workflow step/trigger types, blog statuses, marketplace adapter keys, listing types.
+
 ## Gotchas
 
 **Recurring patterns (see skills for details):**

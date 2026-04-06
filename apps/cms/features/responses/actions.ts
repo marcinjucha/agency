@@ -1,6 +1,6 @@
 'use server'
 
-import { getUserWithTenant, isAuthError } from '@/lib/auth'
+import { requireAuth } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
@@ -9,10 +9,10 @@ export async function deleteResponse(
   id: string
 ): Promise<{ success: boolean; error?: string; hadAppointment?: boolean }> {
   try {
-    const auth = await getUserWithTenant()
-    if (isAuthError(auth)) return { success: false, error: auth.error }
+    const auth = await requireAuth('surveys')
+    if (!auth.success) return auth
 
-    const { supabase } = auth
+    const { supabase } = auth.data
 
     // Check if response has an appointment
     const { data: appointment } = await supabase
@@ -44,6 +44,9 @@ export async function deleteResponse(
 }
 
 export async function triggerAiAnalysis(responseId: string): Promise<{ success: boolean; error?: string }> {
+  const auth = await requireAuth('surveys')
+  if (!auth.success) return auth
+
   const webhookUrl = process.env.N8N_WEBHOOK_SURVEY_ANALYSIS_URL
   if (!webhookUrl) {
     return { success: false, error: 'N8N_WEBHOOK_SURVEY_ANALYSIS_URL not configured' }

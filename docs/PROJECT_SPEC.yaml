@@ -162,10 +162,13 @@ features:
     depends_on: ["Response Management UI", "AI Qualification Workflow"]
 
   - name: "Roles & Permissions System"
-    status: not_started
-    description: "user_roles (super_admin/admin/member) + feature_permissions for granular overrides, RLS policies with role check, middleware route protection, sidebar hiding per role"
-    why: "Multi-user access control needed before client onboarding"
+    status: done
+    task_id: "AAA-T-61"
+    related_tasks: ["AAA-T-76"]
+    description: "Complete RBAC system (6 iterations). DB schema: tenant_roles, role_permissions, user_roles tables + is_super_admin() PostgreSQL function + seed data for default roles (super_admin/admin/member). Type-safe PermissionKey union derived from as const PERMISSION_GROUPS validated at DB boundary. requireAuth() helper consolidates auth+permission check across 48 Server Actions in 18 files. Middleware route protection blocks unauthorized routes, redirects to /admin?unauthorized=1. Sidebar filters menu items per permissions, new Zarządzanie group. User Management CRUD: list (shadcn Table), add (email+password), edit (name+role), delete with guards. Role Management: list, create/edit custom roles with PermissionPicker (indeterminate checkboxes, card-based groups). 47 Server Actions across 15+ features guarded with hasPermission(). Super admin toggle (visible to super admins only, optimistic UI). Change password (hierarchical: super_admin > admin > member, self-change for everyone). Tenant column visible only for super admins with filter dropdown. @agency/ui Table + Checkbox indeterminate added as shared components."
+    why: "Multi-user access control needed before client onboarding — prevents any team member from accessing features they should not see or modify"
     depends_on: ["Authentication System"]
+    completion_notes: "Admins can create and assign custom roles with granular permissions. All 47 Server Actions are guarded. Super admins see cross-tenant data. Users can change their own password. Role management UI supports indeterminate checkboxes for partial permission group selection."
 
   - name: "Email: Booking Confirmation"
     status: not_started
