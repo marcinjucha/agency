@@ -115,8 +115,9 @@ function insertUserRow(
   email: string,
   fullName: string,
 ) {
+  const serviceClient = createServiceClient()
   return ResultAsync.fromPromise(
-    (auth.supabase as any)
+    (serviceClient as any)
       .from('users')
       .insert({
         id: authUserId,
@@ -134,8 +135,9 @@ function insertUserRow(
 }
 
 function assignRole(auth: AuthSuccess, userId: string, roleId: string) {
+  const serviceClient = createServiceClient()
   return ResultAsync.fromPromise(
-    (auth.supabase as any)
+    (serviceClient as any)
       .from('user_roles')
       .insert({
         user_id: userId,
@@ -156,7 +158,7 @@ function updateUserFields(auth: AuthSuccess, parsed: { userId: string; fullName?
   if (parsed.fullName !== undefined) {
     tasks.push(
       ResultAsync.fromPromise(
-        (auth.supabase as any)
+        (createServiceClient() as any)
           .from('users')
           .update({ full_name: parsed.fullName })
           .eq('id', parsed.userId)
@@ -170,7 +172,7 @@ function updateUserFields(auth: AuthSuccess, parsed: { userId: string; fullName?
     // Upsert user_roles (user may already have a role)
     tasks.push(
       ResultAsync.fromPromise(
-        (auth.supabase as any)
+        (createServiceClient() as any)
           .from('user_roles')
           .upsert(
             {
@@ -199,7 +201,7 @@ function validateDeleteTarget(auth: AuthSuccess, userId: string) {
   }
 
   return ResultAsync.fromPromise(
-    (auth.supabase as any)
+    (createServiceClient() as any)
       .from('users')
       .select('is_super_admin')
       .eq('id', userId)
@@ -216,7 +218,7 @@ function validateDeleteTarget(auth: AuthSuccess, userId: string) {
 
 function removeUserRoles(auth: AuthSuccess, userId: string) {
   return ResultAsync.fromPromise(
-    (auth.supabase as any)
+    (createServiceClient() as any)
       .from('user_roles')
       .delete()
       .eq('user_id', userId)
@@ -227,7 +229,7 @@ function removeUserRoles(auth: AuthSuccess, userId: string) {
 
 function removeUserRow(auth: AuthSuccess, userId: string) {
   return ResultAsync.fromPromise(
-    (auth.supabase as any)
+    (createServiceClient() as any)
       .from('users')
       .delete()
       .eq('id', userId),
