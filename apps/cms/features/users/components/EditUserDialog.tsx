@@ -91,6 +91,7 @@ export function EditUserDialog({ user, open, onOpenChange }: EditUserDialogProps
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.users.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.roles.all })
       reset()
       onOpenChange(false)
     },

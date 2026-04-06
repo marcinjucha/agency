@@ -64,6 +64,7 @@ export function AddUserDialog({ open, onOpenChange }: AddUserDialogProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.users.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.roles.all })
       reset()
       onOpenChange(false)
     },

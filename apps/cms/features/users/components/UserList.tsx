@@ -91,6 +91,7 @@ export function UserList() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.users.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.roles.all })
     },
     onSettled: () => {
       setDeletingUserId(null)
