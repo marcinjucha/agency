@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { getUserWithTenant, isAuthError } from '@/lib/auth'
+import { hasPermission } from '@/lib/permissions'
 import {
   createFolderSchema,
   renameFolderSchema,
@@ -26,6 +27,9 @@ export async function createFolder(
 
     const auth = await getUserWithTenant()
     if (isAuthError(auth)) return { success: false, error: auth.error }
+    if (!hasPermission('content.media', auth.permissions)) {
+      return { success: false, error: messages.common.noPermission }
+    }
     const { supabase, tenantId } = auth
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- media_folders not in generated client types
@@ -65,6 +69,9 @@ export async function renameFolder(
 
     const auth = await getUserWithTenant()
     if (isAuthError(auth)) return { success: false, error: auth.error }
+    if (!hasPermission('content.media', auth.permissions)) {
+      return { success: false, error: messages.common.noPermission }
+    }
     const { supabase } = auth
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- media_folders not in generated client types
@@ -90,6 +97,9 @@ export async function deleteFolder(
   try {
     const auth = await getUserWithTenant()
     if (isAuthError(auth)) return { success: false, error: auth.error }
+    if (!hasPermission('content.media', auth.permissions)) {
+      return { success: false, error: messages.common.noPermission }
+    }
     const { supabase } = auth
 
     // Items in this folder get folder_id=NULL via ON DELETE SET NULL
@@ -117,6 +127,9 @@ export async function moveMediaToFolder(
   try {
     const auth = await getUserWithTenant()
     if (isAuthError(auth)) return { success: false, error: auth.error }
+    if (!hasPermission('content.media', auth.permissions)) {
+      return { success: false, error: messages.common.noPermission }
+    }
     const { supabase } = auth
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- media_items not in generated client types

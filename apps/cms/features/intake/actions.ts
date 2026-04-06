@@ -1,6 +1,7 @@
 'use server'
 
 import { getUserWithTenant, isAuthError } from '@/lib/auth'
+import { hasPermission } from '@/lib/permissions'
 import { revalidatePath } from 'next/cache'
 import { routes } from '@/lib/routes'
 import { messages } from '@/lib/messages'
@@ -17,6 +18,9 @@ export async function updateResponseStatus(
   try {
     const auth = await getUserWithTenant()
     if (isAuthError(auth)) return { success: false, error: auth.error }
+    if (!hasPermission('intake', auth.permissions)) {
+      return { success: false, error: messages.common.noPermission }
+    }
 
     const parsed = updateStatusSchema.safeParse({ responseId, status: newStatus })
     if (!parsed.success) return { success: false, error: messages.common.invalidData }
@@ -52,6 +56,9 @@ export async function updateInternalNotes(
   try {
     const auth = await getUserWithTenant()
     if (isAuthError(auth)) return { success: false, error: auth.error }
+    if (!hasPermission('intake', auth.permissions)) {
+      return { success: false, error: messages.common.noPermission }
+    }
 
     const parsed = updateNotesSchema.safeParse({ responseId, notes })
     if (!parsed.success) return { success: false, error: messages.common.invalidData }

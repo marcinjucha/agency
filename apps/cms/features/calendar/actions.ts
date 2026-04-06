@@ -1,6 +1,8 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { getUserWithTenant, isAuthError } from '@/lib/auth'
+import { hasPermission } from '@/lib/permissions'
 import { revokeAccess } from '@/features/calendar/oauth'
 import { revalidatePath } from 'next/cache'
 import { getValidAccessToken, refreshAccessToken } from '@agency/calendar'
@@ -69,22 +71,18 @@ export async function disconnectGoogleCalendar(): Promise<{
   error?: string
 }> {
   try {
-    const supabase = await createClient()
-
-    // Get current user
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-
-    if (!user) {
-      return { success: false, error: messages.common.notLoggedIn }
+    const auth = await getUserWithTenant()
+    if (isAuthError(auth)) return { success: false, error: auth.error }
+    if (!hasPermission('calendar', auth.permissions)) {
+      return { success: false, error: messages.common.noPermission }
     }
+    const { supabase, userId } = auth
 
     // Get current tokens for revocation
     const { data: userData, error: userError } = await supabase
       .from('users')
       .select('google_calendar_token')
-      .eq('id', user.id)
+      .eq('id', userId)
       .maybeSingle()
 
     if (userError) {
@@ -110,7 +108,7 @@ export async function disconnectGoogleCalendar(): Promise<{
       .from('users')
       // @ts-expect-error - Supabase type inference issue with JSONB fields
       .update({ google_calendar_token: null })
-      .eq('id', user.id)
+      .eq('id', userId)
 
     if (updateError) {
       return {
@@ -140,20 +138,16 @@ export async function updateCalendarSettings(
       return { success: false, error: parsed.error.errors[0].message }
     }
 
-    const supabase = await createClient()
-
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-
-    if (!user) {
-      return { success: false, error: messages.common.notLoggedIn }
+    const auth = await getUserWithTenant()
+    if (isAuthError(auth)) return { success: false, error: auth.error }
+    if (!hasPermission('calendar', auth.permissions)) {
+      return { success: false, error: messages.common.noPermission }
     }
 
-    const { error } = await supabase
+    const { error } = await auth.supabase
       .from('calendar_settings')
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .upsert({ user_id: user.id, ...data } as any, { onConflict: 'user_id' })
+      .upsert({ user_id: auth.userId, ...data } as any, { onConflict: 'user_id' })
 
     if (error) {
       return { success: false, error: error.message }

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { getUserWithTenant, isAuthError } from '@/lib/auth'
+import { hasPermission } from '@/lib/permissions'
 import { legalPageSchema, type LegalPageFormData } from './validation'
 import { parseContent, generateHtmlFromContent } from '../editor/utils'
 import { messages } from '@/lib/messages'
@@ -21,6 +22,9 @@ export async function updateLegalPage(
 
     const auth = await getUserWithTenant()
     if (isAuthError(auth)) return { success: false, error: auth.error }
+    if (!hasPermission('content.legal_pages', auth.permissions)) {
+      return { success: false, error: messages.common.noPermission }
+    }
     const { supabase } = auth
 
     const content = parseContent(parsed.data.content) as TiptapContent

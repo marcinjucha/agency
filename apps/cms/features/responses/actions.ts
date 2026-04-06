@@ -1,6 +1,7 @@
 'use server'
 
 import { getUserWithTenant, isAuthError } from '@/lib/auth'
+import { hasPermission } from '@/lib/permissions'
 import { revalidatePath } from 'next/cache'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
@@ -11,6 +12,9 @@ export async function deleteResponse(
   try {
     const auth = await getUserWithTenant()
     if (isAuthError(auth)) return { success: false, error: auth.error }
+    if (!hasPermission('surveys', auth.permissions)) {
+      return { success: false, error: messages.common.noPermission }
+    }
 
     const { supabase } = auth
 
@@ -44,6 +48,12 @@ export async function deleteResponse(
 }
 
 export async function triggerAiAnalysis(responseId: string): Promise<{ success: boolean; error?: string }> {
+  const auth = await getUserWithTenant()
+  if (isAuthError(auth)) return { success: false, error: auth.error }
+  if (!hasPermission('surveys', auth.permissions)) {
+    return { success: false, error: messages.common.noPermission }
+  }
+
   const webhookUrl = process.env.N8N_WEBHOOK_SURVEY_ANALYSIS_URL
   if (!webhookUrl) {
     return { success: false, error: 'N8N_WEBHOOK_SURVEY_ANALYSIS_URL not configured' }

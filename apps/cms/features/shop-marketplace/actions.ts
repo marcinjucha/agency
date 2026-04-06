@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { getUserWithTenant, isAuthError } from '@/lib/auth'
+import { hasPermission } from '@/lib/permissions'
 import { createServiceClient } from '@/lib/supabase/service'
 import { routes } from '@/lib/routes'
 import { messages } from '@/lib/messages'
@@ -46,6 +47,9 @@ export async function connectMarketplace(
 ): Promise<{ success: true; data: { authUrl: string } } | { success: false; error: string }> {
   const auth = await getUserWithTenant()
   if (isAuthError(auth)) return { success: false, error: auth.error }
+  if (!hasPermission('shop.marketplace', auth.permissions)) {
+    return { success: false, error: messages.common.noPermission }
+  }
 
   const parsed = connectMarketplaceSchema.safeParse(data)
   if (!parsed.success) {
@@ -75,6 +79,9 @@ export async function disconnectMarketplace(
   try {
     const auth = await getUserWithTenant()
     if (isAuthError(auth)) return { success: false, error: auth.error }
+    if (!hasPermission('shop.marketplace', auth.permissions)) {
+      return { success: false, error: messages.common.noPermission }
+    }
     const { supabase } = auth
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- shop_marketplace_connections not in generated types
@@ -99,6 +106,9 @@ export async function publishToMarketplace(
   try {
     const auth = await getUserWithTenant()
     if (isAuthError(auth)) return { success: false, error: auth.error }
+    if (!hasPermission('shop.marketplace', auth.permissions)) {
+      return { success: false, error: messages.common.noPermission }
+    }
     const { supabase, tenantId } = auth
 
     const parsed = publishListingSchema.safeParse(data)
@@ -191,6 +201,9 @@ export async function updateMarketplaceListing(
   try {
     const auth = await getUserWithTenant()
     if (isAuthError(auth)) return { success: false, error: auth.error }
+    if (!hasPermission('shop.marketplace', auth.permissions)) {
+      return { success: false, error: messages.common.noPermission }
+    }
     const { supabase, tenantId } = auth
 
     const parsed = updateListingSchema.safeParse(data)
@@ -275,6 +288,9 @@ export async function removeMarketplaceListing(
   try {
     const auth = await getUserWithTenant()
     if (isAuthError(auth)) return { success: false, error: auth.error }
+    if (!hasPermission('shop.marketplace', auth.permissions)) {
+      return { success: false, error: messages.common.noPermission }
+    }
     const { supabase, tenantId } = auth
 
     // Fetch listing — verify it belongs to tenant and get external_listing_id for n8n
@@ -326,6 +342,9 @@ export async function startMarketplaceImport(
   try {
     const auth = await getUserWithTenant()
     if (isAuthError(auth)) return { success: false, error: auth.error }
+    if (!hasPermission('shop.marketplace', auth.permissions)) {
+      return { success: false, error: messages.common.noPermission }
+    }
     const { supabase, tenantId } = auth
 
     const parsed = createImportSchema.safeParse(data)
