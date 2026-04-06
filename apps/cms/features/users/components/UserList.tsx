@@ -138,10 +138,10 @@ export function UserList() {
             <TableHeader className="hidden sm:table-header-group">
               <TableRow className="hover:bg-transparent">
                 <TableHead className="text-xs font-medium uppercase tracking-wider">{messages.users.fullName}</TableHead>
-                <TableHead className="text-xs font-medium uppercase tracking-wider w-56">{messages.users.email}</TableHead>
-                <TableHead className="text-xs font-medium uppercase tracking-wider w-32">{messages.users.role}</TableHead>
-                <TableHead className="text-xs font-medium uppercase tracking-wider w-32 hidden lg:table-cell">{messages.users.createdAt}</TableHead>
-                <TableHead className="w-20" />
+                <TableHead className="text-xs font-medium uppercase tracking-wider">{messages.users.email}</TableHead>
+                <TableHead className="text-xs font-medium uppercase tracking-wider whitespace-nowrap">{messages.users.role}</TableHead>
+                <TableHead className="text-xs font-medium uppercase tracking-wider whitespace-nowrap hidden lg:table-cell">{messages.users.createdAt}</TableHead>
+                <TableHead />
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -221,24 +221,24 @@ function UserRow({
       </TableCell>
 
       {/* Email — desktop only */}
-      <TableCell className="hidden sm:table-cell w-56">
+      <TableCell className="hidden sm:table-cell">
         <p className="text-sm text-muted-foreground truncate">{user.email}</p>
       </TableCell>
 
       {/* Role — colored badge by role type */}
-      <TableCell className="w-32">
+      <TableCell className="whitespace-nowrap">
         <Badge variant="outline" className={`text-xs ${roleBadgeClasses}`}>
           {roleName ?? '\u2014'}
         </Badge>
       </TableCell>
 
       {/* Created */}
-      <TableCell className="hidden lg:table-cell w-32">
+      <TableCell className="hidden lg:table-cell whitespace-nowrap">
         <p className="text-xs text-muted-foreground">{formattedDate}</p>
       </TableCell>
 
       {/* Actions */}
-      <TableCell className="w-20 text-right">
+      <TableCell className="text-right">
         <div className="flex items-center gap-1 justify-end">
           <Button
             variant="ghost"

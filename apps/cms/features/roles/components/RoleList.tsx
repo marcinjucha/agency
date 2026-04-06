@@ -133,10 +133,10 @@ export function RoleList() {
             <TableHeader className="hidden sm:table-header-group">
               <TableRow className="hover:bg-transparent">
                 <TableHead className="text-xs font-medium uppercase tracking-wider">{messages.roles.name}</TableHead>
-                <TableHead className="text-xs font-medium uppercase tracking-wider w-48 hidden md:table-cell">{messages.roles.description}</TableHead>
-                <TableHead className="text-xs font-medium uppercase tracking-wider w-28 text-center">{messages.roles.userCount}</TableHead>
-                <TableHead className="text-xs font-medium uppercase tracking-wider w-28 text-center">{messages.roles.permissions}</TableHead>
-                <TableHead className="w-20" />
+                <TableHead className="text-xs font-medium uppercase tracking-wider hidden md:table-cell">{messages.roles.description}</TableHead>
+                <TableHead className="text-xs font-medium uppercase tracking-wider text-center whitespace-nowrap">{messages.roles.userCount}</TableHead>
+                <TableHead className="text-xs font-medium uppercase tracking-wider text-center whitespace-nowrap">{messages.roles.permissions}</TableHead>
+                <TableHead />
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -199,26 +199,26 @@ function RoleRow({
       </TableCell>
 
       {/* Description — desktop only */}
-      <TableCell className="hidden md:table-cell w-48">
+      <TableCell className="hidden md:table-cell">
         <p className="text-sm text-muted-foreground">{role.description || '\u2014'}</p>
       </TableCell>
 
       {/* User count */}
-      <TableCell className="w-28 text-center">
+      <TableCell className="text-center whitespace-nowrap">
         <Badge variant="outline" className="text-xs">
           {role.user_count}
         </Badge>
       </TableCell>
 
       {/* Permission count */}
-      <TableCell className="w-28 text-center">
+      <TableCell className="text-center whitespace-nowrap">
         <span className="text-xs text-muted-foreground">
           {messages.roles.permissionCount((role.permissions ?? []).length)}
         </span>
       </TableCell>
 
       {/* Actions */}
-      <TableCell className="w-20 text-right">
+      <TableCell className="text-right">
         <div className="flex items-center gap-1 justify-end">
           <Button
             variant="ghost"
