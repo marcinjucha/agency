@@ -19,6 +19,12 @@
 **Key decisions:** 4 standalone n8n workflows (NOT workflow engine). MARKETPLACE_REGISTRY pattern. Per-tenant pgcrypto OAuth. Unique index on (product_id, connection_id). CategorySelector = search/autocomplete. `update_marketplace_tokens()` for token refresh (UPDATE by PK).
 **Future:** Auto-publish via workflow engine trigger.
 
+## RBAC System — AAA-T-61 + AAA-T-76 — DONE (2026-04-06)
+
+**Status:** Complete. 6 iterations. requireAuth() helper consolidated across 18 files.
+**Scope:** Permission system with type-safe PermissionKey, is_super_admin boolean, role-permission mapping.
+**Key decisions:** `as const` satisfies Record → derived PermissionKey union (compile-time safety). is_super_admin as boolean (not role) — validated by analyst-agent. requireAuth() replaced 48 inline auth checks (-123 LOC).
+
 ## Roadmap & Planning (2026-03-30)
 
 **Priority order:** workflow engine → email triggers → client onboarding.
@@ -57,6 +63,11 @@
 - **Type/DB column name mismatch in manually written types** — Always cross-reference migration SQL when writing manual types. 3 mismatch types: phantom columns, wrong names, missing columns. (2026-04-02, AAA-T-157)
 - **Survey email validation ignored `semantic_role`** — Question had `type: 'text'` in DB but `semantic_role: 'client_email'`. Validation schema only checked `question.type`, so email field got text validation (no format check). Multiple RHF fixes (useFormState, Controller, mode changes) were red herrings. Root cause only found via `[DEBUG]` visible line in component revealing the actual data. Fix: `effectiveType` pattern where `semantic_role` overrides `question.type` for both validation and input rendering. (2026-04-02)
 - **RHF `register` swallows per-field errors silently** — QuestionField inputs using `register` didn't surface `fieldState.error` from react-hook-form. Migrated all inputs to `Controller` with `fieldState.error` for consistent error display. (2026-04-02)
+- **Users table had no INSERT/DELETE RLS policy** — First time users created from CMS (RBAC). SELECT/UPDATE existed, INSERT/DELETE missing. Silent failure on user creation. (2026-04-06, AAA-T-76)
+- **triggerAiAnalysis had zero auth check** — Server Action callable by any authenticated user without permission verification. Discovered during RBAC audit. (2026-04-06, AAA-T-76)
+- **fromSafePromise(Promise.reject()) misuse** — `fromSafePromise` expects a promise that never rejects (wraps resolution). Using it with `Promise.reject()` causes unhandled rejection. Use `ResultAsync.fromPromise()` instead for potentially-rejecting promises. (2026-04-06)
+- **Permission denial returned inside ok() path** — Server Action returned `ok({ error: 'Forbidden' })` instead of `err(...)`. Caller checked `.isOk()` and proceeded with forbidden response as "success". Always use `err()` for denial. (2026-04-06)
+- **React hooks ordering violation in permission-gated components** — Early return before hooks (e.g., `if (!hasPermission) return null` before `useState`) violates Rules of Hooks. Fix: move permission check after all hooks, or use conditional rendering wrapper. (2026-04-06)
 
 ## Domain Concepts
 
@@ -110,6 +121,9 @@
 - **`packages/database` has known deferred violations** — BLOCK_TYPE_LABELS and DEFAULT_BLOCKS in packages/database are pre-existing architecture violations (business constants in infrastructure package). Known deferred items — don't re-flag in audits. (2026-04-03)
 - **remeda + neverthrow as project FP stack** — remeda for data pipelines (pipe, map, filter, etc.), neverthrow for typed error handling (Result, ResultAsync). Effect.js explicitly rejected — too heavy for Next.js CRUD app. (2026-04-06)
 - **result-helpers.ts shared infrastructure in lib/** — `authResult()`, `zodParse()`, `fromSupabase()` wrappers that convert auth/validation/DB calls into neverthrow Results. Located in `apps/cms/lib/result-helpers.ts`. (2026-04-06)
+- **Type-safe PermissionKey via `as const satisfies Record`** — ROLE_PERMISSIONS defined with `as const satisfies Record<Role, PermissionKey[]>`, then `PermissionKey = typeof ROLE_PERMISSIONS[Role][number]`. Compile-time validation + derived union type. No separate enum to maintain. (2026-04-06)
+- **is_super_admin as boolean, not role** — Super admin bypasses all permission checks. Implemented as boolean column on users table, not as a role in role-permission mapping. WHY: super admin is orthogonal to roles (a user can have any role AND be super admin). Validated by analyst-agent. (2026-04-06)
+- **requireAuth() helper consolidation pattern** — Single `requireAuth(permissionKey?)` replaces inline `createClient → getUser → check` in 48 Server Actions across 18 files. Returns `Result<AuthContext, AppError>`. Optional permission param for granular checks. (2026-04-06)
 
 ## Preferences
 

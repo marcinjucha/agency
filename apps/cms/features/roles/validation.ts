@@ -1,11 +1,16 @@
 import { z } from 'zod'
 import { messages } from '@/lib/messages'
+import { ALL_PERMISSION_KEYS } from '@/lib/permissions'
+
+const permissionKeySchema = z.enum(
+  ALL_PERMISSION_KEYS as [string, ...string[]],
+)
 
 export const createRoleSchema = z.object({
   name: z.string().min(2, messages.roles.nameMinLength),
   description: z.string().nullable().optional(),
   permissions: z
-    .array(z.string().min(1))
+    .array(permissionKeySchema)
     .min(1, messages.roles.permissionRequired),
 })
 
@@ -14,7 +19,7 @@ export const updateRoleSchema = z.object({
   name: z.string().min(2, messages.roles.nameMinLength),
   description: z.string().nullable().optional(),
   permissions: z
-    .array(z.string().min(1))
+    .array(permissionKeySchema)
     .min(1, messages.roles.permissionRequired),
 })
 

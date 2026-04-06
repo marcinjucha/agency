@@ -192,7 +192,7 @@ export function UserList() {
                 <TableHead className="text-xs font-medium uppercase tracking-wider">{messages.users.fullName}</TableHead>
                 <TableHead className="text-xs font-medium uppercase tracking-wider">{messages.users.email}</TableHead>
                 {viewerIsSuperAdmin && (
-                  <TableHead className="text-xs font-medium uppercase tracking-wider whitespace-nowrap hidden md:table-cell">Tenant</TableHead>
+                  <TableHead className="text-xs font-medium uppercase tracking-wider whitespace-nowrap hidden md:table-cell">{messages.users.tenant}</TableHead>
                 )}
                 <TableHead className="text-xs font-medium uppercase tracking-wider whitespace-nowrap">{messages.users.role}</TableHead>
                 <TableHead className="text-xs font-medium uppercase tracking-wider whitespace-nowrap hidden lg:table-cell">{messages.users.createdAt}</TableHead>
