@@ -10,6 +10,11 @@ architecture:
     - "RLS for multi-tenancy — database-level enforcement prevents data leaks"
     - "JSONB for survey responses — dynamic schemas, no migration for new question types"
     - "TanStack Query only in CMS — Website is mostly static SSR/SSG"
+    - "DISPLAY_GROUPS for PermissionPicker visual grouping — separate from PERMISSION_GROUPS (backend). UI groups (System/Zarządzanie) are independent of authorization logic; adding new visual group = new DISPLAY_GROUPS entry only"
+    - "expandPermissionKeys in lib/permissions.ts — shared between PermissionPicker component and test utilities; single source of truth for parent→children permission hierarchy traversal"
+    - "Scope Bar pattern for cross-tenant management — super admins switch active tenant context in a sticky header bar; no separate route per tenant, context stored in component state"
+    - "seedDefaultRoles + syncFeaturePermissions on feature flag change — when enabled_features JSONB is updated, role defaults are re-seeded and permission mappings synced automatically to keep RBAC consistent"
+    - "enabled_features JSONB on tenants table — stores PermissionKey[] for features enabled per tenant; checked in requireAuth() and sidebar rendering"
     - "getUserWithTenant() shared auth — extracted from 4x duplication, returns { supabase, userId, tenantId }"
     - "createAnonClient() for ALL website queries — server client calls cookies() which fails at build time during ISR"
     - "queries.ts (browser) vs queries.server.ts (server) — wrong naming causes silent build-time bugs"
@@ -169,6 +174,14 @@ features:
     why: "Multi-user access control needed before client onboarding — prevents any team member from accessing features they should not see or modify"
     depends_on: ["Authentication System"]
     completion_notes: "Admins can create and assign custom roles with granular permissions. All 47 Server Actions are guarded. Super admins see cross-tenant data. Users can change their own password. Role management UI supports indeterminate checkboxes for partial permission group selection."
+
+  - name: "Tenant Management + Feature Flags"
+    status: done
+    task_id: "AAA-T-170"
+    description: "Tenant CRUD (create/edit/deactivate/delete) from /admin/tenants page. Per-tenant feature flags at PermissionKey[] granularity — controls which CMS features each tenant can access. Scope Bar pattern: super admins switch active tenant context via header bar without leaving CMS. PermissionPicker split into DISPLAY_GROUPS (System/Zarządzanie) for visual grouping independent of backend permission structure. seedDefaultRoles + syncFeaturePermissions called on feature flag changes to keep role-permission mapping consistent. expandPermissionKeys extracted to lib/permissions.ts (shared by UI + test utilities). Vitest test infrastructure (vitest.config.ts, vitest.setup.ts) + 84 tests across lib/permissions, tenants, roles, hooks, components — true TDD (Red-Green-Refactor) with Page Object Pattern. Cache fixes: await invalidateQueries prevents stale data on fast navigation; queryClient.clear() on logout prevents cross-user cache leakage. Cross-tenant RLS migration (20260407100000) allows super admins to read/write all tenants. enabled_features JSONB column on tenants table."
+    why: "Admins needed UI to manage the growing list of tenants and control feature access per organisation before client onboarding"
+    depends_on: ["Roles & Permissions System"]
+    completion_notes: "Super admins can create, edit, deactivate, and delete tenant organisations. Each tenant's feature set is controllable via granular flags. Scope Bar allows cross-tenant management without route changes. 84 tests provide regression coverage for permissions, tenant CRUD, and cache behaviour."
 
   - name: "Email: Booking Confirmation"
     status: not_started
