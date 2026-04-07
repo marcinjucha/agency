@@ -1206,6 +1206,7 @@ export type Database = {
           created_at: string | null
           domain: string | null
           email: string
+          enabled_features: Json
           id: string
           name: string
           subscription_status: string | null
@@ -1215,6 +1216,7 @@ export type Database = {
           created_at?: string | null
           domain?: string | null
           email: string
+          enabled_features?: Json
           id?: string
           name: string
           subscription_status?: string | null
@@ -1224,6 +1226,7 @@ export type Database = {
           created_at?: string | null
           domain?: string | null
           email?: string
+          enabled_features?: Json
           id?: string
           name?: string
           subscription_status?: string | null

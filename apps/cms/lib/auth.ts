@@ -13,6 +13,7 @@ export type AuthSuccess = {
   supabase: SupabaseServerClient
   userId: string
   tenantId: string
+  tenantName: string | null
   isSuperAdmin: boolean
   roleName: string | null
   permissions: PermissionKey[]
@@ -60,13 +61,18 @@ export async function getUserWithTenant(): Promise<AuthResult> {
 
   const isSuperAdmin: boolean = userData.is_super_admin ?? false
   const legacyRole: string | null = userData.role ?? null
+  const tenantId: string = userData.tenant_id
+
+  // Fetch tenant name for display (user's own tenant only)
+  const tenantName = await fetchTenantName(tenantId, supabase)
 
   // Super admin or owner/admin legacy role → full access
   if (isSuperAdmin || (legacyRole && FULL_ACCESS_ROLES.has(legacyRole))) {
     return {
       supabase,
       userId: user.id,
-      tenantId: userData.tenant_id,
+      tenantId,
+      tenantName,
       isSuperAdmin,
       roleName: legacyRole,
       permissions: [...ALL_PERMISSION_KEYS],
@@ -77,13 +83,14 @@ export async function getUserWithTenant(): Promise<AuthResult> {
   const { permissions, roleName } = await fetchUserPermissions(
     supabase,
     user.id,
-    userData.tenant_id,
+    tenantId,
   )
 
   return {
     supabase,
     userId: user.id,
-    tenantId: userData.tenant_id,
+    tenantId,
+    tenantName,
     isSuperAdmin: false,
     roleName,
     permissions,
@@ -154,4 +161,27 @@ async function fetchUserPermissions(
   }
 
   return { permissions, roleName }
+}
+
+/**
+ * Fetch the tenant name for display in the sidebar.
+ * Uses the user's supabase client (works for own tenant via RLS).
+ */
+async function fetchTenantName(
+  tenantId: string,
+  supabase: SupabaseServerClient,
+): Promise<string | null> {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase as any)
+      .from('tenants')
+      .select('name')
+      .eq('id', tenantId)
+      .single()
+
+    if (!error && data?.name) return data.name
+    return null
+  } catch {
+    return null
+  }
 }

@@ -5,6 +5,8 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '@/lib/query-keys'
+import { usePermissions } from '@/contexts/permissions-context'
+import { useTenantScope } from '@/features/tenants/hooks/use-tenant-scope'
 import { createUser } from '../actions'
 import { getTenantRoles } from '../queries'
 import { createUserSchema, type CreateUserFormData } from '../validation'
@@ -34,11 +36,14 @@ interface AddUserDialogProps {
 
 export function AddUserDialog({ open, onOpenChange }: AddUserDialogProps) {
   const queryClient = useQueryClient()
+  const { isSuperAdmin } = usePermissions()
+  const { selectedTenantId } = useTenantScope()
   const [showPassword, setShowPassword] = useState(false)
 
+  // Roles are scoped to the currently selected tenant (from URL scope bar)
   const { data: roles } = useQuery({
-    queryKey: queryKeys.roles.all,
-    queryFn: getTenantRoles,
+    queryKey: queryKeys.roles.list(selectedTenantId),
+    queryFn: () => getTenantRoles(selectedTenantId ?? undefined),
   })
 
   const {
@@ -58,13 +63,19 @@ export function AddUserDialog({ open, onOpenChange }: AddUserDialogProps) {
 
   const mutation = useMutation({
     mutationFn: async (data: CreateUserFormData) => {
-      const result = await createUser(data)
+      // Attach selected tenant from scope bar for super admin
+      const payload = isSuperAdmin && selectedTenantId
+        ? { ...data, tenantId: selectedTenantId }
+        : data
+      const result = await createUser(payload)
       if (!result.success) throw new Error(result.error)
       return result
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.users.all })
-      queryClient.invalidateQueries({ queryKey: queryKeys.roles.all })
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: queryKeys.users.all }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.roles.all }),
+      ])
       reset()
       onOpenChange(false)
     },

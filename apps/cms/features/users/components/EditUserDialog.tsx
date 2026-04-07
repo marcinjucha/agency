@@ -57,9 +57,12 @@ export function EditUserDialog({ user, open, onOpenChange }: EditUserDialogProps
     setPasswordResult(null)
   }, [user?.id, user?.is_super_admin])
 
+  // Use edited user's tenant for role query (user may belong to different tenant)
+  const editTenantId = user?.tenant?.id ?? undefined
+
   const { data: roles } = useQuery({
-    queryKey: queryKeys.roles.all,
-    queryFn: getTenantRoles,
+    queryKey: queryKeys.roles.list(editTenantId),
+    queryFn: () => getTenantRoles(editTenantId),
   })
 
   const {
@@ -89,9 +92,11 @@ export function EditUserDialog({ user, open, onOpenChange }: EditUserDialogProps
       if (!result.success) throw new Error(result.error)
       return result
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.users.all })
-      queryClient.invalidateQueries({ queryKey: queryKeys.roles.all })
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: queryKeys.users.all }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.roles.all }),
+      ])
       reset()
       onOpenChange(false)
     },
@@ -110,7 +115,7 @@ export function EditUserDialog({ user, open, onOpenChange }: EditUserDialogProps
       setLocalIsSuperAdmin(!checked) // revert on error
       setSuperAdminError(result.error)
     } else {
-      queryClient.invalidateQueries({ queryKey: queryKeys.users.all })
+      await queryClient.invalidateQueries({ queryKey: queryKeys.users.all })
     }
   }
 

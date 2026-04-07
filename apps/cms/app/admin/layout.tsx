@@ -2,19 +2,28 @@ import { Sidebar } from '@/components/admin/Sidebar'
 import { messages } from '@/lib/messages'
 import { getUserWithTenant, isAuthError } from '@/lib/auth'
 import { PermissionsProvider } from '@/contexts/permissions-context'
-import { ALL_PERMISSION_KEYS } from '@/lib/permissions'
+import { ALL_PERMISSION_KEYS, type PermissionKey } from '@/lib/permissions'
+import { fetchTenantFeatures, fetchAllTenants } from '@/features/tenants/queries.server'
+import type { Tenant } from '@/features/tenants/types'
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const authResult = await getUserWithTenant()
 
   // Fallback: if auth fails, provide full permissions (middleware handles redirect).
   // This avoids blocking the layout — middleware already guards unauthenticated users.
-  const permissions = isAuthError(authResult)
-    ? [...ALL_PERMISSION_KEYS]
-    : authResult.permissions
-  const isSuperAdmin = isAuthError(authResult) ? false : authResult.isSuperAdmin
-  const roleName = isAuthError(authResult) ? null : authResult.roleName
-  const userId = isAuthError(authResult) ? null : authResult.userId
+  const isError = isAuthError(authResult)
+  const permissions = isError ? [...ALL_PERMISSION_KEYS] : authResult.permissions
+  const isSuperAdmin = isError ? false : authResult.isSuperAdmin
+  const roleName = isError ? null : authResult.roleName
+  const userId = isError ? null : authResult.userId
+  const tenantId = isError ? null : authResult.tenantId
+  const tenantName = isError ? null : authResult.tenantName
+
+  // Fetch tenant's enabled features + all tenants for super admin Scope Bar
+  const { enabledFeatures, tenants } = await fetchLayoutData(
+    tenantId,
+    isSuperAdmin,
+  )
 
   return (
     <PermissionsProvider
@@ -22,6 +31,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       permissions={permissions}
       isSuperAdmin={isSuperAdmin}
       roleName={roleName}
+      tenantId={tenantId}
+      tenantName={tenantName}
+      enabledFeatures={enabledFeatures}
+      tenants={tenants}
     >
       <div className="flex h-screen overflow-hidden">
         {/* Skip to main content link - visible on focus for keyboard users */}
@@ -38,4 +51,30 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       </div>
     </PermissionsProvider>
   )
+}
+
+// ---------------------------------------------------------------------------
+// Data fetching for layout
+// ---------------------------------------------------------------------------
+
+async function fetchLayoutData(
+  tenantId: string | null,
+  isSuperAdmin: boolean,
+): Promise<{ enabledFeatures: PermissionKey[]; tenants: Tenant[] }> {
+  let enabledFeatures: PermissionKey[] = []
+  let tenants: Tenant[] = []
+
+  try {
+    if (tenantId) {
+      enabledFeatures = await fetchTenantFeatures(tenantId)
+    }
+
+    if (isSuperAdmin) {
+      tenants = await fetchAllTenants()
+    }
+  } catch {
+    // Non-blocking: layout renders even if tenant fetch fails
+  }
+
+  return { enabledFeatures, tenants }
 }

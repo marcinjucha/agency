@@ -10,12 +10,16 @@ import type { TenantRoleWithPermissions } from './types'
  * 1. Fetches permission keys from role_permissions
  * 2. Validates keys against known set (discards stale/removed keys)
  * 3. Counts assigned users from user_roles
+ *
+ * @param tenantId — when provided, adds explicit `.eq('tenant_id', tenantId)` filter.
+ *   Required for super admins because RLS uses their original tenant, not the
+ *   cookie-based override visible only in the Next.js app layer.
  */
-export async function getRoles(): Promise<TenantRoleWithPermissions[]> {
+export async function getRoles(tenantId?: string): Promise<TenantRoleWithPermissions[]> {
   const supabase = createClient()
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  let query = (supabase as any)
     .from('tenant_roles')
     .select(`
       id,
@@ -34,6 +38,12 @@ export async function getRoles(): Promise<TenantRoleWithPermissions[]> {
     `)
     .order('is_default', { ascending: false })
     .order('name', { ascending: true })
+
+  if (tenantId) {
+    query = query.eq('tenant_id', tenantId)
+  }
+
+  const { data, error } = await query
 
   if (error) throw error
 

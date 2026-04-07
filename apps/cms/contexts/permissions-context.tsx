@@ -2,12 +2,18 @@
 
 import { createContext, useContext, type ReactNode } from 'react'
 import { hasPermission as checkPermission, type PermissionKey } from '@/lib/permissions'
+import type { Tenant } from '@/features/tenants/types'
 
 type PermissionsContextValue = {
   userId: string | null
   permissions: PermissionKey[]
   isSuperAdmin: boolean
   roleName: string | null
+  tenantId: string | null
+  tenantName: string | null
+  enabledFeatures: PermissionKey[]
+  /** All tenants — populated for super admins (used by Scope Bar). */
+  tenants: Tenant[]
   hasPermission: (key: PermissionKey) => boolean
 }
 
@@ -18,6 +24,10 @@ type PermissionsProviderProps = {
   permissions: PermissionKey[]
   isSuperAdmin: boolean
   roleName: string | null
+  tenantId: string | null
+  tenantName: string | null
+  enabledFeatures: PermissionKey[]
+  tenants: Tenant[]
   children: ReactNode
 }
 
@@ -26,6 +36,10 @@ export function PermissionsProvider({
   permissions,
   isSuperAdmin,
   roleName,
+  tenantId,
+  tenantName,
+  enabledFeatures,
+  tenants,
   children,
 }: PermissionsProviderProps) {
   const value: PermissionsContextValue = {
@@ -33,6 +47,10 @@ export function PermissionsProvider({
     permissions,
     isSuperAdmin,
     roleName,
+    tenantId,
+    tenantName,
+    enabledFeatures,
+    tenants,
     hasPermission: (key: PermissionKey) => checkPermission(key, permissions),
   }
 

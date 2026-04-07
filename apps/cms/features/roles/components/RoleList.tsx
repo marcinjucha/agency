@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '@/lib/query-keys'
 import { getRoles } from '../queries'
@@ -34,6 +34,10 @@ import {
   TableRow,
 } from '@agency/ui'
 import { Shield, Plus, Pencil, Trash2 } from 'lucide-react'
+import { usePermissions } from '@/contexts/permissions-context'
+import { TenantScopeBar } from '@/features/tenants/components/TenantScopeBar'
+import { useTenantScope } from '@/features/tenants/hooks/use-tenant-scope'
+import { filterPermissionsByFeatures, type PermissionKey } from '@/lib/permissions'
 import { RoleEditor } from './RoleEditor'
 
 // ---------------------------------------------------------------------------
@@ -42,9 +46,21 @@ import { RoleEditor } from './RoleEditor'
 
 export function RoleList() {
   const queryClient = useQueryClient()
+  const { isSuperAdmin, enabledFeatures: ownEnabledFeatures, tenants } = usePermissions()
+  const { selectedTenantId } = useTenantScope()
   const [editorOpen, setEditorOpen] = useState(false)
   const [editingRole, setEditingRole] = useState<TenantRoleWithPermissions | null>(null)
   const [deletingRoleId, setDeletingRoleId] = useState<string | null>(null)
+
+  // Derive enabled features for the selected tenant
+  const selectedTenantFeatures = useMemo<PermissionKey[] | undefined>(() => {
+    if (!isSuperAdmin || !selectedTenantId) return ownEnabledFeatures
+    const tenant = tenants.find((t) => t.id === selectedTenantId)
+    return tenant?.enabled_features ?? ownEnabledFeatures
+  }, [isSuperAdmin, selectedTenantId, tenants, ownEnabledFeatures])
+
+  // Super admins need explicit tenant filter (RLS uses original tenant, not cookie override)
+  const queryTenantId = isSuperAdmin ? selectedTenantId : undefined
 
   const {
     data: roles,
@@ -52,9 +68,11 @@ export function RoleList() {
     error,
     refetch,
   } = useQuery({
-    queryKey: queryKeys.roles.all,
-    queryFn: getRoles,
+    queryKey: queryKeys.roles.list(queryTenantId),
+    queryFn: () => getRoles(queryTenantId ?? undefined),
   })
+
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   const deleteMutation = useMutation({
     mutationFn: async (roleId: string) => {
@@ -63,9 +81,15 @@ export function RoleList() {
       if (!result.success) throw new Error(result.error)
       return result
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.roles.all })
-      queryClient.invalidateQueries({ queryKey: queryKeys.users.all })
+    onSuccess: async () => {
+      setDeleteError(null)
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: queryKeys.roles.all }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.users.all }),
+      ])
+    },
+    onError: (error) => {
+      setDeleteError(error instanceof Error ? error.message : messages.roles.deleteFailed)
     },
     onSettled: () => {
       setDeletingRoleId(null)
@@ -113,6 +137,9 @@ export function RoleList() {
         </Button>
       </div>
 
+      {/* Tenant scope selector — super admin only */}
+      <TenantScopeBar />
+
       {/* Content */}
       {!hasRoles ? (
         <EmptyState
@@ -128,6 +155,13 @@ export function RoleList() {
           }
         />
       ) : (
+        <>
+        {deleteError && (
+          <div className="mb-4 rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive" role="alert">
+            {deleteError}
+            <button onClick={() => setDeleteError(null)} className="ml-2 underline">{messages.common.cancel}</button>
+          </div>
+        )}
         <div className="rounded-lg border border-border">
           <Table>
             <TableHeader className="hidden sm:table-header-group">
@@ -152,6 +186,7 @@ export function RoleList() {
                 <RoleRow
                   key={role.id}
                   role={role}
+                  enabledFeatures={selectedTenantFeatures}
                   onEdit={() => handleEdit(role)}
                   onDelete={() => deleteMutation.mutate(role.id)}
                   isDeleting={deletingRoleId === role.id}
@@ -160,10 +195,17 @@ export function RoleList() {
             </TableBody>
           </Table>
         </div>
+        </>
       )}
 
       {/* Editor dialog */}
-      <RoleEditor open={editorOpen} onOpenChange={setEditorOpen} role={editingRole} />
+      <RoleEditor
+        open={editorOpen}
+        onOpenChange={setEditorOpen}
+        role={editingRole}
+        enabledFeatures={selectedTenantFeatures}
+        tenantId={isSuperAdmin && selectedTenantId ? selectedTenantId : undefined}
+      />
     </div>
   )
 }
@@ -174,16 +216,21 @@ export function RoleList() {
 
 function RoleRow({
   role,
+  enabledFeatures,
   onEdit,
   onDelete,
   isDeleting,
 }: {
   role: TenantRoleWithPermissions
+  enabledFeatures?: PermissionKey[]
   onEdit: () => void
   onDelete: () => void
   isDeleting: boolean
 }) {
   const canDelete = !isDeleting && !role.is_default && role.user_count === 0
+  const filteredPermissionCount = enabledFeatures?.length
+    ? filterPermissionsByFeatures(role.permissions ?? [], enabledFeatures).length
+    : (role.permissions ?? []).length
 
   return (
     <TableRow>
@@ -219,7 +266,7 @@ function RoleRow({
       {/* Permission count */}
       <TableCell className="text-center whitespace-nowrap">
         <span className="  text-muted-foreground">
-          {messages.roles.permissionCount((role.permissions ?? []).length)}
+          {messages.roles.permissionCount(filteredPermissionCount)}
         </span>
       </TableCell>
 

@@ -35,6 +35,8 @@ export type CreateUserInput = {
   password: string
   fullName: string
   roleId: string
+  /** Super admin only — create user in a specific tenant instead of own. */
+  tenantId?: string
 }
 
 export type UpdateUserInput = {

@@ -93,6 +93,8 @@ apps/cms/
 │
 ├── middleware.ts            # Route protection (redirects to /login)
 ├── next.config.ts           # Next.js configuration
+├── vitest.config.ts         # Vitest test configuration
+├── vitest.setup.ts          # Test setup (mocks: Supabase, next/navigation, next/headers)
 ├── tailwind.config.ts       # Tailwind CSS config
 ├── tsconfig.json            # TypeScript config
 └── package.json             # Dependencies (@agency/cms)
@@ -204,7 +206,7 @@ Only for admin operations that bypass RLS.
 
 1. **Create feature folder:**
    ```bash
-   mkdir -p features/new-feature/components
+   mkdir -p features/new-feature/{components,__tests__}
    touch features/new-feature/{actions,queries,types}.ts
    ```
 
@@ -251,11 +253,22 @@ npm run dev:cms
 # Build CMS only
 npm run build:cms
 
+# Run tests
+npm run test --workspace=apps/cms        # Single run
+npm run test:watch --workspace=apps/cms  # Watch mode (TDD)
+
 # Test locally
 # 1. Create user in Supabase
 # 2. Run seed_first_user.sql
 # 3. Login at http://localhost:3001/login
 ```
+
+## Testing (TDD)
+
+**Testable files** (TDD Red-Green-Refactor): `actions.ts`, `queries.ts`, `queries.server.ts`, `hooks/*.ts`
+**Not tested**: `components/`, `validation.ts` (Zod declarative), `types.ts`
+**Test location**: `features/{name}/__tests__/{file}.test.ts`
+**Style**: Integration — mock Supabase client, test action/query behavior. See `ag-dev-workflow` skill for full TDD patterns.
 
 ## Deployment
 

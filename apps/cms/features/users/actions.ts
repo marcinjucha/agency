@@ -27,11 +27,14 @@ export async function createUser(input: CreateUserInput) {
       if (!hasPermission('system.users', auth.permissions)) {
         return errAsync(messages.users.createFailed)
       }
+      // Super admin may specify target tenant; otherwise use auth tenant
+      const targetTenantId =
+        parsed.tenantId && auth.isSuperAdmin ? parsed.tenantId : auth.tenantId
       return createAuthUser(parsed.email, parsed.password)
         .andThen((authUser) =>
-          insertUserRow(auth, authUser.id, parsed.email, parsed.fullName)
+          insertUserRow(targetTenantId, authUser.id, parsed.email, parsed.fullName)
         )
-        .andThen((userId) => assignRole(auth, userId, parsed.roleId))
+        .andThen((userId) => assignRole(targetTenantId, userId, parsed.roleId))
     })
 
   return result.match(
@@ -212,7 +215,7 @@ function createAuthUser(email: string, password: string) {
 }
 
 function insertUserRow(
-  auth: AuthSuccess,
+  tenantId: string,
   authUserId: string,
   email: string,
   fullName: string,
@@ -223,7 +226,7 @@ function insertUserRow(
       .from('users')
       .insert({
         id: authUserId,
-        tenant_id: auth.tenantId,
+        tenant_id: tenantId,
         email,
         full_name: fullName,
         role: 'member',
@@ -236,14 +239,14 @@ function insertUserRow(
     .map((row) => row.id)
 }
 
-function assignRole(auth: AuthSuccess, userId: string, roleId: string) {
+function assignRole(tenantId: string, userId: string, roleId: string) {
   const serviceClient = createServiceClient()
   return ResultAsync.fromPromise(
     (serviceClient as any)
       .from('user_roles')
       .insert({
         user_id: userId,
-        tenant_id: auth.tenantId,
+        tenant_id: tenantId,
         role_id: roleId,
       })
       .select()

@@ -12,6 +12,7 @@ export const createRoleSchema = z.object({
   permissions: z
     .array(permissionKeySchema)
     .min(1, messages.roles.permissionRequired),
+  tenantId: z.string().uuid().optional(),
 })
 
 export const updateRoleSchema = z.object({

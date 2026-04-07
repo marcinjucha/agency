@@ -61,6 +61,9 @@ export const routes = {
     users: '/admin/users',
     roles: '/admin/roles',
     role: (id: string) => `/admin/roles/${id}`,
+    tenants: '/admin/tenants',
+    tenantNew: '/admin/tenants/new',
+    tenant: (id: string) => `/admin/tenants/${id}`,
   },
 
   api: {

@@ -53,11 +53,12 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL(routes.admin.root, request.url))
   }
 
-  // --- Permission-based route protection ---
+  // --- Permission + feature flag route protection ---
   if (user && request.nextUrl.pathname.startsWith(routes.admin.root)) {
-    const requiredPermission = getRequiredPermission(request.nextUrl.pathname)
+    const pathname = request.nextUrl.pathname
+    const requiredPermission = getRequiredPermission(pathname)
 
-    // No permission mapping for this route (e.g. /admin dashboard) — allow
+    // Permission check: skip for routes with no permission mapping (e.g. /admin dashboard)
     if (requiredPermission) {
       const middlewareUser = await fetchMiddlewareUser(supabase, user.id)
 

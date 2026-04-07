@@ -23,6 +23,8 @@ export type CreateRoleInput = {
   name: string
   description?: string
   permissions: PermissionKey[]
+  /** Super admin may specify target tenant; otherwise uses auth tenant. */
+  tenantId?: string
 }
 
 export type UpdateRoleInput = {
