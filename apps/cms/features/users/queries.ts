@@ -6,13 +6,17 @@ import type { UserWithRole, TenantRole } from './types'
  * Browser client — for TanStack Query in UserList component.
  *
  * Query: users LEFT JOIN user_roles → tenant_roles
- * RLS filters by current_user_tenant_id() automatically.
+ * RLS filters by current_user_tenant_id() automatically for non-super-admins.
+ *
+ * @param tenantId — when provided, adds explicit `.eq('tenant_id', tenantId)` filter.
+ *   Required for super admins because RLS uses their original tenant, not the
+ *   cookie-based override visible only in the Next.js app layer.
  */
-export async function getUsers(): Promise<UserWithRole[]> {
+export async function getUsers(tenantId?: string): Promise<UserWithRole[]> {
   const supabase = createClient()
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  let query = (supabase as any)
     .from('users')
     .select(`
       id,
@@ -36,6 +40,12 @@ export async function getUsers(): Promise<UserWithRole[]> {
     `)
     .order('created_at', { ascending: false })
 
+  if (tenantId) {
+    query = query.eq('tenant_id', tenantId)
+  }
+
+  const { data, error } = await query
+
   if (error) throw error
 
   // Transform nested user_roles → flat tenant_role
@@ -45,15 +55,24 @@ export async function getUsers(): Promise<UserWithRole[]> {
 /**
  * Fetch available tenant roles for role selector dropdown.
  * Browser client — for TanStack Query.
+ *
+ * @param tenantId — when provided, adds explicit `.eq('tenant_id', tenantId)` filter.
+ *   Required for super admins (same RLS cookie limitation as getUsers).
  */
-export async function getTenantRoles(): Promise<TenantRole[]> {
+export async function getTenantRoles(tenantId?: string): Promise<TenantRole[]> {
   const supabase = createClient()
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  let query = (supabase as any)
     .from('tenant_roles')
     .select('id, name, description, is_default')
     .order('name', { ascending: true })
+
+  if (tenantId) {
+    query = query.eq('tenant_id', tenantId)
+  }
+
+  const { data, error } = await query
 
   if (error) throw error
   return (data ?? []) as TenantRole[]

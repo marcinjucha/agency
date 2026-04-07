@@ -33,14 +33,11 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
 } from '@agency/ui'
 import { Users, Plus, Pencil, Trash2, ShieldCheck } from 'lucide-react'
 import { usePermissions } from '@/contexts/permissions-context'
+import { TenantScopeBar } from '@/features/tenants/components/TenantScopeBar'
+import { useTenantScope } from '@/features/tenants/hooks/use-tenant-scope'
 import { AddUserDialog } from './AddUserDialog'
 import { EditUserDialog } from './EditUserDialog'
 
@@ -60,11 +57,11 @@ function getRoleBadgeClassName(role: string | null): string {
 export function UserList() {
   const queryClient = useQueryClient()
   const { isSuperAdmin: viewerIsSuperAdmin } = usePermissions()
+  const { selectedTenantId } = useTenantScope()
   const [addDialogOpen, setAddDialogOpen] = useState(false)
   const [editingUser, setEditingUser] = useState<UserWithRole | null>(null)
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null)
-  const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null)
 
   useEffect(() => {
     createClient().auth.getUser().then(({ data }) => {
@@ -72,14 +69,17 @@ export function UserList() {
     })
   }, [])
 
+  // Super admins need explicit tenant filter (RLS uses original tenant, not cookie override)
+  const queryTenantId = viewerIsSuperAdmin ? selectedTenantId : undefined
+
   const {
     data: users,
     isLoading,
     error,
     refetch,
   } = useQuery({
-    queryKey: queryKeys.users.all,
-    queryFn: getUsers,
+    queryKey: queryKeys.users.list(queryTenantId),
+    queryFn: () => getUsers(queryTenantId ?? undefined),
   })
 
   const deleteMutation = useMutation({
@@ -89,9 +89,11 @@ export function UserList() {
       if (!result.success) throw new Error(result.error)
       return result
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.users.all })
-      queryClient.invalidateQueries({ queryKey: queryKeys.roles.all })
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: queryKeys.users.all }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.roles.all }),
+      ])
     },
     onSettled: () => {
       setDeletingUserId(null)
@@ -104,25 +106,7 @@ export function UserList() {
     [users, viewerIsSuperAdmin],
   )
 
-  // Extract unique tenants for filter dropdown (super admin only)
-  const tenantOptions = useMemo(() => {
-    if (!visibleUsers) return []
-    const seen = new Map<string, string>()
-    for (const u of visibleUsers) {
-      if (u.tenant?.id && !seen.has(u.tenant.id)) {
-        seen.set(u.tenant.id, u.tenant.name)
-      }
-    }
-    return Array.from(seen, ([id, name]) => ({ id, name })).sort((a, b) =>
-      a.name.localeCompare(b.name, 'pl-PL'),
-    )
-  }, [visibleUsers])
-
-  // Apply tenant filter
-  const filteredUsers = selectedTenantId
-    ? visibleUsers?.filter((u) => u.tenant?.id === selectedTenantId)
-    : visibleUsers
-  const hasUsers = filteredUsers && filteredUsers.length > 0
+  const hasUsers = visibleUsers && visibleUsers.length > 0
 
   if (isLoading) return <UserListSkeleton />
 
@@ -145,31 +129,14 @@ export function UserList() {
           <h1 className="text-2xl font-bold text-foreground">{messages.users.title}</h1>
           <p className="text-sm text-muted-foreground mt-1">{messages.users.subtitle}</p>
         </div>
-        <div className="flex items-center gap-3">
-          {viewerIsSuperAdmin && tenantOptions.length > 1 && (
-            <Select
-              value={selectedTenantId ?? 'all'}
-              onValueChange={(v) => setSelectedTenantId(v === 'all' ? null : v)}
-            >
-              <SelectTrigger className="w-48" aria-label={messages.users.filterByTenant}>
-                <SelectValue placeholder={messages.users.allTenants} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{messages.users.allTenants}</SelectItem>
-                {tenantOptions.map((t) => (
-                  <SelectItem key={t.id} value={t.id}>
-                    {t.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-          <Button onClick={() => setAddDialogOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            {messages.users.addUser}
-          </Button>
-        </div>
+        <Button onClick={() => setAddDialogOpen(true)}>
+          <Plus className="mr-2 h-4 w-4" />
+          {messages.users.addUser}
+        </Button>
       </div>
+
+      {/* Tenant scope selector — super admin only */}
+      <TenantScopeBar />
 
       {/* User table */}
       {!hasUsers ? (
@@ -201,7 +168,7 @@ export function UserList() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredUsers!.map((user) => (
+              {visibleUsers!.map((user) => (
                 <UserRow
                   key={user.id}
                   user={user}

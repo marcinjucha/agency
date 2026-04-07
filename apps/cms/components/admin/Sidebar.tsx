@@ -21,13 +21,16 @@ import {
   History,
   Users,
   Shield,
+  Building2,
 } from 'lucide-react'
+import { useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
 import { usePermissions } from '@/contexts/permissions-context'
-import { getRequiredPermission, type PermissionKey } from '@/lib/permissions'
+import { getRequiredPermission, isFeatureEnabled, type PermissionKey } from '@/lib/permissions'
+import { TenantSwitcher } from '@/features/tenants/components/TenantSwitcher'
 
 type MenuItem = { href: string; label: string; icon: typeof LayoutDashboard }
 type MenuGroup = {
@@ -84,10 +87,11 @@ const menuGroups: MenuGroup[] = [
   },
   {
     label: messages.nav.groupManagement,
-    requiredPermissions: ['system.users', 'system.roles'],
+    requiredPermissions: ['system.users', 'system.roles', 'system.tenants'],
     items: [
       { href: routes.admin.users, label: messages.nav.users, icon: Users },
       { href: routes.admin.roles, label: messages.nav.roles, icon: Shield },
+      { href: routes.admin.tenants, label: messages.tenants.title, icon: Building2 },
     ],
   },
 ]
@@ -95,21 +99,34 @@ const menuGroups: MenuGroup[] = [
 export function Sidebar() {
   const pathname = usePathname()
   const router = useRouter()
+  const queryClient = useQueryClient()
   const supabase = createClient()
-  const { hasPermission } = usePermissions()
+  const { hasPermission, isSuperAdmin, enabledFeatures } = usePermissions()
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
+    queryClient.clear()
     router.push(routes.login)
     router.refresh()
   }
 
-  /** Filter menu items based on user permissions. Dashboard is always visible (alwaysGranted). */
+  /**
+   * Filter menu items by two layers:
+   * 1. Tenant feature flags — is the module enabled for this tenant?
+   * 2. User permissions — does the user have access to this route?
+   *
+   * Super admins bypass feature flag filtering (can see all features).
+   * Dashboard is always visible (alwaysGranted + no feature mapping).
+   */
   const filteredGroups = menuGroups
     .map((group) => {
       const visibleItems = group.items.filter((item) => {
+        // Layer 1: Feature flag check (super admins bypass)
+        if (!isSuperAdmin && !isFeatureEnabled(item.href, enabledFeatures)) {
+          return false
+        }
+        // Layer 2: Permission check
         const required = getRequiredPermission(item.href)
-        // No permission mapping (e.g. dashboard) or alwaysGranted -> show
         if (!required) return true
         return hasPermission(required)
       })
@@ -127,10 +144,7 @@ export function Sidebar() {
 
   return (
     <aside className="w-64 bg-card border-r border-border flex flex-col h-screen">
-      <div className="p-6">
-        <h1 className="text-xl font-bold text-foreground">Halo Efekt</h1>
-        <p className="text-muted-foreground text-sm mt-1">{messages.nav.adminPanel}</p>
-      </div>
+      <TenantSwitcher />
 
       <nav className="flex-1 overflow-y-auto px-3 space-y-4">
         {filteredGroups.map((group, groupIdx) => (

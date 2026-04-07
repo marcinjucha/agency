@@ -24,7 +24,10 @@ export async function createRole(input: CreateRoleInput) {
       if (!hasPermission('system.roles', auth.permissions)) {
         return errAsync(messages.roles.createFailed)
       }
-      return insertRole(auth, parsed.name, parsed.description ?? undefined)
+      // Super admin may specify target tenant; otherwise use auth tenant
+      const targetTenantId =
+        parsed.tenantId && auth.isSuperAdmin ? parsed.tenantId : auth.tenantId
+      return insertRole(auth, targetTenantId, parsed.name, parsed.description ?? undefined)
         .andThen((roleId) => insertPermissions(auth, roleId, parsed.permissions))
     })
 
@@ -90,12 +93,12 @@ export async function deleteRole(roleId: string) {
 const dbError = (e: unknown) =>
   e instanceof Error ? e.message : messages.common.unknownError
 
-function insertRole(auth: AuthSuccess, name: string, description?: string) {
+function insertRole(auth: AuthSuccess, tenantId: string, name: string, description?: string) {
   return ResultAsync.fromPromise(
     (auth.supabase as any)
       .from('tenant_roles')
       .insert({
-        tenant_id: auth.tenantId,
+        tenant_id: tenantId,
         name,
         description: description ?? null,
       })

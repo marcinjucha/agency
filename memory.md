@@ -68,6 +68,10 @@
 - **fromSafePromise(Promise.reject()) misuse** — `fromSafePromise` expects a promise that never rejects (wraps resolution). Using it with `Promise.reject()` causes unhandled rejection. Use `ResultAsync.fromPromise()` instead for potentially-rejecting promises. (2026-04-06)
 - **Permission denial returned inside ok() path** — Server Action returned `ok({ error: 'Forbidden' })` instead of `err(...)`. Caller checked `.isOk()` and proceeded with forbidden response as "success". Always use `err()` for denial. (2026-04-06)
 - **React hooks ordering violation in permission-gated components** — Early return before hooks (e.g., `if (!hasPermission) return null` before `useState`) violates Rules of Hooks. Fix: move permission check after all hooks, or use conditional rendering wrapper. (2026-04-06)
+- **PermissionPicker child filtering showed all permissions** — `expandPermissionKeys` was called with parent keys but returned only parent keys (no expansion). Child permissions never rendered in UI. Root cause: expand function needed to map parent→children from ROLE_PERMISSIONS structure. (2026-04-07)
+- **Vitest Proxy mock + async importOriginal = infinite hang** — `vi.mock('module', async (importOriginal) => { const orig = await importOriginal(); return { ...orig, fn: vi.fn() } })` hangs indefinitely in vitest. WHY: Proxy-based mock intercepts the import causing circular resolution. Fix: don't spread importOriginal for modules with pure functions — mock only what you need, or don't mock at all if functions are pure. (2026-04-07)
+- **TanStack Query cache not cleared on logout** — `queryClient` persists across sessions. User A logs out, User B logs in → sees User A's cached data (roles, permissions). Fix: `queryClient.clear()` in signOut action. (2026-04-07)
+- **Don't globally mock pure utility modules in tests** — `@/lib/permissions` (expandPermissionKeys, hasPermission) are pure functions with no side effects. Globally mocking them defeats the purpose of testing. Mock only impure dependencies (Supabase, auth). (2026-04-07)
 
 ## Domain Concepts
 
@@ -124,6 +128,9 @@
 - **Type-safe PermissionKey via `as const satisfies Record`** — ROLE_PERMISSIONS defined with `as const satisfies Record<Role, PermissionKey[]>`, then `PermissionKey = typeof ROLE_PERMISSIONS[Role][number]`. Compile-time validation + derived union type. No separate enum to maintain. (2026-04-06)
 - **is_super_admin as boolean, not role** — Super admin bypasses all permission checks. Implemented as boolean column on users table, not as a role in role-permission mapping. WHY: super admin is orthogonal to roles (a user can have any role AND be super admin). Validated by analyst-agent. (2026-04-06)
 - **requireAuth() helper consolidation pattern** — Single `requireAuth(permissionKey?)` replaces inline `createClient → getUser → check` in 48 Server Actions across 18 files. Returns `Result<AuthContext, AppError>`. Optional permission param for granular checks. (2026-04-06)
+- **expandPermissionKeys extracted to lib/permissions.ts** — Shared permission expansion logic (parent key → child keys) used by both PermissionPicker component and test utilities. Single source of truth for permission hierarchy traversal. (2026-04-07)
+- **DISPLAY_GROUPS for visual-only permission grouping** — PermissionPicker needed 4 visual groups (Users, Content, Settings, System) but PERMISSION_GROUPS (backend) has different structure. Separate DISPLAY_GROUPS constant for UI rendering without touching authorization logic. (2026-04-07)
+- **Vitest setup for CMS app** — `vitest.config.ts` in `apps/cms/`, path aliases matching tsconfig (`@/` → `./`), `@testing-library/react` + `@testing-library/jest-dom` + `jsdom`. Test files colocated in `__tests__/` dirs next to source. (2026-04-07)
 
 ## Preferences
 
@@ -156,3 +163,7 @@
 - **InsertMediaModal: link input above filters, not below** — User corrected layout order: URL link input must appear between upload zone and filter bar, not after filters. middleSlot prop pattern for injecting content into LibraryTab. (2026-04-02)
 - **Readability: named functions over inline closures** — User's strongest signal during FP adoption. Extract `.map(fn)` callbacks to named functions. File organization: public API → internal helpers → private functions. (2026-04-06)
 - **Boy Scout Rule for FP migration (not big-bang refactor)** — Adopt remeda + neverthrow incrementally: refactor files when you touch them, don't rewrite existing working code in bulk. (2026-04-06)
+- **True incremental TDD, not batch TDD** — First version of TDD in ag-develop had "write all tests first, then implement" — user corrected to true Red-Green-Refactor: one test at a time (write failing test → make it pass → refactor → next test). Batch test-writing is waterfall disguised as TDD. Updated ag-develop command + ag-dev-workflow + ag-validation-patterns skills. (2026-04-07)
+- **Page Object Pattern for component tests** — Wrap render + queries in helper object (e.g., `renderPermissionPicker()` returns `{ getCheckbox, getGroup, clickCheckbox }`). Keeps tests readable, DRY, decoupled from DOM structure. (2026-04-07)
+- **`vitest --watch` over `vitest run` during TDD** — Faster feedback loop. Run watch mode in background, iterate on test+implementation. (2026-04-07)
+- **`await queryClient.invalidateQueries()` in onSuccess** — `invalidateQueries` returns a Promise; fire-and-forget causes stale cache on navigation when `staleTime` is long (e.g., 5min). Fast navigation after mutation reads old cached data because invalidation hasn't completed. Always `await` it. (2026-04-07)

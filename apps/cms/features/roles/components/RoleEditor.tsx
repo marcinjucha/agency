@@ -33,13 +33,17 @@ interface RoleEditorProps {
   onOpenChange: (open: boolean) => void
   /** When set, editor is in "edit" mode. When null, "create" mode. */
   role: TenantRoleWithPermissions | null
+  /** Tenant's enabled features — filters which permission groups are shown. */
+  enabledFeatures?: PermissionKey[]
+  /** Target tenant ID for super admin creating roles in another tenant's scope. */
+  tenantId?: string
 }
 
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
-export function RoleEditor({ open, onOpenChange, role }: RoleEditorProps) {
+export function RoleEditor({ open, onOpenChange, role, enabledFeatures, tenantId }: RoleEditorProps) {
   const queryClient = useQueryClient()
   const isEditing = role !== null
 
@@ -83,13 +87,16 @@ export function RoleEditor({ open, onOpenChange, role }: RoleEditorProps) {
             name: data.name,
             description: data.description ?? undefined,
             permissions: data.permissions as PermissionKey[],
+            tenantId,
           })
       if (!result.success) throw new Error(result.error)
       return result
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.roles.all })
-      queryClient.invalidateQueries({ queryKey: queryKeys.users.all })
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: queryKeys.roles.all }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.users.all }),
+      ])
       handleClose()
     },
   })
@@ -163,6 +170,7 @@ export function RoleEditor({ open, onOpenChange, role }: RoleEditorProps) {
                 <PermissionPicker
                   value={field.value as PermissionKey[]}
                   onChange={field.onChange}
+                  enabledFeatures={enabledFeatures}
                 />
               )}
             />

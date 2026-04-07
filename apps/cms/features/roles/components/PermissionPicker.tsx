@@ -12,11 +12,56 @@ import { Lock } from 'lucide-react'
 
 type PermissionGroup = (typeof PERMISSION_GROUPS)[keyof typeof PERMISSION_GROUPS]
 
+/** Display-only grouping — remaps PERMISSION_GROUPS for UI rendering without changing permission logic. */
+interface DisplayGroup {
+  label: string
+  parentKey: string
+  children: readonly PermissionKey[]
+  alwaysGranted: boolean
+}
+
 interface PermissionPickerProps {
   value: PermissionKey[]
   onChange: (keys: PermissionKey[]) => void
   disabled?: boolean
+  /** When provided, only show groups whose key (or any child) is in this list. Dashboard (alwaysGranted) always shown. */
+  enabledFeatures?: PermissionKey[]
 }
+
+// ---------------------------------------------------------------------------
+// Display Groups — visual split of PERMISSION_GROUPS for PermissionPicker UI
+// ---------------------------------------------------------------------------
+
+function buildDisplayGroups(): DisplayGroup[] {
+  const groups: DisplayGroup[] = []
+  for (const group of Object.values(PERMISSION_GROUPS)) {
+    if (group.key === 'system') {
+      // Split system into two display cards
+      groups.push({
+        label: messages.permissions.system,
+        parentKey: 'system',
+        children: ['system.email_templates', 'system.settings'] as const,
+        alwaysGranted: false,
+      })
+      groups.push({
+        label: messages.permissions.management,
+        parentKey: 'system',
+        children: ['system.users', 'system.roles', 'system.tenants'] as const,
+        alwaysGranted: false,
+      })
+    } else {
+      groups.push({
+        label: messages.permissions[group.key] ?? group.key,
+        parentKey: group.key,
+        children: group.children as readonly PermissionKey[],
+        alwaysGranted: 'alwaysGranted' in group && !!group.alwaysGranted,
+      })
+    }
+  }
+  return groups
+}
+
+const DISPLAY_GROUPS = buildDisplayGroups()
 
 // ---------------------------------------------------------------------------
 // Component
@@ -26,27 +71,45 @@ export function PermissionPicker({
   value,
   onChange,
   disabled = false,
+  enabledFeatures,
 }: PermissionPickerProps) {
-  const groups = Object.values(PERMISSION_GROUPS)
+  const displayGroups = filterDisplayGroupsByEnabledFeatures(
+    DISPLAY_GROUPS,
+    enabledFeatures,
+  )
   const selectedSet = new Set(value)
 
   const toggleChild = useCallback(
     (key: PermissionKey, checked: boolean) => {
-      const next = checked
-        ? [...value, key]
-        : value.filter((k) => k !== key)
-      onChange(next)
+      // Find the parent group for this child key (from real PERMISSION_GROUPS)
+      const parentGroup = Object.values(PERMISSION_GROUPS).find((group) =>
+        (group.children as readonly string[]).includes(key),
+      )
+      const parentKey = parentGroup?.key as PermissionKey | undefined
+      const siblingKeys = (parentGroup?.children ?? []) as readonly PermissionKey[]
+
+      if (checked) {
+        const next = [...value, key]
+        if (parentKey && siblingKeys.every((k) => k === key || selectedSet.has(k))) {
+          next.push(parentKey)
+        }
+        onChange(next)
+      } else {
+        const next = value.filter(
+          (k) => k !== key && k !== parentKey,
+        )
+        onChange(next)
+      }
     },
-    [value, onChange],
+    [value, selectedSet, onChange],
   )
 
-  const toggleGroup = useCallback(
-    (group: PermissionGroup) => {
-      const parentKey = group.key as PermissionKey
-      const childKeys = group.children as readonly PermissionKey[]
+  const toggleDisplayGroup = useCallback(
+    (displayGroup: DisplayGroup) => {
+      const parentKey = displayGroup.parentKey as PermissionKey
+      const childKeys = displayGroup.children
 
       if (childKeys.length === 0) {
-        // Simple toggle (no children)
         const isSelected = selectedSet.has(parentKey)
         const next = isSelected
           ? value.filter((k) => k !== parentKey)
@@ -55,20 +118,35 @@ export function PermissionPicker({
         return
       }
 
-      // Group with children: toggle all children + parent
+      // Toggle only THIS display group's children
       const allChildrenSelected = childKeys.every((k) => selectedSet.has(k))
-      const next = allChildrenSelected
-        ? value.filter(
-            (k) => k !== parentKey && !(childKeys as readonly string[]).includes(k),
-          )
-        : [
-            ...value.filter(
-              (k) => k !== parentKey && !(childKeys as readonly string[]).includes(k),
-            ),
-            parentKey,
-            ...childKeys,
-          ]
-      onChange(next)
+      if (allChildrenSelected) {
+        // Uncheck this group's children. Remove parent only if no other system children are selected.
+        const childSet = new Set<string>(childKeys)
+        const next = value.filter((k) => !childSet.has(k))
+        // Check if any remaining children from the same parent are still selected
+        const realGroup = Object.values(PERMISSION_GROUPS).find((g) => g.key === displayGroup.parentKey)
+        const allParentChildren = (realGroup?.children ?? []) as readonly PermissionKey[]
+        const remainingSelected = allParentChildren.some((k) => !childSet.has(k) && selectedSet.has(k))
+        if (!remainingSelected) {
+          return onChange(next.filter((k) => k !== parentKey))
+        }
+        onChange(next)
+      } else {
+        // Check all this group's children
+        const next = [
+          ...value.filter((k) => !(childKeys as readonly string[]).includes(k)),
+          ...childKeys,
+        ]
+        // Add parent if ALL real children are now selected
+        const realGroup = Object.values(PERMISSION_GROUPS).find((g) => g.key === displayGroup.parentKey)
+        const allParentChildren = (realGroup?.children ?? []) as readonly PermissionKey[]
+        const allRealSelected = allParentChildren.every((k) => childKeys.includes(k) || selectedSet.has(k))
+        if (allRealSelected && !next.includes(parentKey)) {
+          next.push(parentKey)
+        }
+        onChange(next)
+      }
     },
     [value, selectedSet, onChange],
   )
@@ -79,14 +157,15 @@ export function PermissionPicker({
       role="group"
       aria-label={messages.roles.selectPermissions}
     >
-      {groups.map((group) => (
-        <GroupCard
-          key={group.key}
-          group={group}
+      {displayGroups.map((dg) => (
+        <DisplayGroupCard
+          key={`${dg.parentKey}-${dg.label}`}
+          displayGroup={dg}
           selectedSet={selectedSet}
-          onToggleGroup={toggleGroup}
+          onToggleGroup={toggleDisplayGroup}
           onToggleChild={toggleChild}
           disabled={disabled}
+          enabledFeatures={enabledFeatures}
         />
       ))}
     </div>
@@ -94,29 +173,30 @@ export function PermissionPicker({
 }
 
 // ---------------------------------------------------------------------------
-// Group Card
+// Display Group Card
 // ---------------------------------------------------------------------------
 
-function GroupCard({
-  group,
+function DisplayGroupCard({
+  displayGroup,
   selectedSet,
   onToggleGroup,
   onToggleChild,
   disabled,
+  enabledFeatures,
 }: {
-  group: PermissionGroup
+  displayGroup: DisplayGroup
   selectedSet: Set<PermissionKey>
-  onToggleGroup: (group: PermissionGroup) => void
+  onToggleGroup: (dg: DisplayGroup) => void
   onToggleChild: (key: PermissionKey, checked: boolean) => void
   disabled: boolean
+  enabledFeatures?: PermissionKey[]
 }) {
   const groupId = useId()
-  const parentKey = group.key as PermissionKey
-  const childKeys = group.children as readonly PermissionKey[]
-  const isAlwaysGranted = 'alwaysGranted' in group && group.alwaysGranted
+  const parentKey = displayGroup.parentKey as PermissionKey
+  const childKeys = filterChildrenByEnabledFeatures(parentKey, displayGroup.children, enabledFeatures)
+  const isAlwaysGranted = displayGroup.alwaysGranted
   const hasChildren = childKeys.length > 0
 
-  // Determine parent checkbox state
   const parentChecked = resolveParentState(
     parentKey,
     childKeys,
@@ -124,8 +204,7 @@ function GroupCard({
     isAlwaysGranted,
   )
 
-  const label =
-    messages.permissions[parentKey] ?? parentKey
+  const label = displayGroup.label
 
   return (
     <div
@@ -139,7 +218,7 @@ function GroupCard({
           id={`${groupId}-parent`}
           checked={parentChecked}
           onCheckedChange={() => {
-            if (!isAlwaysGranted) onToggleGroup(group)
+            if (!isAlwaysGranted) onToggleGroup(displayGroup)
           }}
           disabled={disabled || isAlwaysGranted}
           aria-label={label}
@@ -219,6 +298,40 @@ function ChildCheckbox({
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+/**
+ * Filter display groups to only include those with enabled features.
+ * alwaysGranted groups always shown. Groups with no enabled children are hidden.
+ */
+function filterDisplayGroupsByEnabledFeatures(
+  groups: DisplayGroup[],
+  enabledFeatures?: PermissionKey[],
+): DisplayGroup[] {
+  if (!enabledFeatures) return groups
+  const enabledSet = new Set<string>(enabledFeatures)
+  return groups.filter((group) => {
+    if (group.alwaysGranted) return true
+    if (enabledSet.has(group.parentKey)) return true
+    return group.children.some((child) => enabledSet.has(child))
+  })
+}
+
+/**
+ * Filter children within a group based on enabledFeatures.
+ * - undefined enabledFeatures → all children (backward compat)
+ * - Parent key in enabledFeatures → all children (prefix match)
+ * - Otherwise → only children whose key is in enabledFeatures
+ */
+function filterChildrenByEnabledFeatures(
+  parentKey: PermissionKey,
+  childKeys: readonly PermissionKey[],
+  enabledFeatures?: PermissionKey[],
+): readonly PermissionKey[] {
+  if (!enabledFeatures) return childKeys
+  const enabledSet = new Set<string>(enabledFeatures)
+  if (enabledSet.has(parentKey)) return childKeys
+  return childKeys.filter((child) => enabledSet.has(child))
+}
 
 function resolveParentState(
   parentKey: PermissionKey,

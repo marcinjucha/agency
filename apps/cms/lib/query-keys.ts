@@ -56,11 +56,19 @@ export const queryKeys = {
   },
   users: {
     all: ['users'] as const,
+    list: (tenantId?: string | null) =>
+      tenantId ? (['users', 'list', tenantId] as const) : (['users'] as const),
     detail: (id: string) => ['users', id] as const,
   },
   roles: {
     all: ['roles'] as const,
+    list: (tenantId?: string | null) =>
+      tenantId ? (['roles', 'list', tenantId] as const) : (['roles'] as const),
     detail: (id: string) => ['roles', id] as const,
+  },
+  tenants: {
+    all: ['tenants'] as const,
+    detail: (id: string) => ['tenants', id] as const,
   },
   marketplace: {
     all: ['marketplace'] as const,

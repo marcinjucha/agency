@@ -6,6 +6,8 @@ export const createUserSchema = z.object({
   password: z.string().min(8, messages.users.passwordMinLength),
   fullName: z.string().min(1, messages.validation.nameRequired),
   roleId: z.string().uuid(),
+  /** Super admin only — create user in a specific tenant. */
+  tenantId: z.string().uuid().optional(),
 })
 
 export const updateUserSchema = z.object({
