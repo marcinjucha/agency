@@ -72,6 +72,8 @@
 - **Vitest Proxy mock + async importOriginal = infinite hang** — `vi.mock('module', async (importOriginal) => { const orig = await importOriginal(); return { ...orig, fn: vi.fn() } })` hangs indefinitely in vitest. WHY: Proxy-based mock intercepts the import causing circular resolution. Fix: don't spread importOriginal for modules with pure functions — mock only what you need, or don't mock at all if functions are pure. (2026-04-07)
 - **TanStack Query cache not cleared on logout** — `queryClient` persists across sessions. User A logs out, User B logs in → sees User A's cached data (roles, permissions). Fix: `queryClient.clear()` in signOut action. (2026-04-07)
 - **Don't globally mock pure utility modules in tests** — `@/lib/permissions` (expandPermissionKeys, hasPermission) are pure functions with no side effects. Globally mocking them defeats the purpose of testing. Mock only impure dependencies (Supabase, auth). (2026-04-07)
+- **`vi.resetAllMocks()` clears `vi.mock()` factory return values** — After `vi.resetAllMocks()` in `beforeEach`, mocked functions return `undefined` instead of Promise. Fire-and-forget patterns (`.catch()`) throw on `undefined.catch`. Fix: re-set `mockResolvedValue()` in each describe's `beforeEach` after reset. (2026-04-07)
+- **`formatDate('not-a-date')` returned 'Invalid Date' string** — No guard for invalid date input. TDD caught it. Fix: `isNaN(date.getTime())` check returning em-dash fallback. (2026-04-07)
 
 ## Domain Concepts
 
@@ -131,6 +133,7 @@
 - **expandPermissionKeys extracted to lib/permissions.ts** — Shared permission expansion logic (parent key → child keys) used by both PermissionPicker component and test utilities. Single source of truth for permission hierarchy traversal. (2026-04-07)
 - **DISPLAY_GROUPS for visual-only permission grouping** — PermissionPicker needed 4 visual groups (Users, Content, Settings, System) but PERMISSION_GROUPS (backend) has different structure. Separate DISPLAY_GROUPS constant for UI rendering without touching authorization logic. (2026-04-07)
 - **Vitest setup for CMS app** — `vitest.config.ts` in `apps/cms/`, path aliases matching tsconfig (`@/` → `./`), `@testing-library/react` + `@testing-library/jest-dom` + `jsdom`. Test files colocated in `__tests__/` dirs next to source. (2026-04-07)
+- **Shared test utilities at `apps/cms/__tests__/utils/`** — Global Supabase mock helpers (`supabase-mocks.ts`: mockChain, createSequentialClient, createTableMockClient) and auth mock helpers (`auth-mocks.ts`: mockAuthSuccess, mockAuthFailure). All test infrastructure lives under `__tests__/` pattern — no separate `test-utils/` dirs. Feature-local fixtures in `features/{name}/__tests__/fixtures.ts`. (2026-04-07)
 
 ## Preferences
 
@@ -167,3 +170,5 @@
 - **Page Object Pattern for component tests** — Wrap render + queries in helper object (e.g., `renderPermissionPicker()` returns `{ getCheckbox, getGroup, clickCheckbox }`). Keeps tests readable, DRY, decoupled from DOM structure. (2026-04-07)
 - **`vitest --watch` over `vitest run` during TDD** — Faster feedback loop. Run watch mode in background, iterate on test+implementation. (2026-04-07)
 - **`await queryClient.invalidateQueries()` in onSuccess** — `invalidateQueries` returns a Promise; fire-and-forget causes stale cache on navigation when `staleTime` is long (e.g., 5min). Fast navigation after mutation reads old cached data because invalidation hasn't completed. Always `await` it. (2026-04-07)
+- **Feature-local test fixtures in `features/{name}/__tests__/fixtures.ts`** — Extract shared factory functions (makeStep, makeEdge, makeWorkflow, makeContext) to a dedicated fixtures file per feature. Reusable across all test files within that feature. Apply this pattern to ALL features, not just workflows. (2026-04-07)
+- **Table-name-keyed Supabase mocks over flat call-index mocks** — For executor-style tests with ~20 DB calls, key mock responses by table name (e.g., `createTableMockClient({ workflow_steps: [...], workflow_executions: [...] })`). Flat sequential `.mockResolvedValueOnce()` is brittle — adding one query shifts all subsequent mock indices. (2026-04-07)

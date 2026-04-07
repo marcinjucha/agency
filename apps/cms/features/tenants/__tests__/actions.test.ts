@@ -45,25 +45,7 @@ function makeAuth(overrides: Partial<{
   }
 }
 
-/**
- * Chainable mock for Supabase service client.
- * Tracks calls per table for assertions.
- */
-function mockChain(finalValue: unknown) {
-  const chain: Record<string, any> = {}
-  chain.select = vi.fn().mockReturnValue(chain)
-  chain.insert = vi.fn().mockReturnValue(chain)
-  chain.update = vi.fn().mockReturnValue(chain)
-  chain.delete = vi.fn().mockReturnValue(chain)
-  chain.upsert = vi.fn().mockReturnValue(chain)
-  chain.eq = vi.fn().mockReturnValue(chain)
-  chain.in = vi.fn().mockReturnValue(chain)
-  chain.limit = vi.fn().mockReturnValue(chain)
-  chain.single = vi.fn().mockResolvedValue(finalValue)
-  chain.then = vi.fn((resolve: any, reject?: any) => Promise.resolve(finalValue).then(resolve, reject))
-  chain.catch = vi.fn((fn: any) => Promise.resolve(finalValue).catch(fn))
-  return chain
-}
+import { mockChain } from '@/__tests__/utils/supabase-mocks'
 
 /** Track mockServiceClient.from() calls sequentially */
 let fromCalls: ReturnType<typeof mockChain>[] = []

@@ -1,0 +1,186 @@
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+
+// Mock ../types to avoid importing @/lib/messages (which pulls in the full app context)
+vi.mock('../types', () => ({
+  TRIGGER_TYPE_LABELS: {
+    survey_submitted: 'Formularz wysłany',
+    booking_created: 'Rezerwacja utworzona',
+    lead_scored: 'Lead oceniony',
+    manual: 'Ręczny',
+    scheduled: 'Zaplanowany',
+  },
+  STEP_TYPE_LABELS: {
+    send_email: 'Wyślij email',
+    delay: 'Opóźnienie',
+    condition: 'Warunek',
+    webhook: 'Webhook',
+    ai_action: 'Akcja AI',
+  },
+  EXECUTION_STATUS_LABELS: {
+    pending: 'Oczekuje',
+    running: 'W trakcie',
+    completed: 'Zakończono',
+    failed: 'Błąd',
+    cancelled: 'Anulowano',
+    paused: 'Wstrzymano',
+    waiting_for_callback: 'Oczekuje na callback',
+  },
+  STEP_EXECUTION_STATUS_LABELS: {
+    pending: 'Oczekuje',
+    running: 'W trakcie',
+    completed: 'Zakończono',
+    failed: 'Błąd',
+    skipped: 'Pominięto',
+    waiting: 'Czeka',
+    processing: 'Przetwarzanie',
+  },
+}))
+
+import {
+  formatDate,
+  getTriggerTypeLabel,
+  getStepTypeLabel,
+  getExecutionStatusLabel,
+  getStepExecutionStatusLabel,
+  formatDuration,
+  formatExecutionDuration,
+} from '../utils'
+
+// --- formatDate ---
+
+describe('formatDate', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    // Fixed "now": 2026-04-07T12:00:00Z
+    vi.setSystemTime(new Date('2026-04-07T12:00:00Z'))
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('returns em-dash for null input', () => {
+    expect(formatDate(null)).toBe('\u2014')
+  })
+
+  it('returns relative time for dates within 7 days', () => {
+    // 2 days ago
+    const twoDaysAgo = '2026-04-05T12:00:00Z'
+    const result = formatDate(twoDaysAgo)
+    // Polish relative time should contain "temu" (ago)
+    expect(result).toContain('temu')
+  })
+
+  it('returns localized date for dates older than 7 days', () => {
+    // 10 days ago
+    const oldDate = '2026-03-28T12:00:00Z'
+    const result = formatDate(oldDate)
+    // Should be a localized Polish date like "28 mar 2026"
+    expect(result).toMatch(/\d{1,2}\s\w+\s\d{4}/)
+  })
+
+  it('returns em-dash for unparseable date string', () => {
+    const result = formatDate('not-a-date')
+    expect(result).toBe('\u2014')
+  })
+})
+
+// --- formatDuration ---
+
+describe('formatDuration', () => {
+  it('formats seconds only', () => {
+    expect(formatDuration(45)).toBe('45 s')
+  })
+
+  it('formats zero seconds', () => {
+    expect(formatDuration(0)).toBe('0 s')
+  })
+
+  it('formats minutes only', () => {
+    expect(formatDuration(300)).toBe('5 min')
+  })
+
+  it('formats hours only', () => {
+    expect(formatDuration(3600)).toBe('1 godz')
+  })
+
+  it('formats hours and minutes', () => {
+    expect(formatDuration(5400)).toBe('1 godz 30 min')
+  })
+})
+
+// --- formatExecutionDuration ---
+
+describe('formatExecutionDuration', () => {
+  it('returns en-dash when startedAt is null', () => {
+    expect(formatExecutionDuration(null, '2026-04-07T12:01:00Z')).toBe('\u2013')
+  })
+
+  it('returns en-dash when completedAt is null', () => {
+    expect(formatExecutionDuration('2026-04-07T12:00:00Z', null)).toBe('\u2013')
+  })
+
+  it('returns en-dash when both are null', () => {
+    expect(formatExecutionDuration(null, null)).toBe('\u2013')
+  })
+
+  it('formats seconds duration', () => {
+    expect(
+      formatExecutionDuration('2026-04-07T12:00:00Z', '2026-04-07T12:00:45Z')
+    ).toBe('45s')
+  })
+
+  it('formats minutes and seconds duration', () => {
+    expect(
+      formatExecutionDuration('2026-04-07T12:00:00Z', '2026-04-07T12:02:30Z')
+    ).toBe('2m 30s')
+  })
+
+  it('formats hours and minutes duration', () => {
+    expect(
+      formatExecutionDuration('2026-04-07T12:00:00Z', '2026-04-07T13:15:00Z')
+    ).toBe('1g 15m')
+  })
+})
+
+// --- label getters ---
+
+describe('getTriggerTypeLabel', () => {
+  it('returns label for known trigger type', () => {
+    expect(getTriggerTypeLabel('survey_submitted')).toBe('Formularz wysłany')
+  })
+
+  it('returns raw type string for unknown trigger type', () => {
+    expect(getTriggerTypeLabel('unknown_trigger' as any)).toBe('unknown_trigger')
+  })
+})
+
+describe('getStepTypeLabel', () => {
+  it('returns label for known step type', () => {
+    expect(getStepTypeLabel('send_email')).toBe('Wyślij email')
+  })
+
+  it('returns raw type string for unknown step type', () => {
+    expect(getStepTypeLabel('unknown_step' as any)).toBe('unknown_step')
+  })
+})
+
+describe('getExecutionStatusLabel', () => {
+  it('returns label for known execution status', () => {
+    expect(getExecutionStatusLabel('completed')).toBe('Zakończono')
+  })
+
+  it('returns raw status string for unknown status', () => {
+    expect(getExecutionStatusLabel('unknown_status' as any)).toBe('unknown_status')
+  })
+})
+
+describe('getStepExecutionStatusLabel', () => {
+  it('returns label for known step execution status', () => {
+    expect(getStepExecutionStatusLabel('completed')).toBe('Zakończono')
+  })
+
+  it('returns raw status string for unknown status', () => {
+    expect(getStepExecutionStatusLabel('unknown_status' as any)).toBe('unknown_status')
+  })
+})

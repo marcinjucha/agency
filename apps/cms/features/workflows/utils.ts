@@ -17,6 +17,7 @@ export function formatDate(dateString: string | null): string {
   if (!dateString) return '\u2014'
   try {
     const date = new Date(dateString)
+    if (isNaN(date.getTime())) return '\u2014'
     const now = new Date()
     if (now.getTime() - date.getTime() < SEVEN_DAYS_MS) {
       return formatDistanceToNow(date, { addSuffix: true, locale: pl })
