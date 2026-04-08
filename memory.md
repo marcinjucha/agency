@@ -50,6 +50,7 @@
 - **"wracamy do manuala" = switch back to manual mode** — Confirmation after each phase. "Auto" mode was session-scoped only, not permanent. (2026-03-31)
 - **"do all now" = don't defer P2 items** — When design agent recommends deferring P2 items, user overrides and wants all implemented immediately. Don't defer unless explicitly asked. (2026-03-31)
 - **workflow_id targeting over "all matching"** — User didn't want all matching workflows to fire on trigger. API accepts workflow_id for specific execution. (2026-03-31, AAA-T-149)
+- **Validate after EACH iteration, not batched at end** — Orchestrator was about to skip validation after iteration 2. User corrected mid-session: "Nie zapominaj o wywoływaniu weryfikacji po każdej skończonej iteracji." Run Phase 3+3b validation after EVERY iteration completion, not deferred to a batch at the end. (2026-04-08)
 
 ## Bugs Found (project-specific patterns)
 
@@ -74,6 +75,7 @@
 - **Don't globally mock pure utility modules in tests** — `@/lib/permissions` (expandPermissionKeys, hasPermission) are pure functions with no side effects. Globally mocking them defeats the purpose of testing. Mock only impure dependencies (Supabase, auth). (2026-04-07)
 - **`vi.resetAllMocks()` clears `vi.mock()` factory return values** — After `vi.resetAllMocks()` in `beforeEach`, mocked functions return `undefined` instead of Promise. Fire-and-forget patterns (`.catch()`) throw on `undefined.catch`. Fix: re-set `mockResolvedValue()` in each describe's `beforeEach` after reset. (2026-04-07)
 - **`formatDate('not-a-date')` returned 'Invalid Date' string** — No guard for invalid date input. TDD caught it. Fix: `isNaN(date.getTime())` check returning em-dash fallback. (2026-04-07)
+- **fromSupabaseVoid() — `.map(() => undefined)` silently discards Supabase errors** — Supabase delete/update without `.select()` returns `{data, error}` but chaining `.map(() => undefined)` on the neverthrow Result discards the error path. Needs dedicated `fromSupabaseVoid()` helper that checks error before discarding data. (2026-04-08)
 
 ## Domain Concepts
 
@@ -143,6 +145,7 @@
 - **current_submissions read-only, max_submissions editable** — Never reset submission counter. (2026-03-28)
 - **Cross-project task organization** — Infrastructure tasks live where their "home" is (AAA-P-4), not consuming project. (2026-03-29)
 - **Inline editing over Dialog for simple CRUD** — In-place editing for simple entities. Dialog = overkill for 4 fields. (2026-03-30)
+- **Multi-field detail panel = RHF form + Save button, NOT pencil-per-field inline editing** — User rejected pencil icon per field for detail panels with multiple fields. Always-visible form with Save button preferred. Inline editing still correct for single-field cases (e.g., workflow name on list page). The distinction: multi-field panel = form, single-field list item = inline. (2026-04-08)
 - **Combobox with inline create** — Create related entities without leaving current editor. Popover+Command pattern. (2026-03-30)
 - **Variable inserter button needs text label** — Ghost button with "Zmienne" text, not icon-only Braces. (2026-03-31)
 - **Horizontal flow (left-to-right) for workflow canvas** — Position.Left→Right, not top/bottom. (2026-03-31)
@@ -172,3 +175,4 @@
 - **`await queryClient.invalidateQueries()` in onSuccess** — `invalidateQueries` returns a Promise; fire-and-forget causes stale cache on navigation when `staleTime` is long (e.g., 5min). Fast navigation after mutation reads old cached data because invalidation hasn't completed. Always `await` it. (2026-04-07)
 - **Feature-local test fixtures in `features/{name}/__tests__/fixtures.ts`** — Extract shared factory functions (makeStep, makeEdge, makeWorkflow, makeContext) to a dedicated fixtures file per feature. Reusable across all test files within that feature. Apply this pattern to ALL features, not just workflows. (2026-04-07)
 - **Table-name-keyed Supabase mocks over flat call-index mocks** — For executor-style tests with ~20 DB calls, key mock responses by table name (e.g., `createTableMockClient({ workflow_steps: [...], workflow_executions: [...] })`). Flat sequential `.mockResolvedValueOnce()` is brittle — adding one query shifts all subsequent mock indices. (2026-04-07)
+- **Native input type="date" rejected — always use shadcn/ui DatePicker** — User rejected native HTML date input. Always use shadcn/ui DatePicker (Popover + Calendar component) for consistent styling and UX. (2026-04-08)
