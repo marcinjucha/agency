@@ -21,15 +21,11 @@
 
 ## RBAC System — AAA-T-61 + AAA-T-76 — DONE (2026-04-06)
 
-**Status:** Complete. 6 iterations. requireAuth() helper consolidated across 18 files.
-**Scope:** Permission system with type-safe PermissionKey, is_super_admin boolean, role-permission mapping.
-**Key decisions:** `as const` satisfies Record → derived PermissionKey union (compile-time safety). is_super_admin as boolean (not role) — validated by analyst-agent. requireAuth() replaced 48 inline auth checks (-123 LOC).
+**Status:** Complete. is_super_admin as boolean (not role). requireAuth() consolidated across 18 files.
 
 ## Roadmap & Planning (2026-03-30)
 
-**Priority order:** workflow engine → email triggers → client onboarding.
-**Key decision:** NIE hardcode'ować emaili w n8n osobno — workflow engine najpierw, emaile potem jako triggery.
-**Backlog:** Multi-language, CRM/Slack, Reporting, Onboarding, Newsletter, booking_cancellation.
+**Priority:** workflow engine → email triggers → client onboarding. **Backlog:** Multi-language, CRM/Slack, Reporting, Onboarding, Newsletter, booking_cancellation.
 
 ## Completed Features (compressed)
 
@@ -62,19 +58,6 @@
 - **ConditionNode handle ID mismatch** — `id="yes"`/`id="no"` handles vs executor `'true'`/`'false'`. ReactFlow silently drops edges. Fix: use `id="true"`/`id="false"`. (2026-04-01, AAA-T-153)
 - **Template trigger node synthetic (UUID lost on remount)** — Synthetic trigger UUID changes each mount → edges can't persist. Fix: add trigger as real workflow_step in templates. (2026-04-01, AAA-T-153)
 - **Type/DB column name mismatch in manually written types** — Always cross-reference migration SQL when writing manual types. 3 mismatch types: phantom columns, wrong names, missing columns. (2026-04-02, AAA-T-157)
-- **Survey email validation ignored `semantic_role`** — Question had `type: 'text'` in DB but `semantic_role: 'client_email'`. Validation schema only checked `question.type`, so email field got text validation (no format check). Multiple RHF fixes (useFormState, Controller, mode changes) were red herrings. Root cause only found via `[DEBUG]` visible line in component revealing the actual data. Fix: `effectiveType` pattern where `semantic_role` overrides `question.type` for both validation and input rendering. (2026-04-02)
-- **RHF `register` swallows per-field errors silently** — QuestionField inputs using `register` didn't surface `fieldState.error` from react-hook-form. Migrated all inputs to `Controller` with `fieldState.error` for consistent error display. (2026-04-02)
-- **Users table had no INSERT/DELETE RLS policy** — First time users created from CMS (RBAC). SELECT/UPDATE existed, INSERT/DELETE missing. Silent failure on user creation. (2026-04-06, AAA-T-76)
-- **triggerAiAnalysis had zero auth check** — Server Action callable by any authenticated user without permission verification. Discovered during RBAC audit. (2026-04-06, AAA-T-76)
-- **fromSafePromise(Promise.reject()) misuse** — `fromSafePromise` expects a promise that never rejects (wraps resolution). Using it with `Promise.reject()` causes unhandled rejection. Use `ResultAsync.fromPromise()` instead for potentially-rejecting promises. (2026-04-06)
-- **Permission denial returned inside ok() path** — Server Action returned `ok({ error: 'Forbidden' })` instead of `err(...)`. Caller checked `.isOk()` and proceeded with forbidden response as "success". Always use `err()` for denial. (2026-04-06)
-- **React hooks ordering violation in permission-gated components** — Early return before hooks (e.g., `if (!hasPermission) return null` before `useState`) violates Rules of Hooks. Fix: move permission check after all hooks, or use conditional rendering wrapper. (2026-04-06)
-- **PermissionPicker child filtering showed all permissions** — `expandPermissionKeys` was called with parent keys but returned only parent keys (no expansion). Child permissions never rendered in UI. Root cause: expand function needed to map parent→children from ROLE_PERMISSIONS structure. (2026-04-07)
-- **Vitest Proxy mock + async importOriginal = infinite hang** — `vi.mock('module', async (importOriginal) => { const orig = await importOriginal(); return { ...orig, fn: vi.fn() } })` hangs indefinitely in vitest. WHY: Proxy-based mock intercepts the import causing circular resolution. Fix: don't spread importOriginal for modules with pure functions — mock only what you need, or don't mock at all if functions are pure. (2026-04-07)
-- **TanStack Query cache not cleared on logout** — `queryClient` persists across sessions. User A logs out, User B logs in → sees User A's cached data (roles, permissions). Fix: `queryClient.clear()` in signOut action. (2026-04-07)
-- **Don't globally mock pure utility modules in tests** — `@/lib/permissions` (expandPermissionKeys, hasPermission) are pure functions with no side effects. Globally mocking them defeats the purpose of testing. Mock only impure dependencies (Supabase, auth). (2026-04-07)
-- **`vi.resetAllMocks()` clears `vi.mock()` factory return values** — After `vi.resetAllMocks()` in `beforeEach`, mocked functions return `undefined` instead of Promise. Fire-and-forget patterns (`.catch()`) throw on `undefined.catch`. Fix: re-set `mockResolvedValue()` in each describe's `beforeEach` after reset. (2026-04-07)
-- **`formatDate('not-a-date')` returned 'Invalid Date' string** — No guard for invalid date input. TDD caught it. Fix: `isNaN(date.getTime())` check returning em-dash fallback. (2026-04-07)
 - **fromSupabaseVoid() — `.map(() => undefined)` silently discards Supabase errors** — Supabase delete/update without `.select()` returns `{data, error}` but chaining `.map(() => undefined)` on the neverthrow Result discards the error path. Needs dedicated `fromSupabaseVoid()` helper that checks error before discarding data. (2026-04-08)
 
 ## Domain Concepts
@@ -104,8 +87,6 @@
 - **VariableInserterPopover in packages/ui/** — Shared component with local VariableItem interface (avoids packages→apps import boundary violation). Structurally compatible with TriggerVariable from apps/cms/. (2026-03-31)
 - **Hybrid variable architecture: registry + JSONB cache** — trigger-schemas.ts is source of truth (TypeScript). template_variables JSONB is lazy cache written on save for n8n (which can't call TypeScript). CMS always reads from registry, writes snapshot to DB. (2026-03-31)
 - **form_confirmation as registry key** — Standalone templates (form_confirmation) are just another entry in TRIGGER_VARIABLE_SCHEMAS. No special case, same variable system for workflow and non-workflow templates. (2026-03-31)
-- **NODE_TYPE_REGISTRY centralized** — node-styles.ts + WorkflowCanvas nodeTypes + AddNodeDropdown ITEMS were scattered. Centralized into node-registry.ts: NODE_TYPE_CONFIGS (config-only, safe outside dynamic boundary) and NODE_COMPONENTS (inside boundary). Adding new node type = 2 files. (2026-03-31)
-- **PANEL_REGISTRY for config panels** — Maps stepType → React component, mirrors NODE_TYPE_CONFIGS. Adding new config panel = new file + registry entry. (2026-03-31) [Pattern: ag-coding-practices "Naturally Extensible Systems"; boundary rules: ag-architecture "Dynamic Import Boundary"]
 - **300ms debounced onChange for config panels** — Real-time canvas feedback without Apply button. Explicit Save persists to DB. triggerType passed in ConfigPanelProps for variable inserter context. (2026-03-31)
 - **TENANT_ID as server-only env var for shop frontends** — No NEXT_PUBLIC_ prefix, prevents client-side leakage of tenant context. Shop is per-tenant: env var filters products/categories. (2026-03-31)
 - **True anon Supabase client for shop frontend** — Uses NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY (not service_role like website). RLS enforces is_published for products. (2026-03-31)
@@ -119,44 +100,20 @@
 - **In-code JSON constants for workflow templates (copy-on-use)** — Templates stored as TypeScript constants in `features/workflows/templates/workflow-templates.ts`. On "Use template", server action materialises real workflow+steps+edges with fresh UUIDs. Zero DB overhead for non-users. Same pattern as n8n/Make.com. (2026-04-01, AAA-T-153)
 - **Trigger as real workflow_step in templates** — Including trigger_type step in template step arrays allows fully-connected canvas on load (trigger→condition edge stored in DB). Executor safely skips trigger steps (no handler → logs warning, marks completed). (2026-04-01, AAA-T-153)
 - **MAX_STEPS = 50 + 5-min sync step timeout in executor** — DEFAULT_EXECUTION_LIMITS in engine/types.ts. Timeout applies only to sync steps (condition, webhook). Async steps timeout in n8n. (2026-04-01, AAA-T-153)
-- **Marketplace adapter pattern** — `features/shop-marketplace/adapters/`, feature-local (not package). MARKETPLACE_REGISTRY pattern. New marketplace = new file + registry entry. (2026-04-02)
 - **Standalone n8n workflows for marketplace (not workflow engine)** — Marketplace sync is infrastructure/system-level. Workflow engine = user-configurable event flows. Marketplace = background cron ops. (2026-04-02)
-- **pgcrypto BYTEA for OAuth tokens** — `pgp_sym_encrypt` returns BYTEA natively. SECURITY DEFINER function `upsert_marketplace_connection()` needed because Supabase JS can't call pgp_sym_encrypt directly. `app.encryption_key` GUC = passphrase. First real pgcrypto usage in codebase. (2026-04-02)
-- **FeedbackBanner instead of toast for OAuth callback** — No toast library in project. Inline dismissible alert reads URL query params (?connected=, ?error=), cleaned via router.replace. (2026-04-02, AAA-T-157)
-- **connectMarketplace returns authUrl for client redirect** — Server Actions can't redirect to external URLs. Returns { authUrl }, client does window.location redirect. (2026-04-02, AAA-T-157)
-- **jose for JWT state (not jsonwebtoken)** — jose is Edge-compatible. State JWT = { tenantId, marketplace, nonce }, 10min expiry, HS256. (2026-04-02, AAA-T-157)
-- **`semantic_role` overrides `question.type` via `effectiveType`/`inputType` pattern** — Survey questions have both `type` (DB storage type: text/number/date) and `semantic_role` (business meaning: client_email/client_name/client_phone). When `semantic_role` implies a specific type, it overrides `question.type` for validation schema generation and input rendering. (2026-04-02)
-- **`packages/database` has known deferred violations** — BLOCK_TYPE_LABELS and DEFAULT_BLOCKS in packages/database are pre-existing architecture violations (business constants in infrastructure package). Known deferred items — don't re-flag in audits. (2026-04-03)
-- **remeda + neverthrow as project FP stack** — remeda for data pipelines (pipe, map, filter, etc.), neverthrow for typed error handling (Result, ResultAsync). Effect.js explicitly rejected — too heavy for Next.js CRUD app. (2026-04-06)
-- **result-helpers.ts shared infrastructure in lib/** — `authResult()`, `zodParse()`, `fromSupabase()` wrappers that convert auth/validation/DB calls into neverthrow Results. Located in `apps/cms/lib/result-helpers.ts`. (2026-04-06)
-- **Type-safe PermissionKey via `as const satisfies Record`** — ROLE_PERMISSIONS defined with `as const satisfies Record<Role, PermissionKey[]>`, then `PermissionKey = typeof ROLE_PERMISSIONS[Role][number]`. Compile-time validation + derived union type. No separate enum to maintain. (2026-04-06)
-- **is_super_admin as boolean, not role** — Super admin bypasses all permission checks. Implemented as boolean column on users table, not as a role in role-permission mapping. WHY: super admin is orthogonal to roles (a user can have any role AND be super admin). Validated by analyst-agent. (2026-04-06)
-- **requireAuth() helper consolidation pattern** — Single `requireAuth(permissionKey?)` replaces inline `createClient → getUser → check` in 48 Server Actions across 18 files. Returns `Result<AuthContext, AppError>`. Optional permission param for granular checks. (2026-04-06)
-- **expandPermissionKeys extracted to lib/permissions.ts** — Shared permission expansion logic (parent key → child keys) used by both PermissionPicker component and test utilities. Single source of truth for permission hierarchy traversal. (2026-04-07)
-- **DISPLAY_GROUPS for visual-only permission grouping** — PermissionPicker needed 4 visual groups (Users, Content, Settings, System) but PERMISSION_GROUPS (backend) has different structure. Separate DISPLAY_GROUPS constant for UI rendering without touching authorization logic. (2026-04-07)
-- **Vitest setup for CMS app** — `vitest.config.ts` in `apps/cms/`, path aliases matching tsconfig (`@/` → `./`), `@testing-library/react` + `@testing-library/jest-dom` + `jsdom`. Test files colocated in `__tests__/` dirs next to source. (2026-04-07)
-- **Shared test utilities at `apps/cms/__tests__/utils/`** — Global Supabase mock helpers (`supabase-mocks.ts`: mockChain, createSequentialClient, createTableMockClient) and auth mock helpers (`auth-mocks.ts`: mockAuthSuccess, mockAuthFailure). All test infrastructure lives under `__tests__/` pattern — no separate `test-utils/` dirs. Feature-local fixtures in `features/{name}/__tests__/fixtures.ts`. (2026-04-07)
 
 ## Preferences
 
 - **Notion tasks: single task with checklist content, not subtasks** — Flexibility to partially complete and pause. (2026-03-23)
 - **/develop command: docs before merge** — Notion + PROJECT_SPEC + /extract-memory before merge to main. (2026-03-26)
-- **JIRA-style split view over Sheet overlay** — Inline 480px panel on xl+, full page on smaller screens. (2026-03-28)
 - **current_submissions read-only, max_submissions editable** — Never reset submission counter. (2026-03-28)
 - **Cross-project task organization** — Infrastructure tasks live where their "home" is (AAA-P-4), not consuming project. (2026-03-29)
-- **Inline editing over Dialog for simple CRUD** — In-place editing for simple entities. Dialog = overkill for 4 fields. (2026-03-30)
 - **Multi-field detail panel = RHF form + Save button, NOT pencil-per-field inline editing** — User rejected pencil icon per field for detail panels with multiple fields. Always-visible form with Save button preferred. Inline editing still correct for single-field cases (e.g., workflow name on list page). The distinction: multi-field panel = form, single-field list item = inline. (2026-04-08)
 - **Combobox with inline create** — Create related entities without leaving current editor. Popover+Command pattern. (2026-03-30)
 - **Variable inserter button needs text label** — Ghost button with "Zmienne" text, not icon-only Braces. (2026-03-31)
 - **Horizontal flow (left-to-right) for workflow canvas** — Position.Left→Right, not top/bottom. (2026-03-31)
-- **Row click navigates directly to canvas editor** — No intermediate detail page. (2026-03-31)
-- **Gallery/card view for workflows** — Card grid + table list toggle, persists to localStorage. (2026-03-31)
 - **Trigger creation in canvas, not dialog** — Dialog = name+description only. Trigger type on canvas. (2026-03-31)
-- **560px config panel width** — 480px too tight for form-heavy panels. (2026-03-31)
 - **VariableInserter reuse in all expression/email fields** — Wherever trigger context variables available. (2026-03-31)
-- **Config panel registry = extensible pattern** — New step type = new file + registry entry. (2026-03-31)
-- **Shop frontend path: apps/shop/jacek/** — Nested under apps/shop/ parent, not flat apps/shop-jacek/. User's father's shop name. (2026-03-31)
-- **Inline workflow name editing on list page** — User wants inline editing of workflow names directly on the workflow list page. Next task after AAA-T-151 merge. (2026-04-01)
 - **"impl i validacje rob auto, zatrzymaj sie przy testach"** — Auto mode through implementation + validation phases, stop at manual testing phase. (2026-04-01, AAA-T-153)
 - **Gallery (grid) as default view, stacked cards (image-top, text-below)** — list is secondary. Horizontal cards rejected. (2026-04-01)
 - **Light theme for Oleg's shop** — Warm linen off-white, not pure white. (2026-04-02)
@@ -167,12 +124,4 @@
 - **Landing page section spacing: golden ratio py-24 base** — py-24 (96px) base, scaled with phi 1.618 for hero/CTA. (2026-04-02)
 - **User workflow: docx design notes -> extract -> design agent** — New input channel for design feedback. (2026-04-02)
 - **InsertMediaModal: link input above filters, not below** — User corrected layout order: URL link input must appear between upload zone and filter bar, not after filters. middleSlot prop pattern for injecting content into LibraryTab. (2026-04-02)
-- **Readability: named functions over inline closures** — User's strongest signal during FP adoption. Extract `.map(fn)` callbacks to named functions. File organization: public API → internal helpers → private functions. (2026-04-06)
-- **Boy Scout Rule for FP migration (not big-bang refactor)** — Adopt remeda + neverthrow incrementally: refactor files when you touch them, don't rewrite existing working code in bulk. (2026-04-06)
-- **True incremental TDD, not batch TDD** — First version of TDD in ag-develop had "write all tests first, then implement" — user corrected to true Red-Green-Refactor: one test at a time (write failing test → make it pass → refactor → next test). Batch test-writing is waterfall disguised as TDD. Updated ag-develop command + ag-dev-workflow + ag-validation-patterns skills. (2026-04-07)
-- **Page Object Pattern for component tests** — Wrap render + queries in helper object (e.g., `renderPermissionPicker()` returns `{ getCheckbox, getGroup, clickCheckbox }`). Keeps tests readable, DRY, decoupled from DOM structure. (2026-04-07)
-- **`vitest --watch` over `vitest run` during TDD** — Faster feedback loop. Run watch mode in background, iterate on test+implementation. (2026-04-07)
-- **`await queryClient.invalidateQueries()` in onSuccess** — `invalidateQueries` returns a Promise; fire-and-forget causes stale cache on navigation when `staleTime` is long (e.g., 5min). Fast navigation after mutation reads old cached data because invalidation hasn't completed. Always `await` it. (2026-04-07)
-- **Feature-local test fixtures in `features/{name}/__tests__/fixtures.ts`** — Extract shared factory functions (makeStep, makeEdge, makeWorkflow, makeContext) to a dedicated fixtures file per feature. Reusable across all test files within that feature. Apply this pattern to ALL features, not just workflows. (2026-04-07)
-- **Table-name-keyed Supabase mocks over flat call-index mocks** — For executor-style tests with ~20 DB calls, key mock responses by table name (e.g., `createTableMockClient({ workflow_steps: [...], workflow_executions: [...] })`). Flat sequential `.mockResolvedValueOnce()` is brittle — adding one query shifts all subsequent mock indices. (2026-04-07)
 - **Native input type="date" rejected — always use shadcn/ui DatePicker** — User rejected native HTML date input. Always use shadcn/ui DatePicker (Popover + Calendar component) for consistent styling and UX. (2026-04-08)
