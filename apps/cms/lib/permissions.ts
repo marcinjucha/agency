@@ -47,6 +47,7 @@ const PERMISSION_GROUPS = {
       'system.users',
       'system.roles',
       'system.tenants',
+      'system.docforge_licenses',
     ] as const,
   },
 } as const
@@ -180,6 +181,7 @@ export const ROUTE_PERMISSION_MAP: Record<string, PermissionKey> = {
   '/admin/users': 'system.users',
   '/admin/roles': 'system.roles',
   '/admin/tenants': 'system.tenants',
+  '/admin/docforge/licenses': 'system.docforge_licenses',
 }
 
 /**
@@ -237,6 +239,7 @@ export const ROUTE_FEATURE_MAP: Record<string, ParentKey> = {
   '/admin/users': 'system',
   '/admin/roles': 'system',
   '/admin/tenants': 'system',
+  '/admin/docforge/licenses': 'system',
 }
 
 /**

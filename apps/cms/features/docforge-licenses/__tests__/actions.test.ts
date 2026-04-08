@@ -1,0 +1,260 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { ok, err, okAsync, errAsync } from 'neverthrow'
+import { messages } from '@/lib/messages'
+import { makeLicense } from './fixtures'
+
+// --- Mocks ---
+
+vi.mock('next/cache', () => ({
+  revalidatePath: vi.fn(),
+}))
+
+vi.mock('@/lib/result-helpers', () => ({
+  requireAuthResult: vi.fn(),
+  zodParse: vi.fn(),
+  fromSupabase: vi.fn(),
+}))
+
+const mockServiceClient: Record<string, any> = {}
+
+vi.mock('@/lib/supabase/service', () => ({
+  createServiceClient: vi.fn(() => mockServiceClient),
+}))
+
+import { requireAuthResult, zodParse, fromSupabase } from '@/lib/result-helpers'
+import { revalidatePath } from 'next/cache'
+import {
+  createLicense,
+  updateLicense,
+  deleteLicense,
+  toggleLicenseActive,
+  deactivateActivation,
+} from '../actions'
+
+const mockRequireAuth = requireAuthResult as ReturnType<typeof vi.fn>
+const mockZodParse = zodParse as ReturnType<typeof vi.fn>
+const mockFromSupabase = fromSupabase as ReturnType<typeof vi.fn>
+
+// --- Helpers ---
+
+import { mockChain } from '@/__tests__/utils/supabase-mocks'
+
+function makeAuth(overrides: Partial<{ isSuperAdmin: boolean }> = {}) {
+  return {
+    supabase: {},
+    userId: 'user-1',
+    tenantId: 'tenant-1',
+    tenantName: 'Test',
+    isSuperAdmin: overrides.isSuperAdmin ?? true,
+    roleName: 'admin',
+    permissions: ['system.docforge_licenses'],
+  }
+}
+
+let fromCalls: ReturnType<typeof mockChain>[] = []
+
+function setupServiceFrom(...chains: ReturnType<typeof mockChain>[]) {
+  fromCalls = chains
+  let callIndex = 0
+  mockServiceClient.from = vi.fn(() => {
+    const chain = fromCalls[callIndex] ?? fromCalls[fromCalls.length - 1]
+    callIndex++
+    return chain
+  })
+}
+
+beforeEach(() => {
+  vi.clearAllMocks()
+  mockFromSupabase.mockReturnValue((response: any) => {
+    if (response.error) return err(response.error.message)
+    if (!response.data) return err('Brak danych')
+    return ok(response.data)
+  })
+})
+
+// =========================================================================
+// createLicense
+// =========================================================================
+
+describe('createLicense', () => {
+  const validData = {
+    key: 'DF-ABCD-EFGH-IJKL',
+    client_name: 'Jan Kowalski',
+    email: 'jan@example.com',
+    expires_at: null,
+    max_seats: 3,
+    grace_days: 7,
+  }
+
+  it('creates license and returns ok on success', async () => {
+    mockZodParse.mockReturnValue(ok(validData))
+    mockRequireAuth.mockReturnValue(okAsync(makeAuth()))
+
+    const licenseRow = { id: 'lic-new', ...validData, is_active: true, created_at: '2026-04-08T10:00:00Z' }
+    const insertChain = mockChain({ data: licenseRow, error: null })
+    setupServiceFrom(insertChain)
+
+    const result = await createLicense(validData)
+
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data).toEqual(licenseRow)
+    }
+    expect(revalidatePath).toHaveBeenCalled()
+  })
+
+  it('rejects non-super-admin', async () => {
+    mockZodParse.mockReturnValue(ok(validData))
+    mockRequireAuth.mockReturnValue(okAsync(makeAuth({ isSuperAdmin: false })))
+
+    const result = await createLicense(validData)
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error).toBe(messages.common.noPermission)
+    }
+  })
+
+  it('returns validation error on invalid data', async () => {
+    mockZodParse.mockReturnValue(err('Klucz licencji jest wymagany'))
+
+    const result = await createLicense({} as any)
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error).toBe('Klucz licencji jest wymagany')
+    }
+  })
+})
+
+// =========================================================================
+// updateLicense
+// =========================================================================
+
+describe('updateLicense', () => {
+  const updateData = { client_name: 'Updated Name', max_seats: 5 }
+
+  it('updates license on success', async () => {
+    mockZodParse.mockReturnValue(ok(updateData))
+    mockRequireAuth.mockReturnValue(okAsync(makeAuth()))
+
+    const updatedRow = makeLicense({ client_name: 'Updated Name', max_seats: 5 })
+    const updateChain = mockChain({ data: updatedRow, error: null })
+    setupServiceFrom(updateChain)
+
+    const result = await updateLicense('lic-001', updateData)
+
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.client_name).toBe('Updated Name')
+    }
+    expect(revalidatePath).toHaveBeenCalled()
+  })
+
+  it('rejects non-super-admin', async () => {
+    mockZodParse.mockReturnValue(ok(updateData))
+    mockRequireAuth.mockReturnValue(okAsync(makeAuth({ isSuperAdmin: false })))
+
+    const result = await updateLicense('lic-001', updateData)
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error).toBe(messages.common.noPermission)
+    }
+  })
+})
+
+// =========================================================================
+// deleteLicense
+// =========================================================================
+
+describe('deleteLicense', () => {
+  it('deletes license on success', async () => {
+    mockRequireAuth.mockReturnValue(okAsync(makeAuth()))
+
+    const deleteChain = mockChain({ data: null, error: null })
+    setupServiceFrom(deleteChain)
+
+    const result = await deleteLicense('lic-001')
+
+    expect(result.success).toBe(true)
+    expect(revalidatePath).toHaveBeenCalled()
+  })
+
+  it('rejects non-super-admin', async () => {
+    mockRequireAuth.mockReturnValue(okAsync(makeAuth({ isSuperAdmin: false })))
+
+    const result = await deleteLicense('lic-001')
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error).toBe(messages.common.noPermission)
+    }
+  })
+})
+
+// =========================================================================
+// toggleLicenseActive
+// =========================================================================
+
+describe('toggleLicenseActive', () => {
+  it('toggles is_active to false', async () => {
+    mockRequireAuth.mockReturnValue(okAsync(makeAuth()))
+
+    const updatedRow = makeLicense({ is_active: false })
+    const updateChain = mockChain({ data: updatedRow, error: null })
+    setupServiceFrom(updateChain)
+
+    const result = await toggleLicenseActive('lic-001', false)
+
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.is_active).toBe(false)
+    }
+    expect(revalidatePath).toHaveBeenCalled()
+  })
+
+  it('toggles is_active to true', async () => {
+    mockRequireAuth.mockReturnValue(okAsync(makeAuth()))
+
+    const updatedRow = makeLicense({ is_active: true })
+    const updateChain = mockChain({ data: updatedRow, error: null })
+    setupServiceFrom(updateChain)
+
+    const result = await toggleLicenseActive('lic-001', true)
+
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.is_active).toBe(true)
+    }
+  })
+})
+
+// =========================================================================
+// deactivateActivation
+// =========================================================================
+
+describe('deactivateActivation', () => {
+  it('sets activation is_active to false', async () => {
+    mockRequireAuth.mockReturnValue(okAsync(makeAuth()))
+
+    const deactivateChain = mockChain({ data: null, error: null })
+    setupServiceFrom(deactivateChain)
+
+    const result = await deactivateActivation('act-001')
+
+    expect(result.success).toBe(true)
+    expect(revalidatePath).toHaveBeenCalled()
+  })
+
+  it('rejects non-super-admin', async () => {
+    mockRequireAuth.mockReturnValue(okAsync(makeAuth({ isSuperAdmin: false })))
+
+    const result = await deactivateActivation('act-001')
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error).toBe(messages.common.noPermission)
+    }
+  })
+})

@@ -81,4 +81,9 @@ export const queryKeys = {
     categories: (connectionId: string) => ['marketplace', 'categories', connectionId] as const,
     importProgress: (importId: string) => ['marketplace', 'import-progress', importId] as const,
   },
+  docforgeLicenses: {
+    all: ['docforge-licenses'] as const,
+    detail: (id: string) => ['docforge-licenses', 'detail', id] as const,
+    activations: (licenseId: string) => ['docforge-licenses', 'activations', licenseId] as const,
+  },
 } as const

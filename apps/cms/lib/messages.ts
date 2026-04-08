@@ -1425,6 +1425,46 @@ export const messages = {
     },
   },
 
+  docforgeLicenses: {
+    pageTitle: 'Licencje DocForge',
+    navLabel: 'Licencje DocForge',
+    subtitle: 'Zarządzaj licencjami aplikacji DocForge',
+    createButton: 'Dodaj licencję',
+    editButton: 'Edytuj licencję',
+    // Status labels
+    statusActive: 'Aktywna',
+    statusExpired: 'Wygasła',
+    statusInactive: 'Nieaktywna',
+    // Form labels
+    keyLabel: 'Klucz licencji',
+    clientNameLabel: 'Nazwa klienta',
+    emailLabel: 'Email',
+    expiresAtLabel: 'Data wygaśnięcia',
+    maxSeatsLabel: 'Maks. stanowisk',
+    graceDaysLabel: 'Dni karencji',
+    isActiveLabel: 'Aktywna',
+    // Activations
+    activationsTitle: 'Aktywacje',
+    machineIdLabel: 'ID maszyny',
+    machineNameLabel: 'Nazwa maszyny',
+    activatedAtLabel: 'Aktywowano',
+    lastSeenAtLabel: 'Ostatnio widoczna',
+    deactivateButton: 'Dezaktywuj',
+    // Seats
+    seatsUsage: 'Wykorzystanie stanowisk',
+    // Empty/error
+    emptyList: 'Brak licencji',
+    emptyActivations: 'Brak aktywacji',
+    loadError: 'Nie udało się załadować licencji',
+    createFailed: 'Nie udało się utworzyć licencji',
+    updateFailed: 'Nie udało się zaktualizować licencji',
+    deleteFailed: 'Nie udało się usunąć licencji',
+    // Validation
+    keyRequired: 'Klucz licencji jest wymagany',
+    maxSeatsMin: 'Minimalna liczba stanowisk to 1',
+    graceDaysMin: 'Dni karencji nie mogą być ujemne',
+  },
+
   validation: {
     titleRequired: 'Tytuł jest wymagany',
     slugRequired: 'Slug jest wymagany',
