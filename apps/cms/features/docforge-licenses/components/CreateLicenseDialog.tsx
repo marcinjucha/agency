@@ -134,14 +134,21 @@ export function CreateLicenseDialog({ open, onOpenChange }: CreateLicenseDialogP
             )}
           </div>
 
-          {/* Client name */}
+          {/* Client name (required) */}
           <div className="space-y-1.5">
-            <Label htmlFor="df-client">{messages.docforgeLicenses.clientNameLabel}</Label>
+            <Label htmlFor="df-client">{messages.docforgeLicenses.clientNameLabel} *</Label>
             <Input
               id="df-client"
               {...register('client_name')}
+              aria-required="true"
               aria-invalid={!!errors.client_name}
+              aria-describedby={errors.client_name ? 'df-client-error' : undefined}
             />
+            {errors.client_name && (
+              <p id="df-client-error" role="alert" className="text-xs text-destructive">
+                {errors.client_name.message}
+              </p>
+            )}
           </div>
 
           {/* Email */}

@@ -1,12 +1,17 @@
 'use client'
 
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect } from 'react'
+import { useForm, Controller } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Button,
   Input,
+  Label,
   Switch,
+  Checkbox,
   Skeleton,
+  DatePicker,
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -16,116 +21,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@agency/ui'
-import { ArrowLeft, Check, Clipboard, Pencil, Trash2, X } from 'lucide-react'
+import { ArrowLeft, Check, Clipboard, Trash2 } from 'lucide-react'
 import { messages } from '@/lib/messages'
 import { queryKeys } from '@/lib/query-keys'
 import { useLicense, useLicenseActivations } from '../queries'
 import { updateLicense, deleteLicense, deactivateActivation, toggleLicenseActive } from '../actions'
-import { computeLicenseStatus, formatExpiry } from '../utils'
+import { computeLicenseStatus } from '../utils'
+import { updateLicenseSchema, type UpdateLicenseValues } from '../validation'
 import { StatusBadge } from './LicenseCard'
 import { SeatsProgressBar } from './SeatsProgressBar'
 import { ActivationCard, ActivationsEmptyState } from './ActivationCard'
-
-// ---------------------------------------------------------------------------
-// Inline edit hook
-// ---------------------------------------------------------------------------
-
-function useInlineEdit<T>(
-  initialValue: T,
-  onSave: (value: T) => void,
-) {
-  const [isEditing, setIsEditing] = useState(false)
-  const [draft, setDraft] = useState<T>(initialValue)
-  const inputRef = useRef<HTMLInputElement>(null)
-
-  // Sync draft when initialValue changes externally
-  useEffect(() => {
-    if (!isEditing) setDraft(initialValue)
-  }, [initialValue, isEditing])
-
-  const startEditing = useCallback(() => {
-    setDraft(initialValue)
-    setIsEditing(true)
-    // Focus on next tick after render
-    setTimeout(() => inputRef.current?.focus(), 0)
-  }, [initialValue])
-
-  const cancel = useCallback(() => {
-    setDraft(initialValue)
-    setIsEditing(false)
-  }, [initialValue])
-
-  const save = useCallback(() => {
-    onSave(draft)
-    setIsEditing(false)
-  }, [draft, onSave])
-
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key === 'Enter') save()
-      if (e.key === 'Escape') cancel()
-    },
-    [save, cancel],
-  )
-
-  return { isEditing, draft, setDraft, inputRef, startEditing, cancel, save, handleKeyDown }
-}
-
-// ---------------------------------------------------------------------------
-// Inline editable field
-// ---------------------------------------------------------------------------
-
-interface InlineFieldProps {
-  label: string
-  value: string
-  type?: 'text' | 'number' | 'date' | 'email'
-  onSave: (value: string) => void
-  readOnly?: boolean
-}
-
-function InlineField({ label, value, type = 'text', onSave, readOnly }: InlineFieldProps) {
-  const edit = useInlineEdit(value, onSave)
-
-  return (
-    <>
-      <span className="text-sm text-muted-foreground">{label}</span>
-      <div className="flex items-center gap-2 min-w-0">
-        {edit.isEditing ? (
-          <div className="flex items-center gap-1 flex-1">
-            <Input
-              ref={edit.inputRef}
-              type={type}
-              value={edit.draft}
-              onChange={(e) => edit.setDraft(e.target.value)}
-              onKeyDown={edit.handleKeyDown}
-              onBlur={edit.save}
-              className="h-8 text-sm"
-              autoFocus
-            />
-            <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={edit.cancel} aria-label={messages.common.cancel}>
-              <X className="h-3.5 w-3.5" />
-            </Button>
-          </div>
-        ) : (
-          <div className="flex items-center gap-1.5 min-w-0 group">
-            <span className="text-sm text-foreground truncate">{value || '—'}</span>
-            {!readOnly && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6 shrink-0 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity"
-                onClick={edit.startEditing}
-                aria-label={`${messages.common.edit} ${label}`}
-              >
-                <Pencil className="h-3.5 w-3.5" />
-              </Button>
-            )}
-          </div>
-        )}
-      </div>
-    </>
-  )
-}
 
 // ---------------------------------------------------------------------------
 // Copy button
@@ -199,6 +104,7 @@ interface LicenseDetailPanelProps {
 export function LicenseDetailPanel({ licenseId, onClose }: LicenseDetailPanelProps) {
   const queryClient = useQueryClient()
   const [deleteOpen, setDeleteOpen] = useState(false)
+  const [isPerpetual, setIsPerpetual] = useState(true)
 
   const { data: license, isLoading: licenseLoading } = useLicense(licenseId)
   const { data: activations, isLoading: activationsLoading } = useLicenseActivations(licenseId)
@@ -206,22 +112,47 @@ export function LicenseDetailPanel({ licenseId, onClose }: LicenseDetailPanelPro
   const activeActivations = activations?.filter((a) => a.is_active) ?? []
   const activeSeats = activeActivations.length
 
-  // --- Mutations ---
+  // --- RHF form ---
 
-  const updateMutation = useMutation({
-    mutationFn: async (data: Record<string, unknown>) => {
-      const result = await updateLicense(licenseId, data)
-      if (!result.success) throw new Error(result.error)
-      return result
-    },
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: queryKeys.docforgeLicenses.all })
+  const {
+    register,
+    control,
+    handleSubmit,
+    reset,
+    formState: { errors, isDirty, isValid },
+  } = useForm<UpdateLicenseValues>({
+    resolver: zodResolver(updateLicenseSchema),
+    mode: 'onChange',
+    defaultValues: {
+      client_name: '',
+      email: '',
+      expires_at: null,
+      max_seats: 1,
+      grace_days: 7,
+      is_active: true,
     },
   })
 
-  const toggleMutation = useMutation({
-    mutationFn: async (isActive: boolean) => {
-      const result = await toggleLicenseActive(licenseId, isActive)
+  // Sync form when license data arrives or changes
+  useEffect(() => {
+    if (!license) return
+    const perpetual = license.expires_at === null
+    setIsPerpetual(perpetual)
+    reset({
+      client_name: license.client_name ?? '',
+      email: license.email ?? '',
+      expires_at: license.expires_at ?? null,
+      max_seats: license.max_seats,
+      grace_days: license.grace_days,
+      is_active: license.is_active,
+    })
+  }, [license, reset])
+
+  // --- Mutations ---
+
+  const updateMutation = useMutation({
+    mutationFn: async (data: UpdateLicenseValues) => {
+      const result = await updateLicense(licenseId, data)
       if (!result.success) throw new Error(result.error)
       return result
     },
@@ -255,26 +186,21 @@ export function LicenseDetailPanel({ licenseId, onClose }: LicenseDetailPanelPro
     },
   })
 
-  // --- Field save handlers ---
+  // --- Handlers ---
 
-  const saveField = useCallback(
-    (field: string) => (value: string) => {
-      const payload: Record<string, unknown> = {}
+  function handlePerpetualChange(checked: boolean) {
+    setIsPerpetual(checked)
+    if (checked) {
+      // Clear expires_at when switching to perpetual
+      reset((prev) => ({ ...prev, expires_at: null }), { keepDirty: true, keepErrors: true })
+    }
+  }
 
-      if (field === 'max_seats' || field === 'grace_days') {
-        const num = parseInt(value, 10)
-        if (isNaN(num)) return
-        payload[field] = num
-      } else if (field === 'expires_at') {
-        payload[field] = value || null
-      } else {
-        payload[field] = value || null
-      }
-
-      updateMutation.mutate(payload)
-    },
-    [updateMutation],
-  )
+  function onSubmit(data: UpdateLicenseValues) {
+    // Ensure expires_at is null when perpetual
+    const payload = { ...data, expires_at: isPerpetual ? null : data.expires_at }
+    updateMutation.mutate(payload)
+  }
 
   // --- Loading state ---
 
@@ -315,59 +241,154 @@ export function LicenseDetailPanel({ licenseId, onClose }: LicenseDetailPanelPro
         {/* Seats progress */}
         <SeatsProgressBar active={activeSeats} max={license.max_seats} />
 
-        {/* Info section */}
+        {/* Info section — always-visible edit form */}
         <section>
           <SectionHeading>{messages.docforgeLicenses.sectionInfo}</SectionHeading>
-          <div className="mt-3 grid grid-cols-[auto_1fr] gap-x-4 gap-y-3 items-center">
-            <InlineField
-              label={messages.docforgeLicenses.clientNameLabel}
-              value={license.client_name ?? ''}
-              onSave={saveField('client_name')}
-            />
-            <InlineField
-              label={messages.docforgeLicenses.emailLabel}
-              value={license.email ?? ''}
-              type="email"
-              onSave={saveField('email')}
-            />
-            <InlineField
-              label={messages.docforgeLicenses.expiresAtLabel}
-              value={license.expires_at?.split('T')[0] ?? ''}
-              type="date"
-              onSave={saveField('expires_at')}
-            />
-            <InlineField
-              label={messages.docforgeLicenses.maxSeatsLabel}
-              value={String(license.max_seats)}
-              type="number"
-              onSave={saveField('max_seats')}
-            />
-            <InlineField
-              label={messages.docforgeLicenses.graceDaysLabel}
-              value={String(license.grace_days)}
-              type="number"
-              onSave={saveField('grace_days')}
-            />
+          <form
+            id="license-edit-form"
+            onSubmit={handleSubmit(onSubmit)}
+            className="mt-3 space-y-5"
+          >
+            {/* Client name (required) */}
+            <div className="space-y-1.5">
+              <Label htmlFor="lp-client-name">
+                {messages.docforgeLicenses.clientNameLabel} *
+              </Label>
+              <Input
+                id="lp-client-name"
+                {...register('client_name')}
+                aria-required="true"
+                aria-invalid={!!errors.client_name}
+                aria-describedby={errors.client_name ? 'lp-client-name-error' : undefined}
+              />
+              {errors.client_name && (
+                <p id="lp-client-name-error" role="alert" className="text-xs text-destructive">
+                  {errors.client_name.message}
+                </p>
+              )}
+            </div>
+
+            {/* Email (optional) */}
+            <div className="space-y-1.5">
+              <Label htmlFor="lp-email">{messages.docforgeLicenses.emailLabel}</Label>
+              <Input
+                id="lp-email"
+                type="email"
+                {...register('email')}
+                aria-invalid={!!errors.email}
+                aria-describedby={errors.email ? 'lp-email-error' : undefined}
+              />
+              {errors.email && (
+                <p id="lp-email-error" role="alert" className="text-xs text-destructive">
+                  {errors.email.message}
+                </p>
+              )}
+            </div>
+
+            {/* Expiry: perpetual checkbox + DatePicker */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="lp-perpetual"
+                  checked={isPerpetual}
+                  onCheckedChange={(checked) => handlePerpetualChange(checked === true)}
+                />
+                <Label htmlFor="lp-perpetual" className="cursor-pointer">
+                  {messages.docforgeLicenses.perpetualLabel}
+                </Label>
+              </div>
+              {!isPerpetual && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="lp-expires">{messages.docforgeLicenses.expiresAtLabel}</Label>
+                  <Controller
+                    name="expires_at"
+                    control={control}
+                    render={({ field }) => (
+                      <DatePicker
+                        id="lp-expires"
+                        value={field.value ? new Date(field.value) : undefined}
+                        onChange={(date) => field.onChange(date?.toISOString() ?? null)}
+                      />
+                    )}
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Max seats + Grace days (2-col) */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="lp-seats">{messages.docforgeLicenses.maxSeatsLabel}</Label>
+                <Input
+                  id="lp-seats"
+                  type="number"
+                  min={1}
+                  {...register('max_seats', { valueAsNumber: true })}
+                  aria-invalid={!!errors.max_seats}
+                  aria-describedby={errors.max_seats ? 'lp-seats-error' : undefined}
+                />
+                {errors.max_seats && (
+                  <p id="lp-seats-error" role="alert" className="text-xs text-destructive">
+                    {errors.max_seats.message}
+                  </p>
+                )}
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="lp-grace">{messages.docforgeLicenses.graceDaysLabel}</Label>
+                <Input
+                  id="lp-grace"
+                  type="number"
+                  min={0}
+                  {...register('grace_days', { valueAsNumber: true })}
+                  aria-invalid={!!errors.grace_days}
+                  aria-describedby={errors.grace_days ? 'lp-grace-error' : undefined}
+                />
+                {errors.grace_days && (
+                  <p id="lp-grace-error" role="alert" className="text-xs text-destructive">
+                    {errors.grace_days.message}
+                  </p>
+                )}
+              </div>
+            </div>
 
             {/* Active toggle */}
-            <span className="text-sm text-muted-foreground">{messages.docforgeLicenses.isActiveLabel}</span>
-            <div>
-              <Switch
-                checked={license.is_active}
-                onCheckedChange={(checked) => toggleMutation.mutate(checked)}
-                disabled={toggleMutation.isPending}
-                aria-label={messages.docforgeLicenses.isActiveLabel}
+            <div className="flex items-center justify-between">
+              <Label htmlFor="lp-active">{messages.docforgeLicenses.isActiveLabel}</Label>
+              <Controller
+                name="is_active"
+                control={control}
+                render={({ field }) => (
+                  <Switch
+                    id="lp-active"
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                    aria-label={messages.docforgeLicenses.isActiveLabel}
+                  />
+                )}
               />
             </div>
 
             {/* Created at (read-only) */}
-            <InlineField
-              label={messages.docforgeLicenses.createdAt}
-              value={new Date(license.created_at).toLocaleDateString('pl-PL')}
-              onSave={() => {}}
-              readOnly
-            />
-          </div>
+            <div className="space-y-1.5">
+              <span className="text-sm font-medium text-muted-foreground">
+                {messages.docforgeLicenses.createdAt}
+              </span>
+              <p className="text-sm text-foreground">
+                {new Date(license.created_at).toLocaleDateString('pl-PL')}
+              </p>
+            </div>
+
+            {/* Save button */}
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={!isDirty || !isValid || updateMutation.isPending}
+            >
+              {updateMutation.isPending
+                ? messages.common.saving
+                : messages.docforgeLicenses.saveButton}
+            </Button>
+          </form>
         </section>
 
         {/* Activations section */}

@@ -1506,8 +1506,10 @@ export const messages = {
     updateSuccess: 'Licencja została zaktualizowana',
     sectionInfo: 'Informacje',
     sectionActivations: 'Aktywacje',
+    saveButton: 'Zapisz',
     // Validation
     keyRequired: 'Klucz licencji jest wymagany',
+    clientNameRequired: 'Nazwa klienta jest wymagana',
     maxSeatsMin: 'Minimalna liczba stanowisk to 1',
     graceDaysMin: 'Dni karencji nie mogą być ujemne',
   },
