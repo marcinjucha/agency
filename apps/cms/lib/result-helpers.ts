@@ -53,3 +53,16 @@ export const fromSupabase = <T>() =>
     if (!res.data) return err('Brak danych')
     return ok(res.data)
   }
+
+/**
+ * Wraps Supabase void response (delete, update without .select()) into Result.
+ * Checks error field only — no data expected.
+ *
+ * Usage: ResultAsync.fromPromise(supabase.from(...).delete().eq('id', id), mapErr).andThen(fromSupabaseVoid())
+ */
+export const fromSupabaseVoid = () =>
+  (response: unknown): Result<undefined, string> => {
+    const res = response as { error: { message: string } | null }
+    if (res.error) return err(res.error.message)
+    return ok(undefined)
+  }

@@ -1,3 +1,4 @@
+import { messages } from '@/lib/messages'
 import type { License } from './types'
 import type { LicenseStatus } from './types'
 
@@ -45,9 +46,26 @@ export function seatsUsagePercent(active: number, max: number): number {
   return Math.round((active / max) * 100)
 }
 
-/** Return a Tailwind color class based on seat usage percentage. */
+/** Return a Tailwind text color class based on seat usage percentage. */
 export function seatsColorClass(percent: number): string {
   if (percent >= 100) return 'text-red-400'
   if (percent >= 80) return 'text-amber-400'
   return 'text-emerald-400'
+}
+
+/** Return a Tailwind background color class for seat usage progress bar. */
+export function seatsBarColor(percent: number): string {
+  if (percent >= 100) return 'bg-red-400'
+  if (percent >= 80) return 'bg-amber-400'
+  return 'bg-emerald-400'
+}
+
+// ---------------------------------------------------------------------------
+// Date formatting
+// ---------------------------------------------------------------------------
+
+/** Format expiry date or return "Bezterminowa" for null. */
+export function formatExpiry(expiresAt: string | null): string {
+  if (!expiresAt) return messages.docforgeLicenses.perpetual
+  return new Date(expiresAt).toLocaleDateString('pl-PL')
 }

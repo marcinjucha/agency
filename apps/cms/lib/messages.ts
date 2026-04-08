@@ -1459,6 +1459,34 @@ export const messages = {
     createFailed: 'Nie udało się utworzyć licencji',
     updateFailed: 'Nie udało się zaktualizować licencji',
     deleteFailed: 'Nie udało się usunąć licencji',
+    // Stats
+    statsTotal: 'Wszystkie',
+    statsActive: 'Aktywne',
+    statsExpired: 'Wygasłe',
+    statsSeats: 'Stanowiska',
+    // Filters
+    filterAll: 'Wszystkie',
+    filterActive: 'Aktywne',
+    filterExpired: 'Wygasłe',
+    filterInactive: 'Nieaktywne',
+    searchPlaceholder: 'Szukaj po kluczu, kliencie lub emailu...',
+    // Create dialog
+    createTitle: 'Nowa licencja',
+    generateKey: 'Generuj',
+    perpetualLabel: 'Bezterminowa',
+    createSuccess: 'Licencja została utworzona',
+    // Table columns
+    columnKey: 'Klucz',
+    columnClient: 'Klient',
+    columnStatus: 'Status',
+    columnSeats: 'Stanowiska',
+    columnExpires: 'Wygasa',
+    columnActions: 'Akcje',
+    // Misc
+    noClient: 'Brak klienta',
+    perpetual: 'Bezterminowa',
+    emptyDescription: 'Utwórz pierwszą licencję aby rozpocząć zarządzanie dostępem do DocForge.',
+    createdAt: 'Utworzono',
     // Validation
     keyRequired: 'Klucz licencji jest wymagany',
     maxSeatsMin: 'Minimalna liczba stanowisk to 1',

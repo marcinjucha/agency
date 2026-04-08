@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { errAsync, ResultAsync } from 'neverthrow'
-import { zodParse, fromSupabase, requireAuthResult } from '@/lib/result-helpers'
+import { zodParse, fromSupabase, fromSupabaseVoid, requireAuthResult } from '@/lib/result-helpers'
 import { createLicenseSchema, updateLicenseSchema } from './validation'
 import type { LicenseFormData, License } from './types'
 import { routes } from '@/lib/routes'
@@ -157,7 +157,7 @@ function deleteLicenseRow(id: string) {
       .delete()
       .eq('id', id),
     dbError,
-  ).map(() => undefined)
+  ).andThen(fromSupabaseVoid())
 }
 
 function deactivateActivationRow(activationId: string) {
@@ -167,7 +167,7 @@ function deactivateActivationRow(activationId: string) {
       .update({ is_active: false })
       .eq('id', activationId),
     dbError,
-  ).map(() => undefined)
+  ).andThen(fromSupabaseVoid())
 }
 
 // --- Business logic ---

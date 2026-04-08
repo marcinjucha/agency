@@ -13,6 +13,7 @@ vi.mock('@/lib/result-helpers', () => ({
   requireAuthResult: vi.fn(),
   zodParse: vi.fn(),
   fromSupabase: vi.fn(),
+  fromSupabaseVoid: vi.fn(),
 }))
 
 const mockServiceClient: Record<string, any> = {}
@@ -21,7 +22,7 @@ vi.mock('@/lib/supabase/service', () => ({
   createServiceClient: vi.fn(() => mockServiceClient),
 }))
 
-import { requireAuthResult, zodParse, fromSupabase } from '@/lib/result-helpers'
+import { requireAuthResult, zodParse, fromSupabase, fromSupabaseVoid } from '@/lib/result-helpers'
 import { revalidatePath } from 'next/cache'
 import {
   createLicense,
@@ -34,6 +35,7 @@ import {
 const mockRequireAuth = requireAuthResult as ReturnType<typeof vi.fn>
 const mockZodParse = zodParse as ReturnType<typeof vi.fn>
 const mockFromSupabase = fromSupabase as ReturnType<typeof vi.fn>
+const mockFromSupabaseVoid = fromSupabaseVoid as ReturnType<typeof vi.fn>
 
 // --- Helpers ---
 
@@ -69,6 +71,10 @@ beforeEach(() => {
     if (response.error) return err(response.error.message)
     if (!response.data) return err('Brak danych')
     return ok(response.data)
+  })
+  mockFromSupabaseVoid.mockReturnValue((response: any) => {
+    if (response.error) return err(response.error.message)
+    return ok(undefined)
   })
 })
 
