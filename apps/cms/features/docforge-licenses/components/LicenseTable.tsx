@@ -11,7 +11,7 @@ import {
 } from '@agency/ui'
 import { messages } from '@/lib/messages'
 import type { License } from '../types'
-import { computeLicenseStatus, seatsUsagePercent, seatsBarColor, formatExpiry } from '../utils'
+import { computeLicenseStatus, formatExpiry } from '../utils'
 import { StatusBadge } from './LicenseCard'
 
 interface LicenseTableProps {
@@ -27,25 +27,6 @@ interface LicenseTableProps {
 
 function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString('pl-PL')
-}
-
-function SeatsCell({ active, max }: { active: number; max: number }) {
-  const percent = seatsUsagePercent(active, max)
-  const clampedPercent = Math.min(percent, 100)
-
-  return (
-    <div className="flex items-center gap-2">
-      <span className="whitespace-nowrap text-sm">
-        {active}/{max}
-      </span>
-      <div className="h-1 w-16 rounded-full bg-muted">
-        <div
-          className={`h-1 rounded-full transition-all ${seatsBarColor(percent)}`}
-          style={{ width: `${clampedPercent}%` }}
-        />
-      </div>
-    </div>
-  )
 }
 
 // ---------------------------------------------------------------------------
@@ -89,10 +70,6 @@ function LicenseRow({ license, onSelect, onToggle, isToggling }: LicenseRowProps
       <TableCell className="whitespace-nowrap">
         <StatusBadge status={status} />
       </TableCell>
-      <TableCell>
-        {/* activeSeats=0 for now -- detail panel in iter 3 will resolve actual count */}
-        <SeatsCell active={0} max={license.max_seats} />
-      </TableCell>
       <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
         {formatExpiry(license.expires_at)}
       </TableCell>
@@ -124,7 +101,6 @@ export function LicenseTable({ licenses, onSelect, onToggle, togglingId }: Licen
             <TableHead>{messages.docforgeLicenses.columnKey}</TableHead>
             <TableHead>{messages.docforgeLicenses.columnClient}</TableHead>
             <TableHead>{messages.docforgeLicenses.columnStatus}</TableHead>
-            <TableHead>{messages.docforgeLicenses.columnSeats}</TableHead>
             <TableHead>{messages.docforgeLicenses.columnExpires}</TableHead>
             <TableHead className="hidden lg:table-cell">{messages.docforgeLicenses.createdAt}</TableHead>
             <TableHead className="text-right">

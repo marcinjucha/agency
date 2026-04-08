@@ -1487,6 +1487,25 @@ export const messages = {
     perpetual: 'Bezterminowa',
     emptyDescription: 'Utwórz pierwszą licencję aby rozpocząć zarządzanie dostępem do DocForge.',
     createdAt: 'Utworzono',
+    // Detail panel
+    copyKey: 'Kopiuj klucz',
+    keyCopied: 'Skopiowano',
+    seatsOccupied: (active: number, max: number) => `${active} z ${max} miejsc zajętych`,
+    seatsFull: 'Wszystkie miejsca zajęte',
+    noActiveDevices: 'Brak aktywnych urządzeń',
+    freshnessActive24h: 'Aktywne w ciągu 24h',
+    freshnessActive7d: 'Aktywne 1-7 dni temu',
+    freshnessInactive: 'Nieaktywne ponad 7 dni',
+    deactivateConfirmTitle: 'Dezaktywować urządzenie?',
+    deactivateConfirmDescription: (name: string) =>
+      `Urządzenie "${name}" zostanie dezaktywowane. Użytkownik będzie musiał ponownie aktywować licencję na tym urządzeniu.`,
+    deleteConfirmTitle: 'Usunąć licencję?',
+    deleteConfirmDescription: (key: string) =>
+      `Licencja "${key}" zostanie trwale usunięta wraz ze wszystkimi aktywacjami. Tej operacji nie można cofnąć.`,
+    deleteSuccess: 'Licencja została usunięta',
+    updateSuccess: 'Licencja została zaktualizowana',
+    sectionInfo: 'Informacje',
+    sectionActivations: 'Aktywacje',
     // Validation
     keyRequired: 'Klucz licencji jest wymagany',
     maxSeatsMin: 'Minimalna liczba stanowisk to 1',

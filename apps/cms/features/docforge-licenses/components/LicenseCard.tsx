@@ -3,14 +3,14 @@
 import { Badge, Card, Switch } from '@agency/ui'
 import { messages } from '@/lib/messages'
 import type { License, LicenseStatus } from '../types'
-import { computeLicenseStatus, seatsUsagePercent, seatsBarColor, formatExpiry } from '../utils'
+import { computeLicenseStatus, formatExpiry } from '../utils'
 
 interface LicenseCardProps {
   license: License
-  activeSeats: number
   onSelect: (id: string) => void
   onToggle: (id: string, isActive: boolean) => void
   isToggling: boolean
+  isSelected?: boolean
 }
 
 // ---------------------------------------------------------------------------
@@ -38,41 +38,17 @@ function StatusBadge({ status }: { status: LicenseStatus }) {
 }
 
 // ---------------------------------------------------------------------------
-// Seats progress bar
-// ---------------------------------------------------------------------------
-
-function SeatsBar({ active, max }: { active: number; max: number }) {
-  const percent = seatsUsagePercent(active, max)
-  const clampedPercent = Math.min(percent, 100)
-
-  return (
-    <div className="space-y-1">
-      <div className="flex items-center justify-between text-xs text-muted-foreground">
-        <span>{messages.docforgeLicenses.seatsUsage}</span>
-        <span>
-          {active}/{max}
-        </span>
-      </div>
-      <div className="h-1 rounded-full bg-muted" role="progressbar" aria-valuenow={percent} aria-valuemin={0} aria-valuemax={100}>
-        <div
-          className={`h-1 rounded-full transition-all ${seatsBarColor(percent)}`}
-          style={{ width: `${clampedPercent}%` }}
-        />
-      </div>
-    </div>
-  )
-}
-
-// ---------------------------------------------------------------------------
 // Card
 // ---------------------------------------------------------------------------
 
-export function LicenseCard({ license, activeSeats, onSelect, onToggle, isToggling }: LicenseCardProps) {
+export function LicenseCard({ license, onSelect, onToggle, isToggling, isSelected }: LicenseCardProps) {
   const status = computeLicenseStatus(license)
 
   return (
     <Card
-      className="relative cursor-pointer p-3 transition-transform hover:-translate-y-0.5"
+      className={`relative cursor-pointer p-3 transition-transform hover:-translate-y-0.5 ${
+        isSelected ? 'ring-1 ring-primary border-primary' : ''
+      }`}
       role="button"
       tabIndex={0}
       onClick={() => onSelect(license.id)}
@@ -111,10 +87,6 @@ export function LicenseCard({ license, activeSeats, onSelect, onToggle, isToggli
         <span className="text-xs text-muted-foreground">{formatExpiry(license.expires_at)}</span>
       </div>
 
-      {/* Seats */}
-      <div className="mt-3">
-        <SeatsBar active={activeSeats} max={license.max_seats} />
-      </div>
     </Card>
   )
 }
