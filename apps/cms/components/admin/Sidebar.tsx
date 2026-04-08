@@ -22,6 +22,7 @@ import {
   Users,
   Shield,
   Building2,
+  KeyRound,
 } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
@@ -87,11 +88,12 @@ const menuGroups: MenuGroup[] = [
   },
   {
     label: messages.nav.groupManagement,
-    requiredPermissions: ['system.users', 'system.roles', 'system.tenants'],
+    requiredPermissions: ['system.users', 'system.roles', 'system.tenants', 'system.docforge_licenses'],
     items: [
       { href: routes.admin.users, label: messages.nav.users, icon: Users },
       { href: routes.admin.roles, label: messages.nav.roles, icon: Shield },
       { href: routes.admin.tenants, label: messages.tenants.title, icon: Building2 },
+      { href: routes.admin.docforgeLicenses, label: messages.docforgeLicenses.navLabel, icon: KeyRound },
     ],
   },
 ]

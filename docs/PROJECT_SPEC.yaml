@@ -13,6 +13,8 @@ architecture:
     - "DISPLAY_GROUPS for PermissionPicker visual grouping — separate from PERMISSION_GROUPS (backend). UI groups (System/Zarządzanie) are independent of authorization logic; adding new visual group = new DISPLAY_GROUPS entry only"
     - "expandPermissionKeys in lib/permissions.ts — shared between PermissionPicker component and test utilities; single source of truth for parent→children permission hierarchy traversal"
     - "Scope Bar pattern for cross-tenant management — super admins switch active tenant context in a sticky header bar; no separate route per tenant, context stored in component state"
+    - "is_super_admin() RLS for global tables (no tenant_id) — DocForge licenses are cross-tenant, accessible to super admins only; RLS policy uses is_super_admin() PostgreSQL function instead of current_user_tenant_id() pattern used elsewhere"
+    - "fromSupabaseVoid() for void DB operations — Supabase JS returns {data,error} even on delete/update without select; fromSupabaseVoid() wraps these calls into Result<void,AppError> so callers don't need to handle the unused data field"
     - "seedDefaultRoles + syncFeaturePermissions on feature flag change — when enabled_features JSONB is updated, role defaults are re-seeded and permission mappings synced automatically to keep RBAC consistent"
     - "enabled_features JSONB on tenants table — stores PermissionKey[] for features enabled per tenant; checked in requireAuth() and sidebar rendering"
     - "getUserWithTenant() shared auth — extracted from 4x duplication, returns { supabase, userId, tenantId }"
@@ -209,6 +211,14 @@ features:
     why: "Automate repetitive business processes (email sequences, status updates, notifications) per tenant without code changes"
     depends_on: ["Email Notifications + Template Management", "n8n Infrastructure"]
     completion_notes: "Iterations 1-10 complete. Iter 10 (AAA-T-153): 3 built-in templates with WorkflowTemplateSelector, executor hardened with MAX_STEPS/timeout/try-catch, ConditionNode handles fixed, HOST_URL dedup, E2E test guide written. Iteration 11 (manual cancel/retry, real-time status) remains as nice-to-have backlog."
+
+  - name: "DocForge License Management"
+    status: done
+    task_id: "AAA-T-171"
+    description: "CMS admin panel for managing DocForge desktop app licenses. DB migration: ALTER docforge_licenses (max_seats, grace_days) + CREATE docforge_activations + updated RPC verify_docforge_license (machine_id param, seat count enforcement). List page with gallery/table toggle + stats bar (total/active/expired/inactive) + CreateLicenseDialog (auto-generated DF-XXXX-XXXX-XXXX key). JIRA-style detail panel: RHF inline editing, DatePicker for expires_at, SeatsIndicator (3 color thresholds: orange<80%, amber 80-99%, red=100%), activations section with MachineCard (freshness dot + deactivate). Permission: system.docforge_licenses. RLS via is_super_admin() (no tenant_id). Sidebar: KeyRound entry under Zarządzanie group. 9 components, tests for actions/queries."
+    why: "DocForge desktop app validates licenses via Supabase RPC but had no UI for license management — only manual Supabase Dashboard INSERT. Super admins need CRUD without direct DB access."
+    depends_on: ["Roles & Permissions System"]
+    completion_notes: "Super admins can create, edit, activate/deactivate, and delete licenses. Machine activations are visible per license with freshness indicators and per-machine deactivation. All 19 acceptance criteria met. Fix loop: required client_name, DatePicker, form-based editing in detail panel."
 
   # Backlog
   - name: "Multi-language Support (PL/EN)"

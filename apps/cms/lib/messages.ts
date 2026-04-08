@@ -1425,6 +1425,95 @@ export const messages = {
     },
   },
 
+  docforgeLicenses: {
+    pageTitle: 'Licencje DocForge',
+    navLabel: 'Licencje DocForge',
+    subtitle: 'Zarządzaj licencjami aplikacji DocForge',
+    createButton: 'Dodaj licencję',
+    editButton: 'Edytuj licencję',
+    // Status labels
+    statusActive: 'Aktywna',
+    statusExpired: 'Wygasła',
+    statusInactive: 'Nieaktywna',
+    // Form labels
+    keyLabel: 'Klucz licencji',
+    clientNameLabel: 'Nazwa klienta',
+    emailLabel: 'Email',
+    expiresAtLabel: 'Data wygaśnięcia',
+    maxSeatsLabel: 'Maks. stanowisk',
+    graceDaysLabel: 'Dni karencji',
+    isActiveLabel: 'Aktywna',
+    // Activations
+    activationsTitle: 'Aktywacje',
+    machineIdLabel: 'ID maszyny',
+    machineNameLabel: 'Nazwa maszyny',
+    activatedAtLabel: 'Aktywowano',
+    lastSeenAtLabel: 'Ostatnio widoczna',
+    deactivateButton: 'Dezaktywuj',
+    // Seats
+    seatsUsage: 'Wykorzystanie stanowisk',
+    // Empty/error
+    emptyList: 'Brak licencji',
+    emptyActivations: 'Brak aktywacji',
+    loadError: 'Nie udało się załadować licencji',
+    createFailed: 'Nie udało się utworzyć licencji',
+    updateFailed: 'Nie udało się zaktualizować licencji',
+    deleteFailed: 'Nie udało się usunąć licencji',
+    // Stats
+    statsTotal: 'Wszystkie',
+    statsActive: 'Aktywne',
+    statsExpired: 'Wygasłe',
+    statsSeats: 'Stanowiska',
+    // Filters
+    filterAll: 'Wszystkie',
+    filterActive: 'Aktywne',
+    filterExpired: 'Wygasłe',
+    filterInactive: 'Nieaktywne',
+    searchPlaceholder: 'Szukaj po kluczu, kliencie lub emailu...',
+    // Create dialog
+    createTitle: 'Nowa licencja',
+    generateKey: 'Generuj',
+    perpetualLabel: 'Bezterminowa',
+    createSuccess: 'Licencja została utworzona',
+    // Table columns
+    columnKey: 'Klucz',
+    columnClient: 'Klient',
+    columnStatus: 'Status',
+    columnSeats: 'Stanowiska',
+    columnExpires: 'Wygasa',
+    columnActions: 'Akcje',
+    // Misc
+    noClient: 'Brak klienta',
+    perpetual: 'Bezterminowa',
+    emptyDescription: 'Utwórz pierwszą licencję aby rozpocząć zarządzanie dostępem do DocForge.',
+    createdAt: 'Utworzono',
+    // Detail panel
+    copyKey: 'Kopiuj klucz',
+    keyCopied: 'Skopiowano',
+    seatsOccupied: (active: number, max: number) => `${active} z ${max} miejsc zajętych`,
+    seatsFull: 'Wszystkie miejsca zajęte',
+    noActiveDevices: 'Brak aktywnych urządzeń',
+    freshnessActive24h: 'Aktywne w ciągu 24h',
+    freshnessActive7d: 'Aktywne 1-7 dni temu',
+    freshnessInactive: 'Nieaktywne ponad 7 dni',
+    deactivateConfirmTitle: 'Dezaktywować urządzenie?',
+    deactivateConfirmDescription: (name: string) =>
+      `Urządzenie "${name}" zostanie dezaktywowane. Użytkownik będzie musiał ponownie aktywować licencję na tym urządzeniu.`,
+    deleteConfirmTitle: 'Usunąć licencję?',
+    deleteConfirmDescription: (key: string) =>
+      `Licencja "${key}" zostanie trwale usunięta wraz ze wszystkimi aktywacjami. Tej operacji nie można cofnąć.`,
+    deleteSuccess: 'Licencja została usunięta',
+    updateSuccess: 'Licencja została zaktualizowana',
+    sectionInfo: 'Informacje',
+    sectionActivations: 'Aktywacje',
+    saveButton: 'Zapisz',
+    // Validation
+    keyRequired: 'Klucz licencji jest wymagany',
+    clientNameRequired: 'Nazwa klienta jest wymagana',
+    maxSeatsMin: 'Minimalna liczba stanowisk to 1',
+    graceDaysMin: 'Dni karencji nie mogą być ujemne',
+  },
+
   validation: {
     titleRequired: 'Tytuł jest wymagany',
     slugRequired: 'Slug jest wymagany',

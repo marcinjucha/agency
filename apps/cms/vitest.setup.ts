@@ -107,7 +107,7 @@ vi.mock('lucide-react', () => {
     LayoutDashboard: stub, FileText: stub, Inbox: stub, Calendar: stub, Settings: stub,
     LogOut: stub, Mail: stub, Globe: stub, Newspaper: stub, Images: stub, Scale: stub,
     ShoppingBag: stub, Tags: stub, Store: stub, Zap: stub, History: stub, Users: stub,
-    Building2: stub, Check: stub, Minus: stub, ChevronDown: stub, Search: stub, Star: stub,
+    Building2: stub, Check: stub, Minus: stub, ChevronDown: stub, Search: stub, Star: stub, KeyRound: stub, RefreshCw: stub,
   }
 })
 

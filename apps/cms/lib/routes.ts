@@ -64,6 +64,10 @@ export const routes = {
     tenants: '/admin/tenants',
     tenantNew: '/admin/tenants/new',
     tenant: (id: string) => `/admin/tenants/${id}`,
+
+    // DocForge
+    docforgeLicenses: '/admin/docforge/licenses',
+    docforgeLicense: (id: string) => `/admin/docforge/licenses/${id}`,
   },
 
   api: {
