@@ -137,7 +137,7 @@ Auto-deploys to: https://agency-website.vercel.app
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY` (for createAnonClient submissions)
 - `N8N_WEBHOOK_URL`
-- `HOST_URL` (points to CMS for workflow trigger API)
+- `CMS_BASE_URL` (points to CMS for workflow trigger API, e.g. https://cms.haloefekt.pl)
 
 ## Related Files
 
