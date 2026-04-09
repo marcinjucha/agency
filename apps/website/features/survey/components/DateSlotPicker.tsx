@@ -38,7 +38,9 @@ export function DateSlotPicker({
     setSlotsLoading(true)
 
     try {
-      const dateStr = date.toISOString().split('T')[0]
+      // Format in local timezone — toISOString() converts to UTC which shifts the date
+      // e.g., April 10 00:00 CEST = April 9 22:00 UTC → wrong day sent to API
+      const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
       const params = new URLSearchParams({ surveyId, date: dateStr })
       const response = await fetch(`${routes.api.calendarSlots}?${params.toString()}`)
 

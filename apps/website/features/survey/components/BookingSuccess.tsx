@@ -13,9 +13,7 @@ export function BookingSuccess({ date, slot }: BookingSuccessProps) {
   if (!date || !slot) return null
 
   const slotTime = new Date(slot.start)
-  // Use slot.start for date display (not selectedDate) — avoids timezone mismatch
-  // where DatePicker's Date object can be off by 1 day due to UTC conversion
-  const formattedDate = slotTime.toLocaleDateString('pl-PL', {
+  const formattedDate = date.toLocaleDateString('pl-PL', {
     weekday: 'long',
     year: 'numeric',
     month: 'long',
