@@ -47,7 +47,7 @@ export function WorkflowList() {
   const router = useRouter()
   const queryClient = useQueryClient()
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
-  const [viewMode, setViewMode] = useViewMode('workflow-view-mode', 'list')
+  const [viewMode, setViewMode] = useViewMode('workflow-view-mode', 'grid')
 
   const {
     data: workflows,
