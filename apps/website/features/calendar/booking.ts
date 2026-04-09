@@ -3,7 +3,7 @@
  *
  * Handles the full booking flow: survey lookup, response validation,
  * double-booking conflict detection, appointment creation, and
- * Google Calendar event creation with graceful degradation.
+ * calendar event creation via multi-provider system with graceful degradation.
  *
  * Uses service role client — this runs in a public API route with no auth context.
  *
@@ -11,7 +11,12 @@
  */
 
 import { createClient } from '@supabase/supabase-js'
-import { getValidAccessToken, refreshAccessToken, createEvent } from '@agency/calendar'
+import {
+  getConnectionForSurveyLink,
+  createCalendarProvider,
+  type GoogleCredentials,
+  type ProviderCalendarEventInput,
+} from '@agency/calendar'
 import type { BookingRequest, BookingResult, BookingError } from './types'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
@@ -31,6 +36,89 @@ if (!supabaseKey) {
 
 const supabase = createClient(supabaseUrl, supabaseKey)
 
+// ---------------------------------------------------------------------------
+// Token refresh callback — persists new Google credentials via RPC
+// ---------------------------------------------------------------------------
+
+async function persistTokenRefresh(
+  connectionId: string,
+  newCredentials: GoogleCredentials
+): Promise<void> {
+  const { error } = await supabase.rpc('update_calendar_credentials', {
+    p_connection_id: connectionId,
+    p_credentials_json: JSON.stringify(newCredentials),
+  })
+
+  if (error) {
+    console.error('[BOOKING] Failed to persist refreshed credentials:', error)
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Calendar event creation (graceful degradation)
+// ---------------------------------------------------------------------------
+
+interface CalendarEventResult {
+  eventId: string | null
+  provider: string | null
+  connectionId: string | null
+}
+
+async function createCalendarEvent(
+  surveyLinkId: string,
+  data: BookingRequest
+): Promise<CalendarEventResult> {
+  const noEvent: CalendarEventResult = {
+    eventId: null,
+    provider: null,
+    connectionId: null,
+  }
+
+  const connectionResult = await getConnectionForSurveyLink(surveyLinkId, supabase)
+
+  if (connectionResult.isErr()) {
+    console.warn('[BOOKING] No calendar connection for survey link:', connectionResult.error)
+    return noEvent
+  }
+
+  const connection = connectionResult.value
+
+  if (!connection.isActive) {
+    console.warn('[BOOKING] Calendar connection is inactive:', connection.id)
+    return noEvent
+  }
+
+  const provider = createCalendarProvider(connection, {
+    onTokenRefresh: persistTokenRefresh,
+  })
+
+  const eventInput: ProviderCalendarEventInput = {
+    summary: `Appointment: ${data.clientName}`,
+    description: `Client: ${data.clientName}\nEmail: ${data.clientEmail}\nNotes: ${data.notes || 'N/A'}`,
+    start: data.startTime,
+    end: data.endTime,
+    timeZone: 'Europe/Warsaw',
+    attendees: [{ email: data.clientEmail }],
+  }
+
+  const eventResult = await provider.createEvent(eventInput)
+
+  if (eventResult.isErr()) {
+    console.error('[BOOKING] Failed to create calendar event:', eventResult.error)
+    return noEvent
+  }
+
+  return {
+    eventId: eventResult.value.eventId,
+    provider: connection.provider,
+    connectionId: connection.id,
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Public API
+// ---------------------------------------------------------------------------
+
 /**
  * Book an appointment for a client.
  *
@@ -39,7 +127,7 @@ const supabase = createClient(supabaseUrl, supabaseKey)
  * 2. Validate response exists and belongs to survey
  * 3. Check for double-booking conflicts
  * 4. Create appointment in database
- * 5. Create Google Calendar event (graceful degradation — appointment saved even if calendar fails)
+ * 5. Create calendar event via multi-provider system (graceful degradation)
  * 6. Return booking result
  */
 export async function bookAppointment(
@@ -160,7 +248,7 @@ export async function bookAppointment(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.WORKFLOW_TRIGGER_SECRET}`,
+        Authorization: `Bearer ${process.env.WORKFLOW_TRIGGER_SECRET}`,
       },
       body: JSON.stringify({
         trigger_type: 'booking_created',
@@ -173,51 +261,25 @@ export async function bookAppointment(
           appointmentAt: data.startTime,
         },
       }),
-    }).catch(err => console.error('[Workflow] booking_created trigger failed:', err))
+    }).catch((err) => console.error('[Workflow] booking_created trigger failed:', err))
   }
 
-  // Step 5: Create Google Calendar event (graceful degradation)
-  let googleEventId: string | null = null
-
+  // Step 5: Create calendar event via multi-provider system (graceful degradation)
   try {
-    const tokenResult = await getValidAccessToken(
-      survey.created_by,
-      supabase,
-      refreshAccessToken
-    )
+    const calendarResult = await createCalendarEvent(data.surveyId, data)
 
-    if (tokenResult.error) {
-      console.error('[BOOKING API] Failed to get access token:', tokenResult.error)
-    } else {
-      try {
-        const calendarEvent = {
-          summary: `Appointment: ${data.clientName}`,
-          description: `Client: ${data.clientName}\nEmail: ${data.clientEmail}\nNotes: ${data.notes || 'N/A'}`,
-          start: {
-            dateTime: data.startTime,
-            timeZone: 'Europe/Warsaw',
-          },
-          end: {
-            dateTime: data.endTime,
-            timeZone: 'Europe/Warsaw',
-          },
-          attendees: [{ email: data.clientEmail }],
-        }
-
-        googleEventId = await createEvent(tokenResult.accessToken!, calendarEvent)
-      } catch (eventError) {
-        console.error('Failed to create Google Calendar event:', eventError)
-      }
-    }
-
-    if (googleEventId) {
+    if (calendarResult.eventId) {
       const { error: updateError } = await supabase
         .from('appointments')
-        .update({ google_calendar_event_id: googleEventId })
+        .update({
+          calendar_event_id: calendarResult.eventId,
+          calendar_provider: calendarResult.provider,
+          calendar_connection_id: calendarResult.connectionId,
+        })
         .eq('id', newAppointment.id)
 
       if (updateError) {
-        console.error('Error updating appointment with event ID:', updateError)
+        console.error('Error updating appointment with calendar event:', updateError)
       }
     }
   } catch (error) {

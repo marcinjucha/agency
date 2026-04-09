@@ -30,12 +30,6 @@ export {
   getConnectionById,
 } from './connection-manager'
 
-// ---------------------------------------------------------------------------
-// Legacy exports (backward compat during migration — remove in Iteration 4)
-// ---------------------------------------------------------------------------
-
-export { getValidAccessToken } from './token-manager'
-export type { TokenResult } from './token-manager'
-export { refreshAccessToken } from './oauth'
-export { createEvent, getEvents } from './events'
-export type { CalendarEventInput, CalendarEvent } from './events'
+// Legacy exports removed in Iteration 4 (multi-provider migration complete).
+// token-manager.ts, events.ts, oauth.ts are still used internally by providers
+// but are no longer part of the public API.
