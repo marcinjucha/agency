@@ -59,7 +59,8 @@ CREATE POLICY "Users can update own tenant site settings"
 
 -- No DELETE policy — settings row should never be deleted
 
--- Seed default row for Halo Efekt tenant
+-- Seed default row for Halo Efekt tenant (only if tenant exists — safe for local dev)
 INSERT INTO site_settings (tenant_id, organization_name)
-VALUES ('19342448-4e4e-49ba-8bf0-694d5376f953', 'Halo Efekt')
+SELECT '19342448-4e4e-49ba-8bf0-694d5376f953', 'Halo Efekt'
+WHERE EXISTS (SELECT 1 FROM tenants WHERE id = '19342448-4e4e-49ba-8bf0-694d5376f953')
 ON CONFLICT (tenant_id) DO NOTHING;

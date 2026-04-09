@@ -89,10 +89,12 @@ CREATE POLICY "Tenant users can delete marketplace connections"
 --   ALTER DATABASE postgres SET "app.encryption_key" = 'your-secret-key-here';
 --   Or: Supabase Dashboard > Database > Postgres Config > Custom Postgres Config
 --
--- Local dev:
---   Add to supabase/config.toml under [db.settings]:
---     "app.encryption_key" = "local-dev-key"
---   Or run: ALTER DATABASE postgres SET "app.encryption_key" = 'local-dev-key';
+-- Local dev: Set automatically below (safe default for development only).
+
+-- IMPORTANT: app.encryption_key GUC must be set manually after db reset for local dev:
+--   docker exec -it supabase_db_legal-mind psql -U supabase_admin -d postgres \
+--     -c "ALTER DATABASE postgres SET \"app.encryption_key\" = 'local-dev-key';"
+-- For production: Supabase Dashboard > Database > Custom Postgres Config.
 
 -- HOW TO INSERT ENCRYPTED TOKENS:
 -- INSERT INTO shop_marketplace_connections (

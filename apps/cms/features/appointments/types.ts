@@ -57,7 +57,7 @@ export interface AppointmentResponseContext {
  *   client_email: "john@example.com",
  *   status: "scheduled",
  *   notes: "Initial consultation",
- *   google_calendar_event_id: "evt_123",
+ *   calendar_event_id: "evt_123",
  *   created_at: "2026-01-15T10:30:00Z",
  *   updated_at: "2026-01-15T10:30:00Z",
  *   response: { id: "r-123", status: "qualified", created_at: "2026-01-15T10:00:00Z" }
@@ -91,7 +91,7 @@ export type AppointmentWithResponse = Tables<'appointments'> & {
  *   client_email: "john@example.com",
  *   status: "scheduled",
  *   notes: "Initial consultation",
- *   google_calendar_event_id: "evt_123",
+ *   calendar_event_id: "evt_123",
  *   created_at: "2026-01-15T10:30:00Z",
  *   updated_at: "2026-01-15T10:30:00Z",
  *   response: { id: "r-123", status: "qualified", created_at: "2026-01-15T10:00:00Z" }

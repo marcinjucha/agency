@@ -1,32 +1,40 @@
 /**
  * GET /api/calendar/slots
  *
- * Calculate available appointment slots for a lawyer on a given date.
+ * Calculate available appointment slots for a given date using the
+ * multi-provider calendar system.
  *
  * Query Parameters:
- * - surveyId: UUID of survey (required)
+ * - surveyId: UUID of survey_link (required)
  * - date: ISO date string YYYY-MM-DD (required)
  *
  * Response: AvailableSlotsResponse
  * - slots: Array of { start, end } in ISO format with timezone
  * - date: The requested date
  * - timezone: 'Europe/Warsaw'
+ * - calendarConnected: whether a calendar connection is active
  *
- * Errors:
- * - 400: Missing or invalid parameters
- * - 404: Survey not found
- * - 500: Database or calendar API error
- *
- * Note: If calendar is not connected, returns all slots as available (9 AM - 5 PM)
- * This allows testing without requiring calendar setup
+ * Flow:
+ * 1. Fetch survey_link → get calendar_connection_id + user_id (via surveys)
+ * 2. If no calendar_connection_id → return slots with calendarConnected: false
+ * 3. If connection exists → createCalendarProvider → provider.getEvents()
+ * 4. Calculate available slots from work hours minus busy events
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { getValidAccessToken, refreshAccessToken, getEvents } from '@agency/calendar'
-import type { CalendarEvent } from '@agency/calendar'
+import {
+  getConnectionById,
+  createCalendarProvider,
+  type GoogleCredentials,
+} from '@agency/calendar'
 import type { AvailableSlotsResponse, ErrorResponse } from '@/features/calendar/types'
-import { parseDateString, calculateAvailableSlots, getDayBoundsUTC } from '@/features/calendar/slot-calculator'
+import {
+  parseDateString,
+  calculateAvailableSlots,
+  getDayBoundsUTC,
+  type BusyEvent,
+} from '@/features/calendar/slot-calculator'
 import { getCalendarSettingsForUser } from '@/features/calendar/settings-cache'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -44,9 +52,9 @@ if (!supabaseKey) {
 
 const supabase = createClient(supabaseUrl, supabaseKey)
 
-export async function GET(request: NextRequest): Promise<
-  NextResponse<AvailableSlotsResponse | ErrorResponse>
-> {
+export async function GET(
+  request: NextRequest
+): Promise<NextResponse<AvailableSlotsResponse | ErrorResponse>> {
   try {
     // Step 1: Validate query parameters
     const searchParams = request.nextUrl.searchParams
@@ -73,10 +81,10 @@ export async function GET(request: NextRequest): Promise<
       )
     }
 
-    // Step 2: Get survey link and lawyer info
+    // Step 2: Get survey link with calendar_connection_id + user_id
     const { data: surveyLink, error: surveyError } = await supabase
       .from('survey_links')
-      .select('surveys(id, created_by, tenant_id)')
+      .select('calendar_connection_id, surveys(id, created_by, tenant_id)')
       .eq('id', surveyId)
       .single()
 
@@ -92,36 +100,68 @@ export async function GET(request: NextRequest): Promise<
       created_by: string
       tenant_id: string
     }
-
     const userId = survey.created_by
+    const calendarConnectionId = (surveyLink as unknown as { calendar_connection_id: string | null })
+      .calendar_connection_id
 
-    // Step 3: Get valid access token with auto-refresh
-    const tokenResult = await getValidAccessToken(userId, supabase, refreshAccessToken)
+    // Step 3: Resolve calendar connection
+    let calendarConnected = false
+    let busyEvents: BusyEvent[] = []
 
-    let calendarConnected = true
-    let busyEvents: CalendarEvent[] = []
+    if (calendarConnectionId) {
+      const connectionResult = await getConnectionById(calendarConnectionId, supabase)
 
-    if (tokenResult.error) {
-      // Calendar not connected — proceed with empty busy events (all work-hour slots available)
-      console.warn('[SLOTS API] Calendar not connected, returning all slots as available:', tokenResult.error)
-      calendarConnected = false
-    } else {
-      const accessToken = tokenResult.accessToken!
+      if (connectionResult.isOk()) {
+        const connection = connectionResult.value
 
-      // Step 4: Fetch busy events from calendar
-      try {
-        const { dayStartUTC, dayEndUTC } = getDayBoundsUTC(requestedDate)
-        busyEvents = await getEvents(accessToken, dayStartUTC, dayEndUTC)
-      } catch (error) {
-        console.warn('[SLOTS API] Error fetching calendar events, returning all slots:', error)
-        busyEvents = []
+        if (connection.isActive) {
+          calendarConnected = true
+
+          // Build onTokenRefresh callback for Google token rotation
+          const onTokenRefresh = async (
+            connectionId: string,
+            newCredentials: GoogleCredentials
+          ) => {
+            await supabase.rpc('update_calendar_credentials', {
+              p_connection_id: connectionId,
+              p_credentials_json: JSON.stringify(newCredentials),
+            })
+          }
+
+          const provider = createCalendarProvider(connection, { onTokenRefresh })
+
+          try {
+            const { dayStartUTC, dayEndUTC } = getDayBoundsUTC(requestedDate)
+            const eventsResult = await provider.getEvents(
+              dayStartUTC.toISOString(),
+              dayEndUTC.toISOString()
+            )
+
+            if (eventsResult.isOk()) {
+              // Map provider CalendarEvent (flat start/end) → BusyEvent (nested dateTime)
+              busyEvents = eventsResult.value.map((event) => ({
+                start: { dateTime: event.start },
+                end: { dateTime: event.end },
+              }))
+            } else {
+              console.warn('[SLOTS API] Error fetching calendar events:', eventsResult.error)
+            }
+          } catch (error) {
+            console.warn('[SLOTS API] Error fetching calendar events, returning all slots:', error)
+          }
+        }
+      } else {
+        console.warn('[SLOTS API] Calendar connection not found:', connectionResult.error)
       }
+    } else {
+      // No calendar connection configured — all work-hour slots available
+      console.warn('[SLOTS API] No calendar connection on survey link, returning all slots')
     }
 
-    // Step 5: Load per-user calendar settings (cached)
+    // Step 4: Load per-user calendar settings (cached)
     const calSettings = await getCalendarSettingsForUser(userId)
 
-    // Step 6: Calculate available slots
+    // Step 5: Calculate available slots
     const availableSlots = calculateAvailableSlots(
       requestedDate,
       busyEvents,
@@ -131,7 +171,7 @@ export async function GET(request: NextRequest): Promise<
       calSettings.buffer_minutes
     )
 
-    // Step 7: Return response
+    // Step 6: Return response
     const response: AvailableSlotsResponse = {
       slots: availableSlots,
       date: dateStr,

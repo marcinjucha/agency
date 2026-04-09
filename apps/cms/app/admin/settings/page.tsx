@@ -27,15 +27,11 @@ export default function SettingsPage() {
         </TabsContent>
 
         <TabsContent value="calendar" className="mt-6 space-y-8">
-          {/* Calendar Connection Status */}
-          <div className="bg-card rounded-lg border border-border p-6">
-            <CalendarSettings />
-          </div>
+          {/* Calendar Connections (multi-provider) */}
+          <CalendarSettings />
 
-          {/* Calendar Settings Form */}
-          <div className="bg-card rounded-lg border border-border p-6">
-            <CalendarSettingsForm />
-          </div>
+          {/* Booking Settings (work hours, slot duration, buffer) */}
+          <CalendarSettingsForm />
         </TabsContent>
       </Tabs>
     </div>

@@ -7,11 +7,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "13.0.5"
-  }
   graphql_public: {
     Tables: {
       [_ in never]: never
@@ -39,13 +34,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      app_config: {
+        Row: {
+          key: string
+          value: string
+        }
+        Insert: {
+          key: string
+          value: string
+        }
+        Update: {
+          key?: string
+          value?: string
+        }
+        Relationships: []
+      }
       appointments: {
         Row: {
+          calendar_connection_id: string | null
+          calendar_event_id: string | null
+          calendar_provider: string | null
           client_email: string
           client_name: string
           created_at: string | null
           end_time: string
-          google_calendar_event_id: string | null
           id: string
           notes: string | null
           response_id: string | null
@@ -56,11 +68,13 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          calendar_connection_id?: string | null
+          calendar_event_id?: string | null
+          calendar_provider?: string | null
           client_email: string
           client_name: string
           created_at?: string | null
           end_time: string
-          google_calendar_event_id?: string | null
           id?: string
           notes?: string | null
           response_id?: string | null
@@ -71,11 +85,13 @@ export type Database = {
           user_id: string
         }
         Update: {
+          calendar_connection_id?: string | null
+          calendar_event_id?: string | null
+          calendar_provider?: string | null
           client_email?: string
           client_name?: string
           created_at?: string | null
           end_time?: string
-          google_calendar_event_id?: string | null
           id?: string
           notes?: string | null
           response_id?: string | null
@@ -86,6 +102,20 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "appointments_calendar_connection_id_fkey"
+            columns: ["calendar_connection_id"]
+            isOneToOne: false
+            referencedRelation: "calendar_connections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_calendar_connection_id_fkey"
+            columns: ["calendar_connection_id"]
+            isOneToOne: false
+            referencedRelation: "calendar_connections_decrypted"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "appointments_lawyer_id_fkey"
             columns: ["user_id"]
@@ -177,6 +207,69 @@ export type Database = {
           },
         ]
       }
+      calendar_connections: {
+        Row: {
+          account_identifier: string | null
+          calendar_url: string | null
+          created_at: string
+          credentials_encrypted: string
+          display_name: string
+          id: string
+          is_active: boolean
+          is_default: boolean
+          last_verified_at: string | null
+          provider: string
+          tenant_id: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          account_identifier?: string | null
+          calendar_url?: string | null
+          created_at?: string
+          credentials_encrypted: string
+          display_name: string
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          last_verified_at?: string | null
+          provider: string
+          tenant_id: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          account_identifier?: string | null
+          calendar_url?: string | null
+          created_at?: string
+          credentials_encrypted?: string
+          display_name?: string
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          last_verified_at?: string | null
+          provider?: string
+          tenant_id?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendar_connections_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_connections_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       calendar_settings: {
         Row: {
           buffer_minutes: number
@@ -218,33 +311,77 @@ export type Database = {
           },
         ]
       }
+      docforge_activations: {
+        Row: {
+          activated_at: string
+          id: string
+          is_active: boolean
+          last_seen_at: string
+          license_id: string
+          machine_id: string
+          machine_name: string | null
+        }
+        Insert: {
+          activated_at?: string
+          id?: string
+          is_active?: boolean
+          last_seen_at?: string
+          license_id: string
+          machine_id: string
+          machine_name?: string | null
+        }
+        Update: {
+          activated_at?: string
+          id?: string
+          is_active?: boolean
+          last_seen_at?: string
+          license_id?: string
+          machine_id?: string
+          machine_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "docforge_activations_license_id_fkey"
+            columns: ["license_id"]
+            isOneToOne: false
+            referencedRelation: "docforge_licenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       docforge_licenses: {
         Row: {
           client_name: string | null
           created_at: string | null
           email: string | null
           expires_at: string | null
+          grace_days: number
           id: string
           is_active: boolean | null
           key: string
+          max_seats: number
         }
         Insert: {
           client_name?: string | null
           created_at?: string | null
           email?: string | null
           expires_at?: string | null
+          grace_days?: number
           id?: string
           is_active?: boolean | null
           key: string
+          max_seats?: number
         }
         Update: {
           client_name?: string | null
           created_at?: string | null
           email?: string | null
           expires_at?: string | null
+          grace_days?: number
           id?: string
           is_active?: boolean | null
           key?: string
+          max_seats?: number
         }
         Relationships: []
       }
@@ -1035,6 +1172,7 @@ export type Database = {
       }
       survey_links: {
         Row: {
+          calendar_connection_id: string | null
           created_at: string | null
           expires_at: string | null
           id: string
@@ -1046,6 +1184,7 @@ export type Database = {
           token: string
         }
         Insert: {
+          calendar_connection_id?: string | null
           created_at?: string | null
           expires_at?: string | null
           id?: string
@@ -1057,6 +1196,7 @@ export type Database = {
           token: string
         }
         Update: {
+          calendar_connection_id?: string | null
           created_at?: string | null
           expires_at?: string | null
           id?: string
@@ -1068,6 +1208,20 @@ export type Database = {
           token?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "survey_links_calendar_connection_id_fkey"
+            columns: ["calendar_connection_id"]
+            isOneToOne: false
+            referencedRelation: "calendar_connections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "survey_links_calendar_connection_id_fkey"
+            columns: ["calendar_connection_id"]
+            isOneToOne: false
+            referencedRelation: "calendar_connections_decrypted"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "survey_links_survey_id_fkey"
             columns: ["survey_id"]
@@ -1279,7 +1433,6 @@ export type Database = {
           created_at: string | null
           email: string
           full_name: string | null
-          google_calendar_token: Json | null
           id: string
           is_super_admin: boolean
           role: string | null
@@ -1290,7 +1443,6 @@ export type Database = {
           created_at?: string | null
           email: string
           full_name?: string | null
-          google_calendar_token?: Json | null
           id?: string
           is_super_admin?: boolean
           role?: string | null
@@ -1301,7 +1453,6 @@ export type Database = {
           created_at?: string | null
           email?: string
           full_name?: string | null
-          google_calendar_token?: Json | null
           id?: string
           is_super_admin?: boolean
           role?: string | null
@@ -1575,6 +1726,69 @@ export type Database = {
       }
     }
     Views: {
+      calendar_connections_decrypted: {
+        Row: {
+          account_identifier: string | null
+          calendar_url: string | null
+          created_at: string | null
+          credentials: Json | null
+          display_name: string | null
+          id: string | null
+          is_active: boolean | null
+          is_default: boolean | null
+          last_verified_at: string | null
+          provider: string | null
+          tenant_id: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          account_identifier?: string | null
+          calendar_url?: string | null
+          created_at?: string | null
+          credentials?: never
+          display_name?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          is_default?: boolean | null
+          last_verified_at?: string | null
+          provider?: string | null
+          tenant_id?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          account_identifier?: string | null
+          calendar_url?: string | null
+          created_at?: string | null
+          credentials?: never
+          display_name?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          is_default?: boolean | null
+          last_verified_at?: string | null
+          provider?: string | null
+          tenant_id?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendar_connections_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_connections_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       shop_marketplace_connections_decrypted: {
         Row: {
           access_token: string | null
@@ -1645,11 +1859,38 @@ export type Database = {
       }
       current_user_role: { Args: never; Returns: string }
       current_user_tenant_id: { Args: never; Returns: string }
+      get_encryption_key: { Args: never; Returns: string }
       increment_submission_count: {
         Args: { link_id: string }
         Returns: undefined
       }
       is_super_admin: { Args: never; Returns: boolean }
+      update_calendar_credentials: {
+        Args: { p_connection_id: string; p_credentials_json: string }
+        Returns: undefined
+      }
+      update_marketplace_tokens: {
+        Args: {
+          p_access_token: string
+          p_connection_id: string
+          p_refresh_token: string
+          p_token_expires_at: string
+        }
+        Returns: undefined
+      }
+      upsert_calendar_connection: {
+        Args: {
+          p_account_identifier?: string
+          p_calendar_url?: string
+          p_credentials_json?: string
+          p_display_name?: string
+          p_is_default?: boolean
+          p_provider?: string
+          p_tenant_id: string
+          p_user_id?: string
+        }
+        Returns: string
+      }
       upsert_marketplace_connection: {
         Args: {
           p_access_token: string
@@ -1664,7 +1905,10 @@ export type Database = {
         }
         Returns: string
       }
-      verify_docforge_license: { Args: { license_key: string }; Returns: Json }
+      verify_docforge_license: {
+        Args: { p_license_key: string; p_machine_id: string }
+        Returns: Json
+      }
     }
     Enums: {
       listing_type: "external_link" | "digital_download"
@@ -1767,6 +2011,101 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      iceberg_namespaces: {
+        Row: {
+          bucket_name: string
+          catalog_id: string
+          created_at: string
+          id: string
+          metadata: Json
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          bucket_name: string
+          catalog_id: string
+          created_at?: string
+          id?: string
+          metadata?: Json
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          bucket_name?: string
+          catalog_id?: string
+          created_at?: string
+          id?: string
+          metadata?: Json
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "iceberg_namespaces_catalog_id_fkey"
+            columns: ["catalog_id"]
+            isOneToOne: false
+            referencedRelation: "buckets_analytics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      iceberg_tables: {
+        Row: {
+          bucket_name: string
+          catalog_id: string
+          created_at: string
+          id: string
+          location: string
+          name: string
+          namespace_id: string
+          remote_table_id: string | null
+          shard_id: string | null
+          shard_key: string | null
+          updated_at: string
+        }
+        Insert: {
+          bucket_name: string
+          catalog_id: string
+          created_at?: string
+          id?: string
+          location: string
+          name: string
+          namespace_id: string
+          remote_table_id?: string | null
+          shard_id?: string | null
+          shard_key?: string | null
+          updated_at?: string
+        }
+        Update: {
+          bucket_name?: string
+          catalog_id?: string
+          created_at?: string
+          id?: string
+          location?: string
+          name?: string
+          namespace_id?: string
+          remote_table_id?: string | null
+          shard_id?: string | null
+          shard_key?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "iceberg_tables_catalog_id_fkey"
+            columns: ["catalog_id"]
+            isOneToOne: false
+            referencedRelation: "buckets_analytics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "iceberg_tables_namespace_id_fkey"
+            columns: ["namespace_id"]
+            isOneToOne: false
+            referencedRelation: "iceberg_namespaces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       migrations: {
         Row: {
@@ -1993,20 +2332,9 @@ export type Database = {
         Args: { bucketid: string; metadata: Json; name: string; owner: string }
         Returns: undefined
       }
-      delete_leaf_prefixes: {
-        Args: { bucket_ids: string[]; names: string[] }
-        Returns: undefined
-      }
       extension: { Args: { name: string }; Returns: string }
       filename: { Args: { name: string }; Returns: string }
       foldername: { Args: { name: string }; Returns: string[] }
-      get_common_prefix: {
-        Args: { p_delimiter: string; p_key: string; p_prefix: string }
-        Returns: string
-      }
-      get_level: { Args: { name: string }; Returns: number }
-      get_prefix: { Args: { name: string }; Returns: string }
-      get_prefixes: { Args: { name: string }; Returns: string[] }
       get_size_by_bucket: {
         Args: never
         Returns: {
@@ -2031,106 +2359,59 @@ export type Database = {
       }
       list_objects_with_delimiter: {
         Args: {
-          _bucket_id: string
+          bucket_id: string
           delimiter_param: string
           max_keys?: number
           next_token?: string
           prefix_param: string
-          sort_order?: string
           start_after?: string
         }
         Returns: {
-          created_at: string
           id: string
-          last_accessed_at: string
           metadata: Json
           name: string
           updated_at: string
         }[]
       }
       operation: { Args: never; Returns: string }
-      search: {
-        Args: {
-          bucketname: string
-          levels?: number
-          limits?: number
-          offsets?: number
-          prefix: string
-          search?: string
-          sortcolumn?: string
-          sortorder?: string
-        }
-        Returns: {
-          created_at: string
-          id: string
-          last_accessed_at: string
-          metadata: Json
-          name: string
-          updated_at: string
-        }[]
-      }
-      search_by_timestamp: {
-        Args: {
-          p_bucket_id: string
-          p_level: number
-          p_limit: number
-          p_prefix: string
-          p_sort_column: string
-          p_sort_column_after: string
-          p_sort_order: string
-          p_start_after: string
-        }
-        Returns: {
-          created_at: string
-          id: string
-          key: string
-          last_accessed_at: string
-          metadata: Json
-          name: string
-          updated_at: string
-        }[]
-      }
-      search_legacy_v1: {
-        Args: {
-          bucketname: string
-          levels?: number
-          limits?: number
-          offsets?: number
-          prefix: string
-          search?: string
-          sortcolumn?: string
-          sortorder?: string
-        }
-        Returns: {
-          created_at: string
-          id: string
-          last_accessed_at: string
-          metadata: Json
-          name: string
-          updated_at: string
-        }[]
-      }
-      search_v2: {
-        Args: {
-          bucket_name: string
-          levels?: number
-          limits?: number
-          prefix: string
-          sort_column?: string
-          sort_column_after?: string
-          sort_order?: string
-          start_after?: string
-        }
-        Returns: {
-          created_at: string
-          id: string
-          key: string
-          last_accessed_at: string
-          metadata: Json
-          name: string
-          updated_at: string
-        }[]
-      }
+      search:
+        | {
+            Args: {
+              bucketname: string
+              levels?: number
+              limits?: number
+              offsets?: number
+              prefix: string
+            }
+            Returns: {
+              created_at: string
+              id: string
+              last_accessed_at: string
+              metadata: Json
+              name: string
+              updated_at: string
+            }[]
+          }
+        | {
+            Args: {
+              bucketname: string
+              levels?: number
+              limits?: number
+              offsets?: number
+              prefix: string
+              search?: string
+              sortcolumn?: string
+              sortorder?: string
+            }
+            Returns: {
+              created_at: string
+              id: string
+              last_accessed_at: string
+              metadata: Json
+              name: string
+              updated_at: string
+            }[]
+          }
     }
     Enums: {
       buckettype: "STANDARD" | "ANALYTICS" | "VECTOR"
@@ -2273,3 +2554,4 @@ export const Constants = {
     },
   },
 } as const
+

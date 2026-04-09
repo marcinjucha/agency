@@ -29,7 +29,9 @@ export const queryKeys = {
     all: ['landing-page'] as const,
   },
   calendar: {
-    settings: ['calendarSettings'] as const,
+    all: ['calendar'] as const,
+    connections: ['calendar', 'connections'] as const,
+    settings: ['calendar', 'settings'] as const,
   },
   shopProducts: {
     all: ['shop-products'] as const,

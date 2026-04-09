@@ -14,25 +14,19 @@ ALTER TABLE pages ADD CONSTRAINT pages_page_type_check
 -- 2. Add html_body column for pre-rendered HTML (used by blog_post_template and legal pages)
 ALTER TABLE pages ADD COLUMN html_body TEXT;
 
--- 3. Seed legal pages for tenant Halo Efekt
+-- 3. Seed legal pages for tenant Halo Efekt (only if tenant exists — safe for local dev)
 INSERT INTO pages (tenant_id, slug, title, page_type, blocks, html_body, is_published)
-VALUES
-  (
-    '19342448-4e4e-49ba-8bf0-694d5376f953',
-    'regulamin',
-    'Regulamin',
-    'legal',
-    '{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"Treść zostanie uzupełniona."}]}]}'::jsonb,
-    '<p>Treść zostanie uzupełniona.</p>',
-    true
-  ),
-  (
-    '19342448-4e4e-49ba-8bf0-694d5376f953',
-    'polityka-prywatnosci',
-    'Polityka Prywatności',
-    'legal',
-    '{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"Treść zostanie uzupełniona."}]}]}'::jsonb,
-    '<p>Treść zostanie uzupełniona.</p>',
-    true
-  )
+SELECT
+  '19342448-4e4e-49ba-8bf0-694d5376f953',
+  v.slug, v.title, 'legal',
+  v.blocks::jsonb, v.html_body, true
+FROM (VALUES
+  ('regulamin', 'Regulamin',
+   '{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"Treść zostanie uzupełniona."}]}]}',
+   '<p>Treść zostanie uzupełniona.</p>'),
+  ('polityka-prywatnosci', 'Polityka Prywatności',
+   '{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"Treść zostanie uzupełniona."}]}]}',
+   '<p>Treść zostanie uzupełniona.</p>')
+) AS v(slug, title, blocks, html_body)
+WHERE EXISTS (SELECT 1 FROM tenants WHERE id = '19342448-4e4e-49ba-8bf0-694d5376f953')
 ON CONFLICT (tenant_id, slug) DO NOTHING;
