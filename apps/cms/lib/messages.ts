@@ -359,6 +359,11 @@ export const messages = {
     deactivateConnectionFailed: 'Nie udało się dezaktywować połączenia',
     updateSurveyLinkCalendarFailed: 'Nie udało się przypisać kalendarza do linku',
     oauthSaveFailed: 'Nie udało się zapisać połączenia Google Calendar',
+    oauthNoCode: 'Brak kodu autoryzacji od Google',
+    oauthInvalidState: 'Walidacja bezpieczeństwa OAuth nie powiodła się',
+    oauthTokenFailed: 'Nie udało się wymienić kodu autoryzacji',
+    oauthTenantFailed: 'Nie udało się rozwiązać organizacji',
+    oauthSessionExpired: 'Sesja wygasła',
     // Connection management UI
     connectionsTitle: 'Połączenia z kalendarzem',
     connectionsDescription: 'Zarządzaj połączeniami z kalendarzami. Możesz dodać Google Calendar lub CalDAV.',

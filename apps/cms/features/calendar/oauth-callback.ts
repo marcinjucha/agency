@@ -42,7 +42,7 @@ export async function processOAuthCallback(
     console.error('No authorization code returned from Google')
     return {
       success: false,
-      redirectPath: `${routes.admin.settings}?error=No+authorization+code+received`,
+      redirectPath: `${routes.admin.settings}?error=${encodeURIComponent(messages.calendar.oauthNoCode)}`,
     }
   }
 
@@ -51,7 +51,7 @@ export async function processOAuthCallback(
     console.error('No state parameter returned from Google')
     return {
       success: false,
-      redirectPath: `${routes.admin.settings}?error=Invalid+OAuth+state`,
+      redirectPath: `${routes.admin.settings}?error=${encodeURIComponent(messages.calendar.oauthInvalidState)}`,
     }
   }
 
@@ -62,7 +62,7 @@ export async function processOAuthCallback(
     console.error('State mismatch - possible CSRF attack')
     return {
       success: false,
-      redirectPath: `${routes.admin.settings}?error=OAuth+security+validation+failed`,
+      redirectPath: `${routes.admin.settings}?error=${encodeURIComponent(messages.calendar.oauthInvalidState)}`,
     }
   }
 
@@ -75,7 +75,7 @@ export async function processOAuthCallback(
   if (!user) {
     return {
       success: false,
-      redirectPath: `${routes.login}?error=Session+expired`,
+      redirectPath: `${routes.login}?error=${encodeURIComponent(messages.calendar.oauthSessionExpired)}`,
     }
   }
 
@@ -91,7 +91,7 @@ export async function processOAuthCallback(
     console.error('Failed to fetch user tenant_id:', userError)
     return {
       success: false,
-      redirectPath: `${routes.admin.settings}?error=Failed+to+resolve+tenant`,
+      redirectPath: `${routes.admin.settings}?error=${encodeURIComponent(messages.calendar.oauthTenantFailed)}`,
     }
   }
 
@@ -103,8 +103,7 @@ export async function processOAuthCallback(
     console.error('Token exchange failed:', tokenError)
     return {
       success: false,
-      redirectPath:
-        `${routes.admin.settings}?error=Failed+to+exchange+authorization+code`,
+      redirectPath: `${routes.admin.settings}?error=${encodeURIComponent(messages.calendar.oauthTokenFailed)}`,
     }
   }
 
