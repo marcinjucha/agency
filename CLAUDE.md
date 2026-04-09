@@ -217,4 +217,5 @@ Index of all CLAUDE.md files and their scope:
 - `./packages/CLAUDE.md` — Shared packages (ui, database, validators)
 - `./packages/calendar/CLAUDE.md` — Google Calendar integration
 - `./supabase/CLAUDE.md` — Database config and migrations
+- `./infra/CLAUDE.md` — VPS infrastructure overview (4 stacks, shared Traefik, network topology)
 - `./n8n-workflows/CLAUDE.md` — N8n AI survey analysis workflows
