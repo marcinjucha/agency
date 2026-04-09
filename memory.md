@@ -63,6 +63,7 @@
 - **PostgREST schema cache stale after db reset** — New tables/views/functions invisible to PostgREST until `docker restart supabase_rest_<project>` or `NOTIFY pgrst, 'reload schema'`. Causes "Could not find table/function in schema cache" errors. (2026-04-09)
 - **Turbopack barrel re-export bug with server-only packages** — `export { RUNTIME_VALUE } from '@agency/calendar'` in types.ts pulled googleapis (Node.js child_process) into client bundle. Fix: define runtime constants locally, only use `export type` for cross-package re-exports. (2026-04-09)
 - **Pre-existing migration seed bugs with hardcoded tenant IDs** — 3 migrations had hardcoded production tenant ID causing FK violations on local db reset. Fixed with WHERE EXISTS guards. Always guard seed data with existence checks. (2026-04-09)
+- **DatePicker toISOString() timezone bug** — `date.toISOString().split('T')[0]` shifts date by -1 day in CEST (UTC+2). April 10 00:00 CEST = April 9 22:00 UTC → API receives wrong date. Fix: use `getFullYear()/getMonth()/getDate()` for local date formatting. Affects any DatePicker/Calendar component storing dates as YYYY-MM-DD strings. (2026-04-09, AAA-T-175)
 
 ## Domain Concepts
 
@@ -82,6 +83,7 @@
 - **surveys.status DB column is vestigial** — Status should be computed from survey_links (has active links = active, no links = draft, all expired = closed). Manual enum management on surveys table is wrong model. User wants computed status, not stored status. (2026-04-02)
 - **RPC function parameter names must match migration SQL exactly** — n8n called `upsert_marketplace_connection` with `p_connection_id` but function expected `p_tenant_id`. PostgreSQL error at runtime. Created dedicated `update_marketplace_tokens(p_connection_id)` for token refresh use case. (2026-04-03, AAA-T-157)
 - **Baikal CalDAV has 2 calendars** — tsdav auto-discovery finds "Appointments" (`/dav.php/calendars/haloefekt/appointments/`) and "Default calendar" (`/dav.php/calendars/haloefekt/default/`). Must filter or let user select which calendar to use. (2026-04-09)
+- **Success page "What's Next" steps are Halo Efekt-specific** — Hardcoded timeline (Analiza→Email→Kontakt) only applies to intake surveys. Per-survey confirmation templates needed for booking confirmations, other survey types. Notion task created for per-survey success page customization. (2026-04-09, AAA-T-175)
 
 ## Architecture Decisions
 
@@ -108,6 +110,7 @@
 - **Standalone n8n workflows for marketplace (not workflow engine)** — Marketplace sync is infrastructure/system-level. Workflow engine = user-configurable event flows. Marketplace = background cron ops. (2026-04-02)
 - **Multi-provider calendar architecture** — calendar_connections table with pgcrypto encryption, CalendarProvider interface with ResultAsync, survey_links.calendar_connection_id for calendar-per-survey model. CalDAV via tsdav (tested with Baikal: Basic auth, DAVClient). (2026-04-09)
 - **app_config table replaces custom GUC for encryption key** — Supabase Cloud AND local both block `ALTER DATABASE SET` for custom `app.*` parameters. Solution: `app_config` table with `get_encryption_key()` SECURITY DEFINER helper. Seed row has placeholder, production UPDATE after deploy. Replaces GUC COALESCE fallback pattern. (2026-04-09)
+- **SurveyLinkCalendarSelect dual mode (auto-save vs controlled)** — Component needed two modes: standalone (saves immediately on change via server action) and embedded in form (tracks state, parent form saves). Discriminated union props pattern: `{ mode: 'standalone'; surveyLinkId: string }` vs `{ mode: 'controlled'; value: string | null; onChange: (id) => void }`. Reusable pattern for any component that appears both standalone and inside forms. (2026-04-09, AAA-T-175)
 
 ## Preferences
 
@@ -134,3 +137,4 @@
 - **Native input type="date" rejected — always use shadcn/ui DatePicker** — User rejected native HTML date input. Always use shadcn/ui DatePicker (Popover + Calendar component) for consistent styling and UX. (2026-04-08)
 - **Always test with local database** — CMS was pointing to production Supabase while testing migrations that only existed locally, wasting debugging time. Always use `supabase start` and local connection for development/testing. (2026-04-09)
 - **Always design bidirectional state transitions** — Deactivate button existed but no Activate button to re-enable. When adding a disable/deactivate action, always implement the reverse action too. (2026-04-09)
+- **Always use `vitest watch` during TDD, not `vitest run`** — User explicitly corrected: watch mode for interactive development, run mode only for CI. (2026-04-09)
