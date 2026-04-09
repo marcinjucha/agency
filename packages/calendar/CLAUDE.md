@@ -1,131 +1,80 @@
-# Calendar Package - Google Calendar Integration
+# Calendar Package - Multi-Provider Calendar Integration
 
-Shared package for Google Calendar API integration across CMS and Website apps.
+Shared package for calendar integration across CMS and Website apps. Supports multiple calendar providers (Google Calendar, CalDAV) via a unified `CalendarProvider` interface.
+
+## Architecture
+
+```
+packages/calendar/src/
+├── types.ts              # CalendarProvider interface, credential shapes, CalendarConnection
+├── providers/
+│   ├── index.ts          # CalendarProviderFactory (strategy pattern)
+│   ├── google.ts         # GoogleCalendarProvider (googleapis, token refresh)
+│   └── caldav.ts         # CalDAVProvider (tsdav, iCalendar VEVENT parsing)
+├── connection-manager.ts # Resolve connections from calendar_connections_decrypted view
+├── index.ts              # Public exports
+├── oauth.ts              # Google OAuth token refresh (used by GoogleCalendarProvider)
+├── events.ts             # Legacy Google events (kept on disk, NOT exported)
+├── token-manager.ts      # Legacy token manager (kept on disk, NOT exported)
+└── __tests__/            # 30 tests (providers + factory + connection manager)
+```
 
 ## The Weird Parts
 
-### Token Auto-Refresh with 5-Minute Buffer
+### CalendarProvider returns ResultAsync (not Promise)
 
-**Why:** Access tokens expire after 1 hour. Without buffer, tokens can expire mid-request.
+All provider methods return `ResultAsync<T, string>` from neverthrow. Callers use `.isOk()` / `.isErr()` instead of try/catch. This makes error handling explicit — you can't accidentally ignore a failed calendar operation.
 
-**Pattern:**
-```typescript
-const buffer = 300 // 5 minutes in seconds
-const isExpired = expiresAt - now < buffer
+### CalDAV: Fresh DAVClient per method call
 
-if (isExpired) {
-  // Refresh token BEFORE it expires
-  // Prevents race condition: token expires during API call
-}
-```
+`createCalDAVProvider` creates a new `DAVClient` and calls `login()` for every operation (getEvents, createEvent, etc.). Stateless by design — no session to manage, no connection pooling.
 
-**Impact:** Significantly reduces "token expired" errors by refreshing before expiry.
+**Why:** CalDAV uses Basic auth (username/password per request). No token lifecycle, no refresh needed. Simplicity > efficiency for low-volume booking calendars.
 
-### Dependency Injection for refreshAccessToken
+### Google: Token refresh via callback, not DB
 
-**Why:** `token-manager.ts` needs to call `refreshAccessToken()` from apps/cms/features/calendar/oauth.ts, but packages can't import from apps (circular dependency).
+`GoogleCalendarProvider` checks token expiry before each API call. When expired, it refreshes internally using `refreshAccessToken` and reports new credentials via an `onTokenRefresh` callback. The provider itself does zero DB operations.
 
-**Solution:** Pass `refreshAccessToken` as parameter instead of importing.
+**Why:** Keeps providers pure (credentials in, events out). The caller (CMS/Website) decides how to persist refreshed tokens — via `update_calendar_credentials` RPC (pgcrypto encrypted).
 
-```typescript
-// ✅ CORRECT (dependency injection)
-getValidAccessToken(userId, supabase, refreshAccessToken)
+### Credentials stored encrypted in DB (not in this package)
 
-// ❌ WRONG (circular dependency)
-import { refreshAccessToken } from '../../../apps/cms/features/calendar/oauth'
-```
+`calendar_connections.credentials_encrypted` is BYTEA (pgcrypto). This package reads from `calendar_connections_decrypted` view (which decrypts). Writes go through `upsert_calendar_connection` / `update_calendar_credentials` RPC functions.
 
-### Graceful Degradation in Booking (Not Slots)
+### connection-manager accepts Supabase client as parameter
 
-**Why Different?**
-- **Booking API:** Appointment is PRIMARY, calendar is SECONDARY
-  - User expects: "Appointment booked" ✅
-  - Calendar failure: Log error, continue
+Different callers use different clients: CMS uses authenticated server client (tenant-scoped RLS), Website booking uses service_role (no auth context). The connection-manager doesn't create its own client — caller injects it.
 
-- **Slots API:** Calendar is REQUIRED
-  - User expects: "See available times"
-  - Calendar failure: Cannot show slots → fail fast
+### BusyEvent mapping at API boundary
 
-**Code:**
-```typescript
-// Booking: Graceful degradation
-try {
-  createEvent(token, event)
-} catch (error) {
-  console.error(error)
-  // Continue - appointment already saved
-}
+Provider returns flat `CalendarEvent { start: string, end: string }`. The slot calculator expects `BusyEvent { start: { dateTime: string } }`. Mapping happens in the slots API route, not in this package.
 
-// Slots: Strict error handling
-if (tokenResult.error) {
-  return NextResponse.json({ error: '...' }, { status: 500 })
-}
-```
+## Graceful Degradation (Still Applies)
 
-## Critical Mistakes We Made
-
-### Mock Mode Not Documented
-
-**Problem:** Developers unaware that `GOOGLE_MOCK_MODE=true` disables real API calls.
-
-**Symptom:** Events not appearing in Google Calendar during testing.
-
-**Fix:** Always document environment variables in `.env.local.example`:
-```bash
-# Google Calendar API Mock Mode (for testing without OAuth setup)
-# GOOGLE_MOCK_MODE=true  # Uncomment to use mock events
-# USE_MOCK_CALENDAR=true # Alternative env var name
-```
-
-### No Token Validation Logging
-
-**Problem:** Token manager fails silently - hard to debug auth issues.
-
-**Added:** Debug logging to trace token flow:
-```typescript
-console.log('[TOKEN MANAGER] Checking token expiry...')
-console.log('[TOKEN MANAGER] Token expired, refreshing...')
-console.log('[BOOKING API] Token retrieved, length:', token.length)
-```
-
-**Impact:** Significantly reduced debug time by making token flow visible.
-
-### Not Testing with Real OAuth Tokens
-
-**Problem:** Development used mock mode exclusively, production OAuth untested.
-
-**Symptom:** P0 test failure - "Invalid authentication credentials" error.
-
-**Root Causes (hypotheses):**
-1. Mock mode enabled in environment variables
-2. OAuth token in database invalid/expired (not refreshing properly)
-3. OAuth credentials misconfigured (client ID/secret)
-
-**Fix:** Manual testing required with real Google Calendar OAuth connection before marking feature complete.
+- **Booking:** Appointment is PRIMARY, calendar event is SECONDARY. Calendar failure = log + continue.
+- **Slots:** Calendar is REQUIRED for busy-event filtering. But if connection fails, all work-hour slots are returned (better than no slots).
 
 ## Quick Reference
 
-**Token Expiry:**
-- Access token: 1 hour lifespan
-- Refresh token: Indefinite (until revoked)
-- Buffer: 5 minutes (prevents race conditions)
-- Storage: `users.google_calendar_token` (JSONB)
+**Provider Types:** `'google'` | `'caldav'` (TEXT, extensible without migration)
 
-**Error Handling:**
-- Token manager: Structured returns `{ accessToken } | { error }`
-- Booking API: Graceful degradation (saves appointment)
-- Slots API: Strict (fails fast if no token)
+**Credential Shapes:**
+- Google: `{ access_token, refresh_token, expiry_date, scope, email }`
+- CalDAV: `{ serverUrl, username, password, calendarUrl? }`
 
-**Environment Variables:**
-- `GOOGLE_MOCK_MODE=true` → Mock events (testing without OAuth)
-- `USE_MOCK_CALENDAR=true` → Alternative mock flag
+**Connection Resolution:**
+- `getConnectionForSurveyLink(surveyLinkId, supabase)` — survey booking flow
+- `getConnectionById(id, supabase)` — direct lookup
+- `getConnectionsForTenant(supabase)` — CMS connection list
+- `getDefaultConnection(supabase)` — tenant default
 
-**Files:**
-- token-manager.ts: Auto-refresh logic
-- events.ts: createEvent, getEvents
-- oauth.ts: refreshAccessToken
+**Factory:**
+```typescript
+import { createCalendarProvider, getConnectionForSurveyLink } from '@agency/calendar'
 
-**Architecture:**
-- Shared package: Both CMS and Website can use
-- No circular dependencies (dependency injection pattern)
-- ADR-005 compliant: No cross-app imports
+const connection = await getConnectionForSurveyLink(linkId, supabase)
+const provider = createCalendarProvider(connection, { onTokenRefresh })
+const events = await provider.getEvents(start, end)
+```
+
+**Dependencies:** googleapis (Google), tsdav (CalDAV), neverthrow (ResultAsync), @supabase/supabase-js
