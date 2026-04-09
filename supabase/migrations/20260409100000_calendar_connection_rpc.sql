@@ -85,7 +85,11 @@ DECLARE
   v_connection_id UUID;
   v_encryption_key TEXT;
 BEGIN
-  v_encryption_key := current_setting('app.encryption_key');
+  -- Fallback to default for local dev where GUC can't be persisted via ALTER DATABASE
+  v_encryption_key := COALESCE(
+    NULLIF(current_setting('app.encryption_key', true), ''),
+    'local-dev-encryption-key'
+  );
 
   -- If this connection should be the default, unset all other defaults for this tenant
   -- (tenant-level defaults only, where user_id IS NULL)
@@ -187,7 +191,11 @@ AS $$
 DECLARE
   v_encryption_key TEXT;
 BEGIN
-  v_encryption_key := current_setting('app.encryption_key');
+  -- Fallback to default for local dev where GUC can't be persisted via ALTER DATABASE
+  v_encryption_key := COALESCE(
+    NULLIF(current_setting('app.encryption_key', true), ''),
+    'local-dev-encryption-key'
+  );
 
   UPDATE calendar_connections
   SET

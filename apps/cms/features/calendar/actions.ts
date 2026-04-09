@@ -80,8 +80,8 @@ export async function addCalDAVConnection(
     return { success: true, data: { connectionId } }
   } catch (err) {
     const message = err instanceof Error ? err.message : messages.common.unknownError
-    console.error('[calendar] addCalDAVConnection failed:', message)
-    return { success: false, error: messages.calendar.addConnectionFailed }
+    console.error('[calendar] addCalDAVConnection failed:', message, err)
+    return { success: false, error: `${messages.calendar.addConnectionFailed}: ${message}` }
   }
 }
 

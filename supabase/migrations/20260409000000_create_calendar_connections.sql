@@ -106,7 +106,10 @@ SELECT
   user_id,
   provider,
   display_name,
-  extensions.pgp_sym_decrypt(credentials_encrypted, current_setting('app.encryption_key'))::jsonb AS credentials,
+  extensions.pgp_sym_decrypt(
+    credentials_encrypted,
+    COALESCE(NULLIF(current_setting('app.encryption_key', true), ''), 'local-dev-encryption-key')
+  )::jsonb AS credentials,
   calendar_url,
   account_identifier,
   is_default,
