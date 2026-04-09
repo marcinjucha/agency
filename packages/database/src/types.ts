@@ -34,6 +34,21 @@ export type Database = {
   }
   public: {
     Tables: {
+      app_config: {
+        Row: {
+          key: string
+          value: string
+        }
+        Insert: {
+          key: string
+          value: string
+        }
+        Update: {
+          key?: string
+          value?: string
+        }
+        Relationships: []
+      }
       appointments: {
         Row: {
           calendar_connection_id: string | null
@@ -1844,6 +1859,7 @@ export type Database = {
       }
       current_user_role: { Args: never; Returns: string }
       current_user_tenant_id: { Args: never; Returns: string }
+      get_encryption_key: { Args: never; Returns: string }
       increment_submission_count: {
         Args: { link_id: string }
         Returns: undefined
