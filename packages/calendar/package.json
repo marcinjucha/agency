@@ -1,11 +1,21 @@
 {
   "name": "@agency/calendar",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "main": "./src/index.ts",
   "types": "./src/index.ts",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
   "dependencies": {
     "@agency/database": "*",
-    "googleapis": "^168.0.0"
+    "@supabase/supabase-js": "^2.49.4",
+    "googleapis": "^168.0.0",
+    "neverthrow": "^8.2.0",
+    "tsdav": "^2.1.8"
+  },
+  "devDependencies": {
+    "vitest": "^3.1.1"
   }
 }
