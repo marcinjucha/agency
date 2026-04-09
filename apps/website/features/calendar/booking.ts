@@ -243,8 +243,8 @@ export async function bookAppointment(
   }
 
   // Trigger CMS workflow engine (fire-and-forget)
-  if (process.env.HOST_URL && process.env.WORKFLOW_TRIGGER_SECRET) {
-    fetch(`${process.env.HOST_URL}/api/workflows/trigger`, {
+  if (process.env.CMS_BASE_URL && process.env.WORKFLOW_TRIGGER_SECRET) {
+    fetch(`${process.env.CMS_BASE_URL}/api/workflows/trigger`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

@@ -15,7 +15,7 @@ import { ok, err } from 'neverthrow'
 
 vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'https://test.supabase.co')
 vi.stubEnv('SUPABASE_SERVICE_ROLE_KEY', 'test-service-role-key')
-vi.stubEnv('HOST_URL', 'https://cms.test.com')
+vi.stubEnv('CMS_BASE_URL', 'https://cms.test.com')
 vi.stubEnv('WORKFLOW_TRIGGER_SECRET', 'test-secret')
 
 // ---------------------------------------------------------------------------
@@ -531,8 +531,8 @@ describe('bookAppointment', () => {
   // 10. No workflow trigger when env vars missing
   // -------------------------------------------------------------------------
 
-  it('does not fire workflow trigger when HOST_URL is not set', async () => {
-    vi.stubEnv('HOST_URL', '')
+  it('does not fire workflow trigger when CMS_BASE_URL is not set', async () => {
+    vi.stubEnv('CMS_BASE_URL', '')
 
     mockSurveyLinkFound()
     mockResponseFound()
@@ -545,6 +545,6 @@ describe('bookAppointment', () => {
     expect(mockFetch).not.toHaveBeenCalled()
 
     // Restore
-    vi.stubEnv('HOST_URL', 'https://cms.test.com')
+    vi.stubEnv('CMS_BASE_URL', 'https://cms.test.com')
   })
 })
