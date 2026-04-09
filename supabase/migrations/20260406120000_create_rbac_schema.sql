@@ -189,6 +189,11 @@ DECLARE
   v_admin_role_id UUID;
   v_member_role_id UUID;
 BEGIN
+  -- Skip seed if tenant doesn't exist (safe for local dev without production data)
+  IF NOT EXISTS (SELECT 1 FROM tenants WHERE id = v_tenant_id) THEN
+    RETURN;
+  END IF;
+
   -- Create Admin role (all permissions)
   INSERT INTO tenant_roles (tenant_id, name, description, is_default)
   VALUES (v_tenant_id, 'Admin', 'Full access to all features', false)
