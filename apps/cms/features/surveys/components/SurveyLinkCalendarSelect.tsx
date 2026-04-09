@@ -15,10 +15,27 @@ import { messages } from '@/lib/messages'
 import { getCalendarConnections, updateSurveyLinkCalendar } from '@/features/calendar/actions'
 import type { CalendarConnection } from '@/features/calendar/types'
 
-type SurveyLinkCalendarSelectProps = {
+/**
+ * Auto-save mode: saves to DB immediately on change (standalone usage).
+ * Controlled mode: tracks value via onChange callback (embedded in forms).
+ */
+type AutoSaveProps = {
+  mode?: 'auto-save'
   surveyLinkId: string
   currentConnectionId: string | null
+  onChange?: never
+  value?: never
 }
+
+type ControlledProps = {
+  mode: 'controlled'
+  surveyLinkId?: never
+  currentConnectionId?: never
+  onChange: (connectionId: string | null) => void
+  value: string | null
+}
+
+type SurveyLinkCalendarSelectProps = AutoSaveProps | ControlledProps
 
 function ProviderIcon({ provider }: { provider: CalendarConnection['provider'] }) {
   const className = 'h-3.5 w-3.5 text-muted-foreground shrink-0'
@@ -30,11 +47,9 @@ function ProviderIcon({ provider }: { provider: CalendarConnection['provider'] }
 
 const NONE_VALUE = '__none__'
 
-export function SurveyLinkCalendarSelect({
-  surveyLinkId,
-  currentConnectionId,
-}: SurveyLinkCalendarSelectProps) {
+export function SurveyLinkCalendarSelect(props: SurveyLinkCalendarSelectProps) {
   const queryClient = useQueryClient()
+  const isControlled = props.mode === 'controlled'
 
   const { data: connections, isLoading } = useQuery({
     queryKey: queryKeys.calendar.connections,
@@ -47,7 +62,8 @@ export function SurveyLinkCalendarSelect({
 
   const updateMutation = useMutation({
     mutationFn: async (connectionId: string | null) => {
-      const result = await updateSurveyLinkCalendar(surveyLinkId, connectionId)
+      if (isControlled) throw new Error('Cannot auto-save in controlled mode')
+      const result = await updateSurveyLinkCalendar(props.surveyLinkId, connectionId)
       if (!result.success) throw new Error(result.error)
       return result
     },
@@ -57,16 +73,23 @@ export function SurveyLinkCalendarSelect({
   })
 
   const activeConnections = (connections ?? []).filter((c) => c.isActive)
-  const selectValue = currentConnectionId ?? NONE_VALUE
+  const currentValue = isControlled ? props.value : props.currentConnectionId
+  const selectValue = currentValue ?? NONE_VALUE
 
   function handleValueChange(value: string) {
     const connectionId = value === NONE_VALUE ? null : value
-    updateMutation.mutate(connectionId)
+    if (isControlled) {
+      props.onChange(connectionId)
+    } else {
+      updateMutation.mutate(connectionId)
+    }
   }
+
+  const selectId = isControlled ? 'calendar-select-controlled' : `calendar-select-${props.surveyLinkId}`
 
   return (
     <div className="space-y-1.5">
-      <Label htmlFor={`calendar-select-${surveyLinkId}`}>
+      <Label htmlFor={selectId}>
         {messages.calendar.calendarSelectLabel}
       </Label>
       <Select
@@ -74,7 +97,7 @@ export function SurveyLinkCalendarSelect({
         onValueChange={handleValueChange}
         disabled={isLoading || updateMutation.isPending}
       >
-        <SelectTrigger id={`calendar-select-${surveyLinkId}`}>
+        <SelectTrigger id={selectId}>
           <SelectValue placeholder={messages.calendar.calendarSelectPlaceholder} />
         </SelectTrigger>
         <SelectContent>
@@ -97,7 +120,7 @@ export function SurveyLinkCalendarSelect({
         </SelectContent>
       </Select>
 
-      {updateMutation.error && (
+      {!isControlled && updateMutation.error && (
         <p className="text-xs text-destructive" role="alert">
           {updateMutation.error instanceof Error
             ? updateMutation.error.message
@@ -106,4 +129,24 @@ export function SurveyLinkCalendarSelect({
       )}
     </div>
   )
+}
+
+/**
+ * Get display name for a calendar connection ID.
+ * Returns null if connections not loaded or ID not found.
+ */
+export function useCalendarConnectionName(connectionId: string | null): string | null {
+  const { data: connections } = useQuery({
+    queryKey: queryKeys.calendar.connections,
+    queryFn: async () => {
+      const result = await getCalendarConnections()
+      if (!result.success) throw new Error(result.error)
+      return result.data
+    },
+    enabled: connectionId !== null,
+  })
+
+  if (!connectionId || !connections) return null
+  const connection = connections.find((c) => c.id === connectionId)
+  return connection?.displayName ?? null
 }

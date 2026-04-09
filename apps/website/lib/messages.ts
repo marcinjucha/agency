@@ -74,11 +74,23 @@ export const messages = {
   },
 
   success: {
-    thankYou: 'Dziękujemy!',
-    surveySubmitted: 'Twoja ankieta została pomyślnie wysłana. Przejrzymy Twoje odpowiedzi i wkrótce się z Tobą skontaktujemy.',
-    bookAppointmentHeading: 'Zarezerwuj wizytę',
+    thankYou: 'Dziękujemy za wypełnienie ankiety!',
+    surveySubmitted:
+      'Twoje odpowiedzi zostały zapisane. Oto co wydarzy się dalej:',
+    surveySubmittedWithBooking:
+      'Twoje odpowiedzi zostały zapisane. Wybierz teraz termin konsultacji — to najszybszy sposób, by omówić Twoje potrzeby.',
     whatsNext: 'Co dalej?',
-    whatsNextDescription: 'Wkrótce otrzymasz email z potwierdzeniem. Jeśli chcesz zarezerwować wizytę, sprawdź email po dalsze instrukcje.',
+    whatsNextStep1: 'Analiza odpowiedzi',
+    whatsNextStep1Description:
+      'Nasz zespół zapozna się z przesłanymi informacjami w ciągu 24 godzin.',
+    whatsNextStep2: 'Email z podsumowaniem',
+    whatsNextStep2Description:
+      'Na Twój adres email wyślemy potwierdzenie wraz z dalszymi krokami.',
+    whatsNextStep3: 'Kontakt w sprawie oferty',
+    whatsNextStep3Description:
+      'Umówimy się na rozmowę, by omówić szczegóły i dopasować ofertę do Twoich potrzeb.',
+    noCalendarReassurance:
+      'Nie musisz nic więcej robić — odezwiemy się do Ciebie.',
     metaTitle: 'Ankieta wysłana - Halo Efekt',
     metaDescription: 'Twoja ankieta została pomyślnie wysłana.',
   },
