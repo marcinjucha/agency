@@ -122,6 +122,7 @@ export async function generateSurveyLink(
     expiresAt?: string // ISO date string
     maxSubmissions?: number | null
     isActive?: boolean
+    calendarConnectionId?: string | null
   }
 ): Promise<{ success: boolean; linkId?: string; token?: string; error?: string }> {
   try {
@@ -131,6 +132,7 @@ export async function generateSurveyLink(
       expiresAt: options.expiresAt,
       maxSubmissions: options.maxSubmissions,
       isActive: options.isActive ?? true,
+      calendarConnectionId: options.calendarConnectionId ?? null,
     })
     if (!parsed.success) {
       return { success: false, error: parsed.error.errors[0].message }
@@ -163,6 +165,7 @@ export async function generateSurveyLink(
       max_submissions: options.maxSubmissions ?? null, // null = unlimited
       submission_count: 0,
       is_active: parsed.data.isActive, // CRITICAL: Required for RLS policy to allow public access
+      calendar_connection_id: parsed.data.calendarConnectionId ?? null,
     }
 
     const { data: link, error: insertError } = await supabase
@@ -231,15 +234,21 @@ export async function updateSurveyLink(
     if (!auth.success) return auth
 
     // RLS will ensure user can only update links for their tenant's surveys
+    const updatePayload: Record<string, unknown> = {
+      notification_email: parsed.data.notificationEmail,
+      expires_at: parsed.data.expiresAt ?? null,
+      max_submissions: parsed.data.maxSubmissions ?? null,
+      is_active: parsed.data.isActive,
+    }
+    // Only include calendar_connection_id if explicitly provided in the update
+    if (parsed.data.calendarConnectionId !== undefined) {
+      updatePayload.calendar_connection_id = parsed.data.calendarConnectionId ?? null
+    }
+
     const { error } = await auth.data.supabase
       .from('survey_links')
       // @ts-expect-error - Supabase type inference issue with update payload
-      .update({
-        notification_email: parsed.data.notificationEmail,
-        expires_at: parsed.data.expiresAt ?? null,
-        max_submissions: parsed.data.maxSubmissions ?? null,
-        is_active: parsed.data.isActive,
-      })
+      .update(updatePayload)
       .eq('id', linkId)
 
     if (error) {

@@ -16,12 +16,24 @@ import { format, parseISO } from 'date-fns'
 import { queryKeys } from '@/lib/query-keys'
 import { messages } from '@/lib/messages'
 import type { Tables } from '@agency/database'
+import { SurveyLinkCalendarSelect, useCalendarConnectionName } from './SurveyLinkCalendarSelect'
 
 type SurveyLinksProps = {
   surveyId: string
 }
 
 type SurveyLink = Tables<'survey_links'>
+
+function CalendarConnectionDisplay({ connectionId }: { connectionId: string | null }) {
+  const name = useCalendarConnectionName(connectionId)
+  const label = messages.calendar.calendarSelectLabel
+  const displayValue = connectionId ? (name ?? '...') : messages.calendar.calendarSelectNone
+  return (
+    <div>
+      {label}: {displayValue}
+    </div>
+  )
+}
 
 export function SurveyLinks({ surveyId }: SurveyLinksProps) {
   const queryClient = useQueryClient()
@@ -34,11 +46,13 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
     expiresAt: '',
     maxSubmissions: '',
     isActive: true,
+    calendarConnectionId: null as string | null,
   })
   const [editFormData, setEditFormData] = useState({
     notificationEmail: '',
     expiresAt: '',
     maxSubmissions: '',
+    calendarConnectionId: null as string | null,
   })
 
   // Query for links
@@ -55,6 +69,7 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
         expiresAt: formData.expiresAt || undefined,
         maxSubmissions: formData.maxSubmissions ? parseInt(formData.maxSubmissions) : null,
         isActive: formData.isActive,
+        calendarConnectionId: formData.calendarConnectionId,
       })
       if (!result.success) throw new Error(result.error || messages.surveys.generateFailed)
       return result
@@ -63,7 +78,7 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
       queryClient.invalidateQueries({ queryKey: queryKeys.surveys.links(surveyId) })
       queryClient.invalidateQueries({ queryKey: queryKeys.surveys.all })
       setShowForm(false)
-      setFormData({ notificationEmail: '', expiresAt: '', maxSubmissions: '', isActive: true })
+      setFormData({ notificationEmail: '', expiresAt: '', maxSubmissions: '', isActive: true, calendarConnectionId: null })
       setError(null)
     },
     onError: (err: Error) => {
@@ -119,6 +134,7 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
         expiresAt: editFormData.expiresAt || null,
         maxSubmissions: editFormData.maxSubmissions ? parseInt(editFormData.maxSubmissions) : null,
         isActive: link.is_active,
+        calendarConnectionId: editFormData.calendarConnectionId,
       }
       const result = await updateSurveyLink(linkId, surveyId, data)
       if (!result.success) throw new Error(result.error || messages.surveys.updateLinkFailed)
@@ -156,6 +172,7 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
       notificationEmail: link.notification_email,
       expiresAt: link.expires_at ? link.expires_at.slice(0, 16) : '',
       maxSubmissions: link.max_submissions !== null ? String(link.max_submissions) : '',
+      calendarConnectionId: link.calendar_connection_id ?? null,
     })
     setError(null)
   }
@@ -250,6 +267,12 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
                 {formData.isActive ? messages.surveys.active : messages.surveys.inactive}
               </Label>
             </div>
+
+            <SurveyLinkCalendarSelect
+              mode="controlled"
+              value={formData.calendarConnectionId}
+              onChange={(connectionId) => setFormData({ ...formData, calendarConnectionId: connectionId })}
+            />
 
             <div className="flex gap-2 pt-2">
               <Button
@@ -462,6 +485,12 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
                       )}
                     </div>
 
+                    <SurveyLinkCalendarSelect
+                      mode="controlled"
+                      value={editFormData.calendarConnectionId}
+                      onChange={(connectionId) => setEditFormData({ ...editFormData, calendarConnectionId: connectionId })}
+                    />
+
                     <div className="flex gap-2 pt-1">
                       <Button
                         size="sm"
@@ -498,6 +527,7 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
                       {messages.surveys.submissions} {link.submission_count || 0} /{' '}
                       {link.max_submissions !== null ? link.max_submissions : messages.surveys.unlimited}
                     </div>
+                    <CalendarConnectionDisplay connectionId={link.calendar_connection_id} />
                   </div>
                 )}
               </div>

@@ -1,6 +1,7 @@
 import { Card } from '@agency/ui'
 import { CalendarBooking } from '@/features/survey/components/CalendarBooking'
 import { messages } from '@/lib/messages'
+import { getSurveyLinkCalendarStatus } from '@/features/survey/queries'
 
 interface PageProps {
   params: Promise<{
@@ -16,6 +17,10 @@ export default async function SuccessPage({ params, searchParams }: PageProps) {
   // IMPORTANT: Next.js 15 requires await params
   const { token } = await params
   const { responseId, linkId } = await searchParams
+
+  // Check if this survey link has a calendar connection configured
+  const hasCalendar = linkId ? await getSurveyLinkCalendarStatus(linkId) : false
+  const showBooking = responseId && linkId && hasCalendar
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-muted/30 to-muted py-12 px-4 sm:px-6 lg:px-8">
@@ -49,8 +54,8 @@ export default async function SuccessPage({ params, searchParams }: PageProps) {
           </Card>
         </div>
 
-        {/* Calendar Booking Section */}
-        {responseId && linkId ? (
+        {/* Calendar Booking Section — only if survey link has calendar configured */}
+        {showBooking ? (
           <div>
             <h2 className="text-2xl font-bold text-foreground mb-6">
               {messages.success.bookAppointmentHeading}

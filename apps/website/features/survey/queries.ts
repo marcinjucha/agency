@@ -138,3 +138,29 @@ export async function getSurveyByToken(token: string): Promise<LinkValidation> {
     data: surveyData
   }
 }
+
+/**
+ * Check if a survey link has a calendar connection configured.
+ *
+ * Used by success page to conditionally show CalendarBooking.
+ * Returns false on any error (graceful degradation — no booking shown).
+ *
+ * @param linkId - Survey link UUID
+ * @returns true if calendar_connection_id is set, false otherwise
+ */
+export async function getSurveyLinkCalendarStatus(linkId: string): Promise<boolean> {
+  try {
+    const supabase = createAnonClient()
+
+    const { data, error } = await supabase
+      .from('survey_links')
+      .select('calendar_connection_id')
+      .eq('id', linkId)
+      .single()
+
+    if (error || !data) return false
+    return data.calendar_connection_id !== null
+  } catch {
+    return false
+  }
+}
