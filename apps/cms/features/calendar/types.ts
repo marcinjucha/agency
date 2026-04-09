@@ -5,7 +5,7 @@
  * Defines CMS-specific form types for connection management and settings.
  */
 
-// Re-export domain types from shared package
+// Re-export type-only imports from shared package (safe for client bundles)
 export type {
   CalendarConnection,
   ProviderType,
@@ -13,7 +13,14 @@ export type {
   GoogleCredentials,
   CalDAVCredentials,
 } from '@agency/calendar'
-export { PROVIDER_TYPES } from '@agency/calendar'
+
+// Local copy of PROVIDER_TYPES — re-exporting runtime value from @agency/calendar
+// pulls googleapis (Node.js) into client bundle, causing "Can't resolve child_process".
+// Turbopack barrel re-export bug: runtime re-exports from server-only packages are unsafe.
+export const PROVIDER_TYPES = {
+  google: 'google',
+  caldav: 'caldav',
+} as const
 
 // ---------------------------------------------------------------------------
 // CalDAV Connection Form
