@@ -1,3 +1,35 @@
+/**
+ * Calendar Connection Management Types
+ *
+ * Re-exports provider types from @agency/calendar.
+ * Defines CMS-specific form types for connection management and settings.
+ */
+
+// Re-export domain types from shared package
+export type {
+  CalendarConnection,
+  ProviderType,
+  CalendarInfo,
+  GoogleCredentials,
+  CalDAVCredentials,
+} from '@agency/calendar'
+export { PROVIDER_TYPES } from '@agency/calendar'
+
+// ---------------------------------------------------------------------------
+// CalDAV Connection Form
+// ---------------------------------------------------------------------------
+
+export interface CalDAVConnectionFormValues {
+  serverUrl: string
+  username: string
+  password: string
+  displayName: string
+}
+
+// ---------------------------------------------------------------------------
+// Calendar Settings (work hours, slot duration, buffer)
+// ---------------------------------------------------------------------------
+
 export interface CalendarSettings {
   id: string
   user_id: string

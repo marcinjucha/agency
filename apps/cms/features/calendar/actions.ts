@@ -1,123 +1,287 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
-import { requireAuth } from '@/lib/auth'
-import { revokeAccess } from '@/features/calendar/oauth'
 import { revalidatePath } from 'next/cache'
-import { getValidAccessToken, refreshAccessToken } from '@agency/calendar'
-import type { GoogleCalendarToken } from '@/features/calendar/oauth'
-import type { CalendarSettingsFormValues } from './types'
+import { requireAuth } from '@/lib/auth'
+import type { AuthSuccess } from '@/lib/auth'
+import { createCalendarProvider, type CalendarConnection, type CalDAVCredentials } from '@agency/calendar'
+import { caldavConnectionSchema } from './validation'
 import { calendarSettingsSchema } from './validation'
+import type { CalDAVConnectionFormValues, CalendarSettingsFormValues } from './types'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
 
+// ---------------------------------------------------------------------------
+// Server Actions (public API)
+// ---------------------------------------------------------------------------
+
 /**
- * Get Google Calendar connection status
- * Returns whether user has connected Google Calendar and their email
+ * Add a CalDAV calendar connection.
+ *
+ * Flow: validate form → test connection via CalDAV provider → discover calendars →
+ * persist via upsert_calendar_connection RPC (pgcrypto encrypted).
  */
-export async function getGoogleCalendarStatus(): Promise<{
-  connected: boolean
-  email?: string
-  error?: string
-}> {
+export async function addCalDAVConnection(
+  data: CalDAVConnectionFormValues
+): Promise<{ success: true; data: { connectionId: string } } | { success: false; error: string }> {
   try {
-    const supabase = await createClient()
-
-    // Get current user
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-
-    if (!user) {
-      return { connected: false, error: messages.common.notLoggedIn }
+    const parsed = caldavConnectionSchema.safeParse(data)
+    if (!parsed.success) {
+      return { success: false, error: parsed.error.errors[0]?.message ?? messages.common.invalidData }
     }
 
-    // Get user's google_calendar_token
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('google_calendar_token')
-      .eq('id', user.id)
-      .maybeSingle()
+    const auth = await requireAuth('calendar')
+    if (!auth.success) return auth
 
-    if (userError) {
-      return { connected: false, error: messages.calendar.fetchSettingsFailed }
+    const { serverUrl, username, password, displayName } = parsed.data
+    const credentials: CalDAVCredentials = { serverUrl, username, password }
+
+    // Build a temporary CalendarConnection object for the provider factory
+    const tempConnection: CalendarConnection = {
+      id: 'temp',
+      tenantId: auth.data.tenantId,
+      userId: auth.data.userId,
+      provider: 'caldav',
+      displayName,
+      credentials,
+      calendarUrl: null,
+      accountIdentifier: null,
+      isDefault: false,
+      isActive: true,
     }
 
-    const tokenData = (userData as unknown as { google_calendar_token: unknown })?.google_calendar_token
+    // Test connection before persisting
+    const provider = createCalendarProvider(tempConnection)
+    const testResult = await provider.testConnection()
 
-    if (!tokenData) {
-      return { connected: false }
+    if (testResult.isErr()) {
+      return { success: false, error: `${messages.calendar.testConnectionFailed}: ${testResult.error}` }
     }
 
-    const token = tokenData as GoogleCalendarToken
+    // Discover calendars — use first found calendar URL
+    const discoverResult = await provider.discoverCalendars()
+    const calendarUrl = discoverResult.isOk() && discoverResult.value.length > 0
+      ? discoverResult.value[0].url
+      : null
 
-    return {
-      connected: true,
-      email: token.email,
+    // Persist via RPC (pgcrypto encrypted credentials)
+    const connectionId = await upsertConnection(auth.data, {
+      provider: 'caldav',
+      displayName,
+      credentials: { ...credentials, calendarUrl: calendarUrl ?? undefined },
+      calendarUrl,
+      accountIdentifier: `${username}@${new URL(serverUrl).hostname}`,
+    })
+
+    if (!connectionId) {
+      return { success: false, error: messages.calendar.addConnectionFailed }
     }
-  } catch (error) {
-    console.error('Error fetching calendar status:', error)
-    return { connected: false, error: messages.calendar.fetchStatusFailed }
+
+    revalidatePath(routes.admin.settings)
+    return { success: true, data: { connectionId } }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : messages.common.unknownError
+    console.error('[calendar] addCalDAVConnection failed:', message)
+    return { success: false, error: messages.calendar.addConnectionFailed }
   }
 }
 
 /**
- * Disconnect Google Calendar
- * Revokes access and removes tokens from database
+ * Test an existing calendar connection (any provider).
+ *
+ * Fetches decrypted credentials from DB, creates provider, calls testConnection().
  */
-export async function disconnectGoogleCalendar(): Promise<{
-  success: boolean
-  error?: string
-}> {
+export async function testCalendarConnection(
+  connectionId: string
+): Promise<{ success: true } | { success: false; error: string }> {
   try {
     const auth = await requireAuth('calendar')
     if (!auth.success) return auth
-    const { supabase, userId } = auth.data
 
-    // Get current tokens for revocation
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('google_calendar_token')
-      .eq('id', userId)
-      .maybeSingle()
-
-    if (userError) {
-      return { success: false, error: messages.calendar.fetchSettingsFailed }
+    const connection = await fetchDecryptedConnection(auth.data.supabase, connectionId)
+    if (!connection) {
+      return { success: false, error: messages.calendar.connectionNotFound }
     }
 
-    // Revoke access with Google if refresh token exists
-    const tokenData = (userData as unknown as { google_calendar_token: unknown })?.google_calendar_token
-    if (tokenData) {
-      const token = tokenData as GoogleCalendarToken
-      if (token.refresh_token) {
-        try {
-          await revokeAccess(token.refresh_token)
-        } catch (revokeError) {
-          console.error('Failed to revoke Google access:', revokeError)
-          // Continue anyway - we still want to clear the token locally
-        }
-      }
+    const provider = createCalendarProvider(connection, {
+      onTokenRefresh: buildTokenRefreshCallback(auth.data.supabase),
+    })
+
+    const result = await provider.testConnection()
+    if (result.isErr()) {
+      return { success: false, error: `${messages.calendar.testConnectionFailed}: ${result.error}` }
     }
 
-    // Clear tokens from database
-    const { error: updateError } = await supabase
-      .from('users')
-      // @ts-expect-error - Supabase type inference issue with JSONB fields
-      .update({ google_calendar_token: null })
-      .eq('id', userId)
+    // Update last_verified_at
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (auth.data.supabase as any)
+      .from('calendar_connections')
+      .update({ last_verified_at: new Date().toISOString() })
+      .eq('id', connectionId)
 
-    if (updateError) {
-      return {
-        success: false,
-        error: updateError.message || messages.calendar.disconnectFailed,
-      }
+    return { success: true }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : messages.common.unknownError
+    console.error('[calendar] testCalendarConnection failed:', message)
+    return { success: false, error: messages.calendar.testConnectionFailed }
+  }
+}
+
+/**
+ * Set a calendar connection as the tenant-level default.
+ *
+ * The upsert_calendar_connection RPC handles unsetting previous defaults,
+ * but for an existing connection we just flip the boolean directly.
+ */
+export async function setDefaultConnection(
+  connectionId: string
+): Promise<{ success: true } | { success: false; error: string }> {
+  try {
+    const auth = await requireAuth('calendar')
+    if (!auth.success) return auth
+    const { supabase, tenantId } = auth.data
+
+    // Unset current defaults for tenant (tenant-level only, user_id IS NULL)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (supabase as any)
+      .from('calendar_connections')
+      .update({ is_default: false })
+      .eq('tenant_id', tenantId)
+      .is('user_id', null)
+      .eq('is_default', true)
+
+    // Set new default
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase as any)
+      .from('calendar_connections')
+      .update({ is_default: true })
+      .eq('id', connectionId)
+
+    if (error) {
+      return { success: false, error: messages.calendar.setDefaultFailed }
     }
 
     revalidatePath(routes.admin.settings)
     return { success: true }
-  } catch (error) {
-    console.error('Error disconnecting calendar:', error)
-    return { success: false, error: messages.calendar.disconnectFailed }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : messages.common.unknownError
+    console.error('[calendar] setDefaultConnection failed:', message)
+    return { success: false, error: messages.calendar.setDefaultFailed }
+  }
+}
+
+/**
+ * Permanently remove a calendar connection.
+ *
+ * Also clears survey_links.calendar_connection_id FK references (ON DELETE SET NULL handles this).
+ */
+export async function removeConnection(
+  connectionId: string
+): Promise<{ success: true } | { success: false; error: string }> {
+  try {
+    const auth = await requireAuth('calendar')
+    if (!auth.success) return auth
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (auth.data.supabase as any)
+      .from('calendar_connections')
+      .delete()
+      .eq('id', connectionId)
+
+    if (error) {
+      return { success: false, error: messages.calendar.removeConnectionFailed }
+    }
+
+    revalidatePath(routes.admin.settings)
+    return { success: true }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : messages.common.unknownError
+    console.error('[calendar] removeConnection failed:', message)
+    return { success: false, error: messages.calendar.removeConnectionFailed }
+  }
+}
+
+/**
+ * Deactivate a calendar connection (soft delete — set is_active=false).
+ *
+ * Keeps credentials in DB for potential reactivation.
+ */
+export async function disconnectCalendarConnection(
+  connectionId: string
+): Promise<{ success: true } | { success: false; error: string }> {
+  try {
+    const auth = await requireAuth('calendar')
+    if (!auth.success) return auth
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (auth.data.supabase as any)
+      .from('calendar_connections')
+      .update({ is_active: false, is_default: false })
+      .eq('id', connectionId)
+
+    if (error) {
+      return { success: false, error: messages.calendar.deactivateConnectionFailed }
+    }
+
+    revalidatePath(routes.admin.settings)
+    return { success: true }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : messages.common.unknownError
+    console.error('[calendar] disconnectCalendarConnection failed:', message)
+    return { success: false, error: messages.calendar.deactivateConnectionFailed }
+  }
+}
+
+/**
+ * Update which calendar connection a survey link uses for booking.
+ *
+ * Pass null to disconnect the calendar from a survey link.
+ */
+export async function updateSurveyLinkCalendar(
+  surveyLinkId: string,
+  connectionId: string | null
+): Promise<{ success: true } | { success: false; error: string }> {
+  try {
+    const auth = await requireAuth('calendar')
+    if (!auth.success) return auth
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- calendar_connection_id not in generated types yet
+    const { error } = await (auth.data.supabase as any)
+      .from('survey_links')
+      .update({ calendar_connection_id: connectionId })
+      .eq('id', surveyLinkId)
+
+    if (error) {
+      return { success: false, error: messages.calendar.updateSurveyLinkCalendarFailed }
+    }
+
+    revalidatePath(routes.admin.surveys)
+    return { success: true }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : messages.common.unknownError
+    console.error('[calendar] updateSurveyLinkCalendar failed:', message)
+    return { success: false, error: messages.calendar.updateSurveyLinkCalendarFailed }
+  }
+}
+
+/**
+ * Get all calendar connections for the current tenant (decrypted view).
+ *
+ * Server Action because it reads encrypted credentials that should not
+ * be exposed to the browser client — TanStack Query fetches via this action.
+ */
+export async function getCalendarConnections(): Promise<
+  { success: true; data: CalendarConnection[] } | { success: false; error: string }
+> {
+  try {
+    const auth = await requireAuth('calendar')
+    if (!auth.success) return auth
+
+    const connections = await fetchTenantConnections(auth.data.supabase)
+    return { success: true, data: connections }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : messages.common.unknownError
+    console.error('[calendar] getCalendarConnections failed:', message)
+    return { success: false, error: messages.calendar.fetchConnectionsFailed }
   }
 }
 
@@ -154,71 +318,128 @@ export async function updateCalendarSettings(
   }
 }
 
+// ---------------------------------------------------------------------------
+// DB helpers (feature-local)
+// ---------------------------------------------------------------------------
+
+type SupabaseClient = AuthSuccess['supabase']
+
+interface UpsertConnectionParams {
+  provider: 'google' | 'caldav'
+  displayName: string
+  credentials: Record<string, unknown>
+  calendarUrl: string | null
+  accountIdentifier: string | null
+}
+
 /**
- * Returns the Google Calendar token connection status for the current user.
- * connected  = valid token with refresh_token and future expiry
- * expired    = token exists but expired or missing refresh_token
- * disconnected = no token stored
+ * Calls the upsert_calendar_connection RPC (SECURITY DEFINER) for encrypted credential storage.
+ * Returns the connection UUID on success, null on failure.
  */
-export async function getCalendarTokenStatus(): Promise<{
-  status: 'connected' | 'expired' | 'disconnected'
-  expiresAt: string | null
-  hasRefreshToken: boolean
-}> {
-  try {
-    const supabase = await createClient()
+async function upsertConnection(
+  auth: AuthSuccess,
+  params: UpsertConnectionParams
+): Promise<string | null> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (auth.supabase as any).rpc('upsert_calendar_connection', {
+    p_tenant_id: auth.tenantId,
+    p_user_id: auth.userId,
+    p_provider: params.provider,
+    p_display_name: params.displayName,
+    p_credentials_json: JSON.stringify(params.credentials),
+    p_calendar_url: params.calendarUrl,
+    p_account_identifier: params.accountIdentifier,
+    p_is_default: false,
+  })
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
+  if (error) {
+    console.error('[calendar] upsert_calendar_connection RPC failed:', error.message)
+    return null
+  }
 
-    if (!user) {
-      return { status: 'disconnected', expiresAt: null, hasRefreshToken: false }
-    }
+  return data as string
+}
 
-    const { data: userData, error } = await supabase
-      .from('users')
-      .select('google_calendar_token')
-      .eq('id', user.id)
-      .maybeSingle()
+/**
+ * Fetch a single decrypted connection by ID.
+ * Used for testConnection — needs decrypted credentials.
+ */
+async function fetchDecryptedConnection(
+  supabase: SupabaseClient,
+  connectionId: string
+): Promise<CalendarConnection | null> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase as any)
+    .from('calendar_connections_decrypted')
+    .select('*')
+    .eq('id', connectionId)
+    .single()
+
+  if (error || !data) return null
+
+  return toCalendarConnection(data)
+}
+
+/**
+ * Fetch all active connections for the user's tenant (decrypted).
+ */
+async function fetchTenantConnections(
+  supabase: SupabaseClient
+): Promise<CalendarConnection[]> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase as any)
+    .from('calendar_connections_decrypted')
+    .select('*')
+    .order('is_default', { ascending: false })
+    .order('created_at', { ascending: true })
+
+  if (error) {
+    console.error('[calendar] fetchTenantConnections failed:', error.message)
+    return []
+  }
+
+  return (data ?? []).map(toCalendarConnection)
+}
+
+// ---------------------------------------------------------------------------
+// Business logic
+// ---------------------------------------------------------------------------
+
+/**
+ * Transform raw DB row from calendar_connections_decrypted view
+ * into the CalendarConnection domain model.
+ */
+function toCalendarConnection(row: Record<string, unknown>): CalendarConnection {
+  return {
+    id: row.id as string,
+    tenantId: row.tenant_id as string,
+    userId: (row.user_id as string) ?? null,
+    provider: row.provider as CalendarConnection['provider'],
+    displayName: row.display_name as string,
+    credentials: row.credentials as CalendarConnection['credentials'],
+    calendarUrl: (row.calendar_url as string) ?? null,
+    accountIdentifier: (row.account_identifier as string) ?? null,
+    isDefault: row.is_default as boolean,
+    isActive: row.is_active as boolean,
+  }
+}
+
+/**
+ * Build a token refresh callback for Google provider.
+ * Called when Google access token is refreshed — persists new credentials via RPC.
+ */
+function buildTokenRefreshCallback(
+  supabase: SupabaseClient
+): (connectionId: string, newCredentials: import('@agency/calendar').GoogleCredentials) => Promise<void> {
+  return async (connectionId, newCredentials) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase as any).rpc('update_calendar_credentials', {
+      p_connection_id: connectionId,
+      p_credentials_json: JSON.stringify(newCredentials),
+    })
 
     if (error) {
-      return { status: 'disconnected', expiresAt: null, hasRefreshToken: false }
+      console.error('[calendar] Token refresh callback failed:', error.message)
     }
-
-    const tokenData = (userData as unknown as { google_calendar_token: unknown })?.google_calendar_token
-
-    if (!tokenData) {
-      return { status: 'disconnected', expiresAt: null, hasRefreshToken: false }
-    }
-
-    const token = tokenData as GoogleCalendarToken
-    const hasRefreshToken = !!token.refresh_token
-    const expiresAt = token.expiry_date
-      ? new Date(token.expiry_date).toISOString()
-      : null
-    const isExpired = !expiresAt || new Date(expiresAt) <= new Date()
-
-    // No refresh_token → cannot recover, needs reconnect
-    if (!hasRefreshToken) {
-      return { status: 'expired', expiresAt, hasRefreshToken }
-    }
-
-    // Access token expired → attempt refresh to detect revoked tokens
-    // Only when expiry_date is in the past (not on every page load)
-    if (isExpired) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const result = await getValidAccessToken(user.id, supabase as any, refreshAccessToken)
-      if (result.error === 'token_revoked') {
-        return { status: 'expired', expiresAt, hasRefreshToken }
-      }
-      // Transient failure or success — treat as connected
-      // (refresh succeeded or will succeed on next real API call)
-    }
-
-    return { status: 'connected', expiresAt, hasRefreshToken }
-  } catch (error) {
-    console.error('Error fetching calendar token status:', error)
-    return { status: 'disconnected', expiresAt: null, hasRefreshToken: false }
   }
 }

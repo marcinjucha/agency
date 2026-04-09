@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { handleCallback, revokeAccess } from '@/features/calendar/oauth'
 import { cookies } from 'next/headers'
 import { routes } from '@/lib/routes'
+import { messages } from '@/lib/messages'
 
 type CallbackResult =
   | { success: true; redirectPath: string }
@@ -16,7 +17,7 @@ interface CallbackParams {
 
 /**
  * Core OAuth callback logic: validates params, verifies CSRF state,
- * exchanges code for tokens, saves to DB, cleans up cookies.
+ * exchanges code for tokens, saves to calendar_connections via RPC.
  *
  * Route handler owns HTTP concerns (parsing query params, building redirect URL).
  * This function owns business logic and returns a redirect path.
@@ -65,7 +66,7 @@ export async function processOAuthCallback(
     }
   }
 
-  // Step 4: Get authenticated user
+  // Step 4: Get authenticated user + tenant
   const supabase = await createClient()
   const {
     data: { user },
@@ -75,6 +76,22 @@ export async function processOAuthCallback(
     return {
       success: false,
       redirectPath: `${routes.login}?error=Session+expired`,
+    }
+  }
+
+  // Fetch tenant_id for the user (needed for upsert_calendar_connection)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: userData, error: userError } = await (supabase as any)
+    .from('users')
+    .select('tenant_id')
+    .eq('id', user.id)
+    .single()
+
+  if (userError || !userData?.tenant_id) {
+    console.error('Failed to fetch user tenant_id:', userError)
+    return {
+      success: false,
+      redirectPath: `${routes.admin.settings}?error=Failed+to+resolve+tenant`,
     }
   }
 
@@ -91,15 +108,34 @@ export async function processOAuthCallback(
     }
   }
 
-  // Step 6: Save tokens to users.google_calendar_token
-  const { error: updateError } = await supabase
-    .from('users')
-    // @ts-expect-error - Supabase type inference issue with JSONB fields
-    .update({ google_calendar_token: tokenData })
-    .eq('id', user.id)
+  // Step 6: Save tokens to calendar_connections via upsert_calendar_connection RPC
+  const credentialsJson = JSON.stringify({
+    access_token: tokenData.access_token,
+    refresh_token: tokenData.refresh_token,
+    expiry_date: tokenData.expiry_date,
+    scope: tokenData.scope,
+    email: tokenData.email,
+  })
 
-  if (updateError) {
-    console.error('Failed to save tokens:', updateError)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: connectionId, error: rpcError } = await (supabase as any).rpc(
+    'upsert_calendar_connection',
+    {
+      p_tenant_id: userData.tenant_id,
+      p_user_id: user.id,
+      p_provider: 'google',
+      p_display_name: tokenData.email
+        ? `Google Calendar (${tokenData.email})`
+        : 'Google Calendar',
+      p_credentials_json: credentialsJson,
+      p_calendar_url: null,
+      p_account_identifier: tokenData.email ?? null,
+      p_is_default: false,
+    }
+  )
+
+  if (rpcError) {
+    console.error('Failed to save calendar connection:', rpcError)
     // Try to revoke access since we couldn't save tokens
     if (tokenData.refresh_token) {
       await revokeAccess(tokenData.refresh_token)
@@ -107,7 +143,7 @@ export async function processOAuthCallback(
     return {
       success: false,
       redirectPath:
-        `${routes.admin.settings}?error=Failed+to+save+calendar+connection`,
+        `${routes.admin.settings}?error=${encodeURIComponent(messages.calendar.oauthSaveFailed)}`,
     }
   }
 
