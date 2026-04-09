@@ -1849,6 +1849,10 @@ export type Database = {
         Returns: undefined
       }
       is_super_admin: { Args: never; Returns: boolean }
+      update_calendar_credentials: {
+        Args: { p_connection_id: string; p_credentials_json: string }
+        Returns: undefined
+      }
       update_marketplace_tokens: {
         Args: {
           p_access_token: string
@@ -1857,6 +1861,19 @@ export type Database = {
           p_token_expires_at: string
         }
         Returns: undefined
+      }
+      upsert_calendar_connection: {
+        Args: {
+          p_account_identifier?: string
+          p_calendar_url?: string
+          p_credentials_json?: string
+          p_display_name?: string
+          p_is_default?: boolean
+          p_provider?: string
+          p_tenant_id: string
+          p_user_id?: string
+        }
+        Returns: string
       }
       upsert_marketplace_connection: {
         Args: {
