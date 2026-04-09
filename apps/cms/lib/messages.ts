@@ -357,6 +357,7 @@ export const messages = {
     setDefaultFailed: 'Nie udało się ustawić domyślnego kalendarza',
     fetchConnectionsFailed: 'Nie udało się pobrać połączeń kalendarza',
     deactivateConnectionFailed: 'Nie udało się dezaktywować połączenia',
+    activateConnectionFailed: 'Nie udało się aktywować połączenia',
     updateSurveyLinkCalendarFailed: 'Nie udało się przypisać kalendarza do linku',
     oauthSaveFailed: 'Nie udało się zapisać połączenia Google Calendar',
     oauthNoCode: 'Brak kodu autoryzacji od Google',

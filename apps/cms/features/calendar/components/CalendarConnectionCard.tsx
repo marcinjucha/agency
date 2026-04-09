@@ -33,6 +33,7 @@ import {
   testCalendarConnection,
   setDefaultConnection,
   disconnectCalendarConnection,
+  activateCalendarConnection,
   removeConnection,
 } from '../actions'
 import type { CalendarConnection } from '../types'
@@ -96,6 +97,17 @@ export function CalendarConnectionCard({ connection }: CalendarConnectionCardPro
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.calendar.all })
       setConfirmAction(null)
+    },
+  })
+
+  const activateMutation = useMutation({
+    mutationFn: async () => {
+      const result = await activateCalendarConnection(connection.id)
+      if (!result.success) throw new Error(result.error)
+      return result
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.calendar.all })
     },
   })
 
@@ -233,7 +245,7 @@ export function CalendarConnectionCard({ connection }: CalendarConnectionCardPro
               </Button>
             )}
 
-            {connection.isActive && (
+            {connection.isActive ? (
               <Button
                 variant="ghost"
                 size="sm"
@@ -242,6 +254,17 @@ export function CalendarConnectionCard({ connection }: CalendarConnectionCardPro
               >
                 <PowerOff className="mr-2 h-3.5 w-3.5" />
                 {messages.calendar.actionDeactivate}
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => activateMutation.mutate()}
+                disabled={activateMutation.isPending}
+                aria-label={`${messages.calendar.actionActivate}: ${connection.displayName}`}
+              >
+                <CheckCircle className="mr-2 h-3.5 w-3.5" />
+                {messages.calendar.actionActivate}
               </Button>
             )}
 

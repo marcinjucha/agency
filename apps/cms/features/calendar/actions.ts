@@ -232,6 +232,35 @@ export async function disconnectCalendarConnection(
 }
 
 /**
+ * Activate a previously deactivated calendar connection.
+ */
+export async function activateCalendarConnection(
+  connectionId: string
+): Promise<{ success: true } | { success: false; error: string }> {
+  try {
+    const auth = await requireAuth('calendar')
+    if (!auth.success) return auth
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (auth.data.supabase as any)
+      .from('calendar_connections')
+      .update({ is_active: true })
+      .eq('id', connectionId)
+
+    if (error) {
+      return { success: false, error: messages.calendar.activateConnectionFailed }
+    }
+
+    revalidatePath(routes.admin.settings)
+    return { success: true }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : messages.common.unknownError
+    console.error('[calendar] activateCalendarConnection failed:', message)
+    return { success: false, error: messages.calendar.activateConnectionFailed }
+  }
+}
+
+/**
  * Update which calendar connection a survey link uses for booking.
  *
  * Pass null to disconnect the calendar from a survey link.
