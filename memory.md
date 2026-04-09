@@ -59,6 +59,10 @@
 - **Template trigger node synthetic (UUID lost on remount)** — Synthetic trigger UUID changes each mount → edges can't persist. Fix: add trigger as real workflow_step in templates. (2026-04-01, AAA-T-153)
 - **Type/DB column name mismatch in manually written types** — Always cross-reference migration SQL when writing manual types. 3 mismatch types: phantom columns, wrong names, missing columns. (2026-04-02, AAA-T-157)
 - **fromSupabaseVoid() — `.map(() => undefined)` silently discards Supabase errors** — Supabase delete/update without `.select()` returns `{data, error}` but chaining `.map(() => undefined)` on the neverthrow Result discards the error path. Needs dedicated `fromSupabaseVoid()` helper that checks error before discarding data. (2026-04-08)
+- **Supabase local can't persist custom GUCs** — `ALTER DATABASE/ROLE SET "app.encryption_key"` fails with "permission denied" in local Supabase. Fix: COALESCE fallback in RPC functions: `COALESCE(NULLIF(current_setting('app.encryption_key', true), ''), 'local-dev-encryption-key')`. (2026-04-09)
+- **PostgREST schema cache stale after db reset** — New tables/views/functions invisible to PostgREST until `docker restart supabase_rest_<project>` or `NOTIFY pgrst, 'reload schema'`. Causes "Could not find table/function in schema cache" errors. (2026-04-09)
+- **Turbopack barrel re-export bug with server-only packages** — `export { RUNTIME_VALUE } from '@agency/calendar'` in types.ts pulled googleapis (Node.js child_process) into client bundle. Fix: define runtime constants locally, only use `export type` for cross-package re-exports. (2026-04-09)
+- **Pre-existing migration seed bugs with hardcoded tenant IDs** — 3 migrations had hardcoded production tenant ID causing FK violations on local db reset. Fixed with WHERE EXISTS guards. Always guard seed data with existence checks. (2026-04-09)
 
 ## Domain Concepts
 
@@ -77,6 +81,7 @@
 - **Cookie banner wording: general "analytics" not "Plausible"** — Cookie/analytics consent banner uses general wording ("anonimowe dane analityczne") without naming specific tool. Avoids updating banner when analytics provider changes. (2026-04-02)
 - **surveys.status DB column is vestigial** — Status should be computed from survey_links (has active links = active, no links = draft, all expired = closed). Manual enum management on surveys table is wrong model. User wants computed status, not stored status. (2026-04-02)
 - **RPC function parameter names must match migration SQL exactly** — n8n called `upsert_marketplace_connection` with `p_connection_id` but function expected `p_tenant_id`. PostgreSQL error at runtime. Created dedicated `update_marketplace_tokens(p_connection_id)` for token refresh use case. (2026-04-03, AAA-T-157)
+- **Baikal CalDAV has 2 calendars** — tsdav auto-discovery finds "Appointments" (`/dav.php/calendars/haloefekt/appointments/`) and "Default calendar" (`/dav.php/calendars/haloefekt/default/`). Must filter or let user select which calendar to use. (2026-04-09)
 
 ## Architecture Decisions
 
@@ -101,6 +106,8 @@
 - **Trigger as real workflow_step in templates** — Including trigger_type step in template step arrays allows fully-connected canvas on load (trigger→condition edge stored in DB). Executor safely skips trigger steps (no handler → logs warning, marks completed). (2026-04-01, AAA-T-153)
 - **MAX_STEPS = 50 + 5-min sync step timeout in executor** — DEFAULT_EXECUTION_LIMITS in engine/types.ts. Timeout applies only to sync steps (condition, webhook). Async steps timeout in n8n. (2026-04-01, AAA-T-153)
 - **Standalone n8n workflows for marketplace (not workflow engine)** — Marketplace sync is infrastructure/system-level. Workflow engine = user-configurable event flows. Marketplace = background cron ops. (2026-04-02)
+- **Multi-provider calendar architecture** — calendar_connections table with pgcrypto encryption, CalendarProvider interface with ResultAsync, survey_links.calendar_connection_id for calendar-per-survey model. CalDAV via tsdav (tested with Baikal: Basic auth, DAVClient). (2026-04-09)
+- **app_config table replaces custom GUC for encryption key** — Supabase Cloud AND local both block `ALTER DATABASE SET` for custom `app.*` parameters. Solution: `app_config` table with `get_encryption_key()` SECURITY DEFINER helper. Seed row has placeholder, production UPDATE after deploy. Replaces GUC COALESCE fallback pattern. (2026-04-09)
 
 ## Preferences
 
@@ -125,3 +132,5 @@
 - **User workflow: docx design notes -> extract -> design agent** — New input channel for design feedback. (2026-04-02)
 - **InsertMediaModal: link input above filters, not below** — User corrected layout order: URL link input must appear between upload zone and filter bar, not after filters. middleSlot prop pattern for injecting content into LibraryTab. (2026-04-02)
 - **Native input type="date" rejected — always use shadcn/ui DatePicker** — User rejected native HTML date input. Always use shadcn/ui DatePicker (Popover + Calendar component) for consistent styling and UX. (2026-04-08)
+- **Always test with local database** — CMS was pointing to production Supabase while testing migrations that only existed locally, wasting debugging time. Always use `supabase start` and local connection for development/testing. (2026-04-09)
+- **Always design bidirectional state transitions** — Deactivate button existed but no Activate button to re-enable. When adding a disable/deactivate action, always implement the reverse action too. (2026-04-09)

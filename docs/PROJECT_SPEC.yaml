@@ -29,6 +29,8 @@ architecture:
     - "google-calendar OAuth helpers moved to features/calendar/oauth.ts — lib/ is for cross-feature utilities, not feature-specific business logic (ADR-005)"
     - "LandingPage type canonical in @agency/database (seo_metadata included) — removed 2 duplicate definitions in CMS + website"
     - "ResponseStatus single source of truth in @agency/validators — status.ts re-exports with | null extension"
+    - "Multi-provider calendar via CalendarProvider interface — calendar_connections table with pgcrypto-encrypted BYTEA credentials + decrypted view, survey_links.calendar_connection_id for calendar-per-survey model, tsdav for CalDAV, googleapis for Google Calendar. Adding new provider = implement CalendarProvider interface only."
+    - "app_config table for encryption key instead of custom GUC — Supabase Cloud blocks ALTER DATABASE SET for app.* parameters (unlike self-hosted PostgreSQL). app_config stores key-value pairs; calendar_connection_rpc reads encryption key from app_config instead of current_setting('app.encryption_key')."
 
 features:
   # Phase 1: Foundation
@@ -81,9 +83,11 @@ features:
   # Phase 3: Calendar
   - name: "Calendar Integration"
     status: done
-    description: "Google Calendar OAuth, available slots API (timezone-aware, buffer time), booking UI, event creation, calendar_settings per user"
-    why: "Appointment scheduling after form submission, synced with Google Calendar"
+    task_id: "AAA-T-126"
+    description: "Multi-provider calendar system (CalDAV via tsdav + Google Calendar via googleapis) behind CalendarProvider interface. calendar_connections table with pgcrypto-encrypted credentials (BYTEA + decrypted view). Per-tenant + per-user connections. survey_links.calendar_connection_id for calendar-per-survey model. CMS UI: CalendarConnectionCard, AddCalDAVDialog, CalendarConnectionList, CalendarSettings, SurveyLinkCalendarSelect. Slots API and booking flow rewritten for multi-provider. app_config table stores encryption key (Supabase Cloud blocks ALTER DATABASE SET for app.* GUC). google_calendar_event_id renamed to calendar_event_id in appointments. 49 tests."
+    why: "Appointment scheduling after form submission. Multi-provider needed to support company's own Baikal CalDAV server (cal.haloefekt.pl) alongside Google Calendar, with per-survey calendar assignment for flexibility."
     depends_on: ["Form Submission & Response Storage"]
+    completion_notes: "Tenants can connect CalDAV or Google Calendar from CMS and assign different calendars per survey link. CalDAV tested against production Baikal server. All 5 iterations complete."
 
   # Phase 4: UI/UX
   - name: "Design System & Accessibility"
