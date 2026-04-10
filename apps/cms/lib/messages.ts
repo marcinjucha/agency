@@ -1050,10 +1050,16 @@ export const messages = {
       headerKeyPlaceholder: 'Klucz',
       headerValuePlaceholder: 'Wartość',
       // AI Action config
-      promptLabel: 'Prompt',
-      promptPlaceholder: 'Opisz zadanie dla AI...',
+      promptLabel: 'Prompt AI',
+      promptPlaceholder: 'Opisz co AI ma przeanalizować i jakie dane zwrócić...',
       modelLabel: 'Model (opcjonalny)',
       modelPlaceholder: 'np. claude-haiku-4-5',
+      outputFields: 'Pola wyjściowe',
+      outputFieldKey: 'Klucz',
+      outputFieldLabel: 'Etykieta',
+      addOutputField: '+ Dodaj pole',
+      removeOutputField: 'Usuń pole',
+      defaultOutputFieldsHint: 'Domyślne pola: aiResponse, overallScore, recommendation',
     },
     stepLibrary: {
       categoryActions: 'Akcje',
