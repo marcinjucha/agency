@@ -320,3 +320,139 @@ describe('buildTriggerContext', () => {
     expect(ctx).toEqual({ trigger_type: 'unknown_future_type' })
   })
 })
+
+// ---------------------------------------------------------------------------
+// collectAvailableVariables
+// ---------------------------------------------------------------------------
+
+import { collectAvailableVariables } from '../utils'
+import { vi } from 'vitest'
+
+// Mock trigger-schemas to return predictable variables
+vi.mock('@/lib/trigger-schemas', () => ({
+  getTriggerVariables: (triggerType: string) => {
+    if (triggerType === 'survey_submitted') {
+      return [
+        { key: 'responseId', label: 'ID odpowiedzi', description: 'UUID', category: 'Odpowiedź' },
+        { key: 'surveyLinkId', label: 'ID linku', description: 'UUID', category: 'Link' },
+      ]
+    }
+    return []
+  },
+}))
+
+// Use makeStepBase directly for collectAvailableVariables tests (supports type param)
+describe('collectAvailableVariables', () => {
+  it('linear chain: step2 sees trigger vars + step1 output', () => {
+    const steps = [
+      makeStepBase('trigger', 'survey_submitted'),
+      makeStepBase('step1', 'send_email'),
+      makeStepBase('step2', 'webhook'),
+    ]
+    const edges = [
+      makeEdgeBase('trigger', 'step1'),
+      makeEdgeBase('step1', 'step2'),
+    ]
+
+    const result = collectAvailableVariables('step2', steps, edges, 'survey_submitted')
+
+    // Should have trigger variables
+    const triggerVars = result.filter((v) => v.category === 'Trigger')
+    expect(triggerVars).toHaveLength(2)
+    expect(triggerVars[0].key).toBe('responseId')
+
+    // Should have step1 (send_email) output variables
+    const step1Vars = result.filter((v) => v.category?.includes('Wyślij email'))
+    expect(step1Vars.length).toBeGreaterThan(0)
+    expect(step1Vars.some((v) => v.key === 'emailSent')).toBe(true)
+  })
+
+  it('branching: both branches see trigger + condition output', () => {
+    const steps = [
+      makeStepBase('trigger', 'survey_submitted'),
+      makeStepBase('cond', 'condition'),
+      makeStepBase('step_a', 'send_email'),
+      makeStepBase('step_b', 'webhook'),
+    ]
+    const edges = [
+      makeEdgeBase('trigger', 'cond'),
+      makeEdgeBase('cond', 'step_a', 'true'),
+      makeEdgeBase('cond', 'step_b', 'false'),
+    ]
+
+    const resultA = collectAvailableVariables('step_a', steps, edges, 'survey_submitted')
+    const resultB = collectAvailableVariables('step_b', steps, edges, 'survey_submitted')
+
+    // Both should see trigger vars
+    expect(resultA.filter((v) => v.category === 'Trigger')).toHaveLength(2)
+    expect(resultB.filter((v) => v.category === 'Trigger')).toHaveLength(2)
+
+    // Both should see condition output
+    expect(resultA.some((v) => v.key === 'branch')).toBe(true)
+    expect(resultB.some((v) => v.key === 'branch')).toBe(true)
+  })
+
+  it('diamond convergence: C sees trigger + A output + B output', () => {
+    const steps = [
+      makeStepBase('trigger', 'survey_submitted'),
+      makeStepBase('A', 'send_email'),
+      makeStepBase('B', 'webhook'),
+      makeStepBase('C', 'ai_action'),
+    ]
+    const edges = [
+      makeEdgeBase('trigger', 'A'),
+      makeEdgeBase('trigger', 'B'),
+      makeEdgeBase('A', 'C'),
+      makeEdgeBase('B', 'C'),
+    ]
+
+    const result = collectAvailableVariables('C', steps, edges, 'survey_submitted')
+
+    // Trigger vars
+    expect(result.filter((v) => v.category === 'Trigger')).toHaveLength(2)
+    // A (send_email) output
+    expect(result.some((v) => v.key === 'emailSent')).toBe(true)
+    // B (webhook) output
+    expect(result.some((v) => v.key === 'statusCode')).toBe(true)
+  })
+
+  it('ai_action with custom output_schema uses custom fields', () => {
+    const customSchema = [
+      { key: 'sentiment', label: 'Sentyment', type: 'string' as const },
+      { key: 'confidence', label: 'Pewność', type: 'number' as const },
+    ]
+    const steps = [
+      makeStepBase('trigger', 'survey_submitted'),
+      makeStepBase('ai', 'ai_action', { output_schema: customSchema }),
+      makeStepBase('next', 'send_email'),
+    ]
+    const edges = [
+      makeEdgeBase('trigger', 'ai'),
+      makeEdgeBase('ai', 'next'),
+    ]
+
+    const result = collectAvailableVariables('next', steps, edges, 'survey_submitted')
+
+    // Should have custom AI fields, not default
+    expect(result.some((v) => v.key === 'sentiment')).toBe(true)
+    expect(result.some((v) => v.key === 'confidence')).toBe(true)
+    // Should NOT have default ai_action fields
+    expect(result.some((v) => v.key === 'aiResponse')).toBe(false)
+  })
+
+  it('step with no ancestors (only trigger) sees only trigger variables', () => {
+    const steps = [
+      makeStepBase('trigger', 'survey_submitted'),
+      makeStepBase('step1', 'send_email'),
+    ]
+    const edges = [makeEdgeBase('trigger', 'step1')]
+
+    const result = collectAvailableVariables('step1', steps, edges, 'survey_submitted')
+
+    // Only trigger vars
+    expect(result.filter((v) => v.category === 'Trigger')).toHaveLength(2)
+    // No step output vars (trigger is skipped as a step)
+    const nonTriggerVars = result.filter((v) => v.category !== 'Trigger')
+    expect(nonTriggerVars).toHaveLength(0)
+  })
+})
