@@ -34,7 +34,7 @@ import { ConditionNode } from './nodes/ConditionNode'
 import { DelayNode } from './nodes/DelayNode'
 import { NODE_TYPE_CONFIGS } from './nodes/node-registry'
 import { CanvasControls } from './CanvasControls'
-import { AddNodeDropdown } from './AddNodeDropdown'
+// AddNodeDropdown removed — StepLibraryPanel replaces it (AAA-T-177)
 
 /** Component map keyed by node type — components resolved from registry keys */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- ReactFlow node components have varying prop types
@@ -404,7 +404,6 @@ function CanvasInner(
       >
         <Background variant={BackgroundVariant.Dots} gap={16} size={1} />
       </ReactFlow>
-      <AddNodeDropdown onAddNode={onAddNode} hasTrigger={hasTrigger} />
       <CanvasControls />
       {/* Empty state hint when no trigger node exists */}
       {!hasTrigger && nodes.length === 0 && (

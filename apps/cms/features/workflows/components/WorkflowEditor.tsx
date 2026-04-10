@@ -294,7 +294,7 @@ export function WorkflowEditor({ workflow }: WorkflowEditorProps) {
         </div>
       )}
       <div className="flex-1 min-h-0 flex flex-row">
-        <StepLibraryPanel isOpen={isLibraryOpen} />
+        <StepLibraryPanel isOpen={isLibraryOpen} onClose={() => setIsLibraryOpen(false)} />
         <div className="flex-1 min-w-0 relative">
           <div className="absolute top-3 left-3 z-10 flex items-center gap-2">
             <Button

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { ChevronRight } from 'lucide-react'
+import { ChevronRight, PanelLeftClose } from 'lucide-react'
 import { Button } from '@agency/ui'
 import { cn } from '@agency/ui'
 import { messages } from '@/lib/messages'
@@ -31,6 +31,7 @@ function getStepsByCategory(categoryKey: string): [string, NodeTypeConfig][] {
 
 interface StepLibraryPanelProps {
   isOpen: boolean
+  onClose?: () => void
 }
 
 function StepLibraryItem({
@@ -112,7 +113,7 @@ function CategorySection({
   )
 }
 
-export function StepLibraryPanel({ isOpen }: StepLibraryPanelProps) {
+export function StepLibraryPanel({ isOpen, onClose }: StepLibraryPanelProps) {
   return (
     <div
       className={cn(
@@ -121,9 +122,21 @@ export function StepLibraryPanel({ isOpen }: StepLibraryPanelProps) {
       )}
     >
       <div className="p-4 space-y-4">
-        <h3 className="text-sm font-semibold text-foreground">
-          {messages.workflows.editor.stepLibrary}
-        </h3>
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-foreground">
+            {messages.workflows.editor.stepLibrary}
+          </h3>
+          {onClose && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 text-muted-foreground hover:text-foreground"
+              onClick={onClose}
+            >
+              <PanelLeftClose className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
         {STEP_CATEGORIES.map((cat) => (
           <CategorySection
             key={cat.key}
