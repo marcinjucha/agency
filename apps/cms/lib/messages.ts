@@ -1060,6 +1060,7 @@ export const messages = {
       addOutputField: '+ Dodaj pole',
       removeOutputField: 'Usuń pole',
       defaultOutputFieldsHint: 'Domyślne pola: aiResponse, overallScore, recommendation',
+      defaultFieldsOverrideHint: 'Domyślne pola zostaną zastąpione polami niestandardowymi.',
     },
     stepLibrary: {
       categoryActions: 'Akcje',
@@ -1172,6 +1173,8 @@ export const messages = {
       runStepButton: 'Uruchom',
       stepRunCompleted: 'Krok wykonany pomyślnie',
       stepRunFailed: 'Krok zakończony błędem',
+      comparisonHint: 'Porównanie z oryginałem dostępne w logach',
+      openExecution: 'Otwórz',
     },
     // Templates
     templatesSectionTitle: 'Zacznij od szablonu',

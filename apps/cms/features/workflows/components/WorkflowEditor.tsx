@@ -38,6 +38,7 @@ const TRIGGER_TYPES = new Set<string>([
   'booking_created',
   'lead_scored',
   'manual',
+  'scheduled',
 ])
 
 function isTriggerType(type: string): type is TriggerType {
@@ -271,7 +272,7 @@ export function WorkflowEditor({ workflow }: WorkflowEditorProps) {
     }))
 
     return collectAvailableVariables(selectedNode.id, steps, edgeList, workflow.trigger_type)
-  }, [selectedNode, workflow.trigger_type])
+  }, [selectedNode, workflow.trigger_type, isDirty])
 
   const PanelComponent = selectedNode ? getPanelComponent(selectedNode.stepType) : null
 

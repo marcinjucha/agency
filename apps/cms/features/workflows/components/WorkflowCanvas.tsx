@@ -37,6 +37,7 @@ import { CanvasControls } from './CanvasControls'
 import { AddNodeDropdown } from './AddNodeDropdown'
 
 /** Component map keyed by node type — components resolved from registry keys */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- ReactFlow node components have varying prop types
 const NODE_COMPONENTS: Record<string, React.ComponentType<any>> = {
   trigger: TriggerNode,
   send_email: ActionNode,

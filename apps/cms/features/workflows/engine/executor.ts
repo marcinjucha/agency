@@ -511,6 +511,10 @@ async function runPendingSteps(
 
     // --- Regular step ---
     const handlerRegistry = dryRun ? dryRunHandlers : handlers
+    // Safety invariant: dry-run must never use real handlers
+    if (dryRun && handlerRegistry !== dryRunHandlers) {
+      throw new Error('Dry-run invariant violated: real handlers selected for dry-run execution')
+    }
     const handler = handlerRegistry[step.step_type]
     if (!handler) {
       console.warn(

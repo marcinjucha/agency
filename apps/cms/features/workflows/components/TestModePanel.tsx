@@ -17,6 +17,7 @@ import { routes } from '@/lib/routes'
 import { TRIGGER_VARIABLE_SCHEMAS } from '@/lib/trigger-schemas'
 import { dryRunWorkflow } from '../actions'
 import { getWorkflowExecutions, getExecutionWithSteps } from '../queries'
+import { EXECUTION_STATUS_LABELS } from '../types'
 
 export type StepTestResult = {
   stepId: string
@@ -329,14 +330,14 @@ export function TestModePanel({
               {/* Comparison hint when replaying from execution */}
               {lastDryRunSourceId && (
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <span>Porównanie z oryginałem dostępne w logach</span>
+                  <span>{messages.workflows.testMode.comparisonHint}</span>
                   <a
                     href={routes.admin.execution(lastDryRunSourceId)}
                     className="inline-flex items-center gap-1 text-primary hover:underline"
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    Otwórz
+                    {messages.workflows.testMode.openExecution}
                     <ExternalLink className="h-3 w-3" />
                   </a>
                 </div>
@@ -432,16 +433,6 @@ function capitalize(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1)
 }
 
-const EXECUTION_STATUS_LABELS: Record<string, string> = {
-  completed: 'Ukończono',
-  failed: 'Błąd',
-  running: 'W trakcie',
-  pending: 'Oczekuje',
-  cancelled: 'Anulowano',
-  paused: 'Wstrzymano',
-  waiting_for_callback: 'Oczekuje na callback',
-}
-
 function formatExecutionStatus(status: string): string {
-  return EXECUTION_STATUS_LABELS[status] ?? status
+  return (EXECUTION_STATUS_LABELS as Record<string, string>)[status] ?? status
 }

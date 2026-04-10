@@ -165,7 +165,7 @@ export function AiActionConfigPanel({ stepConfig, onChange, availableVariables }
 
         {hasCustomFields && defaultFields.length > 0 && (
           <p className="text-xs text-muted-foreground">
-            Domyślne pola ({defaultFields.map(f => f.key).join(', ')}) zostaną zastąpione.
+            {messages.workflows.editor.defaultFieldsOverrideHint}
           </p>
         )}
       </div>

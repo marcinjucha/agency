@@ -260,35 +260,40 @@ const handleWebhook: StepHandlerRegistry[string] = async (
 
 // --- Dry-run mock handlers ---
 
+/** Returns a mock value for a given field type and label */
+function getMockValue(type: string, label: string): unknown {
+  switch (type) {
+    case 'string': return `[mock] ${label}`
+    case 'number': return 0
+    case 'boolean': return true
+    case 'object': return {}
+    default: return `[mock] ${label}`
+  }
+}
+
 /**
  * Generates mock output based on STEP_OUTPUT_SCHEMAS for a given step type.
- * For ai_action steps with custom output_schema in config, uses those fields instead.
+ * For ai_action steps with custom output_schema in config, REPLACES defaults entirely.
  */
 function generateMockOutput(step: WorkflowStep): Record<string, unknown> {
   const stepType = step.step_type as StepType
-  const outputSchema: OutputSchemaField[] = STEP_OUTPUT_SCHEMAS[stepType] ?? []
+  const config = step.step_config as Record<string, unknown>
 
+  // For ai_action with custom output_schema, use ONLY custom fields (replace defaults)
+  if (stepType === 'ai_action' && Array.isArray(config.output_schema)) {
+    const mockOutput: Record<string, unknown> = {}
+    for (const field of config.output_schema as Array<{ key: string; label: string; type: string }>) {
+      mockOutput[field.key] = getMockValue(field.type, field.label)
+    }
+    return mockOutput
+  }
+
+  // Default: use STEP_OUTPUT_SCHEMAS
+  const outputSchema: OutputSchemaField[] = STEP_OUTPUT_SCHEMAS[stepType] ?? []
   const mockOutput: Record<string, unknown> = {}
   for (const field of outputSchema) {
-    switch (field.type) {
-      case 'string': mockOutput[field.key] = `[mock] ${field.label}`; break
-      case 'number': mockOutput[field.key] = 0; break
-      case 'boolean': mockOutput[field.key] = true; break
-      case 'object': mockOutput[field.key] = {}; break
-    }
+    mockOutput[field.key] = getMockValue(field.type, field.label)
   }
-
-  // For ai_action with custom output_schema, use those fields instead
-  if (step.step_config.type === 'ai_action') {
-    const config = step.step_config as Record<string, unknown>
-    if (Array.isArray(config.output_schema)) {
-      const customFields = config.output_schema as Array<{ key: string; label: string; type: string }>
-      for (const field of customFields) {
-        mockOutput[field.key] = `[mock] ${field.label}`
-      }
-    }
-  }
-
   return mockOutput
 }
 

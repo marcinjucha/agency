@@ -48,7 +48,7 @@ import { evaluateCondition } from '../condition-evaluator'
 import { findMatchingWorkflows } from '../trigger-matcher'
 import { stepHandlers } from '../action-handlers'
 import type { WorkflowStep, WorkflowEdge } from '../../types'
-import { createTableMockClient } from '@/__tests__/utils/supabase-mocks'
+import { createTableMockClient } from '../../../../__tests__/utils/supabase-mocks'
 import { makeStep, makeEdge, makeWorkflow, makeContext, manualTrigger } from '../../__tests__/fixtures'
 
 // Alias for backward compat within this file

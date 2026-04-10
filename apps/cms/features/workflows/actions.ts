@@ -391,11 +391,17 @@ export async function createWorkflowFromTemplate(
   }
 }
 
+const MAX_PAYLOAD_SIZE = 100_000 // 100KB
+
 export async function dryRunWorkflow(
   workflowId: string,
   mockTriggerPayload: Record<string, unknown>
 ): Promise<{ success: boolean; data?: { executionId: string; status: string }; error?: string }> {
   try {
+    if (JSON.stringify(mockTriggerPayload).length > MAX_PAYLOAD_SIZE) {
+      return { success: false, error: 'Payload too large' }
+    }
+
     const auth = await requireAuth('workflows')
     if (!auth.success) return auth
     const { supabase, tenantId } = auth.data
@@ -436,6 +442,10 @@ export async function dryRunSingleStep(
   inputPayload: Record<string, unknown>
 ): Promise<{ success: boolean; data?: { status: string; outputPayload: Record<string, unknown> | null; errorMessage?: string }; error?: string }> {
   try {
+    if (JSON.stringify(inputPayload).length > MAX_PAYLOAD_SIZE) {
+      return { success: false, error: 'Payload too large' }
+    }
+
     const auth = await requireAuth('workflows')
     if (!auth.success) return auth
     const { supabase, tenantId } = auth.data
