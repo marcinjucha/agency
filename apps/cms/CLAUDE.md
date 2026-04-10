@@ -265,7 +265,7 @@ npm run test:watch --workspace=apps/cms  # Watch mode (TDD)
 
 ## Testing (TDD)
 
-**Testable files** (TDD Red-Green-Refactor): `actions.ts`, `queries.ts`, `queries.server.ts`, `hooks/*.ts`
+**Testable files** (TDD Red-Green-Refactor): `actions.ts`, `queries.ts`, `queries.server.ts`, `hooks/*.ts`, `utils/*.ts`
 **Not tested**: `components/`, `validation.ts` (Zod declarative), `types.ts`
 **Test location**: `features/{name}/__tests__/{file}.test.ts`
 **Style**: Integration — mock Supabase client, test action/query behavior. See `ag-dev-workflow` skill for full TDD patterns.
