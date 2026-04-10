@@ -389,6 +389,45 @@ export async function createWorkflowFromTemplate(
   }
 }
 
+export async function dryRunWorkflow(
+  workflowId: string,
+  mockTriggerPayload: Record<string, unknown>
+): Promise<{ success: boolean; data?: { executionId: string; status: string }; error?: string }> {
+  try {
+    const auth = await requireAuth('workflows')
+    if (!auth.success) return auth
+    const { supabase, tenantId } = auth.data
+
+    // Verify workflow belongs to user's tenant
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: workflow, error: fetchError } = await (supabase as any)
+      .from('workflows')
+      .select('id, tenant_id')
+      .eq('id', workflowId)
+      .maybeSingle()
+
+    if (fetchError) return { success: false, error: fetchError.message }
+    if (!workflow) return { success: false, error: messages.workflows.workflowNotFound }
+
+    if (workflow.tenant_id !== tenantId) {
+      return { success: false, error: messages.workflows.workflowNotFound }
+    }
+
+    const triggerPayload = {
+      trigger_type: 'manual' as const,
+      ...mockTriggerPayload,
+    }
+
+    const result = await executeWorkflow(workflowId, triggerPayload, { dryRun: true })
+
+    revalidatePath(routes.admin.workflow(workflowId))
+    return { success: true, data: { executionId: result.executionId, status: result.status } }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : messages.common.unknownError
+    return { success: false, error: message }
+  }
+}
+
 export async function cancelWorkflowExecution(
   executionId: string
 ): Promise<{ success: boolean; error?: string }> {

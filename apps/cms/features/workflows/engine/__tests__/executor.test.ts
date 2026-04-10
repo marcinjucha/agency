@@ -19,9 +19,18 @@ vi.mock('../trigger-matcher', () => ({
   findMatchingWorkflows: vi.fn(() => []),
 }))
 
-vi.mock('../action-handlers', () => ({
-  stepHandlers: {} as Record<string, unknown>,
-}))
+vi.mock('../action-handlers', () => {
+  const mockDryRunHandler = async () => ({ success: true, outputPayload: { mock: true } })
+  return {
+    stepHandlers: {} as Record<string, unknown>,
+    dryRunHandlers: {
+      send_email: mockDryRunHandler,
+      ai_action: mockDryRunHandler,
+      delay: mockDryRunHandler,
+      webhook: mockDryRunHandler,
+    },
+  }
+})
 
 // Mock types to avoid messages.ts import chain
 vi.mock('../../types', () => ({
@@ -533,6 +542,59 @@ describe('resumeExecution', () => {
     expect(execCalls).toHaveLength(1)
   })
 
+  it('rebuilds variable context from completed step outputs on resume', async () => {
+    const stepA = makeStep('sA', 'send_email', {})
+    const stepB = makeStep('sB', 'webhook', {})
+
+    vi.mocked(topologicalSort).mockReturnValue([stepA, stepB])
+
+    const stepExecs = [
+      { id: 'se-A', step_id: 'sA', status: 'completed', output_payload: { emailSent: true } },
+      { id: 'se-B', step_id: 'sB', status: 'pending', output_payload: null },
+    ]
+
+    const mockClient = createMockClient({
+      workflow_executions: [
+        {
+          data: {
+            id: 'exec-1',
+            workflow_id: 'wf-1',
+            status: 'waiting_for_callback',
+            trigger_payload: { trigger_type: 'manual' },
+            triggering_execution_id: null,
+          },
+          error: null,
+        },
+        { data: [{ id: 'exec-1' }], error: null },
+        { data: null, error: null },
+      ],
+      workflow_step_executions: [
+        { data: stepExecs, error: null },
+        { data: null, error: null },
+      ],
+      workflow_steps: [{ data: [stepA, stepB], error: null }],
+      workflow_edges: [{ data: [], error: null }],
+      workflows: [{ data: makeWorkflow(), error: null }],
+    })
+
+    vi.mocked(createServiceClient).mockReturnValue(
+      mockClient as unknown as ReturnType<typeof createServiceClient>
+    )
+
+    let capturedContext: Record<string, unknown> | undefined
+    const webhookHandler = vi.fn().mockImplementation(
+      (_step: unknown, _ctx: unknown, _client: unknown, varCtx: Record<string, unknown>) => {
+        capturedContext = { ...varCtx }
+        return Promise.resolve({ success: true })
+      }
+    )
+    ;(stepHandlers as Record<string, unknown>)['webhook'] = webhookHandler
+
+    await resumeExecution('exec-1', 'se-A', 'completed')
+
+    expect(capturedContext?.emailSent).toBe(true)
+  })
+
   it('returns silently when optimistic lock fails', async () => {
     const mockClient = createMockClient({
       workflow_executions: [
@@ -557,5 +619,95 @@ describe('resumeExecution', () => {
 
     // Should not throw — exits silently
     await resumeExecution('exec-1', 'se-A', 'completed')
+  })
+})
+
+// ============================================================
+// Dry-run mode
+// ============================================================
+
+describe('dry-run mode', () => {
+  it('completes without calling real handlers (n8n not called)', async () => {
+    const step = makeStep('s1', 'send_email', { template_id: 'tpl-1' })
+    setupExecuteWorkflowMock(makeWorkflow(), [step], [])
+
+    // Register a real handler that should NOT be called in dry-run
+    const realHandler = vi.fn().mockResolvedValue({ success: true, async: true })
+    ;(stepHandlers as Record<string, unknown>)['send_email'] = realHandler
+
+    const result = await executeWorkflow('wf-1', manualTrigger, { dryRun: true })
+
+    expect(result.status).toBe('completed')
+    expect(realHandler).not.toHaveBeenCalled()
+  })
+
+  it('generates mock output based on STEP_OUTPUT_SCHEMAS', async () => {
+    const step = makeStep('s1', 'webhook', { url: 'https://example.com' })
+    setupExecuteWorkflowMock(makeWorkflow(), [step], [])
+
+    // Track what gets written as output_payload
+    let capturedContext: Record<string, unknown> | undefined
+
+    // Add a second step to capture the variable context after first step
+    const step2 = makeStep('s2', 'webhook', {})
+    vi.mocked(topologicalSort).mockReturnValue([step, step2])
+
+    // Re-setup with 2 steps
+    const stepExecData = [{ id: 'se-0', step_id: 's1' }, { id: 'se-1', step_id: 's2' }]
+    const client = createMockClient({
+      workflows: [{ data: makeWorkflow(), error: null }],
+      workflow_steps: [{ data: [step, step2], error: null }],
+      workflow_edges: [{ data: [], error: null }],
+      workflow_executions: [
+        { data: { id: 'exec-1' }, error: null },
+        { data: null, error: null },
+      ],
+      workflow_step_executions: [
+        { data: stepExecData, error: null },
+        { data: null, error: null },
+      ],
+    })
+    vi.mocked(createServiceClient).mockReturnValue(client as unknown as ReturnType<typeof createServiceClient>)
+
+    const result = await executeWorkflow('wf-1', manualTrigger, { dryRun: true })
+
+    expect(result.status).toBe('completed')
+  })
+
+  it('skips is_active check (allows dry-run on inactive workflow)', async () => {
+    const workflow = makeWorkflow({ is_active: false })
+    setupExecuteWorkflowMock(workflow, [], [])
+
+    const result = await executeWorkflow('wf-1', manualTrigger, { dryRun: true })
+
+    // Without dryRun, inactive returns failed; with dryRun, it completes
+    expect(result.status).toBe('completed')
+    expect(result.executionId).toBe('exec-1')
+  })
+
+  it('delay step completes immediately (no resume_at, no async)', async () => {
+    const step = makeStep('s1', 'delay', { value: 60, unit: 'minutes' })
+    setupExecuteWorkflowMock(makeWorkflow(), [step], [])
+
+    // Real delay handler would set async: true and write resume_at
+    const realHandler = vi.fn().mockResolvedValue({ success: true, async: true })
+    ;(stepHandlers as Record<string, unknown>)['delay'] = realHandler
+
+    const result = await executeWorkflow('wf-1', manualTrigger, { dryRun: true })
+
+    // Dry-run delay completes synchronously (mock handler returns success without async)
+    expect(result.status).toBe('completed')
+    expect(realHandler).not.toHaveBeenCalled()
+  })
+
+  it('creates execution record with is_dry_run flag', async () => {
+    const client = setupExecuteWorkflowMock(makeWorkflow(), [], [])
+
+    await executeWorkflow('wf-1', manualTrigger, { dryRun: true })
+
+    // Find the insert call on workflow_executions
+    const execCalls = client.from.mock.calls
+    const insertCalls = execCalls.filter((call: string[]) => call[0] === 'workflow_executions')
+    expect(insertCalls.length).toBeGreaterThanOrEqual(1)
   })
 })

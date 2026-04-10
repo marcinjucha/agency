@@ -6,6 +6,7 @@ import type {
   TriggerPayload,
   StepHandlerRegistry,
   ExecutionContext,
+  ExecutionOptions,
   VariableContext,
 } from './types'
 import { DEFAULT_EXECUTION_LIMITS } from './types'
@@ -13,7 +14,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { topologicalSort, buildTriggerContext } from './utils'
 import { evaluateCondition } from './condition-evaluator'
 import { findMatchingWorkflows } from './trigger-matcher'
-import { stepHandlers as handlers } from './action-handlers'
+import { stepHandlers as handlers, dryRunHandlers } from './action-handlers'
 
 // --- DB helper types ---
 
@@ -49,7 +50,7 @@ function resolveStepExecId(
 export async function executeWorkflow(
   workflowId: string,
   triggerPayload: TriggerPayload,
-  options?: { triggeringExecutionId?: string }
+  options?: ExecutionOptions
 ): Promise<{ executionId: string; status: 'completed' | 'failed' | 'waiting_for_callback' }> {
   const serviceClient = createServiceClient()
 
@@ -59,7 +60,7 @@ export async function executeWorkflow(
     // --- 1. Fetch workflow + steps + edges ---
     const workflow = await fetchWorkflow(serviceClient, workflowId)
 
-    if (!workflow.is_active) {
+    if (!workflow.is_active && !options?.dryRun) {
       return { executionId: '', status: 'failed' }
     }
 
@@ -95,6 +96,7 @@ export async function executeWorkflow(
       tenant_id: workflow.tenant_id,
       trigger_payload: triggerPayload as unknown as Record<string, unknown>,
       triggering_execution_id: options?.triggeringExecutionId ?? null,
+      is_dry_run: options?.dryRun ?? false,
       status: 'running',
       started_at: new Date().toISOString(),
     })
@@ -137,7 +139,8 @@ export async function executeWorkflow(
       variableContext,
       edges,
       steps,
-      serviceClient
+      serviceClient,
+      options?.dryRun
     )
 
     // --- 8. Final status ---
@@ -419,7 +422,8 @@ async function runPendingSteps(
   variableContext: VariableContext,
   edges: WorkflowEdge[],
   steps: WorkflowStep[],
-  serviceClient: SupabaseClient<Database>
+  serviceClient: SupabaseClient<Database>,
+  dryRun?: boolean
 ): Promise<'completed' | 'failed' | 'waiting_for_callback'> {
   // MAX_STEPS guard: fail fast to prevent runaway workflows
   const pendingSteps = sortedSteps.filter((s) => {
@@ -506,7 +510,8 @@ async function runPendingSteps(
     }
 
     // --- Regular step ---
-    const handler = handlers[step.step_type]
+    const handlerRegistry = dryRun ? dryRunHandlers : handlers
+    const handler = handlerRegistry[step.step_type]
     if (!handler) {
       console.warn(
         `[executor] No handler registered for step type "${step.step_type}". Skipping step ${step.id}.`
@@ -747,6 +752,7 @@ async function createExecution(
     tenant_id: string
     trigger_payload: Record<string, unknown>
     triggering_execution_id: string | null
+    is_dry_run: boolean
     status: string
     started_at: string
   }

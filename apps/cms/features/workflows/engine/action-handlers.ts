@@ -1,5 +1,6 @@
 import type { StepHandlerRegistry, ActionResult, ExecutionContext } from './types'
-import type { WorkflowStep, StepType } from '../types'
+import type { WorkflowStep, StepType, OutputSchemaField } from '../types'
+import { STEP_OUTPUT_SCHEMAS } from '../types'
 import { resolveVariables } from './utils'
 
 // --- N8n dispatch (shared by send_email, ai_action) ---
@@ -255,6 +256,52 @@ const handleWebhook: StepHandlerRegistry[string] = async (
       error: `Webhook request failed: ${message}`,
     }
   }
+}
+
+// --- Dry-run mock handlers ---
+
+/**
+ * Generates mock output based on STEP_OUTPUT_SCHEMAS for a given step type.
+ * For ai_action steps with custom output_schema in config, uses those fields instead.
+ */
+function generateMockOutput(step: WorkflowStep): Record<string, unknown> {
+  const stepType = step.step_type as StepType
+  const outputSchema: OutputSchemaField[] = STEP_OUTPUT_SCHEMAS[stepType] ?? []
+
+  const mockOutput: Record<string, unknown> = {}
+  for (const field of outputSchema) {
+    switch (field.type) {
+      case 'string': mockOutput[field.key] = `[mock] ${field.label}`; break
+      case 'number': mockOutput[field.key] = 0; break
+      case 'boolean': mockOutput[field.key] = true; break
+      case 'object': mockOutput[field.key] = {}; break
+    }
+  }
+
+  // For ai_action with custom output_schema, use those fields instead
+  if (step.step_config.type === 'ai_action') {
+    const config = step.step_config as Record<string, unknown>
+    if (Array.isArray(config.output_schema)) {
+      const customFields = config.output_schema as Array<{ key: string; label: string; type: string }>
+      for (const field of customFields) {
+        mockOutput[field.key] = `[mock] ${field.label}`
+      }
+    }
+  }
+
+  return mockOutput
+}
+
+const mockHandler: StepHandlerRegistry[string] = async (step) => {
+  return { success: true, outputPayload: generateMockOutput(step) }
+}
+
+/** Handler registry for dry-run mode — returns mock success for all step types */
+export const dryRunHandlers: StepHandlerRegistry = {
+  send_email: mockHandler,
+  ai_action: mockHandler,
+  delay: mockHandler,
+  webhook: mockHandler,
 }
 
 // --- Registry ---
