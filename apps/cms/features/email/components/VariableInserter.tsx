@@ -1,14 +1,13 @@
 'use client'
 
 import { type RefObject } from 'react'
-import { Button, VariableInserterPopover } from '@agency/ui'
+import { Button, VariableInserterPopover, type VariableItem } from '@agency/ui'
 import { Braces } from 'lucide-react'
 import { useVariableInserter } from '@/hooks/use-variable-inserter'
 import { messages } from '@/lib/messages'
-import type { TriggerVariable } from '@/lib/trigger-schemas'
 
 interface VariableInserterProps {
-  variables: TriggerVariable[]
+  variables: VariableItem[]
   inputRef: RefObject<HTMLInputElement | HTMLTextAreaElement | null>
   onChange: (value: string) => void
   currentValue: string

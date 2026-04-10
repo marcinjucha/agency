@@ -21,6 +21,7 @@ import { Button } from '@agency/ui'
 import { ConfigPanelWrapper, getPanelComponent } from './panels'
 import type { ConfigPanelProps } from './panels'
 import { StepLibraryPanel } from './StepLibraryPanel'
+import { collectAvailableVariables } from '../engine/utils'
 
 const WorkflowCanvas = dynamic(() => import('./WorkflowCanvas'), {
   ssr: false,
@@ -231,6 +232,24 @@ export function WorkflowEditor({ workflow }: WorkflowEditorProps) {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [isDirty, isSaving, handleSave])
 
+  const availableVariables = useMemo(() => {
+    if (!selectedNode || !canvasRef.current) return []
+    const nodes = canvasRef.current.getNodes()
+    const edges = canvasRef.current.getEdges()
+
+    const steps = nodes.map((n) => ({
+      id: n.id,
+      step_type: (n.data as { stepType: string }).stepType,
+      step_config: ((n.data as { stepConfig?: Record<string, unknown> }).stepConfig ?? {}) as Record<string, unknown>,
+    }))
+    const edgeList = edges.map((e) => ({
+      source_step_id: e.source,
+      target_step_id: e.target,
+    }))
+
+    return collectAvailableVariables(selectedNode.id, steps, edgeList, workflow.trigger_type)
+  }, [selectedNode, workflow.trigger_type])
+
   const PanelComponent = selectedNode ? getPanelComponent(selectedNode.stepType) : null
 
   return (
@@ -286,6 +305,7 @@ export function WorkflowEditor({ workflow }: WorkflowEditorProps) {
               stepConfig={selectedNode.stepConfig}
               onChange={handleConfigChange}
               triggerType={workflow.trigger_type}
+              availableVariables={availableVariables}
             />
           </ConfigPanelWrapper>
         )}

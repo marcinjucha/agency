@@ -15,6 +15,7 @@ import {
 } from '@agency/ui'
 import { Plus, Trash2 } from 'lucide-react'
 import { messages } from '@/lib/messages'
+import { VariableInserter } from '@/features/email/components/VariableInserter'
 import { webhookConfigSchema } from '../../validation'
 import { HTTP_METHODS, type HttpMethod } from '../../types'
 import type { ConfigPanelProps } from './index'
@@ -50,10 +51,13 @@ function arrayToHeaders(arr: { key: string; value: string }[]): Record<string, s
   return Object.fromEntries(filtered.map((h) => [h.key, h.value]))
 }
 
-export function WebhookConfigPanel({ stepConfig, onChange }: ConfigPanelProps) {
+export function WebhookConfigPanel({ stepConfig, onChange, availableVariables }: ConfigPanelProps) {
   const isFirstRender = useRef(true)
   const onChangeRef = useRef(onChange)
   onChangeRef.current = onChange
+
+  const urlRef = useRef<HTMLInputElement>(null)
+  const variables = availableVariables ?? []
 
   const {
     register,
@@ -103,14 +107,33 @@ export function WebhookConfigPanel({ stepConfig, onChange }: ConfigPanelProps) {
         <Label htmlFor="webhook-url" className="text-sm font-medium">
           {messages.workflows.editor.urlLabel}
         </Label>
-        <Input
-          id="webhook-url"
-          placeholder={messages.workflows.editor.urlPlaceholder}
-          {...register('url')}
-          aria-required="true"
-          aria-invalid={!!errors.url}
-          aria-describedby={errors.url ? 'url-error' : undefined}
+        <Controller
+          name="url"
+          control={control}
+          render={({ field }) => (
+            <Input
+              id="webhook-url"
+              ref={urlRef}
+              placeholder={messages.workflows.editor.urlPlaceholder}
+              value={field.value ?? ''}
+              onChange={field.onChange}
+              onBlur={field.onBlur}
+              aria-required="true"
+              aria-invalid={!!errors.url}
+              aria-describedby={errors.url ? 'url-error' : undefined}
+            />
+          )}
         />
+        {variables.length > 0 && (
+          <div className="flex justify-end">
+            <VariableInserter
+              variables={variables}
+              inputRef={urlRef}
+              onChange={(value) => setValue('url', value, { shouldDirty: true })}
+              currentValue={formValues.url ?? ''}
+            />
+          </div>
+        )}
         {errors.url && (
           <p id="url-error" role="alert" className="text-xs text-destructive">
             {errors.url.message}

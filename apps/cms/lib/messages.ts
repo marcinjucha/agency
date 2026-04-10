@@ -995,6 +995,7 @@ export const messages = {
       saveSuccess: 'Workflow zapisany',
       trigger: 'Wyzwalacz',
       addTriggerHint: 'Dodaj wyzwalacz, aby rozpocząć workflow',
+      deleteStep: 'Usuń krok',
       stepLibrary: 'Biblioteka kroków',
       stepLibraryToggle: 'Biblioteka',
       zoomIn: 'Przybliż',

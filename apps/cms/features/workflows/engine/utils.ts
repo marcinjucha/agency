@@ -186,8 +186,9 @@ export function collectAvailableVariables(
 
     // For ai_action: check custom output_schema in config first
     let fields: OutputSchemaField[]
-    if (stepType === 'ai_action' && Array.isArray(step.step_config?.output_schema)) {
-      fields = step.step_config.output_schema as OutputSchemaField[]
+    const config = step.step_config as Record<string, unknown>
+    if (stepType === 'ai_action' && Array.isArray(config.output_schema)) {
+      fields = config.output_schema as OutputSchemaField[]
     } else {
       fields = STEP_OUTPUT_SCHEMAS[stepType] ?? []
     }

@@ -18,13 +18,14 @@ import {
   useNodesState,
   useEdgesState,
   addEdge,
+  useReactFlow,
   type Node,
   type Edge,
   type OnConnect,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 
-import { Zap } from 'lucide-react'
+import { Zap, Trash2 } from 'lucide-react'
 import { messages } from '@/lib/messages'
 import { TriggerNode } from './nodes/TriggerNode'
 import { ActionNode } from './nodes/ActionNode'
@@ -125,6 +126,7 @@ function CanvasInner(
 
   const [nodes, setNodes, onNodesChange] = useNodesState(rfNodes)
   const [edges, setEdges, onEdgesChange] = useEdgesState(rfEdges)
+  const { screenToFlowPosition } = useReactFlow()
 
   const initialRef = useRef(JSON.stringify({ nodes: initialNodes, edges: initialEdges }))
 
@@ -193,6 +195,70 @@ function CanvasInner(
     [hasTrigger, nodes.length, setNodes, triggerType, getLabel]
   )
 
+  const onDragOver = useCallback((event: React.DragEvent) => {
+    event.preventDefault()
+    event.dataTransfer.dropEffect = 'copy'
+  }, [])
+
+  const onDrop = useCallback(
+    (event: React.DragEvent) => {
+      event.preventDefault()
+      const stepType = event.dataTransfer.getData('application/workflow-step')
+      if (!stepType || stepType === 'trigger') return
+
+      const position = screenToFlowPosition({
+        x: event.clientX,
+        y: event.clientY,
+      })
+
+      const id = crypto.randomUUID()
+      const newNode: Node = {
+        id,
+        type: stepType,
+        position,
+        data: {
+          label: getLabel(stepType),
+          stepType,
+          stepConfig: { type: stepType },
+        },
+      }
+
+      setNodes((nds) => [...nds, newNode])
+    },
+    [setNodes, getLabel, screenToFlowPosition]
+  )
+
+  // Context menu state
+  const [contextMenu, setContextMenu] = useState<{
+    nodeId: string
+    x: number
+    y: number
+  } | null>(null)
+
+  const onNodeContextMenu = useCallback(
+    (event: React.MouseEvent, node: Node) => {
+      event.preventDefault()
+      if (node.deletable === false) return
+      setContextMenu({ nodeId: node.id, x: event.clientX, y: event.clientY })
+    },
+    []
+  )
+
+  // Close context menu on click-away or Escape
+  useEffect(() => {
+    if (!contextMenu) return
+    const handleClick = () => setContextMenu(null)
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setContextMenu(null)
+    }
+    window.addEventListener('click', handleClick)
+    window.addEventListener('keydown', handleEscape)
+    return () => {
+      window.removeEventListener('click', handleClick)
+      window.removeEventListener('keydown', handleEscape)
+    }
+  }, [contextMenu])
+
   // Node click handler — propagates selection to parent
   const onNodeClick = useCallback(
     (_event: React.MouseEvent, node: Node) => {
@@ -202,8 +268,9 @@ function CanvasInner(
     [onNodeSelect]
   )
 
-  // Pane click handler — deselects
+  // Pane click handler — deselects and closes context menu
   const onPaneClick = useCallback(() => {
+    setContextMenu(null)
     onNodeSelect?.(null, '', {})
   }, [onNodeSelect])
 
@@ -270,6 +337,9 @@ function CanvasInner(
         onConnect={onConnect}
         onNodeClick={onNodeClick}
         onPaneClick={onPaneClick}
+        onNodeContextMenu={onNodeContextMenu}
+        onDragOver={onDragOver}
+        onDrop={onDrop}
         nodeTypes={nodeTypes}
         defaultEdgeOptions={defaultEdgeOptions}
         connectionLineType={ConnectionLineType.SmoothStep}
@@ -288,6 +358,30 @@ function CanvasInner(
             <Zap className="h-8 w-8" />
             <p className="text-sm">{messages.workflows.editor.addTriggerHint}</p>
           </div>
+        </div>
+      )}
+      {contextMenu && (
+        <div
+          className="fixed z-50 min-w-[160px] rounded-md border bg-popover p-1 text-popover-foreground shadow-md"
+          style={{ top: contextMenu.y, left: contextMenu.x }}
+        >
+          <button
+            className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-destructive hover:bg-accent cursor-pointer"
+            onClick={(e) => {
+              e.stopPropagation()
+              setNodes((nds) => nds.filter((n) => n.id !== contextMenu.nodeId))
+              setEdges((eds) =>
+                eds.filter(
+                  (e) => e.source !== contextMenu.nodeId && e.target !== contextMenu.nodeId
+                )
+              )
+              setContextMenu(null)
+              onNodeSelect?.(null, '', {})
+            }}
+          >
+            <Trash2 className="h-4 w-4" />
+            {messages.workflows.editor.deleteStep}
+          </button>
         </div>
       )}
     </div>
