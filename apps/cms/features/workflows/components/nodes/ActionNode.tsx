@@ -7,16 +7,24 @@ export type ActionNodeData = {
   label: string
   stepType: string
   stepConfig: Record<string, unknown>
+  executionStatus?: 'completed' | 'failed' | 'skipped' | 'pending'
+}
+
+const EXECUTION_RING: Record<string, string> = {
+  completed: 'ring-2 ring-emerald-500/60',
+  failed: 'ring-2 ring-red-500/60',
+  skipped: 'opacity-40',
 }
 
 function ActionNodeComponent({ data, selected }: NodeProps) {
   const nodeData = data as unknown as ActionNodeData
   const Icon = nodeIcons[nodeData.stepType]
   const borderClass = borderColors[nodeData.stepType] ?? 'border-l-4 border-l-blue-400'
+  const execRing = nodeData.executionStatus ? EXECUTION_RING[nodeData.executionStatus] ?? '' : ''
 
   return (
     <div
-      className={`${nodeBaseClasses} ${borderClass} ${selected ? selectedClasses : ''}`}
+      className={`${nodeBaseClasses} ${borderClass} ${selected ? selectedClasses : ''} ${execRing}`}
     >
       <Handle
         type="target"

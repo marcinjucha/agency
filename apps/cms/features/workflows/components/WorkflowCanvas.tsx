@@ -77,6 +77,13 @@ export interface WorkflowCanvasHandle {
   updateNodeData: (nodeId: string, newData: Record<string, unknown>) => void
 }
 
+export type TestResultStatus = 'completed' | 'failed' | 'skipped' | 'pending'
+
+interface TestResult {
+  stepId: string
+  status: TestResultStatus
+}
+
 interface WorkflowCanvasProps {
   initialNodes: CanvasNodeData[]
   initialEdges: CanvasEdgeData[]
@@ -85,6 +92,7 @@ interface WorkflowCanvasProps {
   hasTriggerNode: boolean
   triggerType: string
   getLabel: (stepType: string) => string
+  testResults?: TestResult[]
 }
 
 function CanvasInner(
@@ -96,6 +104,7 @@ function CanvasInner(
     hasTriggerNode: initialHasTrigger,
     triggerType,
     getLabel,
+    testResults,
   }: WorkflowCanvasProps,
   ref: React.Ref<WorkflowCanvasHandle>
 ) {
@@ -153,6 +162,34 @@ function CanvasInner(
   useEffect(() => {
     onDirtyChange(isDirty)
   }, [isDirty, onDirtyChange])
+
+  // Apply test result status to nodes
+  useEffect(() => {
+    if (!testResults?.length) {
+      // Clear execution status from all nodes
+      setNodes((nds) =>
+        nds.map((n) => {
+          const data = n.data as Record<string, unknown>
+          if (data.executionStatus) {
+            return { ...n, data: { ...data, executionStatus: undefined } }
+          }
+          return n
+        })
+      )
+      return
+    }
+
+    const statusMap = new Map(testResults.map((r) => [r.stepId, r.status]))
+    setNodes((nds) =>
+      nds.map((n) => {
+        const status = statusMap.get(n.id)
+        return {
+          ...n,
+          data: { ...(n.data as Record<string, unknown>), executionStatus: status },
+        }
+      })
+    )
+  }, [testResults, setNodes])
 
   const hasTrigger = useMemo(
     () => nodes.some((n) => n.type === 'trigger'),

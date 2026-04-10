@@ -1151,6 +1151,23 @@ export const messages = {
     openInEditor: 'Otwórz w edytorze',
     // Nav
     navExecutions: 'Historia',
+    // Test mode
+    testMode: {
+      title: 'Tryb testowy',
+      toggle: 'Test',
+      mockData: 'Dane testowe',
+      fromExecution: 'Z wykonania',
+      runTest: 'Uruchom test',
+      running: 'Uruchamianie...',
+      testCompleted: 'Test zakończony',
+      testFailed: 'Test zakończony z błędami',
+      invalidJson: 'Nieprawidłowy format JSON',
+      noExecutions: 'Brak wykonań do załadowania',
+      fetchFailed: 'Nie udało się pobrać wyników testu',
+      stepInput: 'Dane wejściowe',
+      stepOutput: 'Dane wyjściowe',
+      selectExecution: 'Wybierz wykonanie...',
+    },
     // Templates
     templatesSectionTitle: 'Zacznij od szablonu',
     useTemplate: 'Użyj szablonu',
