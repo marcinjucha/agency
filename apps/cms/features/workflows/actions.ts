@@ -11,9 +11,11 @@ import {
   type UpdateWorkflowFormData,
   type SaveCanvasFormData,
 } from './validation'
-import { toWorkflow, type Workflow } from './types'
+import { toWorkflow, toWorkflowStep, type Workflow } from './types'
 import { executeWorkflow } from './engine/executor'
+import { dryRunHandlers } from './engine/action-handlers'
 import { createServiceClient } from '@/lib/supabase/service'
+import type { ExecutionContext, VariableContext } from './engine/types'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
 import { WORKFLOW_TEMPLATES } from './templates/workflow-templates'
@@ -383,6 +385,116 @@ export async function createWorkflowFromTemplate(
 
     revalidatePath(routes.admin.workflows)
     return { success: true, data: { id: workflowId } }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : messages.common.unknownError
+    return { success: false, error: message }
+  }
+}
+
+const MAX_PAYLOAD_SIZE = 100_000 // 100KB
+
+export async function dryRunWorkflow(
+  workflowId: string,
+  mockTriggerPayload: Record<string, unknown>
+): Promise<{ success: boolean; data?: { executionId: string; status: string }; error?: string }> {
+  try {
+    if (JSON.stringify(mockTriggerPayload).length > MAX_PAYLOAD_SIZE) {
+      return { success: false, error: 'Payload too large' }
+    }
+
+    const auth = await requireAuth('workflows')
+    if (!auth.success) return auth
+    const { supabase, tenantId } = auth.data
+
+    // Verify workflow belongs to user's tenant
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: workflow, error: fetchError } = await (supabase as any)
+      .from('workflows')
+      .select('id, tenant_id')
+      .eq('id', workflowId)
+      .maybeSingle()
+
+    if (fetchError) return { success: false, error: fetchError.message }
+    if (!workflow) return { success: false, error: messages.workflows.workflowNotFound }
+
+    if (workflow.tenant_id !== tenantId) {
+      return { success: false, error: messages.workflows.workflowNotFound }
+    }
+
+    const triggerPayload = {
+      trigger_type: 'manual' as const,
+      ...mockTriggerPayload,
+    }
+
+    const result = await executeWorkflow(workflowId, triggerPayload, { dryRun: true })
+
+    revalidatePath(routes.admin.workflow(workflowId))
+    return { success: true, data: { executionId: result.executionId, status: result.status } }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : messages.common.unknownError
+    return { success: false, error: message }
+  }
+}
+
+export async function dryRunSingleStep(
+  workflowId: string,
+  stepId: string,
+  inputPayload: Record<string, unknown>
+): Promise<{ success: boolean; data?: { status: string; outputPayload: Record<string, unknown> | null; errorMessage?: string }; error?: string }> {
+  try {
+    if (JSON.stringify(inputPayload).length > MAX_PAYLOAD_SIZE) {
+      return { success: false, error: 'Payload too large' }
+    }
+
+    const auth = await requireAuth('workflows')
+    if (!auth.success) return auth
+    const { supabase, tenantId } = auth.data
+
+    // Fetch step and verify ownership via workflow
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: step, error: stepError } = await (supabase as any)
+      .from('workflow_steps')
+      .select('*, workflows(tenant_id)')
+      .eq('id', stepId)
+      .eq('workflow_id', workflowId)
+      .maybeSingle()
+
+    if (stepError) return { success: false, error: stepError.message }
+    if (!step) return { success: false, error: messages.workflows.workflowNotFound }
+
+    if (step.workflows?.tenant_id !== tenantId) {
+      return { success: false, error: messages.workflows.workflowNotFound }
+    }
+
+    const stepType = step.step_type as string
+    const handler = dryRunHandlers[stepType]
+    if (!handler) {
+      return { success: false, error: `No dry-run handler for step type: ${stepType}` }
+    }
+
+    const workflowStep = toWorkflowStep(step)
+    const serviceClient = createServiceClient()
+
+    const minimalContext: ExecutionContext = {
+      executionId: 'dry-run-single',
+      workflowId,
+      tenantId,
+      triggerPayload: { trigger_type: 'manual' },
+      stepExecutionId: 'dry-run-single-step',
+    }
+
+    const variableContext: VariableContext = { ...inputPayload }
+
+    const result = await handler(workflowStep, minimalContext, serviceClient, variableContext)
+
+    return {
+      success: true,
+      data: {
+        status: result.success ? 'completed' : 'failed',
+        outputPayload: result.outputPayload ?? null,
+        errorMessage: result.error,
+      },
+    }
   } catch (err) {
     const message = err instanceof Error ? err.message : messages.common.unknownError
     return { success: false, error: message }

@@ -6,6 +6,11 @@
 **Scope:** Two shops: Jacek (books, dark amber theme) + Kolega (general merchandise, light linen theme). Catalog-only, NO Stripe. Single Supabase (`shop_` prefix), CMS extended, separate frontends (`apps/shop/jacek/`, `apps/shop/kolega/`).
 **Key decisions:** `listing_type` ENUM, `gallery`/`editorial` display_layout, `is_featured BOOLEAN`, flat categories. Dual PROJECT_SPEC: `docs/PROJECT_SPEC.yaml` (AAA-P-4) + `docs/SHOP_PROJECT_SPEC.yaml` (AAA-P-9).
 
+## Workflow Builder UX Overhaul — AAA-T-177 + AAA-T-179 — DONE (2026-04-10)
+
+**Status:** XL task, 10 iterations complete. Bundled T-179 (context menu + single step run — user-requested additions beyond original roadmap).
+**Scope:** Workflow builder canvas UX improvements, context menu, single step execution.
+
 ## Workflow Engine — AAA-P-4 — IN PROGRESS (2026-03-31)
 
 **Status:** Iterations 1-10 done. Iter 11 (cancel/retry/real-time) = backlog.
@@ -111,6 +116,8 @@
 - **Multi-provider calendar architecture** — calendar_connections table with pgcrypto encryption, CalendarProvider interface with ResultAsync, survey_links.calendar_connection_id for calendar-per-survey model. CalDAV via tsdav (tested with Baikal: Basic auth, DAVClient). (2026-04-09)
 - **app_config table replaces custom GUC for encryption key** — Supabase Cloud AND local both block `ALTER DATABASE SET` for custom `app.*` parameters. Solution: `app_config` table with `get_encryption_key()` SECURITY DEFINER helper. Seed row has placeholder, production UPDATE after deploy. Replaces GUC COALESCE fallback pattern. (2026-04-09)
 - **SurveyLinkCalendarSelect dual mode (auto-save vs controlled)** — Component needed two modes: standalone (saves immediately on change via server action) and embedded in form (tracks state, parent form saves). Discriminated union props pattern: `{ mode: 'standalone'; surveyLinkId: string }` vs `{ mode: 'controlled'; value: string | null; onChange: (id) => void }`. Reusable pattern for any component that appears both standalone and inside forms. (2026-04-09, AAA-T-175)
+- **Extract pure logic from .tsx to utils/ for TDD** — When component files contain pure logic (validation, transformation, mapping), extract to `utils/` files. Enables unit testing without React rendering. Pattern: `.tsx` = rendering + hooks, `utils/*.ts` = pure testable functions. (2026-04-10, AAA-T-177)
+- **3-pass validation more valuable than unit tests for UI-heavy features** — For features that are primarily UI (canvas interactions, drag-and-drop, visual builders), the 3-pass validator (functional + architecture + integration) catches more real issues than unit tests. Unit tests still valuable for extracted pure logic in utils/. (2026-04-10, AAA-T-177)
 
 ## Preferences
 

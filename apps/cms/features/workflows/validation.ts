@@ -78,10 +78,17 @@ export const webhookConfigSchema = z.object({
   body: z.string().nullable().optional(),
 })
 
+export const outputSchemaFieldSchema = z.object({
+  key: z.string().min(1),
+  label: z.string().min(1),
+  type: z.enum(['string', 'number', 'boolean', 'object']).default('string'),
+})
+
 export const aiActionConfigSchema = z.object({
   type: z.literal('ai_action'),
   prompt: z.string().min(1, messages.validation.promptRequired),
   model: z.string().nullable().optional(),
+  output_schema: z.array(outputSchemaFieldSchema).nullable().optional(),
 })
 
 /**

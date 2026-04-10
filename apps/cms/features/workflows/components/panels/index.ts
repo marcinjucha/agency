@@ -14,6 +14,7 @@ import { WebhookConfigPanel } from './WebhookConfigPanel'
 import { AiActionConfigPanel } from './AiActionConfigPanel'
 import { ConfigPanelWrapper } from './ConfigPanelWrapper'
 import type { TriggerType } from '../../types'
+import type { VariableItem } from '@agency/ui'
 
 /** Props shared by all config panel components */
 export interface ConfigPanelProps {
@@ -24,6 +25,8 @@ export interface ConfigPanelProps {
   onChange: (config: Record<string, unknown>, triggerType?: TriggerType) => void
   /** Workflow's trigger type — needed by panels that show trigger-context variables */
   triggerType?: string
+  /** Graph-aware grouped variables from upstream steps + trigger */
+  availableVariables?: VariableItem[]
 }
 
 const TRIGGER_TYPES = new Set<string>([

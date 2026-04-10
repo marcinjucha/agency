@@ -15,7 +15,6 @@ import {
 } from '@agency/ui'
 import { messages } from '@/lib/messages'
 import { queryKeys } from '@/lib/query-keys'
-import { TRIGGER_VARIABLE_SCHEMAS } from '@/lib/trigger-schemas'
 import { VariableInserter } from '@/features/email/components/VariableInserter'
 import { getEmailTemplatesForWorkflow } from '../../queries'
 import { sendEmailConfigSchema } from '../../validation'
@@ -24,7 +23,7 @@ import type { ConfigPanelProps } from './index'
 
 type SendEmailFormData = StepConfigSendEmail
 
-export function SendEmailConfigPanel({ stepConfig, onChange, triggerType }: ConfigPanelProps) {
+export function SendEmailConfigPanel({ stepConfig, onChange, availableVariables }: ConfigPanelProps) {
   const isFirstRender = useRef(true)
   const onChangeRef = useRef(onChange)
   onChangeRef.current = onChange
@@ -61,7 +60,7 @@ export function SendEmailConfigPanel({ stepConfig, onChange, triggerType }: Conf
     return () => clearTimeout(timeoutId)
   }, [JSON.stringify(formValues)])
 
-  const variables = triggerType ? (TRIGGER_VARIABLE_SCHEMAS[triggerType] ?? []) : []
+  const variables = availableVariables ?? []
 
   return (
     <div className="space-y-6">

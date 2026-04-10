@@ -23,6 +23,10 @@ export interface NodeTypeConfig {
   borderColor: string
   /** If true, this type appears in the "add node" dropdown as a trigger option */
   isTrigger?: boolean
+  /** Category key for step library grouping (e.g. 'actions', 'logic', 'ai') */
+  category?: string
+  /** Short description shown in step library */
+  description?: string
 }
 
 export const NODE_TYPE_CONFIGS: Record<string, NodeTypeConfig> = {
@@ -36,26 +40,36 @@ export const NODE_TYPE_CONFIGS: Record<string, NodeTypeConfig> = {
     icon: Mail,
     label: messages.workflows.stepSendEmail,
     borderColor: 'border-l-4 border-l-blue-400',
+    category: 'actions',
+    description: messages.workflows.stepLibrary.descSendEmail,
   },
   condition: {
     icon: GitBranch,
     label: messages.workflows.stepCondition,
     borderColor: 'border-l-4 border-l-amber-400',
+    category: 'logic',
+    description: messages.workflows.stepLibrary.descCondition,
   },
   delay: {
     icon: Clock,
     label: messages.workflows.stepDelay,
     borderColor: 'border-l-4 border-l-muted-foreground',
+    category: 'logic',
+    description: messages.workflows.stepLibrary.descDelay,
   },
   webhook: {
     icon: Globe,
     label: messages.workflows.stepWebhook,
     borderColor: 'border-l-4 border-l-blue-400',
+    category: 'actions',
+    description: messages.workflows.stepLibrary.descWebhook,
   },
   ai_action: {
     icon: Sparkles,
     label: messages.workflows.stepAiAction,
     borderColor: 'border-l-4 border-l-blue-400',
+    category: 'ai',
+    description: messages.workflows.stepLibrary.descAiAction,
   },
 }
 

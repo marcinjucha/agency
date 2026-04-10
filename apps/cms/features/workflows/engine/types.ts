@@ -92,6 +92,15 @@ export type StepHandlerRegistry = Record<string, StepHandler>
 /** Flat key-value map used for {{variable}} resolution in templates */
 export type VariableContext = Record<string, unknown>
 
+// --- Execution Options ---
+
+/** Options passed to executeWorkflow to control execution behavior */
+export type ExecutionOptions = {
+  triggeringExecutionId?: string
+  /** When true, intercepts all side effects (no emails, no webhooks, no n8n) while recording step I/O with mock data */
+  dryRun?: boolean
+}
+
 // --- Execution Limits ---
 
 export const DEFAULT_EXECUTION_LIMITS = {

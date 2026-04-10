@@ -16,8 +16,13 @@ import {
   type TriggerType,
   type StepType,
 } from '../types'
+import { LayoutGrid, FlaskConical } from 'lucide-react'
+import { Button } from '@agency/ui'
 import { ConfigPanelWrapper, getPanelComponent } from './panels'
 import type { ConfigPanelProps } from './panels'
+import { StepLibraryPanel } from './StepLibraryPanel'
+import { TestModePanel, type StepTestResult } from './TestModePanel'
+import { collectAvailableVariables } from '../engine/utils'
 
 const WorkflowCanvas = dynamic(() => import('./WorkflowCanvas'), {
   ssr: false,
@@ -33,6 +38,7 @@ const TRIGGER_TYPES = new Set<string>([
   'booking_created',
   'lead_scored',
   'manual',
+  'scheduled',
 ])
 
 function isTriggerType(type: string): type is TriggerType {
@@ -114,10 +120,32 @@ export function WorkflowEditor({ workflow }: WorkflowEditorProps) {
   )
 
   const canvasRef = useRef<WorkflowCanvasHandle>(null)
+  const [isLibraryOpen, setIsLibraryOpen] = useState(true)
   const [isDirty, setIsDirty] = useState(false)
   const [isActive, setIsActive] = useState(workflow.is_active)
   const [isSaving, setIsSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
+
+  // Test mode state
+  const [isTestMode, setIsTestMode] = useState(false)
+  const [testResults, setTestResults] = useState<StepTestResult[]>([])
+
+  const handleTestModeToggle = useCallback(() => {
+    setIsTestMode((prev) => {
+      if (!prev) {
+        // Entering test mode — close config panel
+        setSelectedNode(null)
+      } else {
+        // Exiting test mode — clear results
+        setTestResults([])
+      }
+      return !prev
+    })
+  }, [])
+
+  const handleTestResults = useCallback((results: StepTestResult[]) => {
+    setTestResults(results)
+  }, [])
 
   // Config panel state
   const [selectedNode, setSelectedNode] = useState<{
@@ -128,13 +156,14 @@ export function WorkflowEditor({ workflow }: WorkflowEditorProps) {
 
   const handleNodeSelect = useCallback(
     (nodeId: string | null, stepType: string, stepConfig: Record<string, unknown>) => {
+      if (isTestMode) return // Disable config panel in test mode
       if (!nodeId) {
         setSelectedNode(null)
         return
       }
       setSelectedNode({ id: nodeId, stepType, stepConfig })
     },
-    []
+    [isTestMode]
   )
 
   const handleConfigChange = useCallback(
@@ -227,6 +256,24 @@ export function WorkflowEditor({ workflow }: WorkflowEditorProps) {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [isDirty, isSaving, handleSave])
 
+  const availableVariables = useMemo(() => {
+    if (!selectedNode || !canvasRef.current) return []
+    const nodes = canvasRef.current.getNodes()
+    const edges = canvasRef.current.getEdges()
+
+    const steps = nodes.map((n) => ({
+      id: n.id,
+      step_type: (n.data as { stepType: string }).stepType,
+      step_config: ((n.data as { stepConfig?: Record<string, unknown> }).stepConfig ?? {}) as Record<string, unknown>,
+    }))
+    const edgeList = edges.map((e) => ({
+      source_step_id: e.source,
+      target_step_id: e.target,
+    }))
+
+    return collectAvailableVariables(selectedNode.id, steps, edgeList, workflow.trigger_type)
+  }, [selectedNode, workflow.trigger_type, isDirty])
+
   const PanelComponent = selectedNode ? getPanelComponent(selectedNode.stepType) : null
 
   return (
@@ -247,9 +294,33 @@ export function WorkflowEditor({ workflow }: WorkflowEditorProps) {
         </div>
       )}
       <div className="flex-1 min-h-0 flex flex-row">
-        <div className="flex-1 min-w-0">
+        <StepLibraryPanel isOpen={isLibraryOpen} onClose={() => setIsLibraryOpen(false)} />
+        <div className="flex-1 min-w-0 relative">
+          <div className="absolute top-3 left-3 z-10 flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsLibraryOpen((prev) => !prev)}
+              className="gap-1.5"
+              aria-label={messages.workflows.editor.stepLibraryToggle}
+            >
+              <LayoutGrid className="h-4 w-4" />
+              {messages.workflows.editor.stepLibraryToggle}
+            </Button>
+            <Button
+              variant={isTestMode ? 'default' : 'outline'}
+              size="sm"
+              onClick={handleTestModeToggle}
+              className="gap-1.5"
+              aria-label={messages.workflows.testMode.toggle}
+            >
+              <FlaskConical className="h-4 w-4" />
+              {messages.workflows.testMode.toggle}
+            </Button>
+          </div>
           <WorkflowCanvas
             ref={canvasRef}
+            workflowId={workflow.id}
             initialNodes={initialNodes}
             initialEdges={initialEdges}
             onDirtyChange={handleDirtyChange}
@@ -257,22 +328,33 @@ export function WorkflowEditor({ workflow }: WorkflowEditorProps) {
             hasTriggerNode={hasTriggerNode}
             triggerType={workflow.trigger_type}
             getLabel={getLabel}
+            testResults={testResults}
           />
         </div>
-        {selectedNode && PanelComponent && (
-          <ConfigPanelWrapper
-            nodeId={selectedNode.id}
-            stepType={selectedNode.stepType}
-            onClose={handlePanelClose}
-          >
-            <PanelComponent
+        {isTestMode ? (
+          <TestModePanel
+            workflowId={workflow.id}
+            triggerType={workflow.trigger_type}
+            onClose={handleTestModeToggle}
+            onExecutionResult={handleTestResults}
+          />
+        ) : (
+          selectedNode && PanelComponent && (
+            <ConfigPanelWrapper
               nodeId={selectedNode.id}
               stepType={selectedNode.stepType}
-              stepConfig={selectedNode.stepConfig}
-              onChange={handleConfigChange}
-              triggerType={workflow.trigger_type}
-            />
-          </ConfigPanelWrapper>
+              onClose={handlePanelClose}
+            >
+              <PanelComponent
+                nodeId={selectedNode.id}
+                stepType={selectedNode.stepType}
+                stepConfig={selectedNode.stepConfig}
+                onChange={handleConfigChange}
+                triggerType={workflow.trigger_type}
+                availableVariables={availableVariables}
+              />
+            </ConfigPanelWrapper>
+          )
         )}
       </div>
     </div>

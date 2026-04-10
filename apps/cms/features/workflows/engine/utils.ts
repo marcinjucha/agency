@@ -1,5 +1,49 @@
-import type { WorkflowStep, WorkflowEdge } from '../types'
+import type { WorkflowStep, WorkflowEdge, OutputSchemaField, StepType } from '../types'
 import type { TriggerPayload, VariableContext } from './types'
+import { isTriggerType } from './types'
+import { getTriggerVariables } from '@/lib/trigger-schemas'
+
+/** Variable item compatible with @agency/ui VariableInserterPopover */
+export type VariableItem = {
+  key: string
+  label: string
+  description?: string
+  category?: string
+}
+
+/**
+ * Step output schemas — duplicated from ../types to avoid pulling in messages.ts
+ * at runtime (messages.ts breaks vitest resolution chain).
+ * Keep in sync with STEP_OUTPUT_SCHEMAS in ../types.ts.
+ */
+const STEP_OUTPUT_SCHEMAS: Record<string, OutputSchemaField[]> = {
+  send_email: [
+    { key: 'emailSent', label: 'Email wysłany', type: 'boolean' },
+    { key: 'recipientEmail', label: 'Email odbiorcy', type: 'string' },
+  ],
+  delay: [],
+  condition: [
+    { key: 'branch', label: 'Wynik warunku', type: 'string' },
+  ],
+  webhook: [
+    { key: 'statusCode', label: 'Kod statusu HTTP', type: 'number' },
+    { key: 'responseBody', label: 'Odpowiedź webhook', type: 'string' },
+  ],
+  ai_action: [
+    { key: 'aiResponse', label: 'Odpowiedź AI', type: 'string' },
+    { key: 'overallScore', label: 'Wynik ogólny', type: 'number' },
+    { key: 'recommendation', label: 'Rekomendacja', type: 'string' },
+  ],
+}
+
+/** Step type labels for variable categories — local to avoid messages.ts dependency */
+const STEP_TYPE_LABELS: Record<string, string> = {
+  send_email: 'Wyślij email',
+  delay: 'Opóźnienie',
+  condition: 'Warunek',
+  webhook: 'Webhook',
+  ai_action: 'Akcja AI',
+}
 
 /**
  * Sorts workflow steps in topological (execution) order.
@@ -77,6 +121,88 @@ export function topologicalSort(
   }
 
   return sorted
+}
+
+/**
+ * Collects all variables available to a given step by walking backward through edges.
+ * Returns VariableItem[] with category set to source name (e.g., "Trigger", "Krok 1: Wyślij email").
+ */
+export function collectAvailableVariables(
+  stepId: string,
+  steps: Array<{ id: string; step_type: string; step_config: Record<string, unknown> }>,
+  edges: Array<{ source_step_id: string; target_step_id: string }>,
+  triggerType: string
+): VariableItem[] {
+  // 1. Build reverse adjacency map: target → [sources]
+  const reverseAdj = new Map<string, string[]>()
+  for (const edge of edges) {
+    const sources = reverseAdj.get(edge.target_step_id) ?? []
+    sources.push(edge.source_step_id)
+    reverseAdj.set(edge.target_step_id, sources)
+  }
+
+  // 2. BFS backward from stepId to find all ancestor step IDs
+  const ancestors = new Set<string>()
+  const queue = [stepId]
+  while (queue.length > 0) {
+    const current = queue.shift()!
+    for (const source of reverseAdj.get(current) ?? []) {
+      if (!ancestors.has(source)) {
+        ancestors.add(source)
+        queue.push(source)
+      }
+    }
+  }
+
+  // 3. Collect trigger variables
+  const triggerVars: VariableItem[] = getTriggerVariables(triggerType).map((tv) => ({
+    key: tv.key,
+    label: tv.label,
+    description: tv.description,
+    category: 'Trigger',
+  }))
+
+  // 4. Order ancestors topologically (closest first) using existing topologicalSort
+  const stepMap = new Map(steps.map((s) => [s.id, s]))
+  const ancestorSteps = steps.filter((s) => ancestors.has(s.id) && !isTriggerType(s.step_type))
+
+  // Use topologicalSort for ordering — need WorkflowStep-shaped objects
+  const relevantEdges = edges.filter(
+    (e) => ancestors.has(e.source_step_id) && ancestors.has(e.target_step_id)
+  )
+  const sorted = topologicalSort(
+    ancestorSteps as WorkflowStep[],
+    relevantEdges as WorkflowEdge[]
+  )
+
+  // 5. Map each ancestor step's output schema to VariableItem[]
+  const stepVars: VariableItem[] = []
+  for (let i = 0; i < sorted.length; i++) {
+    const step = sorted[i]
+    const stepType = step.step_type as StepType
+    const stepNum = i + 1
+    const label = STEP_TYPE_LABELS[stepType] ?? stepType
+    const category = `Krok ${stepNum}: ${label}`
+
+    // For ai_action: check custom output_schema in config first
+    let fields: OutputSchemaField[]
+    const config = step.step_config as Record<string, unknown>
+    if (stepType === 'ai_action' && Array.isArray(config.output_schema)) {
+      fields = config.output_schema as OutputSchemaField[]
+    } else {
+      fields = STEP_OUTPUT_SCHEMAS[stepType] ?? []
+    }
+
+    for (const field of fields) {
+      stepVars.push({
+        key: field.key,
+        label: field.label,
+        category,
+      })
+    }
+  }
+
+  return [...triggerVars, ...stepVars]
 }
 
 /**

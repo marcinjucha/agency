@@ -11,6 +11,34 @@ export type ExecutionStatus = 'pending' | 'running' | 'completed' | 'failed' | '
 
 export type StepExecutionStatus = 'pending' | 'running' | 'completed' | 'failed' | 'skipped' | 'waiting' | 'processing'
 
+// --- Step Output Schema ---
+
+export type OutputSchemaField = {
+  key: string
+  label: string
+  type: 'string' | 'number' | 'boolean' | 'object'
+}
+
+export const STEP_OUTPUT_SCHEMAS: Record<StepType, OutputSchemaField[]> = {
+  send_email: [
+    { key: 'emailSent', label: 'Email wysłany', type: 'boolean' },
+    { key: 'recipientEmail', label: 'Email odbiorcy', type: 'string' },
+  ],
+  delay: [],
+  condition: [
+    { key: 'branch', label: 'Wynik warunku', type: 'string' },
+  ],
+  webhook: [
+    { key: 'statusCode', label: 'Kod statusu HTTP', type: 'number' },
+    { key: 'responseBody', label: 'Odpowiedź webhook', type: 'string' },
+  ],
+  ai_action: [
+    { key: 'aiResponse', label: 'Odpowiedź AI', type: 'string' },
+    { key: 'overallScore', label: 'Wynik ogólny', type: 'number' },
+    { key: 'recommendation', label: 'Rekomendacja', type: 'string' },
+  ],
+}
+
 // --- Trigger Config (discriminated union) ---
 
 export type TriggerConfigSurveySubmitted = {
@@ -73,6 +101,7 @@ export type StepConfigAiAction = {
   type: 'ai_action'
   prompt: string
   model?: string
+  output_schema?: OutputSchemaField[]
 }
 
 export type StepConfig =

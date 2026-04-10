@@ -85,19 +85,25 @@ export async function getWorkflow(id: string): Promise<WorkflowWithSteps> {
 
 export async function getWorkflowExecutions(
   workflowId: string,
-  options?: { limit?: number; offset?: number }
+  options?: { limit?: number; offset?: number; excludeDryRuns?: boolean }
 ): Promise<WorkflowExecution[]> {
   const supabase = createClient()
   const limit = options?.limit ?? 50
   const offset = options?.offset ?? 0
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JS v2.95.2 incompatibility
-  const { data, error } = await (supabase as any)
+  let query = (supabase as any)
     .from('workflow_executions')
     .select('*')
     .eq('workflow_id', workflowId)
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1)
+
+  if (options?.excludeDryRuns !== false) {
+    query = query.eq('is_dry_run', false)
+  }
+
+  const { data, error } = await query
 
   if (error) throw error
   return (data || []).map(toWorkflowExecution)
@@ -152,6 +158,9 @@ export async function getAllExecutions(
     .select('*, workflows(name, trigger_type)')
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1)
+
+  // Filter out dry-runs by default
+  query = query.eq('is_dry_run', false)
 
   if (filters?.workflowId) {
     query = query.eq('workflow_id', filters.workflowId)
