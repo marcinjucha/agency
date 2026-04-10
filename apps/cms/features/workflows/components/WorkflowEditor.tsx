@@ -16,8 +16,11 @@ import {
   type TriggerType,
   type StepType,
 } from '../types'
+import { LayoutGrid } from 'lucide-react'
+import { Button } from '@agency/ui'
 import { ConfigPanelWrapper, getPanelComponent } from './panels'
 import type { ConfigPanelProps } from './panels'
+import { StepLibraryPanel } from './StepLibraryPanel'
 
 const WorkflowCanvas = dynamic(() => import('./WorkflowCanvas'), {
   ssr: false,
@@ -114,6 +117,7 @@ export function WorkflowEditor({ workflow }: WorkflowEditorProps) {
   )
 
   const canvasRef = useRef<WorkflowCanvasHandle>(null)
+  const [isLibraryOpen, setIsLibraryOpen] = useState(true)
   const [isDirty, setIsDirty] = useState(false)
   const [isActive, setIsActive] = useState(workflow.is_active)
   const [isSaving, setIsSaving] = useState(false)
@@ -247,7 +251,18 @@ export function WorkflowEditor({ workflow }: WorkflowEditorProps) {
         </div>
       )}
       <div className="flex-1 min-h-0 flex flex-row">
-        <div className="flex-1 min-w-0">
+        <StepLibraryPanel isOpen={isLibraryOpen} />
+        <div className="flex-1 min-w-0 relative">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsLibraryOpen((prev) => !prev)}
+            className="absolute top-3 left-3 z-10 gap-1.5"
+            aria-label={messages.workflows.editor.stepLibraryToggle}
+          >
+            <LayoutGrid className="h-4 w-4" />
+            {messages.workflows.editor.stepLibraryToggle}
+          </Button>
           <WorkflowCanvas
             ref={canvasRef}
             initialNodes={initialNodes}
