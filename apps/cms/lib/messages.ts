@@ -1167,6 +1167,11 @@ export const messages = {
       stepInput: 'Dane wejściowe',
       stepOutput: 'Dane wyjściowe',
       selectExecution: 'Wybierz wykonanie...',
+      runStep: 'Uruchom krok',
+      stepInputData: 'Dane wejściowe kroku',
+      runStepButton: 'Uruchom',
+      stepRunCompleted: 'Krok wykonany pomyślnie',
+      stepRunFailed: 'Krok zakończony błędem',
     },
     // Templates
     templatesSectionTitle: 'Zacznij od szablonu',

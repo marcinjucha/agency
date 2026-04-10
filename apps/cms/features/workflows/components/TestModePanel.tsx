@@ -10,9 +10,10 @@ import {
   TabsTrigger,
   TabsContent,
 } from '@agency/ui'
-import { Play, X, ChevronDown, ChevronRight, Loader2 } from 'lucide-react'
+import { Play, X, ChevronDown, ChevronRight, Loader2, ExternalLink } from 'lucide-react'
 import { messages } from '@/lib/messages'
 import { queryKeys } from '@/lib/query-keys'
+import { routes } from '@/lib/routes'
 import { TRIGGER_VARIABLE_SCHEMAS } from '@/lib/trigger-schemas'
 import { dryRunWorkflow } from '../actions'
 import { getWorkflowExecutions, getExecutionWithSteps } from '../queries'
@@ -76,11 +77,13 @@ export function TestModePanel({
   const [stepResults, setStepResults] = useState<StepTestResult[]>([])
   const [expandedStep, setExpandedStep] = useState<string | null>(null)
   const [executionStatus, setExecutionStatus] = useState<string | null>(null)
+  const [selectedExecutionId, setSelectedExecutionId] = useState<string | null>(null)
+  const [lastDryRunSourceId, setLastDryRunSourceId] = useState<string | null>(null)
 
-  // Fetch recent executions for "Z wykonania" tab
+  // Fetch recent real executions (exclude dry-runs) for "Z wykonania" tab
   const { data: recentExecutions } = useQuery({
     queryKey: [...queryKeys.workflows.all, workflowId, 'executions-for-test'],
-    queryFn: () => getWorkflowExecutions(workflowId, { limit: 10 }),
+    queryFn: () => getWorkflowExecutions(workflowId, { limit: 10, excludeDryRuns: true }),
   })
 
   const handleJsonChange = useCallback((value: string) => {
@@ -95,6 +98,8 @@ export function TestModePanel({
 
   const handleSelectExecution = useCallback(
     async (executionId: string) => {
+      setSelectedExecutionId(executionId)
+      setLastDryRunSourceId(executionId)
       try {
         const execution = await getExecutionWithSteps(executionId)
         if (execution?.trigger_payload) {
@@ -223,20 +228,30 @@ export function TestModePanel({
                     {recentExecutions.map((exec) => (
                       <button
                         key={exec.id}
-                        className="w-full text-left px-3 py-2 rounded-md border border-border bg-card hover:bg-muted transition-colors text-sm"
+                        className={`w-full text-left px-3 py-2 rounded-md border transition-colors text-sm ${
+                          selectedExecutionId === exec.id
+                            ? 'border-primary bg-primary/5'
+                            : 'border-border bg-card hover:bg-muted'
+                        }`}
                         onClick={() => handleSelectExecution(exec.id)}
                       >
                         <div className="flex items-center justify-between">
-                          <span className="text-foreground text-xs font-mono">
-                            {exec.id.slice(0, 8)}...
+                          <span className="text-foreground text-xs">
+                            {new Date(exec.created_at).toLocaleString('pl-PL', {
+                              day: '2-digit',
+                              month: '2-digit',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
                           </span>
-                          <Badge variant="outline" className="text-xs">
-                            {exec.status}
+                          <Badge
+                            variant="outline"
+                            className={`text-xs ${STATUS_STYLES[exec.status] ?? ''}`}
+                          >
+                            {formatExecutionStatus(exec.status)}
                           </Badge>
                         </div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {new Date(exec.created_at).toLocaleString('pl-PL')}
-                        </p>
                       </button>
                     ))}
                   </div>
@@ -310,6 +325,22 @@ export function TestModePanel({
                     : messages.workflows.testMode.testFailed}
                 </Badge>
               </div>
+
+              {/* Comparison hint when replaying from execution */}
+              {lastDryRunSourceId && (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <span>Porównanie z oryginałem dostępne w logach</span>
+                  <a
+                    href={routes.admin.execution(lastDryRunSourceId)}
+                    className="inline-flex items-center gap-1 text-primary hover:underline"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Otwórz
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                </div>
+              )}
 
               {/* Step results list */}
               <div className="space-y-1">
@@ -399,4 +430,18 @@ function mapStepStatus(
 
 function capitalize(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1)
+}
+
+const EXECUTION_STATUS_LABELS: Record<string, string> = {
+  completed: 'Ukończono',
+  failed: 'Błąd',
+  running: 'W trakcie',
+  pending: 'Oczekuje',
+  cancelled: 'Anulowano',
+  paused: 'Wstrzymano',
+  waiting_for_callback: 'Oczekuje na callback',
+}
+
+function formatExecutionStatus(status: string): string {
+  return EXECUTION_STATUS_LABELS[status] ?? status
 }

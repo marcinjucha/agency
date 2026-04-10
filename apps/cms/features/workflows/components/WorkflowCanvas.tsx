@@ -25,7 +25,8 @@ import {
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 
-import { Zap, Trash2 } from 'lucide-react'
+import { Zap, Trash2, Play } from 'lucide-react'
+import { dryRunSingleStep } from '../actions'
 import { messages } from '@/lib/messages'
 import { TriggerNode } from './nodes/TriggerNode'
 import { ActionNode } from './nodes/ActionNode'
@@ -85,6 +86,7 @@ interface TestResult {
 }
 
 interface WorkflowCanvasProps {
+  workflowId: string
   initialNodes: CanvasNodeData[]
   initialEdges: CanvasEdgeData[]
   onDirtyChange: (isDirty: boolean) => void
@@ -97,6 +99,7 @@ interface WorkflowCanvasProps {
 
 function CanvasInner(
   {
+    workflowId,
     initialNodes,
     initialEdges,
     onDirtyChange,
@@ -272,13 +275,27 @@ function CanvasInner(
     y: number
   } | null>(null)
 
+  // Single step run state
+  const [singleStepRun, setSingleStepRun] = useState<{
+    stepId: string
+    stepLabel: string
+  } | null>(null)
+  const [singleStepInput, setSingleStepInput] = useState('{}')
+  const [singleStepRunning, setSingleStepRunning] = useState(false)
+  const [singleStepResult, setSingleStepResult] = useState<{
+    status: string
+    outputPayload: Record<string, unknown> | null
+    errorMessage?: string
+  } | null>(null)
+
   const onNodeContextMenu = useCallback(
     (event: React.MouseEvent, node: Node) => {
       event.preventDefault()
-      if (node.deletable === false) return
+      // Allow context menu for test mode (run step) even on non-deletable nodes
+      if (node.deletable === false && !testResults?.length) return
       setContextMenu({ nodeId: node.id, x: event.clientX, y: event.clientY })
     },
-    []
+    [testResults]
   )
 
   // Close context menu on click-away or Escape
@@ -402,23 +419,112 @@ function CanvasInner(
           className="fixed z-50 min-w-[160px] rounded-md border bg-popover p-1 text-popover-foreground shadow-md"
           style={{ top: contextMenu.y, left: contextMenu.x }}
         >
-          <button
-            className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-destructive hover:bg-accent cursor-pointer"
-            onClick={(e) => {
-              e.stopPropagation()
-              setNodes((nds) => nds.filter((n) => n.id !== contextMenu.nodeId))
-              setEdges((eds) =>
-                eds.filter(
-                  (e) => e.source !== contextMenu.nodeId && e.target !== contextMenu.nodeId
+          {testResults?.length && (
+            <button
+              className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent cursor-pointer"
+              onClick={(e) => {
+                e.stopPropagation()
+                const node = nodes.find((n) => n.id === contextMenu.nodeId)
+                const label = (node?.data as Record<string, unknown>)?.label as string ?? contextMenu.nodeId
+                setSingleStepRun({ stepId: contextMenu.nodeId, stepLabel: label })
+                setSingleStepInput('{}')
+                setSingleStepResult(null)
+                setContextMenu(null)
+              }}
+            >
+              <Play className="h-4 w-4" />
+              {messages.workflows.testMode.runStep}
+            </button>
+          )}
+          {nodes.find((n) => n.id === contextMenu.nodeId)?.deletable !== false && (
+            <button
+              className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-destructive hover:bg-accent cursor-pointer"
+              onClick={(e) => {
+                e.stopPropagation()
+                setNodes((nds) => nds.filter((n) => n.id !== contextMenu.nodeId))
+                setEdges((eds) =>
+                  eds.filter(
+                    (e) => e.source !== contextMenu.nodeId && e.target !== contextMenu.nodeId
+                  )
                 )
-              )
-              setContextMenu(null)
-              onNodeSelect?.(null, '', {})
-            }}
-          >
-            <Trash2 className="h-4 w-4" />
-            {messages.workflows.editor.deleteStep}
-          </button>
+                setContextMenu(null)
+                onNodeSelect?.(null, '', {})
+              }}
+            >
+              <Trash2 className="h-4 w-4" />
+              {messages.workflows.editor.deleteStep}
+            </button>
+          )}
+        </div>
+      )}
+      {/* Single step run dialog */}
+      {singleStepRun && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="w-[480px] rounded-lg border bg-popover p-4 text-popover-foreground shadow-lg">
+            <h3 className="text-sm font-semibold mb-3">
+              {messages.workflows.testMode.runStep}: {singleStepRun.stepLabel}
+            </h3>
+            <label className="text-xs text-muted-foreground mb-1 block">
+              {messages.workflows.testMode.stepInputData}
+            </label>
+            <textarea
+              className="w-full h-32 rounded-md border bg-background p-2 text-sm font-mono mb-3"
+              value={singleStepInput}
+              onChange={(e) => setSingleStepInput(e.target.value)}
+            />
+            <div className="flex gap-2 mb-3">
+              <button
+                className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 cursor-pointer"
+                disabled={singleStepRunning}
+                onClick={async () => {
+                  let parsed: Record<string, unknown>
+                  try {
+                    parsed = JSON.parse(singleStepInput)
+                  } catch {
+                    setSingleStepResult({ status: 'failed', outputPayload: null, errorMessage: messages.workflows.testMode.invalidJson })
+                    return
+                  }
+                  setSingleStepRunning(true)
+                  setSingleStepResult(null)
+                  try {
+                    const result = await dryRunSingleStep(workflowId, singleStepRun.stepId, parsed)
+                    if (result.success && result.data) {
+                      setSingleStepResult(result.data)
+                    } else {
+                      setSingleStepResult({ status: 'failed', outputPayload: null, errorMessage: result.error })
+                    }
+                  } catch (err) {
+                    setSingleStepResult({ status: 'failed', outputPayload: null, errorMessage: err instanceof Error ? err.message : 'Unknown error' })
+                  } finally {
+                    setSingleStepRunning(false)
+                  }
+                }}
+              >
+                {singleStepRunning ? messages.workflows.testMode.running : messages.workflows.testMode.runStepButton}
+              </button>
+              <button
+                className="rounded-md border px-3 py-1.5 text-sm hover:bg-accent cursor-pointer"
+                onClick={() => setSingleStepRun(null)}
+              >
+                {messages.workflows.editor.configPanelClose}
+              </button>
+            </div>
+            {singleStepResult && (
+              <div className={`rounded-md border p-3 text-sm ${singleStepResult.status === 'completed' ? 'border-emerald-500/20 bg-emerald-500/10' : 'border-destructive/20 bg-destructive/10'}`}>
+                <p className="font-medium mb-1">
+                  {singleStepResult.status === 'completed' ? messages.workflows.testMode.stepRunCompleted : messages.workflows.testMode.stepRunFailed}
+                </p>
+                {singleStepResult.errorMessage && (
+                  <p className="text-xs text-muted-foreground mb-1">{singleStepResult.errorMessage}</p>
+                )}
+                {singleStepResult.outputPayload && (
+                  <pre className="text-xs font-mono mt-1 overflow-auto max-h-32">
+                    {JSON.stringify(singleStepResult.outputPayload, null, 2)}
+                  </pre>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>

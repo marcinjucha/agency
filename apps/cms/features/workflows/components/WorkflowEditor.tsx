@@ -319,6 +319,7 @@ export function WorkflowEditor({ workflow }: WorkflowEditorProps) {
           </div>
           <WorkflowCanvas
             ref={canvasRef}
+            workflowId={workflow.id}
             initialNodes={initialNodes}
             initialEdges={initialEdges}
             onDirtyChange={handleDirtyChange}
