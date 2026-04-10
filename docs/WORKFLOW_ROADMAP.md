@@ -91,6 +91,92 @@ Zależy od stabilnej migracji trigger pipeline (T-178).
 
 ---
 
+---
+
+## AAA-T-177 — Status implementacji (2026-04-10)
+
+Branch: `feature/aaa-t-177-workflow-builder-ux-overhaul`
+Migracja: `supabase/migrations/20260410120000_add_dry_run_flag.sql` — uruchom przed testami.
+
+### Co zostało zaimplementowane
+
+**(b) Input/Output Dynamic Data Flow**
+- `STEP_OUTPUT_SCHEMAS` — każdy typ kroku deklaruje co zwraca
+- `collectAvailableVariables()` — przechodzi wstecz po grafie (BFS), zwraca zmienne pogrupowane po źródle
+- Variable inserter w panelach konfiguracyjnych pokazuje: Trigger / Krok 1: Wyślij email / Krok 2: AI...
+- `StepConfigAiAction.output_schema` — per-instancja pola wyjściowe dla AI
+
+**(T-179) AI prompt per workflow**
+- Pole `prompt` w panelu Akcja AI z variable inserterem
+- Edytor pól wyjściowych (+ Dodaj pole / usuwanie)
+- Domyślne pola pokazane jako podpowiedź gdy brak customowych
+
+**(a) Drag & Drop + Step Library**
+- Panel boczny Biblioteka (240px) z 3 kategoriami: Akcje / Logika / AI
+- Przeciągnij krok na canvas → tworzy węzeł w miejscu upuszczenia
+- Prawy klik na krok → kontekstowe menu z "Usuń krok" (trigger chroniony)
+
+**(c) Test Mode**
+- Przycisk "Test" (kolba) otwiera TestModePanel
+- Edytowalny JSON z danymi triggera (pre-populated ze schematu)
+- Dry-run: bez side effects (brak emaili, n8n, webhooków), wyniki w canvas (zielony/czerwony/szary)
+- "Z wykonania" tab: załaduj trigger_payload z poprzedniego wykonania
+- Prawy klik na krok w trybie testowym → "Uruchom krok" z własnym inputem
+
+### Lista testów manualnych
+
+**Prereq:** `supabase migration up` + `npm run dev:cms` (localhost:3001)
+
+#### (a) Step Library + Drag & Drop
+
+1. Otwórz edytor workflow → kliknij **Biblioteka** (lewy górny róg canvas)
+   - Oczekiwane: panel 240px z 3 sekcjami: Akcje (Wyślij email, Webhook), Logika (Warunek, Opóźnienie), AI (Akcja AI)
+2. Kliknij nagłówek sekcji → powinna się zwinąć/rozwinąć
+3. Przeciągnij "Akcja AI" z biblioteki i upuść na canvas
+   - Oczekiwane: węzeł pojawia się w miejscu upuszczenia
+4. Prawy klik na nowo dodany węzeł → menu "Usuń krok" w kolorze czerwonym
+5. Prawy klik na węzeł Trigger → brak menu (trigger chroniony)
+6. Kliknij "Usuń krok" → węzeł i krawędzie znikają
+
+#### (b) Variable Inserter (grupowany)
+
+7. Stwórz workflow: Trigger → Warunek → Wyślij email (połączone krawędziami)
+8. Kliknij węzeł **Wyślij email** → panel konfiguracyjny
+9. Kliknij przycisk **Zmienne** przy polu "Do:"
+   - Oczekiwane: popover z grupami: "Trigger" (zmienne triggera) + "Krok 1: Warunek" (branch)
+   - NIE powinny być widoczne zmienne z kroków downstream
+10. Kliknij węzeł **Warunek** → otwórz Zmienne
+    - Oczekiwane: tylko "Trigger" — Warunek jest bezpośrednio po triggerze, brak upstream kroków
+
+#### (b) AI Action — prompt + output schema
+
+11. Kliknij węzeł Akcja AI → panel konfiguracyjny
+12. W polu Prompt wpisz tekst, użyj Zmienne do wstawienia `{{clientName}}`
+13. Kliknij **+ Dodaj pole** dwukrotnie, wypełnij: key=`sentiment`, label=`Sentyment`
+    - Oczekiwane: podpowiedź zmienia się z "Domyślne pola" na "zostaną zastąpione polami niestandardowymi"
+14. Zapisz workflow (Ctrl+S)
+15. Dodaj krok po Akcji AI, kliknij go → Zmienne powinny zawierać `{{sentiment}}` w grupie "Krok N: Akcja AI"
+
+#### (c) Test Mode — dry-run
+
+16. Kliknij przycisk **Test** (kolba) w headerze → TestModePanel otwiera się po prawej
+17. Sprawdź że JSON jest pre-populated danymi zgodnymi ze schematem triggera
+18. Edytuj JSON (np. zmień `clientName`) → kliknij **Uruchom test**
+    - Oczekiwane: loading → po zakończeniu canvas pokazuje kolorowe ringi na węzłach
+    - Zielony ring = completed, czerwony = failed, wyszarzony = skipped
+19. Rozwiń wynik kroku w liście → widać input_payload i output_payload (mock)
+20. Sprawdź że w historii wykonań (`/admin/workflows/executions`) dry-run NIE jest widoczny
+
+#### (c) Test Mode — replay + single step
+
+21. W TestModePanel przełącz na tab **Z wykonania**
+    - Jeśli są poprzednie wykonania: wybierz jedno → JSON powinien się załadować z trigger_payload
+22. W trybie testowym (po uruchomieniu testu): prawy klik na krok → "Uruchom krok"
+    - Oczekiwane: dialog z polem JSON input
+23. Wpisz `{}` → kliknij Uruchom → wynik widoczny (mock output lub błąd)
+
+---
+
 ## Cleanup wykonany w Notion (2026-04-10)
 
 - AAA-T-103 → Cancelled (Google Calendar token refresh — Baikal zastąpił)
