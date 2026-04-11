@@ -964,7 +964,6 @@ export const messages = {
     executionFailed: 'Błąd',
     executionCancelled: 'Anulowano',
     executionPaused: 'Wstrzymano',
-    executionWaitingForCallback: 'Czeka na odpowiedź',
     // Step execution statuses
     stepExecutionPending: 'Oczekuje',
     stepExecutionRunning: 'W toku',

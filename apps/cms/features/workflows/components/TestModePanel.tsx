@@ -374,21 +374,6 @@ export function TestModePanel({
   )
 }
 
-function mapStepStatus(
-  status: string
-): 'completed' | 'failed' | 'skipped' | 'pending' {
-  switch (status) {
-    case 'completed':
-      return 'completed'
-    case 'failed':
-      return 'failed'
-    case 'skipped':
-      return 'skipped'
-    default:
-      return 'pending'
-  }
-}
-
 function capitalize(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1)
 }

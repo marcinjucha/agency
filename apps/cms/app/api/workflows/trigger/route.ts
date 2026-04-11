@@ -81,7 +81,10 @@ export async function POST(request: Request) {
   ) {
     const resp = await fetch(n8nOrchestratorUrl!, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.ORCHESTRATOR_WEBHOOK_SECRET}`,
+      },
       body: JSON.stringify({ workflowId, tenantId, triggerPayload: payload }),
     })
     if (!resp.ok) {

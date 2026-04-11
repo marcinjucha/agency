@@ -297,7 +297,10 @@ export async function triggerManualWorkflow(
       ResultAsync.fromPromise(
         fetch(n8nUrl, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${process.env.ORCHESTRATOR_WEBHOOK_SECRET}`,
+          },
           body: JSON.stringify({ workflowId, tenantId, triggerPayload: { trigger_type: 'manual' } }),
         }).then(async (resp) => {
           if (!resp.ok) throw new Error(`n8n dispatch failed: ${resp.status}`)

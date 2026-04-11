@@ -10,7 +10,7 @@ export type ExecutionContext = {
   workflowId: string
   tenantId: string
   triggerPayload: TriggerPayload
-  /** Current step execution ID — used by async handlers to identify the step for callbacks */
+  /** Current step execution ID — used by dry-run test mode to identify step */
   stepExecutionId: string
   /** Set when this execution was triggered by another workflow (circular protection) */
   triggeringExecutionId?: string
@@ -64,12 +64,6 @@ export type ActionResult = {
   success: boolean
   outputPayload?: Record<string, unknown>
   error?: string
-  /**
-   * When true, the step was dispatched to an external system (n8n) and will
-   * be completed later via callback. The executor must NOT mark the step as
-   * completed — it stays in 'running' status until the callback arrives.
-   */
-  async?: boolean
 }
 
 // --- Step Handler Signature ---
@@ -91,15 +85,6 @@ export type StepHandlerRegistry = Record<string, StepHandler>
 
 /** Flat key-value map used for {{variable}} resolution in templates */
 export type VariableContext = Record<string, unknown>
-
-// --- Execution Options ---
-
-/** Options passed to executeWorkflow to control execution behavior */
-export type ExecutionOptions = {
-  triggeringExecutionId?: string
-  /** When true, intercepts all side effects (no emails, no webhooks, no n8n) while recording step I/O with mock data */
-  dryRun?: boolean
-}
 
 // --- Execution Limits ---
 

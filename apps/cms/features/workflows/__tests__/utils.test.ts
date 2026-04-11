@@ -23,7 +23,6 @@ vi.mock('../types', () => ({
     failed: 'Błąd',
     cancelled: 'Anulowano',
     paused: 'Wstrzymano',
-    waiting_for_callback: 'Oczekuje na callback',
   },
   STEP_EXECUTION_STATUS_LABELS: {
     pending: 'Oczekuje',
