@@ -66,6 +66,7 @@
 - **"do all now" = don't defer P2 items** — When design agent recommends deferring P2 items, user overrides and wants all implemented immediately. Don't defer unless explicitly asked. (2026-03-31)
 - **workflow_id targeting over "all matching"** — User didn't want all matching workflows to fire on trigger. API accepts workflow_id for specific execution. (2026-03-31, AAA-T-149)
 - **Validate after EACH iteration, not batched at end** — Orchestrator was about to skip validation after iteration 2. User corrected mid-session: "Nie zapominaj o wywoływaniu weryfikacji po każdej skończonej iteracji." Run Phase 3+3b validation after EVERY iteration completion, not deferred to a batch at the end. (2026-04-08)
+- **Aggressive Boy Scout Rule for remeda/neverthrow — scouting was too gentle** — User corrected: when touching ANY file (even for minor changes), convert try/catch to neverthrow Result pipelines and imperative code to remeda pipe(). Previous session touched 48 files but only converted 3 — unacceptable. Every file you modify must be updated to match functional patterns. Not optional, not "when convenient". (2026-04-11, AAA-T-183)
 
 ## Bugs Found (project-specific patterns)
 
@@ -83,6 +84,7 @@
 - **Turbopack barrel re-export bug with server-only packages** — `export { RUNTIME_VALUE } from '@agency/calendar'` in types.ts pulled googleapis (Node.js child_process) into client bundle. Fix: define runtime constants locally, only use `export type` for cross-package re-exports. (2026-04-09)
 - **Pre-existing migration seed bugs with hardcoded tenant IDs** — 3 migrations had hardcoded production tenant ID causing FK violations on local db reset. Fixed with WHERE EXISTS guards. Always guard seed data with existence checks. (2026-04-09)
 - **DatePicker toISOString() timezone bug** — `date.toISOString().split('T')[0]` shifts date by -1 day in CEST (UTC+2). April 10 00:00 CEST = April 9 22:00 UTC → API receives wrong date. Fix: use `getFullYear()/getMonth()/getDate()` for local date formatting. Affects any DatePicker/Calendar component storing dates as YYYY-MM-DD strings. (2026-04-09, AAA-T-175)
+- **Supabase URL fallback in n8n Orchestrator pointed to wrong project ID** — Hardcoded fallback `zujwhdoickvsotbrqkot.supabase.co` was a different project than production `zsrpdslhnuwmzewwoexr.supabase.co`. Would silently connect to wrong database if env var missing. Always verify Supabase project IDs in n8n credential/env configs. (2026-04-11, AAA-T-183)
 
 ## Domain Concepts
 
@@ -103,6 +105,7 @@
 - **RPC function parameter names must match migration SQL exactly** — n8n called `upsert_marketplace_connection` with `p_connection_id` but function expected `p_tenant_id`. PostgreSQL error at runtime. Created dedicated `update_marketplace_tokens(p_connection_id)` for token refresh use case. (2026-04-03, AAA-T-157)
 - **Baikal CalDAV has 2 calendars** — tsdav auto-discovery finds "Appointments" (`/dav.php/calendars/haloefekt/appointments/`) and "Default calendar" (`/dav.php/calendars/haloefekt/default/`). Must filter or let user select which calendar to use. (2026-04-09)
 - **Success page "What's Next" steps are Halo Efekt-specific** — Hardcoded timeline (Analiza→Email→Kontakt) only applies to intake surveys. Per-survey confirmation templates needed for booking confirmations, other survey types. Notion task created for per-survey success page customization. (2026-04-09, AAA-T-175)
+- **n8n Wait node works inside SplitInBatches** — n8n serializes execution state, so Wait (delay) inside a SplitInBatches loop works correctly — each batch waits, then continues. Non-obvious because you'd expect async state loss. Useful for rate-limited API calls in Orchestrator subworkflows. (2026-04-11, AAA-T-183)
 
 ## Architecture Decisions
 
