@@ -491,7 +491,7 @@ function CanvasInner(
                     if (result.success && result.data) {
                       setSingleStepResult(result.data)
                     } else {
-                      setSingleStepResult({ status: 'failed', outputPayload: null, errorMessage: result.error })
+                      setSingleStepResult({ status: 'failed', outputPayload: null, errorMessage: !result.success ? result.error : 'Unknown error' })
                     }
                   } catch (err) {
                     setSingleStepResult({ status: 'failed', outputPayload: null, errorMessage: err instanceof Error ? err.message : 'Unknown error' })

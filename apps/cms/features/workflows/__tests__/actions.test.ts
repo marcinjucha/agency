@@ -546,6 +546,15 @@ describe('saveWorkflowCanvas', () => {
 // =========================================================================
 
 describe('triggerManualWorkflow', () => {
+  beforeEach(() => {
+    vi.stubEnv('N8N_WORKFLOW_ORCHESTRATOR_URL', 'https://n8n.example.com/webhook/orchestrator')
+  })
+
+  afterEach(() => {
+    vi.unstubAllEnvs()
+    vi.unstubAllGlobals()
+  })
+
   it('returns auth error when not authenticated', async () => {
     mockRequireAuth.mockResolvedValue(mockAuthFailure())
 
@@ -565,7 +574,7 @@ describe('triggerManualWorkflow', () => {
     const result = await triggerManualWorkflow('wf-1')
 
     expect(result.success).toBe(false)
-    expect(result.error).toBe('Workflow not found')
+    expect(result.error).toBe('Brak danych')
   })
 
   it('returns error when workflow belongs to different tenant', async () => {
@@ -610,8 +619,6 @@ describe('triggerManualWorkflow', () => {
     })
     auth._supabase.from = vi.fn(() => fetchChain)
 
-    vi.stubEnv('N8N_WORKFLOW_ORCHESTRATOR_URL', 'https://n8n.example.com/webhook/orchestrator')
-
     const mockFetch = vi.fn().mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({ executionId: 'exec-1' }),
@@ -628,29 +635,15 @@ describe('triggerManualWorkflow', () => {
     )
     expect(revalidatePath).toHaveBeenCalledWith('/admin/workflows/wf-1')
     expect(revalidatePath).toHaveBeenCalledWith('/admin/workflows/wf-1/executions')
-
-    vi.unstubAllEnvs()
-    vi.unstubAllGlobals()
   })
 
   it('returns error when N8N_WORKFLOW_ORCHESTRATOR_URL is not configured', async () => {
-    const auth = mockAuthSuccess()
-    mockRequireAuth.mockResolvedValue(auth)
-
-    const fetchChain = mockChain({
-      data: { id: 'wf-1', tenant_id: 'tenant-1', trigger_type: 'manual' },
-      error: null,
-    })
-    auth._supabase.from = vi.fn(() => fetchChain)
-
     vi.stubEnv('N8N_WORKFLOW_ORCHESTRATOR_URL', '')
 
     const result = await triggerManualWorkflow('wf-1')
 
     expect(result.success).toBe(false)
     expect(result.error).toContain('N8N_WORKFLOW_ORCHESTRATOR_URL')
-
-    vi.unstubAllEnvs()
   })
 })
 
@@ -782,7 +775,7 @@ describe('cancelWorkflowExecution', () => {
     const result = await cancelWorkflowExecution('exec-1')
 
     expect(result.success).toBe(false)
-    expect(result.error).toBe('Execution not found')
+    expect(result.error).toBe('Brak danych')
   })
 
   it('returns error when execution belongs to different tenant', async () => {
