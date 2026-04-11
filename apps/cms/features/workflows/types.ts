@@ -7,7 +7,7 @@ export type TriggerType = 'survey_submitted' | 'booking_created' | 'lead_scored'
 
 export type StepType = 'send_email' | 'delay' | 'condition' | 'webhook' | 'ai_action'
 
-export type ExecutionStatus = 'pending' | 'running' | 'completed' | 'failed' | 'cancelled' | 'paused' | 'waiting_for_callback'
+export type ExecutionStatus = 'pending' | 'running' | 'completed' | 'failed' | 'cancelled' | 'paused'
 
 export type StepExecutionStatus = 'pending' | 'running' | 'completed' | 'failed' | 'skipped' | 'waiting' | 'processing'
 
@@ -240,7 +240,6 @@ export const EXECUTION_STATUS_LABELS: Record<ExecutionStatus, string> = {
   failed: messages.workflows.executionFailed,
   cancelled: messages.workflows.executionCancelled,
   paused: messages.workflows.executionPaused,
-  waiting_for_callback: messages.workflows.executionWaitingForCallback,
 }
 
 export const STEP_EXECUTION_STATUS_LABELS: Record<StepExecutionStatus, string> = {

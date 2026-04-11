@@ -6,16 +6,30 @@
 **Scope:** Two shops: Jacek (books, dark amber theme) + Kolega (general merchandise, light linen theme). Catalog-only, NO Stripe. Single Supabase (`shop_` prefix), CMS extended, separate frontends (`apps/shop/jacek/`, `apps/shop/kolega/`).
 **Key decisions:** `listing_type` ENUM, `gallery`/`editorial` display_layout, `is_featured BOOLEAN`, flat categories. Dual PROJECT_SPEC: `docs/PROJECT_SPEC.yaml` (AAA-P-4) + `docs/SHOP_PROJECT_SPEC.yaml` (AAA-P-9).
 
+## n8n Orchestrator Migration — AAA-T-183 iter 7 — DONE (2026-04-11)
+
+**Status:** Iteration 7 complete. CMS executor.ts fully replaced by n8n Workflow Orchestrator.
+**Scope:** Migrate all workflow execution from CMS (executor.ts, 874 LOC) to n8n. CMS now only POSTs workflowId + triggerPayload → n8n does everything (reads definition, dispatches steps, writes state to Supabase directly).
+**Key deletions:** `engine/executor.ts`, `engine/action-handlers.ts`, `engine/trigger-matcher.ts`, `/api/workflows/callback`, `/api/workflows/resume`, `/api/workflows/process-due-delays`, `claim_due_delay_steps()` RPC (migration `20260411120000_drop_claim_due_delay_steps.sql`), `Workflow Action Executor.json`, `Workflow Delay Processor.json`.
+**What remains in CMS:** `engine/dry-run-handlers.ts` (mock handlers for TestModePanel dry-run only), trigger route simplified to ~70 LOC.
+**Env var change:** `N8N_WORKFLOW_ORCHESTRATOR_URL` replaces `N8N_WORKFLOW_EXECUTOR_URL`.
+
+## Per-Step Testing & Configuration — AAA-T-182 — DONE (2026-04-10)
+
+**Status:** Complete. `dryRunWorkflow` (full-workflow dry-run) removed in AAA-T-183; `executeWorkflowStep()` / `dryRunSingleStep` preserved for TestModePanel single-step test mode.
+**Scope:** n8n-style per-step test/run capability for workflow builder. TestModePanel UI, per-step execution with real upstream chain, dry-run result display.
+**Key decisions:** New `executeWorkflowStep()` code path alongside existing executor (not refactoring `executeWorkflow`). Generic test mocks (next/cache, @/lib/auth) in vitest.setup.ts. executeUpstreamChain uses REAL step handlers (not dry-run) to build authentic context.
+
 ## Workflow Builder UX Overhaul — AAA-T-177 + AAA-T-179 — DONE (2026-04-10)
 
 **Status:** XL task, 10 iterations complete. Bundled T-179 (context menu + single step run — user-requested additions beyond original roadmap).
 **Scope:** Workflow builder canvas UX improvements, context menu, single step execution.
 
-## Workflow Engine — AAA-P-4 — IN PROGRESS (2026-03-31)
+## Workflow Engine — AAA-P-4 — DONE (2026-04-11)
 
-**Status:** Iterations 1-10 done. Iter 11 (cancel/retry/real-time) = backlog.
-**Scope:** Per-tenant workflow automation. CMS routing/config + n8n heavy execution. ReactFlow visual builder.
-**Key decisions:** trigger_type/step_type as TEXT not ENUM; delay step writes resume_at to DB directly (not n8n); sync steps in CMS, async dispatch to n8n.
+**Status:** Iterations 1-10 + AAA-T-182 (per-step testing) + AAA-T-183 (n8n orchestrator migration) all done. Iter 11 (cancel/retry/real-time) = backlog.
+**Scope:** Per-tenant workflow automation. CMS UI/config + n8n Orchestrator full execution. ReactFlow visual builder.
+**Key decisions:** trigger_type/step_type as TEXT not ENUM; n8n Orchestrator owns all execution (no CMS executor); CMS trigger route is fire-and-forget (~70 LOC); dry-run-handlers.ts preserved for TestModePanel only.
 
 ## Marketplace Integration — AAA-P-9 — IN PROGRESS (2026-04-02)
 
@@ -52,6 +66,7 @@
 - **"do all now" = don't defer P2 items** — When design agent recommends deferring P2 items, user overrides and wants all implemented immediately. Don't defer unless explicitly asked. (2026-03-31)
 - **workflow_id targeting over "all matching"** — User didn't want all matching workflows to fire on trigger. API accepts workflow_id for specific execution. (2026-03-31, AAA-T-149)
 - **Validate after EACH iteration, not batched at end** — Orchestrator was about to skip validation after iteration 2. User corrected mid-session: "Nie zapominaj o wywoływaniu weryfikacji po każdej skończonej iteracji." Run Phase 3+3b validation after EVERY iteration completion, not deferred to a batch at the end. (2026-04-08)
+- **Aggressive Boy Scout Rule for remeda/neverthrow — scouting was too gentle** — User corrected: when touching ANY file (even for minor changes), convert try/catch to neverthrow Result pipelines and imperative code to remeda pipe(). Previous session touched 48 files but only converted 3 — unacceptable. Every file you modify must be updated to match functional patterns. Not optional, not "when convenient". (2026-04-11, AAA-T-183)
 
 ## Bugs Found (project-specific patterns)
 
@@ -69,6 +84,7 @@
 - **Turbopack barrel re-export bug with server-only packages** — `export { RUNTIME_VALUE } from '@agency/calendar'` in types.ts pulled googleapis (Node.js child_process) into client bundle. Fix: define runtime constants locally, only use `export type` for cross-package re-exports. (2026-04-09)
 - **Pre-existing migration seed bugs with hardcoded tenant IDs** — 3 migrations had hardcoded production tenant ID causing FK violations on local db reset. Fixed with WHERE EXISTS guards. Always guard seed data with existence checks. (2026-04-09)
 - **DatePicker toISOString() timezone bug** — `date.toISOString().split('T')[0]` shifts date by -1 day in CEST (UTC+2). April 10 00:00 CEST = April 9 22:00 UTC → API receives wrong date. Fix: use `getFullYear()/getMonth()/getDate()` for local date formatting. Affects any DatePicker/Calendar component storing dates as YYYY-MM-DD strings. (2026-04-09, AAA-T-175)
+- **Supabase URL fallback in n8n Orchestrator pointed to wrong project ID** — Hardcoded fallback `zujwhdoickvsotbrqkot.supabase.co` was a different project than production `zsrpdslhnuwmzewwoexr.supabase.co`. Would silently connect to wrong database if env var missing. Always verify Supabase project IDs in n8n credential/env configs. (2026-04-11, AAA-T-183)
 
 ## Domain Concepts
 
@@ -89,6 +105,7 @@
 - **RPC function parameter names must match migration SQL exactly** — n8n called `upsert_marketplace_connection` with `p_connection_id` but function expected `p_tenant_id`. PostgreSQL error at runtime. Created dedicated `update_marketplace_tokens(p_connection_id)` for token refresh use case. (2026-04-03, AAA-T-157)
 - **Baikal CalDAV has 2 calendars** — tsdav auto-discovery finds "Appointments" (`/dav.php/calendars/haloefekt/appointments/`) and "Default calendar" (`/dav.php/calendars/haloefekt/default/`). Must filter or let user select which calendar to use. (2026-04-09)
 - **Success page "What's Next" steps are Halo Efekt-specific** — Hardcoded timeline (Analiza→Email→Kontakt) only applies to intake surveys. Per-survey confirmation templates needed for booking confirmations, other survey types. Notion task created for per-survey success page customization. (2026-04-09, AAA-T-175)
+- **n8n Wait node works inside SplitInBatches** — n8n serializes execution state, so Wait (delay) inside a SplitInBatches loop works correctly — each batch waits, then continues. Non-obvious because you'd expect async state loss. Useful for rate-limited API calls in Orchestrator subworkflows. (2026-04-11, AAA-T-183)
 
 ## Architecture Decisions
 
@@ -119,6 +136,9 @@
 - **Extract pure logic from .tsx to utils/ for TDD** — When component files contain pure logic (validation, transformation, mapping), extract to `utils/` files. Enables unit testing without React rendering. Pattern: `.tsx` = rendering + hooks, `utils/*.ts` = pure testable functions. (2026-04-10, AAA-T-177)
 - **React Compiler enabled via `reactCompiler: true` in all 4 next.config.ts** — Explicitly enabled in cms, website, jacek, kolega after upgrading to Next.js 16.2.3 + React 19.2.5 (2026-04-10). Auto-memoizes — Boy Scout Rule: remove manual useCallback/useMemo when touching files (unless profiling shows need). Don't wrap new handlers in useCallback by default. (2026-04-10)
 - **3-pass validation more valuable than unit tests for UI-heavy features** — For features that are primarily UI (canvas interactions, drag-and-drop, visual builders), the 3-pass validator (functional + architecture + integration) catches more real issues than unit tests. Unit tests still valuable for extracted pure logic in utils/. (2026-04-10, AAA-T-177)
+- **Per-step testing: new code path alongside executor, not refactoring** — `executeWorkflowStep()` is a separate function from `executeWorkflow()`. Per-step execution has fundamentally different concerns (upstream chain resolution, single-step dry-run, result capture) that don't fit into the existing full-workflow executor. (2026-04-10, AAA-T-182)
+- **Generic test mocks belong in vitest.setup.ts, not per-test files** — Mocks for next/cache, @/lib/auth, and similar infrastructure modules used across many test files should be centralized in vitest.setup.ts. Per-test mocks only for test-specific overrides. (2026-04-10, AAA-T-182)
+- **n8n Orchestrator owns ALL workflow execution (AAA-T-183)** — CMS executor.ts fully removed. N8n Workflow Orchestrator reads definition from Supabase, dispatches steps, writes state directly — no CMS callbacks. CMS trigger route is ~70 LOC fire-and-forget. dry-run-handlers.ts stays in CMS for TestModePanel only. WHY: Vercel serverless timeout (5-10 min) can't handle multi-hour workflow delays; n8n native Wait node eliminates the need for resume/delay-processor routes entirely. (2026-04-11, AAA-T-183)
 
 ## Preferences
 

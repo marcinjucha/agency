@@ -329,6 +329,32 @@ function CanvasInner(
     onNodeSelect?.(null, '', {})
   }, [onNodeSelect])
 
+  // Single step run handler — extracted from inline onClick
+  async function handleSingleStepRun() {
+    if (!singleStepRun) return
+    let parsed: Record<string, unknown>
+    try {
+      parsed = JSON.parse(singleStepInput)
+    } catch {
+      setSingleStepResult({ status: 'failed', outputPayload: null, errorMessage: messages.workflows.testMode.invalidJson })
+      return
+    }
+    setSingleStepRunning(true)
+    setSingleStepResult(null)
+    try {
+      const result = await dryRunSingleStep(workflowId, singleStepRun.stepId, parsed)
+      if (result.success && result.data) {
+        setSingleStepResult(result.data)
+      } else {
+        setSingleStepResult({ status: 'failed', outputPayload: null, errorMessage: !result.success ? result.error : 'Unknown error' })
+      }
+    } catch (runErr) {
+      setSingleStepResult({ status: 'failed', outputPayload: null, errorMessage: runErr instanceof Error ? runErr.message : 'Unknown error' })
+    } finally {
+      setSingleStepRunning(false)
+    }
+  }
+
   // Expose current state to parent via ref
   useImperativeHandle(
     ref,
@@ -419,7 +445,7 @@ function CanvasInner(
           className="fixed z-50 min-w-[160px] rounded-md border bg-popover p-1 text-popover-foreground shadow-md"
           style={{ top: contextMenu.y, left: contextMenu.x }}
         >
-          {testResults?.length && (
+          {testResults?.length ? (
             <button
               className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent cursor-pointer"
               onClick={(e) => {
@@ -435,7 +461,7 @@ function CanvasInner(
               <Play className="h-4 w-4" />
               {messages.workflows.testMode.runStep}
             </button>
-          )}
+          ) : null}
           {nodes.find((n) => n.id === contextMenu.nodeId)?.deletable !== false && (
             <button
               className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-destructive hover:bg-accent cursor-pointer"
@@ -444,7 +470,7 @@ function CanvasInner(
                 setNodes((nds) => nds.filter((n) => n.id !== contextMenu.nodeId))
                 setEdges((eds) =>
                   eds.filter(
-                    (e) => e.source !== contextMenu.nodeId && e.target !== contextMenu.nodeId
+                    (edge) => edge.source !== contextMenu.nodeId && edge.target !== contextMenu.nodeId
                   )
                 )
                 setContextMenu(null)
@@ -476,29 +502,7 @@ function CanvasInner(
               <button
                 className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 cursor-pointer"
                 disabled={singleStepRunning}
-                onClick={async () => {
-                  let parsed: Record<string, unknown>
-                  try {
-                    parsed = JSON.parse(singleStepInput)
-                  } catch {
-                    setSingleStepResult({ status: 'failed', outputPayload: null, errorMessage: messages.workflows.testMode.invalidJson })
-                    return
-                  }
-                  setSingleStepRunning(true)
-                  setSingleStepResult(null)
-                  try {
-                    const result = await dryRunSingleStep(workflowId, singleStepRun.stepId, parsed)
-                    if (result.success && result.data) {
-                      setSingleStepResult(result.data)
-                    } else {
-                      setSingleStepResult({ status: 'failed', outputPayload: null, errorMessage: result.error })
-                    }
-                  } catch (err) {
-                    setSingleStepResult({ status: 'failed', outputPayload: null, errorMessage: err instanceof Error ? err.message : 'Unknown error' })
-                  } finally {
-                    setSingleStepRunning(false)
-                  }
-                }}
+                onClick={handleSingleStepRun}
               >
                 {singleStepRunning ? messages.workflows.testMode.running : messages.workflows.testMode.runStepButton}
               </button>

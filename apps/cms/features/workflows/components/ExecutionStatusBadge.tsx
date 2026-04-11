@@ -14,8 +14,7 @@ const STATUS_CLASSES: Record<ExecutionStatus, string> = {
   pending:   'border-border bg-muted/50 text-muted-foreground',
   failed:    'border-red-500/30 bg-red-500/10 text-red-400',
   cancelled: 'border-orange-500/30 bg-orange-500/10 text-orange-400',
-  paused:                'border-amber-500/30 bg-amber-500/10 text-amber-400',
-  waiting_for_callback:  'border-amber-500/30 bg-amber-500/10 text-amber-400',
+  paused:     'border-amber-500/30 bg-amber-500/10 text-amber-400',
 }
 
 const DOT_CLASSES: Record<ExecutionStatus, string> = {
@@ -24,8 +23,7 @@ const DOT_CLASSES: Record<ExecutionStatus, string> = {
   pending:   'bg-muted-foreground',
   failed:    'bg-red-400',
   cancelled: 'bg-orange-400',
-  paused:                'bg-amber-400',
-  waiting_for_callback:  'bg-amber-400',
+  paused:     'bg-amber-400',
 }
 
 export function ExecutionStatusBadge({ status, className }: ExecutionStatusBadgeProps) {
