@@ -74,6 +74,78 @@ export async function POST(request: Request) {
     ...body.payload,
   } as TriggerPayload
 
+  // --- Feature flag: n8n Orchestrator dispatch ---
+  const useN8nOrchestrator = process.env.USE_N8N_ORCHESTRATOR === 'true'
+  const n8nOrchestratorUrl = process.env.N8N_WORKFLOW_ORCHESTRATOR_URL
+
+  if (useN8nOrchestrator) {
+    if (!n8nOrchestratorUrl) {
+      console.error('[workflow-trigger] N8N_WORKFLOW_ORCHESTRATOR_URL not configured')
+      return NextResponse.json({ error: 'Server misconfigured' }, { status: 500 })
+    }
+
+    async function dispatchToOrchestrator(
+      workflowId: string,
+      tenantId: string,
+      payload: TriggerPayload
+    ) {
+      const resp = await fetch(n8nOrchestratorUrl!, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ workflowId, tenantId, triggerPayload: payload }),
+      })
+      if (!resp.ok) {
+        throw new Error(`n8n Orchestrator returned ${resp.status}: ${await resp.text()}`)
+      }
+      return resp.json()
+    }
+
+    if (body.workflow_id) {
+      // Validate workflow exists + active (same as CMS-local path)
+      const { createServiceClient } = await import('@/lib/supabase/service')
+      const svc = createServiceClient()
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: wf, error: wfErr } = await (svc as any)
+        .from('workflows')
+        .select('id, is_active')
+        .eq('id', body.workflow_id)
+        .maybeSingle()
+
+      if (wfErr || !wf) {
+        return NextResponse.json({ error: 'Workflow not found' }, { status: 404 })
+      }
+      if (!wf.is_active) {
+        return NextResponse.json({ error: 'Workflow is inactive' }, { status: 422 })
+      }
+
+      dispatchToOrchestrator(body.workflow_id, body.tenant_id, triggerPayload).catch((err) => {
+        console.error(
+          `[workflow-trigger] n8n dispatch failed for workflow_id="${body.workflow_id}":`,
+          err instanceof Error ? err.message : err
+        )
+      })
+    } else {
+      // Find matching workflows, dispatch each to n8n
+      const { findMatchingWorkflows } = await import('@/features/workflows/engine/trigger-matcher')
+      const { createServiceClient } = await import('@/lib/supabase/service')
+      const svc = createServiceClient()
+      const matching = await findMatchingWorkflows(body.trigger_type, body.tenant_id, svc)
+
+      for (const wf of matching) {
+        dispatchToOrchestrator(wf.id, body.tenant_id, triggerPayload).catch((err) => {
+          console.error(
+            `[workflow-trigger] n8n dispatch failed for workflow ${wf.id}:`,
+            err instanceof Error ? err.message : err
+          )
+        })
+      }
+    }
+
+    return NextResponse.json({ triggered: true }, { status: 202 })
+  }
+
+  // --- Existing CMS-local execution path (USE_N8N_ORCHESTRATOR off or missing) ---
+
   if (body.workflow_id) {
     // Trigger specific workflow by ID — validate existence + active status before fire-and-forget
     const { createServiceClient } = await import('@/lib/supabase/service')

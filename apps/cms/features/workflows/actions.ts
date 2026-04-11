@@ -290,6 +290,32 @@ export async function triggerManualWorkflow(
       return { success: false, error: messages.workflows.notManualTrigger }
     }
 
+    // --- Feature flag: n8n Orchestrator dispatch ---
+    const useN8nOrchestrator = process.env.USE_N8N_ORCHESTRATOR === 'true'
+    const n8nUrl = process.env.N8N_WORKFLOW_ORCHESTRATOR_URL
+
+    if (useN8nOrchestrator && n8nUrl) {
+      const resp = await fetch(n8nUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          workflowId,
+          tenantId,
+          triggerPayload: { trigger_type: 'manual' },
+        }),
+      })
+
+      if (!resp.ok) {
+        return { success: false, error: `n8n dispatch failed: ${resp.status}` }
+      }
+
+      const data = await resp.json()
+      revalidatePath(routes.admin.workflow(workflowId))
+      revalidatePath(routes.admin.workflowExecutions(workflowId))
+      return { success: true, executionId: data.executionId }
+    }
+
+    // --- Existing CMS-local execution path ---
     const result = await executeWorkflow(workflowId, { trigger_type: 'manual' })
 
     revalidatePath(routes.admin.workflow(workflowId))
