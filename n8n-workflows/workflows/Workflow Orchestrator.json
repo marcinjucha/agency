@@ -42,7 +42,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// =============================================================\n// Fetch & Initialize — the orchestrator brain\n// =============================================================\n// Reads webhook body, fetches workflow + steps + edges from\n// Supabase, creates execution + step execution records,\n// topologically sorts steps, builds trigger context, and\n// returns the sorted step list for SplitInBatches processing.\n// =============================================================\n\nconst Sentry = require('@sentry/node');\nconst https = require('https');\n\nconst SUPABASE_URL = $env.SUPABASE_URL || 'https://zujwhdoickvsotbrqkot.supabase.co';\nconst SUPABASE_KEY = $env.SUPABASE_SERVICE_ROLE_KEY;\n\n// ---- Supabase helper (native https, no SDK) ----\n\nasync function supabaseRequest(path, method, body) {\n  const url = `${SUPABASE_URL}/rest/v1/${path}`;\n  return new Promise((resolve, reject) => {\n    const parsed = new URL(url);\n    const options = {\n      hostname: parsed.hostname,\n      path: parsed.pathname + parsed.search,\n      method: method || 'GET',\n      headers: {\n        'apikey': SUPABASE_KEY,\n        'Authorization': `Bearer ${SUPABASE_KEY}`,\n        'Content-Type': 'application/json',\n        'Prefer': method === 'POST' ? 'return=representation' : 'return=representation',\n      },\n    };\n    const req = https.request(options, (res) => {\n      let data = '';\n      res.on('data', (chunk) => data += chunk);\n      res.on('end', () => {\n        try {\n          const parsed = JSON.parse(data);\n          if (res.statusCode >= 400) {\n            reject(new Error(`Supabase ${method} ${path} returned ${res.statusCode}: ${data}`));\n          } else {\n            resolve(parsed);\n          }\n        } catch (e) {\n          reject(new Error(`Parse error for ${path}: ${data}`));\n        }\n      });\n    });\n    req.on('error', reject);\n    if (body) req.write(JSON.stringify(body));\n    req.end();\n  });\n}\n\nfunction uuid() {\n  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {\n    const r = Math.random() * 16 | 0;\n    const v = c === 'x' ? r : (r & 0x3 | 0x8);\n    return v.toString(16);\n  });\n}\n\n// ---- Topological sort (Kahn's algorithm — ported from CMS utils.ts) ----\n\nfunction topologicalSort(steps, edges) {\n  const stepMap = new Map(steps.map(s => [s.id, s]));\n  const inDegree = new Map();\n  const adjacency = new Map();\n\n  for (const step of steps) {\n    inDegree.set(step.id, 0);\n    adjacency.set(step.id, []);\n  }\n\n  for (const edge of edges) {\n    if (!stepMap.has(edge.source_step_id) || !stepMap.has(edge.target_step_id)) continue;\n    adjacency.get(edge.source_step_id).push(edge.target_step_id);\n    inDegree.set(edge.target_step_id, (inDegree.get(edge.target_step_id) || 0) + 1);\n  }\n\n  const queue = [];\n  for (const [id, degree] of inDegree) {\n    if (degree === 0) queue.push(id);\n  }\n\n  const sorted = [];\n  while (queue.length > 0) {\n    const current = queue.shift();\n    const step = stepMap.get(current);\n    if (step) sorted.push(step);\n    for (const neighbor of (adjacency.get(current) || [])) {\n      const newDeg = (inDegree.get(neighbor) || 1) - 1;\n      inDegree.set(neighbor, newDeg);\n      if (newDeg === 0) queue.push(neighbor);\n    }\n  }\n\n  if (sorted.length !== steps.length) {\n    throw new Error(`Workflow graph contains a cycle. Sorted ${sorted.length} of ${steps.length} steps.`);\n  }\n  return sorted;\n}\n\n// ---- Build trigger context (ported from CMS utils.ts) ----\n\nfunction buildTriggerContext(triggerType, payload) {\n  const base = { trigger_type: triggerType };\n  switch (triggerType) {\n    case 'survey_submitted':\n      return { ...base, responseId: payload.responseId, surveyLinkId: payload.surveyLinkId };\n    case 'booking_created':\n      return {\n        ...base,\n        appointmentId: payload.appointmentId,\n        ...(payload.responseId && { responseId: payload.responseId }),\n        ...(payload.surveyLinkId && { surveyLinkId: payload.surveyLinkId }),\n        ...(payload.clientEmail && { clientEmail: payload.clientEmail }),\n        ...(payload.appointmentAt && { appointmentAt: payload.appointmentAt }),\n      };\n    case 'lead_scored':\n      return {\n        ...base,\n        responseId: payload.responseId,\n        overallScore: payload.score,\n        recommendation: payload.recommendation,\n        ...(payload.summary && { summary: payload.summary }),\n        ...(payload.analyzedAt && { analyzedAt: payload.analyzedAt }),\n      };\n    default:\n      return base;\n  }\n}\n\n// ---- Main logic ----\n\ntry {\n  const webhookBody = $('Webhook').first().json.body;\n  const { workflowId, triggerPayload, tenantId } = webhookBody;\n\n  if (!workflowId || !tenantId) {\n    throw new Error('Missing required fields: workflowId and tenantId');\n  }\n\n  // 1. Fetch workflow\n  const workflows = await supabaseRequest(\n    `workflows?id=eq.${workflowId}&tenant_id=eq.${tenantId}&is_active=eq.true&limit=1`, 'GET'\n  );\n  if (!workflows.length) {\n    throw new Error(`Workflow ${workflowId} not found or not active for tenant ${tenantId}`);\n  }\n  const workflow = workflows[0];\n\n  // 2. Fetch steps (exclude trigger-type steps — executor skips them)\n  const allSteps = await supabaseRequest(\n    `workflow_steps?workflow_id=eq.${workflowId}&order=position.asc`, 'GET'\n  );\n  // Filter out trigger-type steps\n  const TRIGGER_TYPES = ['survey_submitted', 'booking_created', 'lead_scored', 'manual', 'scheduled'];\n  const steps = allSteps.filter(s => !TRIGGER_TYPES.includes(s.step_type));\n\n  if (steps.length === 0) {\n    throw new Error(`Workflow ${workflowId} has no executable steps`);\n  }\n\n  // 3. Fetch edges\n  const edges = await supabaseRequest(\n    `workflow_edges?workflow_id=eq.${workflowId}`, 'GET'\n  );\n\n  // 4. Circular protection — max depth 1\n  if (triggerPayload && triggerPayload.triggeringExecutionId) {\n    const parentExecs = await supabaseRequest(\n      `workflow_executions?id=eq.${triggerPayload.triggeringExecutionId}&limit=1`, 'GET'\n    );\n    if (parentExecs.length && parentExecs[0].triggering_execution_id) {\n      throw new Error('Circular workflow detected: max depth (1) exceeded');\n    }\n  }\n\n  // 5. Create execution record\n  const executionId = uuid();\n  const triggerType = triggerPayload?.trigger_type || 'manual';\n  const execRecords = await supabaseRequest('workflow_executions', 'POST', {\n    id: executionId,\n    workflow_id: workflowId,\n    tenant_id: tenantId,\n    status: 'running',\n    trigger_payload: triggerPayload || {},\n    triggering_execution_id: triggerPayload?.triggeringExecutionId || null,\n    started_at: new Date().toISOString(),\n  });\n\n  // 6. Create step execution records\n  const stepExecRecords = steps.map(step => ({\n    id: uuid(),\n    execution_id: executionId,\n    step_id: step.id,\n    status: 'pending',\n    started_at: null,\n    completed_at: null,\n    output_payload: null,\n    error_message: null,\n  }));\n  await supabaseRequest('workflow_step_executions', 'POST', stepExecRecords);\n\n  // Build step_id → step_execution_id map\n  const stepExecMap = {};\n  for (const se of stepExecRecords) {\n    stepExecMap[se.step_id] = se.id;\n  }\n\n  // 7. Topological sort\n  const sortedSteps = topologicalSort(steps, edges);\n\n  // 8. Build trigger context\n  const variableContext = buildTriggerContext(triggerType, triggerPayload || {});\n\n  // 9. Build output items for SplitInBatches\n  const items = sortedSteps.map((step, index) => ({\n    json: {\n      step,\n      stepIndex: index,\n      totalSteps: sortedSteps.length,\n      stepExecutionId: stepExecMap[step.id],\n      executionId,\n      workflowId,\n      tenantId,\n      variableContext,\n      edges,\n      allStepExecRecords: stepExecRecords,\n      failed: false,\n    }\n  }));\n\n  Sentry.addBreadcrumb({\n    message: `Orchestrator initialized: ${sortedSteps.length} steps for workflow ${workflowId}`,\n    level: 'info',\n  });\n\n  return items;\n\n} catch (err) {\n  Sentry.captureException(err);\n  await Sentry.flush(2000);\n  throw err;\n}\n"
+        "jsCode": "// =============================================================\n// Fetch & Initialize — the orchestrator brain\n// =============================================================\n// Reads webhook body, fetches workflow + steps + edges from\n// Supabase, creates execution + step execution records,\n// topologically sorts steps, builds trigger context, and\n// returns the sorted step list for SplitInBatches processing.\n// =============================================================\n\nconst Sentry = require('@sentry/node');\nconst https = require('https');\n\nconst SUPABASE_URL = $env.SUPABASE_URL || 'https://zujwhdoickvsotbrqkot.supabase.co';\nconst SUPABASE_KEY = $env.SUPABASE_SERVICE_ROLE_KEY;\n\n// ---- Supabase helper (native https, no SDK) ----\n\nasync function supabaseRequest(path, method, body) {\n  const url = `${SUPABASE_URL}/rest/v1/${path}`;\n  return new Promise((resolve, reject) => {\n    const parsed = new URL(url);\n    const options = {\n      hostname: parsed.hostname,\n      path: parsed.pathname + parsed.search,\n      method: method || 'GET',\n      headers: {\n        'apikey': SUPABASE_KEY,\n        'Authorization': `Bearer ${SUPABASE_KEY}`,\n        'Content-Type': 'application/json',\n        'Prefer': method === 'POST' ? 'return=representation' : 'return=representation',\n      },\n    };\n    const req = https.request(options, (res) => {\n      let data = '';\n      res.on('data', (chunk) => data += chunk);\n      res.on('end', () => {\n        try {\n          const parsed = JSON.parse(data);\n          if (res.statusCode >= 400) {\n            reject(new Error(`Supabase ${method} ${path} returned ${res.statusCode}: ${data}`));\n          } else {\n            resolve(parsed);\n          }\n        } catch (e) {\n          reject(new Error(`Parse error for ${path}: ${data}`));\n        }\n      });\n    });\n    req.on('error', reject);\n    if (body) req.write(JSON.stringify(body));\n    req.end();\n  });\n}\n\nfunction uuid() {\n  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {\n    const r = Math.random() * 16 | 0;\n    const v = c === 'x' ? r : (r & 0x3 | 0x8);\n    return v.toString(16);\n  });\n}\n\n// ---- Topological sort (Kahn's algorithm — ported from CMS utils.ts) ----\n\nfunction topologicalSort(steps, edges) {\n  const stepMap = new Map(steps.map(s => [s.id, s]));\n  const inDegree = new Map();\n  const adjacency = new Map();\n\n  for (const step of steps) {\n    inDegree.set(step.id, 0);\n    adjacency.set(step.id, []);\n  }\n\n  for (const edge of edges) {\n    if (!stepMap.has(edge.source_step_id) || !stepMap.has(edge.target_step_id)) continue;\n    adjacency.get(edge.source_step_id).push(edge.target_step_id);\n    inDegree.set(edge.target_step_id, (inDegree.get(edge.target_step_id) || 0) + 1);\n  }\n\n  const queue = [];\n  for (const [id, degree] of inDegree) {\n    if (degree === 0) queue.push(id);\n  }\n\n  const sorted = [];\n  while (queue.length > 0) {\n    const current = queue.shift();\n    const step = stepMap.get(current);\n    if (step) sorted.push(step);\n    for (const neighbor of (adjacency.get(current) || [])) {\n      const newDeg = (inDegree.get(neighbor) || 1) - 1;\n      inDegree.set(neighbor, newDeg);\n      if (newDeg === 0) queue.push(neighbor);\n    }\n  }\n\n  if (sorted.length !== steps.length) {\n    throw new Error(`Workflow graph contains a cycle. Sorted ${sorted.length} of ${steps.length} steps.`);\n  }\n  return sorted;\n}\n\n// ---- Build trigger context (ported from CMS utils.ts) ----\n\nfunction buildTriggerContext(triggerType, payload) {\n  const base = { trigger_type: triggerType };\n  switch (triggerType) {\n    case 'survey_submitted':\n      return { ...base, responseId: payload.responseId, surveyLinkId: payload.surveyLinkId };\n    case 'booking_created':\n      return {\n        ...base,\n        appointmentId: payload.appointmentId,\n        ...(payload.responseId && { responseId: payload.responseId }),\n        ...(payload.surveyLinkId && { surveyLinkId: payload.surveyLinkId }),\n        ...(payload.clientEmail && { clientEmail: payload.clientEmail }),\n        ...(payload.appointmentAt && { appointmentAt: payload.appointmentAt }),\n      };\n    case 'lead_scored':\n      return {\n        ...base,\n        responseId: payload.responseId,\n        overallScore: payload.score,\n        recommendation: payload.recommendation,\n        ...(payload.summary && { summary: payload.summary }),\n        ...(payload.analyzedAt && { analyzedAt: payload.analyzedAt }),\n      };\n    default:\n      return base;\n  }\n}\n\n// ---- Main logic ----\n\ntry {\n  const webhookBody = $('Webhook').first().json.body;\n  const { workflowId, triggerPayload, tenantId } = webhookBody;\n\n  if (!workflowId || !tenantId) {\n    throw new Error('Missing required fields: workflowId and tenantId');\n  }\n\n  // 1. Fetch workflow\n  const workflows = await supabaseRequest(\n    `workflows?id=eq.${workflowId}&tenant_id=eq.${tenantId}&is_active=eq.true&limit=1`, 'GET'\n  );\n  if (!workflows.length) {\n    throw new Error(`Workflow ${workflowId} not found or not active for tenant ${tenantId}`);\n  }\n  const workflow = workflows[0];\n\n  // 2. Fetch steps (exclude trigger-type steps — executor skips them)\n  const allSteps = await supabaseRequest(\n    `workflow_steps?workflow_id=eq.${workflowId}&order=position.asc`, 'GET'\n  );\n  const TRIGGER_TYPES = ['survey_submitted', 'booking_created', 'lead_scored', 'manual', 'scheduled'];\n  const steps = allSteps.filter(s => !TRIGGER_TYPES.includes(s.step_type));\n\n  if (steps.length === 0) {\n    throw new Error(`Workflow ${workflowId} has no executable steps`);\n  }\n\n  // 3. Fetch edges\n  const edges = await supabaseRequest(\n    `workflow_edges?workflow_id=eq.${workflowId}`, 'GET'\n  );\n\n  // 4. Circular protection — max depth 1\n  if (triggerPayload && triggerPayload.triggeringExecutionId) {\n    const parentExecs = await supabaseRequest(\n      `workflow_executions?id=eq.${triggerPayload.triggeringExecutionId}&limit=1`, 'GET'\n    );\n    if (parentExecs.length && parentExecs[0].triggering_execution_id) {\n      throw new Error('Circular workflow detected: max depth (1) exceeded');\n    }\n  }\n\n  // 5. Create execution record\n  const executionId = uuid();\n  const triggerType = triggerPayload?.trigger_type || 'manual';\n  await supabaseRequest('workflow_executions', 'POST', {\n    id: executionId,\n    workflow_id: workflowId,\n    tenant_id: tenantId,\n    status: 'running',\n    trigger_payload: triggerPayload || {},\n    triggering_execution_id: triggerPayload?.triggeringExecutionId || null,\n    started_at: new Date().toISOString(),\n  });\n\n  // 6. Create step execution records\n  const stepExecRecords = steps.map(step => ({\n    id: uuid(),\n    execution_id: executionId,\n    step_id: step.id,\n    status: 'pending',\n    started_at: null,\n    completed_at: null,\n    output_payload: null,\n    error_message: null,\n  }));\n  await supabaseRequest('workflow_step_executions', 'POST', stepExecRecords);\n\n  const stepExecMap = {};\n  for (const se of stepExecRecords) {\n    stepExecMap[se.step_id] = se.id;\n  }\n\n  // 7. Topological sort\n  const sortedSteps = topologicalSort(steps, edges);\n\n  // 8. Build trigger context\n  const variableContext = buildTriggerContext(triggerType, triggerPayload || {});\n\n  // 9. Build output items for SplitInBatches\n  const items = sortedSteps.map((step, index) => ({\n    json: {\n      currentStep: step,\n      stepIndex: index,\n      totalSteps: sortedSteps.length,\n      currentStepExecId: stepExecMap[step.id],\n      executionId,\n      workflowId,\n      tenantId,\n      variableContext,\n      edges,\n      allStepExecRecords: stepExecRecords,\n      failed: false,\n    }\n  }));\n\n  Sentry.addBreadcrumb({\n    message: `Orchestrator initialized: ${sortedSteps.length} steps for workflow ${workflowId}`,\n    level: 'info',\n  });\n\n  return items;\n\n} catch (err) {\n  Sentry.captureException(err);\n  await Sentry.flush(2000);\n  throw err;\n}\n"
       },
       "id": "a1b2c3d4-1111-4aaa-bbbb-000000000003",
       "name": "Fetch and Initialize",
@@ -79,13 +79,50 @@
     },
     {
       "parameters": {
-        "jsCode": "// =============================================================\n// Prepare Current Step — resolves variables and marks step running\n// =============================================================\n\nconst Sentry = require('@sentry/node');\nconst https = require('https');\n\nconst SUPABASE_URL = $env.SUPABASE_URL || 'https://zujwhdoickvsotbrqkot.supabase.co';\nconst SUPABASE_KEY = $env.SUPABASE_SERVICE_ROLE_KEY;\n\nasync function supabasePatch(path, body) {\n  const url = `${SUPABASE_URL}/rest/v1/${path}`;\n  return new Promise((resolve, reject) => {\n    const parsed = new URL(url);\n    const options = {\n      hostname: parsed.hostname,\n      path: parsed.pathname + parsed.search,\n      method: 'PATCH',\n      headers: {\n        'apikey': SUPABASE_KEY,\n        'Authorization': `Bearer ${SUPABASE_KEY}`,\n        'Content-Type': 'application/json',\n        'Prefer': 'return=representation',\n      },\n    };\n    const req = https.request(options, (res) => {\n      let data = '';\n      res.on('data', (chunk) => data += chunk);\n      res.on('end', () => {\n        if (res.statusCode >= 400) {\n          reject(new Error(`Supabase PATCH ${path}: ${res.statusCode} ${data}`));\n        } else {\n          resolve(data ? JSON.parse(data) : null);\n        }\n      });\n    });\n    req.on('error', reject);\n    req.write(JSON.stringify(body));\n    req.end();\n  });\n}\n\n// Resolve {{variable}} placeholders in strings\nfunction resolveVariables(template, context) {\n  if (typeof template !== 'string') return template;\n  return template.replace(/\\{\\{(\\s*[\\w.]+\\s*)\\}\\}/g, (_, rawKey) => {\n    const key = rawKey.trim();\n    const value = getNestedValue(context, key);\n    return (value !== undefined && value !== null) ? String(value) : `{{${key}}}`;\n  });\n}\n\nfunction getNestedValue(obj, path) {\n  const parts = path.split('.');\n  let current = obj;\n  for (const part of parts) {\n    if (current === null || current === undefined || typeof current !== 'object') return undefined;\n    current = current[part];\n  }\n  return current;\n}\n\n// Deep-resolve all string values in an object\nfunction resolveDeep(obj, context) {\n  if (typeof obj === 'string') return resolveVariables(obj, context);\n  if (Array.isArray(obj)) return obj.map(item => resolveDeep(item, context));\n  if (obj && typeof obj === 'object') {\n    const result = {};\n    for (const [key, value] of Object.entries(obj)) {\n      result[key] = resolveDeep(value, context);\n    }\n    return result;\n  }\n  return obj;\n}\n\ntry {\n  const item = $input.first().json;\n\n  // If previous step failed, skip all remaining\n  if (item.failed) {\n    return { json: item };\n  }\n\n  const { step, stepExecutionId, variableContext } = item;\n\n  // Mark step as running in DB\n  await supabasePatch(\n    `workflow_step_executions?id=eq.${stepExecutionId}`,\n    { status: 'running', started_at: new Date().toISOString() }\n  );\n\n  // Resolve variables in step_config\n  const resolvedConfig = resolveDeep(step.step_config, variableContext);\n\n  Sentry.addBreadcrumb({\n    message: `Step ${item.stepIndex + 1}/${item.totalSteps}: ${step.step_type} (${step.name || step.id})`,\n    level: 'info',\n  });\n\n  return {\n    json: {\n      ...item,\n      resolvedConfig,\n      stepType: step.step_type,\n    }\n  };\n} catch (err) {\n  Sentry.captureException(err);\n  await Sentry.flush(2000);\n  throw err;\n}\n"
+        "jsCode": "// =============================================================\n// Prepare Current Step — resolve variables in config\n// =============================================================\n// Variable resolution and skip-check only. DB status update\n// moved to native Supabase Update node downstream.\n// =============================================================\n\nconst Sentry = require('@sentry/node');\n\n// Resolve {{variable}} placeholders in strings\nfunction resolveVariables(template, context) {\n  if (typeof template !== 'string') return template;\n  return template.replace(/\\{\\{(\\s*[\\w.]+\\s*)\\}\\}/g, (_, rawKey) => {\n    const key = rawKey.trim();\n    const value = getNestedValue(context, key);\n    return (value !== undefined && value !== null) ? String(value) : `{{${key}}}`;\n  });\n}\n\nfunction getNestedValue(obj, path) {\n  const parts = path.split('.');\n  let current = obj;\n  for (const part of parts) {\n    if (current === null || current === undefined || typeof current !== 'object') return undefined;\n    current = current[part];\n  }\n  return current;\n}\n\n// Deep-resolve all string values in an object\nfunction resolveDeep(obj, context) {\n  if (typeof obj === 'string') return resolveVariables(obj, context);\n  if (Array.isArray(obj)) return obj.map(item => resolveDeep(item, context));\n  if (obj && typeof obj === 'object') {\n    const result = {};\n    for (const [key, value] of Object.entries(obj)) {\n      result[key] = resolveDeep(value, context);\n    }\n    return result;\n  }\n  return obj;\n}\n\ntry {\n  const item = $input.first().json;\n\n  // If previous step failed, skip all remaining\n  if (item.failed) {\n    return { json: item };\n  }\n\n  const { currentStep, variableContext } = item;\n\n  // Resolve variables in step_config\n  const resolvedConfig = resolveDeep(currentStep.step_config, variableContext);\n\n  Sentry.addBreadcrumb({\n    message: `Step ${item.stepIndex + 1}/${item.totalSteps}: ${currentStep.step_type} (${currentStep.name || currentStep.id})`,\n    level: 'info',\n  });\n\n  return {\n    json: {\n      ...item,\n      resolvedConfig,\n      stepType: currentStep.step_type,\n    }\n  };\n} catch (err) {\n  Sentry.captureException(err);\n  await Sentry.flush(2000);\n  throw err;\n}\n"
       },
       "id": "a1b2c3d4-1111-4aaa-bbbb-000000000006",
       "name": "Prepare Current Step",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [140, 300]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "workflow_step_executions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "keyValue": "={{ $json.currentStepExecId }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldName": "status",
+              "fieldValue": "running"
+            },
+            {
+              "fieldName": "started_at",
+              "fieldValue": "={{ new Date().toISOString() }}"
+            }
+          ]
+        }
+      },
+      "id": "a1b2c3d4-2222-4bbb-cccc-000000000001",
+      "name": "Mark Step Running",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [340, 300],
+      "credentials": {
+        "supabaseApi": {
+          "id": "f048XNg2A6zhwlWZ",
+          "name": "Supabase account"
+        }
+      }
     },
     {
       "parameters": {
@@ -233,26 +270,15 @@
       "name": "Route by Step Type",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.2,
-      "position": [380, 300]
-    },
-    {
-      "parameters": {
-        "jsCode": "// =============================================================\n// Build Email Payload — fetch template, resolve recipient\n// =============================================================\n\nconst Sentry = require('@sentry/node');\nconst https = require('https');\n\nconst SUPABASE_URL = $env.SUPABASE_URL || 'https://zujwhdoickvsotbrqkot.supabase.co';\nconst SUPABASE_KEY = $env.SUPABASE_SERVICE_ROLE_KEY;\n\nasync function supabaseGet(path) {\n  const url = `${SUPABASE_URL}/rest/v1/${path}`;\n  return new Promise((resolve, reject) => {\n    const parsed = new URL(url);\n    const req = https.request({\n      hostname: parsed.hostname,\n      path: parsed.pathname + parsed.search,\n      method: 'GET',\n      headers: {\n        'apikey': SUPABASE_KEY,\n        'Authorization': `Bearer ${SUPABASE_KEY}`,\n        'Content-Type': 'application/json',\n      },\n    }, (res) => {\n      let data = '';\n      res.on('data', (chunk) => data += chunk);\n      res.on('end', () => {\n        try { resolve(JSON.parse(data)); }\n        catch (e) { reject(new Error(`Parse error: ${data}`)); }\n      });\n    });\n    req.on('error', reject);\n    req.end();\n  });\n}\n\nfunction resolveVariables(template, context) {\n  if (typeof template !== 'string') return template;\n  return template.replace(/\\{\\{(\\s*[\\w.]+\\s*)\\}\\}/g, (_, rawKey) => {\n    const key = rawKey.trim();\n    const value = getNestedValue(context, key);\n    return (value !== undefined && value !== null) ? String(value) : `{{${key}}}`;\n  });\n}\n\nfunction getNestedValue(obj, path) {\n  const parts = path.split('.');\n  let current = obj;\n  for (const part of parts) {\n    if (current === null || current === undefined || typeof current !== 'object') return undefined;\n    current = current[part];\n  }\n  return current;\n}\n\ntry {\n  const item = $input.first().json;\n  const { resolvedConfig, variableContext, tenantId } = item;\n\n  const templateId = resolvedConfig.template_id;\n  let subject = resolvedConfig.subject || 'Notification';\n  let html = resolvedConfig.html_body || '<p>Notification</p>';\n\n  // Fetch email template if template_id provided\n  if (templateId) {\n    const templates = await supabaseGet(`email_templates?id=eq.${templateId}&limit=1`);\n    if (templates.length && templates[0].html_body) {\n      subject = templates[0].subject || subject;\n      html = templates[0].html_body;\n    }\n  }\n\n  // Determine recipient\n  let to = resolvedConfig.to;\n  if (!to && variableContext.responseId) {\n    // Fetch response → survey_link → notification_email\n    const responses = await supabaseGet(`responses?id=eq.${variableContext.responseId}&limit=1`);\n    if (responses.length) {\n      const surveyLinks = await supabaseGet(`survey_links?id=eq.${responses[0].survey_link_id}&limit=1`);\n      if (surveyLinks.length) {\n        to = surveyLinks[0].notification_email;\n      }\n    }\n  }\n\n  if (!to) throw new Error('No recipient email resolved for send_email step');\n\n  // Resolve variables in subject and html\n  subject = resolveVariables(subject, variableContext);\n  html = resolveVariables(html, variableContext);\n\n  return {\n    json: {\n      ...item,\n      emailPayload: { to, subject, html, tenant_id: tenantId },\n    }\n  };\n} catch (err) {\n  Sentry.captureException(err);\n  await Sentry.flush(2000);\n  // Return failure result instead of throwing — Process Step Result handles it\n  const item = $input.first().json;\n  return {\n    json: {\n      ...item,\n      stepResult: { success: false, error: err.message },\n    }\n  };\n}\n"
-      },
-      "id": "a1b2c3d4-1111-4aaa-bbbb-000000000010",
-      "name": "Build Email Payload",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [660, 0]
+      "position": [580, 300]
     },
     {
       "parameters": {
         "workflowId": {
           "__rl": true,
-          "value": "IL4nS-1FRcLA2IlSkvvKY",
+          "value": "",
           "mode": "list",
-          "cachedResultUrl": "/workflow/IL4nS-1FRcLA2IlSkvvKY",
-          "cachedResultName": "Send Email"
+          "cachedResultName": "Step - Send Email Handler"
         },
         "workflowInputs": {
           "mappingMode": "defineBelow",
@@ -266,28 +292,17 @@
       },
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.3,
-      "position": [900, 0],
-      "id": "a1b2c3d4-1111-4aaa-bbbb-000000000011",
-      "name": "Call Send Email"
-    },
-    {
-      "parameters": {
-        "jsCode": "// Build AI Payload for MiniMax Agent subworkflow\nconst item = $input.first().json;\nconst { resolvedConfig, variableContext } = item;\n\nconst prompt = resolvedConfig.prompt || '';\nconst outputSchema = resolvedConfig.output_schema || [];\n\n// Build context string from variable context\nconst contextEntries = Object.entries(variableContext)\n  .map(([k, v]) => `${k}: ${JSON.stringify(v)}`)\n  .join('\\n');\n\nreturn {\n  json: {\n    ...item,\n    aiPayload: {\n      prompt,\n      context: contextEntries,\n      output_schema: outputSchema,\n      tenant_id: item.tenantId,\n    },\n  }\n};\n"
-      },
-      "id": "a1b2c3d4-1111-4aaa-bbbb-000000000012",
-      "name": "Build AI Payload",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [660, 200]
+      "position": [860, 0],
+      "id": "a1b2c3d4-3333-4ccc-dddd-000000000001",
+      "name": "Call Send Email Handler"
     },
     {
       "parameters": {
         "workflowId": {
           "__rl": true,
-          "value": "xaU50vf4eiNTeqSf",
+          "value": "",
           "mode": "list",
-          "cachedResultUrl": "/workflow/xaU50vf4eiNTeqSf",
-          "cachedResultName": "MiniMax Agent"
+          "cachedResultName": "Step - AI Action Handler"
         },
         "workflowInputs": {
           "mappingMode": "defineBelow",
@@ -301,78 +316,81 @@
       },
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.3,
-      "position": [900, 200],
-      "id": "a1b2c3d4-1111-4aaa-bbbb-000000000013",
-      "name": "Call MiniMax Agent"
+      "position": [860, 200],
+      "id": "a1b2c3d4-3333-4ccc-dddd-000000000002",
+      "name": "Call AI Action Handler"
     },
     {
       "parameters": {
-        "jsCode": "// =============================================================\n// SSRF Check — block private IPs before HTTP Request\n// =============================================================\n\nconst item = $input.first().json;\nconst { resolvedConfig } = item;\nconst url = resolvedConfig.url;\n\nif (!url) {\n  return {\n    json: {\n      ...item,\n      stepResult: { success: false, error: 'Webhook step missing url in config' },\n    }\n  };\n}\n\ntry {\n  const parsed = new URL(url);\n  const hostname = parsed.hostname.toLowerCase();\n\n  const privatePatterns = [\n    /^10\\./,\n    /^172\\.(1[6-9]|2\\d|3[01])\\./,\n    /^192\\.168\\./,\n    /^127\\./,\n    /^localhost$/i,\n    /^::1$/,\n    /\\.local$/,\n    /^0\\.0\\.0\\.0$/,\n    /^169\\.254\\./,\n  ];\n\n  const isPrivate = privatePatterns.some(p => p.test(hostname));\n  if (isPrivate) {\n    return {\n      json: {\n        ...item,\n        stepResult: { success: false, error: `Webhook URL targets private address: ${hostname}` },\n      }\n    };\n  }\n\n  return { json: { ...item, webhookUrl: url, webhookMethod: resolvedConfig.method || 'POST' } };\n} catch (e) {\n  return {\n    json: {\n      ...item,\n      stepResult: { success: false, error: `Invalid webhook URL: ${url}` },\n    }\n  };\n}\n"
+        "workflowId": {
+          "__rl": true,
+          "value": "",
+          "mode": "list",
+          "cachedResultName": "Step - Webhook Handler"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
       },
-      "id": "a1b2c3d4-1111-4aaa-bbbb-000000000014",
-      "name": "SSRF Check",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [660, 400]
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [860, 400],
+      "id": "a1b2c3d4-3333-4ccc-dddd-000000000003",
+      "name": "Call Webhook Handler"
     },
     {
       "parameters": {
-        "method": "={{ $json.webhookMethod }}",
-        "url": "={{ $json.webhookUrl }}",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify($json.resolvedConfig.body ? JSON.parse($json.resolvedConfig.body) : {}) }}",
-        "options": {
-          "timeout": 10000
-        }
+        "workflowId": {
+          "__rl": true,
+          "value": "",
+          "mode": "list",
+          "cachedResultName": "Step - Condition Handler"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
       },
-      "id": "a1b2c3d4-1111-4aaa-bbbb-000000000015",
-      "name": "HTTP Webhook Request",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [900, 400]
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [860, 600],
+      "id": "a1b2c3d4-3333-4ccc-dddd-000000000004",
+      "name": "Call Condition Handler"
     },
     {
       "parameters": {
-        "jsCode": "// =============================================================\n// Evaluate Condition — ported from CMS condition-evaluator.ts\n// =============================================================\n\nconst Sentry = require('@sentry/node');\n\nconst OPERATORS = ['>=', '<=', '!=', '==', '>', '<', 'contains', 'in'];\n\nfunction escapeRegex(str) {\n  return str.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&');\n}\n\nfunction parseExpression(expression) {\n  const trimmed = expression.trim();\n  for (const op of OPERATORS) {\n    const pattern = (op === 'contains' || op === 'in')\n      ? new RegExp(`^(.+?)\\\\s+${op}\\\\s+(.+)$`)\n      : new RegExp(`^(.+?)\\\\s*${escapeRegex(op)}\\\\s*(.+)$`);\n    const match = trimmed.match(pattern);\n    if (match) {\n      return { field: match[1].trim(), operator: op, value: match[2].trim() };\n    }\n  }\n  return null;\n}\n\nfunction getNestedValue(obj, path) {\n  const parts = path.split('.');\n  let current = obj;\n  for (const part of parts) {\n    if (current === null || current === undefined || typeof current !== 'object') return undefined;\n    current = current[part];\n  }\n  return current;\n}\n\nfunction resolveField(field, context) {\n  const cleanField = field.replace(/^\\{\\{|\\}\\}$/g, '').trim();\n  return getNestedValue(context, cleanField);\n}\n\nfunction coerceNumeric(value) {\n  const num = Number(value);\n  return Number.isNaN(num) ? value : num;\n}\n\nfunction compare(fieldValue, operator, rawValue) {\n  switch (operator) {\n    case '==':\n      return String(fieldValue) === rawValue;\n    case '!=':\n      return String(fieldValue) !== rawValue;\n    case '>': case '<': case '>=': case '<=': {\n      const left = typeof fieldValue === 'number' ? fieldValue : Number(fieldValue);\n      const right = coerceNumeric(rawValue);\n      if (typeof right !== 'number' || Number.isNaN(left)) return false;\n      if (operator === '>') return left > right;\n      if (operator === '<') return left < right;\n      if (operator === '>=') return left >= right;\n      if (operator === '<=') return left <= right;\n      return false;\n    }\n    case 'contains':\n      return String(fieldValue).includes(rawValue);\n    case 'in': {\n      const list = rawValue.split(',').map(v => v.trim());\n      return list.includes(String(fieldValue));\n    }\n  }\n  return false;\n}\n\nfunction evaluateCondition(expression, context) {\n  const parsed = parseExpression(expression);\n  if (!parsed) return 'false';\n  const fieldValue = resolveField(parsed.field, context);\n  if (fieldValue === undefined) return 'false';\n  return compare(fieldValue, parsed.operator, parsed.value) ? 'true' : 'false';\n}\n\n// ---- Main ----\n\ntry {\n  const item = $input.first().json;\n  const { resolvedConfig, variableContext, step, edges, allStepExecRecords } = item;\n\n  const expression = resolvedConfig.expression || '';\n  const branch = evaluateCondition(expression, variableContext);\n\n  Sentry.addBreadcrumb({\n    message: `Condition '${expression}' evaluated to '${branch}'`,\n    level: 'info',\n  });\n\n  // Mark steps on non-taken branch as skipped\n  // Find edges from this condition step on the non-taken branch\n  const conditionEdges = edges.filter(e => e.source_step_id === step.id);\n  const nonTakenEdges = conditionEdges.filter(e => e.condition_branch && e.condition_branch !== branch);\n  const skipTargetIds = new Set();\n\n  for (const edge of nonTakenEdges) {\n    const targetId = edge.target_step_id;\n    // Check if target has alternate incoming path (from non-skipped sources)\n    const allIncoming = edges.filter(e => e.target_step_id === targetId);\n    const hasAlternatePath = allIncoming.some(e =>\n      e.source_step_id !== step.id ||\n      e.condition_branch === branch ||\n      e.condition_branch === null\n    );\n    if (!hasAlternatePath) {\n      skipTargetIds.add(targetId);\n    }\n  }\n\n  // Recursively find all downstream steps only reachable from skipped steps\n  // A step is skipped only if ALL its incoming edges come from skipped steps\n  const allSkipped = new Set(skipTargetIds);\n  let changed = true;\n  while (changed) {\n    changed = false;\n    for (const edge of edges) {\n      if (allSkipped.has(edge.source_step_id) && !allSkipped.has(edge.target_step_id)) {\n        // Check if ALL incoming edges to target come from skipped steps\n        const incomingEdges = edges.filter(e => e.target_step_id === edge.target_step_id);\n        const allIncomingSkipped = incomingEdges.every(e => allSkipped.has(e.source_step_id));\n        if (allIncomingSkipped) {\n          allSkipped.add(edge.target_step_id);\n          changed = true;\n        }\n      }\n    }\n  }\n\n  return {\n    json: {\n      ...item,\n      stepResult: {\n        success: true,\n        outputPayload: { branch },\n      },\n      skippedStepIds: Array.from(allSkipped),\n    }\n  };\n} catch (err) {\n  Sentry.captureException(err);\n  await Sentry.flush(2000);\n  const item = $input.first().json;\n  return {\n    json: {\n      ...item,\n      stepResult: { success: false, error: err.message },\n    }\n  };\n}\n"
+        "workflowId": {
+          "__rl": true,
+          "value": "",
+          "mode": "list",
+          "cachedResultName": "Step - Delay Handler"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
       },
-      "id": "a1b2c3d4-1111-4aaa-bbbb-000000000016",
-      "name": "Evaluate Condition",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [660, 600]
-    },
-    {
-      "parameters": {
-        "jsCode": "// =============================================================\n// Prepare Delay — compute duration, mark step waiting, pause execution\n// =============================================================\n\nconst Sentry = require('@sentry/node');\nconst https = require('https');\n\nconst SUPABASE_URL = $env.SUPABASE_URL || 'https://zujwhdoickvsotbrqkot.supabase.co';\nconst SUPABASE_KEY = $env.SUPABASE_SERVICE_ROLE_KEY;\n\nasync function supabasePatch(path, body) {\n  const url = `${SUPABASE_URL}/rest/v1/${path}`;\n  return new Promise((resolve, reject) => {\n    const parsed = new URL(url);\n    const options = {\n      hostname: parsed.hostname,\n      path: parsed.pathname + parsed.search,\n      method: 'PATCH',\n      headers: {\n        'apikey': SUPABASE_KEY,\n        'Authorization': `Bearer ${SUPABASE_KEY}`,\n        'Content-Type': 'application/json',\n        'Prefer': 'return=representation',\n      },\n    };\n    const req = https.request(options, (res) => {\n      let data = '';\n      res.on('data', (chunk) => data += chunk);\n      res.on('end', () => {\n        if (res.statusCode >= 400) {\n          reject(new Error(`Supabase PATCH ${path}: ${res.statusCode} ${data}`));\n        } else {\n          resolve(data ? JSON.parse(data) : null);\n        }\n      });\n    });\n    req.on('error', reject);\n    req.write(JSON.stringify(body));\n    req.end();\n  });\n}\n\ntry {\n  const item = $input.first().json;\n  const step = item.step;\n  const config = item.resolvedConfig || step.step_config;\n\n  // Calculate delay duration\n  const value = Number(config.value) || 1;\n  const unit = config.unit || 'minutes';\n  const multipliers = { minutes: 60, hours: 3600, days: 86400 };\n  const seconds = value * (multipliers[unit] || 60);\n\n  const resumeAt = new Date(Date.now() + seconds * 1000).toISOString();\n\n  // Update step execution: waiting + resume_at\n  const stepExecId = item.stepExecutionId;\n  await supabasePatch(\n    `workflow_step_executions?id=eq.${stepExecId}`,\n    { status: 'waiting', resume_at: resumeAt }\n  );\n\n  // Update execution: paused\n  await supabasePatch(\n    `workflow_executions?id=eq.${item.executionId}`,\n    { status: 'paused' }\n  );\n\n  Sentry.addBreadcrumb({\n    message: `Delay step: waiting ${value} ${unit} (${seconds}s), resume at ${resumeAt}`,\n    level: 'info',\n  });\n\n  return { json: { ...item, delaySeconds: seconds } };\n} catch (err) {\n  Sentry.captureException(err);\n  await Sentry.flush(2000);\n  const item = $input.first().json;\n  return {\n    json: {\n      ...item,\n      stepResult: { success: false, error: err.message },\n    }\n  };\n}\n"
-      },
-      "id": "b7e3f1a2-4c5d-4e8f-9a1b-d3c2e4f5a6b7",
-      "name": "Prepare Delay",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [660, 800]
-    },
-    {
-      "parameters": {
-        "amount": "={{ $json.delaySeconds }}",
-        "unit": "seconds"
-      },
-      "id": "c8f4a2b3-5d6e-4f9a-ab2c-e4d3f5a6b7c8",
-      "name": "Wait for Delay",
-      "type": "n8n-nodes-base.wait",
-      "typeVersion": 1.1,
-      "position": [880, 800],
-      "webhookId": "d9a5b3c4-6e7f-4aab-bc3d-f5e4a6b7c8d9"
-    },
-    {
-      "parameters": {
-        "jsCode": "// =============================================================\n// Resume After Delay — mark step completed, resume execution\n// =============================================================\n\nconst Sentry = require('@sentry/node');\nconst https = require('https');\n\nconst SUPABASE_URL = $env.SUPABASE_URL || 'https://zujwhdoickvsotbrqkot.supabase.co';\nconst SUPABASE_KEY = $env.SUPABASE_SERVICE_ROLE_KEY;\n\nasync function supabasePatch(path, body) {\n  const url = `${SUPABASE_URL}/rest/v1/${path}`;\n  return new Promise((resolve, reject) => {\n    const parsed = new URL(url);\n    const options = {\n      hostname: parsed.hostname,\n      path: parsed.pathname + parsed.search,\n      method: 'PATCH',\n      headers: {\n        'apikey': SUPABASE_KEY,\n        'Authorization': `Bearer ${SUPABASE_KEY}`,\n        'Content-Type': 'application/json',\n        'Prefer': 'return=representation',\n      },\n    };\n    const req = https.request(options, (res) => {\n      let data = '';\n      res.on('data', (chunk) => data += chunk);\n      res.on('end', () => {\n        if (res.statusCode >= 400) {\n          reject(new Error(`Supabase PATCH ${path}: ${res.statusCode} ${data}`));\n        } else {\n          resolve(data ? JSON.parse(data) : null);\n        }\n      });\n    });\n    req.on('error', reject);\n    req.write(JSON.stringify(body));\n    req.end();\n  });\n}\n\ntry {\n  const item = $input.first().json;\n  const stepExecId = item.stepExecutionId;\n\n  // Mark step completed\n  await supabasePatch(\n    `workflow_step_executions?id=eq.${stepExecId}`,\n    {\n      status: 'completed',\n      completed_at: new Date().toISOString(),\n      output_payload: { delay_completed: true, duration_seconds: item.delaySeconds }\n    }\n  );\n\n  // Resume execution\n  await supabasePatch(\n    `workflow_executions?id=eq.${item.executionId}`,\n    { status: 'running' }\n  );\n\n  Sentry.addBreadcrumb({\n    message: `Delay step completed after ${item.delaySeconds}s, execution resumed`,\n    level: 'info',\n  });\n\n  // Return with stepResult so Process Step Result handles it correctly\n  // alreadyPersisted = true so Process Step Result skips DB update\n  return {\n    json: {\n      ...item,\n      stepResult: {\n        success: true,\n        outputPayload: { delay_completed: true, duration_seconds: item.delaySeconds },\n        alreadyPersisted: true,\n      },\n    }\n  };\n} catch (err) {\n  Sentry.captureException(err);\n  await Sentry.flush(2000);\n  const item = $input.first().json;\n  return {\n    json: {\n      ...item,\n      stepResult: { success: false, error: err.message },\n    }\n  };\n}\n"
-      },
-      "id": "e1a6c4d5-7f8a-4bbc-cd4e-a6b5c7d8e9f0",
-      "name": "Resume After Delay",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [1100, 800]
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [860, 800],
+      "id": "a1b2c3d4-3333-4ccc-dddd-000000000005",
+      "name": "Call Delay Handler"
     },
     {
       "parameters": {
@@ -382,7 +400,7 @@
       "name": "Skip Failed Step",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [660, 1000]
+      "position": [860, 1000]
     },
     {
       "parameters": {
@@ -392,27 +410,195 @@
       "name": "Unknown Type Handler",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [660, 1200]
+      "position": [860, 1200]
     },
     {
       "parameters": {
-        "jsCode": "// =============================================================\n// Process Step Result — update DB, merge context, handle failure\n// =============================================================\n// This node runs after every step type branch.\n// It updates the step execution in DB, merges output into\n// variableContext, and handles failure (marks remaining skipped).\n// =============================================================\n\nconst Sentry = require('@sentry/node');\nconst https = require('https');\n\nconst SUPABASE_URL = $env.SUPABASE_URL || 'https://zujwhdoickvsotbrqkot.supabase.co';\nconst SUPABASE_KEY = $env.SUPABASE_SERVICE_ROLE_KEY;\n\nasync function supabasePatch(path, body) {\n  const url = `${SUPABASE_URL}/rest/v1/${path}`;\n  return new Promise((resolve, reject) => {\n    const parsed = new URL(url);\n    const options = {\n      hostname: parsed.hostname,\n      path: parsed.pathname + parsed.search,\n      method: 'PATCH',\n      headers: {\n        'apikey': SUPABASE_KEY,\n        'Authorization': `Bearer ${SUPABASE_KEY}`,\n        'Content-Type': 'application/json',\n        'Prefer': 'return=representation',\n      },\n    };\n    const req = https.request(options, (res) => {\n      let data = '';\n      res.on('data', (chunk) => data += chunk);\n      res.on('end', () => {\n        if (res.statusCode >= 400) {\n          reject(new Error(`Supabase PATCH ${path}: ${res.statusCode} ${data}`));\n        } else {\n          resolve(data ? JSON.parse(data) : null);\n        }\n      });\n    });\n    req.on('error', reject);\n    req.write(JSON.stringify(body));\n    req.end();\n  });\n}\n\ntry {\n  const item = $input.first().json;\n  const { stepExecutionId, executionId, variableContext, step } = item;\n\n  // If already in failed passthrough mode, just return\n  if (item.failed) {\n    return { json: item };\n  }\n\n  // Determine step result — some branches set it directly, others need extraction\n  let stepResult = item.stepResult;\n\n  // For send_email: result comes from Call Send Email subworkflow\n  if (!stepResult && item.stepType === 'send_email') {\n    if (item.emailPayload) {\n      stepResult = { success: true, outputPayload: { emailSent: true, recipientEmail: item.emailPayload.to } };\n    } else {\n      stepResult = { success: false, error: 'Email payload not built' };\n    }\n  }\n\n  // For ai_action: parse result from MiniMax Agent subworkflow\n  if (!stepResult && item.stepType === 'ai_action') {\n    try {\n      // MiniMax Agent returns content[0].text — try to parse as JSON\n      const aiOutput = $('Call MiniMax Agent').first().json;\n      let parsedOutput = {};\n      if (aiOutput && aiOutput.content && aiOutput.content[0] && aiOutput.content[0].text) {\n        try {\n          parsedOutput = JSON.parse(aiOutput.content[0].text);\n        } catch {\n          parsedOutput = { aiResponse: aiOutput.content[0].text };\n        }\n      } else if (aiOutput && aiOutput.text) {\n        try {\n          parsedOutput = JSON.parse(aiOutput.text);\n        } catch {\n          parsedOutput = { aiResponse: aiOutput.text || JSON.stringify(aiOutput) };\n        }\n      } else {\n        parsedOutput = { aiResponse: JSON.stringify(aiOutput) };\n      }\n      stepResult = { success: true, outputPayload: parsedOutput };\n    } catch (e) {\n      stepResult = { success: false, error: `AI action failed: ${e.message}` };\n    }\n  }\n\n  // For webhook: extract result from HTTP Request response\n  if (!stepResult && item.stepType === 'webhook') {\n    try {\n      const httpResult = $('HTTP Webhook Request').first().json;\n      stepResult = {\n        success: true,\n        outputPayload: {\n          statusCode: httpResult.statusCode || 200,\n          responseBody: typeof httpResult === 'string' ? httpResult : JSON.stringify(httpResult),\n        },\n      };\n    } catch (e) {\n      stepResult = { success: false, error: `Webhook failed: ${e.message}` };\n    }\n  }\n\n  // Fallback if no result set\n  if (!stepResult) {\n    stepResult = { success: false, error: 'No step result produced' };\n  }\n\n  // Update step execution in DB (skip if already persisted by delay handler)\n  const now = new Date().toISOString();\n  if (!stepResult.alreadyPersisted) {\n    if (stepResult.success) {\n      await supabasePatch(\n        `workflow_step_executions?id=eq.${stepExecutionId}`,\n        {\n          status: 'completed',\n          completed_at: now,\n          output_payload: stepResult.outputPayload || {},\n        }\n      );\n    } else {\n      await supabasePatch(\n        `workflow_step_executions?id=eq.${stepExecutionId}`,\n        {\n          status: 'failed',\n          completed_at: now,\n          error_message: stepResult.error || 'Unknown error',\n        }\n      );\n    }\n  }\n\n  // Handle skipped steps from condition branching\n  const skippedStepIds = item.skippedStepIds || [];\n  if (skippedStepIds.length > 0) {\n    const allStepExecs = item.allStepExecRecords || [];\n    for (const skipStepId of skippedStepIds) {\n      const skipExec = allStepExecs.find(se => se.step_id === skipStepId);\n      if (skipExec) {\n        await supabasePatch(\n          `workflow_step_executions?id=eq.${skipExec.id}`,\n          { status: 'skipped', completed_at: now }\n        );\n      }\n    }\n  }\n\n  // Merge output into variable context\n  const updatedContext = { ...variableContext };\n  if (stepResult.success && stepResult.outputPayload) {\n    Object.assign(updatedContext, stepResult.outputPayload);\n  }\n\n  // If step failed: mark execution as failed and signal to skip remaining steps\n  if (!stepResult.success) {\n    await supabasePatch(\n      `workflow_executions?id=eq.${executionId}`,\n      { status: 'failed', completed_at: now, error_message: stepResult.error }\n    );\n\n    Sentry.captureException(new Error(`Step failed: ${step.step_type} — ${stepResult.error}`));\n    await Sentry.flush(2000);\n\n    return {\n      json: {\n        ...item,\n        variableContext: updatedContext,\n        failed: true,\n        failureError: stepResult.error,\n      }\n    };\n  }\n\n  return {\n    json: {\n      ...item,\n      variableContext: updatedContext,\n      stepResult: null,\n      skippedStepIds: null,\n    }\n  };\n\n} catch (err) {\n  Sentry.captureException(err);\n  await Sentry.flush(2000);\n  throw err;\n}\n"
+        "jsCode": "// =============================================================\n// Process Step Result — merge context, handle failure/skipping\n// =============================================================\n// Merges subworkflow output into the loop item's variableContext.\n// DB status updates moved to native Supabase nodes downstream.\n// =============================================================\n\nconst Sentry = require('@sentry/node');\n\ntry {\n  const item = $input.first().json;\n  const { currentStepExecId, executionId, variableContext, currentStep } = item;\n\n  // If already in failed passthrough mode, just return\n  if (item.failed) {\n    return { json: item };\n  }\n\n  // Get step result from subworkflow output\n  // Subworkflows return { stepResult, skippedStepIds?, alreadyPersisted? }\n  let stepResult = item.stepResult;\n\n  // Fallback if no result set\n  if (!stepResult) {\n    stepResult = { success: false, error: 'No step result produced' };\n  }\n\n  // Merge output into variable context\n  const updatedContext = { ...variableContext };\n  if (stepResult.success && stepResult.outputPayload) {\n    Object.assign(updatedContext, stepResult.outputPayload);\n  }\n\n  // Prepare DB update fields\n  const now = new Date().toISOString();\n  const alreadyPersisted = item.alreadyPersisted || stepResult.alreadyPersisted || false;\n\n  // If step failed: signal to skip remaining steps\n  if (!stepResult.success) {\n    Sentry.captureException(new Error(`Step failed: ${currentStep.step_type} — ${stepResult.error}`));\n    await Sentry.flush(2000);\n\n    return {\n      json: {\n        ...item,\n        variableContext: updatedContext,\n        failed: true,\n        failureError: stepResult.error,\n        dbStatus: 'failed',\n        dbCompletedAt: now,\n        dbErrorMessage: stepResult.error || 'Unknown error',\n        dbOutputPayload: null,\n        alreadyPersisted,\n        skippedStepIds: item.skippedStepIds || [],\n      }\n    };\n  }\n\n  return {\n    json: {\n      ...item,\n      variableContext: updatedContext,\n      stepResult: null,\n      dbStatus: 'completed',\n      dbCompletedAt: now,\n      dbOutputPayload: JSON.stringify(stepResult.outputPayload || {}),\n      dbErrorMessage: null,\n      alreadyPersisted,\n      skippedStepIds: item.skippedStepIds || [],\n    }\n  };\n\n} catch (err) {\n  Sentry.captureException(err);\n  await Sentry.flush(2000);\n  throw err;\n}\n"
       },
       "id": "a1b2c3d4-1111-4aaa-bbbb-000000000020",
       "name": "Process Step Result",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1160, 500]
+      "position": [1120, 500]
     },
     {
       "parameters": {
-        "jsCode": "// =============================================================\n// Mark Execution Complete — runs after all steps processed\n// =============================================================\n\nconst Sentry = require('@sentry/node');\nconst https = require('https');\n\nconst SUPABASE_URL = $env.SUPABASE_URL || 'https://zujwhdoickvsotbrqkot.supabase.co';\nconst SUPABASE_KEY = $env.SUPABASE_SERVICE_ROLE_KEY;\n\nasync function supabasePatch(path, body) {\n  const url = `${SUPABASE_URL}/rest/v1/${path}`;\n  return new Promise((resolve, reject) => {\n    const parsed = new URL(url);\n    const options = {\n      hostname: parsed.hostname,\n      path: parsed.pathname + parsed.search,\n      method: 'PATCH',\n      headers: {\n        'apikey': SUPABASE_KEY,\n        'Authorization': `Bearer ${SUPABASE_KEY}`,\n        'Content-Type': 'application/json',\n        'Prefer': 'return=representation',\n      },\n    };\n    const req = https.request(options, (res) => {\n      let data = '';\n      res.on('data', (chunk) => data += chunk);\n      res.on('end', () => {\n        if (res.statusCode >= 400) {\n          reject(new Error(`Supabase PATCH ${path}: ${res.statusCode} ${data}`));\n        } else {\n          resolve(data ? JSON.parse(data) : null);\n        }\n      });\n    });\n    req.on('error', reject);\n    req.write(JSON.stringify(body));\n    req.end();\n  });\n}\n\ntry {\n  // Get the last item from the batch — contains final state\n  const items = $input.all();\n  const lastItem = items[items.length - 1].json;\n\n  // If already failed, execution was already marked failed in Process Step Result\n  if (lastItem.failed) {\n    Sentry.addBreadcrumb({\n      message: `Execution ${lastItem.executionId} already marked failed`,\n      level: 'warning',\n    });\n    return { json: { executionId: lastItem.executionId, status: 'failed' } };\n  }\n\n  // Mark remaining pending step executions as skipped (e.g. from condition branches)\n  // These were not reached during execution\n  const now = new Date().toISOString();\n\n  // Mark execution as completed\n  await supabasePatch(\n    `workflow_executions?id=eq.${lastItem.executionId}`,\n    { status: 'completed', completed_at: now }\n  );\n\n  Sentry.addBreadcrumb({\n    message: `Execution ${lastItem.executionId} completed successfully`,\n    level: 'info',\n  });\n\n  return { json: { executionId: lastItem.executionId, status: 'completed' } };\n} catch (err) {\n  Sentry.captureException(err);\n  await Sentry.flush(2000);\n  throw err;\n}\n"
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.alreadyPersisted }}",
+                    "rightValue": "={{ true }}",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "equals"
+                    },
+                    "id": "persist-gate-skip"
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
       },
-      "id": "a1b2c3d4-1111-4aaa-bbbb-000000000021",
-      "name": "Mark Execution Complete",
+      "id": "a1b2c3d4-4444-4ddd-eeee-000000000001",
+      "name": "Persist Gate",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [1340, 500]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "workflow_step_executions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "keyValue": "={{ $json.currentStepExecId }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldName": "status",
+              "fieldValue": "={{ $json.dbStatus }}"
+            },
+            {
+              "fieldName": "completed_at",
+              "fieldValue": "={{ $json.dbCompletedAt }}"
+            },
+            {
+              "fieldName": "output_payload",
+              "fieldValue": "={{ $json.dbOutputPayload }}"
+            },
+            {
+              "fieldName": "error_message",
+              "fieldValue": "={{ $json.dbErrorMessage }}"
+            }
+          ]
+        }
+      },
+      "id": "a1b2c3d4-4444-4ddd-eeee-000000000002",
+      "name": "Update Step Execution",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [1560, 600],
+      "credentials": {
+        "supabaseApi": {
+          "id": "f048XNg2A6zhwlWZ",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// =============================================================\n// Handle Skipped Steps + Mark Failed Execution\n// =============================================================\n// After persisting step result, handle condition-branch skipping\n// and mark execution as failed if step failed.\n// =============================================================\n\nconst https = require('https');\n\nconst SUPABASE_URL = $env.SUPABASE_URL || 'https://zujwhdoickvsotbrqkot.supabase.co';\nconst SUPABASE_KEY = $env.SUPABASE_SERVICE_ROLE_KEY;\n\nasync function supabasePatch(path, body) {\n  const url = `${SUPABASE_URL}/rest/v1/${path}`;\n  return new Promise((resolve, reject) => {\n    const parsed = new URL(url);\n    const options = {\n      hostname: parsed.hostname,\n      path: parsed.pathname + parsed.search,\n      method: 'PATCH',\n      headers: {\n        'apikey': SUPABASE_KEY,\n        'Authorization': `Bearer ${SUPABASE_KEY}`,\n        'Content-Type': 'application/json',\n        'Prefer': 'return=representation',\n      },\n    };\n    const req = https.request(options, (res) => {\n      let data = '';\n      res.on('data', (chunk) => data += chunk);\n      res.on('end', () => {\n        if (res.statusCode >= 400) {\n          reject(new Error(`Supabase PATCH ${path}: ${res.statusCode} ${data}`));\n        } else {\n          resolve(data ? JSON.parse(data) : null);\n        }\n      });\n    });\n    req.on('error', reject);\n    req.write(JSON.stringify(body));\n    req.end();\n  });\n}\n\ntry {\n  const item = $input.first().json;\n  const now = new Date().toISOString();\n\n  // Handle skipped steps from condition branching\n  const skippedStepIds = item.skippedStepIds || [];\n  if (skippedStepIds.length > 0) {\n    const allStepExecs = item.allStepExecRecords || [];\n    for (const skipStepId of skippedStepIds) {\n      const skipExec = allStepExecs.find(se => se.step_id === skipStepId);\n      if (skipExec) {\n        await supabasePatch(\n          `workflow_step_executions?id=eq.${skipExec.id}`,\n          { status: 'skipped', completed_at: now }\n        );\n      }\n    }\n  }\n\n  // If step failed, mark execution as failed\n  if (item.failed) {\n    await supabasePatch(\n      `workflow_executions?id=eq.${item.executionId}`,\n      { status: 'failed', completed_at: now, error_message: item.failureError }\n    );\n  }\n\n  // Clean up transient fields before looping back\n  return {\n    json: {\n      ...item,\n      stepResult: null,\n      skippedStepIds: null,\n      dbStatus: undefined,\n      dbCompletedAt: undefined,\n      dbOutputPayload: undefined,\n      dbErrorMessage: undefined,\n      alreadyPersisted: undefined,\n    }\n  };\n} catch (err) {\n  throw err;\n}\n"
+      },
+      "id": "a1b2c3d4-4444-4ddd-eeee-000000000003",
+      "name": "Handle Skipped and Failed",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [-100, 600]
+      "position": [1780, 500]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "workflow_executions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "keyValue": "={{ $json.executionId }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldName": "status",
+              "fieldValue": "completed"
+            },
+            {
+              "fieldName": "completed_at",
+              "fieldValue": "={{ new Date().toISOString() }}"
+            }
+          ]
+        }
+      },
+      "id": "a1b2c3d4-4444-4ddd-eeee-000000000004",
+      "name": "Mark Execution Complete",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [-100, 600],
+      "credentials": {
+        "supabaseApi": {
+          "id": "f048XNg2A6zhwlWZ",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Check if execution was already marked failed — skip completion\nconst items = $input.all();\nconst lastItem = items[items.length - 1].json;\n\nif (lastItem.failed) {\n  // Already marked failed in Handle Skipped and Failed node\n  return { json: { executionId: lastItem.executionId, status: 'failed', skipCompletion: true } };\n}\n\nreturn { json: { executionId: lastItem.executionId, status: 'completed', skipCompletion: false } };\n"
+      },
+      "id": "a1b2c3d4-4444-4ddd-eeee-000000000005",
+      "name": "Check Final Status",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-320, 600]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.skipCompletion }}",
+                    "rightValue": "={{ true }}",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "equals"
+                    },
+                    "id": "completion-gate-skip"
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "id": "a1b2c3d4-4444-4ddd-eeee-000000000006",
+      "name": "Completion Gate",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [-100, 750]
     }
   ],
   "pinData": {},
@@ -459,7 +645,7 @@
       "main": [
         [
           {
-            "node": "Mark Execution Complete",
+            "node": "Check Final Status",
             "type": "main",
             "index": 0
           }
@@ -477,6 +663,17 @@
       "main": [
         [
           {
+            "node": "Mark Step Running",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark Step Running": {
+      "main": [
+        [
+          {
             "node": "Route by Step Type",
             "type": "main",
             "index": 0
@@ -488,35 +685,35 @@
       "main": [
         [
           {
-            "node": "Build Email Payload",
+            "node": "Call Send Email Handler",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Build AI Payload",
+            "node": "Call AI Action Handler",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "SSRF Check",
+            "node": "Call Webhook Handler",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Evaluate Condition",
+            "node": "Call Condition Handler",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Prepare Delay",
+            "node": "Call Delay Handler",
             "type": "main",
             "index": 0
           }
@@ -537,18 +734,7 @@
         ]
       ]
     },
-    "Build Email Payload": {
-      "main": [
-        [
-          {
-            "node": "Call Send Email",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Call Send Email": {
+    "Call Send Email Handler": {
       "main": [
         [
           {
@@ -559,18 +745,7 @@
         ]
       ]
     },
-    "Build AI Payload": {
-      "main": [
-        [
-          {
-            "node": "Call MiniMax Agent",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Call MiniMax Agent": {
+    "Call AI Action Handler": {
       "main": [
         [
           {
@@ -581,18 +756,7 @@
         ]
       ]
     },
-    "SSRF Check": {
-      "main": [
-        [
-          {
-            "node": "HTTP Webhook Request",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "HTTP Webhook Request": {
+    "Call Webhook Handler": {
       "main": [
         [
           {
@@ -603,7 +767,7 @@
         ]
       ]
     },
-    "Evaluate Condition": {
+    "Call Condition Handler": {
       "main": [
         [
           {
@@ -614,29 +778,7 @@
         ]
       ]
     },
-    "Prepare Delay": {
-      "main": [
-        [
-          {
-            "node": "Wait for Delay",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Wait for Delay": {
-      "main": [
-        [
-          {
-            "node": "Resume After Delay",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Resume After Delay": {
+    "Call Delay Handler": {
       "main": [
         [
           {
@@ -673,7 +815,70 @@
       "main": [
         [
           {
+            "node": "Persist Gate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Persist Gate": {
+      "main": [
+        [
+          {
+            "node": "Handle Skipped and Failed",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update Step Execution",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Step Execution": {
+      "main": [
+        [
+          {
+            "node": "Handle Skipped and Failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Handle Skipped and Failed": {
+      "main": [
+        [
+          {
             "node": "Loop Over Steps",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Final Status": {
+      "main": [
+        [
+          {
+            "node": "Completion Gate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Completion Gate": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Mark Execution Complete",
             "type": "main",
             "index": 0
           }

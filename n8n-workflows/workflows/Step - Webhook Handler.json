@@ -1,0 +1,165 @@
+{
+  "name": "Step - Webhook Handler",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "wbh-0001-0000-0000-000000000001",
+      "name": "Start",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [0, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// =============================================================\n// SSRF Check — block private IPs before HTTP Request\n// =============================================================\n\nconst item = $input.first().json;\nconst { resolvedConfig } = item;\nconst url = resolvedConfig.url;\n\nif (!url) {\n  return {\n    json: {\n      stepResult: { success: false, error: 'Webhook step missing url in config' },\n    }\n  };\n}\n\ntry {\n  const parsed = new URL(url);\n  const hostname = parsed.hostname.toLowerCase();\n\n  const privatePatterns = [\n    /^10\\./,\n    /^172\\.(1[6-9]|2\\d|3[01])\\./,\n    /^192\\.168\\./,\n    /^127\\./,\n    /^localhost$/i,\n    /^::1$/,\n    /\\.local$/,\n    /^0\\.0\\.0\\.0$/,\n    /^169\\.254\\./,\n  ];\n\n  const isPrivate = privatePatterns.some(p => p.test(hostname));\n  if (isPrivate) {\n    return {\n      json: {\n        stepResult: { success: false, error: `Webhook URL targets private address: ${hostname}` },\n      }\n    };\n  }\n\n  return {\n    json: {\n      ...item,\n      webhookUrl: url,\n      webhookMethod: resolvedConfig.method || 'POST',\n      webhookBody: resolvedConfig.body || '{}',\n      ssrfPassed: true,\n    }\n  };\n} catch (e) {\n  return {\n    json: {\n      stepResult: { success: false, error: `Invalid webhook URL: ${url}` },\n    }\n  };\n}\n"
+      },
+      "id": "wbh-0001-0000-0000-000000000002",
+      "name": "SSRF Check",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 300]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.ssrfPassed }}",
+                    "rightValue": "={{ true }}",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "equals"
+                    },
+                    "id": "wbh-ssrf-ok"
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "id": "wbh-0001-0000-0000-000000000003",
+      "name": "SSRF Gate",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "method": "={{ $json.webhookMethod }}",
+        "url": "={{ $json.webhookUrl }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.webhookBody ? JSON.parse($json.webhookBody) : {}) }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "wbh-0001-0000-0000-000000000004",
+      "name": "HTTP Request",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [700, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build success result from HTTP response\ntry {\n  const httpResult = $('HTTP Request').first().json;\n  return {\n    json: {\n      stepResult: {\n        success: true,\n        outputPayload: {\n          statusCode: httpResult.statusCode || 200,\n          responseBody: typeof httpResult === 'string' ? httpResult : JSON.stringify(httpResult),\n        },\n      },\n    }\n  };\n} catch (e) {\n  return {\n    json: {\n      stepResult: { success: false, error: `Webhook failed: ${e.message}` },\n    }\n  };\n}\n"
+      },
+      "id": "wbh-0001-0000-0000-000000000005",
+      "name": "Build Webhook Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [940, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Pass through SSRF/error result\nconst item = $input.first().json;\nreturn {\n  json: {\n    stepResult: item.stepResult,\n  }\n};\n"
+      },
+      "id": "wbh-0001-0000-0000-000000000006",
+      "name": "Pass Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [700, 400]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Start": {
+      "main": [
+        [
+          {
+            "node": "SSRF Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SSRF Check": {
+      "main": [
+        [
+          {
+            "node": "SSRF Gate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SSRF Gate": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Pass Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Build Webhook Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "00000000-0000-0000-0000-000000000004",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "id": "",
+  "tags": []
+}

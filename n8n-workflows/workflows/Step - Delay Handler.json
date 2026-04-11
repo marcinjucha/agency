@@ -1,0 +1,313 @@
+{
+  "name": "Step - Delay Handler",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "dly-0001-0000-0000-000000000001",
+      "name": "Start",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [0, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// =============================================================\n// Compute Duration — calculate delay in seconds from config\n// =============================================================\n\nconst item = $input.first().json;\nconst config = item.resolvedConfig || item.step.step_config;\n\nconst value = Number(config.value) || 1;\nconst unit = config.unit || 'minutes';\nconst multipliers = { minutes: 60, hours: 3600, days: 86400 };\nconst seconds = value * (multipliers[unit] || 60);\n\nconst resumeAt = new Date(Date.now() + seconds * 1000).toISOString();\n\nreturn {\n  json: {\n    ...item,\n    delaySeconds: seconds,\n    resumeAt,\n  }\n};\n"
+      },
+      "id": "dly-0001-0000-0000-000000000002",
+      "name": "Compute Duration",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 300]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "workflow_step_executions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "keyValue": "={{ $json.currentStepExecId }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldName": "status",
+              "fieldValue": "waiting"
+            },
+            {
+              "fieldName": "resume_at",
+              "fieldValue": "={{ $json.resumeAt }}"
+            }
+          ]
+        }
+      },
+      "id": "dly-0001-0000-0000-000000000003",
+      "name": "Mark Step Waiting",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [460, 200],
+      "credentials": {
+        "supabaseApi": {
+          "id": "f048XNg2A6zhwlWZ",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "workflow_executions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "keyValue": "={{ $json.executionId }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldName": "status",
+              "fieldValue": "paused"
+            }
+          ]
+        }
+      },
+      "id": "dly-0001-0000-0000-000000000004",
+      "name": "Mark Execution Paused",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [460, 400],
+      "credentials": {
+        "supabaseApi": {
+          "id": "f048XNg2A6zhwlWZ",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Merge data from both Supabase nodes and pass delay info forward\nconst computeData = $('Compute Duration').first().json;\nreturn {\n  json: {\n    delaySeconds: computeData.delaySeconds,\n    executionId: computeData.executionId,\n    currentStepExecId: computeData.currentStepExecId,\n  }\n};\n"
+      },
+      "id": "dly-0001-0000-0000-000000000005",
+      "name": "Merge Before Wait",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [700, 300]
+    },
+    {
+      "parameters": {
+        "amount": "={{ $json.delaySeconds }}",
+        "unit": "seconds"
+      },
+      "id": "dly-0001-0000-0000-000000000006",
+      "name": "Wait",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [920, 300],
+      "webhookId": "dly-wait-webhook-0001"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "workflow_step_executions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "keyValue": "={{ $('Merge Before Wait').first().json.currentStepExecId }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldName": "status",
+              "fieldValue": "completed"
+            },
+            {
+              "fieldName": "completed_at",
+              "fieldValue": "={{ new Date().toISOString() }}"
+            },
+            {
+              "fieldName": "output_payload",
+              "fieldValue": "={{ JSON.stringify({ delay_completed: true, duration_seconds: $('Merge Before Wait').first().json.delaySeconds }) }}"
+            }
+          ]
+        }
+      },
+      "id": "dly-0001-0000-0000-000000000007",
+      "name": "Mark Step Completed",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [1140, 200],
+      "credentials": {
+        "supabaseApi": {
+          "id": "f048XNg2A6zhwlWZ",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "workflow_executions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "keyValue": "={{ $('Merge Before Wait').first().json.executionId }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldName": "status",
+              "fieldValue": "running"
+            }
+          ]
+        }
+      },
+      "id": "dly-0001-0000-0000-000000000008",
+      "name": "Resume Execution",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [1140, 400],
+      "credentials": {
+        "supabaseApi": {
+          "id": "f048XNg2A6zhwlWZ",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Return result — alreadyPersisted because we wrote DB directly\nconst computeData = $('Merge Before Wait').first().json;\nreturn {\n  json: {\n    stepResult: {\n      success: true,\n      outputPayload: {\n        delay_completed: true,\n        duration_seconds: computeData.delaySeconds,\n      },\n    },\n    alreadyPersisted: true,\n  }\n};\n"
+      },
+      "id": "dly-0001-0000-0000-000000000009",
+      "name": "Build Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1380, 300]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Start": {
+      "main": [
+        [
+          {
+            "node": "Compute Duration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compute Duration": {
+      "main": [
+        [
+          {
+            "node": "Mark Step Waiting",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Mark Execution Paused",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark Step Waiting": {
+      "main": [
+        [
+          {
+            "node": "Merge Before Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark Execution Paused": {
+      "main": [
+        [
+          {
+            "node": "Merge Before Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Before Wait": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Mark Step Completed",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Resume Execution",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark Step Completed": {
+      "main": [
+        [
+          {
+            "node": "Build Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resume Execution": {
+      "main": [
+        [
+          {
+            "node": "Build Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "00000000-0000-0000-0000-000000000006",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "id": "",
+  "tags": []
+}
