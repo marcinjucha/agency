@@ -10,10 +10,9 @@ import {
   TabsTrigger,
   TabsContent,
 } from '@agency/ui'
-import { Play, X, ChevronDown, ChevronRight, Loader2, ExternalLink } from 'lucide-react'
+import { Play, X } from 'lucide-react'
 import { messages } from '@/lib/messages'
 import { queryKeys } from '@/lib/query-keys'
-import { routes } from '@/lib/routes'
 import { TRIGGER_VARIABLE_SCHEMAS } from '@/lib/trigger-schemas'
 import { getWorkflowExecutions, getExecutionWithSteps } from '../queries'
 import { EXECUTION_STATUS_LABELS } from '../types'
@@ -52,13 +51,6 @@ const STATUS_STYLES: Record<string, string> = {
   pending: 'bg-muted text-muted-foreground border-border',
 }
 
-const STATUS_DOT: Record<string, string> = {
-  completed: 'bg-emerald-500',
-  failed: 'bg-red-500',
-  skipped: 'bg-muted-foreground',
-  pending: 'bg-muted-foreground',
-}
-
 export function TestModePanel({
   workflowId,
   triggerType,
@@ -72,13 +64,8 @@ export function TestModePanel({
 
   const [jsonText, setJsonText] = useState(initialJson)
   const [jsonError, setJsonError] = useState<string | null>(null)
-  const [isRunning, setIsRunning] = useState(false)
   const [runError, setRunError] = useState<string | null>(null)
-  const [stepResults, setStepResults] = useState<StepTestResult[]>([])
-  const [expandedStep, setExpandedStep] = useState<string | null>(null)
-  const [executionStatus, setExecutionStatus] = useState<string | null>(null)
   const [selectedExecutionId, setSelectedExecutionId] = useState<string | null>(null)
-  const [lastDryRunSourceId, setLastDryRunSourceId] = useState<string | null>(null)
 
   // Fetch recent real executions (exclude dry-runs) for "Z wykonania" tab
   const { data: recentExecutions } = useQuery({
@@ -99,7 +86,6 @@ export function TestModePanel({
   const handleSelectExecution = useCallback(
     async (executionId: string) => {
       setSelectedExecutionId(executionId)
-      setLastDryRunSourceId(executionId)
       try {
         const execution = await getExecutionWithSteps(executionId)
         if (execution?.trigger_payload) {
@@ -114,15 +100,11 @@ export function TestModePanel({
     []
   )
 
-  const handleRunTest = useCallback(async () => {
+  const handleRunTest = useCallback(() => {
     // Full workflow dry-run was removed during CMS execution cleanup (AAA-T-183).
     // Workflow execution is now handled entirely by n8n Orchestrator.
-    // Per-step testing via dryRunSingleStep still works.
+    // Per-step testing via dryRunSingleStep still works (context menu on canvas).
     setRunError('Pełne testowanie workflow jest tymczasowo niedostępne. Użyj testowania per-krok.')
-  }, [])
-
-  const toggleStep = useCallback((stepId: string) => {
-    setExpandedStep((prev) => (prev === stepId ? null : stepId))
   }, [])
 
   return (
@@ -243,23 +225,14 @@ export function TestModePanel({
             </TabsContent>
           </Tabs>
 
-          {/* Run button */}
+          {/* Run button — full workflow dry-run disabled, per-step testing via context menu */}
           <Button
             className="w-full"
             onClick={handleRunTest}
-            disabled={isRunning || !!jsonError}
+            disabled={!!jsonError}
           >
-            {isRunning ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                {messages.workflows.testMode.running}
-              </>
-            ) : (
-              <>
-                <Play className="h-4 w-4 mr-2" />
-                {messages.workflows.testMode.runTest}
-              </>
-            )}
+            <Play className="h-4 w-4 mr-2" />
+            {messages.workflows.testMode.runTest}
           </Button>
 
           {/* Run error */}
@@ -269,113 +242,11 @@ export function TestModePanel({
             </div>
           )}
 
-          {/* Results */}
-          {executionStatus && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <Badge
-                  variant="outline"
-                  className={
-                    executionStatus === 'completed'
-                      ? STATUS_STYLES.completed
-                      : STATUS_STYLES.failed
-                  }
-                >
-                  {executionStatus === 'completed'
-                    ? messages.workflows.testMode.testCompleted
-                    : messages.workflows.testMode.testFailed}
-                </Badge>
-              </div>
-
-              {/* Comparison hint when replaying from execution */}
-              {lastDryRunSourceId && (
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <span>{messages.workflows.testMode.comparisonHint}</span>
-                  <a
-                    href={routes.admin.execution(lastDryRunSourceId)}
-                    className="inline-flex items-center gap-1 text-primary hover:underline"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    {messages.workflows.testMode.openExecution}
-                    <ExternalLink className="h-3 w-3" />
-                  </a>
-                </div>
-              )}
-
-              {/* Step results list */}
-              <div className="space-y-1">
-                {stepResults.map((step) => (
-                  <div key={step.stepId} className="rounded-md border border-border">
-                    <button
-                      className="w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-muted/50 transition-colors"
-                      onClick={() => toggleStep(step.stepId)}
-                    >
-                      {expandedStep === step.stepId ? (
-                        <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                      ) : (
-                        <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                      )}
-                      <span
-                        className={`h-2 w-2 rounded-full shrink-0 ${STATUS_DOT[step.status]}`}
-                      />
-                      <span className="text-sm text-foreground flex-1 truncate">
-                        {step.stepName}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        {messages.workflows[`stepExecution${capitalize(step.status)}` as keyof typeof messages.workflows] as string}
-                      </span>
-                    </button>
-
-                    {expandedStep === step.stepId && (
-                      <div className="px-3 pb-3 space-y-3 border-t border-border pt-3">
-                        {step.errorMessage && (
-                          <div className="rounded-md bg-destructive/10 border border-destructive/20 px-3 py-2">
-                            <p className="text-xs text-destructive font-mono">
-                              {step.errorMessage}
-                            </p>
-                          </div>
-                        )}
-                        {step.inputPayload && Object.keys(step.inputPayload).length > 0 && (
-                          <div>
-                            <p className="text-xs font-medium text-muted-foreground mb-1">
-                              {messages.workflows.testMode.stepInput}
-                            </p>
-                            <pre className="text-xs font-mono bg-muted rounded-md px-3 py-2 overflow-x-auto text-foreground">
-                              {JSON.stringify(step.inputPayload, null, 2)}
-                            </pre>
-                          </div>
-                        )}
-                        {step.outputPayload && Object.keys(step.outputPayload).length > 0 && (
-                          <div>
-                            <p className="text-xs font-medium text-muted-foreground mb-1">
-                              {messages.workflows.testMode.stepOutput}
-                            </p>
-                            <pre className="text-xs font-mono bg-muted rounded-md px-3 py-2 overflow-x-auto text-foreground">
-                              {JSON.stringify(step.outputPayload, null, 2)}
-                            </pre>
-                          </div>
-                        )}
-                        {!step.inputPayload && !step.outputPayload && !step.errorMessage && (
-                          <p className="text-xs text-muted-foreground">
-                            {messages.workflows.stepNoPayload}
-                          </p>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          {/* Full workflow dry-run results will be restored when n8n test mode is implemented */}
         </div>
       </div>
     </div>
   )
-}
-
-function capitalize(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1)
 }
 
 function formatExecutionStatus(status: string): string {
