@@ -205,15 +205,48 @@ Pass input data (mappingMode: `defineBelow`) with prompt and any context the nod
 
 **Current callers:**
 - `Survey Response AI Analysis.json` — calls after building Q&A context, parses scored JSON from response
-- `Workflow Action Executor.json` — calls as `ai_action` branch in Switch node
+- `Workflow Orchestrator.json` — calls as `ai_action` branch inside the orchestrator's step dispatcher
 
 **Adding new AI workflow:** Add `Execute Workflow` node → `xaU50vf4eiNTeqSf`. Do NOT add new Anthropic credential nodes or raw HTTP calls to Claude.
 
 ---
 
+## Workflow Orchestrator (AAA-T-183 iter 7)
+
+**File:** `n8n-workflows/workflows/Workflow Orchestrator.json` (21 nodes, ~700 lines)
+
+This is the generic workflow execution engine. CMS no longer runs executor.ts — instead it POSTs `{ workflowId, triggerPayload }` to n8n and n8n does everything.
+
+**Flow:**
+1. Webhook receives `{ workflowId, triggerPayload }` from CMS trigger route
+2. Reads workflow definition (steps + edges) directly from Supabase
+3. Resolves step order (topological sort)
+4. Dispatches each step to its type-specific subworkflow (send_email, webhook, ai_action, condition, delay)
+5. Writes execution state (workflow_executions + workflow_step_executions) directly to Supabase — no CMS callback
+6. Returns immediately (fire-and-forget); CMS polls for status via execution list UI
+
+**Why n8n owns all execution now:** CMS executor.ts grew to 874 LOC handling orchestration, callbacks, resume, delay processing — all on Vercel serverless (5-10 min execution limit). N8n has native Wait node, Redis queue, retry logic, and no serverless timeout. Moving orchestration to n8n eliminated the callback route, resume route, and delay processor route entirely.
+
+**Deleted from CMS:**
+- `engine/executor.ts`, `engine/action-handlers.ts`, `engine/trigger-matcher.ts`
+- `/api/workflows/callback`, `/api/workflows/resume`, `/api/workflows/process-due-delays`
+- `claim_due_delay_steps()` RPC (migration: `20260411120000_drop_claim_due_delay_steps.sql`)
+
+**Deleted n8n workflows:**
+- `Workflow Action Executor.json` — replaced by Orchestrator's built-in step dispatcher
+- `Workflow Delay Processor.json` — replaced by n8n native Wait node
+
+**Payload contract (CMS → n8n):**
+```json
+{ "workflowId": "uuid", "triggerPayload": { ...trigger-specific fields } }
+```
+
+---
+
 ## Role in Workflow Engine Architecture
 
-- **N8n = execution layer only (2026-03-29)** — Workflow Engine (Supabase + CMS) handles routing, config, conditions, sequences — what the client sees and configures. N8n handles heavy execution only: email sending, AI processing, external API calls. Pattern: CMS workflow engine → triggers n8n webhook with payload → n8n executes → callback to CMS with result. **WHY:** N8n has Redis queue, retry logic, rate limiting, scheduled jobs — rebuilding this in-house would take months. But routing logic ("if score > 10 then email A") belongs in Supabase because clients configure it via CMS UI.
+- **N8n = orchestrator (2026-04-11, AAA-T-183)** — N8n now owns ALL workflow execution: reads definition, dispatches steps, writes state, handles delays natively. CMS role reduced to: (1) UI canvas builder, (2) single trigger POST, (3) execution log viewer, (4) dry-run test mode. **WHY:** CMS executor on Vercel had a hard serverless timeout limit; n8n native Wait node handles multi-hour delays without polling or resume endpoints. Routing logic still configured via CMS UI but executed entirely by n8n.
+- **Previous architecture (2026-03-29 to 2026-04-10):** N8n was execution layer only — CMS dispatched async steps to n8n and received callbacks. This was replaced by the Orchestrator pattern above.
 
 ## Gotchas (n8n Workflow Authoring)
 
@@ -263,6 +296,7 @@ Pass input data (mappingMode: `defineBelow`) with prompt and any context the nod
 **Environment Variables:**
 ```bash
 N8N_WEBHOOK_URL=https://n8n.trustcode.pl/webhook/survey-analysis
+N8N_WORKFLOW_ORCHESTRATOR_URL=https://n8n.trustcode.pl/webhook/workflow-orchestrator
 WEBHOOK_URL=https://n8n.trustcode.pl  # N8n itself
 EXECUTIONS_MODE=queue                  # CRITICAL for async
 QUEUE_BULL_REDIS_HOST=redis

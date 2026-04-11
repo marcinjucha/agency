@@ -46,7 +46,7 @@ apps/cms/
 │       ├── responses/       # Response API
 │       ├── surveys/         # Survey CRUD
 │       ├── upload/          # S3 file upload
-│       └── workflows/       # Workflow trigger + delay processing
+│       └── workflows/       # Workflow trigger (POST to n8n Orchestrator)
 │
 ├── features/                # BUSINESS LOGIC (ADR-005 pattern)
 │   ├── appointments/        # Appointment management (Google Calendar sync)
@@ -283,7 +283,8 @@ Required in Vercel Dashboard:
 - `NEXT_PUBLIC_SUPABASE_URL` (browser + server)
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY` (browser + server)
 - `SUPABASE_SERVICE_ROLE_KEY` (server only, secret!)
-- `N8N_WEBHOOK_URL` (server only)
+- `N8N_WEBHOOK_URL` (server only — survey analysis webhook)
+- `N8N_WORKFLOW_ORCHESTRATOR_URL` (server only — workflow execution, replaces N8N_WORKFLOW_EXECUTOR_URL)
 - `HOST_URL` (server only)
 
 See `.env.local.example` for full list.

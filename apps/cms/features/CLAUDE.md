@@ -30,7 +30,7 @@ features/
 ├── shop-products/       # Shop product editor (Tiptap, media gallery, SEO, layout selector)
 ├── site-settings/       # Site settings (org-level config, SEO defaults, keywords)
 ├── surveys/             # Survey builder + link management
-└── workflows/           # Workflow engine — visual builder (ReactFlow), templates, execution
+└── workflows/           # Workflow engine — visual builder (ReactFlow), templates, test mode (dry-run). Execution runs in n8n Orchestrator.
 ```
 
 ## Pattern (ADR-005)

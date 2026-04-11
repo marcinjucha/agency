@@ -6,16 +6,30 @@
 **Scope:** Two shops: Jacek (books, dark amber theme) + Kolega (general merchandise, light linen theme). Catalog-only, NO Stripe. Single Supabase (`shop_` prefix), CMS extended, separate frontends (`apps/shop/jacek/`, `apps/shop/kolega/`).
 **Key decisions:** `listing_type` ENUM, `gallery`/`editorial` display_layout, `is_featured BOOLEAN`, flat categories. Dual PROJECT_SPEC: `docs/PROJECT_SPEC.yaml` (AAA-P-4) + `docs/SHOP_PROJECT_SPEC.yaml` (AAA-P-9).
 
+## n8n Orchestrator Migration — AAA-T-183 iter 7 — DONE (2026-04-11)
+
+**Status:** Iteration 7 complete. CMS executor.ts fully replaced by n8n Workflow Orchestrator.
+**Scope:** Migrate all workflow execution from CMS (executor.ts, 874 LOC) to n8n. CMS now only POSTs workflowId + triggerPayload → n8n does everything (reads definition, dispatches steps, writes state to Supabase directly).
+**Key deletions:** `engine/executor.ts`, `engine/action-handlers.ts`, `engine/trigger-matcher.ts`, `/api/workflows/callback`, `/api/workflows/resume`, `/api/workflows/process-due-delays`, `claim_due_delay_steps()` RPC (migration `20260411120000_drop_claim_due_delay_steps.sql`), `Workflow Action Executor.json`, `Workflow Delay Processor.json`.
+**What remains in CMS:** `engine/dry-run-handlers.ts` (mock handlers for TestModePanel dry-run only), trigger route simplified to ~70 LOC.
+**Env var change:** `N8N_WORKFLOW_ORCHESTRATOR_URL` replaces `N8N_WORKFLOW_EXECUTOR_URL`.
+
+## Per-Step Testing & Configuration — AAA-T-182 — DONE (2026-04-10)
+
+**Status:** Complete. `dryRunWorkflow` (full-workflow dry-run) removed in AAA-T-183; `executeWorkflowStep()` / `dryRunSingleStep` preserved for TestModePanel single-step test mode.
+**Scope:** n8n-style per-step test/run capability for workflow builder. TestModePanel UI, per-step execution with real upstream chain, dry-run result display.
+**Key decisions:** New `executeWorkflowStep()` code path alongside existing executor (not refactoring `executeWorkflow`). Generic test mocks (next/cache, @/lib/auth) in vitest.setup.ts. executeUpstreamChain uses REAL step handlers (not dry-run) to build authentic context.
+
 ## Workflow Builder UX Overhaul — AAA-T-177 + AAA-T-179 — DONE (2026-04-10)
 
 **Status:** XL task, 10 iterations complete. Bundled T-179 (context menu + single step run — user-requested additions beyond original roadmap).
 **Scope:** Workflow builder canvas UX improvements, context menu, single step execution.
 
-## Workflow Engine — AAA-P-4 — IN PROGRESS (2026-03-31)
+## Workflow Engine — AAA-P-4 — DONE (2026-04-11)
 
-**Status:** Iterations 1-10 done. Iter 11 (cancel/retry/real-time) = backlog.
-**Scope:** Per-tenant workflow automation. CMS routing/config + n8n heavy execution. ReactFlow visual builder.
-**Key decisions:** trigger_type/step_type as TEXT not ENUM; delay step writes resume_at to DB directly (not n8n); sync steps in CMS, async dispatch to n8n.
+**Status:** Iterations 1-10 + AAA-T-182 (per-step testing) + AAA-T-183 (n8n orchestrator migration) all done. Iter 11 (cancel/retry/real-time) = backlog.
+**Scope:** Per-tenant workflow automation. CMS UI/config + n8n Orchestrator full execution. ReactFlow visual builder.
+**Key decisions:** trigger_type/step_type as TEXT not ENUM; n8n Orchestrator owns all execution (no CMS executor); CMS trigger route is fire-and-forget (~70 LOC); dry-run-handlers.ts preserved for TestModePanel only.
 
 ## Marketplace Integration — AAA-P-9 — IN PROGRESS (2026-04-02)
 
@@ -119,6 +133,9 @@
 - **Extract pure logic from .tsx to utils/ for TDD** — When component files contain pure logic (validation, transformation, mapping), extract to `utils/` files. Enables unit testing without React rendering. Pattern: `.tsx` = rendering + hooks, `utils/*.ts` = pure testable functions. (2026-04-10, AAA-T-177)
 - **React Compiler enabled via `reactCompiler: true` in all 4 next.config.ts** — Explicitly enabled in cms, website, jacek, kolega after upgrading to Next.js 16.2.3 + React 19.2.5 (2026-04-10). Auto-memoizes — Boy Scout Rule: remove manual useCallback/useMemo when touching files (unless profiling shows need). Don't wrap new handlers in useCallback by default. (2026-04-10)
 - **3-pass validation more valuable than unit tests for UI-heavy features** — For features that are primarily UI (canvas interactions, drag-and-drop, visual builders), the 3-pass validator (functional + architecture + integration) catches more real issues than unit tests. Unit tests still valuable for extracted pure logic in utils/. (2026-04-10, AAA-T-177)
+- **Per-step testing: new code path alongside executor, not refactoring** — `executeWorkflowStep()` is a separate function from `executeWorkflow()`. Per-step execution has fundamentally different concerns (upstream chain resolution, single-step dry-run, result capture) that don't fit into the existing full-workflow executor. (2026-04-10, AAA-T-182)
+- **Generic test mocks belong in vitest.setup.ts, not per-test files** — Mocks for next/cache, @/lib/auth, and similar infrastructure modules used across many test files should be centralized in vitest.setup.ts. Per-test mocks only for test-specific overrides. (2026-04-10, AAA-T-182)
+- **n8n Orchestrator owns ALL workflow execution (AAA-T-183)** — CMS executor.ts fully removed. N8n Workflow Orchestrator reads definition from Supabase, dispatches steps, writes state directly — no CMS callbacks. CMS trigger route is ~70 LOC fire-and-forget. dry-run-handlers.ts stays in CMS for TestModePanel only. WHY: Vercel serverless timeout (5-10 min) can't handle multi-hour workflow delays; n8n native Wait node eliminates the need for resume/delay-processor routes entirely. (2026-04-11, AAA-T-183)
 
 ## Preferences
 
