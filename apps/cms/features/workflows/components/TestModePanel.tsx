@@ -15,7 +15,6 @@ import { messages } from '@/lib/messages'
 import { queryKeys } from '@/lib/query-keys'
 import { routes } from '@/lib/routes'
 import { TRIGGER_VARIABLE_SCHEMAS } from '@/lib/trigger-schemas'
-import { dryRunWorkflow } from '../actions'
 import { getWorkflowExecutions, getExecutionWithSteps } from '../queries'
 import { EXECUTION_STATUS_LABELS } from '../types'
 
@@ -116,50 +115,11 @@ export function TestModePanel({
   )
 
   const handleRunTest = useCallback(async () => {
-    let parsed: Record<string, unknown>
-    try {
-      parsed = JSON.parse(jsonText)
-    } catch {
-      setJsonError(messages.workflows.testMode.invalidJson)
-      return
-    }
-
-    setIsRunning(true)
-    setRunError(null)
-    setStepResults([])
-    setExecutionStatus(null)
-
-    const result = await dryRunWorkflow(workflowId, parsed)
-
-    if (!result.success) {
-      setRunError(result.error ?? messages.common.unknownError)
-      setIsRunning(false)
-      return
-    }
-
-    // Fetch execution details with step results
-    try {
-      const executionDetail = await getExecutionWithSteps(result.data!.executionId)
-      if (executionDetail) {
-        setExecutionStatus(executionDetail.status)
-        const results: StepTestResult[] = executionDetail.step_executions.map((se) => ({
-          stepId: se.step_id,
-          stepName: se.step_type,
-          stepType: se.step_type,
-          status: mapStepStatus(se.status),
-          inputPayload: se.input_payload as Record<string, unknown> | undefined,
-          outputPayload: se.output_payload as Record<string, unknown> | undefined,
-          errorMessage: se.error_message ?? undefined,
-        }))
-        setStepResults(results)
-        onExecutionResult(results)
-      }
-    } catch {
-      setRunError(messages.workflows.testMode.fetchFailed)
-    } finally {
-      setIsRunning(false)
-    }
-  }, [jsonText, workflowId, onExecutionResult])
+    // Full workflow dry-run was removed during CMS execution cleanup (AAA-T-183).
+    // Workflow execution is now handled entirely by n8n Orchestrator.
+    // Per-step testing via dryRunSingleStep still works.
+    setRunError('Pełne testowanie workflow jest tymczasowo niedostępne. Użyj testowania per-krok.')
+  }, [])
 
   const toggleStep = useCallback((stepId: string) => {
     setExpandedStep((prev) => (prev === stepId ? null : stepId))

@@ -21,10 +21,6 @@ vi.mock('../types', () => ({
   toWorkflow: vi.fn((d: unknown) => d),
 }))
 
-vi.mock('../engine/executor', () => ({
-  executeWorkflow: vi.fn(),
-}))
-
 const mockServiceClient: Record<string, any> = {}
 
 vi.mock('@/lib/supabase/service', () => ({
@@ -99,7 +95,6 @@ import {
   saveCanvasSchema,
   createWorkflowFromTemplateSchema,
 } from '../validation'
-import { executeWorkflow } from '../engine/executor'
 import {
   createWorkflow,
   updateWorkflow,
@@ -112,7 +107,6 @@ import {
 } from '../actions'
 
 const mockRequireAuth = requireAuth as ReturnType<typeof vi.fn>
-const mockExecuteWorkflow = executeWorkflow as ReturnType<typeof vi.fn>
 
 // --- Helpers ---
 
@@ -606,7 +600,7 @@ describe('triggerManualWorkflow', () => {
     expect(result.error).toBe('Not a manual trigger')
   })
 
-  it('executes workflow and returns executionId on success', async () => {
+  it('dispatches to n8n orchestrator and returns executionId on success', async () => {
     const auth = mockAuthSuccess()
     mockRequireAuth.mockResolvedValue(auth)
 
@@ -616,15 +610,47 @@ describe('triggerManualWorkflow', () => {
     })
     auth._supabase.from = vi.fn(() => fetchChain)
 
-    mockExecuteWorkflow.mockResolvedValue({ executionId: 'exec-1' })
+    vi.stubEnv('N8N_WORKFLOW_ORCHESTRATOR_URL', 'https://n8n.example.com/webhook/orchestrator')
+
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ executionId: 'exec-1' }),
+    })
+    vi.stubGlobal('fetch', mockFetch)
 
     const result = await triggerManualWorkflow('wf-1')
 
     expect(result.success).toBe(true)
     expect(result.executionId).toBe('exec-1')
-    expect(mockExecuteWorkflow).toHaveBeenCalledWith('wf-1', { trigger_type: 'manual' })
+    expect(mockFetch).toHaveBeenCalledWith(
+      'https://n8n.example.com/webhook/orchestrator',
+      expect.objectContaining({ method: 'POST' })
+    )
     expect(revalidatePath).toHaveBeenCalledWith('/admin/workflows/wf-1')
     expect(revalidatePath).toHaveBeenCalledWith('/admin/workflows/wf-1/executions')
+
+    vi.unstubAllEnvs()
+    vi.unstubAllGlobals()
+  })
+
+  it('returns error when N8N_WORKFLOW_ORCHESTRATOR_URL is not configured', async () => {
+    const auth = mockAuthSuccess()
+    mockRequireAuth.mockResolvedValue(auth)
+
+    const fetchChain = mockChain({
+      data: { id: 'wf-1', tenant_id: 'tenant-1', trigger_type: 'manual' },
+      error: null,
+    })
+    auth._supabase.from = vi.fn(() => fetchChain)
+
+    vi.stubEnv('N8N_WORKFLOW_ORCHESTRATOR_URL', '')
+
+    const result = await triggerManualWorkflow('wf-1')
+
+    expect(result.success).toBe(false)
+    expect(result.error).toContain('N8N_WORKFLOW_ORCHESTRATOR_URL')
+
+    vi.unstubAllEnvs()
   })
 })
 
