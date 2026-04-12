@@ -263,6 +263,12 @@ npm run test:watch --workspace=apps/cms  # Watch mode (TDD)
 # 3. Login at http://localhost:3001/login
 ```
 
+### React Compiler
+
+React Compiler enabled via `reactCompiler: true` in all 4 `next.config.ts` files (cms, website, jacek, kolega). Next.js 16.2.3 + React 19.2.5 (2026-04-10).
+
+**Impact:** Auto-memoizes — remove manual `useCallback`/`useMemo` when touching files (Boy Scout Rule). Don't wrap new handlers in `useCallback` by default. Only add manual memoization if profiling shows need.
+
 ## Testing (TDD)
 
 **Testable files** (TDD Red-Green-Refactor): `actions.ts`, `queries.ts`, `queries.server.ts`, `hooks/*.ts`, `utils/*.ts`
@@ -284,7 +290,8 @@ Required in Vercel Dashboard:
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY` (browser + server)
 - `SUPABASE_SERVICE_ROLE_KEY` (server only, secret!)
 - `N8N_WEBHOOK_URL` (server only — survey analysis webhook)
-- `N8N_WORKFLOW_ORCHESTRATOR_URL` (server only — workflow execution, replaces N8N_WORKFLOW_EXECUTOR_URL)
+- `N8N_WORKFLOW_ORCHESTRATOR_URL` (server only — n8n Orchestrator webhook for workflow execution)
+- `ORCHESTRATOR_WEBHOOK_SECRET` (server only — Bearer token for CMS → n8n auth)
 - `HOST_URL` (server only)
 
 See `.env.local.example` for full list.

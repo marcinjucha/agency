@@ -1,0 +1,120 @@
+{
+  "name": "Step - AI Action Handler",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "39bb4a9a-7044-4f66-aa5b-fafaa3a16d2e",
+      "name": "Start",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// =============================================================\n// Build Prompt — resolve variables in prompt template\n// =============================================================\n\nconst item = $input.first().json;\nconst { resolvedConfig, variableContext, tenantId } = item;\n\nconst prompt = resolvedConfig.prompt || '';\nconst outputSchema = resolvedConfig.output_schema || [];\n\n// Build context string from variable context\nconst contextEntries = Object.entries(variableContext)\n  .map(([k, v]) => `${k}: ${JSON.stringify(v)}`)\n  .join('\\n');\n\nreturn {\n  json: {\n    ...item,\n    aiPayload: {\n      prompt,\n      context: contextEntries,\n      output_schema: outputSchema,\n      tenant_id: tenantId,\n    },\n  }\n};\n"
+      },
+      "id": "9b764c01-a615-419b-8a4d-2bc764783ff3",
+      "name": "Build Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "xaU50vf4eiNTeqSf",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/xaU50vf4eiNTeqSf",
+          "cachedResultName": "MiniMax Agent"
+        },
+        "workflowInputs": {
+          "mappingMode": "autoMapInputData",
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        464,
+        0
+      ],
+      "id": "d6e8da01-5f84-41ff-b5aa-ad5fb6b1c5b7",
+      "name": "Call MiniMax Agent"
+    },
+    {
+      "parameters": {
+        "jsCode": "// =============================================================\n// Parse AI Result — extract structured output from MiniMax Agent\n// =============================================================\n// MiniMax returns: { content: [{ type: 'thinking', ... }, { type: 'text', text: '```json\\n{...}\\n```' }] }\n// We need: find 'text' entry, strip markdown code fences, parse JSON.\n// =============================================================\n\nfunction stripCodeFences(str) {\n  const match = str.match(/```(?:json)?\\s*([\\s\\S]*?)```/);\n  return match ? match[1].trim() : str.trim();\n}\n\nfunction extractTextContent(aiOutput) {\n  // Case 1: content array with typed entries (MiniMax/Claude format)\n  if (aiOutput && Array.isArray(aiOutput.content)) {\n    const textEntry = aiOutput.content.find(c => c.type === 'text');\n    if (textEntry && textEntry.text) return textEntry.text;\n    // Fallback: first entry with text\n    const anyText = aiOutput.content.find(c => c.text);\n    if (anyText) return anyText.text;\n  }\n  // Case 2: direct text field\n  if (aiOutput && aiOutput.text) return aiOutput.text;\n  // Case 3: stringified response\n  return JSON.stringify(aiOutput);\n}\n\ntry {\n  const aiOutput = $('Call MiniMax Agent').first().json;\n  const rawText = extractTextContent(aiOutput);\n  const cleaned = stripCodeFences(rawText);\n\n  let parsedOutput;\n  try {\n    parsedOutput = JSON.parse(cleaned);\n  } catch {\n    parsedOutput = { aiResponse: rawText };\n  }\n\n  const item = $('Build Prompt').first().json;\n  return {\n    json: {\n      ...item,\n      stepResult: {\n        success: true,\n        outputPayload: parsedOutput,\n      },\n    }\n  };\n} catch (e) {\n  const item = $('Build Prompt').first().json;\n  return {\n    json: {\n      ...item,\n      stepResult: {\n        success: false,\n        error: `AI action failed: ${e.message}`,\n      },\n    }\n  };\n}\n"
+      },
+      "id": "7a65248b-9b6b-42dc-902c-b5a564a54d8d",
+      "name": "Parse AI Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        704,
+        0
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Start": {
+      "main": [
+        [
+          {
+            "node": "Build Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Prompt": {
+      "main": [
+        [
+          {
+            "node": "Call MiniMax Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call MiniMax Agent": {
+      "main": [
+        [
+          {
+            "node": "Parse AI Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "pEvMbZGHKOsqaHmK",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "c7739b6e-c603-460e-9254-c38c7040bf57",
+  "meta": {
+    "instanceId": "b46d0b13d69880a2fec430102877b55af4e44991549a68a3e78cd50a4dc1a09e"
+  },
+  "id": "JFbhvbYqFSit2PfR",
+  "tags": []
+}

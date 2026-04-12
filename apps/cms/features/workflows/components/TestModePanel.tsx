@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo, useCallback } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Button,
   Badge,
@@ -10,28 +10,18 @@ import {
   TabsTrigger,
   TabsContent,
 } from '@agency/ui'
-import { Play, X } from 'lucide-react'
+import { Play, X, Loader2 } from 'lucide-react'
 import { messages } from '@/lib/messages'
 import { queryKeys } from '@/lib/query-keys'
 import { TRIGGER_VARIABLE_SCHEMAS } from '@/lib/trigger-schemas'
 import { getWorkflowExecutions, getExecutionWithSteps } from '../queries'
+import { testWorkflow } from '../actions'
 import { EXECUTION_STATUS_LABELS } from '../types'
-
-export type StepTestResult = {
-  stepId: string
-  stepName: string
-  stepType: string
-  status: 'completed' | 'failed' | 'skipped' | 'pending'
-  inputPayload?: Record<string, unknown>
-  outputPayload?: Record<string, unknown>
-  errorMessage?: string
-}
 
 interface TestModePanelProps {
   workflowId: string
   triggerType: string
   onClose: () => void
-  onExecutionResult: (stepResults: StepTestResult[]) => void
 }
 
 function generateMockData(triggerType: string): Record<string, unknown> {
@@ -47,6 +37,8 @@ function generateMockData(triggerType: string): Record<string, unknown> {
 const STATUS_STYLES: Record<string, string> = {
   completed: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
   failed: 'bg-red-500/10 text-red-400 border-red-500/20',
+  running: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+  paused: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
   skipped: 'bg-muted text-muted-foreground border-border',
   pending: 'bg-muted text-muted-foreground border-border',
 }
@@ -55,8 +47,8 @@ export function TestModePanel({
   workflowId,
   triggerType,
   onClose,
-  onExecutionResult,
 }: TestModePanelProps) {
+  const queryClient = useQueryClient()
   const initialJson = useMemo(
     () => JSON.stringify(generateMockData(triggerType), null, 2),
     [triggerType]
@@ -64,10 +56,11 @@ export function TestModePanel({
 
   const [jsonText, setJsonText] = useState(initialJson)
   const [jsonError, setJsonError] = useState<string | null>(null)
-  const [runError, setRunError] = useState<string | null>(null)
   const [selectedExecutionId, setSelectedExecutionId] = useState<string | null>(null)
+  const [isRunning, setIsRunning] = useState(false)
+  const [runResult, setRunResult] = useState<{ success: boolean; executionId?: string; error?: string } | null>(null)
 
-  // Fetch recent real executions (exclude dry-runs) for "Z wykonania" tab
+  // Fetch recent executions for "Z wykonania" tab
   const { data: recentExecutions } = useQuery({
     queryKey: [...queryKeys.workflows.all, workflowId, 'executions-for-test'],
     queryFn: () => getWorkflowExecutions(workflowId, { limit: 10, excludeDryRuns: true }),
@@ -100,12 +93,31 @@ export function TestModePanel({
     []
   )
 
-  const handleRunTest = useCallback(() => {
-    // Full workflow dry-run was removed during CMS execution cleanup (AAA-T-183).
-    // Workflow execution is now handled entirely by n8n Orchestrator.
-    // Per-step testing via dryRunSingleStep still works (context menu on canvas).
-    setRunError('Pełne testowanie workflow jest tymczasowo niedostępne. Użyj testowania per-krok.')
-  }, [])
+  async function handleRunWorkflow() {
+    let payload: Record<string, unknown>
+    try {
+      payload = JSON.parse(jsonText)
+    } catch {
+      setJsonError(messages.workflows.testMode.invalidJson)
+      return
+    }
+
+    setIsRunning(true)
+    setRunResult(null)
+
+    const result = await testWorkflow(workflowId, payload)
+    setIsRunning(false)
+
+    if (result.success) {
+      setRunResult({ success: true, executionId: result.executionId })
+      // Refresh executions list so the new one appears
+      queryClient.invalidateQueries({
+        queryKey: [...queryKeys.workflows.all, workflowId],
+      })
+    } else {
+      setRunResult({ success: false, error: result.error })
+    }
+  }
 
   return (
     <div
@@ -225,24 +237,42 @@ export function TestModePanel({
             </TabsContent>
           </Tabs>
 
-          {/* Run button — full workflow dry-run disabled, per-step testing via context menu */}
+          {/* Run workflow button */}
           <Button
-            className="w-full"
-            onClick={handleRunTest}
-            disabled={!!jsonError}
+            className="w-full gap-2"
+            onClick={handleRunWorkflow}
+            disabled={isRunning || !!jsonError}
           >
-            <Play className="h-4 w-4 mr-2" />
-            {messages.workflows.testMode.runTest}
+            {isRunning ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Play className="h-4 w-4" />
+            )}
+            {isRunning ? messages.workflows.testMode.running : messages.workflows.testMode.runTest}
           </Button>
 
-          {/* Run error */}
-          {runError && (
-            <div className="rounded-md border border-destructive/20 bg-destructive/10 px-3 py-2">
-              <p className="text-sm text-destructive">{runError}</p>
+          {/* Run result */}
+          {runResult && (
+            <div className={`rounded-md border p-3 text-sm ${
+              runResult.success
+                ? 'border-emerald-500/20 bg-emerald-500/10'
+                : 'border-destructive/20 bg-destructive/10'
+            }`}>
+              <p className="font-medium">
+                {runResult.success
+                  ? messages.workflows.testMode.testCompleted
+                  : messages.workflows.testMode.testFailed}
+              </p>
+              {runResult.error && (
+                <p className="text-xs text-muted-foreground mt-1">{runResult.error}</p>
+              )}
+              {runResult.executionId && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  {messages.workflows.testMode.executionId}: {runResult.executionId}
+                </p>
+              )}
             </div>
           )}
-
-          {/* Full workflow dry-run results will be restored when n8n test mode is implemented */}
         </div>
       </div>
     </div>

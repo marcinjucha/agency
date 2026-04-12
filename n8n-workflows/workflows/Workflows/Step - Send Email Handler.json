@@ -1,0 +1,237 @@
+{
+  "name": "Step - Send Email Handler",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "9f7508d7-e284-4d80-bfe2-7113c552e1d6",
+      "name": "Start",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -464,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// =============================================================\n// Resolve and Build Email Payload\n// =============================================================\n// Single Code node replaces 6 nodes (Extract Input, Fetch Email\n// Template, Fetch Response, Resolve Variables, Fetch Survey Link,\n// Finalize Recipient). Uses supabaseRequest() + Promise.all() to\n// avoid n8n fan-in race conditions.\n// =============================================================\n\nconst https = require('https');\n\nconst SUPABASE_URL = $env.SUPABASE_URL;\nif (!SUPABASE_URL) throw new Error('SUPABASE_URL environment variable not configured');\nconst SUPABASE_KEY = $env.SUPABASE_SERVICE_ROLE_KEY;\n\nasync function supabaseRequest(path, method, body) {\n  const url = `${SUPABASE_URL}/rest/v1/${path}`;\n  return new Promise((resolve, reject) => {\n    const match = url.match(/^https?:\\/\\/([^/]+)(\\/.*)$/);\n    if (!match) { reject(new Error('Invalid SUPABASE_URL')); return; }\n    const options = {\n      hostname: match[1],\n      path: match[2],\n      method: method || 'GET',\n      headers: {\n        'apikey': SUPABASE_KEY,\n        'Authorization': `Bearer ${SUPABASE_KEY}`,\n        'Content-Type': 'application/json',\n        'Prefer': 'return=representation',\n      },\n    };\n    const req = https.request(options, (res) => {\n      let data = '';\n      res.on('data', (chunk) => data += chunk);\n      res.on('end', () => {\n        try {\n          const parsed = JSON.parse(data);\n          if (res.statusCode >= 400) {\n            reject(new Error(`Supabase ${method} ${path} returned ${res.statusCode}: ${data}`));\n          } else {\n            resolve(parsed);\n          }\n        } catch (e) {\n          reject(new Error(`Parse error for ${path}: ${data}`));\n        }\n      });\n    });\n    req.on('error', reject);\n    if (body) req.write(JSON.stringify(body));\n    req.end();\n  });\n}\n\nfunction resolveVariables(template, context) {\n  if (typeof template !== 'string') return template;\n  return template.replace(/\\{\\{(\\s*[\\w.]+\\s*)\\}\\}/g, (_, rawKey) => {\n    const key = rawKey.trim();\n    const value = getNestedValue(context, key);\n    return (value !== undefined && value !== null) ? String(value) : `{{${key}}}`;\n  });\n}\n\nfunction getNestedValue(obj, path) {\n  const parts = path.split('.');\n  let current = obj;\n  for (const part of parts) {\n    if (current === null || current === undefined || typeof current !== 'object') return undefined;\n    current = current[part];\n  }\n  return current;\n}\n\ntry {\n  const item = $input.first().json;\n  const { resolvedConfig, variableContext, tenantId } = item;\n\n  const templateId = resolvedConfig.template_id || null;\n  const configuredTo = resolvedConfig.to_expression || null;\n  const configuredSubject = resolvedConfig.subject || 'Notification';\n  const configuredHtml = resolvedConfig.html_body || '<p>Notification</p>';\n  const responseId = variableContext.responseId || null;\n\n  // ---- Parallel fetches (only when IDs exist) ----\n  const fetches = {};\n  if (templateId) {\n    fetches.template = supabaseRequest(\n      `email_templates?id=eq.${templateId}&limit=1`, 'GET'\n    );\n  }\n  if (responseId) {\n    fetches.response = supabaseRequest(\n      `responses?id=eq.${responseId}&limit=1`, 'GET'\n    );\n  }\n\n  const results = {};\n  const keys = Object.keys(fetches);\n  const values = await Promise.all(keys.map(k => fetches[k]));\n  keys.forEach((k, i) => { results[k] = values[i]; });\n\n  // ---- Merge template data ----\n  let subject = configuredSubject;\n  let html = configuredHtml;\n\n  if (results.template && results.template.length > 0) {\n    const tpl = results.template[0];\n    if (tpl.subject) subject = tpl.subject;\n    if (tpl.html_body) html = tpl.html_body;\n  }\n\n  // ---- Resolve recipient ----\n  let to = configuredTo;\n\n  if (!to && responseId && results.response && results.response.length > 0) {\n    const response = results.response[0];\n    if (response.survey_link_id) {\n      // Fetch survey_link for notification_email\n      const surveyLinks = await supabaseRequest(\n        `survey_links?id=eq.${response.survey_link_id}&limit=1`, 'GET'\n      );\n      if (surveyLinks.length > 0 && surveyLinks[0].notification_email) {\n        to = surveyLinks[0].notification_email;\n      }\n    }\n  }\n\n  if (!to) throw new Error('No recipient email resolved for send_email step');\n\n  // ---- Resolve variables in subject and html ----\n  subject = resolveVariables(subject, variableContext);\n  html = resolveVariables(html, variableContext);\n\n  return {\n    json: {\n      ...item,\n      emailPayload: { to, subject, html, tenant_id: tenantId },\n    }\n  };\n\n} catch (err) {\n  const item = $input.first().json;\n  return {\n    json: {\n      ...item,\n      stepResult: { success: false, error: err.message },\n    }\n  };\n}\n"
+      },
+      "id": "29731fb6-6e75-4f70-9a03-ad0ca05b3202",
+      "name": "Resolve and Build Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -160,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.stepResult !== undefined && $json.stepResult !== null }}",
+                    "rightValue": "={{ true }}",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "equals"
+                    },
+                    "id": "seh-already-failed"
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "id": "384f2762-715a-4170-b2d5-3765eb422f64",
+      "name": "Check Error",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        120,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Pass through error result — preserve orchestrator context\nconst item = $input.first().json;\nreturn {\n  json: {\n    ...item,\n  }\n};\n"
+      },
+      "id": "bedb8e71-6d86-4ea6-add3-2e7617494ac7",
+      "name": "Pass Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        380,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Flatten emailPayload to top level for Send Email subworkflow\n// Send Email expects { to, subject, html, tenant_id }\nconst item = $input.first().json;\nconst { to, subject, html, tenant_id } = item.emailPayload;\nreturn { json: { to, subject, html, tenant_id } };\n"
+      },
+      "id": "a1b2c3d4-flat-email-payload-node",
+      "name": "Flatten Email Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        380,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "IL4nS-1FRcLA2IlSkvvKY",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/IL4nS-1FRcLA2IlSkvvKY",
+          "cachedResultName": "Send Email"
+        },
+        "workflowInputs": {
+          "mappingMode": "autoMapInputData",
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        600,
+        304
+      ],
+      "id": "02dd070b-c5de-4add-a025-56283d8ab562",
+      "name": "Call Send Email",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Handle Send Email subworkflow failure — preserve orchestrator context\nconst item = $('Resolve and Build Payload').first().json;\nconst errorData = $input.first().json;\nconst errorMsg = errorData.error?.message || errorData.message || 'Send Email subworkflow failed';\nreturn {\n  json: {\n    ...item,\n    stepResult: { success: false, error: errorMsg },\n  }\n};\n"
+      },
+      "id": "e5f6a7b8-send-email-error-handler",
+      "name": "Handle Email Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        840,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build success result — preserve orchestrator context\nconst item = $('Resolve and Build Payload').first().json;\nreturn {\n  json: {\n    ...item,\n    stepResult: {\n      success: true,\n      outputPayload: {\n        emailSent: true,\n        recipientEmail: item.emailPayload.to,\n      },\n    },\n  }\n};\n"
+      },
+      "id": "c2e40ed4-b472-4e4a-a201-9d599f08716e",
+      "name": "Build Success Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        840,
+        304
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Start": {
+      "main": [
+        [
+          {
+            "node": "Resolve and Build Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resolve and Build Payload": {
+      "main": [
+        [
+          {
+            "node": "Check Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Error": {
+      "main": [
+        [
+          {
+            "node": "Pass Error",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Flatten Email Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Flatten Email Payload": {
+      "main": [
+        [
+          {
+            "node": "Call Send Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Send Email": {
+      "main": [
+        [
+          {
+            "node": "Build Success Result",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Handle Email Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "pEvMbZGHKOsqaHmK",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "2146a691-74a6-46f5-8ca3-094b6270e38c",
+  "meta": {
+    "instanceId": "b46d0b13d69880a2fec430102877b55af4e44991549a68a3e78cd50a4dc1a09e"
+  },
+  "id": "GzqdOgElGDMW8lCI",
+  "tags": []
+}

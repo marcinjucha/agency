@@ -6,45 +6,33 @@
 **Scope:** Two shops: Jacek (books, dark amber theme) + Kolega (general merchandise, light linen theme). Catalog-only, NO Stripe. Single Supabase (`shop_` prefix), CMS extended, separate frontends (`apps/shop/jacek/`, `apps/shop/kolega/`).
 **Key decisions:** `listing_type` ENUM, `gallery`/`editorial` display_layout, `is_featured BOOLEAN`, flat categories. Dual PROJECT_SPEC: `docs/PROJECT_SPEC.yaml` (AAA-P-4) + `docs/SHOP_PROJECT_SPEC.yaml` (AAA-P-9).
 
-## n8n Orchestrator Migration — AAA-T-183 iter 7 — DONE (2026-04-11)
+## n8n Orchestrator Migration — AAA-T-183 — DONE (2026-04-11)
 
-**Status:** Iteration 7 complete. CMS executor.ts fully replaced by n8n Workflow Orchestrator.
-**Scope:** Migrate all workflow execution from CMS (executor.ts, 874 LOC) to n8n. CMS now only POSTs workflowId + triggerPayload → n8n does everything (reads definition, dispatches steps, writes state to Supabase directly).
-**Key deletions:** `engine/executor.ts`, `engine/action-handlers.ts`, `engine/trigger-matcher.ts`, `/api/workflows/callback`, `/api/workflows/resume`, `/api/workflows/process-due-delays`, `claim_due_delay_steps()` RPC (migration `20260411120000_drop_claim_due_delay_steps.sql`), `Workflow Action Executor.json`, `Workflow Delay Processor.json`.
-**What remains in CMS:** `engine/dry-run-handlers.ts` (mock handlers for TestModePanel dry-run only), trigger route simplified to ~70 LOC.
-**Env var change:** `N8N_WORKFLOW_ORCHESTRATOR_URL` replaces `N8N_WORKFLOW_EXECUTOR_URL`.
+**Status:** Complete. CMS executor.ts replaced by n8n Orchestrator. CMS = trigger route (~70 LOC) + TestModePanel dispatches to real n8n via `testWorkflow()`.
 
 ## Per-Step Testing & Configuration — AAA-T-182 — DONE (2026-04-10)
 
-**Status:** Complete. `dryRunWorkflow` (full-workflow dry-run) removed in AAA-T-183; `executeWorkflowStep()` / `dryRunSingleStep` preserved for TestModePanel single-step test mode.
-**Scope:** n8n-style per-step test/run capability for workflow builder. TestModePanel UI, per-step execution with real upstream chain, dry-run result display.
-**Key decisions:** New `executeWorkflowStep()` code path alongside existing executor (not refactoring `executeWorkflow`). Generic test mocks (next/cache, @/lib/auth) in vitest.setup.ts. executeUpstreamChain uses REAL step handlers (not dry-run) to build authentic context.
+**Status:** Complete. TestModePanel dispatches to real n8n via `testWorkflow()`. All mock dry-run code removed.
 
 ## Workflow Builder UX Overhaul — AAA-T-177 + AAA-T-179 — DONE (2026-04-10)
 
-**Status:** XL task, 10 iterations complete. Bundled T-179 (context menu + single step run — user-requested additions beyond original roadmap).
-**Scope:** Workflow builder canvas UX improvements, context menu, single step execution.
+**Status:** Complete. XL task, 10 iterations. Canvas UX + context menu.
 
 ## Workflow Engine — AAA-P-4 — DONE (2026-04-11)
 
-**Status:** Iterations 1-10 + AAA-T-182 (per-step testing) + AAA-T-183 (n8n orchestrator migration) all done. Iter 11 (cancel/retry/real-time) = backlog.
-**Scope:** Per-tenant workflow automation. CMS UI/config + n8n Orchestrator full execution. ReactFlow visual builder.
-**Key decisions:** trigger_type/step_type as TEXT not ENUM; n8n Orchestrator owns all execution (no CMS executor); CMS trigger route is fire-and-forget (~70 LOC); dry-run-handlers.ts preserved for TestModePanel only.
+**Status:** Complete. n8n Orchestrator owns all execution. CMS = UI/config + fire-and-forget trigger. Iter 11 (cancel/retry/real-time) = backlog.
 
 ## Marketplace Integration — AAA-P-9 — IN PROGRESS (2026-04-02)
 
-**Status:** Iterations 1-10 done (2026-04-03). Manual testing remaining.
-**Scope:** OLX + Allegro — publish, sync status, import listings. Bidirectional. Adapter pattern (extensible).
-**Key decisions:** 4 standalone n8n workflows (NOT workflow engine). MARKETPLACE_REGISTRY pattern. Per-tenant pgcrypto OAuth. Unique index on (product_id, connection_id). CategorySelector = search/autocomplete. `update_marketplace_tokens()` for token refresh (UPDATE by PK).
-**Future:** Auto-publish via workflow engine trigger.
+**Status:** Iterations 1-10 done. Manual testing remaining. 4 standalone n8n workflows (NOT workflow engine).
 
 ## RBAC System — AAA-T-61 + AAA-T-76 — DONE (2026-04-06)
 
 **Status:** Complete. is_super_admin as boolean (not role). requireAuth() consolidated across 18 files.
 
-## Roadmap & Planning (2026-03-30)
+## Roadmap & Planning (2026-04-11)
 
-**Priority:** workflow engine → email triggers → client onboarding. **Backlog:** Multi-language, CRM/Slack, Reporting, Onboarding, Newsletter, booking_cancellation.
+**Next:** email triggers → client onboarding. **Backlog:** Multi-language, CRM/Slack, Reporting, Newsletter.
 
 ## Completed Features (compressed)
 
@@ -66,13 +54,13 @@
 - **"do all now" = don't defer P2 items** — When design agent recommends deferring P2 items, user overrides and wants all implemented immediately. Don't defer unless explicitly asked. (2026-03-31)
 - **workflow_id targeting over "all matching"** — User didn't want all matching workflows to fire on trigger. API accepts workflow_id for specific execution. (2026-03-31, AAA-T-149)
 - **Validate after EACH iteration, not batched at end** — Orchestrator was about to skip validation after iteration 2. User corrected mid-session: "Nie zapominaj o wywoływaniu weryfikacji po każdej skończonej iteracji." Run Phase 3+3b validation after EVERY iteration completion, not deferred to a batch at the end. (2026-04-08)
+- **n8n Trigger Handler: use Switch per trigger type, not one big if/else** — User rejected single Code node with if/else for all trigger types. Preferred Switch node routing to dedicated Code nodes per type (Fetch Survey Data, Fetch Booking Data, etc.). More maintainable, each type isolated. (2026-04-12, AAA-T-183)
 - **Aggressive Boy Scout Rule for remeda/neverthrow — scouting was too gentle** — User corrected: when touching ANY file (even for minor changes), convert try/catch to neverthrow Result pipelines and imperative code to remeda pipe(). Previous session touched 48 files but only converted 3 — unacceptable. Every file you modify must be updated to match functional patterns. Not optional, not "when convenient". (2026-04-11, AAA-T-183)
 
 ## Bugs Found (project-specific patterns)
 
 - **supabase gen types prepends "Initialising login role..."** — Corrupts types.ts. Workaround: `grep -v "^Initialising"`. Also: `db:types` uses --local, need --linked when local not running. (2026-03-28)
 - **Supabase JS v2.95.2 `as any` needed even for SELECT** — `.from('shop_products')` resolves to `never` in complex chains. Upgrade may fix. (2026-03-30)
-- **Race condition on concurrent n8n callbacks** — Fix: optimistic lock + idempotency guard on callback route. (2026-03-31, AAA-T-149)
 - **SSRF in webhook handler** — User-configured webhook URLs could target private IPs. Fix: private IP blocklist + AbortSignal.timeout(10_000). (2026-03-31, AAA-T-149)
 - **{{variable}} syntax in condition evaluator causes silent false** — Mustache syntax `{{fieldName}}` always evaluates to false. Fix: resolveField() strips `{{ }}` wrapper. (2026-04-01, AAA-T-152)
 - **ConditionNode handle ID mismatch** — `id="yes"`/`id="no"` handles vs executor `'true'`/`'false'`. ReactFlow silently drops edges. Fix: use `id="true"`/`id="false"`. (2026-04-01, AAA-T-153)
@@ -84,19 +72,19 @@
 - **Turbopack barrel re-export bug with server-only packages** — `export { RUNTIME_VALUE } from '@agency/calendar'` in types.ts pulled googleapis (Node.js child_process) into client bundle. Fix: define runtime constants locally, only use `export type` for cross-package re-exports. (2026-04-09)
 - **Pre-existing migration seed bugs with hardcoded tenant IDs** — 3 migrations had hardcoded production tenant ID causing FK violations on local db reset. Fixed with WHERE EXISTS guards. Always guard seed data with existence checks. (2026-04-09)
 - **DatePicker toISOString() timezone bug** — `date.toISOString().split('T')[0]` shifts date by -1 day in CEST (UTC+2). April 10 00:00 CEST = April 9 22:00 UTC → API receives wrong date. Fix: use `getFullYear()/getMonth()/getDate()` for local date formatting. Affects any DatePicker/Calendar component storing dates as YYYY-MM-DD strings. (2026-04-09, AAA-T-175)
-- **Supabase URL fallback in n8n Orchestrator pointed to wrong project ID** — Hardcoded fallback `zujwhdoickvsotbrqkot.supabase.co` was a different project than production `zsrpdslhnuwmzewwoexr.supabase.co`. Would silently connect to wrong database if env var missing. Always verify Supabase project IDs in n8n credential/env configs. (2026-04-11, AAA-T-183)
+- **n8n executeWorkflow replaces input with subworkflow output** — When Orchestrator calls `executeWorkflow` for step handlers, the subworkflow return completely overwrites the caller's item data. Original context (`currentStepExecId`, `executionId`, `variableContext`) silently lost. Fix: every handler must `return { json: { ...item, ...handlerResult } }` to spread original input into output. All 5 handlers had this bug. (2026-04-12, AAA-T-183)
+- **MiniMax AI response content array has typed entries** — `content[0]` is often `thinking` type, not `text`. Accessing `content[0].text` returns thinking chain, not the answer. Fix: `content.find(c => c.type === 'text')`. Also: response wrapped in markdown code fences — strip ````json\n` and trailing ` ``` ` before `JSON.parse()`. (2026-04-12, AAA-T-183)
+- **n8n fan-in race condition — downstream fires on ANY upstream, not ALL** — n8n executes a downstream node as soon as ANY incoming branch completes, not when ALL complete. Causes `$('NodeName') hasn't been executed` errors when downstream references a branch that hasn't run yet. Fix: consolidate parallel DB operations into a single Code node using `Promise.all()` + `supabaseRequest()` helper. (2026-04-12, AAA-T-183)
+- **n8n Supabase node filter expressions unreliable** — Both `$json.workflowId` and `$('NodeName').first().json.field` fail to filter correctly in native Supabase GET nodes, returning all rows instead of filtered set. Fix: use inline REST API calls via `supabaseRequest()` in Code nodes instead of native Supabase nodes for filtered queries. (2026-04-12, AAA-T-183)
+- **n8n Supabase UPDATE node replaces pipeline data** — UPDATE node returns the DB row as output, overwriting the enriched pipeline data accumulated in previous nodes. Fix: fan-out pattern — wire source node to both UPDATE (fire-and-forget) and downstream node in parallel, so downstream gets original enriched data. (2026-04-12, AAA-T-183)
 
 ## Domain Concepts
 
-- **Plausible Analytics** — Self-hosted at `analytics.trustcode.pl`, data-domain `haloefekt.pl`. No cookies = no RODO. (2026-03-26)
-- **AWS S3 for media uploads** — Bucket: `legal-mind-bucket`, region: `eu-central-1`. S3 public GET; CORS must allow PUT from CMS domains. (2026-03-18)
 - **Tenant "Halo Efekt" in production** — email: kontakt@haloefekt.pl, id: 19342448-4e4e-49ba-8bf0-694d5376f953. (2026-03-23)
 - **deleteAppointment does NOT remove Google Calendar event** — DB row deleted only. Notion ticket created. (2026-03-28)
 - **email_configs table empty in production** — N8n uses hardcoded Resend fallback (`noreply@haloefekt.pl`). (2026-03-27)
 - **notification_email is per survey_link, not per tenant** — Each link has own notification address. (2026-03-27)
 - **RLS for anon can only filter by row properties** — is_published, UUID token, etc. Cannot filter by session context (tenant_id) because anon has no JWT. Tenant filtering must be app-level (server component). (2026-03-31)
-- **Booking flow is in apps/website/features/calendar/booking.ts** — NOT calendar/actions.ts as assumed. Trigger integration point for booking_confirmed. (2026-04-01, AAA-T-152)
-- **n8n HTTP Request: specifyBody "string" + JSON.stringify()** — Reliable way to send nested objects in n8n HTTP Request node. bodyParameters can't handle nested payload objects. (2026-04-01, AAA-T-152)
 - **Condition evaluator supported operators** — >=, <=, !=, ==, >, <, contains, in. NO single `=` operator. Field names without `{{ }}` wrappers. (2026-04-01, AAA-T-152)
 - **OLX/Allegro API quirks** — OLX: offset pagination, credentials in POST body. Allegro: cursor pagination, Basic auth for token exchange, `publication.status: 'END'` for removeListing (PATCH not DELETE). (2026-04-02)
 - **Consent question type = string "true" stored in DB** — `question_type: 'consent'`, renders as checkbox, stores string `"true"` (not boolean) in survey_answers.answer TEXT column. Always required (is_required forced true, toggle disabled in builder). (2026-04-02)
@@ -105,7 +93,9 @@
 - **RPC function parameter names must match migration SQL exactly** — n8n called `upsert_marketplace_connection` with `p_connection_id` but function expected `p_tenant_id`. PostgreSQL error at runtime. Created dedicated `update_marketplace_tokens(p_connection_id)` for token refresh use case. (2026-04-03, AAA-T-157)
 - **Baikal CalDAV has 2 calendars** — tsdav auto-discovery finds "Appointments" (`/dav.php/calendars/haloefekt/appointments/`) and "Default calendar" (`/dav.php/calendars/haloefekt/default/`). Must filter or let user select which calendar to use. (2026-04-09)
 - **Success page "What's Next" steps are Halo Efekt-specific** — Hardcoded timeline (Analiza→Email→Kontakt) only applies to intake surveys. Per-survey confirmation templates needed for booking confirmations, other survey types. Notion task created for per-survey success page customization. (2026-04-09, AAA-T-175)
-- **n8n Wait node works inside SplitInBatches** — n8n serializes execution state, so Wait (delay) inside a SplitInBatches loop works correctly — each batch waits, then continues. Non-obvious because you'd expect async state loss. Useful for rate-limited API calls in Orchestrator subworkflows. (2026-04-11, AAA-T-183)
+- **Flatten node needed before n8n subworkflows with flat contract** — Orchestrator enriches pipeline items with nested objects (e.g., `emailPayload: { to, subject, html }`) but subworkflows expect flat `{ to, subject, html, tenant_id }`. Without a Flatten Code node before `executeWorkflow`, subworkflow receives nested structure and fields resolve to undefined. (2026-04-12, AAA-T-183)
+- **Nil UUID fallback for Supabase filters** — `?? '00000000-0000-0000-0000-000000000000'` prevents PostgreSQL UUID parse errors when filter value is null/undefined. Without fallback, null in `.eq('id', value)` causes Supabase REST API to throw. (2026-04-12, AAA-T-183)
+- **CMS-n8n field name mismatch pattern** — CMS saves fields with one name (e.g., `to_expression`) but n8n reads a different name (e.g., `to`). Results in silent null, no runtime error. Always verify field names match between CMS config schema and n8n Code node reads. (2026-04-12, AAA-T-183)
 
 ## Architecture Decisions
 
@@ -120,25 +110,27 @@
 - **TENANT_ID as server-only env var for shop frontends** — No NEXT_PUBLIC_ prefix, prevents client-side leakage of tenant context. Shop is per-tenant: env var filters products/categories. (2026-03-31)
 - **True anon Supabase client for shop frontend** — Uses NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY (not service_role like website). RLS enforces is_published for products. (2026-03-31)
 - **shop_categories RLS USING(true) is correct** — Anon has no JWT/tenant context, so tenant_id filter must be app-level (server component). Categories contain non-sensitive data. (2026-03-31)
-- **Delay step nie dispatchuje do n8n — CMS pisze resume_at bezpośrednio do DB** — n8n nie "trzyma" kroków przez godziny/dni. Wzorzec: handleDelay zapisuje resume_at + status='waiting', n8n cron co 5 min wywołuje /api/workflows/process-due-delays. (2026-04-01, AAA-T-150)
-- **n8n Delay Processor: POST do CMS, nie bezpośrednio do Supabase** — Nawet gdy n8n ma Supabase credentials (ma, bo form_confirmation je używa), logika orkiestracji (który krok wznowić) należy do CMS, nie n8n. n8n = głupi timer. (2026-04-01, AAA-T-150)
-- **Atomic claim z FOR UPDATE SKIP LOCKED dla batch processing** — Supabase JS chain nie jest atomowy. Dla batch endpoint gdzie concurrent calls mogą się nałożyć: PostgreSQL RPC z FOR UPDATE SKIP LOCKED + status przejściowy 'processing'. (2026-04-01, AAA-T-150)
 - **HOST_URL env var reused for website→CMS communication** — Website .env.local HOST_URL points to CMS (localhost:3001 dev, cms.haloefekt.pl prod). Path /api/workflows/trigger appended in code. Reuses CMS's existing HOST_URL convention. (2026-04-01, AAA-T-152)
 - **No separate API route per trigger type** — n8n calls existing /api/workflows/trigger with trigger_type in payload (e.g., 'lead_scored'). No /api/workflows/trigger/lead-scored/ needed. Single endpoint, multiple trigger types. (2026-04-01, AAA-T-152)
 - **Old n8n email webhook removal deferred** — survey_submitted now fires workflow engine trigger in parallel with old N8N_WEBHOOK_FORM_CONFIRM_EMAIL_URL. Removing old webhook is destructive; deferred until tenant has active workflow with send_email step confirmed working. (2026-04-01, AAA-T-152)
 - **In-code JSON constants for workflow templates (copy-on-use)** — Templates stored as TypeScript constants in `features/workflows/templates/workflow-templates.ts`. On "Use template", server action materialises real workflow+steps+edges with fresh UUIDs. Zero DB overhead for non-users. Same pattern as n8n/Make.com. (2026-04-01, AAA-T-153)
-- **Trigger as real workflow_step in templates** — Including trigger_type step in template step arrays allows fully-connected canvas on load (trigger→condition edge stored in DB). Executor safely skips trigger steps (no handler → logs warning, marks completed). (2026-04-01, AAA-T-153)
-- **MAX_STEPS = 50 + 5-min sync step timeout in executor** — DEFAULT_EXECUTION_LIMITS in engine/types.ts. Timeout applies only to sync steps (condition, webhook). Async steps timeout in n8n. (2026-04-01, AAA-T-153)
+- **Trigger as real workflow_step (executed, not filtered)** — Trigger steps are no longer filtered out by Orchestrator. They execute via Trigger Handler subworkflow which hydrates variableContext with real data (survey answers, appointment details). Without this, AI Action steps only get UUIDs. CMS trigger-schemas.ts defines available variables (qaContext, surveyTitle, etc.) matching what handler produces. (2026-04-01→2026-04-12, AAA-T-153→AAA-T-183)
 - **Standalone n8n workflows for marketplace (not workflow engine)** — Marketplace sync is infrastructure/system-level. Workflow engine = user-configurable event flows. Marketplace = background cron ops. (2026-04-02)
 - **Multi-provider calendar architecture** — calendar_connections table with pgcrypto encryption, CalendarProvider interface with ResultAsync, survey_links.calendar_connection_id for calendar-per-survey model. CalDAV via tsdav (tested with Baikal: Basic auth, DAVClient). (2026-04-09)
 - **app_config table replaces custom GUC for encryption key** — Supabase Cloud AND local both block `ALTER DATABASE SET` for custom `app.*` parameters. Solution: `app_config` table with `get_encryption_key()` SECURITY DEFINER helper. Seed row has placeholder, production UPDATE after deploy. Replaces GUC COALESCE fallback pattern. (2026-04-09)
 - **SurveyLinkCalendarSelect dual mode (auto-save vs controlled)** — Component needed two modes: standalone (saves immediately on change via server action) and embedded in form (tracks state, parent form saves). Discriminated union props pattern: `{ mode: 'standalone'; surveyLinkId: string }` vs `{ mode: 'controlled'; value: string | null; onChange: (id) => void }`. Reusable pattern for any component that appears both standalone and inside forms. (2026-04-09, AAA-T-175)
 - **Extract pure logic from .tsx to utils/ for TDD** — When component files contain pure logic (validation, transformation, mapping), extract to `utils/` files. Enables unit testing without React rendering. Pattern: `.tsx` = rendering + hooks, `utils/*.ts` = pure testable functions. (2026-04-10, AAA-T-177)
-- **React Compiler enabled via `reactCompiler: true` in all 4 next.config.ts** — Explicitly enabled in cms, website, jacek, kolega after upgrading to Next.js 16.2.3 + React 19.2.5 (2026-04-10). Auto-memoizes — Boy Scout Rule: remove manual useCallback/useMemo when touching files (unless profiling shows need). Don't wrap new handlers in useCallback by default. (2026-04-10)
 - **3-pass validation more valuable than unit tests for UI-heavy features** — For features that are primarily UI (canvas interactions, drag-and-drop, visual builders), the 3-pass validator (functional + architecture + integration) catches more real issues than unit tests. Unit tests still valuable for extracted pure logic in utils/. (2026-04-10, AAA-T-177)
-- **Per-step testing: new code path alongside executor, not refactoring** — `executeWorkflowStep()` is a separate function from `executeWorkflow()`. Per-step execution has fundamentally different concerns (upstream chain resolution, single-step dry-run, result capture) that don't fit into the existing full-workflow executor. (2026-04-10, AAA-T-182)
 - **Generic test mocks belong in vitest.setup.ts, not per-test files** — Mocks for next/cache, @/lib/auth, and similar infrastructure modules used across many test files should be centralized in vitest.setup.ts. Per-test mocks only for test-specific overrides. (2026-04-10, AAA-T-182)
-- **n8n Orchestrator owns ALL workflow execution (AAA-T-183)** — CMS executor.ts fully removed. N8n Workflow Orchestrator reads definition from Supabase, dispatches steps, writes state directly — no CMS callbacks. CMS trigger route is ~70 LOC fire-and-forget. dry-run-handlers.ts stays in CMS for TestModePanel only. WHY: Vercel serverless timeout (5-10 min) can't handle multi-hour workflow delays; n8n native Wait node eliminates the need for resume/delay-processor routes entirely. (2026-04-11, AAA-T-183)
+- **n8n Orchestrator owns ALL workflow execution (AAA-T-183)** — CMS executor.ts fully removed. N8n Workflow Orchestrator reads definition from Supabase, dispatches steps, writes state directly — no CMS callbacks. CMS trigger route is ~70 LOC fire-and-forget. WHY: Vercel serverless timeout (5-10 min) can't handle multi-hour workflow delays; n8n native Wait node eliminates the need for resume/delay-processor routes entirely. (2026-04-11, AAA-T-183)
+- **Mock testing useless when execution engine moves to external system** — After n8n became sole executor, CMS dry-run handlers returned fake data unrelated to real execution. Testing must use same execution path as production. Deleted all mock infrastructure, TestModePanel dispatches to real n8n. (2026-04-11, AAA-T-182)
+- **n8n Supabase UPDATE as dead-end (fire-and-forget) pattern** — Supabase UPDATE nodes replace pipeline data with the DB row. When pipeline data must continue downstream, use fan-out: wire upstream node to both UPDATE (dead-end, no output connections) and next pipeline node directly. Applied to Mark Step Running and Update Step Execution nodes in Orchestrator. (2026-04-12, AAA-T-183)
+- **n8n subworkflow = overengineering for infrastructure helpers** — `supabaseRequest()` helper (25 LOC) should NOT be a subworkflow. n8n subworkflow overhead (serialize/deserialize/new execution context) makes it worse than copy-pasting boilerplate. Subworkflows for business logic reuse, not infrastructure helpers. (2026-04-12, AAA-T-183)
+- **n8n SplitInBatches loses ALL state between iterations** — Each iteration gets fresh original item from input queue. variableContext updates, skippedStepIds, failed flag — all lost. Fix: `$getWorkflowStaticData('global')` persists across iterations. Caused 3+ bugs before discovery. (2026-04-12, AAA-T-183)
+- **n8n executeWorkflow `defineBelow` + empty `value: {}` sends nothing** — When `convertFieldsToString: false`, only defined fields are sent. Empty value = empty object to subworkflow. When `convertFieldsToString: true`, it accidentally sent all input as strings (masking the issue but breaking objects). Fix: `mappingMode: "autoMapInputData"`. (2026-04-12, AAA-T-183)
+- **n8n Switch condition `failed` must be FIRST (index 0)** — Failed items have no `stepType` field. If `failed` check is after step-type checks, it never matches (undefined !== any type string), falls to fallback. During editing, `failed` condition got lost entirely — items routed to wrong handlers. (2026-04-12, AAA-T-183)
+- **responses.answers is JSONB, surveys.questions is JSONB — no separate tables** — No `survey_answers` or `questions` table exists. Answers stored as `{ questionId: "answer" }` in responses row, questions as array in surveys row. Trigger Handler must read both from parent tables. (2026-04-12, AAA-T-183)
+- **Condition evaluator fails on pre-resolved literal values** — Prepare Current Step resolves `{{overallScore}}` → `7` in expression before condition handler. Handler gets `"7 >= 5"`, looks for key "7" in context → undefined → false. Fix: coerceNumeric fallback for left operand. (2026-04-12, AAA-T-183)
 
 ## Preferences
 
