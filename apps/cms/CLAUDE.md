@@ -263,6 +263,12 @@ npm run test:watch --workspace=apps/cms  # Watch mode (TDD)
 # 3. Login at http://localhost:3001/login
 ```
 
+### React Compiler
+
+React Compiler enabled via `reactCompiler: true` in all 4 `next.config.ts` files (cms, website, jacek, kolega). Next.js 16.2.3 + React 19.2.5 (2026-04-10).
+
+**Impact:** Auto-memoizes — remove manual `useCallback`/`useMemo` when touching files (Boy Scout Rule). Don't wrap new handlers in `useCallback` by default. Only add manual memoization if profiling shows need.
+
 ## Testing (TDD)
 
 **Testable files** (TDD Red-Green-Refactor): `actions.ts`, `queries.ts`, `queries.server.ts`, `hooks/*.ts`, `utils/*.ts`

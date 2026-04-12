@@ -13,10 +13,8 @@ import {
   type UpdateWorkflowFormData,
   type SaveCanvasFormData,
 } from './validation'
-import { toWorkflow, toWorkflowStep } from './types'
-import { dryRunHandlers } from './engine/dry-run-handlers'
+import { toWorkflow } from './types'
 import { createServiceClient } from '@/lib/supabase/service'
-import type { ExecutionContext, VariableContext } from './engine/types'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
 import { WORKFLOW_TEMPLATES } from './templates/workflow-templates'
@@ -320,6 +318,65 @@ export async function triggerManualWorkflow(
   )
 }
 
+// --- Test workflow (dispatch to n8n with custom payload) ---
+
+export async function testWorkflow(
+  workflowId: string,
+  triggerPayload: Record<string, unknown>,
+): Promise<{ success: true; executionId: string } | { success: false; error: string }> {
+  const n8nUrl = process.env.N8N_WORKFLOW_ORCHESTRATOR_URL
+  if (!n8nUrl) {
+    return { success: false, error: 'N8N_WORKFLOW_ORCHESTRATOR_URL not configured' }
+  }
+
+  const result = await requireAuthResult('workflows')
+    .andThen(({ supabase, tenantId }) =>
+      ResultAsync.fromPromise(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (supabase as any)
+          .from('workflows')
+          .select('id, tenant_id, trigger_type')
+          .eq('id', workflowId)
+          .maybeSingle(),
+        dbError,
+      )
+        .andThen(fromSupabase<{ id: string; tenant_id: string; trigger_type: string }>())
+        .andThen((workflow) => {
+          if (workflow.tenant_id !== tenantId) return err(messages.workflows.workflowNotFound)
+          return ok({ tenantId, triggerType: workflow.trigger_type })
+        }),
+    )
+    .andThen(({ tenantId, triggerType }) =>
+      ResultAsync.fromPromise(
+        fetch(n8nUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${process.env.ORCHESTRATOR_WEBHOOK_SECRET}`,
+          },
+          body: JSON.stringify({
+            workflowId,
+            tenantId,
+            triggerPayload: { trigger_type: triggerType, ...triggerPayload },
+          }),
+        }).then(async (resp) => {
+          if (!resp.ok) throw new Error(`n8n dispatch failed: ${resp.status}`)
+          return resp.json() as Promise<{ executionId: string }>
+        }),
+        (e) => (e instanceof Error ? e.message : messages.common.unknownError),
+      ),
+    )
+
+  return result.match(
+    ({ executionId }) => {
+      revalidatePath(routes.admin.workflow(workflowId))
+      revalidatePath(routes.admin.workflowExecutions(workflowId))
+      return { success: true as const, executionId }
+    },
+    (error) => ({ success: false as const, error }),
+  )
+}
+
 // --- Template-based workflow creation ---
 
 export async function createWorkflowFromTemplate(templateId: string) {
@@ -411,77 +468,6 @@ export async function createWorkflowFromTemplate(templateId: string) {
       revalidatePath(routes.admin.workflows)
       return { success: true as const, data: created }
     },
-    (error) => ({ success: false as const, error }),
-  )
-}
-
-// --- Dry-run single step ---
-
-const MAX_PAYLOAD_SIZE = 100_000 // 100KB
-
-export async function dryRunSingleStep(
-  workflowId: string,
-  stepId: string,
-  inputPayload: Record<string, unknown>,
-) {
-  if (JSON.stringify(inputPayload).length > MAX_PAYLOAD_SIZE) {
-    return { success: false as const, error: 'Payload too large' }
-  }
-
-  const result = await requireAuthResult('workflows')
-    .andThen(({ supabase, tenantId }) =>
-      ResultAsync.fromPromise(
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (supabase as any)
-          .from('workflow_steps')
-          .select('*, workflows(tenant_id)')
-          .eq('id', stepId)
-          .eq('workflow_id', workflowId)
-          .maybeSingle(),
-        dbError,
-      )
-        .andThen(fromSupabase<Record<string, unknown>>())
-        .andThen((step) => {
-          const workflows = step.workflows as { tenant_id: string } | undefined
-          if (workflows?.tenant_id !== tenantId) {
-            return err(messages.workflows.workflowNotFound)
-          }
-
-          const stepType = step.step_type as string
-          const handler = dryRunHandlers[stepType]
-          if (!handler) {
-            return err(`No dry-run handler for step type: ${stepType}`)
-          }
-
-          const workflowStep = toWorkflowStep(step)
-          const serviceClient = createServiceClient()
-
-          const minimalContext: ExecutionContext = {
-            executionId: 'dry-run-single',
-            workflowId,
-            tenantId,
-            triggerPayload: { trigger_type: 'manual' },
-            stepExecutionId: 'dry-run-single-step',
-          }
-
-          const variableContext: VariableContext = { ...inputPayload }
-
-          return ResultAsync.fromPromise(
-            handler(workflowStep, minimalContext, serviceClient, variableContext),
-            (e) => (e instanceof Error ? e.message : messages.common.unknownError),
-          )
-        }),
-    )
-
-  return result.match(
-    (handlerResult) => ({
-      success: true as const,
-      data: {
-        status: handlerResult.success ? 'completed' : 'failed',
-        outputPayload: handlerResult.outputPayload ?? null,
-        errorMessage: handlerResult.error,
-      },
-    }),
     (error) => ({ success: false as const, error }),
   )
 }

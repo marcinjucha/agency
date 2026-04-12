@@ -1,0 +1,187 @@
+{
+  "name": "Step - Webhook Handler",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "7829f131-1ce9-4916-888a-dd5a330958f2",
+      "name": "Start",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -704,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// =============================================================\n// SSRF Check — block private IPs before HTTP Request\n// =============================================================\n// Uses regex parsing instead of new URL() (unavailable in n8n sandbox).\n// =============================================================\n\nconst item = $input.first().json;\nconst { resolvedConfig } = item;\nconst url = resolvedConfig.url;\n\nif (!url) {\n  return {\n    json: {\n      ...item,\n      stepResult: { success: false, error: 'Webhook step missing url in config' },\n    }\n  };\n}\n\ntry {\n  // Parse URL via regex (n8n sandbox lacks URL constructor)\n  const urlMatch = url.match(/^(https?):\\/\\/([^/:]+)(:\\d+)?(\\/.*)?$/);\n  if (!urlMatch) {\n    return {\n      json: {\n        ...item,\n        stepResult: { success: false, error: `Invalid webhook URL format: ${url}` },\n      }\n    };\n  }\n\n  const hostname = urlMatch[2].toLowerCase();\n\n  const privatePatterns = [\n    /^10\\./,\n    /^172\\.(1[6-9]|2\\d|3[01])\\./,\n    /^192\\.168\\./,\n    /^127\\./,\n    /^localhost$/i,\n    /^::1$/,\n    /\\.local$/,\n    /^0\\.0\\.0\\.0$/,\n    /^169\\.254\\./,\n  ];\n\n  const isPrivate = privatePatterns.some(p => p.test(hostname));\n  if (isPrivate) {\n    return {\n      json: {\n        ...item,\n        stepResult: { success: false, error: `Webhook URL targets private address: ${hostname}` },\n      }\n    };\n  }\n\n  return {\n    json: {\n      ...item,\n      webhookUrl: url,\n      webhookMethod: resolvedConfig.method || 'POST',\n      webhookBody: resolvedConfig.body || '{}',\n      ssrfPassed: true,\n    }\n  };\n} catch (e) {\n  return {\n    json: {\n      ...item,\n      stepResult: { success: false, error: `Invalid webhook URL: ${url}` },\n    }\n  };\n}\n"
+      },
+      "id": "f76fbfad-8850-413f-8523-2d468be26a21",
+      "name": "SSRF Check",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -480,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.ssrfPassed }}",
+                    "rightValue": "={{ true }}",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "equals"
+                    },
+                    "id": "wbh-ssrf-ok"
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "id": "d4f92464-5bc5-4240-b89a-590eaa26033c",
+      "name": "SSRF Gate",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        -240,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "method": "={{ $json.webhookMethod }}",
+        "url": "={{ $json.webhookUrl }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.webhookBody ? JSON.parse($json.webhookBody) : {}) }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "c296e848-829a-449b-80d9-ca4995d717d8",
+      "name": "HTTP Request",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build success result from HTTP response — preserve orchestrator context\ntry {\n  const item = $('SSRF Check').first().json;\n  const httpResult = $('HTTP Request').first().json;\n  return {\n    json: {\n      ...item,\n      stepResult: {\n        success: true,\n        outputPayload: {\n          statusCode: httpResult.statusCode || 200,\n          responseBody: typeof httpResult === 'string' ? httpResult : JSON.stringify(httpResult),\n        },\n      },\n    }\n  };\n} catch (e) {\n  const item = $('SSRF Check').first().json;\n  return {\n    json: {\n      ...item,\n      stepResult: { success: false, error: `Webhook failed: ${e.message}` },\n    }\n  };\n}\n"
+      },
+      "id": "8c671251-b49e-42e2-946f-e26491c4ab49",
+      "name": "Build Webhook Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Pass through SSRF/error result — preserve orchestrator context\nconst item = $input.first().json;\nreturn { json: { ...item } };\n"
+      },
+      "id": "9f39d067-b5b0-46d1-9f33-e7f84d5a8e0b",
+      "name": "Pass Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        208
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Start": {
+      "main": [
+        [
+          {
+            "node": "SSRF Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SSRF Check": {
+      "main": [
+        [
+          {
+            "node": "SSRF Gate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SSRF Gate": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Pass Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Build Webhook Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "pEvMbZGHKOsqaHmK",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "c9e42819-dbb1-4173-95cf-0affd85479a4",
+  "meta": {
+    "instanceId": "b46d0b13d69880a2fec430102877b55af4e44991549a68a3e78cd50a4dc1a09e"
+  },
+  "id": "AO4IeIFV3w6X1EaC",
+  "tags": []
+}

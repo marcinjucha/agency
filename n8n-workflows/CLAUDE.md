@@ -241,6 +241,14 @@ This is the generic workflow execution engine. CMS no longer runs executor.ts �
 { "workflowId": "uuid", "triggerPayload": { ...trigger-specific fields } }
 ```
 
+### Inline Supabase Fetches (Promise.all in Code Node)
+
+Orchestrator uses a single "Fetch and Initialize" Code node with `supabaseRequest()` helper + `Promise.all()` for parallel fetches (workflow, steps, edges). Native Supabase nodes were reverted due to fan-in race conditions and unreliable filter expressions.
+
+**Why Code node over native Supabase nodes:** (1) n8n fan-in fires downstream when ANY upstream completes, not ALL — causes `$('NodeName') hasn't been executed` errors. (2) Native Supabase node filter expressions (`$json.field`, `$('Node').first().json.field`) silently return all rows instead of filtered set. `Promise.all()` in JavaScript handles parallelism reliably.
+
+**See also:** `.claude/skills/ag-n8n-step-handlers/SKILL.md` for the full `supabaseRequest()` boilerplate and handler patterns.
+
 ---
 
 ## Role in Workflow Engine Architecture
@@ -273,6 +281,32 @@ This is the generic workflow execution engine. CMS no longer runs executor.ts �
 **Why:** `publish_payload` vs `params` mismatch caused silent data loss in AAA-T-157. N8n expressions like `{{ $json.params }}` return `undefined` silently when the actual key is `publish_payload`.
 
 **Fix:** Verify field names match between CMS `dispatchToN8n()` payload and n8n Set/Code node reads. No runtime validation exists — must be checked manually.
+
+### n8n Supabase Node Default Operation is `create`
+
+**Problem:** Without explicit `"operation": "getAll"`, Supabase node tries to INSERT filter values as new row. Causes NOT NULL constraint violations.
+
+**Why:** Default operation for n8n Supabase node v1 is `create`, not `getAll`. Silent data corruption risk — filter values become column values for INSERT.
+
+**Fix:** Always set `"operation": "getAll"` explicitly for read operations in workflow JSON.
+
+### n8n Sandbox Lacks `URL` Constructor
+
+**Problem:** `new URL()` throws `ReferenceError: URL is not defined` in Code nodes.
+
+**Why:** n8n Code node runs in a sandboxed VM that doesn't expose Node.js globals like `URL`.
+
+**Fix:** Use regex parsing: `url.match(/^https?:\/\/([^/]+)(\/.*)$/)` — `hostname = match[1]`, `path = match[2]`.
+
+### n8n HTTP Request: specifyBody "string" for Nested Objects
+
+**Problem:** `bodyParameters` can't handle nested payload objects in HTTP Request node.
+
+**Fix:** Use `specifyBody: "string"` + `JSON.stringify()` for reliable nested object sending.
+
+### Wait Node Works Inside SplitInBatches
+
+n8n serializes execution state, so Wait (delay) inside a SplitInBatches loop works correctly — each batch waits, then continues. Non-obvious because you'd expect async state loss. Useful for rate-limited API calls.
 
 ---
 

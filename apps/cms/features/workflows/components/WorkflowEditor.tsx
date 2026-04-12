@@ -21,7 +21,7 @@ import { Button } from '@agency/ui'
 import { ConfigPanelWrapper, getPanelComponent } from './panels'
 import type { ConfigPanelProps } from './panels'
 import { StepLibraryPanel } from './StepLibraryPanel'
-import { TestModePanel, type StepTestResult } from './TestModePanel'
+import { TestModePanel } from './TestModePanel'
 import { collectAvailableVariables } from '../engine/utils'
 
 const WorkflowCanvas = dynamic(() => import('./WorkflowCanvas'), {
@@ -128,23 +128,14 @@ export function WorkflowEditor({ workflow }: WorkflowEditorProps) {
 
   // Test mode state
   const [isTestMode, setIsTestMode] = useState(false)
-  const [testResults, setTestResults] = useState<StepTestResult[]>([])
 
   const handleTestModeToggle = useCallback(() => {
     setIsTestMode((prev) => {
       if (!prev) {
-        // Entering test mode — close config panel
         setSelectedNode(null)
-      } else {
-        // Exiting test mode — clear results
-        setTestResults([])
       }
       return !prev
     })
-  }, [])
-
-  const handleTestResults = useCallback((results: StepTestResult[]) => {
-    setTestResults(results)
   }, [])
 
   // Config panel state
@@ -328,7 +319,6 @@ export function WorkflowEditor({ workflow }: WorkflowEditorProps) {
             hasTriggerNode={hasTriggerNode}
             triggerType={workflow.trigger_type}
             getLabel={getLabel}
-            testResults={testResults}
           />
         </div>
         {isTestMode ? (
@@ -336,7 +326,6 @@ export function WorkflowEditor({ workflow }: WorkflowEditorProps) {
             workflowId={workflow.id}
             triggerType={workflow.trigger_type}
             onClose={handleTestModeToggle}
-            onExecutionResult={handleTestResults}
           />
         ) : (
           selectedNode && PanelComponent && (

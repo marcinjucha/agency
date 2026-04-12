@@ -1,6 +1,4 @@
-import type { SupabaseClient } from '@supabase/supabase-js'
-import type { Database } from '@agency/database'
-import type { TriggerType, WorkflowStep } from '../types'
+import type { TriggerType } from '../types'
 
 // --- Execution Context ---
 
@@ -10,7 +8,7 @@ export type ExecutionContext = {
   workflowId: string
   tenantId: string
   triggerPayload: TriggerPayload
-  /** Current step execution ID — used by dry-run test mode to identify step */
+  /** Current step execution ID */
   stepExecutionId: string
   /** Set when this execution was triggered by another workflow (circular protection) */
   triggeringExecutionId?: string
@@ -57,43 +55,10 @@ export type TriggerPayload =
   | TriggerPayloadManual
   | TriggerPayloadScheduled
 
-// --- Step Execution Result ---
-
-/** Returned by every step handler after execution */
-export type ActionResult = {
-  success: boolean
-  outputPayload?: Record<string, unknown>
-  error?: string
-}
-
-// --- Step Handler Signature ---
-
-/** Function that executes a single workflow step */
-export type StepHandler = (
-  step: WorkflowStep,
-  context: ExecutionContext,
-  serviceClient: SupabaseClient<Database>,
-  variableContext: VariableContext
-) => Promise<ActionResult>
-
-// --- Step Handler Registry ---
-
-/** Maps step types to their handler implementations */
-export type StepHandlerRegistry = Record<string, StepHandler>
-
 // --- Variable Context ---
 
 /** Flat key-value map used for {{variable}} resolution in templates */
 export type VariableContext = Record<string, unknown>
-
-// --- Execution Limits ---
-
-export const DEFAULT_EXECUTION_LIMITS = {
-  maxSteps: 50,
-  stepTimeoutMs: 5 * 60 * 1000, // 5 minutes
-} as const
-
-export type ExecutionLimits = typeof DEFAULT_EXECUTION_LIMITS
 
 // --- Type guard helpers ---
 
