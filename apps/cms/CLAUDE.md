@@ -290,7 +290,8 @@ Required in Vercel Dashboard:
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY` (browser + server)
 - `SUPABASE_SERVICE_ROLE_KEY` (server only, secret!)
 - `N8N_WEBHOOK_URL` (server only — survey analysis webhook)
-- `N8N_WORKFLOW_ORCHESTRATOR_URL` (server only — workflow execution, replaces N8N_WORKFLOW_EXECUTOR_URL)
+- `N8N_WORKFLOW_ORCHESTRATOR_URL` (server only — n8n Orchestrator webhook for workflow execution)
+- `ORCHESTRATOR_WEBHOOK_SECRET` (server only — Bearer token for CMS → n8n auth)
 - `HOST_URL` (server only)
 
 See `.env.local.example` for full list.
