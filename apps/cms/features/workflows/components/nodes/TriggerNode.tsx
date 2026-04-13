@@ -2,7 +2,8 @@ import { memo } from 'react'
 import { Handle, Position, type NodeProps } from '@xyflow/react'
 import { Zap } from 'lucide-react'
 import { messages } from '@/lib/messages'
-import { nodeBaseClasses, selectedClasses, borderColors } from './node-styles'
+import { nodeBaseClasses, selectedClasses } from './node-styles'
+import { lookupNodeConfig } from './node-registry'
 
 export type TriggerNodeData = {
   label: string
@@ -19,7 +20,7 @@ const EXECUTION_RING: Record<string, string> = {
 
 function TriggerNodeComponent({ data, selected }: NodeProps) {
   const nodeData = data as unknown as TriggerNodeData
-  const borderClass = borderColors[nodeData.stepType] ?? borderColors.trigger
+  const borderClass = lookupNodeConfig(nodeData.stepType)?.borderColor ?? 'border-l-4 border-l-orange-500'
   const execRing = nodeData.executionStatus ? EXECUTION_RING[nodeData.executionStatus] ?? '' : ''
 
   return (

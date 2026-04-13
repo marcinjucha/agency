@@ -22,7 +22,7 @@ import type { ConfigPanelProps } from './panels'
 import { StepLibraryPanel } from './StepLibraryPanel'
 import { TestModePanel } from './TestModePanel'
 import { collectAvailableVariables } from '../engine/utils'
-import { getStepTypeLabel } from '../utils/step-labels'
+import { getStepTypeLabel, getOutputFieldLabel } from '../utils/step-labels'
 
 const WorkflowCanvas = dynamic(() => import('./WorkflowCanvas'), {
   ssr: false,
@@ -262,7 +262,7 @@ export function WorkflowEditor({ workflow }: WorkflowEditorProps) {
       target_step_id: e.target,
     }))
 
-    return collectAvailableVariables(selectedNode.id, steps, edgeList, workflow.trigger_type, getStepTypeLabel)
+    return collectAvailableVariables(selectedNode.id, steps, edgeList, workflow.trigger_type, getStepTypeLabel, getOutputFieldLabel)
   }, [selectedNode, workflow.trigger_type, isDirty])
 
   const PanelComponent = selectedNode ? getPanelComponent(selectedNode.stepType) : null

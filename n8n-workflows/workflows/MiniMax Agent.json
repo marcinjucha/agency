@@ -11,7 +11,7 @@
         "messages": {
           "values": [
             {
-              "content": "={{ JSON.stringify($json) }}"
+              "content": "={{ JSON.stringify($json.aiPayload) }}"
             }
           ]
         },
@@ -20,10 +20,7 @@
       },
       "type": "@n8n/n8n-nodes-langchain.anthropic",
       "typeVersion": 1,
-      "position": [
-        2752,
-        -16
-      ],
+      "position": [2752, -16],
       "id": "b8cebf3d-6821-4a4c-8352-74d5aa268a1c",
       "name": "Message a MiniMax Model",
       "credentials": {
@@ -41,17 +38,240 @@
       "typeVersion": 1.1,
       "name": "Start",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
-      "position": [
-        2544,
-        -16
-      ]
+      "position": [2544, -16]
     }
   ],
   "pinData": {
     "Start": [
       {
         "json": {
-          "prompt": "Przeanalizuj poniższe zgłoszenie klienta i oceń jego kwalifikację do konsultacji prawnej.\n\nTYTUŁ FORMULARZA: ${surveyTitle}\n\nODPOWIEDZI KLIENTA:\n${qaContext.map((qa, i) => `${i + 1}. ${qa.question}\\n   Odpowiedź: ${qa.answer}`).join('\\n\\n')}\n\nZADANIE:\nOceń to zgłoszenie pod kątem:\n1. Pilność sprawy - czy wymaga natychmiastowej reakcji (0-10)\n2. Złożoność - jak skomplikowana jest sprawa (0-10)\n3. Wartość sprawy - potencjalna wartość ekonomiczna dla kancelarii (0-10)\n4. Prawdopodobieństwo sukcesu - czy sprawa ma solidne podstawy (0-10)\n5. Krótkie podsumowanie - 1-2 zdania o sprawie\n6. Rekomendacja - czy warto umówić konsultację (QUALIFIED / DISQUALIFIED / NEEDS_MORE_INFO)\n7. Uwagi dla prawnika - maksymalnie 3 kluczowe punkty do omówienia na spotkaniu\n\nOdpowiedź TYLKO w formacie JSON:\n{\n  \"urgency_score\": 0-10,\n  \"complexity_score\": 0-10,\n  \"value_score\": 0-10,\n  \"success_probability\": 0-10,\n  \"summary\": \"krótkie podsumowanie\",\n  \"recommendation\": \"QUALIFIED | DISQUALIFIED | NEEDS_MORE_INFO\",\n  \"notes_for_lawyer\": [\"punkt 1\", \"punkt 2\", \"punkt 3\"]\n}"
+          "currentStep": {
+            "id": "6f4fab25-a373-4998-830d-ba4ed6c3b7c0",
+            "workflow_id": "65c67220-7b6b-45d3-996e-cdb5170b046f",
+            "step_type": "ai_action",
+            "step_config": {
+              "type": "ai_action",
+              "model": "",
+              "prompt": "Analyze response:\n{{qaContext}}",
+              "output_schema": [
+                {
+                  "key": "overallScore",
+                  "type": "number",
+                  "label": "Score"
+                },
+                {
+                  "key": "recommendation",
+                  "type": "string",
+                  "label": "Recommendation"
+                }
+              ]
+            },
+            "position_x": 300,
+            "position_y": 0,
+            "created_at": "2026-04-11T15:07:43.707174+00:00",
+            "updated_at": "2026-04-13T16:46:42.06781+00:00"
+          },
+          "stepIndex": 2,
+          "totalSteps": 7,
+          "currentStepExecId": "b6a6fb7d-82a7-4201-bf47-8261705c17f3",
+          "executionId": "b3238ca7-7497-43f4-b662-3756d421c221",
+          "workflowId": "65c67220-7b6b-45d3-996e-cdb5170b046f",
+          "tenantId": "19342448-4e4e-49ba-8bf0-694d5376f953",
+          "edges": [
+            {
+              "id": "c5e107e5-6183-442f-b745-6cf6772c1064",
+              "workflow_id": "65c67220-7b6b-45d3-996e-cdb5170b046f",
+              "source_step_id": "6f4fab25-a373-4998-830d-ba4ed6c3b7c0",
+              "target_step_id": "f7c83fa5-8b80-4c9a-9417-507e9be0a769",
+              "condition_branch": null,
+              "sort_order": 0,
+              "created_at": "2026-04-13T16:46:42.423301+00:00"
+            },
+            {
+              "id": "76a3b6de-72ff-446d-925a-cb4014240476",
+              "workflow_id": "65c67220-7b6b-45d3-996e-cdb5170b046f",
+              "source_step_id": "f7c83fa5-8b80-4c9a-9417-507e9be0a769",
+              "target_step_id": "f481dad9-fee5-4397-9927-f3ba94e90ba4",
+              "condition_branch": "true",
+              "sort_order": 1,
+              "created_at": "2026-04-13T16:46:42.423301+00:00"
+            },
+            {
+              "id": "3e8cb319-d09f-4250-bc3e-b7cd130ce2df",
+              "workflow_id": "65c67220-7b6b-45d3-996e-cdb5170b046f",
+              "source_step_id": "f7c83fa5-8b80-4c9a-9417-507e9be0a769",
+              "target_step_id": "62139848-0a9b-447d-9416-b71fc37ba9a8",
+              "condition_branch": "false",
+              "sort_order": 2,
+              "created_at": "2026-04-13T16:46:42.423301+00:00"
+            },
+            {
+              "id": "06443d56-e4f9-4184-bef4-97611d0b5cbb",
+              "workflow_id": "65c67220-7b6b-45d3-996e-cdb5170b046f",
+              "source_step_id": "3d4e0a27-d75c-4c17-8ce6-b09e607bc43f",
+              "target_step_id": "63b077c3-0e51-4ac9-b3c4-a9d73fa1dd8d",
+              "condition_branch": null,
+              "sort_order": 3,
+              "created_at": "2026-04-13T16:46:42.423301+00:00"
+            },
+            {
+              "id": "8d1ef2a0-2aee-4467-aad2-25057c0c786e",
+              "workflow_id": "65c67220-7b6b-45d3-996e-cdb5170b046f",
+              "source_step_id": "63b077c3-0e51-4ac9-b3c4-a9d73fa1dd8d",
+              "target_step_id": "6f4fab25-a373-4998-830d-ba4ed6c3b7c0",
+              "condition_branch": "true",
+              "sort_order": 4,
+              "created_at": "2026-04-13T16:46:42.423301+00:00"
+            },
+            {
+              "id": "f6b0454c-5c78-4f56-9b89-f5d292b824c7",
+              "workflow_id": "65c67220-7b6b-45d3-996e-cdb5170b046f",
+              "source_step_id": "62139848-0a9b-447d-9416-b71fc37ba9a8",
+              "target_step_id": "4a54845c-527d-4b2d-8a8b-23aaeca371af",
+              "condition_branch": null,
+              "sort_order": 5,
+              "created_at": "2026-04-13T16:46:42.423301+00:00"
+            }
+          ],
+          "allStepExecRecords": [
+            {
+              "id": "b6a6fb7d-82a7-4201-bf47-8261705c17f3",
+              "execution_id": "b3238ca7-7497-43f4-b662-3756d421c221",
+              "step_id": "6f4fab25-a373-4998-830d-ba4ed6c3b7c0",
+              "status": "pending",
+              "started_at": null,
+              "completed_at": null,
+              "output_payload": null,
+              "error_message": null
+            },
+            {
+              "id": "7ed4f5d9-5ad9-40ce-b452-e3a1aa686178",
+              "execution_id": "b3238ca7-7497-43f4-b662-3756d421c221",
+              "step_id": "f7c83fa5-8b80-4c9a-9417-507e9be0a769",
+              "status": "pending",
+              "started_at": null,
+              "completed_at": null,
+              "output_payload": null,
+              "error_message": null
+            },
+            {
+              "id": "b43296f4-0412-47ae-a471-8bf3577b181b",
+              "execution_id": "b3238ca7-7497-43f4-b662-3756d421c221",
+              "step_id": "f481dad9-fee5-4397-9927-f3ba94e90ba4",
+              "status": "pending",
+              "started_at": null,
+              "completed_at": null,
+              "output_payload": null,
+              "error_message": null
+            },
+            {
+              "id": "8a0a2876-e672-413b-936d-36decb66d96d",
+              "execution_id": "b3238ca7-7497-43f4-b662-3756d421c221",
+              "step_id": "62139848-0a9b-447d-9416-b71fc37ba9a8",
+              "status": "pending",
+              "started_at": null,
+              "completed_at": null,
+              "output_payload": null,
+              "error_message": null
+            },
+            {
+              "id": "23c70359-4bce-4515-bfa5-7ceb50306f4d",
+              "execution_id": "b3238ca7-7497-43f4-b662-3756d421c221",
+              "step_id": "3d4e0a27-d75c-4c17-8ce6-b09e607bc43f",
+              "status": "pending",
+              "started_at": null,
+              "completed_at": null,
+              "output_payload": null,
+              "error_message": null
+            },
+            {
+              "id": "758913bb-5142-402e-8b2c-0695593eb296",
+              "execution_id": "b3238ca7-7497-43f4-b662-3756d421c221",
+              "step_id": "63b077c3-0e51-4ac9-b3c4-a9d73fa1dd8d",
+              "status": "pending",
+              "started_at": null,
+              "completed_at": null,
+              "output_payload": null,
+              "error_message": null
+            },
+            {
+              "id": "94f883ec-35e7-401c-93fd-f5eb23fb7f1d",
+              "execution_id": "b3238ca7-7497-43f4-b662-3756d421c221",
+              "step_id": "4a54845c-527d-4b2d-8a8b-23aaeca371af",
+              "status": "pending",
+              "started_at": null,
+              "completed_at": null,
+              "output_payload": null,
+              "error_message": null
+            }
+          ],
+          "initialVariableContext": {
+            "trigger_type": "survey_submitted",
+            "responseId": "2584aca8-6f61-4504-84fb-378b67150eb0",
+            "surveyLinkId": "01c54fc5-f6b0-422e-abb2-72d85b145f5e"
+          },
+          "variableContext": {
+            "trigger_type": "survey_submitted",
+            "responseId": "2584aca8-6f61-4504-84fb-378b67150eb0",
+            "surveyLinkId": "01c54fc5-f6b0-422e-abb2-72d85b145f5e",
+            "surveyTitle": "Test",
+            "clientEmail": "marcin@haloefekt.pl",
+            "answers": [
+              {
+                "questionText": "Imię i nazwisko",
+                "answer": "Marcin",
+                "questionType": "text"
+              },
+              {
+                "questionText": "Adres email",
+                "answer": "marcin@haloefekt.pl",
+                "questionType": "email"
+              }
+            ],
+            "qaContext": "Q: Imię i nazwisko\nA: Marcin\n\nQ: Adres email\nA: marcin@haloefekt.pl",
+            "respondentName": null,
+            "submittedAt": "2026-04-12T10:47:00.334656+00:00",
+            "companyName": "Halo Efekt",
+            "branch": "true"
+          },
+          "resolvedConfig": {
+            "type": "ai_action",
+            "model": "",
+            "prompt": "Analyze response:\nQ: Imię i nazwisko\nA: Marcin\n\nQ: Adres email\nA: marcin@haloefekt.pl",
+            "output_schema": [
+              {
+                "key": "overallScore",
+                "type": "number",
+                "label": "Score"
+              },
+              {
+                "key": "recommendation",
+                "type": "string",
+                "label": "Recommendation"
+              }
+            ]
+          },
+          "stepType": "ai_action",
+          "aiPayload": {
+            "prompt": "Analyze response:\nQ: Imię i nazwisko\nA: Marcin\n\nQ: Adres email\nA: marcin@haloefekt.pl",
+            "context": "trigger_type: \"survey_submitted\"\nresponseId: \"2584aca8-6f61-4504-84fb-378b67150eb0\"\nsurveyLinkId: \"01c54fc5-f6b0-422e-abb2-72d85b145f5e\"\nsurveyTitle: \"Test\"\nclientEmail: \"marcin@haloefekt.pl\"\nanswers: [{\"questionText\":\"Imię i nazwisko\",\"answer\":\"Marcin\",\"questionType\":\"text\"},{\"questionText\":\"Adres email\",\"answer\":\"marcin@haloefekt.pl\",\"questionType\":\"email\"}]\nqaContext: \"Q: Imię i nazwisko\\nA: Marcin\\n\\nQ: Adres email\\nA: marcin@haloefekt.pl\"\nrespondentName: null\nsubmittedAt: \"2026-04-12T10:47:00.334656+00:00\"\ncompanyName: \"Halo Efekt\"\nbranch: \"true\"",
+            "output_schema": [
+              {
+                "key": "overallScore",
+                "type": "number",
+                "label": "Score"
+              },
+              {
+                "key": "recommendation",
+                "type": "string",
+                "label": "Recommendation"
+              }
+            ],
+            "tenant_id": "19342448-4e4e-49ba-8bf0-694d5376f953"
+          }
+        },
+        "pairedItem": {
+          "item": 0
         }
       }
     ]
@@ -72,9 +292,13 @@
   "active": true,
   "settings": {
     "executionOrder": "v1",
-    "availableInMCP": false
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "pEvMbZGHKOsqaHmK",
+    "callerPolicy": "workflowsFromSameOwner"
   },
-  "versionId": "b21edd42-730f-4b56-b04d-e6e9eab2b07d",
+  "versionId": "444ec1c4-3c50-453b-8a4d-9277578c507d",
   "meta": {
     "instanceId": "b46d0b13d69880a2fec430102877b55af4e44991549a68a3e78cd50a4dc1a09e"
   },
