@@ -104,6 +104,13 @@ export const TRIGGER_VARIABLE_SCHEMAS: Record<string, TriggerVariable[]> = {
       category: 'Firma',
       example: 'Halo Efekt',
     },
+    {
+      key: 'answers',
+      label: 'Odpowiedzi na pytania (JSON)',
+      description: 'Obiekt z odpowiedziami: { questionId: "odpowiedź" }',
+      category: 'Ankieta',
+      example: '{ "q1": "Jan Kowalski", "q2": "Tech firma" }',
+    },
   ],
 
   booking_created: [
