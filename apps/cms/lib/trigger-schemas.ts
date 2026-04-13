@@ -107,9 +107,9 @@ export const TRIGGER_VARIABLE_SCHEMAS: Record<string, TriggerVariable[]> = {
     {
       key: 'answers',
       label: 'Odpowiedzi na pytania (JSON)',
-      description: 'Obiekt z odpowiedziami: { questionId: "odpowiedź" }',
+      description: 'Tablica odpowiedzi: [{questionText, answer, questionType}]',
       category: 'Ankieta',
-      example: '{ "q1": "Jan Kowalski", "q2": "Tech firma" }',
+      example: '[{"questionText": "Imię", "answer": "Jan Kowalski", "questionType": "text"}]',
     },
   ],
 

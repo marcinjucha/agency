@@ -5,6 +5,7 @@ This directory contains business logic separated from routing (ADR-005 pattern).
 ## Purpose
 
 Keep `app/` clean (routing only) and put all business logic here:
+
 - Data fetching
 - State management
 - Component logic
@@ -53,6 +54,7 @@ features/{feature}/
 ## Example: Surveys Feature
 
 ### components/SurveyList.tsx
+
 ```typescript
 'use client'
 import { useQuery } from '@tanstack/react-query'
@@ -61,13 +63,14 @@ import { getSurveys } from '../queries'
 export function SurveyList() {
   const { data: surveys } = useQuery({
     queryKey: ['surveys'],
-    queryFn: getSurveys
+    queryFn: getSurveys,
   })
   // Component logic here
 }
 ```
 
 ### queries.ts
+
 ```typescript
 import { createClient } from '@/lib/supabase/client'
 import type { Tables } from '@agency/database'
@@ -85,6 +88,7 @@ export async function getSurveys(): Promise<Tables<'surveys'>[]> {
 ```
 
 ### actions.ts
+
 ```typescript
 'use server'
 import { createClient } from '@/lib/supabase/server'
@@ -93,11 +97,7 @@ import { revalidatePath } from 'next/cache'
 export async function createSurvey(data: { title: string }) {
   const supabase = await createClient()
 
-  const { data: survey, error } = await supabase
-    .from('surveys')
-    .insert(data)
-    .select()
-    .single()
+  const { data: survey, error } = await supabase.from('surveys').insert(data).select().single()
 
   if (error) return { success: false, error: error.message }
 
@@ -109,6 +109,7 @@ export async function createSurvey(data: { title: string }) {
 ## Usage in Routes
 
 **app/admin/surveys/page.tsx:**
+
 ```typescript
 import { SurveyList } from '@/features/surveys/components/SurveyList'
 
@@ -127,6 +128,7 @@ export default function SurveysPage() {
 ## Why This Pattern?
 
 **Benefits:**
+
 - ✅ **Testable:** Business logic isolated from Next.js
 - ✅ **Reusable:** Features can be extracted to packages
 - ✅ **Discoverable:** Find all survey code in one place
@@ -134,6 +136,7 @@ export default function SurveysPage() {
 - ✅ **Scalable:** Easy to add new features
 
 **Pattern Result:**
+
 - app/admin/surveys/page.tsx: 10 lines (just imports and layout)
 - features/surveys/components/SurveyList.tsx: 80 lines (component logic)
 - features/surveys/queries.ts: 40 lines (data fetching)
@@ -169,6 +172,7 @@ import { NewFeatureList } from '@/features/new-feature/components/NewFeatureList
 ## Server Actions vs API Routes
 
 **Use Server Actions (preferred):**
+
 ```typescript
 'use server'
 export async function createSurvey(data: FormData) {
@@ -179,6 +183,7 @@ export async function createSurvey(data: FormData) {
 ```
 
 **Use API Routes only for:**
+
 - External webhooks (n8n)
 - Third-party integrations
 - Public endpoints
@@ -196,7 +201,7 @@ export async function getSurveys() {
 // features/surveys/components/SurveyList.tsx
 const { data } = useQuery({
   queryKey: ['surveys'],
-  queryFn: getSurveys  // ← References query function
+  queryFn: getSurveys, // ← References query function
 })
 ```
 
@@ -226,8 +231,9 @@ type StepType = 'condition' | 'delay' | 'webhook'
 ## Gotchas
 
 **Recurring patterns (see skills for details):**
-- Tiptap renderHTML: inline styles only → see `ag-ui-components` skill
-- TanStack Query: root key invalidation → see `ag-ui-components` skill
+
+- Tiptap renderHTML: inline styles only → see `ag-design-patterns` skill
+- TanStack Query: root key invalidation → see `ag-design-patterns` skill
 
 ### Common Bugs & Gotchas
 
