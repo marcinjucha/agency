@@ -31,6 +31,6 @@ export const STEP_TYPE_LABELS: Record<StepType, string> = Object.fromEntries(
  * Returns a resolved Polish label for a given StepType.
  * Falls back to raw type string for unknown/future types.
  */
-export function getStepTypeLabel(type: StepType): string {
-  return STEP_TYPE_LABELS[type] ?? type
+export function getStepTypeLabel(type: string): string {
+  return STEP_TYPE_LABELS[type as StepType] ?? type
 }

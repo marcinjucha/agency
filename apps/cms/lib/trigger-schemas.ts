@@ -205,6 +205,16 @@ export const TRIGGER_VARIABLE_SCHEMAS: Record<string, TriggerVariable[]> = {
       example: 'Halo Efekt',
     },
   ],
+
+  scheduled: [
+    {
+      key: 'companyName',
+      label: 'Nazwa firmy',
+      description: 'Z profilu organizacji',
+      category: 'Firma',
+      example: 'Halo Efekt',
+    },
+  ],
 }
 
 /**
