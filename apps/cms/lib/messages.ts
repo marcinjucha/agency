@@ -1062,9 +1062,11 @@ export const messages = {
       defaultFieldsOverrideHint: 'Domyślne pola zostaną zastąpione polami niestandardowymi.',
     },
     stepLibrary: {
+      categoryTriggers: 'Wyzwalacze',
       categoryActions: 'Akcje',
       categoryLogic: 'Logika',
       categoryAi: 'AI',
+      descTrigger: 'Rozpocznij workflow od zdarzenia',
       descSendEmail: 'Wyślij wiadomość email',
       descWebhook: 'Wywołaj zewnętrzny endpoint',
       descCondition: 'Rozgałęzienie na podstawie warunku',

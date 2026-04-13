@@ -10,6 +10,10 @@ import type { NodeTypeConfig } from './nodes/node-registry'
 
 const STEP_CATEGORIES = [
   {
+    key: 'triggers',
+    label: messages.workflows.stepLibrary.categoryTriggers,
+  },
+  {
     key: 'actions',
     label: messages.workflows.stepLibrary.categoryActions,
   },

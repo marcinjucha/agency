@@ -37,6 +37,8 @@ export const NODE_TYPE_CONFIGS: Record<StepType | 'trigger', NodeTypeConfig> = {
     label: messages.workflows.editor.trigger,
     borderColor: 'border-l-4 border-l-orange-500',
     isTrigger: true,
+    category: 'triggers',
+    description: messages.workflows.stepLibrary.descTrigger,
   },
   send_email: {
     icon: Mail,
