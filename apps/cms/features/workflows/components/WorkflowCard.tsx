@@ -19,11 +19,11 @@ import { Trash2 } from 'lucide-react'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
 import { getTriggerTypeLabel, formatDate } from '../utils'
-import { NODE_TYPE_CONFIGS, TRIGGER_SUBTYPE_CONFIGS } from './nodes/node-registry'
+import { NODE_TYPE_CONFIGS, lookupNodeConfig } from './nodes/node-registry'
 import type { WorkflowListItem, TriggerType } from '../types'
 
 function getTriggerBorderColor(triggerType: string): string {
-  const config = TRIGGER_SUBTYPE_CONFIGS[triggerType] ?? NODE_TYPE_CONFIGS.trigger
+  const config = lookupNodeConfig(triggerType) ?? NODE_TYPE_CONFIGS.trigger
   // Extract just the border-l color (e.g., "border-l-orange-500")
   return config?.borderColor ?? 'border-l-4 border-l-orange-500'
 }

@@ -13,6 +13,7 @@ import { DelayConfigPanel } from './DelayConfigPanel'
 import { WebhookConfigPanel } from './WebhookConfigPanel'
 import { AiActionConfigPanel } from './AiActionConfigPanel'
 import { ConfigPanelWrapper } from './ConfigPanelWrapper'
+import type { StepType } from '../../step-registry'
 import type { TriggerType } from '../../types'
 import type { VariableItem } from '@agency/ui'
 
@@ -39,9 +40,9 @@ const TRIGGER_TYPES = new Set<string>([
 
 /**
  * Registry mapping step type to its config panel component.
- * Trigger types all resolve to TriggerConfigPanel.
+ * Trigger types all resolve to TriggerConfigPanel (handled separately in getPanelComponent).
  */
-const STEP_PANEL_REGISTRY: Record<string, React.ComponentType<ConfigPanelProps>> = {
+const STEP_PANEL_REGISTRY: Record<StepType, React.ComponentType<ConfigPanelProps>> = {
   send_email: SendEmailConfigPanel,
   condition: ConditionConfigPanel,
   delay: DelayConfigPanel,
@@ -54,7 +55,7 @@ export function getPanelComponent(stepType: string): React.ComponentType<ConfigP
   if (TRIGGER_TYPES.has(stepType)) {
     return TriggerConfigPanel
   }
-  return STEP_PANEL_REGISTRY[stepType] ?? null
+  return (STEP_PANEL_REGISTRY as Record<string, React.ComponentType<ConfigPanelProps>>)[stepType] ?? null
 }
 
 // Re-export components (import-then-re-export pattern)

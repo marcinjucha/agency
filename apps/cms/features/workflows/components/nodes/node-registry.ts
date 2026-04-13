@@ -8,6 +8,8 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { messages } from '@/lib/messages'
+import type { StepType } from '../../step-registry'
+import type { TriggerType } from '../../types'
 
 /**
  * Config-only node type definitions (no component imports).
@@ -29,7 +31,7 @@ export interface NodeTypeConfig {
   description?: string
 }
 
-export const NODE_TYPE_CONFIGS: Record<string, NodeTypeConfig> = {
+export const NODE_TYPE_CONFIGS: Record<StepType | 'trigger', NodeTypeConfig> = {
   trigger: {
     icon: Zap,
     label: messages.workflows.editor.trigger,
@@ -74,7 +76,7 @@ export const NODE_TYPE_CONFIGS: Record<string, NodeTypeConfig> = {
 }
 
 /** Trigger-specific subtypes share the trigger border/icon */
-export const TRIGGER_SUBTYPE_CONFIGS: Record<string, NodeTypeConfig> = {
+export const TRIGGER_SUBTYPE_CONFIGS: Record<TriggerType, NodeTypeConfig> = {
   survey_submitted: {
     icon: Zap,
     label: messages.workflows.triggerSurveySubmitted,
@@ -99,13 +101,25 @@ export const TRIGGER_SUBTYPE_CONFIGS: Record<string, NodeTypeConfig> = {
     borderColor: 'border-l-4 border-l-orange-500',
     isTrigger: true,
   },
+  scheduled: {
+    icon: Zap,
+    label: messages.workflows.triggerScheduled,
+    borderColor: 'border-l-4 border-l-orange-500',
+    isTrigger: true,
+  },
 }
 
 /**
- * Derived maps for backward compatibility with node components.
- * Node components import these instead of maintaining separate maps.
+ * Combined lookup map (step + trigger types) for runtime lookups by arbitrary string.
+ * Use this for runtime node data lookups where the type is unknown at compile time.
+ * Use NODE_TYPE_CONFIGS / TRIGGER_SUBTYPE_CONFIGS directly for compile-time complete maps.
  */
-const allConfigs = { ...NODE_TYPE_CONFIGS, ...TRIGGER_SUBTYPE_CONFIGS }
+const allConfigs: Record<string, NodeTypeConfig> = { ...NODE_TYPE_CONFIGS, ...TRIGGER_SUBTYPE_CONFIGS }
+
+/** Runtime lookup by arbitrary string key — returns undefined for unknown types */
+export function lookupNodeConfig(type: string): NodeTypeConfig | undefined {
+  return allConfigs[type]
+}
 
 export const borderColors: Record<string, string> = Object.fromEntries(
   Object.entries(allConfigs).map(([key, config]) => [key, config.borderColor])

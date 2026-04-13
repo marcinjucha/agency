@@ -1,4 +1,6 @@
-import type { WorkflowStep, WorkflowEdge, OutputSchemaField, StepType } from '../types'
+import type { WorkflowStep, WorkflowEdge } from '../types'
+import type { OutputSchemaField, StepType } from '../step-registry'
+import { STEP_OUTPUT_SCHEMAS, STEP_TYPE_LABELS } from '../step-registry'
 import type { TriggerPayload, VariableContext } from './types'
 import { isTriggerType } from './types'
 import { getTriggerVariables } from '@/lib/trigger-schemas'
@@ -9,40 +11,6 @@ export type VariableItem = {
   label: string
   description?: string
   category?: string
-}
-
-/**
- * Step output schemas — duplicated from ../types to avoid pulling in messages.ts
- * at runtime (messages.ts breaks vitest resolution chain).
- * Keep in sync with STEP_OUTPUT_SCHEMAS in ../types.ts.
- */
-const STEP_OUTPUT_SCHEMAS: Record<string, OutputSchemaField[]> = {
-  send_email: [
-    { key: 'emailSent', label: 'Email wysłany', type: 'boolean' },
-    { key: 'recipientEmail', label: 'Email odbiorcy', type: 'string' },
-  ],
-  delay: [],
-  condition: [
-    { key: 'branch', label: 'Wynik warunku', type: 'string' },
-  ],
-  webhook: [
-    { key: 'statusCode', label: 'Kod statusu HTTP', type: 'number' },
-    { key: 'responseBody', label: 'Odpowiedź webhook', type: 'string' },
-  ],
-  ai_action: [
-    { key: 'aiResponse', label: 'Odpowiedź AI', type: 'string' },
-    { key: 'overallScore', label: 'Wynik ogólny', type: 'number' },
-    { key: 'recommendation', label: 'Rekomendacja', type: 'string' },
-  ],
-}
-
-/** Step type labels for variable categories — local to avoid messages.ts dependency */
-const STEP_TYPE_LABELS: Record<string, string> = {
-  send_email: 'Wyślij email',
-  delay: 'Opóźnienie',
-  condition: 'Warunek',
-  webhook: 'Webhook',
-  ai_action: 'Akcja AI',
 }
 
 /**

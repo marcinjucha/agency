@@ -32,12 +32,13 @@ import { ActionNode } from './nodes/ActionNode'
 import { ConditionNode } from './nodes/ConditionNode'
 import { DelayNode } from './nodes/DelayNode'
 import { NODE_TYPE_CONFIGS } from './nodes/node-registry'
+import type { StepType } from '../step-registry'
 import { CanvasControls } from './CanvasControls'
 // AddNodeDropdown removed — StepLibraryPanel replaces it (AAA-T-177)
 
 /** Component map keyed by node type — components resolved from registry keys */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- ReactFlow node components have varying prop types
-const NODE_COMPONENTS: Record<string, React.ComponentType<any>> = {
+const NODE_COMPONENTS: Record<StepType | 'trigger', React.ComponentType<any>> = {
   trigger: TriggerNode,
   send_email: ActionNode,
   condition: ConditionNode,
@@ -46,8 +47,12 @@ const NODE_COMPONENTS: Record<string, React.ComponentType<any>> = {
   ai_action: ActionNode,
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- ReactFlow NodeTypes accepts arbitrary ComponentType
 const nodeTypes = Object.fromEntries(
-  Object.keys(NODE_TYPE_CONFIGS).map((key) => [key, NODE_COMPONENTS[key]])
+  Object.keys(NODE_TYPE_CONFIGS).map((key) => [
+    key,
+    (NODE_COMPONENTS as Record<string, React.ComponentType<any>>)[key],
+  ])
 )
 
 const defaultEdgeOptions = {
