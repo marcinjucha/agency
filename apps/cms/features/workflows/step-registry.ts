@@ -135,12 +135,12 @@ export const STEP_MAP = Object.fromEntries(
 
 // --- Derived Records (backward compatibility z istniejącymi konsumentami) ---
 
-/** Derived labels — zastępuje STEP_TYPE_LABELS w types.ts i engine/utils.ts w iter 2-3 */
+/** Derived labels — single source of truth, re-eksportowane przez types.ts i engine/utils.ts */
 export const STEP_TYPE_LABELS: Record<StepType, string> = Object.fromEntries(
   STEP_REGISTRY.map((s) => [s.id, s.label])
 ) as Record<StepType, string>
 
-/** Derived output schemas — zastępuje STEP_OUTPUT_SCHEMAS w types.ts i engine/utils.ts w iter 2-3 */
+/** Derived output schemas — single source of truth, re-eksportowane przez types.ts i engine/utils.ts */
 export const STEP_OUTPUT_SCHEMAS: Record<StepType, OutputSchemaField[]> = Object.fromEntries(
   STEP_REGISTRY.map((s) => [s.id, s.outputSchema])
 ) as Record<StepType, OutputSchemaField[]>
