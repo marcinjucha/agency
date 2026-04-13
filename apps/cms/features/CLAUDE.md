@@ -263,6 +263,10 @@ type StepType = 'condition' | 'delay' | 'webhook'
 
 **Trigger payload schemas as cross-feature contract** — Each workflow trigger type (survey_submitted, booking_created, lead_scored) declares a payload schema in `lib/trigger-schemas.ts`. This schema defines what `{{variables}}` are available in email templates. Adding a new trigger = adding one payload schema → variables auto-appear in email template editor. **WHY:** Decouples triggers from email templates — no hardcoded variable lists per template type. Features communicate through schema contracts, not direct imports.
 
+**`export { X } from './module'` doesn't create local binding in same file** — Re-export syntax only forwards to external consumers. If same file needs to USE `X`, must have separate `import { X } from './module'`. Caused runtime `ReferenceError` in step-registry refactor when barrel re-exports were added alongside local usage. **WHY:** TypeScript compiles without error — the binding exists for importers but not for the file itself. Only surfaces at runtime. (AAA-T-190)
+
+**`OutputSchemaField` serves dual context — never convert `.label` to `labelKey`** — Same type used for static output schema definitions in step-registry (CAN use labelKey bridge) AND user-defined output fields saved to DB via AI Action config panel (MUST keep `.label` as freetext string entered by user, e.g. "Customer name"). Converting `.label` to `labelKey` would silently break user-defined output schemas. **WHY:** Only registry-level labels use the i18n bridge pattern. DB-persisted user input must remain raw strings — no message key lookup exists for dynamic user content. (AAA-T-190)
+
 ## Related Documentation
 
 - [ADR-005: App vs Features Separation](../../../docs/adr/ARCHIVED-005-app-vs-features-separation.md)
