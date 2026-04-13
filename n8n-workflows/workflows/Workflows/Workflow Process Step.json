@@ -1,0 +1,693 @@
+{
+  "name": "Workflow Process Step",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "727692c9-ef6c-468e-aa9f-0e5a43381bd9",
+      "typeVersion": 1.1,
+      "name": "Start",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "position": [
+        5536,
+        18352
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// =============================================================\n// Prepare Current Step — resolve variables in config\n// =============================================================\n// Uses execution-scoped state keyed by executionId to support\n// concurrent workflow executions. Initializes on stepIndex 0.\n// =============================================================\n\nconst Sentry = require('@sentry/node');\n\nfunction resolveVariables(template, context) {\n  if (typeof template !== 'string') return template;\n  return template.replace(/\\{\\{(\\s*[\\w.]+\\s*)\\}\\}/g, (_, rawKey) => {\n    const key = rawKey.trim();\n    const value = getNestedValue(context, key);\n    return (value !== undefined && value !== null) ? String(value) : `{{${key}}}`;\n  });\n}\n\nfunction getNestedValue(obj, path) {\n  const parts = path.split('.');\n  let current = obj;\n  for (const part of parts) {\n    if (current === null || current === undefined || typeof current !== 'object') return undefined;\n    current = current[part];\n  }\n  return current;\n}\n\nfunction resolveDeep(obj, context) {\n  if (typeof obj === 'string') return resolveVariables(obj, context);\n  if (Array.isArray(obj)) return obj.map(item => resolveDeep(item, context));\n  if (obj && typeof obj === 'object') {\n    const result = {};\n    for (const [key, value] of Object.entries(obj)) {\n      result[key] = resolveDeep(value, context);\n    }\n    return result;\n  }\n  return obj;\n}\n\ntry {\n  const item = $input.first().json;\n  const state = $getWorkflowStaticData('global');\n  const { currentStep, executionId } = item;\n\n  // Initialize execution-scoped state on first step\n  if (item.stepIndex === 0) {\n    // Clean up stale entries older than 2 hours (defensive)\n    for (const key of Object.keys(state)) {\n      const entry = state[key];\n      if (entry && entry._createdAt && (Date.now() - entry._createdAt > 7200000)) {\n        delete state[key];\n      }\n    }\n    state[executionId] = {\n      variableContext: item.initialVariableContext || {},\n      skippedStepIds: [],\n      failed: false,\n      failureError: null,\n      _createdAt: Date.now(),\n    };\n  }\n\n  const execState = state[executionId] || { variableContext: {}, skippedStepIds: [], failed: false };\n\n  if (execState.failed) {\n    return { json: { ...item, failed: true } };\n  }\n\n  if ((execState.skippedStepIds || []).includes(currentStep.id)) {\n    Sentry.addBreadcrumb({\n      message: `Step ${item.stepIndex + 1}/${item.totalSteps}: ${currentStep.step_type} (${currentStep.id}) SKIPPED by condition branch`,\n      level: 'info',\n    });\n    return {\n      json: {\n        ...item,\n        resolvedConfig: currentStep.step_config,\n        stepType: '__skipped__',\n        stepResult: { success: true, outputPayload: { skipped: true } },\n        alreadyPersisted: true,\n      }\n    };\n  }\n\n  const variableContext = execState.variableContext || {};\n  const resolvedConfig = resolveDeep(currentStep.step_config, variableContext);\n\n  Sentry.addBreadcrumb({\n    message: `Step ${item.stepIndex + 1}/${item.totalSteps}: ${currentStep.step_type} (${currentStep.name || currentStep.id})`,\n    level: 'info',\n  });\n\n  return {\n    json: {\n      ...item,\n      variableContext,\n      resolvedConfig,\n      stepType: currentStep.step_type,\n    }\n  };\n} catch (err) {\n  Sentry.captureException(err);\n  await Sentry.flush(2000);\n  throw err;\n}\n"
+      },
+      "id": "0f69061c-ff3f-48c4-862c-cc746052f2d6",
+      "name": "Prepare Current Step",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5760,
+        18352
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "workflow_step_executions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $json.currentStepExecId }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "status",
+              "fieldValue": "running"
+            },
+            {
+              "fieldId": "started_at",
+              "fieldValue": "={{ new Date().toISOString() }}"
+            }
+          ]
+        }
+      },
+      "id": "78bf9c83-5433-4431-9c48-54c6902589a5",
+      "name": "Mark Step Running",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        5984,
+        18192
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "f048XNg2A6zhwlWZ",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.failed }}",
+                    "rightValue": "={{ true }}",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "equals"
+                    },
+                    "id": "sw-cond-failed"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.stepType }}",
+                    "rightValue": "__skipped__",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "sw-cond-skipped"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.stepType }}",
+                    "rightValue": "send_email",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "sw-cond-send_email"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.stepType }}",
+                    "rightValue": "ai_action",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "sw-cond-ai_action"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.stepType }}",
+                    "rightValue": "webhook",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "sw-cond-webhook"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.stepType }}",
+                    "rightValue": "condition",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "sw-cond-condition"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.stepType }}",
+                    "rightValue": "delay",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "sw-cond-delay"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.stepType }}",
+                    "rightValue": "survey_submitted",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "sw-cond-trigger-survey_submitted"
+                  },
+                  {
+                    "leftValue": "={{ $json.stepType }}",
+                    "rightValue": "booking_created",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "sw-cond-trigger-booking_created"
+                  },
+                  {
+                    "leftValue": "={{ $json.stepType }}",
+                    "rightValue": "lead_scored",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "sw-cond-trigger-lead_scored"
+                  },
+                  {
+                    "leftValue": "={{ $json.stepType }}",
+                    "rightValue": "manual",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "sw-cond-trigger-manual"
+                  },
+                  {
+                    "leftValue": "={{ $json.stepType }}",
+                    "rightValue": "scheduled",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "sw-cond-trigger-scheduled"
+                  }
+                ],
+                "combinator": "or"
+              }
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "id": "434c9079-aea4-4a0f-8c8e-28a5088f9b7f",
+      "name": "Route by Step Type",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        5984,
+        18384
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "GzqdOgElGDMW8lCI",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/GzqdOgElGDMW8lCI",
+          "cachedResultName": "Step - Send Email Handler"
+        },
+        "workflowInputs": {
+          "mappingMode": "autoMapInputData",
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        6208,
+        17968
+      ],
+      "id": "3f9f8ebf-d791-4008-bf9f-25f30d529e0b",
+      "name": "Call Send Email Handler"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "JFbhvbYqFSit2PfR",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/JFbhvbYqFSit2PfR",
+          "cachedResultName": "Step - AI Action Handler"
+        },
+        "workflowInputs": {
+          "mappingMode": "autoMapInputData",
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        6208,
+        18160
+      ],
+      "id": "9b0604b6-1644-4d1e-93be-6c6c0730dfb6",
+      "name": "Call AI Action Handler"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "AO4IeIFV3w6X1EaC",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/AO4IeIFV3w6X1EaC",
+          "cachedResultName": "Step - Webhook Handler"
+        },
+        "workflowInputs": {
+          "mappingMode": "autoMapInputData",
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        6208,
+        18352
+      ],
+      "id": "ba39e5ee-0f66-4b8c-898f-a93ab731a71d",
+      "name": "Call Webhook Handler"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "NHDn17UtUlbQj3m5",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/NHDn17UtUlbQj3m5",
+          "cachedResultName": "Step - Condition Handler"
+        },
+        "workflowInputs": {
+          "mappingMode": "autoMapInputData",
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        6208,
+        18640
+      ],
+      "id": "65d8e770-ec9d-48ad-bd88-8b1b22e97312",
+      "name": "Call Condition Handler"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "EPhZj3Dru3pAU9RU",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/EPhZj3Dru3pAU9RU",
+          "cachedResultName": "Step - Delay Handler"
+        },
+        "workflowInputs": {
+          "mappingMode": "autoMapInputData",
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        6208,
+        18832
+      ],
+      "id": "36a80eae-cfc0-4056-b3d5-df272ba437d0",
+      "name": "Call Delay Handler"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Unknown step type handler\nconst item = $input.first().json;\nreturn {\n  json: {\n    ...item,\n    stepResult: {\n      success: false,\n      error: `Unknown step type: ${item.stepType}`,\n    },\n  }\n};\n"
+      },
+      "id": "cb3d4473-7b64-4c14-8076-40aaba699ee0",
+      "name": "Unknown Type Handler",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6208,
+        19216
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// =============================================================\n// Process Step Result — merge context, handle failure/skipping\n// =============================================================\n// Uses execution-scoped state keyed by executionId.\n// Cleans up state entry on last step.\n// =============================================================\n\nconst Sentry = require('@sentry/node');\n\ntry {\n  const item = $input.first().json;\n  const state = $getWorkflowStaticData('global');\n  const { currentStep, executionId } = item;\n  const execState = state[executionId] || { variableContext: {}, skippedStepIds: [], failed: false };\n\n  // If already in failed passthrough mode, just return\n  if (item.failed || execState.failed) {\n    if (item.stepIndex === item.totalSteps - 1) delete state[executionId];\n    return { json: item };\n  }\n\n  // Get step result from subworkflow output\n  let stepResult = item.stepResult;\n  if (!stepResult) {\n    stepResult = { success: false, error: 'No step result produced' };\n  }\n\n  // Merge output into execution-scoped variableContext\n  if (stepResult.success && stepResult.outputPayload) {\n    Object.assign(execState.variableContext, stepResult.outputPayload);\n  }\n\n  // Accumulate skipped step IDs from condition branching\n  const newSkipped = item.skippedStepIds || [];\n  if (newSkipped.length > 0) {\n    execState.skippedStepIds = [...(execState.skippedStepIds || []), ...newSkipped];\n  }\n\n  // Write back to state\n  state[executionId] = execState;\n\n  // Prepare DB update fields\n  const now = new Date().toISOString();\n  const alreadyPersisted = item.alreadyPersisted || stepResult.alreadyPersisted || false;\n  const isLastStep = item.stepIndex === item.totalSteps - 1;\n\n  // If step failed: signal to skip remaining steps\n  if (!stepResult.success) {\n    execState.failed = true;\n    execState.failureError = stepResult.error;\n    state[executionId] = execState;\n\n    Sentry.captureException(new Error(`Step failed: ${currentStep.step_type} — ${stepResult.error}`));\n    await Sentry.flush(2000);\n\n    if (isLastStep) delete state[executionId];\n\n    return {\n      json: {\n        ...item,\n        variableContext: execState.variableContext,\n        failed: true,\n        failureError: stepResult.error,\n        dbStatus: 'failed',\n        dbCompletedAt: now,\n        dbErrorMessage: stepResult.error || 'Unknown error',\n        dbOutputPayload: null,\n        alreadyPersisted,\n        skippedStepIds: newSkipped,\n      }\n    };\n  }\n\n  if (isLastStep) delete state[executionId];\n\n  return {\n    json: {\n      ...item,\n      variableContext: execState.variableContext,\n      stepResult: null,\n      dbStatus: 'completed',\n      dbCompletedAt: now,\n      dbOutputPayload: stepResult.outputPayload || {},\n      dbErrorMessage: null,\n      alreadyPersisted,\n      skippedStepIds: newSkipped,\n    }\n  };\n\n} catch (err) {\n  Sentry.captureException(err);\n  await Sentry.flush(2000);\n  throw err;\n}\n"
+      },
+      "id": "2c76d1f5-e020-4227-83f3-1859b5be4157",
+      "name": "Process Step Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6432,
+        18656
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "156WunKSQ2vT9tLz",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/156WunKSQ2vT9tLz",
+          "cachedResultName": "Step - Trigger Handler"
+        },
+        "workflowInputs": {
+          "mappingMode": "autoMapInputData",
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        6208,
+        19024
+      ],
+      "id": "ab48f22f-e89f-4895-8d0d-5797cb7375f1",
+      "name": "Call Trigger Handler"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Failed passthrough — just forward the item\nconst item = $input.first().json;\nreturn { json: item };\n"
+      },
+      "id": "5c8f43da-de7e-4209-858f-31b4c98d4125",
+      "name": "Skip Step",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6208,
+        17776
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Start": {
+      "main": [
+        [
+          {
+            "node": "Prepare Current Step",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Current Step": {
+      "main": [
+        [
+          {
+            "node": "Mark Step Running",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Route by Step Type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by Step Type": {
+      "main": [
+        [
+          {
+            "node": "Skip Step",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Process Step Result",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Call Send Email Handler",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Call AI Action Handler",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Call Webhook Handler",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Call Condition Handler",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Call Delay Handler",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Call Trigger Handler",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Unknown Type Handler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Send Email Handler": {
+      "main": [
+        [
+          {
+            "node": "Process Step Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call AI Action Handler": {
+      "main": [
+        [
+          {
+            "node": "Process Step Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Webhook Handler": {
+      "main": [
+        [
+          {
+            "node": "Process Step Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Condition Handler": {
+      "main": [
+        [
+          {
+            "node": "Process Step Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Delay Handler": {
+      "main": [
+        [
+          {
+            "node": "Process Step Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Unknown Type Handler": {
+      "main": [
+        [
+          {
+            "node": "Process Step Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Trigger Handler": {
+      "main": [
+        [
+          {
+            "node": "Process Step Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Skip Step": {
+      "main": [
+        [
+          {
+            "node": "Process Step Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "pEvMbZGHKOsqaHmK",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "0fe6ee8e-6539-4a6f-9da8-d2acc778a280",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "b46d0b13d69880a2fec430102877b55af4e44991549a68a3e78cd50a4dc1a09e"
+  },
+  "id": "RWzILX8sZPGkfl1m",
+  "tags": []
+}

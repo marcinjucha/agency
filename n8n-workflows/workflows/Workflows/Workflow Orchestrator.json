@@ -8,13 +8,13 @@
         "responseMode": "responseNode",
         "options": {}
       },
-      "id": "c7ebd760-b076-444c-9541-bf6e8e3c2208",
+      "id": "8442afb8-68e5-4d27-9443-4d840444a704",
       "name": "Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1.1,
       "position": [
-        -2688,
-        13680
+        2768,
+        17616
       ],
       "webhookId": "workflow-orchestrator"
     },
@@ -40,36 +40,36 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.3,
       "position": [
-        -2464,
-        13680
+        2992,
+        17616
       ],
-      "id": "3161daf8-8333-4ec2-bd53-84dcfd2aec53",
+      "id": "d0fddae6-e4af-4e98-b6a3-df80a4fa2c1a",
       "name": "Call Sentry Init"
     },
     {
       "parameters": {
         "jsCode": "// =============================================================\n// Validate Auth — extract and validate webhook payload\n// =============================================================\n// Validates Bearer token, extracts workflowId/tenantId/triggerPayload.\n// NO Supabase calls — those are handled by native Supabase Get nodes.\n// =============================================================\n\nconst Sentry = require('@sentry/node');\n\ntry {\n  // --- Auth: validate shared secret ---\n  const expectedSecret = $env.ORCHESTRATOR_WEBHOOK_SECRET;\n  if (!expectedSecret) {\n    throw new Error('ORCHESTRATOR_WEBHOOK_SECRET not configured in n8n environment');\n  }\n\n  const webhookData = $('Webhook').first().json;\n  const authHeader = webhookData.headers?.authorization || webhookData.headers?.Authorization;\n  if (!authHeader || authHeader !== `Bearer ${expectedSecret}`) {\n    throw new Error('Unauthorized: invalid or missing Bearer token');\n  }\n\n  const { workflowId, triggerPayload, tenantId } = webhookData.body;\n\n  if (!workflowId || !tenantId) {\n    throw new Error('Missing required fields: workflowId and tenantId');\n  }\n\n  return {\n    json: {\n      workflowId,\n      tenantId,\n      triggerPayload: triggerPayload || {},\n    }\n  };\n} catch (err) {\n  Sentry.captureException(err);\n  await Sentry.flush(2000);\n  throw err;\n}\n"
       },
-      "id": "3273640f-854d-44c1-bf94-ea447efeaa9d",
+      "id": "3ed236b1-7d8b-4964-9530-b9c5725edf78",
       "name": "Validate Auth",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -2240,
-        13680
+        3216,
+        17616
       ]
     },
     {
       "parameters": {
-        "jsCode": "// =============================================================\n// Fetch and Initialize Execution\n// =============================================================\n// Fetches workflow, steps, edges from Supabase inline.\n// Then: validates, filters trigger steps, circular protection,\n// creates execution + step execution records, topological sort,\n// builds trigger context, returns sorted step list.\n// =============================================================\n\nconst Sentry = require('@sentry/node');\nconst https = require('https');\n\nconst SUPABASE_URL = $env.SUPABASE_URL;\nif (!SUPABASE_URL) throw new Error('SUPABASE_URL environment variable not configured');\nconst SUPABASE_KEY = $env.SUPABASE_SERVICE_ROLE_KEY;\n\n// ---- Supabase helper (native https, no SDK) ----\n\nasync function supabaseRequest(path, method, body) {\n  const url = `${SUPABASE_URL}/rest/v1/${path}`;\n  return new Promise((resolve, reject) => {\n    const match = url.match(/^https?:\\/\\/([^/]+)(\\/.*)$/);\n    if (!match) { reject(new Error('Invalid SUPABASE_URL')); return; }\n    const options = {\n      hostname: match[1],\n      path: match[2],\n      method: method || 'GET',\n      headers: {\n        'apikey': SUPABASE_KEY,\n        'Authorization': `Bearer ${SUPABASE_KEY}`,\n        'Content-Type': 'application/json',\n        'Prefer': method === 'POST' ? 'return=representation' : 'return=representation',\n      },\n    };\n    const req = https.request(options, (res) => {\n      let data = '';\n      res.on('data', (chunk) => data += chunk);\n      res.on('end', () => {\n        try {\n          const parsed = JSON.parse(data);\n          if (res.statusCode >= 400) {\n            reject(new Error(`Supabase ${method} ${path} returned ${res.statusCode}: ${data}`));\n          } else {\n            resolve(parsed);\n          }\n        } catch (e) {\n          reject(new Error(`Parse error for ${path}: ${data}`));\n        }\n      });\n    });\n    req.on('error', reject);\n    if (body) req.write(JSON.stringify(body));\n    req.end();\n  });\n}\n\nfunction uuid() {\n  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {\n    const r = Math.random() * 16 | 0;\n    const v = c === 'x' ? r : (r & 0x3 | 0x8);\n    return v.toString(16);\n  });\n}\n\n// ---- Topological sort (Kahn's algorithm) ----\n\nfunction topologicalSort(steps, edges) {\n  const stepMap = new Map(steps.map(s => [s.id, s]));\n  const inDegree = new Map();\n  const adjacency = new Map();\n  for (const step of steps) {\n    inDegree.set(step.id, 0);\n    adjacency.set(step.id, []);\n  }\n  for (const edge of edges) {\n    if (!stepMap.has(edge.source_step_id) || !stepMap.has(edge.target_step_id)) continue;\n    adjacency.get(edge.source_step_id).push(edge.target_step_id);\n    inDegree.set(edge.target_step_id, (inDegree.get(edge.target_step_id) || 0) + 1);\n  }\n  const queue = [];\n  for (const [id, degree] of inDegree) {\n    if (degree === 0) queue.push(id);\n  }\n  const sorted = [];\n  while (queue.length > 0) {\n    const current = queue.shift();\n    const step = stepMap.get(current);\n    if (step) sorted.push(step);\n    for (const neighbor of (adjacency.get(current) || [])) {\n      const newDeg = (inDegree.get(neighbor) || 1) - 1;\n      inDegree.set(neighbor, newDeg);\n      if (newDeg === 0) queue.push(neighbor);\n    }\n  }\n  if (sorted.length !== steps.length) {\n    throw new Error(`Workflow graph contains a cycle. Sorted ${sorted.length} of ${steps.length} steps.`);\n  }\n  return sorted;\n}\n\n// ---- Build trigger context ----\n\nfunction buildTriggerContext(triggerType, payload) {\n  const base = { trigger_type: triggerType };\n  switch (triggerType) {\n    case 'survey_submitted':\n      return { ...base, responseId: payload.responseId, surveyLinkId: payload.surveyLinkId };\n    case 'booking_created':\n      return {\n        ...base,\n        appointmentId: payload.appointmentId,\n        ...(payload.responseId && { responseId: payload.responseId }),\n        ...(payload.surveyLinkId && { surveyLinkId: payload.surveyLinkId }),\n        ...(payload.clientEmail && { clientEmail: payload.clientEmail }),\n        ...(payload.appointmentAt && { appointmentAt: payload.appointmentAt }),\n      };\n    case 'lead_scored':\n      return {\n        ...base,\n        responseId: payload.responseId,\n        overallScore: payload.score,\n        recommendation: payload.recommendation,\n        ...(payload.summary && { summary: payload.summary }),\n        ...(payload.analyzedAt && { analyzedAt: payload.analyzedAt }),\n      };\n    default:\n      return base;\n  }\n}\n\n// ---- Main logic ----\n\ntry {\n  const authData = $('Validate Auth').first().json;\n  const { workflowId, tenantId, triggerPayload } = authData;\n\n  // 1. Fetch workflow, steps, edges (parallel)\n  const [workflowRows, allSteps, edges] = await Promise.all([\n    supabaseRequest(`workflows?id=eq.${workflowId}&tenant_id=eq.${tenantId}&is_active=eq.true`, 'GET'),\n    supabaseRequest(`workflow_steps?workflow_id=eq.${workflowId}`, 'GET'),\n    supabaseRequest(`workflow_edges?workflow_id=eq.${workflowId}`, 'GET'),\n  ]);\n\n  if (!workflowRows.length) {\n    throw new Error(`Workflow ${workflowId} not found or not active for tenant ${tenantId}`);\n  }\n\n  // 2. Filter out trigger-type steps\n  const TRIGGER_TYPES = ['survey_submitted', 'booking_created', 'lead_scored', 'manual', 'scheduled'];\n  const steps = allSteps; // Keep trigger steps — they now execute via Trigger Handler\n  const executableSteps = steps.filter(s => !TRIGGER_TYPES.includes(s.step_type));\n  if (executableSteps.length === 0) {\n    throw new Error(`Workflow ${workflowId} has no executable steps`);\n  }\n\n  // 3. Circular protection\n  if (triggerPayload && triggerPayload.triggeringExecutionId) {\n    const parentExecs = await supabaseRequest(\n      `workflow_executions?id=eq.${triggerPayload.triggeringExecutionId}&limit=1`, 'GET'\n    );\n    if (parentExecs.length && parentExecs[0].triggering_execution_id) {\n      throw new Error('Circular workflow detected: max depth (1) exceeded');\n    }\n  }\n\n  // 4. Create execution record\n  const executionId = uuid();\n  const triggerType = triggerPayload?.trigger_type || 'manual';\n  await supabaseRequest('workflow_executions', 'POST', {\n    id: executionId,\n    workflow_id: workflowId,\n    tenant_id: tenantId,\n    status: 'running',\n    trigger_payload: triggerPayload || {},\n    triggering_execution_id: triggerPayload?.triggeringExecutionId || null,\n    started_at: new Date().toISOString(),\n  });\n\n  // 5. Create step execution records\n  const stepExecRecords = steps.map(step => ({\n    id: uuid(),\n    execution_id: executionId,\n    step_id: step.id,\n    status: 'pending',\n    started_at: null,\n    completed_at: null,\n    output_payload: null,\n    error_message: null,\n  }));\n  await supabaseRequest('workflow_step_executions', 'POST', stepExecRecords);\n\n  const stepExecMap = {};\n  for (const se of stepExecRecords) {\n    stepExecMap[se.step_id] = se.id;\n  }\n\n  // 6. Topological sort\n  const sortedSteps = topologicalSort(steps, edges);\n\n  // 7. Build trigger context\n  const variableContext = buildTriggerContext(triggerType, triggerPayload || {});\n\n  // 8. Initialize shared state (survives SplitInBatches iterations)\n  const state = $getWorkflowStaticData('global');\n  state.variableContext = variableContext;\n  state.skippedStepIds = [];\n  state.failed = false;\n  state.failureError = null;\n\n  // 9. Build output items for SplitInBatches\n  const items = sortedSteps.map((step, index) => ({\n    json: {\n      currentStep: step,\n      stepIndex: index,\n      totalSteps: sortedSteps.length,\n      currentStepExecId: stepExecMap[step.id],\n      executionId,\n      workflowId,\n      tenantId,\n      edges,\n      allStepExecRecords: stepExecRecords,\n    }\n  }));\n\n  Sentry.addBreadcrumb({\n    message: `Orchestrator initialized: ${sortedSteps.length} steps for workflow ${workflowId}`,\n    level: 'info',\n  });\n\n  return items;\n\n} catch (err) {\n  Sentry.captureException(err);\n  await Sentry.flush(2000);\n  throw err;\n}\n"
+        "jsCode": "// =============================================================\n// Fetch and Initialize Execution\n// =============================================================\n// Fetches workflow, steps, edges from Supabase inline.\n// Then: validates, filters trigger steps, circular protection,\n// creates execution + step execution records, topological sort,\n// builds trigger context, returns sorted step list.\n// =============================================================\n\nconst Sentry = require('@sentry/node');\nconst https = require('https');\n\nconst SUPABASE_URL = $env.SUPABASE_URL;\nif (!SUPABASE_URL) throw new Error('SUPABASE_URL environment variable not configured');\nconst SUPABASE_KEY = $env.SUPABASE_SERVICE_ROLE_KEY;\n\n// ---- Supabase helper (native https, no SDK) ----\n\nasync function supabaseRequest(path, method, body) {\n  const url = `${SUPABASE_URL}/rest/v1/${path}`;\n  return new Promise((resolve, reject) => {\n    const match = url.match(/^https?:\\/\\/([^/]+)(\\/.*)$/);\n    if (!match) { reject(new Error('Invalid SUPABASE_URL')); return; }\n    const options = {\n      hostname: match[1],\n      path: match[2],\n      method: method || 'GET',\n      headers: {\n        'apikey': SUPABASE_KEY,\n        'Authorization': `Bearer ${SUPABASE_KEY}`,\n        'Content-Type': 'application/json',\n        'Prefer': method === 'POST' ? 'return=representation' : 'return=representation',\n      },\n    };\n    const req = https.request(options, (res) => {\n      let data = '';\n      res.on('data', (chunk) => data += chunk);\n      res.on('end', () => {\n        try {\n          const parsed = JSON.parse(data);\n          if (res.statusCode >= 400) {\n            reject(new Error(`Supabase ${method} ${path} returned ${res.statusCode}: ${data}`));\n          } else {\n            resolve(parsed);\n          }\n        } catch (e) {\n          reject(new Error(`Parse error for ${path}: ${data}`));\n        }\n      });\n    });\n    req.on('error', reject);\n    if (body) req.write(JSON.stringify(body));\n    req.end();\n  });\n}\n\nfunction uuid() {\n  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {\n    const r = Math.random() * 16 | 0;\n    const v = c === 'x' ? r : (r & 0x3 | 0x8);\n    return v.toString(16);\n  });\n}\n\n// ---- Topological sort (Kahn's algorithm) ----\n\nfunction topologicalSort(steps, edges) {\n  const stepMap = new Map(steps.map(s => [s.id, s]));\n  const inDegree = new Map();\n  const adjacency = new Map();\n  for (const step of steps) {\n    inDegree.set(step.id, 0);\n    adjacency.set(step.id, []);\n  }\n  for (const edge of edges) {\n    if (!stepMap.has(edge.source_step_id) || !stepMap.has(edge.target_step_id)) continue;\n    adjacency.get(edge.source_step_id).push(edge.target_step_id);\n    inDegree.set(edge.target_step_id, (inDegree.get(edge.target_step_id) || 0) + 1);\n  }\n  const queue = [];\n  for (const [id, degree] of inDegree) {\n    if (degree === 0) queue.push(id);\n  }\n  const sorted = [];\n  while (queue.length > 0) {\n    const current = queue.shift();\n    const step = stepMap.get(current);\n    if (step) sorted.push(step);\n    for (const neighbor of (adjacency.get(current) || [])) {\n      const newDeg = (inDegree.get(neighbor) || 1) - 1;\n      inDegree.set(neighbor, newDeg);\n      if (newDeg === 0) queue.push(neighbor);\n    }\n  }\n  if (sorted.length !== steps.length) {\n    throw new Error(`Workflow graph contains a cycle. Sorted ${sorted.length} of ${steps.length} steps.`);\n  }\n  return sorted;\n}\n\n// ---- Build trigger context ----\n\nfunction buildTriggerContext(triggerType, payload) {\n  const base = { trigger_type: triggerType };\n  switch (triggerType) {\n    case 'survey_submitted':\n      return { ...base, responseId: payload.responseId, surveyLinkId: payload.surveyLinkId };\n    case 'booking_created':\n      return {\n        ...base,\n        appointmentId: payload.appointmentId,\n        ...(payload.responseId && { responseId: payload.responseId }),\n        ...(payload.surveyLinkId && { surveyLinkId: payload.surveyLinkId }),\n        ...(payload.clientEmail && { clientEmail: payload.clientEmail }),\n        ...(payload.appointmentAt && { appointmentAt: payload.appointmentAt }),\n      };\n    case 'lead_scored':\n      return {\n        ...base,\n        responseId: payload.responseId,\n        overallScore: payload.score,\n        recommendation: payload.recommendation,\n        ...(payload.summary && { summary: payload.summary }),\n        ...(payload.analyzedAt && { analyzedAt: payload.analyzedAt }),\n      };\n    default:\n      return base;\n  }\n}\n\n// ---- Main logic ----\n\ntry {\n  const authData = $('Validate Auth').first().json;\n  const { workflowId, tenantId, triggerPayload } = authData;\n\n  // 1. Fetch workflow, steps, edges (parallel)\n  const [workflowRows, allSteps, edges] = await Promise.all([\n    supabaseRequest(`workflows?id=eq.${workflowId}&tenant_id=eq.${tenantId}&is_active=eq.true`, 'GET'),\n    supabaseRequest(`workflow_steps?workflow_id=eq.${workflowId}`, 'GET'),\n    supabaseRequest(`workflow_edges?workflow_id=eq.${workflowId}`, 'GET'),\n  ]);\n\n  if (!workflowRows.length) {\n    throw new Error(`Workflow ${workflowId} not found or not active for tenant ${tenantId}`);\n  }\n\n  // 2. Filter out trigger-type steps\n  const TRIGGER_TYPES = ['survey_submitted', 'booking_created', 'lead_scored', 'manual', 'scheduled'];\n  const steps = allSteps; // Keep trigger steps — they now execute via Trigger Handler\n  const executableSteps = steps.filter(s => !TRIGGER_TYPES.includes(s.step_type));\n  if (executableSteps.length === 0) {\n    throw new Error(`Workflow ${workflowId} has no executable steps`);\n  }\n\n  // 3. Circular protection\n  if (triggerPayload && triggerPayload.triggeringExecutionId) {\n    const parentExecs = await supabaseRequest(\n      `workflow_executions?id=eq.${triggerPayload.triggeringExecutionId}&limit=1`, 'GET'\n    );\n    if (parentExecs.length && parentExecs[0].triggering_execution_id) {\n      throw new Error('Circular workflow detected: max depth (1) exceeded');\n    }\n  }\n\n  // 4. Create execution record\n  const executionId = uuid();\n  const triggerType = triggerPayload?.trigger_type || 'manual';\n  await supabaseRequest('workflow_executions', 'POST', {\n    id: executionId,\n    workflow_id: workflowId,\n    tenant_id: tenantId,\n    status: 'running',\n    trigger_payload: triggerPayload || {},\n    triggering_execution_id: triggerPayload?.triggeringExecutionId || null,\n    started_at: new Date().toISOString(),\n  });\n\n  // 5. Create step execution records\n  const stepExecRecords = steps.map(step => ({\n    id: uuid(),\n    execution_id: executionId,\n    step_id: step.id,\n    status: 'pending',\n    started_at: null,\n    completed_at: null,\n    output_payload: null,\n    error_message: null,\n  }));\n  await supabaseRequest('workflow_step_executions', 'POST', stepExecRecords);\n\n  const stepExecMap = {};\n  for (const se of stepExecRecords) {\n    stepExecMap[se.step_id] = se.id;\n  }\n\n  // 6. Topological sort\n  const sortedSteps = topologicalSort(steps, edges);\n\n  // 7. Build trigger context\n  const variableContext = buildTriggerContext(triggerType, triggerPayload || {});\n\n  // 8. Build output items for SplitInBatches\n  // NOTE: State management moved to Process step subworkflow (state[executionId] pattern)\n  const items = sortedSteps.map((step, index) => ({\n    json: {\n      currentStep: step,\n      stepIndex: index,\n      totalSteps: sortedSteps.length,\n      currentStepExecId: stepExecMap[step.id],\n      executionId,\n      workflowId,\n      tenantId,\n      edges,\n      allStepExecRecords: stepExecRecords,\n      initialVariableContext: variableContext,\n    }\n  }));\n\n  Sentry.addBreadcrumb({\n    message: `Orchestrator initialized: ${sortedSteps.length} steps for workflow ${workflowId}`,\n    level: 'info',\n  });\n\n  return items;\n\n} catch (err) {\n  Sentry.captureException(err);\n  await Sentry.flush(2000);\n  throw err;\n}\n"
       },
-      "id": "d6ce74f2-880a-40b4-8043-292eb60f4db6",
+      "id": "fa4343db-1a6c-4e99-8411-abc11b9228b5",
       "name": "Fetch and Initialize",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -2016,
-        13680
+        3440,
+        17616
       ]
     },
     {
@@ -80,13 +80,13 @@
           "responseCode": 202
         }
       },
-      "id": "1b82d4df-7527-494c-8880-67bd95fb8c52",
+      "id": "79acefe1-026e-4d10-8252-c51a4e3a8bc5",
       "name": "Respond 202 Accepted",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [
-        -1792,
-        13584
+        3664,
+        17520
       ]
     },
     {
@@ -95,449 +95,13 @@
           "reset": false
         }
       },
-      "id": "be0b7334-01ef-4930-8656-76c2485b3b8d",
+      "id": "210b8cfc-d7fc-4301-a4e1-afbbd23b71cf",
       "name": "Loop Over Steps",
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
       "position": [
-        -1792,
-        13776
-      ]
-    },
-    {
-      "parameters": {
-        "jsCode": "// =============================================================\n// Prepare Current Step — resolve variables in config\n// =============================================================\n// Reads shared state from $getWorkflowStaticData('global') which\n// persists across SplitInBatches iterations. No DB reads needed.\n// =============================================================\n\nconst Sentry = require('@sentry/node');\n\nfunction resolveVariables(template, context) {\n  if (typeof template !== 'string') return template;\n  return template.replace(/\\{\\{(\\s*[\\w.]+\\s*)\\}\\}/g, (_, rawKey) => {\n    const key = rawKey.trim();\n    const value = getNestedValue(context, key);\n    return (value !== undefined && value !== null) ? String(value) : `{{${key}}}`;\n  });\n}\n\nfunction getNestedValue(obj, path) {\n  const parts = path.split('.');\n  let current = obj;\n  for (const part of parts) {\n    if (current === null || current === undefined || typeof current !== 'object') return undefined;\n    current = current[part];\n  }\n  return current;\n}\n\nfunction resolveDeep(obj, context) {\n  if (typeof obj === 'string') return resolveVariables(obj, context);\n  if (Array.isArray(obj)) return obj.map(item => resolveDeep(item, context));\n  if (obj && typeof obj === 'object') {\n    const result = {};\n    for (const [key, value] of Object.entries(obj)) {\n      result[key] = resolveDeep(value, context);\n    }\n    return result;\n  }\n  return obj;\n}\n\ntry {\n  const item = $input.first().json;\n  const state = $getWorkflowStaticData('global');\n  const { currentStep } = item;\n\n  // Read shared state (survives SplitInBatches iteration resets)\n  if (state.failed) {\n    return { json: { ...item, failed: true } };\n  }\n\n  if ((state.skippedStepIds || []).includes(currentStep.id)) {\n    Sentry.addBreadcrumb({\n      message: `Step ${item.stepIndex + 1}/${item.totalSteps}: ${currentStep.step_type} (${currentStep.id}) SKIPPED by condition branch`,\n      level: 'info',\n    });\n    return {\n      json: {\n        ...item,\n        resolvedConfig: currentStep.step_config,\n        stepType: '__skipped__',\n        stepResult: { success: true, outputPayload: { skipped: true } },\n        alreadyPersisted: true,\n      }\n    };\n  }\n\n  // Use variableContext from shared state (accumulated across iterations)\n  const variableContext = state.variableContext || {};\n  const resolvedConfig = resolveDeep(currentStep.step_config, variableContext);\n\n  Sentry.addBreadcrumb({\n    message: `Step ${item.stepIndex + 1}/${item.totalSteps}: ${currentStep.step_type} (${currentStep.name || currentStep.id})`,\n    level: 'info',\n  });\n\n  return {\n    json: {\n      ...item,\n      variableContext,\n      resolvedConfig,\n      stepType: currentStep.step_type,\n    }\n  };\n} catch (err) {\n  Sentry.captureException(err);\n  await Sentry.flush(2000);\n  throw err;\n}\n"
-      },
-      "id": "e52eeecc-7d44-43da-9e2b-86a325f0a01c",
-      "name": "Prepare Current Step",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -1568,
-        12768
-      ]
-    },
-    {
-      "parameters": {
-        "operation": "update",
-        "tableId": "workflow_step_executions",
-        "filters": {
-          "conditions": [
-            {
-              "keyName": "id",
-              "condition": "eq",
-              "keyValue": "={{ $json.currentStepExecId }}"
-            }
-          ]
-        },
-        "fieldsUi": {
-          "fieldValues": [
-            {
-              "fieldId": "status",
-              "fieldValue": "running"
-            },
-            {
-              "fieldId": "started_at",
-              "fieldValue": "={{ new Date().toISOString() }}"
-            }
-          ]
-        }
-      },
-      "id": "a24ca136-fefb-41f3-9a6e-8e2306b67d07",
-      "name": "Mark Step Running",
-      "type": "n8n-nodes-base.supabase",
-      "typeVersion": 1,
-      "position": [
-        -1344,
-        12608
-      ],
-      "credentials": {
-        "supabaseApi": {
-          "id": "f048XNg2A6zhwlWZ",
-          "name": "Supabase account"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "rules": {
-          "values": [
-            {
-              "conditions": {
-                "options": {
-                  "caseSensitive": true,
-                  "leftValue": "",
-                  "typeValidation": "strict",
-                  "version": 2
-                },
-                "conditions": [
-                  {
-                    "leftValue": "={{ $json.failed }}",
-                    "rightValue": "={{ true }}",
-                    "operator": {
-                      "type": "boolean",
-                      "operation": "equals"
-                    },
-                    "id": "sw-cond-failed"
-                  }
-                ],
-                "combinator": "and"
-              }
-            },
-            {
-              "conditions": {
-                "options": {
-                  "caseSensitive": true,
-                  "leftValue": "",
-                  "typeValidation": "strict",
-                  "version": 2
-                },
-                "conditions": [
-                  {
-                    "leftValue": "={{ $json.stepType }}",
-                    "rightValue": "__skipped__",
-                    "operator": {
-                      "type": "string",
-                      "operation": "equals"
-                    },
-                    "id": "sw-cond-skipped"
-                  }
-                ],
-                "combinator": "and"
-              }
-            },
-            {
-              "conditions": {
-                "options": {
-                  "caseSensitive": true,
-                  "leftValue": "",
-                  "typeValidation": "strict",
-                  "version": 2
-                },
-                "conditions": [
-                  {
-                    "leftValue": "={{ $json.stepType }}",
-                    "rightValue": "send_email",
-                    "operator": {
-                      "type": "string",
-                      "operation": "equals"
-                    },
-                    "id": "sw-cond-send_email"
-                  }
-                ],
-                "combinator": "and"
-              }
-            },
-            {
-              "conditions": {
-                "options": {
-                  "caseSensitive": true,
-                  "leftValue": "",
-                  "typeValidation": "strict",
-                  "version": 2
-                },
-                "conditions": [
-                  {
-                    "leftValue": "={{ $json.stepType }}",
-                    "rightValue": "ai_action",
-                    "operator": {
-                      "type": "string",
-                      "operation": "equals"
-                    },
-                    "id": "sw-cond-ai_action"
-                  }
-                ],
-                "combinator": "and"
-              }
-            },
-            {
-              "conditions": {
-                "options": {
-                  "caseSensitive": true,
-                  "leftValue": "",
-                  "typeValidation": "strict",
-                  "version": 2
-                },
-                "conditions": [
-                  {
-                    "leftValue": "={{ $json.stepType }}",
-                    "rightValue": "webhook",
-                    "operator": {
-                      "type": "string",
-                      "operation": "equals"
-                    },
-                    "id": "sw-cond-webhook"
-                  }
-                ],
-                "combinator": "and"
-              }
-            },
-            {
-              "conditions": {
-                "options": {
-                  "caseSensitive": true,
-                  "leftValue": "",
-                  "typeValidation": "strict",
-                  "version": 2
-                },
-                "conditions": [
-                  {
-                    "leftValue": "={{ $json.stepType }}",
-                    "rightValue": "condition",
-                    "operator": {
-                      "type": "string",
-                      "operation": "equals"
-                    },
-                    "id": "sw-cond-condition"
-                  }
-                ],
-                "combinator": "and"
-              }
-            },
-            {
-              "conditions": {
-                "options": {
-                  "caseSensitive": true,
-                  "leftValue": "",
-                  "typeValidation": "strict",
-                  "version": 2
-                },
-                "conditions": [
-                  {
-                    "leftValue": "={{ $json.stepType }}",
-                    "rightValue": "delay",
-                    "operator": {
-                      "type": "string",
-                      "operation": "equals"
-                    },
-                    "id": "sw-cond-delay"
-                  }
-                ],
-                "combinator": "and"
-              }
-            },
-            {
-              "conditions": {
-                "options": {
-                  "caseSensitive": true,
-                  "leftValue": "",
-                  "typeValidation": "strict",
-                  "version": 2
-                },
-                "conditions": [
-                  {
-                    "leftValue": "={{ $json.stepType }}",
-                    "rightValue": "survey_submitted",
-                    "operator": {
-                      "type": "string",
-                      "operation": "equals"
-                    },
-                    "id": "sw-cond-trigger-survey_submitted"
-                  },
-                  {
-                    "leftValue": "={{ $json.stepType }}",
-                    "rightValue": "booking_created",
-                    "operator": {
-                      "type": "string",
-                      "operation": "equals"
-                    },
-                    "id": "sw-cond-trigger-booking_created"
-                  },
-                  {
-                    "leftValue": "={{ $json.stepType }}",
-                    "rightValue": "lead_scored",
-                    "operator": {
-                      "type": "string",
-                      "operation": "equals"
-                    },
-                    "id": "sw-cond-trigger-lead_scored"
-                  },
-                  {
-                    "leftValue": "={{ $json.stepType }}",
-                    "rightValue": "manual",
-                    "operator": {
-                      "type": "string",
-                      "operation": "equals"
-                    },
-                    "id": "sw-cond-trigger-manual"
-                  },
-                  {
-                    "leftValue": "={{ $json.stepType }}",
-                    "rightValue": "scheduled",
-                    "operator": {
-                      "type": "string",
-                      "operation": "equals"
-                    },
-                    "id": "sw-cond-trigger-scheduled"
-                  }
-                ],
-                "combinator": "or"
-              }
-            }
-          ]
-        },
-        "options": {
-          "fallbackOutput": "extra"
-        }
-      },
-      "id": "a4422d81-083b-4c16-a241-b583bf4bb5cd",
-      "name": "Route by Step Type",
-      "type": "n8n-nodes-base.switch",
-      "typeVersion": 3.2,
-      "position": [
-        -1344,
-        12800
-      ]
-    },
-    {
-      "parameters": {
-        "workflowId": {
-          "__rl": true,
-          "value": "GzqdOgElGDMW8lCI",
-          "mode": "list",
-          "cachedResultUrl": "/workflow/GzqdOgElGDMW8lCI",
-          "cachedResultName": "Step - Send Email Handler"
-        },
-        "workflowInputs": {
-          "mappingMode": "autoMapInputData",
-          "attemptToConvertTypes": false,
-          "convertFieldsToString": false
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.executeWorkflow",
-      "typeVersion": 1.3,
-      "position": [
-        -1120,
-        12336
-      ],
-      "id": "6e95a65d-ed13-4c6f-ba99-d5b25217d3be",
-      "name": "Call Send Email Handler"
-    },
-    {
-      "parameters": {
-        "workflowId": {
-          "__rl": true,
-          "value": "JFbhvbYqFSit2PfR",
-          "mode": "list",
-          "cachedResultUrl": "/workflow/JFbhvbYqFSit2PfR",
-          "cachedResultName": "Step - AI Action Handler"
-        },
-        "workflowInputs": {
-          "mappingMode": "autoMapInputData",
-          "attemptToConvertTypes": false,
-          "convertFieldsToString": false
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.executeWorkflow",
-      "typeVersion": 1.3,
-      "position": [
-        -1120,
-        12528
-      ],
-      "id": "cd6c7c9d-1e10-498b-90d3-9ecccb07a802",
-      "name": "Call AI Action Handler"
-    },
-    {
-      "parameters": {
-        "workflowId": {
-          "__rl": true,
-          "value": "AO4IeIFV3w6X1EaC",
-          "mode": "list",
-          "cachedResultUrl": "/workflow/AO4IeIFV3w6X1EaC",
-          "cachedResultName": "Step - Webhook Handler"
-        },
-        "workflowInputs": {
-          "mappingMode": "autoMapInputData",
-          "attemptToConvertTypes": false,
-          "convertFieldsToString": false
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.executeWorkflow",
-      "typeVersion": 1.3,
-      "position": [
-        -1120,
-        12720
-      ],
-      "id": "74926efd-101e-4f12-bcbc-0bdf6ab361ad",
-      "name": "Call Webhook Handler"
-    },
-    {
-      "parameters": {
-        "workflowId": {
-          "__rl": true,
-          "value": "NHDn17UtUlbQj3m5",
-          "mode": "list",
-          "cachedResultUrl": "/workflow/NHDn17UtUlbQj3m5",
-          "cachedResultName": "Step - Condition Handler"
-        },
-        "workflowInputs": {
-          "mappingMode": "autoMapInputData",
-          "attemptToConvertTypes": false,
-          "convertFieldsToString": false
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.executeWorkflow",
-      "typeVersion": 1.3,
-      "position": [
-        -1120,
-        12912
-      ],
-      "id": "37b379bf-0c67-4069-9b6f-6e4c3577c7b3",
-      "name": "Call Condition Handler"
-    },
-    {
-      "parameters": {
-        "workflowId": {
-          "__rl": true,
-          "value": "EPhZj3Dru3pAU9RU",
-          "mode": "list",
-          "cachedResultUrl": "/workflow/EPhZj3Dru3pAU9RU",
-          "cachedResultName": "Step - Delay Handler"
-        },
-        "workflowInputs": {
-          "mappingMode": "autoMapInputData",
-          "attemptToConvertTypes": false,
-          "convertFieldsToString": false
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.executeWorkflow",
-      "typeVersion": 1.3,
-      "position": [
-        -1120,
-        13104
-      ],
-      "id": "3413c90b-efe5-4f78-8b89-b6293f6279de",
-      "name": "Call Delay Handler"
-    },
-    {
-      "parameters": {
-        "jsCode": "// Unknown step type handler\nconst item = $input.first().json;\nreturn {\n  json: {\n    ...item,\n    stepResult: {\n      success: false,\n      error: `Unknown step type: ${item.stepType}`,\n    },\n  }\n};\n"
-      },
-      "id": "45084c1b-a759-48bc-9c11-fa6cb6dd9b2e",
-      "name": "Unknown Type Handler",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -1120,
-        13328
-      ]
-    },
-    {
-      "parameters": {
-        "jsCode": "// =============================================================\n// Process Step Result — merge context, handle failure/skipping\n// =============================================================\n// Writes accumulated state to $getWorkflowStaticData('global')\n// so it persists across SplitInBatches iterations.\n// =============================================================\n\nconst Sentry = require('@sentry/node');\n\ntry {\n  const item = $input.first().json;\n  const state = $getWorkflowStaticData('global');\n  const { currentStep } = item;\n\n  // If already in failed passthrough mode, just return\n  if (item.failed || state.failed) {\n    return { json: item };\n  }\n\n  // Get step result from subworkflow output\n  let stepResult = item.stepResult;\n  if (!stepResult) {\n    stepResult = { success: false, error: 'No step result produced' };\n  }\n\n  // Merge output into shared variableContext\n  if (stepResult.success && stepResult.outputPayload) {\n    Object.assign(state.variableContext, stepResult.outputPayload);\n  }\n\n  // Accumulate skipped step IDs from condition branching\n  const newSkipped = item.skippedStepIds || [];\n  if (newSkipped.length > 0) {\n    state.skippedStepIds = [...(state.skippedStepIds || []), ...newSkipped];\n  }\n\n  // Prepare DB update fields\n  const now = new Date().toISOString();\n  const alreadyPersisted = item.alreadyPersisted || stepResult.alreadyPersisted || false;\n\n  // If step failed: signal to skip remaining steps\n  if (!stepResult.success) {\n    state.failed = true;\n    state.failureError = stepResult.error;\n\n    Sentry.captureException(new Error(`Step failed: ${currentStep.step_type} — ${stepResult.error}`));\n    await Sentry.flush(2000);\n\n    return {\n      json: {\n        ...item,\n        variableContext: state.variableContext,\n        failed: true,\n        failureError: stepResult.error,\n        dbStatus: 'failed',\n        dbCompletedAt: now,\n        dbErrorMessage: stepResult.error || 'Unknown error',\n        dbOutputPayload: null,\n        alreadyPersisted,\n        skippedStepIds: newSkipped,\n      }\n    };\n  }\n\n  return {\n    json: {\n      ...item,\n      variableContext: state.variableContext,\n      stepResult: null,\n      dbStatus: 'completed',\n      dbCompletedAt: now,\n      dbOutputPayload: JSON.stringify(stepResult.outputPayload || {}),\n      dbErrorMessage: null,\n      alreadyPersisted,\n      skippedStepIds: newSkipped,\n    }\n  };\n\n} catch (err) {\n  Sentry.captureException(err);\n  await Sentry.flush(2000);\n  throw err;\n}\n"
-      },
-      "id": "ad7ecc74-b1ac-4a87-8518-8927f1424afa",
-      "name": "Process Step Result",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -896,
-        13104
+        3664,
+        17712
       ]
     },
     {
@@ -572,13 +136,13 @@
           "fallbackOutput": "extra"
         }
       },
-      "id": "2db7f9c0-e107-4a49-89f5-bd16fa27d894",
+      "id": "b71e2f67-9b2a-45ce-a74f-19b7fd865d80",
       "name": "Persist Gate",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.2,
       "position": [
-        -672,
-        13104
+        4112,
+        17760
       ]
     },
     {
@@ -615,13 +179,13 @@
           ]
         }
       },
-      "id": "7e589b35-ac9e-4127-af0c-7e04a413e429",
+      "id": "c048d6a7-b845-4f1c-a602-9484eebc196b",
       "name": "Update Step Execution",
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        -448,
-        13056
+        4336,
+        17664
       ],
       "credentials": {
         "supabaseApi": {
@@ -634,13 +198,13 @@
       "parameters": {
         "jsCode": "// =============================================================\n// Handle Skipped Steps + Mark Failed Execution\n// =============================================================\n// Reads skippedStepIds from shared state + item. Batch-PATCHes\n// skipped step executions in DB. Marks execution failed if needed.\n// =============================================================\n\nconst https = require('https');\n\nconst SUPABASE_URL = $env.SUPABASE_URL;\nif (!SUPABASE_URL) throw new Error('SUPABASE_URL environment variable not configured');\nconst SUPABASE_KEY = $env.SUPABASE_SERVICE_ROLE_KEY;\n\nasync function supabasePatch(path, body) {\n  const url = `${SUPABASE_URL}/rest/v1/${path}`;\n  return new Promise((resolve, reject) => {\n    const match = url.match(/^https?:\\/\\/([^/]+)(\\/.*)$/);\n    if (!match) { reject(new Error('Invalid SUPABASE_URL')); return; }\n    const options = {\n      hostname: match[1],\n      path: match[2],\n      method: 'PATCH',\n      headers: {\n        'apikey': SUPABASE_KEY,\n        'Authorization': `Bearer ${SUPABASE_KEY}`,\n        'Content-Type': 'application/json',\n        'Prefer': 'return=representation',\n      },\n    };\n    const req = https.request(options, (res) => {\n      let data = '';\n      res.on('data', (chunk) => data += chunk);\n      res.on('end', () => {\n        if (res.statusCode >= 400) {\n          reject(new Error(`Supabase PATCH ${path}: ${res.statusCode} ${data}`));\n        } else {\n          resolve(data ? JSON.parse(data) : null);\n        }\n      });\n    });\n    req.on('error', reject);\n    req.write(JSON.stringify(body));\n    req.end();\n  });\n}\n\ntry {\n  const item = $input.first().json;\n  const now = new Date().toISOString();\n\n  // Handle skipped steps from condition branching (from current iteration's item)\n  const skippedStepIds = item.skippedStepIds || [];\n  if (skippedStepIds.length > 0) {\n    const allStepExecs = item.allStepExecRecords || [];\n    for (const skipStepId of skippedStepIds) {\n      const skipExec = allStepExecs.find(se => se.step_id === skipStepId);\n      if (skipExec) {\n        await supabasePatch(\n          `workflow_step_executions?id=eq.${skipExec.id}`,\n          { status: 'skipped', completed_at: now }\n        );\n      }\n    }\n  }\n\n  // If step failed, mark execution as failed\n  if (item.failed) {\n    await supabasePatch(\n      `workflow_executions?id=eq.${item.executionId}`,\n      { status: 'failed', completed_at: now, error_message: item.failureError }\n    );\n  }\n\n  // Clean up transient fields before looping back\n  return {\n    json: {\n      ...item,\n      stepResult: null,\n      skippedStepIds: null,\n      dbStatus: undefined,\n      dbCompletedAt: undefined,\n      dbOutputPayload: undefined,\n      dbErrorMessage: undefined,\n      alreadyPersisted: undefined,\n    }\n  };\n} catch (err) {\n  throw err;\n}\n"
       },
-      "id": "8010aac3-94dc-4edb-86ca-eb819743377b",
+      "id": "05b5ab0c-b889-4c08-af51-b637ea683ad2",
       "name": "Handle Skipped and Failed",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -448,
-        13920
+        4336,
+        17904
       ]
     },
     {
@@ -669,13 +233,13 @@
           ]
         }
       },
-      "id": "650fab0d-2061-479c-aa27-ce277f9b334a",
+      "id": "40fe9577-1db1-4aed-828c-dcbbaba97383",
       "name": "Mark Execution Complete",
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        -1120,
-        13776
+        4336,
+        17472
       ],
       "credentials": {
         "supabaseApi": {
@@ -688,13 +252,13 @@
       "parameters": {
         "jsCode": "// Check if execution was already marked failed — skip completion\nconst items = $input.all();\nconst lastItem = items[items.length - 1].json;\n\nif (lastItem.failed) {\n  // Already marked failed in Handle Skipped and Failed node\n  return { json: { executionId: lastItem.executionId, status: 'failed', skipCompletion: true } };\n}\n\nreturn { json: { executionId: lastItem.executionId, status: 'completed', skipCompletion: false } };\n"
       },
-      "id": "d71e2c81-cf1f-48d9-ac0c-295369724260",
+      "id": "21ebd596-88cc-4eba-b3f9-8d24d0051bff",
       "name": "Check Final Status",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -1568,
-        13776
+        3888,
+        17472
       ]
     },
     {
@@ -729,23 +293,23 @@
           "fallbackOutput": "extra"
         }
       },
-      "id": "b2f7e339-d400-4a64-b22d-ed7b08c876ab",
+      "id": "3ec9487f-b46d-4dbf-baf2-84682c1779ab",
       "name": "Completion Gate",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.2,
       "position": [
-        -1344,
-        13776
+        4112,
+        17472
       ]
     },
     {
       "parameters": {
         "workflowId": {
           "__rl": true,
-          "value": "156WunKSQ2vT9tLz",
+          "value": "RWzILX8sZPGkfl1m",
           "mode": "list",
-          "cachedResultUrl": "/workflow/156WunKSQ2vT9tLz",
-          "cachedResultName": "Step - Trigger Handler"
+          "cachedResultUrl": "/workflow/RWzILX8sZPGkfl1m",
+          "cachedResultName": "Process step"
         },
         "workflowInputs": {
           "mappingMode": "autoMapInputData",
@@ -757,24 +321,11 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.3,
       "position": [
-        -1120,
-        12144
+        3888,
+        17760
       ],
-      "id": "c354ebac-90bf-4876-9f1f-cabfa055d03c",
-      "name": "Call Trigger Handler"
-    },
-    {
-      "parameters": {
-        "jsCode": "// Failed passthrough — just forward the item\nconst item = $input.first().json;\nreturn { json: item };\n"
-      },
-      "id": "aabb1122-skip-step-node-0001",
-      "name": "Skip Step",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -2784,
-        11200
-      ]
+      "name": "Call Process step",
+      "id": "a351100f-3f5e-4c86-83f6-45396c9c6bc6"
     }
   ],
   "pinData": {
@@ -879,167 +430,7 @@
         ],
         [
           {
-            "node": "Prepare Current Step",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Prepare Current Step": {
-      "main": [
-        [
-          {
-            "node": "Mark Step Running",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Route by Step Type",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Route by Step Type": {
-      "main": [
-        [
-          {
-            "node": "Skip Step",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Process Step Result",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Call Send Email Handler",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Call AI Action Handler",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Call Webhook Handler",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Call Condition Handler",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Call Delay Handler",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Call Trigger Handler",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Unknown Type Handler",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Call Send Email Handler": {
-      "main": [
-        [
-          {
-            "node": "Process Step Result",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Call AI Action Handler": {
-      "main": [
-        [
-          {
-            "node": "Process Step Result",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Call Webhook Handler": {
-      "main": [
-        [
-          {
-            "node": "Process Step Result",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Call Condition Handler": {
-      "main": [
-        [
-          {
-            "node": "Process Step Result",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Call Delay Handler": {
-      "main": [
-        [
-          {
-            "node": "Process Step Result",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Unknown Type Handler": {
-      "main": [
-        [
-          {
-            "node": "Process Step Result",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Process Step Result": {
-      "main": [
-        [
-          {
-            "node": "Persist Gate",
+            "node": "Call Process step",
             "type": "main",
             "index": 0
           }
@@ -1103,22 +494,11 @@
         ]
       ]
     },
-    "Call Trigger Handler": {
+    "Call Process step": {
       "main": [
         [
           {
-            "node": "Process Step Result",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Skip Step": {
-      "main": [
-        [
-          {
-            "node": "Process Step Result",
+            "node": "Persist Gate",
             "type": "main",
             "index": 0
           }
@@ -1135,7 +515,7 @@
     "callerPolicy": "workflowsFromSameOwner",
     "availableInMCP": false
   },
-  "versionId": "3e6aa589-d782-48fe-a1f4-7799d2819960",
+  "versionId": "a493905f-f6e0-4948-9bdb-d644e1827f83",
   "meta": {
     "instanceId": "b46d0b13d69880a2fec430102877b55af4e44991549a68a3e78cd50a4dc1a09e"
   },

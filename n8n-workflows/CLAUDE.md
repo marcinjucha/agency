@@ -39,13 +39,21 @@ Code nodes run in sandboxed VM. Missing globals:
 
 Each iteration gets a **fresh original item** from the input queue. State accumulated in iteration N is lost at N+1. Fix: `$getWorkflowStaticData('global')` persists across iterations. Orchestrator uses this for variableContext, skippedStepIds, failed flag.
 
+### `$getWorkflowStaticData('global')` Is Per Workflow ID, Not Per Execution
+
+staticData is scoped to the **workflow ID**, not the execution. Moving a Code node that reads/writes staticData from Orchestrator to a subworkflow silently changes which bucket it reads from (different workflow = different staticData). Caused P0 bug during Process Step subworkflow extraction — state written in main workflow was invisible to subworkflow. Fix: pass state explicitly via item data to subworkflows, use `state[executionId]` dictionary pattern for concurrent execution isolation.
+
+### Set Node v3.4 Defaults to REPLACE (Not Merge)
+
+Set node strips ALL fields not explicitly assigned. Looks like "add these fields" but actually means "replace everything with only these fields". Pipeline data silently lost. Fix: never use Set for passthrough — use Code node with `return $input.all()` and modify fields in-place, or use Set with mode "Combine > Merge".
+
 ### executeWorkflow Replaces Caller Data
 
 `executeWorkflow` output completely replaces the caller's item. Every handler MUST return `{ json: { ...item, stepResult } }` to preserve orchestrator context.
 
 ### executeWorkflow Config Matters
 
-- `mappingMode: "autoMapInputData"` — sends full pipeline data. **NOT `defineBelow` with empty value** (sends nothing when `convertFieldsToString: false`)
+- `mappingMode: "autoMapInputData"` — sends full pipeline data. **NOT `defineBelow` with empty value** (sends nothing when `convertFieldsToString: false`). When `convertFieldsToString: true`, it masks the empty-value bug by sending garbage stringified data instead of nothing.
 - `convertFieldsToString: false` — preserves objects. When `true`, `resolvedConfig: {prompt: "..."}` becomes `"[object Object]"`
 
 ## Critical Mistakes We Made
@@ -72,7 +80,7 @@ Prepare Current Step resolves `{{overallScore}}` → `7` before condition handle
 
 ### JSONB Double-Encode
 
-`supabaseRequest()` does `req.write(JSON.stringify(body))`. If `output_payload` is already `JSON.stringify()`'d, PostgREST stores string-in-string. Fix: pass objects directly.
+`supabaseRequest()` does `req.write(JSON.stringify(body))`. If `output_payload` is already `JSON.stringify()`'d, PostgREST stores string-in-string. PostgREST handles JSONB natively — never `JSON.stringify()` values going into JSONB columns. Fix: pass objects directly.
 
 ## MiniMax Agent Subworkflow
 
@@ -88,11 +96,13 @@ Reusable Claude API wrapper (workflow ID: `xaU50vf4eiNTeqSf`). Any workflow need
 
 **File:** `n8n-workflows/workflows/Workflows/Workflow Orchestrator.json`
 
-Receives `{ workflowId, tenantId, triggerPayload }` from CMS → fetches definition from Supabase → topological sort → SplitInBatches loop → dispatches each step to handler subworkflow → writes state directly to Supabase.
+Receives `{ workflowId, tenantId, triggerPayload }` from CMS → fetches definition from Supabase → topological sort → SplitInBatches loop → dispatches each step to **Workflow Process Step** subworkflow → writes state directly to Supabase.
 
-**State management:** `$getWorkflowStaticData('global')` — initialized in Fetch and Initialize, read in Prepare Current Step, written in Process Step Result.
+**Two-workflow architecture:** Orchestrator handles sequencing (SplitInBatches loop, state initialization, step preparation). Process Step subworkflow (`RWzILX8sZPGkfl1m`) handles routing by step type and dispatching to individual handlers. Extracted to keep Orchestrator focused and reduce node count.
 
-**Route by Step Type:** 9 outputs — failed(0), __skipped__(1), send_email(2), ai_action(3), webhook(4), condition(5), delay(6), trigger_types(7, OR), fallback(8).
+**State management:** `$getWorkflowStaticData('global')` in Orchestrator — initialized in Fetch and Initialize, read in Prepare Current Step. State is passed to Process Step subworkflow via item data (staticData doesn't cross workflow boundaries). Process Step Result writes back via item return, Orchestrator persists to staticData. Uses `state[executionId]` dictionary pattern for concurrent execution isolation.
+
+**Route by Step Type** (in Process Step subworkflow): 9 outputs — failed(0), __skipped__(1), send_email(2), ai_action(3), webhook(4), condition(5), delay(6), trigger_types(7, OR), fallback(8).
 
 **Trigger steps as real steps:** Not filtered out. Execute via Trigger Handler which fetches real data from Supabase (survey answers, appointments).
 
@@ -136,6 +146,7 @@ n8n serializes execution state, so Wait inside SplitInBatches works. Useful for 
 | Cost | ~$0.0008/analysis |
 | Queue | Redis (`EXECUTIONS_MODE=queue`) |
 | Error tracking | GlitchTip (Sentry-compatible) |
+| Process Step subworkflow | ID: `RWzILX8sZPGkfl1m` |
 | Workflow files | `n8n-workflows/workflows/Workflows/` (engine) |
 | Marketplace files | `n8n-workflows/workflows/Marketplace/` (standalone) |
 
