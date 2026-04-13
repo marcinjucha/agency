@@ -24,7 +24,12 @@ export type OutputSchemaField = {
 
 export type StepDefinition<TId extends string> = {
   id: TId
-  label: string
+  /**
+   * Key into messages.workflows — e.g. 'stepSendEmail'.
+   * Consumers resolve via messages.workflows[labelKey] or utils/step-labels.ts.
+   * Registry stays zero-dependency (no messages.ts import).
+   */
+  labelKey: string
   /** Lucide icon key — consumer maps string to LucideIcon component */
   icon: string
   borderColor: string
@@ -48,7 +53,7 @@ export function defineStep<TId extends string>(
 
 const SEND_EMAIL_STEP = defineStep({
   id: 'send_email' as const,
-  label: 'Wyślij email',
+  labelKey: 'stepSendEmail',
   icon: 'Mail',
   borderColor: 'border-l-4 border-l-blue-400',
   category: 'actions',
@@ -62,7 +67,7 @@ const SEND_EMAIL_STEP = defineStep({
 
 const AI_ACTION_STEP = defineStep({
   id: 'ai_action' as const,
-  label: 'Akcja AI',
+  labelKey: 'stepAiAction',
   icon: 'Sparkles',
   borderColor: 'border-l-4 border-l-blue-400',
   category: 'ai',
@@ -77,7 +82,7 @@ const AI_ACTION_STEP = defineStep({
 
 const CONDITION_STEP = defineStep({
   id: 'condition' as const,
-  label: 'Warunek',
+  labelKey: 'stepCondition',
   icon: 'GitBranch',
   borderColor: 'border-l-4 border-l-amber-400',
   category: 'logic',
@@ -90,7 +95,7 @@ const CONDITION_STEP = defineStep({
 
 const DELAY_STEP = defineStep({
   id: 'delay' as const,
-  label: 'Opóźnienie',
+  labelKey: 'stepDelay',
   icon: 'Clock',
   borderColor: 'border-l-4 border-l-muted-foreground',
   category: 'logic',
@@ -101,7 +106,7 @@ const DELAY_STEP = defineStep({
 
 const WEBHOOK_STEP = defineStep({
   id: 'webhook' as const,
-  label: 'Webhook',
+  labelKey: 'stepWebhook',
   icon: 'Globe',
   borderColor: 'border-l-4 border-l-blue-400',
   category: 'actions',
@@ -133,11 +138,15 @@ export const STEP_MAP = Object.fromEntries(
   STEP_REGISTRY.map((s) => [s.id, s])
 ) as Record<StepType, (typeof STEP_REGISTRY)[number]>
 
-// --- Derived Records (backward compatibility z istniejącymi konsumentami) ---
+// --- Derived Records ---
 
-/** Derived labels — single source of truth, re-eksportowane przez types.ts i engine/utils.ts */
-export const STEP_TYPE_LABELS: Record<StepType, string> = Object.fromEntries(
-  STEP_REGISTRY.map((s) => [s.id, s.label])
+/**
+ * Derived label keys — maps StepType → messages.workflows key (e.g. 'stepSendEmail').
+ * Consumers resolve to Polish strings via messages.workflows[key] or utils/step-labels.ts.
+ * Registry stays zero-dependency: no messages import here.
+ */
+export const STEP_TYPE_LABEL_KEYS: Record<StepType, string> = Object.fromEntries(
+  STEP_REGISTRY.map((s) => [s.id, s.labelKey])
 ) as Record<StepType, string>
 
 /** Derived output schemas — single source of truth, re-eksportowane przez types.ts i engine/utils.ts */

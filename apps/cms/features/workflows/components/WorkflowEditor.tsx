@@ -11,7 +11,6 @@ import { WorkflowEditorHeader } from './WorkflowEditorHeader'
 import type { WorkflowCanvasHandle, CanvasNodeData, CanvasEdgeData } from './WorkflowCanvas'
 import {
   TRIGGER_TYPE_LABELS,
-  STEP_TYPE_LABELS,
   type WorkflowWithSteps,
   type TriggerType,
   type StepType,
@@ -23,6 +22,7 @@ import type { ConfigPanelProps } from './panels'
 import { StepLibraryPanel } from './StepLibraryPanel'
 import { TestModePanel } from './TestModePanel'
 import { collectAvailableVariables } from '../engine/utils'
+import { getStepTypeLabel } from '../utils/step-labels'
 
 const WorkflowCanvas = dynamic(() => import('./WorkflowCanvas'), {
   ssr: false,
@@ -54,7 +54,7 @@ function getLabel(stepType: string): string {
   if (isTriggerType(stepType)) {
     return TRIGGER_TYPE_LABELS[stepType as TriggerType] ?? stepType
   }
-  return STEP_TYPE_LABELS[stepType as StepType] ?? stepType
+  return getStepTypeLabel(stepType as StepType)
 }
 
 interface WorkflowEditorProps {
@@ -262,7 +262,7 @@ export function WorkflowEditor({ workflow }: WorkflowEditorProps) {
       target_step_id: e.target,
     }))
 
-    return collectAvailableVariables(selectedNode.id, steps, edgeList, workflow.trigger_type)
+    return collectAvailableVariables(selectedNode.id, steps, edgeList, workflow.trigger_type, getStepTypeLabel)
   }, [selectedNode, workflow.trigger_type, isDirty])
 
   const PanelComponent = selectedNode ? getPanelComponent(selectedNode.stepType) : null

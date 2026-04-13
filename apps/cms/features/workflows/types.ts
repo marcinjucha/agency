@@ -6,7 +6,8 @@ import type { StepType, OutputSchemaField } from './step-registry'
 // --- Re-exports from step-registry (single source of truth) ---
 
 export type { StepType, OutputSchemaField } from './step-registry'
-export { STEP_OUTPUT_SCHEMAS, STEP_TYPE_LABELS } from './step-registry'
+export { STEP_OUTPUT_SCHEMAS } from './step-registry'
+export { STEP_TYPE_LABELS } from './utils/step-labels'
 
 // --- Enums ---
 
@@ -228,7 +229,7 @@ export const TRIGGER_TYPE_OPTIONS = Object.entries(TRIGGER_TYPE_LABELS).map(
 )
 
 export const STEP_TYPE_OPTIONS = STEP_REGISTRY.map(
-  (s) => ({ value: s.id, label: s.label })
+  (s) => ({ value: s.id, label: STEP_TYPE_LABELS[s.id as StepType] })
 )
 
 // --- Config panel types ---

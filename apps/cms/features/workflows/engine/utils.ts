@@ -1,6 +1,6 @@
 import type { WorkflowStep, WorkflowEdge } from '../types'
 import type { OutputSchemaField, StepType } from '../step-registry'
-import { STEP_OUTPUT_SCHEMAS, STEP_TYPE_LABELS } from '../step-registry'
+import { STEP_OUTPUT_SCHEMAS, STEP_TYPE_LABEL_KEYS } from '../step-registry'
 import type { TriggerPayload, VariableContext } from './types'
 import { isTriggerType } from './types'
 import { getTriggerVariables } from '@/lib/trigger-schemas'
@@ -95,11 +95,18 @@ export function topologicalSort(
  * Collects all variables available to a given step by walking backward through edges.
  * Returns VariableItem[] with category set to source name (e.g., "Trigger", "Krok 1: Wyślij email").
  */
+/**
+ * Optional resolver for step type labels.
+ * UI callers (WorkflowEditor) pass getStepTypeLabel from utils/step-labels.ts.
+ * Test callers and engine/utils.ts (zero-dep) omit it — falls back to labelKey (machine string).
+ * WHY: engine/utils.ts must stay zero-dependency (no messages.ts import).
+ */
 export function collectAvailableVariables(
   stepId: string,
   steps: Array<{ id: string; step_type: string; step_config: Record<string, unknown> }>,
   edges: Array<{ source_step_id: string; target_step_id: string }>,
-  triggerType: string
+  triggerType: string,
+  resolveStepLabel?: (stepType: string) => string
 ): VariableItem[] {
   // 1. Build reverse adjacency map: target → [sources]
   const reverseAdj = new Map<string, string[]>()
@@ -149,8 +156,9 @@ export function collectAvailableVariables(
     const step = sorted[i]
     const stepType = step.step_type as StepType
     const stepNum = i + 1
-    const label = STEP_TYPE_LABELS[stepType] ?? stepType
-    const category = `Krok ${stepNum}: ${label}`
+    const labelKey = STEP_TYPE_LABEL_KEYS[stepType] ?? stepType
+    const resolvedLabel = resolveStepLabel ? resolveStepLabel(stepType) : labelKey
+    const category = `Krok ${stepNum}: ${resolvedLabel}`
 
     // For ai_action: check custom output_schema in config first
     let fields: OutputSchemaField[]

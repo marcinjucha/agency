@@ -3,10 +3,10 @@ import { pl } from 'date-fns/locale'
 import type { TriggerType, StepType, ExecutionStatus, StepExecutionStatus } from './types'
 import {
   TRIGGER_TYPE_LABELS,
-  STEP_TYPE_LABELS,
   EXECUTION_STATUS_LABELS,
   STEP_EXECUTION_STATUS_LABELS,
 } from './types'
+import { STEP_TYPE_LABELS } from './utils/step-labels'
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000
 

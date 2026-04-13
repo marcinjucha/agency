@@ -1,5 +1,26 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
+// Mock ../utils/step-labels to avoid importing @/lib/messages (which pulls in the full app context)
+vi.mock('../utils/step-labels', () => ({
+  STEP_TYPE_LABELS: {
+    send_email: 'Wyślij email',
+    delay: 'Opóźnienie',
+    condition: 'Warunek',
+    webhook: 'Webhook',
+    ai_action: 'Akcja AI',
+  },
+  getStepTypeLabel: (type: string) => {
+    const labels: Record<string, string> = {
+      send_email: 'Wyślij email',
+      delay: 'Opóźnienie',
+      condition: 'Warunek',
+      webhook: 'Webhook',
+      ai_action: 'Akcja AI',
+    }
+    return labels[type] ?? type
+  },
+}))
+
 // Mock ../types to avoid importing @/lib/messages (which pulls in the full app context)
 vi.mock('../types', () => ({
   TRIGGER_TYPE_LABELS: {
@@ -8,13 +29,6 @@ vi.mock('../types', () => ({
     lead_scored: 'Lead oceniony',
     manual: 'Ręczny',
     scheduled: 'Zaplanowany',
-  },
-  STEP_TYPE_LABELS: {
-    send_email: 'Wyślij email',
-    delay: 'Opóźnienie',
-    condition: 'Warunek',
-    webhook: 'Webhook',
-    ai_action: 'Akcja AI',
   },
   EXECUTION_STATUS_LABELS: {
     pending: 'Oczekuje',

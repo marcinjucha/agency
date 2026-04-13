@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   STEP_REGISTRY,
   STEP_MAP,
-  STEP_TYPE_LABELS,
+  STEP_TYPE_LABEL_KEYS,
   STEP_OUTPUT_SCHEMAS,
   type StepType,
 } from '../step-registry'
@@ -30,8 +30,8 @@ describe('STEP_REGISTRY', () => {
     expect(unique.size).toBe(ids.length)
   })
 
-  it('każdy step ma wymagane pola: id, label, icon, borderColor, category, outputSchema, defaultConfig', () => {
-    const requiredFields = ['id', 'label', 'icon', 'borderColor', 'category', 'outputSchema', 'defaultConfig'] as const
+  it('każdy step ma wymagane pola: id, labelKey, icon, borderColor, category, outputSchema, defaultConfig', () => {
+    const requiredFields = ['id', 'labelKey', 'icon', 'borderColor', 'category', 'outputSchema', 'defaultConfig'] as const
     for (const step of STEP_REGISTRY) {
       for (const field of requiredFields) {
         expect(step, `step ${step.id} brakuje pola ${field}`).toHaveProperty(field)
@@ -59,10 +59,10 @@ describe('STEP_REGISTRY', () => {
     }
   })
 
-  it('label jest niepustym polskim stringiem dla każdego step type', () => {
+  it('labelKey jest niepustym stringiem (klucz messages.workflows) dla każdego step type', () => {
     for (const step of STEP_REGISTRY) {
-      expect(typeof step.label).toBe('string')
-      expect(step.label.length).toBeGreaterThan(0)
+      expect(typeof step.labelKey).toBe('string')
+      expect(step.labelKey.length).toBeGreaterThan(0)
     }
   })
 
@@ -95,18 +95,31 @@ describe('STEP_MAP', () => {
   })
 })
 
-describe('STEP_TYPE_LABELS (derived z registry)', () => {
-  it('STEP_TYPE_LABELS jest Record<StepType, string>', () => {
+describe('STEP_TYPE_LABEL_KEYS (derived z registry)', () => {
+  it('STEP_TYPE_LABEL_KEYS jest Record<StepType, string>', () => {
     for (const step of STEP_REGISTRY) {
-      const label = STEP_TYPE_LABELS[step.id as StepType]
-      expect(typeof label).toBe('string')
-      expect(label.length).toBeGreaterThan(0)
+      const key = STEP_TYPE_LABEL_KEYS[step.id as StepType]
+      expect(typeof key).toBe('string')
+      expect(key.length).toBeGreaterThan(0)
     }
   })
 
-  it('STEP_TYPE_LABELS wartości zgadzają się z registry labels', () => {
+  it('STEP_TYPE_LABEL_KEYS wartości zgadzają się z registry labelKey', () => {
     for (const step of STEP_REGISTRY) {
-      expect(STEP_TYPE_LABELS[step.id as StepType]).toBe(step.label)
+      expect(STEP_TYPE_LABEL_KEYS[step.id as StepType]).toBe(step.labelKey)
+    }
+  })
+
+  it('STEP_TYPE_LABEL_KEYS zawiera klucze messages.workflows dla step types', () => {
+    const expectedKeys: Record<StepType, string> = {
+      send_email: 'stepSendEmail',
+      ai_action: 'stepAiAction',
+      condition: 'stepCondition',
+      delay: 'stepDelay',
+      webhook: 'stepWebhook',
+    }
+    for (const [stepType, expectedKey] of Object.entries(expectedKeys)) {
+      expect(STEP_TYPE_LABEL_KEYS[stepType as StepType]).toBe(expectedKey)
     }
   })
 })
