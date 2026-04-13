@@ -1,6 +1,23 @@
 import { z, type ZodSchema } from 'zod'
 import { messages } from '@/lib/messages'
-import type { TriggerType, StepType } from './types'
+import { STEP_REGISTRY, type StepType } from './step-registry'
+import type { TriggerType } from './types'
+
+const STEP_TYPE_ENUM = STEP_REGISTRY.map((s) => s.id) as [StepType, ...StepType[]]
+
+/** All canvas step types (step types + trigger types that appear as workflow_steps in the canvas) */
+const TRIGGER_TYPES_FOR_CANVAS = [
+  'survey_submitted',
+  'booking_created',
+  'lead_scored',
+  'manual',
+  'scheduled',
+] as const satisfies TriggerType[]
+
+const CANVAS_STEP_TYPE_ENUM = [
+  ...STEP_TYPE_ENUM,
+  ...TRIGGER_TYPES_FOR_CANVAS,
+] as [StepType | TriggerType, ...(StepType | TriggerType)[]]
 
 // --- Per-step-type config schemas (for config panels) ---
 
@@ -131,7 +148,7 @@ export const updateWorkflowSchema = createWorkflowSchema.partial()
 // --- Step schemas ---
 
 export const createStepSchema = z.object({
-  step_type: z.enum(['send_email', 'delay', 'condition', 'webhook', 'ai_action'], {
+  step_type: z.enum(STEP_TYPE_ENUM, {
     required_error: messages.validation.stepTypeRequired,
   }),
   step_config: z.record(z.unknown()).optional().default({}),
@@ -162,10 +179,7 @@ export const saveCanvasSchema = z.object({
   steps: z.array(
     z.object({
       id: z.string().uuid().optional(),
-      step_type: z.enum([
-        'send_email', 'delay', 'condition', 'webhook', 'ai_action',
-        'survey_submitted', 'booking_created', 'lead_scored', 'manual', 'scheduled',
-      ]),
+      step_type: z.enum(CANVAS_STEP_TYPE_ENUM),
       step_config: z.record(z.unknown()).optional().default({}),
       position_x: z
         .number()

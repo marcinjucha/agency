@@ -4,7 +4,7 @@ import { useEffect, useRef } from 'react'
 import { Button } from '@agency/ui'
 import { X } from 'lucide-react'
 import { messages } from '@/lib/messages'
-import { NODE_TYPE_CONFIGS, TRIGGER_SUBTYPE_CONFIGS } from '../nodes/node-registry'
+import { NODE_TYPE_CONFIGS, lookupNodeConfig } from '../nodes/node-registry'
 
 interface ConfigPanelWrapperProps {
   nodeId: string
@@ -14,11 +14,7 @@ interface ConfigPanelWrapperProps {
 }
 
 function getNodeConfig(stepType: string) {
-  return (
-    TRIGGER_SUBTYPE_CONFIGS[stepType] ??
-    NODE_TYPE_CONFIGS[stepType] ??
-    NODE_TYPE_CONFIGS['trigger']
-  )
+  return lookupNodeConfig(stepType) ?? NODE_TYPE_CONFIGS['trigger']
 }
 
 export function ConfigPanelWrapper({

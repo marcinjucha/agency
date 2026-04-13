@@ -1,7 +1,7 @@
 import { memo } from 'react'
 import { Handle, Position, type NodeProps } from '@xyflow/react'
 import { nodeBaseClasses, selectedClasses, borderColors, nodeIcons } from './node-styles'
-import { NODE_TYPE_CONFIGS } from './node-registry'
+import { lookupNodeConfig } from './node-registry'
 
 export type ActionNodeData = {
   label: string
@@ -35,7 +35,7 @@ function ActionNodeComponent({ data, selected }: NodeProps) {
         {Icon && <Icon className="h-4 w-4 text-blue-400 shrink-0" />}
         <div className="min-w-0">
           <p className="text-xs uppercase tracking-wide text-muted-foreground">
-            {NODE_TYPE_CONFIGS[nodeData.stepType]?.label ?? nodeData.stepType}
+            {lookupNodeConfig(nodeData.stepType)?.label ?? nodeData.stepType}
           </p>
           <p className="text-sm font-medium text-foreground truncate">
             {nodeData.label}

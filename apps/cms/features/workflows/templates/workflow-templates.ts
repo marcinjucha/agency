@@ -8,16 +8,19 @@
  * Template step ID conventions:
  *   'condition-1', 'send-email-1', 'delay-1'  — stable slugs for edge remapping
  *
- * Note: Trigger information is stored on the workflow row (trigger_type + trigger_config),
- * NOT as a workflow_step row. Templates do NOT include a trigger step.
+ * Note: Trigger steps ARE real workflow_steps executed by the n8n Orchestrator via
+ * the Trigger Handler subworkflow. Templates include trigger steps for canvas hydration.
  */
+
+import type { StepType } from '../step-registry'
+import type { TriggerType } from '../types'
 
 // --- Types ---
 
 export type TemplateStep = {
   /** Stable temp ID used for edge source/target references within this template */
   tempId: string
-  step_type: 'send_email' | 'condition' | 'delay' | 'webhook' | 'ai_action' | 'survey_submitted' | 'booking_created' | 'lead_scored'
+  step_type: StepType | TriggerType
   step_config: Record<string, unknown>
   position_x: number
   position_y: number

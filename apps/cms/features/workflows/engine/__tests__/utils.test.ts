@@ -362,7 +362,8 @@ describe('collectAvailableVariables', () => {
     expect(triggerVars[0].key).toBe('responseId')
 
     // Should have step1 (send_email) output variables
-    const step1Vars = result.filter((v) => v.category?.includes('Wyślij email'))
+    // Without resolveStepLabel, category uses labelKey (machine string e.g. 'stepSendEmail')
+    const step1Vars = result.filter((v) => v.category?.includes('stepSendEmail'))
     expect(step1Vars.length).toBeGreaterThan(0)
     expect(step1Vars.some((v) => v.key === 'emailSent')).toBe(true)
   })

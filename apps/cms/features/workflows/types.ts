@@ -1,43 +1,22 @@
 import type { Tables } from '@agency/database'
 import { messages } from '@/lib/messages'
+import { STEP_REGISTRY } from './step-registry'
+import type { StepType, OutputSchemaField } from './step-registry'
+
+// --- Re-exports from step-registry (single source of truth) ---
+
+export type { StepType, OutputSchemaField } from './step-registry'
+export { STEP_OUTPUT_SCHEMAS } from './step-registry'
+export { STEP_TYPE_LABELS } from './utils/step-labels'
+import { STEP_TYPE_LABELS } from './utils/step-labels'
 
 // --- Enums ---
 
 export type TriggerType = 'survey_submitted' | 'booking_created' | 'lead_scored' | 'manual' | 'scheduled'
 
-export type StepType = 'send_email' | 'delay' | 'condition' | 'webhook' | 'ai_action'
-
 export type ExecutionStatus = 'pending' | 'running' | 'completed' | 'failed' | 'cancelled' | 'paused'
 
 export type StepExecutionStatus = 'pending' | 'running' | 'completed' | 'failed' | 'skipped' | 'waiting' | 'processing'
-
-// --- Step Output Schema ---
-
-export type OutputSchemaField = {
-  key: string
-  label: string
-  type: 'string' | 'number' | 'boolean' | 'object'
-}
-
-export const STEP_OUTPUT_SCHEMAS: Record<StepType, OutputSchemaField[]> = {
-  send_email: [
-    { key: 'emailSent', label: 'Email wysłany', type: 'boolean' },
-    { key: 'recipientEmail', label: 'Email odbiorcy', type: 'string' },
-  ],
-  delay: [],
-  condition: [
-    { key: 'branch', label: 'Wynik warunku', type: 'string' },
-  ],
-  webhook: [
-    { key: 'statusCode', label: 'Kod statusu HTTP', type: 'number' },
-    { key: 'responseBody', label: 'Odpowiedź webhook', type: 'string' },
-  ],
-  ai_action: [
-    { key: 'aiResponse', label: 'Odpowiedź AI', type: 'string' },
-    { key: 'overallScore', label: 'Wynik ogólny', type: 'number' },
-    { key: 'recommendation', label: 'Rekomendacja', type: 'string' },
-  ],
-}
 
 // --- Trigger Config (discriminated union) ---
 
@@ -225,14 +204,6 @@ export const TRIGGER_TYPE_LABELS: Record<TriggerType, string> = {
   scheduled: messages.workflows.triggerScheduled,
 }
 
-export const STEP_TYPE_LABELS: Record<StepType, string> = {
-  send_email: messages.workflows.stepSendEmail,
-  delay: messages.workflows.stepDelay,
-  condition: messages.workflows.stepCondition,
-  webhook: messages.workflows.stepWebhook,
-  ai_action: messages.workflows.stepAiAction,
-}
-
 export const EXECUTION_STATUS_LABELS: Record<ExecutionStatus, string> = {
   pending: messages.workflows.executionPending,
   running: messages.workflows.executionRunning,
@@ -258,8 +229,8 @@ export const TRIGGER_TYPE_OPTIONS = Object.entries(TRIGGER_TYPE_LABELS).map(
   ([value, label]) => ({ value: value as TriggerType, label })
 )
 
-export const STEP_TYPE_OPTIONS = Object.entries(STEP_TYPE_LABELS).map(
-  ([value, label]) => ({ value: value as StepType, label })
+export const STEP_TYPE_OPTIONS = STEP_REGISTRY.map(
+  (s) => ({ value: s.id, label: STEP_TYPE_LABELS[s.id as StepType] })
 )
 
 // --- Config panel types ---
