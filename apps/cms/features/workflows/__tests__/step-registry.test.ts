@@ -3,8 +3,10 @@ import {
   STEP_REGISTRY,
   STEP_MAP,
   STEP_TYPE_LABEL_KEYS,
+  STEP_TYPE_DESCRIPTION_KEYS,
   STEP_OUTPUT_SCHEMAS,
   type StepType,
+  type OutputSchemaDefinition,
 } from '../step-registry'
 
 // Registry is pure data — no messages.ts, no React, no Zod.
@@ -30,8 +32,8 @@ describe('STEP_REGISTRY', () => {
     expect(unique.size).toBe(ids.length)
   })
 
-  it('każdy step ma wymagane pola: id, labelKey, icon, borderColor, category, outputSchema, defaultConfig', () => {
-    const requiredFields = ['id', 'labelKey', 'icon', 'borderColor', 'category', 'outputSchema', 'defaultConfig'] as const
+  it('każdy step ma wymagane pola: id, labelKey, descriptionKey, borderColor, category, outputSchema, defaultConfig', () => {
+    const requiredFields = ['id', 'labelKey', 'descriptionKey', 'borderColor', 'category', 'outputSchema', 'defaultConfig'] as const
     for (const step of STEP_REGISTRY) {
       for (const field of requiredFields) {
         expect(step, `step ${step.id} brakuje pola ${field}`).toHaveProperty(field)
@@ -39,15 +41,23 @@ describe('STEP_REGISTRY', () => {
     }
   })
 
-  it('outputSchema każdego stepu jest tablicą; każde pole ma key, label, type', () => {
+  it('icon nie istnieje w StepDefinition (usunięty jako dead code — node-registry.ts ma własny STEP_ICON_MAP)', () => {
+    for (const step of STEP_REGISTRY) {
+      expect(step).not.toHaveProperty('icon')
+    }
+  })
+
+  it('outputSchema każdego stepu jest tablicą; każde pole ma key, labelKey (nie label), type', () => {
     for (const step of STEP_REGISTRY) {
       expect(Array.isArray(step.outputSchema), `${step.id}.outputSchema musi być tablicą`).toBe(true)
       for (const field of step.outputSchema) {
         expect(field, `${step.id} output field musi mieć key`).toHaveProperty('key')
-        expect(field, `${step.id} output field musi mieć label`).toHaveProperty('label')
+        expect(field, `${step.id} output field musi mieć labelKey (nie label)`).toHaveProperty('labelKey')
+        expect(field, `${step.id} output field NIE powinien mieć label (hardcoded Polish)`).not.toHaveProperty('label')
         expect(field, `${step.id} output field musi mieć type`).toHaveProperty('type')
         expect(typeof field.key, `${step.id}.key musi być stringiem`).toBe('string')
-        expect(typeof field.label, `${step.id}.label musi być stringiem`).toBe('string')
+        expect(typeof field.labelKey, `${step.id}.labelKey musi być stringiem`).toBe('string')
+        expect(field.labelKey.length, `${step.id}.labelKey nie może być pusty`).toBeGreaterThan(0)
         expect(['string', 'number', 'boolean', 'object']).toContain(field.type)
       }
     }
@@ -66,10 +76,10 @@ describe('STEP_REGISTRY', () => {
     }
   })
 
-  it('icon jest niepustym stringiem (key do Lucide mapping)', () => {
+  it('descriptionKey jest niepustym stringiem (klucz messages.workflows.stepLibrary) dla każdego step type', () => {
     for (const step of STEP_REGISTRY) {
-      expect(typeof step.icon).toBe('string')
-      expect(step.icon.length).toBeGreaterThan(0)
+      expect(typeof step.descriptionKey).toBe('string')
+      expect(step.descriptionKey.length).toBeGreaterThan(0)
     }
   })
 
@@ -124,10 +134,39 @@ describe('STEP_TYPE_LABEL_KEYS (derived z registry)', () => {
   })
 })
 
-describe('STEP_OUTPUT_SCHEMAS (derived z registry)', () => {
-  it('STEP_OUTPUT_SCHEMAS jest Record<StepType, OutputSchemaField[]>', () => {
+describe('STEP_TYPE_DESCRIPTION_KEYS (derived z registry)', () => {
+  it('STEP_TYPE_DESCRIPTION_KEYS jest Record<StepType, string>', () => {
     for (const step of STEP_REGISTRY) {
-      const schema = STEP_OUTPUT_SCHEMAS[step.id as StepType]
+      const key = STEP_TYPE_DESCRIPTION_KEYS[step.id as StepType]
+      expect(typeof key).toBe('string')
+      expect(key.length).toBeGreaterThan(0)
+    }
+  })
+
+  it('STEP_TYPE_DESCRIPTION_KEYS wartości zgadzają się z registry descriptionKey', () => {
+    for (const step of STEP_REGISTRY) {
+      expect(STEP_TYPE_DESCRIPTION_KEYS[step.id as StepType]).toBe(step.descriptionKey)
+    }
+  })
+
+  it('STEP_TYPE_DESCRIPTION_KEYS zawiera klucze messages.workflows.stepLibrary dla step types', () => {
+    const expectedKeys: Record<StepType, string> = {
+      send_email: 'descSendEmail',
+      ai_action: 'descAiAction',
+      condition: 'descCondition',
+      delay: 'descDelay',
+      webhook: 'descWebhook',
+    }
+    for (const [stepType, expectedKey] of Object.entries(expectedKeys)) {
+      expect(STEP_TYPE_DESCRIPTION_KEYS[stepType as StepType]).toBe(expectedKey)
+    }
+  })
+})
+
+describe('STEP_OUTPUT_SCHEMAS (derived z registry)', () => {
+  it('STEP_OUTPUT_SCHEMAS jest Record<StepType, OutputSchemaDefinition[]>', () => {
+    for (const step of STEP_REGISTRY) {
+      const schema: OutputSchemaDefinition[] = STEP_OUTPUT_SCHEMAS[step.id as StepType]
       expect(Array.isArray(schema)).toBe(true)
     }
   })
@@ -135,6 +174,18 @@ describe('STEP_OUTPUT_SCHEMAS (derived z registry)', () => {
   it('STEP_OUTPUT_SCHEMAS wartości zgadzają się z registry outputSchema', () => {
     for (const step of STEP_REGISTRY) {
       expect(STEP_OUTPUT_SCHEMAS[step.id as StepType]).toEqual(step.outputSchema)
+    }
+  })
+
+  it('każde pole w STEP_OUTPUT_SCHEMAS ma labelKey (nie label) — i18n przez bridge', () => {
+    for (const step of STEP_REGISTRY) {
+      const schema = STEP_OUTPUT_SCHEMAS[step.id as StepType]
+      for (const field of schema) {
+        expect(field).toHaveProperty('labelKey')
+        expect(field).not.toHaveProperty('label')
+        expect(typeof field.labelKey).toBe('string')
+        expect(field.labelKey.length).toBeGreaterThan(0)
+      }
     }
   })
 })

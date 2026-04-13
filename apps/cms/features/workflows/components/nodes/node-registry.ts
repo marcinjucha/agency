@@ -8,8 +8,10 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { messages } from '@/lib/messages'
+import { STEP_REGISTRY } from '../../step-registry'
 import type { StepType } from '../../step-registry'
 import type { TriggerType } from '../../types'
+import { STEP_TYPE_LABELS, getStepTypeDescription } from '../../utils/step-labels'
 
 /**
  * Config-only node type definitions (no component imports).
@@ -31,7 +33,20 @@ export interface NodeTypeConfig {
   description?: string
 }
 
+/**
+ * Icon map — icons stay local (step-registry.ts is zero-dep, no Lucide imports).
+ * Maps StepType string keys to LucideIcon components.
+ */
+const STEP_ICON_MAP: Record<StepType, LucideIcon> = {
+  send_email: Mail,
+  condition: GitBranch,
+  delay: Clock,
+  webhook: Globe,
+  ai_action: Sparkles,
+}
+
 export const NODE_TYPE_CONFIGS: Record<StepType | 'trigger', NodeTypeConfig> = {
+  // trigger is NOT in STEP_REGISTRY (different contract) — manual entry required
   trigger: {
     icon: Zap,
     label: messages.workflows.editor.trigger,
@@ -40,41 +55,19 @@ export const NODE_TYPE_CONFIGS: Record<StepType | 'trigger', NodeTypeConfig> = {
     category: 'triggers',
     description: messages.workflows.stepLibrary.descTrigger,
   },
-  send_email: {
-    icon: Mail,
-    label: messages.workflows.stepSendEmail,
-    borderColor: 'border-l-4 border-l-blue-400',
-    category: 'actions',
-    description: messages.workflows.stepLibrary.descSendEmail,
-  },
-  condition: {
-    icon: GitBranch,
-    label: messages.workflows.stepCondition,
-    borderColor: 'border-l-4 border-l-amber-400',
-    category: 'logic',
-    description: messages.workflows.stepLibrary.descCondition,
-  },
-  delay: {
-    icon: Clock,
-    label: messages.workflows.stepDelay,
-    borderColor: 'border-l-4 border-l-muted-foreground',
-    category: 'logic',
-    description: messages.workflows.stepLibrary.descDelay,
-  },
-  webhook: {
-    icon: Globe,
-    label: messages.workflows.stepWebhook,
-    borderColor: 'border-l-4 border-l-blue-400',
-    category: 'actions',
-    description: messages.workflows.stepLibrary.descWebhook,
-  },
-  ai_action: {
-    icon: Sparkles,
-    label: messages.workflows.stepAiAction,
-    borderColor: 'border-l-4 border-l-blue-400',
-    category: 'ai',
-    description: messages.workflows.stepLibrary.descAiAction,
-  },
+  // All step types derived from STEP_REGISTRY — borderColor, category, label, description from single source of truth
+  ...Object.fromEntries(
+    STEP_REGISTRY.map((s) => [
+      s.id,
+      {
+        icon: STEP_ICON_MAP[s.id as StepType],
+        label: STEP_TYPE_LABELS[s.id as StepType],
+        borderColor: s.borderColor,
+        category: s.category,
+        description: getStepTypeDescription(s.id),
+      } satisfies NodeTypeConfig,
+    ])
+  ) as Record<StepType, NodeTypeConfig>,
 }
 
 /** Trigger-specific subtypes share the trigger border/icon */
@@ -123,10 +116,10 @@ export function lookupNodeConfig(type: string): NodeTypeConfig | undefined {
   return allConfigs[type]
 }
 
-export const borderColors: Record<string, string> = Object.fromEntries(
+export const borderColors: Record<StepType | TriggerType | 'trigger', string> = Object.fromEntries(
   Object.entries(allConfigs).map(([key, config]) => [key, config.borderColor])
-)
+) as Record<StepType | TriggerType | 'trigger', string>
 
-export const nodeIcons: Record<string, LucideIcon> = Object.fromEntries(
+export const nodeIcons: Record<StepType | TriggerType | 'trigger', LucideIcon> = Object.fromEntries(
   Object.entries(allConfigs).map(([key, config]) => [key, config.icon])
-)
+) as Record<StepType | TriggerType | 'trigger', LucideIcon>

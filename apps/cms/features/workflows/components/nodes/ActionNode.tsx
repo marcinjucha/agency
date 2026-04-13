@@ -1,6 +1,6 @@
 import { memo } from 'react'
 import { Handle, Position, type NodeProps } from '@xyflow/react'
-import { nodeBaseClasses, selectedClasses, borderColors, nodeIcons } from './node-styles'
+import { nodeBaseClasses, selectedClasses } from './node-styles'
 import { lookupNodeConfig } from './node-registry'
 
 export type ActionNodeData = {
@@ -18,8 +18,9 @@ const EXECUTION_RING: Record<string, string> = {
 
 function ActionNodeComponent({ data, selected }: NodeProps) {
   const nodeData = data as unknown as ActionNodeData
-  const Icon = nodeIcons[nodeData.stepType]
-  const borderClass = borderColors[nodeData.stepType] ?? 'border-l-4 border-l-blue-400'
+  const config = lookupNodeConfig(nodeData.stepType)
+  const Icon = config?.icon
+  const borderClass = config?.borderColor ?? 'border-l-4 border-l-blue-400'
   const execRing = nodeData.executionStatus ? EXECUTION_RING[nodeData.executionStatus] ?? '' : ''
 
   return (

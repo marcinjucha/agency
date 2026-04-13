@@ -12,8 +12,25 @@
  * Iter 2-4 zmigrują istniejące rejestry żeby importować stąd zamiast duplikować.
  */
 
-// --- Output Schema Field Type ---
+// --- Output Schema Field Types ---
 
+/**
+ * OutputSchemaDefinition — used in step-registry.ts (static definitions).
+ * labelKey references messages.workflows.stepOutput.* for Polish resolution via bridge.
+ * Registry stays zero-dependency: no messages.ts import here.
+ */
+export type OutputSchemaDefinition = {
+  key: string
+  /** Key into messages.workflows.stepOutput — e.g. 'emailSent'. Resolved to Polish via utils/step-labels.ts bridge. */
+  labelKey: string
+  type: 'string' | 'number' | 'boolean' | 'object'
+}
+
+/**
+ * OutputSchemaField — used for runtime/DB data (user-defined ai_action output schemas).
+ * label is a resolved string (user-entered or resolved from registry).
+ * Must keep label: string because it's stored in DB and entered by users in AiActionConfigPanel.
+ */
 export type OutputSchemaField = {
   key: string
   label: string
@@ -30,12 +47,15 @@ export type StepDefinition<TId extends string> = {
    * Registry stays zero-dependency (no messages.ts import).
    */
   labelKey: string
-  /** Lucide icon key — consumer maps string to LucideIcon component */
-  icon: string
+  /**
+   * Key into messages.workflows.stepLibrary — e.g. 'descSendEmail'.
+   * Consumers resolve via messages.workflows.stepLibrary[descriptionKey] or utils/step-labels.ts.
+   * Registry stays zero-dependency (no messages.ts import).
+   */
+  descriptionKey: string
   borderColor: string
   category: 'actions' | 'logic' | 'ai'
-  description: string
-  outputSchema: OutputSchemaField[]
+  outputSchema: OutputSchemaDefinition[]
   defaultConfig: { type: TId } & Record<string, unknown>
 }
 
@@ -54,13 +74,12 @@ export function defineStep<TId extends string>(
 const SEND_EMAIL_STEP = defineStep({
   id: 'send_email' as const,
   labelKey: 'stepSendEmail',
-  icon: 'Mail',
+  descriptionKey: 'descSendEmail',
   borderColor: 'border-l-4 border-l-blue-400',
   category: 'actions',
-  description: 'Wyślij wiadomość email',
   outputSchema: [
-    { key: 'emailSent', label: 'Email wysłany', type: 'boolean' },
-    { key: 'recipientEmail', label: 'Email odbiorcy', type: 'string' },
+    { key: 'emailSent', labelKey: 'emailSent', type: 'boolean' },
+    { key: 'recipientEmail', labelKey: 'recipientEmail', type: 'string' },
   ],
   defaultConfig: { type: 'send_email', template_id: null, to_expression: null },
 })
@@ -68,14 +87,13 @@ const SEND_EMAIL_STEP = defineStep({
 const AI_ACTION_STEP = defineStep({
   id: 'ai_action' as const,
   labelKey: 'stepAiAction',
-  icon: 'Sparkles',
+  descriptionKey: 'descAiAction',
   borderColor: 'border-l-4 border-l-blue-400',
   category: 'ai',
-  description: 'Przetwórz dane za pomocą AI',
   outputSchema: [
-    { key: 'aiResponse', label: 'Odpowiedź AI', type: 'string' },
-    { key: 'overallScore', label: 'Wynik ogólny', type: 'number' },
-    { key: 'recommendation', label: 'Rekomendacja', type: 'string' },
+    { key: 'aiResponse', labelKey: 'aiResponse', type: 'string' },
+    { key: 'overallScore', labelKey: 'overallScore', type: 'number' },
+    { key: 'recommendation', labelKey: 'recommendation', type: 'string' },
   ],
   defaultConfig: { type: 'ai_action', prompt: '', model: null, output_schema: null },
 })
@@ -83,12 +101,11 @@ const AI_ACTION_STEP = defineStep({
 const CONDITION_STEP = defineStep({
   id: 'condition' as const,
   labelKey: 'stepCondition',
-  icon: 'GitBranch',
+  descriptionKey: 'descCondition',
   borderColor: 'border-l-4 border-l-amber-400',
   category: 'logic',
-  description: 'Rozgałęzienie na podstawie warunku',
   outputSchema: [
-    { key: 'branch', label: 'Wynik warunku', type: 'string' },
+    { key: 'branch', labelKey: 'conditionBranch', type: 'string' },
   ],
   defaultConfig: { type: 'condition', expression: '' },
 })
@@ -96,10 +113,9 @@ const CONDITION_STEP = defineStep({
 const DELAY_STEP = defineStep({
   id: 'delay' as const,
   labelKey: 'stepDelay',
-  icon: 'Clock',
+  descriptionKey: 'descDelay',
   borderColor: 'border-l-4 border-l-muted-foreground',
   category: 'logic',
-  description: 'Poczekaj określony czas',
   outputSchema: [],
   defaultConfig: { type: 'delay', value: 1, unit: 'minutes' },
 })
@@ -107,13 +123,12 @@ const DELAY_STEP = defineStep({
 const WEBHOOK_STEP = defineStep({
   id: 'webhook' as const,
   labelKey: 'stepWebhook',
-  icon: 'Globe',
+  descriptionKey: 'descWebhook',
   borderColor: 'border-l-4 border-l-blue-400',
   category: 'actions',
-  description: 'Wywołaj zewnętrzny endpoint',
   outputSchema: [
-    { key: 'statusCode', label: 'Kod statusu HTTP', type: 'number' },
-    { key: 'responseBody', label: 'Odpowiedź webhook', type: 'string' },
+    { key: 'statusCode', labelKey: 'httpStatusCode', type: 'number' },
+    { key: 'responseBody', labelKey: 'webhookResponseBody', type: 'string' },
   ],
   defaultConfig: { type: 'webhook', url: '', method: 'POST' },
 })
@@ -149,7 +164,17 @@ export const STEP_TYPE_LABEL_KEYS: Record<StepType, string> = Object.fromEntries
   STEP_REGISTRY.map((s) => [s.id, s.labelKey])
 ) as Record<StepType, string>
 
-/** Derived output schemas — single source of truth, re-eksportowane przez types.ts i engine/utils.ts */
-export const STEP_OUTPUT_SCHEMAS: Record<StepType, OutputSchemaField[]> = Object.fromEntries(
+/**
+ * Derived description keys — maps StepType → messages.workflows.stepLibrary key (e.g. 'descSendEmail').
+ * Consumers resolve to Polish strings via messages.workflows.stepLibrary[key] or utils/step-labels.ts.
+ * Registry stays zero-dependency: no messages import here.
+ */
+export const STEP_TYPE_DESCRIPTION_KEYS: Record<StepType, string> = Object.fromEntries(
+  STEP_REGISTRY.map((s) => [s.id, s.descriptionKey])
+) as Record<StepType, string>
+
+/** Derived output schema definitions — single source of truth, re-eksportowane przez types.ts i engine/utils.ts.
+ * Type uses OutputSchemaDefinition (labelKey) — resolve to OutputSchemaField (label) via utils/step-labels.ts bridge. */
+export const STEP_OUTPUT_SCHEMAS: Record<StepType, OutputSchemaDefinition[]> = Object.fromEntries(
   STEP_REGISTRY.map((s) => [s.id, s.outputSchema])
-) as Record<StepType, OutputSchemaField[]>
+) as Record<StepType, OutputSchemaDefinition[]>

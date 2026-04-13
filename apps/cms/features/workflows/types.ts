@@ -5,7 +5,7 @@ import type { StepType, OutputSchemaField } from './step-registry'
 
 // --- Re-exports from step-registry (single source of truth) ---
 
-export type { StepType, OutputSchemaField } from './step-registry'
+export type { StepType, OutputSchemaDefinition, OutputSchemaField } from './step-registry'
 export { STEP_OUTPUT_SCHEMAS } from './step-registry'
 export { STEP_TYPE_LABELS } from './utils/step-labels'
 import { STEP_TYPE_LABELS } from './utils/step-labels'

@@ -1073,6 +1073,25 @@ export const messages = {
       descDelay: 'Poczekaj określony czas',
       descAiAction: 'Przetwórz dane za pomocą AI',
     },
+    /**
+     * Output schema field labels — keyed by OutputSchemaDefinition.labelKey.
+     * Resolved from step-registry.ts definitions via utils/step-labels.ts bridge.
+     * WHY: Registry stays zero-dependency; Polish strings live here, not in step-registry.ts.
+     */
+    stepOutputFields: {
+      // send_email outputs
+      emailSent: 'Email wysłany',
+      recipientEmail: 'Email odbiorcy',
+      // ai_action outputs (default schema)
+      aiResponse: 'Odpowiedź AI',
+      overallScore: 'Wynik ogólny',
+      recommendation: 'Rekomendacja',
+      // condition outputs
+      conditionBranch: 'Wynik warunku',
+      // webhook outputs
+      httpStatusCode: 'Kod statusu HTTP',
+      webhookResponseBody: 'Odpowiedź webhook',
+    },
     // Labels
     nameLabel: 'Nazwa',
     descriptionLabel: 'Opis',

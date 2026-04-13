@@ -1,5 +1,5 @@
 import type { WorkflowStep, WorkflowEdge } from '../types'
-import type { OutputSchemaField, StepType } from '../step-registry'
+import type { OutputSchemaDefinition, OutputSchemaField, StepType } from '../step-registry'
 import { STEP_OUTPUT_SCHEMAS, STEP_TYPE_LABEL_KEYS } from '../step-registry'
 import type { TriggerPayload, VariableContext } from './types'
 import { isTriggerType } from './types'
@@ -100,13 +100,19 @@ export function topologicalSort(
  * UI callers (WorkflowEditor) pass getStepTypeLabel from utils/step-labels.ts.
  * Test callers and engine/utils.ts (zero-dep) omit it — falls back to labelKey (machine string).
  * WHY: engine/utils.ts must stay zero-dependency (no messages.ts import).
+ *
+ * @param resolveStepLabel - optional resolver for step TYPE labels (e.g. 'Wyślij email')
+ * @param resolveOutputLabel - optional resolver for output field labelKeys (e.g. 'Email wysłany')
+ *   UI callers pass a function wrapping messages.workflows.stepOutputFields lookup.
+ *   Omitting it falls back to raw labelKey string.
  */
 export function collectAvailableVariables(
   stepId: string,
   steps: Array<{ id: string; step_type: string; step_config: Record<string, unknown> }>,
   edges: Array<{ source_step_id: string; target_step_id: string }>,
   triggerType: string,
-  resolveStepLabel?: (stepType: string) => string
+  resolveStepLabel?: (stepType: string) => string,
+  resolveOutputLabel?: (labelKey: string) => string
 ): VariableItem[] {
   // 1. Build reverse adjacency map: target → [sources]
   const reverseAdj = new Map<string, string[]>()
@@ -160,21 +166,29 @@ export function collectAvailableVariables(
     const resolvedLabel = resolveStepLabel ? resolveStepLabel(stepType) : labelKey
     const category = `Krok ${stepNum}: ${resolvedLabel}`
 
-    // For ai_action: check custom output_schema in config first
-    let fields: OutputSchemaField[]
+    // For ai_action: check custom output_schema in config first (uses OutputSchemaField with label: string)
+    // For all other types: use registry definitions (OutputSchemaDefinition with labelKey: string)
     const config = step.step_config as Record<string, unknown>
     if (stepType === 'ai_action' && Array.isArray(config.output_schema)) {
-      fields = config.output_schema as OutputSchemaField[]
+      const fields = config.output_schema as OutputSchemaField[]
+      for (const field of fields) {
+        stepVars.push({
+          key: field.key,
+          label: field.label,
+          category,
+        })
+      }
     } else {
-      fields = STEP_OUTPUT_SCHEMAS[stepType] ?? []
-    }
-
-    for (const field of fields) {
-      stepVars.push({
-        key: field.key,
-        label: field.label,
-        category,
-      })
+      const definitions: OutputSchemaDefinition[] = STEP_OUTPUT_SCHEMAS[stepType] ?? []
+      for (const def of definitions) {
+        stepVars.push({
+          key: def.key,
+          // labelKey used as label fallback — UI callers pass resolveOutputLabel for Polish strings.
+          // engine/utils.ts stays zero-dep (no messages import) for vitest compatibility.
+          label: resolveOutputLabel ? resolveOutputLabel(def.labelKey) : def.labelKey,
+          category,
+        })
+      }
     }
   }
 
