@@ -1,0 +1,29 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "website",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev:website"],
+      "port": 3000
+    },
+    {
+      "name": "cms",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev:cms"],
+      "port": 3001
+    },
+    {
+      "name": "shop-jacek",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev:shop-jacek"],
+      "port": 3002
+    },
+    {
+      "name": "shop-kolega",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev:shop-kolega"],
+      "port": 3003
+    }
+  ]
+}
