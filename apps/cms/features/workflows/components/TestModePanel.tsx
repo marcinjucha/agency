@@ -15,7 +15,7 @@ import { messages } from '@/lib/messages'
 import { queryKeys } from '@/lib/query-keys'
 import { TRIGGER_VARIABLE_SCHEMAS } from '@/lib/trigger-schemas'
 import { getWorkflowExecutions, getExecutionWithSteps } from '../queries'
-import { testWorkflow } from '../actions'
+import { testWorkflowFn } from '../server'
 import { EXECUTION_STATUS_LABELS } from '../types'
 
 interface TestModePanelProps {
@@ -105,7 +105,7 @@ export function TestModePanel({
     setIsRunning(true)
     setRunResult(null)
 
-    const result = await testWorkflow(workflowId, payload)
+    const result = await testWorkflowFn({ data: { workflowId, triggerPayload: payload } })
     setIsRunning(false)
 
     if (result.success) {

@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import dynamic from 'next/dynamic'
 import { messages } from '@/lib/messages'
-import { saveWorkflowCanvas, toggleWorkflowActive } from '../actions'
+import { saveWorkflowCanvasFn, toggleWorkflowActiveFn } from '../server'
 import { queryKeys } from '@/lib/query-keys'
 import type { SaveCanvasFormData } from '../validation'
 import { WorkflowEditorHeader } from './WorkflowEditorHeader'
@@ -209,7 +209,7 @@ export function WorkflowEditor({ workflow }: WorkflowEditorProps) {
         })),
       }
 
-      const result = await saveWorkflowCanvas(workflow.id, payload)
+      const result = await saveWorkflowCanvasFn({ data: { workflowId: workflow.id, data: payload } })
 
       if (result.success) {
         canvasRef.current?.resetDirty()
@@ -227,7 +227,7 @@ export function WorkflowEditor({ workflow }: WorkflowEditorProps) {
   const handleToggleActive = useCallback(
     async (active: boolean) => {
       setIsActive(active)
-      const result = await toggleWorkflowActive(workflow.id, active)
+      const result = await toggleWorkflowActiveFn({ data: { id: workflow.id, isActive: active } })
       if (!result.success) {
         setIsActive(!active)
         console.error('Toggle failed:', result.error)

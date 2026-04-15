@@ -7,7 +7,7 @@ import { ChevronDown, ChevronUp, Loader2 } from 'lucide-react'
 import { Button, Badge } from '@agency/ui'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
-import { createWorkflowFromTemplate } from '../actions'
+import { createWorkflowFromTemplateFn } from '../server'
 import { WORKFLOW_TEMPLATES } from '../templates/workflow-templates'
 import { getTriggerTypeLabel } from '../utils'
 import type { TriggerType } from '../types'
@@ -44,7 +44,7 @@ export function WorkflowTemplateSelector({ workflowCount }: WorkflowTemplateSele
     mutationFn: async (templateId: string) => {
       setActiveTemplateId(templateId)
       setErrorTemplateId(null)
-      const result = await createWorkflowFromTemplate(templateId)
+      const result = await createWorkflowFromTemplateFn({ data: { templateId } })
       if (!result.success) throw new Error(result.error)
       return result
     },

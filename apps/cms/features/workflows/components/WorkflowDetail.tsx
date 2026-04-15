@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
 import { queryKeys } from '@/lib/query-keys'
-import { deleteWorkflow, toggleWorkflowActive } from '../actions'
+import { deleteWorkflowFn, toggleWorkflowActiveFn } from '../server'
 import { getTriggerTypeLabel } from '../utils'
 import type { WorkflowWithSteps, TriggerType } from '../types'
 import {
@@ -56,7 +56,7 @@ export function WorkflowDetail({ workflow: initialWorkflow }: WorkflowDetailProp
 
   const toggleMutation = useMutation({
     mutationFn: async (isActive: boolean) => {
-      const result = await toggleWorkflowActive(workflow.id, isActive)
+      const result = await toggleWorkflowActiveFn({ data: { id: workflow.id, isActive } })
       if (!result.success) throw new Error(result.error)
       return result
     },
@@ -68,7 +68,7 @@ export function WorkflowDetail({ workflow: initialWorkflow }: WorkflowDetailProp
 
   const deleteMutation = useMutation({
     mutationFn: async () => {
-      const result = await deleteWorkflow(workflow.id)
+      const result = await deleteWorkflowFn({ data: { id: workflow.id } })
       if (!result.success) throw new Error(result.error)
       return result
     },

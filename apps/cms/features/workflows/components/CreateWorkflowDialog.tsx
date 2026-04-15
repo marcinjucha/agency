@@ -6,7 +6,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
 import { queryKeys } from '@/lib/query-keys'
 import { createWorkflowSchema, type CreateWorkflowFormData } from '../validation'
-import { createWorkflow } from '../actions'
+import { createWorkflowFn } from '../server'
 import {
   Button,
   Input,
@@ -46,7 +46,7 @@ export function CreateWorkflowDialog({ open, onOpenChange }: CreateWorkflowDialo
 
   const mutation = useMutation({
     mutationFn: async (data: CreateWorkflowFormData) => {
-      const result = await createWorkflow(data)
+      const result = await createWorkflowFn({ data })
       if (!result.success) throw new Error(result.error)
       return result
     },
