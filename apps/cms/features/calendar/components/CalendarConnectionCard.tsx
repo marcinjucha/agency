@@ -30,12 +30,12 @@ import {
 import { queryKeys } from '@/lib/query-keys'
 import { messages } from '@/lib/messages'
 import {
-  testCalendarConnection,
-  setDefaultConnection,
-  disconnectCalendarConnection,
-  activateCalendarConnection,
-  removeConnection,
-} from '../actions'
+  testConnectionFn,
+  setDefaultConnectionFn,
+  disconnectConnectionFn,
+  activateConnectionFn,
+  removeConnectionFn,
+} from '../server'
 import type { CalendarConnection } from '../types'
 
 type CalendarConnectionCardProps = {
@@ -62,7 +62,7 @@ export function CalendarConnectionCard({ connection }: CalendarConnectionCardPro
 
   const testMutation = useMutation({
     mutationFn: async () => {
-      const result = await testCalendarConnection(connection.id)
+      const result = await testConnectionFn({ data: { connectionId: connection.id } })
       if (!result.success) throw new Error(result.error)
       return result
     },
@@ -79,7 +79,7 @@ export function CalendarConnectionCard({ connection }: CalendarConnectionCardPro
 
   const setDefaultMutation = useMutation({
     mutationFn: async () => {
-      const result = await setDefaultConnection(connection.id)
+      const result = await setDefaultConnectionFn({ data: { connectionId: connection.id } })
       if (!result.success) throw new Error(result.error)
       return result
     },
@@ -90,7 +90,7 @@ export function CalendarConnectionCard({ connection }: CalendarConnectionCardPro
 
   const deactivateMutation = useMutation({
     mutationFn: async () => {
-      const result = await disconnectCalendarConnection(connection.id)
+      const result = await disconnectConnectionFn({ data: { connectionId: connection.id } })
       if (!result.success) throw new Error(result.error)
       return result
     },
@@ -102,7 +102,7 @@ export function CalendarConnectionCard({ connection }: CalendarConnectionCardPro
 
   const activateMutation = useMutation({
     mutationFn: async () => {
-      const result = await activateCalendarConnection(connection.id)
+      const result = await activateConnectionFn({ data: { connectionId: connection.id } })
       if (!result.success) throw new Error(result.error)
       return result
     },
@@ -113,7 +113,7 @@ export function CalendarConnectionCard({ connection }: CalendarConnectionCardPro
 
   const removeMutation = useMutation({
     mutationFn: async () => {
-      const result = await removeConnection(connection.id)
+      const result = await removeConnectionFn({ data: { connectionId: connection.id } })
       if (!result.success) throw new Error(result.error)
       return result
     },

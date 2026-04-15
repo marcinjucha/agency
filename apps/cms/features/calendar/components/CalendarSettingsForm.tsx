@@ -7,7 +7,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Button, Card, Input, Label, LoadingState } from '@agency/ui'
 import { Loader2 } from 'lucide-react'
 import { getCalendarSettings } from '../queries'
-import { updateCalendarSettings } from '../actions'
+import { updateCalendarSettingsFn } from '../server'
 import { calendarSettingsSchema, type CalendarSettingsSchema } from '../validation'
 import { useState } from 'react'
 import { queryKeys } from '@/lib/query-keys'
@@ -37,7 +37,7 @@ export function CalendarSettingsForm() {
   async function onSubmit(values: CalendarSettingsSchema) {
     setSaveState('saving')
     try {
-      const result = await updateCalendarSettings(values)
+      const result = await updateCalendarSettingsFn({ data: values })
       setSaveState(result.success ? 'saved' : 'error')
     } catch {
       setSaveState('error')

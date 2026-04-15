@@ -7,7 +7,7 @@ import { Calendar, Globe, Plus } from 'lucide-react'
 import { queryKeys } from '@/lib/query-keys'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
-import { getCalendarConnections } from '../actions'
+import { getCalendarConnectionsFn, initiateGoogleOAuthFn } from '../server'
 import { CalendarConnectionCard } from './CalendarConnectionCard'
 import { AddCalDAVDialog } from './AddCalDAVDialog'
 
@@ -42,14 +42,19 @@ export function CalendarConnectionList() {
   } = useQuery({
     queryKey: queryKeys.calendar.connections,
     queryFn: async () => {
-      const result = await getCalendarConnections()
+      const result = await getCalendarConnectionsFn()
       if (!result.success) throw new Error(result.error)
       return result.data
     },
   })
 
-  function handleConnectGoogle() {
-    window.location.href = routes.api.authGoogle
+  async function handleConnectGoogle() {
+    const result = await initiateGoogleOAuthFn()
+    if (result.success) {
+      window.location.href = result.data.authUrl
+    } else {
+      setOauthMessage({ type: 'error', text: result.error })
+    }
   }
 
   if (isLoading) {

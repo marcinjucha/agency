@@ -17,7 +17,7 @@ import {
 import { Loader2, XCircle } from 'lucide-react'
 import { queryKeys } from '@/lib/query-keys'
 import { messages } from '@/lib/messages'
-import { addCalDAVConnection } from '../actions'
+import { addCalDAVConnectionFn } from '../server'
 import { caldavConnectionSchema, type CaldavConnectionSchema } from '../validation'
 
 type AddCalDAVDialogProps = {
@@ -40,7 +40,7 @@ export function AddCalDAVDialog({ open, onOpenChange }: AddCalDAVDialogProps) {
 
   const mutation = useMutation({
     mutationFn: async (data: CaldavConnectionSchema) => {
-      const result = await addCalDAVConnection(data)
+      const result = await addCalDAVConnectionFn({ data })
       if (!result.success) throw new Error(result.error)
       return result
     },
