@@ -41,6 +41,8 @@
 
 ## Domain Concepts
 
+- **TanStack Router `validateSearch` + `navigate({ search: fn })` 3-step pattern** — Search params require: (1) `validateSearch` with zod schema on route, (2) `useSearch({ from: routeId })` to read, (3) `navigate({ search: (prev) => ({ ...prev, key: val }) })` function form to update. Missing any step = type errors or silent failures.
+- **`supabase.getAll/setAll` is correct API (not deprecated)** — In server-start.ts cookie handler, getAll/setAll are the current @supabase/ssr methods for reading/writing all cookies. Agent incorrectly flagged as deprecated.
 - **Tenant "Halo Efekt" in production** — email: kontakt@haloefekt.pl, id: 19342448-4e4e-49ba-8bf0-694d5376f953.
 - **email_configs table empty in production** — N8n uses hardcoded Resend fallback (`noreply@haloefekt.pl`).
 - **notification_email per survey_link, not per tenant** — Each link has own notification address.
@@ -59,6 +61,8 @@
 - **n8n Orchestrator owns ALL execution** — CMS trigger route = ~70 LOC fire-and-forget. WHY: Vercel serverless timeout can't handle multi-hour workflow delays.
 - **TanStack Start auth: beforeLoad mandatory, requestMiddleware optional** — beforeLoad (isomorphic) handles SSR + client navigation. requestMiddleware = server-only, misses client nav. See tanstack-server skill.
 - **`admin.tsx` not `_admin.tsx` for /admin/* routes** — Pathless layout (underscore) adds no URL segment. `_admin/index.tsx` → URL `/`. See tanstack-setup skill.
+- **Feature server-fns in `features/{name}/server-fns.ts`, NOT `lib/server-fns/`** — User corrected agent placing server functions in lib/. Each feature owns its server functions colocated with its other files. WHY: matches ADR-005 feature isolation pattern.
+- **RSC prop patterns don't apply in TanStack Start** — Components that received full objects from RSC (e.g., SurveyBuilder receiving survey) should take ID + internal useQuery instead. WHY: TanStack Start has no RSC; passing serialized objects from loader is fragile vs letting component own its data fetching.
 
 ## Preferences
 
