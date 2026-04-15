@@ -6,7 +6,7 @@ import { messages } from '@/lib/messages'
 export const Route = createFileRoute('/login')({
   beforeLoad: ({ context }) => {
     if (context.auth) {
-      throw redirect({ to: '/_admin/' })
+      throw redirect({ to: '/admin' })
     }
   },
   component: LoginPage,
@@ -27,7 +27,7 @@ function LoginPage() {
     const result = await loginFn({ data: { email, password } })
 
     if (result.success) {
-      await navigate({ to: '/_admin/' })
+      await navigate({ to: '/admin' })
     } else {
       setError(result.error)
       setLoading(false)
