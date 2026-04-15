@@ -8,11 +8,12 @@ import { useQuery } from '@tanstack/react-query'
 
 export const Route = createFileRoute('/admin/email-templates/')({
   head: () => buildCmsHead(messages.nav.emailTemplates),
-  loader: ({ context: { queryClient } }) =>
-    queryClient.ensureQueryData({
+  loader: ({ context: { queryClient } }) => {
+    queryClient.prefetchQuery({
       queryKey: queryKeys.email.templates,
       queryFn: () => getEmailTemplatesFn(),
-    }),
+    })
+  },
   component: EmailTemplatesPage,
 })
 

@@ -12,14 +12,15 @@ import { buildCmsHead } from '@/lib/head'
 export const Route = createFileRoute('/admin/surveys/')({
   head: () => buildCmsHead(messages.nav.surveys),
   // Pre-populate TanStack Query cache so SurveyList renders instantly from cache.
-  loader: ({ context: { queryClient } }) =>
-    queryClient.ensureQueryData({
+  loader: ({ context: { queryClient } }) => {
+    queryClient.prefetchQuery({
       queryKey: queryKeys.surveys.all,
       queryFn: async () => {
         const data = await getSurveysFn()
         return data
       },
-    }),
+    })
+  },
   component: SurveysPage,
 })
 

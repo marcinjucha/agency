@@ -7,18 +7,16 @@ import { UserList } from '@/features/users/components/UserList'
 
 export const Route = createFileRoute('/admin/users/')({
   head: () => buildCmsHead(messages.nav.users),
-  loader: async ({ context: { queryClient, auth } }) => {
+  loader: ({ context: { queryClient } }) => {
     const tenantId = undefined
-    await Promise.all([
-      queryClient.ensureQueryData({
-        queryKey: queryKeys.users.list(tenantId),
-        queryFn: () => getUsersFn({ data: { tenantId } }),
-      }),
-      queryClient.ensureQueryData({
-        queryKey: queryKeys.roles.list(tenantId),
-        queryFn: () => getTenantRolesFn({ data: { tenantId } }),
-      }),
-    ])
+    queryClient.prefetchQuery({
+      queryKey: queryKeys.users.list(tenantId),
+      queryFn: () => getUsersFn({ data: { tenantId } }),
+    })
+    queryClient.prefetchQuery({
+      queryKey: queryKeys.roles.list(tenantId),
+      queryFn: () => getTenantRolesFn({ data: { tenantId } }),
+    })
   },
   component: UsersPage,
 })

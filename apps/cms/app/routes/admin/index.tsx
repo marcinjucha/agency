@@ -13,11 +13,12 @@ const dashboardKeys = {
 export const Route = createFileRoute('/admin/')({
   head: () => buildCmsHead(messages.nav.dashboard),
   // Pre-populate TanStack Query cache so dashboard stats render instantly.
-  loader: ({ context: { queryClient } }) =>
-    queryClient.ensureQueryData({
+  loader: ({ context: { queryClient } }) => {
+    queryClient.prefetchQuery({
       queryKey: dashboardKeys.stats,
       queryFn: () => getDashboardStatsFn(),
-    }),
+    })
+  },
   component: DashboardPage,
 })
 

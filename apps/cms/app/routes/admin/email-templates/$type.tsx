@@ -11,11 +11,12 @@ export const Route = createFileRoute('/admin/email-templates/$type')({
     const label = TEMPLATE_TYPE_LABELS[params.type as EmailTemplateType] ?? params.type
     return buildCmsHead(label)
   },
-  loader: ({ params, context: { queryClient } }) =>
-    queryClient.ensureQueryData({
+  loader: ({ params, context: { queryClient } }) => {
+    queryClient.prefetchQuery({
       queryKey: queryKeys.email.template(params.type),
       queryFn: () => getEmailTemplateFn({ data: { type: params.type } }),
-    }),
+    })
+  },
   component: EmailTemplatePage,
 })
 

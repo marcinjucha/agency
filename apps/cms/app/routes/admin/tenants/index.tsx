@@ -7,14 +7,15 @@ import { TenantList } from '@/features/tenants/components/TenantList'
 
 export const Route = createFileRoute('/admin/tenants/')({
   head: () => buildCmsHead(messages.tenants.title),
-  loader: ({ context: { queryClient } }) =>
-    queryClient.ensureQueryData({
+  loader: ({ context: { queryClient } }) => {
+    queryClient.prefetchQuery({
       queryKey: queryKeys.tenants.all,
       queryFn: async () => {
         const data = await getTenantsFn()
         return data
       },
-    }),
+    })
+  },
   component: TenantsPage,
 })
 

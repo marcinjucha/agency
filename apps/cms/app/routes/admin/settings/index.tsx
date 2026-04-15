@@ -11,41 +11,40 @@ import { SeoSettingsForm } from '@/features/site-settings/components/SeoSettings
 
 export const Route = createFileRoute('/admin/settings/')({
   head: () => buildCmsHead(messages.nav.settings),
-  loader: ({ context: { queryClient } }) =>
-    Promise.all([
-      queryClient.ensureQueryData({
-        queryKey: queryKeys.calendar.connections,
-        queryFn: async () => {
-          const result = await getCalendarConnectionsFn()
-          if (!result.success) throw new Error(result.error)
-          return result.data
-        },
-      }),
-      queryClient.ensureQueryData({
-        queryKey: queryKeys.calendar.settings,
-        queryFn: async () => {
-          const result = await getCalendarSettingsFn()
-          if (!result.success) throw new Error(result.error)
-          return result.data
-        },
-      }),
-      queryClient.ensureQueryData({
-        queryKey: siteSettingsKeys.detail,
-        queryFn: async () => {
-          const result = await getSiteSettingsFn()
-          if (!result.success) throw new Error(result.error)
-          return result.data
-        },
-      }),
-      queryClient.ensureQueryData({
-        queryKey: siteSettingsKeys.keywordPool,
-        queryFn: async () => {
-          const result = await getKeywordPoolFn()
-          if (!result.success) throw new Error(result.error)
-          return result.data
-        },
-      }),
-    ]),
+  loader: ({ context: { queryClient } }) => {
+    queryClient.prefetchQuery({
+      queryKey: queryKeys.calendar.connections,
+      queryFn: async () => {
+        const result = await getCalendarConnectionsFn()
+        if (!result.success) throw new Error(result.error)
+        return result.data
+      },
+    })
+    queryClient.prefetchQuery({
+      queryKey: queryKeys.calendar.settings,
+      queryFn: async () => {
+        const result = await getCalendarSettingsFn()
+        if (!result.success) throw new Error(result.error)
+        return result.data
+      },
+    })
+    queryClient.prefetchQuery({
+      queryKey: siteSettingsKeys.detail,
+      queryFn: async () => {
+        const result = await getSiteSettingsFn()
+        if (!result.success) throw new Error(result.error)
+        return result.data
+      },
+    })
+    queryClient.prefetchQuery({
+      queryKey: siteSettingsKeys.keywordPool,
+      queryFn: async () => {
+        const result = await getKeywordPoolFn()
+        if (!result.success) throw new Error(result.error)
+        return result.data
+      },
+    })
+  },
   component: SettingsPage,
 })
 

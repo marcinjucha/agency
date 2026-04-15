@@ -8,14 +8,15 @@ import { WorkflowList } from '@/features/workflows/components/WorkflowList'
 export const Route = createFileRoute('/admin/workflows/')({
   head: () => buildCmsHead(messages.nav.workflows),
   // Pre-populate TanStack Query cache so WorkflowList renders instantly from cache.
-  loader: ({ context: { queryClient } }) =>
-    queryClient.ensureQueryData({
+  loader: ({ context: { queryClient } }) => {
+    queryClient.prefetchQuery({
       queryKey: queryKeys.workflows.list,
       queryFn: async () => {
         const data = await getWorkflowsFn()
         return data
       },
-    }),
+    })
+  },
   component: WorkflowsPage,
 })
 

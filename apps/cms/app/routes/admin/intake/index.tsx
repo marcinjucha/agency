@@ -13,13 +13,14 @@ export const Route = createFileRoute('/admin/intake/')({
     appointmentStatus: search.appointmentStatus as string | undefined,
   }),
   // Pre-populate TanStack Query cache so IntakeHub renders instantly from cache.
-  loader: ({ context: { queryClient } }) =>
-    queryClient.ensureQueryData({
+  loader: ({ context: { queryClient } }) => {
+    queryClient.prefetchQuery({
       queryKey: queryKeys.intake.pipeline,
       queryFn: async () => {
         const data = await getPipelineResponsesFn()
         return data
       },
-    }),
+    })
+  },
   component: () => <IntakeHub />,
 })

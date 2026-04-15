@@ -14,30 +14,29 @@ export const Route = createFileRoute('/admin/workflows/$workflowId')({
   // Pre-populate all 3 query caches in parallel.
   // WorkflowEditor + TriggerConfigPanel + SendEmailConfigPanel each use their own
   // useQuery with matching keys — data is already in cache so they render instantly.
-  loader: ({ context: { queryClient }, params }) =>
-    Promise.all([
-      queryClient.ensureQueryData({
-        queryKey: queryKeys.workflows.detail(params.workflowId),
-        queryFn: async () => {
-          const data = await getWorkflowFn({ data: { id: params.workflowId } })
-          return data
-        },
-      }),
-      queryClient.ensureQueryData({
-        queryKey: queryKeys.workflows.surveys,
-        queryFn: async () => {
-          const data = await getSurveysForWorkflowFn()
-          return data
-        },
-      }),
-      queryClient.ensureQueryData({
-        queryKey: queryKeys.workflows.emailTemplates,
-        queryFn: async () => {
-          const data = await getEmailTemplatesForWorkflowFn()
-          return data
-        },
-      }),
-    ]),
+  loader: ({ context: { queryClient }, params }) => {
+    queryClient.prefetchQuery({
+      queryKey: queryKeys.workflows.detail(params.workflowId),
+      queryFn: async () => {
+        const data = await getWorkflowFn({ data: { id: params.workflowId } })
+        return data
+      },
+    })
+    queryClient.prefetchQuery({
+      queryKey: queryKeys.workflows.surveys,
+      queryFn: async () => {
+        const data = await getSurveysForWorkflowFn()
+        return data
+      },
+    })
+    queryClient.prefetchQuery({
+      queryKey: queryKeys.workflows.emailTemplates,
+      queryFn: async () => {
+        const data = await getEmailTemplatesForWorkflowFn()
+        return data
+      },
+    })
+  },
   component: WorkflowEditorPage,
 })
 
