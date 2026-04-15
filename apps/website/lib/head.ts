@@ -1,0 +1,33 @@
+/**
+ * Head meta builder for website public routes.
+ *
+ * Website pages are indexed — no noindex/nofollow.
+ * Title pattern: "{page} | Halo Efekt" or the full title for root.
+ * Plausible analytics is added via script tag in root layout (iteration 2).
+ */
+export function buildWebsiteHead(title: string, description?: string, ogImage?: string) {
+  const metaTags: Array<Record<string, string>> = [
+    { charSet: 'utf-8' },
+    { name: 'viewport', content: 'width=device-width, initial-scale=1' },
+    { title },
+  ]
+
+  if (description) {
+    metaTags.push({ name: 'description', content: description })
+    metaTags.push({ property: 'og:description', content: description })
+  }
+
+  metaTags.push({ property: 'og:title', content: title })
+  metaTags.push({ property: 'og:type', content: 'website' })
+  metaTags.push({ property: 'og:site_name', content: 'Halo Efekt' })
+
+  if (ogImage) {
+    metaTags.push({ property: 'og:image', content: ogImage })
+    metaTags.push({ name: 'twitter:card', content: 'summary_large_image' })
+    metaTags.push({ name: 'twitter:image', content: ogImage })
+  }
+
+  return {
+    meta: metaTags,
+  }
+}
