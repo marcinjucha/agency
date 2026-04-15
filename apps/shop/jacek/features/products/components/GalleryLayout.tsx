@@ -1,6 +1,5 @@
 'use client'
 
-import Image from 'next/image'
 import { useState } from 'react'
 import type { ShopProductPublic } from '../types'
 import { formatPrice } from '../utils'
@@ -27,13 +26,11 @@ export function GalleryLayout({ product }: GalleryLayoutProps) {
       <div className="space-y-4">
         {activeImage && (
           <div className="relative aspect-[3/4] overflow-hidden rounded-lg bg-muted">
-            <Image
+            <img
               src={activeImage}
               alt={product.title}
-              fill
-              className="object-cover"
-              sizes="(max-width: 1024px) 100vw, 50vw"
-              priority
+              className="w-full h-full object-cover"
+              loading="eager"
             />
           </div>
         )}
@@ -50,7 +47,7 @@ export function GalleryLayout({ product }: GalleryLayoutProps) {
                 }`}
                 aria-label={`Zdjęcie ${i + 1}`}
               >
-                <Image src={src} alt="" fill className="object-cover" sizes="64px" />
+                <img src={src} alt="" className="w-full h-full object-cover" loading="lazy" />
               </button>
             ))}
           </div>

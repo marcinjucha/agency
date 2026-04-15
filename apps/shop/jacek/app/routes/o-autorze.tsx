@@ -1,12 +1,17 @@
-import type { Metadata } from 'next'
+import { createFileRoute } from '@tanstack/react-router'
 import { messages } from '@/lib/messages'
 
-export const metadata: Metadata = {
-  title: messages.about.title,
-  description: messages.about.description,
-}
+export const Route = createFileRoute('/o-autorze')({
+  head: () => ({
+    meta: [
+      { title: messages.about.title + ' | Książki Jacka' },
+      { name: 'description', content: messages.about.description },
+    ],
+  }),
+  component: AboutPage,
+})
 
-export default function AboutPage() {
+function AboutPage() {
   return (
     <main className="mx-auto max-w-3xl px-6 py-16 sm:py-24">
       <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">

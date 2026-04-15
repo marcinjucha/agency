@@ -36,8 +36,9 @@
   --radius: 0.5rem;
 
   /* Font family variables for serif headings + sans body */
-  --font-heading: var(--font-merriweather), Georgia, 'Times New Roman', serif;
-  --font-body: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
+  /* Using fontsource direct imports — no next/font CSS variable injection */
+  --font-heading: 'Merriweather', Georgia, 'Times New Roman', serif;
+  --font-body: 'Geist Sans Variable', 'Geist Sans', system-ui, -apple-system, sans-serif;
 }
 
 /* Serif headings */

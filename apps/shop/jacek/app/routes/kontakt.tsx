@@ -1,12 +1,17 @@
-import type { Metadata } from 'next'
+import { createFileRoute } from '@tanstack/react-router'
 import { messages } from '@/lib/messages'
 
-export const metadata: Metadata = {
-  title: messages.contact.title,
-  description: messages.contact.description,
-}
+export const Route = createFileRoute('/kontakt')({
+  head: () => ({
+    meta: [
+      { title: messages.contact.title + ' | Książki Jacka' },
+      { name: 'description', content: messages.contact.description },
+    ],
+  }),
+  component: ContactPage,
+})
 
-export default function ContactPage() {
+function ContactPage() {
   return (
     <main className="mx-auto max-w-3xl px-6 py-16 sm:py-24">
       <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">

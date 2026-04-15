@@ -1,7 +1,6 @@
 'use client'
 
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { Link, useRouterState } from '@tanstack/react-router'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
 
@@ -12,12 +11,12 @@ const NAV_LINKS = [
 ] as const
 
 export function Navbar() {
-  const pathname = usePathname()
+  const pathname = useRouterState({ select: (s) => s.location.pathname })
 
   return (
     <header className="border-b border-border bg-background/80 backdrop-blur-sm sticky top-0 z-50">
       <nav className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
-        <Link href={routes.home} className="font-serif text-xl font-bold text-foreground">
+        <Link to={routes.home} className="font-serif text-xl font-bold text-foreground">
           Jacek
         </Link>
 
@@ -27,7 +26,7 @@ export function Navbar() {
             return (
               <li key={href}>
                 <Link
-                  href={href}
+                  to={href}
                   className={`text-sm transition-colors ${
                     isActive
                       ? 'text-primary font-medium'

@@ -1,19 +1,27 @@
-import Link from 'next/link'
+import { createFileRoute, Link } from '@tanstack/react-router'
 import { getPublishedProducts } from '@/features/products/queries'
 import { ProductGrid } from '@/features/products/components/ProductGrid'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
 
-export const revalidate = 3600
+export const Route = createFileRoute('/')({
+  loader: async () => {
+    try {
+      const products = await getPublishedProducts()
+      return { featured: products.slice(0, 6) }
+    } catch {
+      // Supabase unreachable at build time — render empty
+      return { featured: [] }
+    }
+  },
+  headers: () => ({
+    'Cache-Control': 'public, max-age=3600, stale-while-revalidate=86400',
+  }),
+  component: HomePage,
+})
 
-export default async function HomePage() {
-  let featured: Awaited<ReturnType<typeof getPublishedProducts>> = []
-  try {
-    const products = await getPublishedProducts()
-    featured = products.slice(0, 6)
-  } catch {
-    // Supabase unreachable at build time — render empty
-  }
+function HomePage() {
+  const { featured } = Route.useLoaderData()
 
   return (
     <main>
@@ -29,7 +37,7 @@ export default async function HomePage() {
           </p>
           <div className="mt-8">
             <Link
-              href={routes.products}
+              to={routes.products}
               className="inline-flex items-center rounded-md bg-primary px-6 py-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
             >
               {messages.products.seeAll}
@@ -46,7 +54,7 @@ export default async function HomePage() {
               {messages.products.featured}
             </h2>
             <Link
-              href={routes.products}
+              to={routes.products}
               className="text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
               {messages.products.seeAll} &rarr;

@@ -1,4 +1,3 @@
-import Image from 'next/image'
 import type { ShopProductPublic } from '../types'
 import { formatPrice } from '../utils'
 import { ProductCta } from './ProductCta'
@@ -17,13 +16,11 @@ export function EditorialLayout({ product }: EditorialLayoutProps) {
       <div className="grid gap-8 lg:grid-cols-[300px_1fr] lg:gap-12">
         {product.cover_image_url && (
           <div className="relative aspect-[3/4] overflow-hidden rounded-lg bg-muted">
-            <Image
+            <img
               src={product.cover_image_url}
               alt={product.title}
-              fill
-              className="object-cover"
-              sizes="(max-width: 1024px) 100vw, 300px"
-              priority
+              className="w-full h-full object-cover"
+              loading="eager"
             />
           </div>
         )}
