@@ -4,7 +4,7 @@ Admin panel for service providers. Authenticated application managing surveys, i
 
 ## Tech Stack
 
-- **Framework:** Next.js 16 (App Router)
+- **Framework:** Next.js 16 (App Router, port 3001) + TanStack Start (Vite, port 3004) — dual framework during migration
 - **State Management:** TanStack Query (server state)
 - **Forms:** React Hook Form + Zod
 - **UI:** shadcn/ui from @agency/ui
@@ -155,6 +155,20 @@ Feature-specific components go in `features/{feature}/components/`.
 **Session:** Stored in HTTP-only cookies via Supabase Auth
 
 **Logout:** Sidebar → Logout button → `supabase.auth.signOut()`
+
+## TanStack Start Migration
+
+Both Next.js 16 (port 3001, existing features) and TanStack Start (port 3004, new routes) coexist in `apps/cms/` until full migration. TanStack Start dev: `npm run dev:vite` (port 3004). See `docs/TANSTACK_CMS_MIGRATION.md` for per-iteration progress.
+
+- **`messages.nav.xxx` is the correct key (NOT `messages.navigation.xxx`)** — Agent hallucinated `messages.navigation` as the section key during migration, causing silent runtime TypeError. The actual section in `messages.ts` is `messages.nav`. Always grep `messages.ts` before referencing any key. **WHY:** CMS-specific key structure; no way to infer from convention.
+
+- **`admin.tsx` (no underscore) for `/admin/*` routes** — Underscore prefix (`_admin.tsx`) creates a pathless layout (no URL segment added). `_admin/index.tsx` maps to URL `/` not `/admin/`. Use `admin.tsx` which adds `/admin/` segment, matching existing Next.js `app/admin/` structure. **WHY:** TanStack routing convention is in `tanstack-routing` skill, but the CMS decision to use segment-based `admin.tsx` is project-specific.
+
+- **Supabase mock arrays: count ALL `.from()` calls in neverthrow pipeline** — `verifyWorkflowAccess` + `patchSurveyLink` = 2 calls. Test with only 1 mock returns `{data: null}` for the first call, so `verifyWorkflowAccess` returns `err('notFound')` and the test silently passes for the wrong reason. Count every `.from()` invocation in the pipeline. **WHY:** Vitest Supabase mocks are consumed sequentially; mismatch between mock count and actual call count causes silent false-positive tests.
+
+- **`lib/supabase/server-start.ts` for TanStack Start (not `server.ts`)** — `server.ts` uses `cookies()` from `next/headers` which fails in TanStack Start. New `server-start.ts` uses `getCookies()`/`setCookie()` from `@tanstack/start-server-core`. Both files coexist during migration. Use `createStartClient()` in new TanStack routes. **WHY:** Importing `server.ts` in a TanStack route pulls in `next/headers` and crashes at runtime with no clear error message.
+
+- **Cross-reference to skills for TanStack patterns** — Don't duplicate generic TanStack patterns here. Use: `tanstack-setup` (vite config, `optimizeDeps.exclude`), `tanstack-routing` (pathless layout vs segment route), `tanstack-server` (createServerFn, auth middleware). **WHY:** Avoids drift between skill and CLAUDE.md; skills are the source of truth for framework patterns.
 
 ## Database Access
 
