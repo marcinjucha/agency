@@ -1,4 +1,4 @@
-import { createAnonClient } from '@/lib/supabase/anon-server'
+import { createServiceClient } from '@/lib/supabase/service'
 import type { TablesInsert } from '@agency/database'
 import type { SurveyAnswers } from './types'
 import { messages } from '@/lib/messages'
@@ -22,7 +22,7 @@ export async function submitResponse({
   surveyId,
   answers,
 }: SubmitResponseParams): Promise<SubmitResponseResult> {
-  const supabase = createAnonClient()
+  const supabase = createServiceClient()
 
   // Step 1: Get tenant_id + workflow_id from survey link and survey in a single query
   const { data: linkData, error: linkError } = await (supabase as any)

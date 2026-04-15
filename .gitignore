@@ -13,6 +13,11 @@ out/
 build/
 dist/
 
+# TanStack Start / Vinxi
+.tanstack/
+.output/
+.vinxi/
+
 # Production
 *.log
 npm-debug.log*

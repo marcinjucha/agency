@@ -28,3 +28,10 @@ export type WebsiteBlogListItem = {
   published_at: string | null
   estimated_reading_time: number | null
 }
+
+/** Minimal blog post data for sitemap generation */
+export type BlogSitemapEntry = {
+  slug: string
+  updated_at: string | null
+  published_at: string | null
+}

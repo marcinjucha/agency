@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import Link from 'next/link'
+import { Link } from '@tanstack/react-router'
 import { Button } from '@agency/ui'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
@@ -53,7 +53,7 @@ export function CookieBanner() {
             <p className="text-sm text-muted-foreground">
               {messages.cookie.message}{' '}
               <Link
-                href={routes.politykaPrywatnosci}
+                to={routes.politykaPrywatnosci}
                 className="text-primary underline underline-offset-4 decoration-primary/40 hover:decoration-primary transition-colors duration-200"
               >
                 {messages.cookie.privacyLink}
@@ -61,7 +61,7 @@ export function CookieBanner() {
             </p>
 
             <div className="flex items-center gap-3 shrink-0">
-              <Link href={routes.politykaPrywatnosci} tabIndex={-1}>
+              <Link to={routes.politykaPrywatnosci} tabIndex={-1}>
                 <Button
                   variant="ghost"
                   size="sm"

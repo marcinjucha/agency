@@ -1,12 +1,12 @@
 # apps/ - Applications Directory
 
-This directory contains the applications that make up AI Agency. CMS and Website use Next.js, shop frontends use TanStack Start.
+This directory contains the applications that make up AI Agency. CMS uses Next.js. Website and shop frontends use TanStack Start + Vite 8.
 
 ## Structure
 
 ```
 apps/
-├── website/     # Public-facing marketing website — Next.js (port 3000)
+├── website/     # Public-facing marketing website — TanStack Start + Vite 8 (port 3000)
 ├── cms/         # Admin panel — Next.js (port 3001)
 └── shop/        # E-commerce frontends — TanStack Start + Vite 8 (per-client)
     ├── jacek/   # Jacek's book shop (port 3002)
@@ -26,6 +26,7 @@ apps/
 - Calendar booking interface
 - No authentication required
 
+**Framework:** TanStack Start v1.167 + Vite 8
 **Port:** 3000 (development)
 **URL:** https://agency-website.vercel.app (production)
 

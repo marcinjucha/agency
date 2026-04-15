@@ -1,7 +1,6 @@
 import { createServerFn } from '@tanstack/react-start'
 import { createServiceClient } from '@/lib/supabase/service'
-import type { WebsiteBlogPost, WebsiteBlogListItem, SeoMetadata } from './types'
-import type { BlogSitemapEntry } from './queries'
+import type { WebsiteBlogPost, WebsiteBlogListItem, SeoMetadata, BlogSitemapEntry } from './types'
 
 // ---------------------------------------------------------------------------
 // Field selectors (mirrors queries.ts)
