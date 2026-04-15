@@ -47,6 +47,9 @@ function RootLayout() {
 
 function SentryErrorBoundary({ error }: { error: unknown }) {
   Sentry.captureException(error)
+  const isDev = import.meta.env.DEV
+  const message = isDev && error instanceof Error ? error.message : undefined
+  const stack = isDev && error instanceof Error ? error.stack : undefined
 
   return (
     <html lang="pl" className="dark">
@@ -56,12 +59,17 @@ function SentryErrorBoundary({ error }: { error: unknown }) {
         <title>Błąd | Halo Efekt CMS</title>
       </head>
       <body className="antialiased bg-background text-foreground">
-        <div className="flex min-h-screen items-center justify-center">
-          <div className="text-center space-y-2">
+        <div className="flex min-h-screen items-center justify-center p-8">
+          <div className="text-center space-y-4 max-w-2xl">
             <p className="text-destructive font-semibold">Coś poszło nie tak</p>
             <p className="text-sm text-muted-foreground">
               Błąd został zarejestrowany. Odśwież stronę.
             </p>
+            {isDev && message && (
+              <pre className="text-left text-xs bg-gray-900 text-red-400 p-4 rounded overflow-auto">
+                {message}{'\n\n'}{stack}
+              </pre>
+            )}
           </div>
         </div>
       </body>

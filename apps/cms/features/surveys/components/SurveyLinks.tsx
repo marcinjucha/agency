@@ -238,7 +238,7 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
 
   // Copy to clipboard
   async function copyToClipboard(token: string, linkId: string) {
-    const websiteUrl = process.env.NEXT_PUBLIC_WEBSITE_URL || 'http://localhost:3000'
+    const websiteUrl = import.meta.env.VITE_WEBSITE_URL || 'http://localhost:3000'
     const fullUrl = `${websiteUrl}/survey/${token}`
 
     try {

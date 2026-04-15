@@ -12,12 +12,12 @@ import type { Database } from '@agency/database'
  * Usage: workflow engine writes only. Never expose to client components.
  */
 export function createServiceClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
   if (!supabaseUrl) {
     throw new Error(
-      'Missing NEXT_PUBLIC_SUPABASE_URL environment variable.'
+      'Missing VITE_SUPABASE_URL environment variable.'
     )
   }
 

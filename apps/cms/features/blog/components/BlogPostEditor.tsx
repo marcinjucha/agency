@@ -424,7 +424,7 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
                 onTimeChange={handleTimeChange}
                 onClearSchedule={clearSchedule}
                 onCopyPreviewLink={() => {
-                  const url = `${process.env.NEXT_PUBLIC_WEBSITE_URL || ''}/blog/preview/${blogPost?.preview_token}`
+                  const url = `${import.meta.env.VITE_WEBSITE_URL || ''}/blog/preview/${blogPost?.preview_token}`
                   navigator.clipboard.writeText(url)
                 }}
               />
