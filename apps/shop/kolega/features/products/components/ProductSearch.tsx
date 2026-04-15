@@ -1,32 +1,31 @@
-'use client'
-
-import { useRouter, useSearchParams } from 'next/navigation'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useNavigate, useSearch } from '@tanstack/react-router'
+import { useEffect, useRef, useState } from 'react'
 import { Input } from '@agency/ui'
 import { messages } from '@/lib/messages'
 import { Search } from 'lucide-react'
 
 export function ProductSearch() {
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const initialQuery = searchParams.get('q') ?? ''
+  const navigate = useNavigate({ from: '/produkty/' })
+  const search = useSearch({ strict: false })
+  const initialQuery = (search.q as string | undefined) ?? ''
   const [value, setValue] = useState(initialQuery)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const isFirstRender = useRef(true)
 
-  const pushQuery = useCallback(
-    (q: string) => {
-      const params = new URLSearchParams(searchParams.toString())
-      if (q) {
-        params.set('q', q)
-      } else {
-        params.delete('q')
-      }
-      // Keep category param if present
-      router.replace(`?${params.toString()}`, { scroll: false })
-    },
-    [router, searchParams]
-  )
+  function pushQuery(q: string) {
+    navigate({
+      search: (prev) => {
+        const next = { ...prev }
+        if (q) {
+          next.q = q
+        } else {
+          delete next.q
+        }
+        return next
+      },
+      replace: true,
+    })
+  }
 
   useEffect(() => {
     if (isFirstRender.current) {
@@ -40,7 +39,7 @@ export function ProductSearch() {
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current)
     }
-  }, [value, pushQuery])
+  }, [value])
 
   return (
     <div className="relative">

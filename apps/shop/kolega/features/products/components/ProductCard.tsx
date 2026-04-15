@@ -1,5 +1,4 @@
-import Image from 'next/image'
-import Link from 'next/link'
+import { Link } from '@tanstack/react-router'
 import type { ShopProductPublic } from '../types'
 import { formatPrice } from '../utils'
 import { messages } from '@/lib/messages'
@@ -14,17 +13,16 @@ export function ProductCard({ product }: ProductCardProps) {
 
   return (
     <Link
-      href={routes.product(product.slug)}
+      to={routes.product(product.slug)}
       className="group block rounded-md border border-border bg-card overflow-hidden transition-all hover:-translate-y-0.5 hover:shadow-md"
     >
       <div className="relative aspect-[4/5] bg-muted">
         {product.cover_image_url ? (
-          <Image
+          <img
             src={product.cover_image_url}
             alt={product.title}
-            fill
-            className="object-cover"
-            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw"
+            className="w-full h-full object-cover"
+            loading="lazy"
           />
         ) : (
           <div className="flex h-full items-center justify-center">

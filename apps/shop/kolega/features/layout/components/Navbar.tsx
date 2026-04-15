@@ -1,7 +1,4 @@
-'use client'
-
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { Link, useRouterState } from '@tanstack/react-router'
 import { Search } from 'lucide-react'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
@@ -12,13 +9,13 @@ const NAV_LINKS = [
 ] as const
 
 export function Navbar() {
-  const pathname = usePathname()
+  const pathname = useRouterState({ select: (s) => s.location.pathname })
 
   return (
     <header className="border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
       <nav className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
         <Link
-          href={routes.home}
+          to={routes.home}
           className="text-lg font-bold text-foreground tracking-tight"
         >
           Oleg
@@ -32,7 +29,7 @@ export function Navbar() {
               return (
                 <li key={href}>
                   <Link
-                    href={href}
+                    to={href}
                     className={`text-sm transition-colors ${
                       isActive
                         ? 'text-primary font-medium'
@@ -47,7 +44,7 @@ export function Navbar() {
           </ul>
 
           <Link
-            href={`${routes.products}?q=`}
+            to={`${routes.products}?q=`}
             className="text-muted-foreground hover:text-foreground transition-colors"
             aria-label={messages.nav.search}
           >

@@ -1,14 +1,16 @@
-import Link from 'next/link'
+import { Link, useSearch } from '@tanstack/react-router'
 import type { ShopCategoryPublic } from '../types'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
 
 type CategorySidebarProps = {
   categories: ShopCategoryPublic[]
-  activeCategory?: string
 }
 
-export function CategorySidebar({ categories, activeCategory }: CategorySidebarProps) {
+export function CategorySidebar({ categories }: CategorySidebarProps) {
+  const search = useSearch({ strict: false })
+  const activeCategory = (search.category as string | undefined)
+
   if (categories.length === 0) return null
 
   return (
@@ -20,7 +22,7 @@ export function CategorySidebar({ categories, activeCategory }: CategorySidebarP
 
       <div className="space-y-0.5">
         <Link
-          href={routes.products}
+          to={routes.products}
           className={`block px-3 py-1.5 text-sm rounded-md transition-colors ${
             !activeCategory
               ? 'text-primary font-medium bg-primary/5'
@@ -33,7 +35,7 @@ export function CategorySidebar({ categories, activeCategory }: CategorySidebarP
         {categories.map((cat) => (
           <Link
             key={cat.id}
-            href={`${routes.products}?category=${cat.slug}`}
+            to={`${routes.products}?category=${cat.slug}`}
             className={`block px-3 py-1.5 text-sm rounded-md transition-colors ${
               activeCategory === cat.slug
                 ? 'text-primary font-medium bg-primary/5'
