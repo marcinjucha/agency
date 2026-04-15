@@ -16,6 +16,7 @@
     "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",
     "dev:website": "turbo run dev --filter=@agency/website",
     "dev:cms": "turbo run dev --filter=@agency/cms",
+    "dev:vite": "turbo run dev:vite --filter=@agency/cms",
     "build:website": "turbo run build --filter=@agency/website",
     "build:cms": "turbo run build --filter=@agency/cms",
     "dev:shop-jacek": "turbo run dev --filter=@agency/shop-jacek",

@@ -1,5 +1,3 @@
-'use client'
-
 import { useState, useMemo, useCallback } from 'react'
 import {
   DndContext,
@@ -12,7 +10,7 @@ import {
   type DragEndEvent,
 } from '@dnd-kit/core'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { updateResponseStatus } from '../actions'
+import { updateResponseStatusFn } from '../server-fns'
 import { messages } from '@/lib/messages'
 import { queryKeys } from '@/lib/query-keys'
 import { PipelineColumn } from './PipelineColumn'
@@ -61,7 +59,7 @@ export function PipelineView({ responses, onSelectResponse }: PipelineViewProps)
 
   const statusMutation = useMutation({
     mutationFn: async ({ responseId, newStatus }: { responseId: string; newStatus: string }) => {
-      const result = await updateResponseStatus(responseId, newStatus)
+      const result = await updateResponseStatusFn({ data: { responseId, status: newStatus } })
       if (!result.success) throw new Error(result.error)
       return result
     },

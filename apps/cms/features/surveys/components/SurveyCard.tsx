@@ -1,6 +1,4 @@
-'use client'
-
-import { useRouter } from 'next/navigation'
+import { useNavigate } from '@tanstack/react-router'
 import {
   Card,
   CardContent,
@@ -28,7 +26,7 @@ interface SurveyCardProps {
 }
 
 export function SurveyCard({ survey, onDelete, isDeleting }: SurveyCardProps) {
-  const router = useRouter()
+  const navigate = useNavigate()
   const questionCount = Array.isArray(survey.questions) ? survey.questions.length : 0
 
   return (
@@ -36,11 +34,11 @@ export function SurveyCard({ survey, onDelete, isDeleting }: SurveyCardProps) {
       className="group cursor-pointer overflow-hidden transition-transform hover:-translate-y-0.5 focus-within:ring-2 focus-within:ring-ring"
       role="button"
       tabIndex={0}
-      onClick={() => router.push(routes.admin.survey(survey.id))}
+      onClick={() => navigate({ to: routes.admin.survey(survey.id) })}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault()
-          router.push(routes.admin.survey(survey.id))
+          navigate({ to: routes.admin.survey(survey.id) })
         }
       }}
     >

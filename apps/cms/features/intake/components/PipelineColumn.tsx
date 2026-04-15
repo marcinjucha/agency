@@ -1,5 +1,3 @@
-'use client'
-
 import { useDroppable } from '@dnd-kit/core'
 import { Badge } from '@agency/ui'
 import { PipelineCard } from './PipelineCard'
