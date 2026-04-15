@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
+import { createClient } from '@supabase/supabase-js'
 import { bookingRequestSchema } from '@/features/calendar/validation'
 import { bookAppointment } from '@/features/calendar/booking'
 
 /**
- * POST /api/calendar/book
+ * POST /api/calendar/book (legacy Next.js route — superseded by bookAppointmentFn)
  * Creates a new appointment after client books a time slot.
  *
  * Thin HTTP handler — all business logic lives in features/calendar/booking.ts
@@ -14,7 +15,11 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const validatedData = bookingRequestSchema.parse(body)
 
-    const result = await bookAppointment(validatedData)
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+    const result = await bookAppointment(supabase, validatedData)
 
     if (!result.success) {
       const { error, code, status, details } = result.error

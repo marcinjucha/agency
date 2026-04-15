@@ -14,8 +14,6 @@
  * @module apps/website/features/survey/components/QuestionField
  */
 
-'use client'
-
 import { Control, Controller } from 'react-hook-form'
 import {
   Input,
@@ -31,7 +29,7 @@ import {
   Checkbox,
   DatePicker,
 } from '@agency/ui'
-import Link from 'next/link'
+import { Link } from '@tanstack/react-router'
 import type { Question, SurveyAnswers } from '../types'
 import { messages } from '@/lib/messages'
 
@@ -306,7 +304,7 @@ export function QuestionField({
                       </a>
                     ) : (
                       <Link
-                        href={consentUrl}
+                        to={consentUrl}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-primary underline underline-offset-2 hover:text-primary/80 transition-colors"

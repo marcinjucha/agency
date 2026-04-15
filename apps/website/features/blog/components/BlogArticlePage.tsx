@@ -1,8 +1,5 @@
-'use client'
-
 import { useState } from 'react'
-import Image from 'next/image'
-import Link from 'next/link'
+import { Link } from '@tanstack/react-router'
 import { Badge } from '@agency/ui'
 import type { WebsiteBlogPost } from '../types'
 import { formatPolishDate } from '../utils'
@@ -67,13 +64,13 @@ export function BlogArticlePage({ post, isPreview = false }: BlogArticlePageProp
         {post.cover_image_url && (
           <div className="mx-auto mt-10 max-w-4xl px-4 sm:px-6 lg:px-8">
             <div className="overflow-hidden rounded-2xl shadow-lg">
-              <Image
+              <img
                 src={post.cover_image_url}
                 alt={post.title}
                 width={1200}
                 height={500}
+                loading="eager"
                 className="w-full max-h-[500px] object-cover"
-                priority
               />
             </div>
           </div>
@@ -117,7 +114,7 @@ export function BlogArticlePage({ post, isPreview = false }: BlogArticlePageProp
             </button>
 
             <Link
-              href={routes.blog}
+              to={routes.blog}
               className="text-sm font-medium text-muted-foreground transition-colors duration-200 hover:text-foreground"
             >
               {'\u2190 Wr\u00f3\u0107 do bloga'}

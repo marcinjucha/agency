@@ -1,5 +1,3 @@
-'use client'
-
 import { Calendar, CheckCircle, Clock } from 'lucide-react'
 import { messages } from '@/lib/messages'
 import type { CalendarSlot } from '../types'

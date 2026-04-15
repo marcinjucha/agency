@@ -1,5 +1,3 @@
-'use client'
-
 import type { CalendarSlot } from '../types'
 
 interface TimeSlotsGridProps {

@@ -1,12 +1,10 @@
-'use client'
-
 import { useState } from 'react'
 import { DatePicker, ErrorState, Label, LoadingState } from '@agency/ui'
 import { startOfDay } from 'date-fns'
 import { messages } from '@/lib/messages'
-import { routes } from '@/lib/routes'
 import { TimeSlotsGrid } from './TimeSlotsGrid'
 import type { CalendarSlot } from '../types'
+import { getAvailableSlotsFn } from '@/features/calendar/server'
 
 interface DateSlotPickerProps {
   surveyId: string
@@ -41,27 +39,17 @@ export function DateSlotPicker({
       // Format in local timezone — toISOString() converts to UTC which shifts the date
       // e.g., April 10 00:00 CEST = April 9 22:00 UTC → wrong day sent to API
       const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
-      const params = new URLSearchParams({ surveyId, date: dateStr })
-      const response = await fetch(`${routes.api.calendarSlots}?${params.toString()}`)
 
-      if (!response.ok) {
-        setSlotsError(
-          response.status === 404
-            ? messages.calendar.calendarNotConnected
-            : messages.calendar.loadTimesFailed
-        )
-        setSlots([])
-        return
-      }
+      const result = await getAvailableSlotsFn({
+        data: { surveyLinkId: surveyId, date: dateStr },
+      })
 
-      const data = await response.json()
-
-      if (!data.slots || data.slots.length === 0) {
+      if (!result.slots || result.slots.length === 0) {
         setSlotsError(messages.calendar.noTimesAvailable)
         setSlots([])
       } else {
         setSlotsError(null)
-        setSlots(data.slots)
+        setSlots(result.slots)
       }
     } catch (error) {
       console.error('Error fetching calendar slots:', error)

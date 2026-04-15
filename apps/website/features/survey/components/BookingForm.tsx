@@ -1,5 +1,3 @@
-'use client'
-
 import { type UseFormRegister, type FieldErrors } from 'react-hook-form'
 import { Button, ErrorState, Input, Label, Textarea } from '@agency/ui'
 import { Loader2 } from 'lucide-react'

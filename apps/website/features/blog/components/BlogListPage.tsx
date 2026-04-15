@@ -1,8 +1,5 @@
-'use client'
-
 import { useState } from 'react'
-import Image from 'next/image'
-import Link from 'next/link'
+import { Link } from '@tanstack/react-router'
 import { ArrowRight, Clock, BookOpen } from 'lucide-react'
 import type { WebsiteBlogListItem } from '../types'
 import { formatPolishDate } from '../utils'
@@ -19,12 +16,12 @@ function CoverImage({
 }) {
   if (src) {
     return (
-      <Image
+      <img
         src={src}
         alt={alt}
         width={800}
         height={450}
-        priority={priority}
+        loading={priority ? 'eager' : 'lazy'}
         className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.03]"
       />
     )
@@ -96,7 +93,7 @@ function CategoryPill({
 
 function FeaturedPostCard({ post }: { post: WebsiteBlogListItem }) {
   return (
-    <Link href={routes.blogPost(post.slug)} className="group block">
+    <Link to={routes.blogPost(post.slug)} className="group block">
       <article className="relative overflow-hidden rounded-2xl bg-muted/40 transition-all duration-300 hover:bg-muted/60">
         <div className="grid md:grid-cols-[1.2fr_1fr]">
           {/* Image */}
@@ -141,7 +138,7 @@ function FeaturedPostCard({ post }: { post: WebsiteBlogListItem }) {
 
 function PostCard({ post }: { post: WebsiteBlogListItem }) {
   return (
-    <Link href={routes.blogPost(post.slug)} className="group block h-full">
+    <Link to={routes.blogPost(post.slug)} className="group block h-full">
       <article className="flex h-full flex-col overflow-hidden rounded-xl bg-muted/30 transition-all duration-300 hover:bg-muted/50">
         {/* Image */}
         <div className="relative aspect-[16/9] overflow-hidden">
