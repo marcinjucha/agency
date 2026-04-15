@@ -5,7 +5,7 @@ import tailwindcss from '@tailwindcss/vite'
 import tsConfigPaths from 'vite-tsconfig-paths'
 import { nitro } from 'nitro/vite'
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   server: {
     port: 3001,
   },
@@ -18,7 +18,8 @@ export default defineConfig({
   plugins: [
     tsConfigPaths(),
     tailwindcss(),
-    nitro(),
+    // nitro() required for Vercel serverless functions — dev mode fails with ERR_LOAD_URL
+    ...(command === 'build' ? [nitro()] : []),
     tanstackStart({
       srcDirectory: 'app',
       router: {
@@ -31,4 +32,4 @@ export default defineConfig({
       },
     }),
   ],
-})
+}))
