@@ -1,8 +1,5 @@
 /// <reference types="vite/client" />
 import { createRootRoute, HeadContent, Outlet, Scripts, ScrollRestoration } from '@tanstack/react-router'
-import '@fontsource/merriweather/400.css'
-import '@fontsource/merriweather/700.css'
-import '@fontsource-variable/geist'
 import appCss from '../globals.css?url'
 import { Navbar } from '@/features/layout/components/Navbar'
 import { Footer } from '@/features/layout/components/Footer'

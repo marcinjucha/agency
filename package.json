@@ -38,5 +38,8 @@
   "dependencies": {
     "neverthrow": "^8.2.0",
     "remeda": "^2.33.7"
+  },
+  "overrides": {
+    "vite": "^8.0.0"
   }
 }

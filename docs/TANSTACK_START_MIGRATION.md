@@ -328,12 +328,82 @@ Bracket escape `[.xml]` w nazwie pliku mapuje na literalny `/sitemap.xml` URL.
 
 ---
 
+### P18: Monorepo Vite version conflict — npm overrides required
+
+**Problem:** W monorepo z Next.js apps, npm deduplication instaluje vite@7 lokalnie dla workspace TanStack Start mimo `"vite": "^8.0.0"` w package.json. Inne workspaces (cms, website) ciągną vite@7 przez zależności Next.js, co powoduje conflict.
+
+**Objaw:** `npx vite --version` w jacek pokazuje 7.x mimo zadeklarowania 8.x. SSR middleware nie montuje się na Vite 7 (P2).
+
+**Rozwiązanie:** npm overrides w root `package.json`:
+```json
+{
+  "overrides": {
+    "vite": "^8.0.0"
+  }
+}
+```
+Następnie wymagany clean install: `rm -rf node_modules package-lock.json && npm install`.
+
+**Uwaga:** Override wymusza vite@8 dla WSZYSTKICH packages w monorepo. Jeśli inne apps (cms, website) nie są kompatybilne z Vite 8, użyj workspace-scoped override lub osobnego `node_modules`.
+
+---
+
+### P19: Nitro plugin + `resolve.tsconfigPaths` — path alias failure
+
+**Problem:** Plugin `nitro()` z `nitro/vite` używa `FetchableDevEnvironment` z `env-runner`, który nie respektuje natywnego Vite `resolve.tsconfigPaths: true`. Aliasy `@/` nie rozwiązują się w SSR environment nitro.
+
+**Objaw:** "Cannot find module '@/features/...' imported from routes/__root.tsx"
+
+**Rozwiązanie:** Dwa podejścia:
+1. **Bez nitro** (prostsze) — TanStack Start ma wbudowany serwer, nitro jest opcjonalny (deployment flexibility)
+2. **Z nitro** — użyć `vite-tsconfig-paths` plugin zamiast natywnego `resolve.tsconfigPaths` (plugin działa na poziomie pluginu, nie resolvera)
+
+Wybraliśmy podejście 1 (bez nitro) — wystarczające dla self-hosted deployment.
+
+---
+
+### P20: Fontsource imports — CSS vs route file
+
+**Problem:** Oficjalny guide TanStack Start zaleca importowanie fontów w `globals.css` via `@import`, nie w `__root.tsx` via JavaScript import.
+
+**Rozwiązanie:**
+```css
+/* globals.css */
+@import '@fontsource/merriweather/400.css';
+@import '@fontsource/merriweather/700.css';
+@import '@fontsource-variable/geist';
+
+@theme inline {
+  --font-heading: 'Merriweather', Georgia, serif;
+  --font-body: 'Geist Sans Variable', system-ui, sans-serif;
+}
+```
+
+---
+
+### P21: `tanstackStart()` config — `router.routesDirectory` zamiast `tsr.appDirectory`
+
+**Problem:** Starsze tutoriale pokazują `tsr: { appDirectory: 'app' }`. Oficjalny guide używa nowszego API: `router: { routesDirectory: 'routes' }`.
+
+**Rozwiązanie:**
+```ts
+tanstackStart({
+  srcDirectory: 'app',
+  router: {
+    routesDirectory: 'routes',  // relative to srcDirectory
+  },
+})
+```
+
+---
+
 ## Checklist migracji (do zastosowania przy kolega/tata)
 
 - [ ] `package.json`: usunąć `next`, `next-plausible`, `eslint-config-next`
 - [ ] `package.json`: dodać `@tanstack/react-router`, `@tanstack/react-start`, `vite@^8`, `@tailwindcss/vite`, `@fontsource/*`
 - [ ] `package.json`: `"type": "module"`, scripts: `vite dev`, `vite build`
-- [ ] Stworzyć `vite.config.ts` z `tanstackStart({ srcDirectory: 'app' })` + `tailwindcss()` + `viteReact()`
+- [ ] Root `package.json`: dodać `"overrides": { "vite": "^8.0.0" }` jeśli monorepo ma Next.js apps
+- [ ] Stworzyć `vite.config.ts` z `tanstackStart({ srcDirectory, router: { routesDirectory } })` + `tailwindcss()` + `viteReact()`
 - [ ] Stworzyć `app/router.tsx` z `getRouter()` (nie `createRouter`)
 - [ ] Stworzyć `app/ssr.tsx` z `createServerEntry({ fetch })` pattern
 - [ ] Stworzyć `app/client.tsx` z `StartClient` (bez propsów)
