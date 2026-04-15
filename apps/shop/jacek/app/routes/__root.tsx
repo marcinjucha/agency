@@ -1,13 +1,14 @@
-import { createRootRoute, Outlet, ScrollRestoration } from '@tanstack/react-router'
-import { Meta, Scripts } from '@tanstack/react-start'
+/// <reference types="vite/client" />
+import { createRootRoute, HeadContent, Outlet, Scripts, ScrollRestoration } from '@tanstack/react-router'
 import '@fontsource/merriweather/400.css'
 import '@fontsource/merriweather/700.css'
-import '@fontsource-variable/geist-sans'
-import '../globals.css'
+import '@fontsource-variable/geist'
+import appCss from '../globals.css?url'
 import { Navbar } from '@/features/layout/components/Navbar'
 import { Footer } from '@/features/layout/components/Footer'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
+import type { ReactNode } from 'react'
 
 export const Route = createRootRoute({
   head: () => ({
@@ -25,6 +26,7 @@ export const Route = createRootRoute({
       { name: 'robots', content: 'index, follow' },
     ],
     links: [
+      { rel: 'stylesheet', href: appCss },
       { rel: 'icon', href: '/favicon.ico' },
     ],
     scripts: [
@@ -44,7 +46,7 @@ function RootLayout() {
   return (
     <html lang="pl" className="dark">
       <head>
-        <Meta />
+        <HeadContent />
       </head>
       <body className="antialiased bg-background text-foreground">
         <Navbar />

@@ -1,5 +1,3 @@
-'use client'
-
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import { useEffect, useRef, useState } from 'react'
 import { Input } from '@agency/ui'

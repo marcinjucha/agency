@@ -1,4 +1,5 @@
 import { createFileRoute, Link, notFound } from '@tanstack/react-router'
+import { createServerFn } from '@tanstack/react-start'
 import { getProductBySlug } from '@/features/products/queries'
 import { buildProductJsonLd } from '@/features/products/utils'
 import { GalleryLayout } from '@/features/products/components/GalleryLayout'
@@ -6,12 +7,16 @@ import { EditorialLayout } from '@/features/products/components/EditorialLayout'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
 
-export const Route = createFileRoute('/produkty/$slug')({
-  loader: async ({ params: { slug } }) => {
+const fetchProduct = createServerFn({ method: 'GET' })
+  .inputValidator((data: { slug: string }) => data)
+  .handler(async ({ data: { slug } }) => {
     const product = await getProductBySlug(slug)
     if (!product) throw notFound()
     return { product }
-  },
+  })
+
+export const Route = createFileRoute('/produkty/$slug')({
+  loader: ({ params: { slug } }) => fetchProduct({ data: { slug } }),
   head: ({ loaderData }) => {
     if (!loaderData) return {}
     const { product } = loaderData

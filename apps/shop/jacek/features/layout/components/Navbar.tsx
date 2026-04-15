@@ -1,5 +1,3 @@
-'use client'
-
 import { Link, useRouterState } from '@tanstack/react-router'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'

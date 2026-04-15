@@ -1,19 +1,23 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
+import { createServerFn } from '@tanstack/react-start'
 import { getPublishedProducts } from '@/features/products/queries'
 import { ProductGrid } from '@/features/products/components/ProductGrid'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
 
-export const Route = createFileRoute('/')({
-  loader: async () => {
+const fetchFeaturedProducts = createServerFn({ method: 'GET' }).handler(
+  async () => {
     try {
       const products = await getPublishedProducts()
       return { featured: products.slice(0, 6) }
     } catch {
-      // Supabase unreachable at build time — render empty
       return { featured: [] }
     }
   },
+)
+
+export const Route = createFileRoute('/')({
+  loader: () => fetchFeaturedProducts(),
   headers: () => ({
     'Cache-Control': 'public, max-age=3600, stale-while-revalidate=86400',
   }),

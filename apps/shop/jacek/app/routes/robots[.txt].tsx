@@ -5,7 +5,7 @@ Allow: /
 
 Sitemap: https://jacek.haloefekt.pl/sitemap.xml`
 
-export const Route = createFileRoute('/robots[.txt]')({
+export const Route = createFileRoute('/robots.txt')({
   component: () => null,
   server: {
     handlers: {

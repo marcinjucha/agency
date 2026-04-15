@@ -33,7 +33,7 @@ ${allPages
 </urlset>`
 }
 
-export const Route = createFileRoute('/sitemap[.xml]')({
+export const Route = createFileRoute('/sitemap.xml')({
   component: () => null,
   server: {
     handlers: {

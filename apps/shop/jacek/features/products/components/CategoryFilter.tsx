@@ -1,5 +1,3 @@
-'use client'
-
 import { Link, useSearch } from '@tanstack/react-router'
 import type { ShopCategoryPublic } from '../types'
 import { messages } from '@/lib/messages'

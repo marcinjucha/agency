@@ -1,17 +1,14 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { createServerFn } from '@tanstack/react-start'
 import { getPublishedProducts, getCategories } from '@/features/products/queries'
 import { CategoryFilter } from '@/features/products/components/CategoryFilter'
 import { ProductGrid } from '@/features/products/components/ProductGrid'
 import { ProductSearch } from '@/features/products/components/ProductSearch'
 import { messages } from '@/lib/messages'
 
-export const Route = createFileRoute('/produkty/')({
-  validateSearch: (search: Record<string, unknown>) => ({
-    category: search.category as string | undefined,
-    q: search.q as string | undefined,
-  }),
-  loaderDeps: ({ search }) => ({ category: search.category, q: search.q }),
-  loader: async ({ deps: { category, q } }) => {
+const fetchProducts = createServerFn({ method: 'GET' })
+  .inputValidator((data: { category?: string; q?: string }) => data)
+  .handler(async ({ data: { category, q } }) => {
     const [products, categories] = await Promise.all([
       getPublishedProducts(category),
       getCategories(),
@@ -28,7 +25,15 @@ export const Route = createFileRoute('/produkty/')({
       : products
 
     return { products: filtered, categories, q }
-  },
+  })
+
+export const Route = createFileRoute('/produkty/')({
+  validateSearch: (search: Record<string, unknown>) => ({
+    category: search.category as string | undefined,
+    q: search.q as string | undefined,
+  }),
+  loaderDeps: ({ search }) => ({ category: search.category, q: search.q }),
+  loader: ({ deps }) => fetchProducts({ data: deps }),
   head: () => ({
     meta: [
       { title: messages.products.title + ' | Książki Jacka' },
