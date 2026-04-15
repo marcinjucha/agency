@@ -56,6 +56,7 @@
 - **Validate after EACH iteration, not batched at end** — Orchestrator was about to skip validation after iteration 2. User corrected mid-session: "Nie zapominaj o wywoływaniu weryfikacji po każdej skończonej iteracji." Run Phase 3+3b validation after EVERY iteration completion, not deferred to a batch at the end. (2026-04-08)
 - **n8n Trigger Handler: use Switch per trigger type, not one big if/else** — User rejected single Code node with if/else for all trigger types. Preferred Switch node routing to dedicated Code nodes per type (Fetch Survey Data, Fetch Booking Data, etc.). More maintainable, each type isolated. (2026-04-12, AAA-T-183)
 - **Aggressive Boy Scout Rule for remeda/neverthrow — scouting was too gentle** — User corrected: when touching ANY file (even for minor changes), convert try/catch to neverthrow Result pipelines and imperative code to remeda pipe(). Previous session touched 48 files but only converted 3 — unacceptable. Every file you modify must be updated to match functional patterns. Not optional, not "when convenient". (2026-04-11, AAA-T-183)
+- **Always fix ALL found bugs immediately, even pre-existing ones** — User corrected twice: when you discover a bug during any task, fix it NOW. Never note-and-defer ("this is pre-existing, not our scope"). Reasoning: pre-existing bugs compound; if you see it and have context, fixing it is cheaper now than creating a separate task later. (2026-04-14)
 
 ## Bugs Found (project-specific patterns)
 
@@ -137,6 +138,8 @@
 - **n8n Set node v3.4 defaults to REPLACE mode, not merge** — Set node strips ALL fields not explicitly assigned. Assumed it merges (keeps existing + adds new). Cost: Persist Gate received `{ alreadyPersisted: false }` only, all pipeline data lost. Always use "Combine → Merge" or pass all needed fields explicitly. (2026-04-13, AAA-T-183)
 - **PostgREST handles JSONB serialization natively** — Never `JSON.stringify()` before writing to JSONB columns via Supabase REST API. PostgREST accepts raw objects and serializes them. Double-serialization produces escaped string `"{\"key\":\"value\"}"` instead of proper JSONB. (2026-04-13, AAA-T-183)
 - **All-workflows fire bug: no per-survey-link scoping** — Trigger route fires ALL active workflows matching trigger_type, not scoped to specific survey_link. Every survey submit triggers every survey_submitted workflow regardless of which link was used. Needs workflow-to-survey_link binding. (2026-04-13)
+- **Trigger route missing tenant_id verification on workflow_id lookup** — Security bug: `/api/workflows/trigger` with valid `WORKFLOW_TRIGGER_SECRET` could trigger another tenant's workflow by knowing its UUID. Fix: add tenant_id filter to workflow lookup query when workflow_id is provided. (2026-04-14)
+- **TanStack Query queryFn receives QueryFunctionContext as first arg** — Passing a function with optional params directly as `queryFn: fn` causes `QueryFunctionContext` object to be injected as first argument, breaking type inference and runtime. Fix: wrap in arrow function `() => fn()` + add explicit generic `useQuery<T>`. (2026-04-14)
 
 ## Preferences
 

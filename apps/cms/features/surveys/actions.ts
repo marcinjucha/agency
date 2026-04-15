@@ -1,8 +1,10 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { requireAuth } from '@/lib/auth'
+import { ok, err, ResultAsync } from 'neverthrow'
 import type { Tables, TablesInsert } from '@agency/database'
+import { requireAuthResult, zodParse, fromSupabase, fromSupabaseVoid } from '@/lib/result-helpers'
+import type { AuthSuccess } from '@/lib/auth'
 import {
   createSurveySchema,
   updateSurveySchema,
@@ -13,252 +15,324 @@ import type { UpdateSurveyLinkFormData } from './validation'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
 
+// --- Server Actions (public API) ---
+
 /**
- * Create a new survey
- * Automatically assigns current user's tenant_id
+ * Create a new survey.
+ * Automatically assigns current user's tenant_id.
  */
 export async function createSurvey(formData: {
   title: string
   description?: string
 }): Promise<{ success: boolean; surveyId?: string; error?: string }> {
-  try {
-    const parsed = createSurveySchema.safeParse(formData)
-    if (!parsed.success) {
-      return { success: false, error: parsed.error.errors[0].message }
-    }
+  const result = await zodParse(createSurveySchema, formData)
+    .asyncAndThen((parsed) => requireAuthResult('surveys').map((auth) => ({ parsed, auth })))
+    .andThen(({ parsed, auth }) => insertSurvey(auth, parsed))
 
-    const auth = await requireAuth('surveys')
-    if (!auth.success) return auth
-    const { supabase, userId, tenantId } = auth.data
-
-    // Create survey
-    const surveyData: TablesInsert<'surveys'> = {
-      title: formData.title,
-      description: formData.description || null,
-      tenant_id: tenantId,
-      created_by: userId,
-      questions: [],
-      status: 'draft',
-    }
-
-    const { data: survey, error: insertError } = await supabase
-      .from('surveys')
-      .insert(surveyData as any) // Type assertion for Supabase insert
-      .select()
-      .single()
-
-    if (insertError || !survey) {
-      return { success: false, error: insertError?.message || messages.surveys.createFailed }
-    }
-
-    revalidatePath(routes.admin.surveys)
-    return { success: true, surveyId: (survey as Tables<'surveys'>).id }
-  } catch (error) {
-    return { success: false, error: messages.surveys.createFailed }
-  }
+  return result.match(
+    (survey) => {
+      revalidatePath(routes.admin.surveys)
+      return { success: true, surveyId: (survey as Tables<'surveys'>).id }
+    },
+    (error) => ({ success: false, error }),
+  )
 }
 
 /**
- * Update survey details
+ * Update survey details.
  */
 export async function updateSurvey(
   id: string,
   data: Partial<Pick<Tables<'surveys'>, 'title' | 'description' | 'status' | 'questions'>>
 ): Promise<{ success: boolean; error?: string }> {
-  try {
-    const parsed = updateSurveySchema.safeParse(data)
-    if (!parsed.success) {
-      return { success: false, error: parsed.error.errors[0].message }
-    }
+  const result = await zodParse(updateSurveySchema, data)
+    .asyncAndThen(() => requireAuthResult('surveys'))
+    .andThen((auth) => patchSurvey(auth, id, data))
 
-    const auth = await requireAuth('surveys')
-    if (!auth.success) return auth
-
-    // @ts-expect-error - Supabase type inference issue with Server Actions
-    const { error } = await auth.data.supabase.from('surveys').update(data).eq('id', id)
-
-    if (error) {
-      return { success: false, error: error.message }
-    }
-
-    revalidatePath(routes.admin.surveys)
-    revalidatePath(routes.admin.survey(id))
-    return { success: true }
-  } catch (error) {
-    return { success: false, error: messages.surveys.updateFailed }
-  }
+  return result.match(
+    () => {
+      revalidatePath(routes.admin.surveys)
+      revalidatePath(routes.admin.survey(id))
+      return { success: true }
+    },
+    (error) => ({ success: false, error }),
+  )
 }
 
 /**
- * Delete survey
+ * Delete survey.
  */
 export async function deleteSurvey(id: string): Promise<{ success: boolean; error?: string }> {
-  try {
-    const auth = await requireAuth('surveys')
-    if (!auth.success) return auth
+  const result = await requireAuthResult('surveys')
+    .andThen((auth) => deleteSurveyRow(auth, id))
 
-    const { error } = await auth.data.supabase.from('surveys').delete().eq('id', id)
-
-    if (error) {
-      return { success: false, error: error.message }
-    }
-
-    revalidatePath(routes.admin.surveys)
-    revalidatePath(routes.admin.intake)
-    return { success: true }
-  } catch {
-    return { success: false, error: messages.surveys.deleteFailed }
-  }
+  return result.match(
+    () => {
+      revalidatePath(routes.admin.surveys)
+      revalidatePath(routes.admin.intake)
+      return { success: true }
+    },
+    (error) => ({ success: false, error: error || messages.surveys.deleteFailed }),
+  )
 }
 
 /**
- * Generate a new survey link
- * Creates a unique token for survey access
+ * Generate a new survey link.
+ * Creates a unique token for survey access.
+ * Accepts optional workflow_id to scope trigger dispatch to a specific workflow.
  */
 export async function generateSurveyLink(
   surveyId: string,
   options: {
     notificationEmail: string
-    expiresAt?: string // ISO date string
+    expiresAt?: string
     maxSubmissions?: number | null
     isActive?: boolean
     calendarConnectionId?: string | null
+    workflowId?: string | null
   }
 ): Promise<{ success: boolean; linkId?: string; token?: string; error?: string }> {
-  try {
-    const parsed = generateSurveyLinkSchema.safeParse({
-      surveyId,
-      notificationEmail: options.notificationEmail,
-      expiresAt: options.expiresAt,
-      maxSubmissions: options.maxSubmissions,
-      isActive: options.isActive ?? true,
-      calendarConnectionId: options.calendarConnectionId ?? null,
-    })
-    if (!parsed.success) {
-      return { success: false, error: parsed.error.errors[0].message }
-    }
-
-    const auth = await requireAuth('surveys')
-    if (!auth.success) return auth
-    const supabase = auth.data.supabase
-
-    // Verify user has access to this survey (via tenant_id RLS)
-    const { data: survey } = await supabase
-      .from('surveys')
-      .select('id')
-      .eq('id', surveyId)
-      .maybeSingle()
-
-    if (!survey) {
-      return { success: false, error: messages.surveys.notFound }
-    }
-
-    // Generate unique token using crypto.randomUUID()
-    const token = crypto.randomUUID()
-
-    // Insert link
-    const linkData: TablesInsert<'survey_links'> = {
-      survey_id: surveyId,
-      token,
-      notification_email: options.notificationEmail,
-      expires_at: options.expiresAt || null,
-      max_submissions: options.maxSubmissions ?? null, // null = unlimited
-      submission_count: 0,
-      is_active: parsed.data.isActive, // CRITICAL: Required for RLS policy to allow public access
-      calendar_connection_id: parsed.data.calendarConnectionId ?? null,
-    }
-
-    const { data: link, error: insertError } = await supabase
-      .from('survey_links')
-      .insert(linkData as any)
-      .select()
-      .single()
-
-    if (insertError || !link) {
-      return { success: false, error: insertError?.message || messages.surveys.generateLinkFailed }
-    }
-
-    revalidatePath(routes.admin.survey(surveyId))
-    return {
-      success: true,
-      linkId: (link as Tables<'survey_links'>).id,
-      token: (link as Tables<'survey_links'>).token,
-    }
-  } catch (error) {
-    return { success: false, error: messages.surveys.generateLinkFailed }
+  const input = {
+    surveyId,
+    notificationEmail: options.notificationEmail,
+    expiresAt: options.expiresAt,
+    maxSubmissions: options.maxSubmissions,
+    isActive: options.isActive ?? true,
+    calendarConnectionId: options.calendarConnectionId ?? null,
+    workflowId: options.workflowId ?? null,
   }
+
+  const result = await zodParse(generateSurveyLinkSchema, input)
+    .asyncAndThen((parsed) => requireAuthResult('surveys').map((auth) => ({ parsed, auth })))
+    .andThen(({ parsed, auth }) => verifySurveyAccess(auth, surveyId).map(() => ({ parsed, auth })))
+    .andThen(({ parsed, auth }) =>
+      parsed.workflowId
+        ? verifyWorkflowAccess(auth, parsed.workflowId).map(() => ({ parsed, auth }))
+        : ok({ parsed, auth })
+    )
+    .andThen(({ parsed, auth }) => insertSurveyLink(auth, surveyId, parsed))
+
+  return result.match(
+    (link) => {
+      revalidatePath(routes.admin.survey(surveyId))
+      return {
+        success: true,
+        linkId: (link as Tables<'survey_links'>).id,
+        token: (link as Tables<'survey_links'>).token,
+      }
+    },
+    (error) => ({ success: false, error }),
+  )
 }
 
 /**
- * Delete a survey link
+ * Delete a survey link.
  */
 export async function deleteSurveyLink(
   linkId: string,
   surveyId: string
 ): Promise<{ success: boolean; error?: string }> {
-  try {
-    const auth = await requireAuth('surveys')
-    if (!auth.success) return auth
+  const result = await requireAuthResult('surveys')
+    .andThen((auth) => deleteLinkRow(auth, linkId))
 
-    // RLS will ensure user can only delete links for their tenant's surveys
-    const { error } = await auth.data.supabase.from('survey_links').delete().eq('id', linkId)
-
-    if (error) {
-      return { success: false, error: error.message }
-    }
-
-    revalidatePath(routes.admin.surveys)
-    revalidatePath(routes.admin.survey(surveyId))
-    return { success: true }
-  } catch (error) {
-    return { success: false, error: messages.surveys.deleteLinkFailed }
-  }
+  return result.match(
+    () => {
+      revalidatePath(routes.admin.surveys)
+      revalidatePath(routes.admin.survey(surveyId))
+      return { success: true }
+    },
+    (error) => ({ success: false, error: error || messages.surveys.deleteLinkFailed }),
+  )
 }
 
 /**
- * Update an existing survey link
- * Allows editing notification_email, expires_at, max_submissions, is_active
+ * Update an existing survey link.
+ * Allows editing notification_email, expires_at, max_submissions, is_active, workflow_id.
  */
 export async function updateSurveyLink(
   linkId: string,
   surveyId: string,
   data: UpdateSurveyLinkFormData
 ): Promise<{ success: boolean; error?: string }> {
-  try {
-    const parsed = updateSurveyLinkSchema.safeParse(data)
-    if (!parsed.success) {
-      return { success: false, error: parsed.error.errors[0].message }
-    }
+  const result = await zodParse(updateSurveyLinkSchema, data)
+    .asyncAndThen((parsed) => requireAuthResult('surveys').map((auth) => ({ parsed, auth })))
+    .andThen(({ parsed, auth }) =>
+      parsed.workflowId
+        ? verifyWorkflowAccess(auth, parsed.workflowId).map(() => ({ parsed, auth }))
+        : ok({ parsed, auth })
+    )
+    .andThen(({ parsed, auth }) => patchSurveyLink(auth, linkId, parsed))
 
-    const auth = await requireAuth('surveys')
-    if (!auth.success) return auth
+  return result.match(
+    () => {
+      revalidatePath(routes.admin.surveys)
+      revalidatePath(routes.admin.survey(surveyId))
+      return { success: true }
+    },
+    (error) => ({ success: false, error: error || messages.surveys.updateLinkFailed }),
+  )
+}
 
-    // RLS will ensure user can only update links for their tenant's surveys
-    const updatePayload: Record<string, unknown> = {
-      notification_email: parsed.data.notificationEmail,
-      expires_at: parsed.data.expiresAt ?? null,
-      max_submissions: parsed.data.maxSubmissions ?? null,
-      is_active: parsed.data.isActive,
-    }
-    // Only include calendar_connection_id if explicitly provided in the update
-    if (parsed.data.calendarConnectionId !== undefined) {
-      updatePayload.calendar_connection_id = parsed.data.calendarConnectionId ?? null
-    }
+// --- DB helpers ---
 
-    const { error } = await auth.data.supabase
-      .from('survey_links')
-      // @ts-expect-error - Supabase type inference issue with update payload
-      .update(updatePayload)
-      .eq('id', linkId)
+const dbError = (e: unknown) =>
+  e instanceof Error ? e.message : messages.common.unknownError
 
-    if (error) {
-      return { success: false, error: error.message }
-    }
-
-    revalidatePath(routes.admin.surveys)
-    revalidatePath(routes.admin.survey(surveyId))
-    return { success: true }
-  } catch {
-    return { success: false, error: messages.surveys.updateLinkFailed }
+function insertSurvey(auth: AuthSuccess, parsed: { title: string; description?: string }) {
+  const surveyData: TablesInsert<'surveys'> = {
+    title: parsed.title,
+    description: parsed.description || null,
+    tenant_id: auth.tenantId,
+    created_by: auth.userId,
+    questions: [],
+    status: 'draft',
   }
+
+  return ResultAsync.fromPromise(
+    (auth.supabase as any)
+      .from('surveys')
+      .insert(surveyData)
+      .select()
+      .single(),
+    dbError,
+  ).andThen(fromSupabase<Tables<'surveys'>>())
+}
+
+function patchSurvey(
+  auth: AuthSuccess,
+  id: string,
+  data: Partial<Pick<Tables<'surveys'>, 'title' | 'description' | 'status' | 'questions'>>
+) {
+  return ResultAsync.fromPromise(
+    (auth.supabase as any)
+      .from('surveys')
+      .update(data)
+      .eq('id', id),
+    dbError,
+  ).andThen(fromSupabaseVoid())
+}
+
+function deleteSurveyRow(auth: AuthSuccess, id: string) {
+  return ResultAsync.fromPromise(
+    (auth.supabase as any)
+      .from('surveys')
+      .delete()
+      .eq('id', id),
+    dbError,
+  ).andThen(fromSupabaseVoid())
+}
+
+function verifySurveyAccess(auth: AuthSuccess, surveyId: string) {
+  return ResultAsync.fromPromise(
+    (auth.supabase as any)
+      .from('surveys')
+      .select('id')
+      .eq('id', surveyId)
+      .maybeSingle(),
+    dbError,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JS v2.95.2 incompatibility
+  ).andThen((res: any) => {
+    if (res.error) return err(res.error.message as string)
+    if (!res.data) return err(messages.surveys.notFound)
+    return ok(res.data as { id: string })
+  })
+}
+
+function verifyWorkflowAccess(auth: AuthSuccess, workflowId: string) {
+  return ResultAsync.fromPromise(
+    (auth.supabase as any)
+      .from('workflows')
+      .select('id')
+      .eq('id', workflowId)
+      .eq('tenant_id', auth.tenantId)
+      .maybeSingle(),
+    dbError,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JS v2.95.2 incompatibility
+  ).andThen((res: any) => {
+    if (res.error) return err(res.error.message as string)
+    if (!res.data) return err(messages.surveys.notFound)
+    return ok(undefined)
+  })
+}
+
+function insertSurveyLink(
+  auth: AuthSuccess,
+  surveyId: string,
+  parsed: {
+    notificationEmail: string
+    expiresAt?: string
+    maxSubmissions?: number | null
+    isActive: boolean
+    calendarConnectionId?: string | null
+    workflowId?: string | null
+  }
+) {
+  const token = crypto.randomUUID()
+
+  const linkData: TablesInsert<'survey_links'> = {
+    survey_id: surveyId,
+    token,
+    notification_email: parsed.notificationEmail,
+    expires_at: parsed.expiresAt || null,
+    max_submissions: parsed.maxSubmissions ?? null,
+    submission_count: 0,
+    is_active: parsed.isActive,
+    calendar_connection_id: parsed.calendarConnectionId ?? null,
+    workflow_id: parsed.workflowId ?? null,
+  }
+
+  return ResultAsync.fromPromise(
+    (auth.supabase as any)
+      .from('survey_links')
+      .insert(linkData)
+      .select()
+      .single(),
+    dbError,
+  ).andThen(fromSupabase<Tables<'survey_links'>>())
+}
+
+function patchSurveyLink(
+  auth: AuthSuccess,
+  linkId: string,
+  parsed: {
+    notificationEmail: string
+    expiresAt?: string | null
+    maxSubmissions?: number | null
+    isActive: boolean
+    calendarConnectionId?: string | null
+    workflowId?: string | null
+  }
+) {
+  const updatePayload: Record<string, unknown> = {
+    notification_email: parsed.notificationEmail,
+    expires_at: parsed.expiresAt ?? null,
+    max_submissions: parsed.maxSubmissions ?? null,
+    is_active: parsed.isActive,
+  }
+
+  if (parsed.calendarConnectionId !== undefined) {
+    updatePayload.calendar_connection_id = parsed.calendarConnectionId ?? null
+  }
+
+  if (parsed.workflowId !== undefined) {
+    updatePayload.workflow_id = parsed.workflowId ?? null
+  }
+
+  return ResultAsync.fromPromise(
+    (auth.supabase as any)
+      .from('survey_links')
+      .update(updatePayload)
+      .eq('id', linkId),
+    dbError,
+  ).andThen(fromSupabaseVoid())
+}
+
+function deleteLinkRow(auth: AuthSuccess, linkId: string) {
+  return ResultAsync.fromPromise(
+    (auth.supabase as any)
+      .from('survey_links')
+      .delete()
+      .eq('id', linkId),
+    dbError,
+  ).andThen(fromSupabaseVoid())
 }

@@ -101,6 +101,7 @@ function resolveWorkflows(ctx: DispatchContext): ResultAsync<{ ctx: DispatchCont
         .from('workflows')
         .select('id, is_active')
         .eq('id', ctx.body.workflow_id)
+        .eq('tenant_id', ctx.body.tenant_id)
         .maybeSingle() as Promise<SupabaseResponse<{ id: string; is_active: boolean }>>,
       () => ({ message: 'Failed to query workflow', status: 500 } as RouteError),
     ).andThen((res) => {

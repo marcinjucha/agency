@@ -128,6 +128,11 @@ export const messages = {
     editLink: 'Edytuj link',
     updateLinkSuccess: 'Link został zaktualizowany',
     updateLinkFailed: 'Nie udało się zaktualizować linku',
+    // Workflow selector
+    workflowSelectorLabel: 'Workflow',
+    workflowSelectorPlaceholder: 'Wybierz workflow…',
+    workflowSelectorNone: 'Brak (nie uruchamiaj workflow)',
+    workflowSelectorHint: 'Żaden workflow nie zostanie uruchomiony po wypełnieniu tego linku. Wybierz workflow, jeśli chcesz automatycznie kwalifikować odpowiedzi lub wysyłać powiadomienia.',
     active: 'Aktywny',
     inactive: 'Nieaktywny',
     noExpiry: 'Bez limitu czasowego',

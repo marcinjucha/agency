@@ -32,6 +32,7 @@ export const generateSurveyLinkSchema = z.object({
     .nullable(),
   isActive: z.boolean().default(true),
   calendarConnectionId: z.string().uuid().nullable().optional(),
+  workflowId: z.string().uuid().nullable().optional(),
 })
 
 // --- Update survey link schema ---
@@ -51,6 +52,7 @@ export const updateSurveyLinkSchema = z.object({
     .optional(),
   isActive: z.boolean(),
   calendarConnectionId: z.string().uuid().nullable().optional(),
+  workflowId: z.string().uuid().nullable().optional(),
 })
 
 // --- Inferred types ---
