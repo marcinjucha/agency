@@ -10,7 +10,7 @@ import {
   type DragEndEvent,
 } from '@dnd-kit/core'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { updateResponseStatusFn } from '../server-fns'
+import { updateResponseStatusFn } from '../server'
 import { messages } from '@/lib/messages'
 import { queryKeys } from '@/lib/query-keys'
 import { PipelineColumn } from './PipelineColumn'

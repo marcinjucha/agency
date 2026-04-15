@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, Link } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
-import { createSurveyFn } from '../server-fns'
+import { createSurveyFn } from '../server'
 import { Button, Input, Label, Card } from '@agency/ui'
 import { ArrowLeft } from 'lucide-react'
 import { queryKeys } from '@/lib/query-keys'

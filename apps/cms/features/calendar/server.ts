@@ -4,7 +4,7 @@ import { messages } from '@/lib/messages'
 import { createStartClient } from '@/lib/supabase/server-start'
 
 // ---------------------------------------------------------------------------
-// Auth helper (same pattern as surveys/server-fns.ts)
+// Auth helper (same pattern as surveys/server.ts)
 // ---------------------------------------------------------------------------
 
 type StartClient = ReturnType<typeof createStartClient>
