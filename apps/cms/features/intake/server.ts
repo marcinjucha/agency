@@ -1,31 +1,14 @@
 import { createServerFn } from '@tanstack/react-start'
-import { createStartClient } from '@/lib/supabase/server-start'
+import { ok, err, ResultAsync } from 'neverthrow'
 import { messages } from '@/lib/messages'
 import { updateStatusSchema, updateNotesSchema } from '@/features/intake/validation'
+import { getAuth, requireAuthContext, type AuthContext } from '@/lib/server-auth'
 
 // ---------------------------------------------------------------------------
-// Auth helper — shared pattern for this module
+// DB error mapper
 // ---------------------------------------------------------------------------
 
-async function getAuth() {
-  const supabase = createStartClient()
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return null
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: userData } = await (supabase as any)
-    .from('users')
-    .select('tenant_id')
-    .eq('id', user.id)
-    .single()
-
-  if (!userData?.tenant_id) return null
-
-  return { supabase, userId: user.id, tenantId: userData.tenant_id as string }
-}
+const dbError = (e: unknown) => (e instanceof Error ? e.message : messages.common.unknownError)
 
 // ---------------------------------------------------------------------------
 // Server Functions (public API)
@@ -64,25 +47,14 @@ export const updateResponseStatusFn = createServerFn()
     updateStatusSchema.parse(input)
   )
   .handler(async ({ data }): Promise<{ success: boolean; error?: string }> => {
-    try {
-      const auth = await getAuth()
-      if (!auth) return { success: false, error: 'Not authenticated' }
+    const result = await requireAuthContext().andThen((auth) =>
+      updateStatus(auth, data.responseId, data.status),
+    )
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase type inference issue with update payload
-      const { error } = await (auth.supabase as any)
-        .from('responses')
-        .update({
-          status: data.status,
-          status_changed_at: new Date().toISOString(),
-        })
-        .eq('id', data.responseId)
-
-      if (error) return { success: false, error: error.message }
-
-      return { success: true }
-    } catch {
-      return { success: false, error: messages.intake.statusUpdateFailed }
-    }
+    return result.match(
+      () => ({ success: true }),
+      (error) => ({ success: false, error: String(error) }),
+    )
   })
 
 /**
@@ -95,20 +67,38 @@ export const updateInternalNotesFn = createServerFn()
     updateNotesSchema.parse(input)
   )
   .handler(async ({ data }): Promise<{ success: boolean; error?: string }> => {
-    try {
-      const auth = await getAuth()
-      if (!auth) return { success: false, error: 'Not authenticated' }
+    const result = await requireAuthContext().andThen((auth) =>
+      updateNotes(auth, data.responseId, data.notes),
+    )
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase type inference issue with update payload
-      const { error } = await (auth.supabase as any)
-        .from('responses')
-        .update({ internal_notes: data.notes })
-        .eq('id', data.responseId)
-
-      if (error) return { success: false, error: error.message }
-
-      return { success: true }
-    } catch {
-      return { success: false, error: messages.intake.sheetNotesSaveFailed }
-    }
+    return result.match(
+      () => ({ success: true }),
+      (error) => ({ success: false, error: String(error) }),
+    )
   })
+
+// ---------------------------------------------------------------------------
+// DB helpers
+// ---------------------------------------------------------------------------
+
+function updateStatus(auth: AuthContext, responseId: string, status: string) {
+  return ResultAsync.fromPromise(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase type inference issue with update payload
+    (auth.supabase as any)
+      .from('responses')
+      .update({ status, status_changed_at: new Date().toISOString() })
+      .eq('id', responseId) as Promise<{ error: { message: string } | null }>,
+    dbError,
+  ).andThen(({ error }) => (error ? err(error.message) : ok(undefined)))
+}
+
+function updateNotes(auth: AuthContext, responseId: string, notes: string) {
+  return ResultAsync.fromPromise(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase type inference issue with update payload
+    (auth.supabase as any)
+      .from('responses')
+      .update({ internal_notes: notes })
+      .eq('id', responseId) as Promise<{ error: { message: string } | null }>,
+    dbError,
+  ).andThen(({ error }) => (error ? err(error.message) : ok(undefined)))
+}

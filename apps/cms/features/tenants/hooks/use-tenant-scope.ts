@@ -1,7 +1,4 @@
-
-
 import { useNavigate, useSearch, useLocation } from '@tanstack/react-router'
-import { useCallback, useMemo } from 'react'
 import { usePermissions } from '@/contexts/permissions-context'
 
 /**
@@ -22,39 +19,29 @@ export function useTenantScope() {
 
   const urlTenantId = search.tenant ?? null
 
-  const selectedTenantId = useMemo(() => {
-    if (!isSuperAdmin) return ownTenantId
-    return urlTenantId ?? ownTenantId
-  }, [isSuperAdmin, urlTenantId, ownTenantId])
+  const selectedTenantId = isSuperAdmin ? (urlTenantId ?? ownTenantId) : ownTenantId
 
-  const isOtherTenant = useMemo(
-    () => isSuperAdmin && !!selectedTenantId && selectedTenantId !== ownTenantId,
-    [isSuperAdmin, selectedTenantId, ownTenantId],
-  )
+  const isOtherTenant = isSuperAdmin && !!selectedTenantId && selectedTenantId !== ownTenantId
 
-  const selectedTenantName = useMemo(() => {
-    if (!selectedTenantId) return null
-    return tenants.find((t) => t.id === selectedTenantId)?.name ?? null
-  }, [tenants, selectedTenantId])
+  const selectedTenantName = selectedTenantId
+    ? (tenants.find((t) => t.id === selectedTenantId)?.name ?? null)
+    : null
 
-  const setTenantScope = useCallback(
-    (tenantId: string) => {
-      const newSearch = { ...search }
-      if (tenantId === ownTenantId) {
-        delete newSearch.tenant
-      } else {
-        newSearch.tenant = tenantId
-      }
-      navigate({ to: pathname, search: newSearch })
-    },
-    [search, pathname, navigate, ownTenantId],
-  )
+  const setTenantScope = (tenantId: string) => {
+    const newSearch = { ...search }
+    if (tenantId === ownTenantId) {
+      delete newSearch.tenant
+    } else {
+      newSearch.tenant = tenantId
+    }
+    navigate({ to: pathname, search: newSearch })
+  }
 
-  const resetToOwn = useCallback(() => {
+  const resetToOwn = () => {
     const newSearch = { ...search }
     delete newSearch.tenant
     navigate({ to: pathname, search: newSearch })
-  }, [search, pathname, navigate])
+  }
 
   return {
     /** The tenant ID currently in scope (URL param or own). */

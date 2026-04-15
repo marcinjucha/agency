@@ -11,44 +11,7 @@ import {
 import type { UpdateSurveyLinkFormData } from '@/features/surveys/validation'
 import { messages } from '@/lib/messages'
 import { createStartClient } from '@/lib/supabase/server-start'
-
-// ---------------------------------------------------------------------------
-// Auth helper — TanStack Start equivalent of requireAuthResult
-// ---------------------------------------------------------------------------
-
-type StartClient = ReturnType<typeof createStartClient>
-
-type AuthContext = {
-  supabase: StartClient
-  userId: string
-  tenantId: string
-}
-
-async function getAuth(): Promise<AuthContext | null> {
-  const supabase = createStartClient()
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return null
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: userData } = await (supabase as any)
-    .from('users')
-    .select('tenant_id')
-    .eq('id', user.id)
-    .single()
-
-  if (!userData?.tenant_id) return null
-
-  return { supabase, userId: user.id, tenantId: userData.tenant_id as string }
-}
-
-function requireAuthContext(): ResultAsync<AuthContext, string> {
-  return ResultAsync.fromPromise(getAuth(), String).andThen((auth) =>
-    auth ? ok(auth) : err('Not authenticated')
-  )
-}
+import { type AuthContext, requireAuthContext, getAuth } from '@/lib/server-auth'
 
 // ---------------------------------------------------------------------------
 // Server Functions (public API)

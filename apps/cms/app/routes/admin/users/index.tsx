@@ -8,7 +8,7 @@ import { UserList } from '@/features/users/components/UserList'
 export const Route = createFileRoute('/admin/users/')({
   head: () => buildCmsHead(messages.nav.users),
   loader: async ({ context: { queryClient, auth } }) => {
-    const tenantId = auth?.isSuperAdmin ? undefined : undefined
+    const tenantId = undefined
     await Promise.all([
       queryClient.ensureQueryData({
         queryKey: queryKeys.users.list(tenantId),

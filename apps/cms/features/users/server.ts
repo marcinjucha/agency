@@ -12,86 +12,11 @@ import type { UserWithRole } from './types'
 import { messages } from '@/lib/messages'
 import { createStartClient } from '@/lib/supabase/server-start'
 import { createServiceClient } from '@/lib/supabase/service'
+import { hasPermission } from '@/lib/permissions'
 import {
-  hasPermission,
-  validatePermissionKeys,
-  ALL_PERMISSION_KEYS,
-  type PermissionKey,
-} from '@/lib/permissions'
-
-// ---------------------------------------------------------------------------
-// Auth helper — extended for users/roles (needs permissions + isSuperAdmin)
-// ---------------------------------------------------------------------------
-
-type StartClient = ReturnType<typeof createStartClient>
-
-type AuthContext = {
-  supabase: StartClient
-  userId: string
-  tenantId: string
-  isSuperAdmin: boolean
-  roleName: string | null
-  permissions: PermissionKey[]
-}
-
-/** Roles that receive all permissions (no per-key check needed). */
-const FULL_ACCESS_ROLES = new Set(['owner', 'admin'])
-
-async function getAuth(): Promise<AuthContext | null> {
-  const supabase = createStartClient()
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return null
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: userData } = await (supabase as any)
-    .from('users')
-    .select('tenant_id, is_super_admin, role')
-    .eq('id', user.id)
-    .single()
-
-  if (!userData?.tenant_id) return null
-
-  const isSuperAdmin = userData.is_super_admin === true
-  const roleName = (userData.role as string) ?? null
-
-  // Resolve permissions
-  let permissions: PermissionKey[]
-  if (isSuperAdmin || FULL_ACCESS_ROLES.has(roleName ?? '')) {
-    permissions = [...ALL_PERMISSION_KEYS] as PermissionKey[]
-  } else {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: roleData } = await (supabase as any)
-      .from('user_roles')
-      .select('tenant_roles(role_permissions(permission_key))')
-      .eq('user_id', user.id)
-      .eq('tenant_id', userData.tenant_id)
-      .maybeSingle()
-
-    const rawKeys: string[] =
-      roleData?.tenant_roles?.role_permissions?.map(
-        (rp: { permission_key: string }) => rp.permission_key,
-      ) ?? []
-    permissions = validatePermissionKeys(rawKeys)
-  }
-
-  return {
-    supabase,
-    userId: user.id,
-    tenantId: userData.tenant_id as string,
-    isSuperAdmin,
-    roleName,
-    permissions,
-  }
-}
-
-function requireAuthContext(): ResultAsync<AuthContext, string> {
-  return ResultAsync.fromPromise(getAuth(), String).andThen((auth) =>
-    auth ? ok(auth) : err('Not authenticated'),
-  )
-}
+  type AuthContextFull as AuthContext,
+  requireAuthContextFull as requireAuthContext,
+} from '@/lib/server-auth'
 
 // ---------------------------------------------------------------------------
 // DB error mapper
@@ -528,17 +453,22 @@ function removeUserRoles(auth: AuthContext, userId: string) {
       .from('user_roles')
       .delete()
       .eq('user_id', userId)
-      .eq('tenant_id', auth.tenantId),
+      .eq('tenant_id', auth.tenantId)
+      .then(checkSupabaseError),
     dbError,
-  ).map(() => undefined)
+  )
 }
 
 function removeUserRow(_auth: AuthContext, userId: string) {
   return ResultAsync.fromPromise(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (createServiceClient() as any).from('users').delete().eq('id', userId),
+    (createServiceClient() as any)
+      .from('users')
+      .delete()
+      .eq('id', userId)
+      .then(checkSupabaseError),
     dbError,
-  ).map(() => undefined)
+  )
 }
 
 function removeAuthUser(userId: string) {

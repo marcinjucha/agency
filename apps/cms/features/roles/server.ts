@@ -4,83 +4,9 @@ import { fromSupabase } from '@/lib/result-helpers'
 import { createRoleSchema, updateRoleSchema } from './validation'
 import type { CreateRoleInput, UpdateRoleInput, TenantRoleWithPermissions } from './types'
 import { messages } from '@/lib/messages'
+import { hasPermission, validatePermissionKeys, type PermissionKey } from '@/lib/permissions'
 import { createStartClient } from '@/lib/supabase/server-start'
-import {
-  hasPermission,
-  validatePermissionKeys,
-  ALL_PERMISSION_KEYS,
-  type PermissionKey,
-} from '@/lib/permissions'
-
-// ---------------------------------------------------------------------------
-// Auth helper — extended for roles (needs permissions + isSuperAdmin)
-// ---------------------------------------------------------------------------
-
-type StartClient = ReturnType<typeof createStartClient>
-
-type AuthContext = {
-  supabase: StartClient
-  userId: string
-  tenantId: string
-  isSuperAdmin: boolean
-  permissions: PermissionKey[]
-}
-
-const FULL_ACCESS_ROLES = new Set(['owner', 'admin'])
-
-async function getAuth(): Promise<AuthContext | null> {
-  const supabase = createStartClient()
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return null
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: userData } = await (supabase as any)
-    .from('users')
-    .select('tenant_id, is_super_admin, role')
-    .eq('id', user.id)
-    .single()
-
-  if (!userData?.tenant_id) return null
-
-  const isSuperAdmin = userData.is_super_admin === true
-  const roleName = (userData.role as string) ?? null
-
-  let permissions: PermissionKey[]
-  if (isSuperAdmin || FULL_ACCESS_ROLES.has(roleName ?? '')) {
-    permissions = [...ALL_PERMISSION_KEYS] as PermissionKey[]
-  } else {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: roleData } = await (supabase as any)
-      .from('user_roles')
-      .select('tenant_roles(role_permissions(permission_key))')
-      .eq('user_id', user.id)
-      .eq('tenant_id', userData.tenant_id)
-      .maybeSingle()
-
-    const rawKeys: string[] =
-      roleData?.tenant_roles?.role_permissions?.map(
-        (rp: { permission_key: string }) => rp.permission_key,
-      ) ?? []
-    permissions = validatePermissionKeys(rawKeys)
-  }
-
-  return {
-    supabase,
-    userId: user.id,
-    tenantId: userData.tenant_id as string,
-    isSuperAdmin,
-    permissions,
-  }
-}
-
-function requireAuthContext(): ResultAsync<AuthContext, string> {
-  return ResultAsync.fromPromise(getAuth(), String).andThen((auth) =>
-    auth ? ok(auth) : err('Not authenticated'),
-  )
-}
+import { type AuthContextFull as AuthContext, requireAuthContextFull as requireAuthContext } from '@/lib/server-auth'
 
 // ---------------------------------------------------------------------------
 // DB error mapper

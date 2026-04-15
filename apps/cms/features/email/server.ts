@@ -1,51 +1,14 @@
 import { createServerFn } from '@tanstack/react-start'
-import { ok, err, ResultAsync } from 'neverthrow'
+import { ResultAsync } from 'neverthrow'
 import { fromSupabaseVoid } from '@/lib/result-helpers'
 import { updateEmailTemplateSchema } from '@/features/email/validation'
 import { renderEmailBlocks, DEFAULT_BLOCKS } from '@agency/email'
 import type { Block } from '@agency/email'
 import type { Tables } from '@agency/database'
 import { messages } from '@/lib/messages'
-import { createStartClient } from '@/lib/supabase/server-start'
 import type { EmailTemplate } from './types'
-
-// ---------------------------------------------------------------------------
-// Auth helper
-// ---------------------------------------------------------------------------
-
-type StartClient = ReturnType<typeof createStartClient>
-
-type AuthContext = {
-  supabase: StartClient
-  userId: string
-  tenantId: string
-}
-
-async function getAuth(): Promise<AuthContext | null> {
-  const supabase = createStartClient()
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return null
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: userData } = await (supabase as any)
-    .from('users')
-    .select('tenant_id')
-    .eq('id', user.id)
-    .single()
-
-  if (!userData?.tenant_id) return null
-
-  return { supabase, userId: user.id, tenantId: userData.tenant_id as string }
-}
-
-function requireAuthContext(): ResultAsync<AuthContext, string> {
-  return ResultAsync.fromPromise(getAuth(), String).andThen((auth) =>
-    auth ? ok(auth) : err('Not authenticated')
-  )
-}
+import { createStartClient } from '@/lib/supabase/server-start'
+import { type AuthContext, requireAuthContext } from '@/lib/server-auth'
 
 // ---------------------------------------------------------------------------
 // Helpers

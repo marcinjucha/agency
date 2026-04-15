@@ -1,30 +1,13 @@
 import { createServerFn } from '@tanstack/react-start'
-import { createStartClient } from '@/lib/supabase/server-start'
+import { okAsync, errAsync, ResultAsync } from 'neverthrow'
 import { messages } from '@/lib/messages'
+import { getAuth, requireAuthContext, type AuthContext } from '@/lib/server-auth'
 
 // ---------------------------------------------------------------------------
-// Auth helper — shared pattern for this module
+// DB error mapper
 // ---------------------------------------------------------------------------
 
-async function getAuth() {
-  const supabase = createStartClient()
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return null
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: userData } = await (supabase as any)
-    .from('users')
-    .select('tenant_id')
-    .eq('id', user.id)
-    .single()
-
-  if (!userData?.tenant_id) return null
-
-  return { supabase, userId: user.id, tenantId: userData.tenant_id as string }
-}
+const dbError = (e: unknown) => (e instanceof Error ? e.message : messages.common.unknownError)
 
 // ---------------------------------------------------------------------------
 // Server Functions (public API)
@@ -38,37 +21,15 @@ export const deleteResponseFn = createServerFn()
   .inputValidator((input: { id: string }) => input)
   .handler(
     async ({ data }): Promise<{ success: boolean; error?: string; hadAppointment?: boolean }> => {
-      try {
-        const auth = await getAuth()
-        if (!auth) return { success: false, error: 'Not authenticated' }
+      const result = await requireAuthContext().andThen((auth) =>
+        deleteResponseWithCleanup(auth, data.id),
+      )
 
-        const { supabase } = auth
-
-        // Check if response has a linked appointment
-        const { data: appointment } = await supabase
-          .from('appointments')
-          .select('id')
-          .eq('response_id', data.id)
-          .maybeSingle()
-
-        // Delete appointment first to avoid FK constraint violation
-        if (appointment) {
-          const { error: appointmentError } = await supabase
-            .from('appointments')
-            .delete()
-            .eq('response_id', data.id)
-
-          if (appointmentError) return { success: false, error: appointmentError.message }
-        }
-
-        const { error } = await supabase.from('responses').delete().eq('id', data.id)
-        if (error) return { success: false, error: error.message }
-
-        return { success: true, hadAppointment: !!appointment }
-      } catch {
-        return { success: false, error: messages.responses.deleteFailed }
-      }
-    }
+      return result.match(
+        ({ hadAppointment }) => ({ success: true, hadAppointment }),
+        (error) => ({ success: false, error }),
+      )
+    },
   )
 
 /**
@@ -87,17 +48,62 @@ export const triggerAiAnalysisFn = createServerFn()
       return { success: false, error: 'N8N_WEBHOOK_SURVEY_ANALYSIS_URL not configured' }
     }
 
-    try {
-      const res = await fetch(webhookUrl, {
+    const result = await ResultAsync.fromPromise(
+      fetch(webhookUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ responseId: data.responseId }),
-      })
+      }).then((res) => {
+        if (!res.ok) throw new Error(`Webhook returned ${res.status}`)
+        return res
+      }),
+      dbError,
+    )
 
-      if (!res.ok) return { success: false, error: `Webhook returned ${res.status}` }
-
-      return { success: true }
-    } catch (err) {
-      return { success: false, error: err instanceof Error ? err.message : messages.common.unknownError }
-    }
+    return result.match(
+      () => ({ success: true }),
+      (error) => ({ success: false, error }),
+    )
   })
+
+// ---------------------------------------------------------------------------
+// DB helpers
+// ---------------------------------------------------------------------------
+
+function deleteResponseWithCleanup(auth: AuthContext, responseId: string) {
+  return checkLinkedAppointment(auth, responseId).andThen(({ appointmentExists }) =>
+    (appointmentExists ? deleteAppointment(auth, responseId) : okAsync(undefined)).andThen(() =>
+      deleteResponseRow(auth, responseId).map(() => ({ hadAppointment: appointmentExists })),
+    ),
+  )
+}
+
+function checkLinkedAppointment(auth: AuthContext, responseId: string) {
+  return ResultAsync.fromPromise(
+    auth.supabase.from('appointments').select('id').eq('response_id', responseId).maybeSingle(),
+    dbError,
+  ).andThen(({ data, error }) => {
+    if (error) return errAsync(error.message)
+    return okAsync({ appointmentExists: !!data })
+  })
+}
+
+function deleteAppointment(auth: AuthContext, responseId: string) {
+  return ResultAsync.fromPromise(
+    auth.supabase.from('appointments').delete().eq('response_id', responseId),
+    dbError,
+  ).andThen(({ error }) => {
+    if (error) return errAsync(error.message)
+    return okAsync(undefined)
+  })
+}
+
+function deleteResponseRow(auth: AuthContext, responseId: string) {
+  return ResultAsync.fromPromise(
+    auth.supabase.from('responses').delete().eq('id', responseId),
+    dbError,
+  ).andThen(({ error }) => {
+    if (error) return errAsync(error.message)
+    return okAsync(undefined)
+  })
+}

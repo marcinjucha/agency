@@ -8,7 +8,7 @@ import { RoleList } from '@/features/roles/components/RoleList'
 export const Route = createFileRoute('/admin/roles/')({
   head: () => buildCmsHead(messages.nav.roles),
   loader: async ({ context: { queryClient, auth } }) => {
-    const tenantId = auth?.isSuperAdmin ? undefined : undefined
+    const tenantId = undefined
     await queryClient.ensureQueryData({
       queryKey: queryKeys.roles.list(tenantId),
       queryFn: () => getRolesFn({ data: { tenantId } }),
