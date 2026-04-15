@@ -344,7 +344,10 @@ export function ResponseDetail({ responseId }: ResponseDetailProps) {
               <div key={index} className={index > 0 ? 'pt-6 border-t border-border' : ''}>
                 {/* Result header: workflow name + timestamp */}
                 <div className="flex items-start justify-between gap-4 mb-4">
-                  <p className="text-sm font-semibold text-foreground">{result.workflowName}</p>
+                  <p className="text-sm font-semibold text-foreground">
+                    {result.workflowName}
+                    {aiActionResults.length > 1 && ` — Krok ${index + 1}`}
+                  </p>
                   {result.completedAt && (
                     <p className="text-xs text-muted-foreground whitespace-nowrap">
                       {new Date(result.completedAt).toLocaleString('pl-PL')}
