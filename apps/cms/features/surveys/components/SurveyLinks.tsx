@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getSurveyLinks } from '../queries'
-import { generateSurveyLinkFn, deleteSurveyLinkFn, updateSurveyLinkFn } from '@/lib/server-fns/surveys'
+import { generateSurveyLinkFn, deleteSurveyLinkFn, updateSurveyLinkFn } from '../server-fns'
 import type { UpdateSurveyLinkFormData } from '../validation'
 import {
   Button, Card, Input, Label, Switch,

@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback, useEffect } from 'react'
 import { useNavigate, Link } from '@tanstack/react-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { updateSurveyFn, deleteSurveyFn } from '@/lib/server-fns/surveys'
+import { updateSurveyFn, deleteSurveyFn } from '../server-fns'
 import { getSurvey } from '../queries'
 import {
   Button, Input, Label, Card, CardHeader, CardContent, Badge, CollapsibleCard,

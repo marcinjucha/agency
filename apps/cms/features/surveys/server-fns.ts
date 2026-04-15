@@ -67,7 +67,7 @@ export const createSurveyFn = createServerFn()
 
     return result.match(
       (survey) => ({ success: true, surveyId: (survey as Tables<'surveys'>).id }),
-      (error) => ({ success: false, error }),
+      (error) => ({ success: false, error })
     )
   })
 
@@ -76,13 +76,15 @@ export const createSurveyFn = createServerFn()
  * TanStack Start port of features/surveys/actions.ts#updateSurvey.
  */
 export const updateSurveyFn = createServerFn()
-  .inputValidator((input: {
-    id: string
-    data: Partial<Pick<Tables<'surveys'>, 'title' | 'description' | 'status' | 'questions'>>
-  }) => {
-    updateSurveySchema.parse(input.data)
-    return input
-  })
+  .inputValidator(
+    (input: {
+      id: string
+      data: Partial<Pick<Tables<'surveys'>, 'title' | 'description' | 'status' | 'questions'>>
+    }) => {
+      updateSurveySchema.parse(input.data)
+      return input
+    }
+  )
   .handler(async ({ data }): Promise<{ success: boolean; error?: string }> => {
     const result = await requireAuthContext().andThen((auth) =>
       patchSurvey(auth, data.id, data.data)
@@ -90,7 +92,7 @@ export const updateSurveyFn = createServerFn()
 
     return result.match(
       () => ({ success: true }),
-      (error) => ({ success: false, error }),
+      (error) => ({ success: false, error })
     )
   })
 
@@ -105,7 +107,7 @@ export const deleteSurveyFn = createServerFn()
 
     return result.match(
       () => ({ success: true }),
-      (error) => ({ success: false, error: error || messages.surveys.deleteFailed }),
+      (error) => ({ success: false, error: error || messages.surveys.deleteFailed })
     )
   })
 
@@ -114,32 +116,34 @@ export const deleteSurveyFn = createServerFn()
  * TanStack Start port of features/surveys/actions.ts#generateSurveyLink.
  */
 export const generateSurveyLinkFn = createServerFn()
-  .inputValidator((input: {
-    surveyId: string
-    notificationEmail: string
-    expiresAt?: string
-    maxSubmissions?: number | null
-    isActive?: boolean
-    calendarConnectionId?: string | null
-    workflowId?: string | null
-  }) => {
-    const normalized = {
-      surveyId: input.surveyId,
-      notificationEmail: input.notificationEmail,
-      expiresAt: input.expiresAt,
-      maxSubmissions: input.maxSubmissions,
-      isActive: input.isActive ?? true,
-      calendarConnectionId: input.calendarConnectionId ?? null,
-      workflowId: input.workflowId ?? null,
+  .inputValidator(
+    (input: {
+      surveyId: string
+      notificationEmail: string
+      expiresAt?: string
+      maxSubmissions?: number | null
+      isActive?: boolean
+      calendarConnectionId?: string | null
+      workflowId?: string | null
+    }) => {
+      const normalized = {
+        surveyId: input.surveyId,
+        notificationEmail: input.notificationEmail,
+        expiresAt: input.expiresAt,
+        maxSubmissions: input.maxSubmissions,
+        isActive: input.isActive ?? true,
+        calendarConnectionId: input.calendarConnectionId ?? null,
+        workflowId: input.workflowId ?? null,
+      }
+      return generateSurveyLinkSchema.parse(normalized)
     }
-    return generateSurveyLinkSchema.parse(normalized)
-  })
+  )
   .handler(
-    async ({ data }): Promise<{ success: boolean; linkId?: string; token?: string; error?: string }> => {
+    async ({
+      data,
+    }): Promise<{ success: boolean; linkId?: string; token?: string; error?: string }> => {
       const result = await requireAuthContext()
-        .andThen((auth) =>
-          verifySurveyAccess(auth, data.surveyId).map(() => ({ auth, data }))
-        )
+        .andThen((auth) => verifySurveyAccess(auth, data.surveyId).map(() => ({ auth, data })))
         .andThen(({ auth, data: parsed }) =>
           parsed.workflowId
             ? verifyWorkflowAccess(auth, parsed.workflowId).map(() => ({ auth, parsed }))
@@ -153,7 +157,7 @@ export const generateSurveyLinkFn = createServerFn()
           linkId: (link as Tables<'survey_links'>).id,
           token: (link as Tables<'survey_links'>).token,
         }),
-        (error) => ({ success: false, error }),
+        (error) => ({ success: false, error })
       )
     }
   )
@@ -169,7 +173,7 @@ export const deleteSurveyLinkFn = createServerFn()
 
     return result.match(
       () => ({ success: true }),
-      (error) => ({ success: false, error: error || messages.surveys.deleteLinkFailed }),
+      (error) => ({ success: false, error: error || messages.surveys.deleteLinkFailed })
     )
   })
 
@@ -195,7 +199,7 @@ export const updateSurveyLinkFn = createServerFn()
 
     return result.match(
       () => ({ success: true }),
-      (error) => ({ success: false, error: error || messages.surveys.updateLinkFailed }),
+      (error) => ({ success: false, error: error || messages.surveys.updateLinkFailed })
     )
   })
 
@@ -203,8 +207,7 @@ export const updateSurveyLinkFn = createServerFn()
 // DB helpers — same logic as features/surveys/actions.ts, adapted for AuthContext
 // ---------------------------------------------------------------------------
 
-const dbError = (e: unknown) =>
-  e instanceof Error ? e.message : messages.common.unknownError
+const dbError = (e: unknown) => (e instanceof Error ? e.message : messages.common.unknownError)
 
 function insertSurvey(auth: AuthContext, parsed: { title: string; description?: string }) {
   const surveyData: TablesInsert<'surveys'> = {
@@ -219,7 +222,7 @@ function insertSurvey(auth: AuthContext, parsed: { title: string; description?: 
   return ResultAsync.fromPromise(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (auth.supabase as any).from('surveys').insert(surveyData).select().single(),
-    dbError,
+    dbError
   ).andThen(fromSupabase<Tables<'surveys'>>())
 }
 
@@ -231,7 +234,7 @@ function patchSurvey(
   return ResultAsync.fromPromise(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (auth.supabase as any).from('surveys').update(data).eq('id', id),
-    dbError,
+    dbError
   ).andThen(fromSupabaseVoid())
 }
 
@@ -239,7 +242,7 @@ function deleteSurveyRow(auth: AuthContext, id: string) {
   return ResultAsync.fromPromise(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (auth.supabase as any).from('surveys').delete().eq('id', id),
-    dbError,
+    dbError
   ).andThen(fromSupabaseVoid())
 }
 
@@ -247,8 +250,8 @@ function verifySurveyAccess(auth: AuthContext, surveyId: string) {
   return ResultAsync.fromPromise(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (auth.supabase as any).from('surveys').select('id').eq('id', surveyId).maybeSingle(),
-    dbError,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JS v2.95.2 incompatibility
+    dbError
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JS v2.95.2 incompatibility
   ).andThen((res: any) => {
     if (res.error) return err(res.error.message as string)
     if (!res.data) return err(messages.surveys.notFound)
@@ -265,8 +268,8 @@ function verifyWorkflowAccess(auth: AuthContext, workflowId: string) {
       .eq('id', workflowId)
       .eq('tenant_id', auth.tenantId)
       .maybeSingle(),
-    dbError,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JS v2.95.2 incompatibility
+    dbError
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JS v2.95.2 incompatibility
   ).andThen((res: any) => {
     if (res.error) return err(res.error.message as string)
     if (!res.data) return err(messages.surveys.notFound)
@@ -303,7 +306,7 @@ function insertSurveyLink(
   return ResultAsync.fromPromise(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (auth.supabase as any).from('survey_links').insert(linkData).select().single(),
-    dbError,
+    dbError
   ).andThen(fromSupabase<Tables<'survey_links'>>())
 }
 
@@ -337,7 +340,7 @@ function patchSurveyLink(
   return ResultAsync.fromPromise(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (auth.supabase as any).from('survey_links').update(updatePayload).eq('id', linkId),
-    dbError,
+    dbError
   ).andThen(fromSupabaseVoid())
 }
 
@@ -345,6 +348,6 @@ function deleteLinkRow(auth: AuthContext, linkId: string) {
   return ResultAsync.fromPromise(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (auth.supabase as any).from('survey_links').delete().eq('id', linkId),
-    dbError,
+    dbError
   ).andThen(fromSupabaseVoid())
 }
