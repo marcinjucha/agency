@@ -235,6 +235,14 @@ features:
     depends_on: ["Workflow Engine"]
     completion_notes: "Iter 1-3 complete. Dual framework coexists: Next.js on 3001, TanStack Start on 3004 (npm run dev:vite). Key gotchas: optimizeDeps.exclude for virtual imports, admin.tsx vs _admin.tsx (pathless layout), server-start.ts for cookies, beforeLoad mandatory over requestMiddleware. 337/337 tests pass."
 
+  - name: "TanStack Start Migration — Surveys & Intake"
+    status: done
+    task_id: "AAA-T-193"
+    description: "Migration of Surveys, Intake, and Responses feature areas from Next.js Server Actions to TanStack Start createServerFn. Includes surveys CRUD, survey links, intake hub (response status/notes), response management, and calendar connection server functions. Key fix: googleapis (CJS) leak from SurveyLinkCalendarSelect resolved by extracting calendar calls to features/calendar/server-fns.ts."
+    why: "Surveys & Intake are the heaviest CMS features. Migrating them unblocks removal of Next.js from the CMS app and enables self-hosted VPS deployment without Vercel."
+    depends_on: ["TanStack Start Migration — CMS Core"]
+    completion_notes: "All route files migrated: admin/surveys/*, admin/intake/*, admin/responses/*. Server fns created for surveys, intake, responses, and calendar features. Fixed googleapis browser bundle leak via createServerFn isolation. Fixed raw Zod JSON error display in SurveyLinks.tsx. Known bug: apps/website dev server broken (Turbopack + @tailwindcss/node 4.2.2 enhanced-resolve issue) — tracked in memory.md."
+
   # Backlog
   - name: "Multi-language Support (PL/EN)"
     status: not_started

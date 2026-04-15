@@ -28,6 +28,8 @@
 
 ## Bugs Found
 
+- **`apps/website` dev server broken after TanStack CMS migration (2026-04-15)** — Turbopack (Next.js 16 default) throws "Cannot find module 'enhanced-resolve'" from `@tailwindcss/node` 4.2.2. Root cause likely: npm install during CMS TanStack setup upgraded `@tailwindcss/node` to v4.2.2 which added `enhanced-resolve` as new dep — Turbopack's PostCSS resolution can't find it. Workaround tried: added `enhanced-resolve` to website devDependencies — did not fix. Next steps: (1) check if `@tailwindcss/postcss` version lock would help, (2) disable Turbopack for website via `next.config.ts` as fallback.
+
 - **supabase gen types prepends "Initialising login role..."** — Corrupts types.ts. Workaround: `grep -v "^Initialising"`. `db:types` uses --local, need --linked when local not running.
 - **Supabase JS v2.95.2 `as any` needed** — `.from('table')` resolves to `never` in complex chains.
 - **DatePicker toISOString() timezone bug** — `.split('T')[0]` shifts date -1 day in CEST. Fix: `getFullYear()/getMonth()/getDate()`. Affects any date stored as YYYY-MM-DD.
@@ -38,6 +40,7 @@
 - **Trigger route missing tenant_id verification** — Security: add tenant_id filter when looking up workflow by workflow_id.
 - **Supabase mock arrays: count ALL `.from()` calls in pipeline** — Each call consumes one mock array entry. Short array = silent failure on second call.
 - **`messages.nav.xxx` not `messages.navigation.xxx`** — Agent hallucinated key name. Always grep messages.ts. CMS uses `messages.nav` section.
+- **`import.meta.env.VITE_*` not `process.env.NEXT_PUBLIC_*` in TanStack Start** — Vite SSR context (createServerFn, server-start.ts, client.ts) uses `import.meta.env.VITE_*` for .env.local vars. `process.env` is undefined in Vite bundles.
 
 ## Domain Concepts
 
@@ -62,6 +65,8 @@
 - **TanStack Start auth: beforeLoad mandatory, requestMiddleware optional** — beforeLoad (isomorphic) handles SSR + client navigation. requestMiddleware = server-only, misses client nav. See tanstack-server skill.
 - **`admin.tsx` not `_admin.tsx` for /admin/* routes** — Pathless layout (underscore) adds no URL segment. `_admin/index.tsx` → URL `/`. See tanstack-setup skill.
 - **Feature server-fns in `features/{name}/server-fns.ts`, NOT `lib/server-fns/`** — User corrected agent placing server functions in lib/. Each feature owns its server functions colocated with its other files. WHY: matches ADR-005 feature isolation pattern.
+- **CMS migration uses parent branch strategy** — Dedicated `feature/cms-tanstack-migration` parent branch; child branches per feature merge back to parent; parent merges to main when ALL features done. WHY: allows deleting Next.js code immediately instead of maintaining coexistence.
+- **`next` package stays in deps until ALL features migrated** — Even after removing Next.js infrastructure, unmigrated features still import next/cache, next/headers, next/link, next/navigation. Removing early breaks imports.
 - **RSC prop patterns don't apply in TanStack Start** — Components that received full objects from RSC (e.g., SurveyBuilder receiving survey) should take ID + internal useQuery instead. WHY: TanStack Start has no RSC; passing serialized objects from loader is fragile vs letting component own its data fetching.
 
 ## Preferences
