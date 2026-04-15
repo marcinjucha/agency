@@ -1,10 +1,10 @@
 'use client'
 
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import dynamic from 'next/dynamic'
 import { messages } from '@/lib/messages'
-import { saveWorkflowCanvasFn, toggleWorkflowActiveFn } from '../server'
+import { getWorkflowFn, saveWorkflowCanvasFn, toggleWorkflowActiveFn } from '../server'
 import { queryKeys } from '@/lib/query-keys'
 import type { SaveCanvasFormData } from '../validation'
 import { WorkflowEditorHeader } from './WorkflowEditorHeader'
@@ -14,11 +14,9 @@ import {
   type WorkflowWithSteps,
   type TriggerType,
   type StepType,
-  type SurveyOption,
-  type EmailTemplateOption,
 } from '../types'
 import { LayoutGrid, FlaskConical } from 'lucide-react'
-import { Button } from '@agency/ui'
+import { Button, ErrorState } from '@agency/ui'
 import { ConfigPanelWrapper, getPanelComponent } from './panels'
 import type { ConfigPanelProps } from './panels'
 import { StepLibraryPanel } from './StepLibraryPanel'
@@ -60,15 +58,33 @@ function getLabel(stepType: string): string {
 }
 
 interface WorkflowEditorProps {
-  workflow: WorkflowWithSteps
-  /** Pre-loaded survey list from route loader — passed to TriggerConfigPanel */
-  surveys?: SurveyOption[]
-  /** Pre-loaded email template list from route loader — passed to SendEmailConfigPanel */
-  emailTemplates?: EmailTemplateOption[]
+  /** Route param — editor fetches workflow data via useQuery (cache pre-populated by loader) */
+  workflowId: string
 }
 
-export function WorkflowEditor({ workflow, surveys, emailTemplates }: WorkflowEditorProps) {
+export function WorkflowEditor({ workflowId }: WorkflowEditorProps) {
   const queryClient = useQueryClient()
+
+  // Cache pre-populated by the route loader's ensureQueryData — renders instantly.
+  const { data: workflow, error: workflowError } = useQuery({
+    queryKey: queryKeys.workflows.detail(workflowId),
+    queryFn: async () => {
+      const data = await getWorkflowFn({ data: { id: workflowId } })
+      return data
+    },
+  })
+
+  if (workflowError) {
+    return (
+      <ErrorState
+        title={messages.workflows.loadFailed}
+        message={workflowError instanceof Error ? workflowError.message : messages.common.errorOccurred}
+        variant="card"
+      />
+    )
+  }
+
+  if (!workflow) return null
 
   // Stable UUID for synthetic trigger node (when no trigger step exists in DB)
   const syntheticTriggerIdRef = useRef(crypto.randomUUID())
@@ -347,8 +363,6 @@ export function WorkflowEditor({ workflow, surveys, emailTemplates }: WorkflowEd
                 onChange={handleConfigChange}
                 triggerType={workflow.trigger_type}
                 availableVariables={availableVariables}
-                surveys={surveys}
-                emailTemplates={emailTemplates}
               />
             </ConfigPanelWrapper>
           )

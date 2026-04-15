@@ -7,7 +7,7 @@ import { queryKeys } from '@/lib/query-keys'
 import { getWorkflows } from '../queries'
 import { deleteWorkflowFn, toggleWorkflowActiveFn } from '../server'
 import { getTriggerTypeLabel, formatDate } from '../utils'
-import type { WorkflowListItem, TriggerType } from '../types'
+import type { TriggerType, WorkflowListItem } from '../types'
 import {
   Button,
   Badge,
@@ -43,17 +43,14 @@ function TriggerBadge({ type }: { type: string }) {
   )
 }
 
-interface WorkflowListProps {
-  /** Pre-loaded workflow list from route loader — used as initialData for the query */
-  initialWorkflows?: WorkflowListItem[]
-}
-
-export function WorkflowList({ initialWorkflows }: WorkflowListProps) {
+export function WorkflowList() {
   const router = useRouter()
   const queryClient = useQueryClient()
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [viewMode, setViewMode] = useViewMode('workflow-view-mode', 'grid')
 
+  // Data already pre-populated in cache by the route loader (ensureQueryData).
+  // This query renders instantly on navigation — no loading flash.
   const {
     data: workflows,
     isLoading,
@@ -62,7 +59,6 @@ export function WorkflowList({ initialWorkflows }: WorkflowListProps) {
   } = useQuery({
     queryKey: queryKeys.workflows.list,
     queryFn: getWorkflows,
-    initialData: initialWorkflows,
   })
 
   const deleteMutation = useMutation({

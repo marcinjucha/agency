@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
@@ -13,6 +14,8 @@ import {
   SelectValue,
 } from '@agency/ui'
 import { messages } from '@/lib/messages'
+import { queryKeys } from '@/lib/query-keys'
+import { getEmailTemplatesForWorkflowFn } from '../../server'
 import { VariableInserter } from '@/features/email/components/VariableInserter'
 import { sendEmailConfigSchema } from '../../validation'
 import type { StepConfigSendEmail } from '../../types'
@@ -20,7 +23,7 @@ import type { ConfigPanelProps } from './index'
 
 type SendEmailFormData = StepConfigSendEmail
 
-export function SendEmailConfigPanel({ stepConfig, onChange, availableVariables, emailTemplates }: ConfigPanelProps) {
+export function SendEmailConfigPanel({ stepConfig, onChange, availableVariables }: ConfigPanelProps) {
   const isFirstRender = useRef(true)
   const onChangeRef = useRef(onChange)
   onChangeRef.current = onChange
@@ -41,7 +44,14 @@ export function SendEmailConfigPanel({ stepConfig, onChange, availableVariables,
     },
   })
 
-  // emailTemplates are pre-loaded from route loader — no useQuery needed
+  // Cache pre-populated by the route loader's ensureQueryData — renders instantly.
+  const { data: emailTemplates = [] } = useQuery({
+    queryKey: queryKeys.workflows.emailTemplates,
+    queryFn: async () => {
+      const data = await getEmailTemplatesForWorkflowFn()
+      return data
+    },
+  })
 
   // Watch all fields and propagate changes (skip initial mount to avoid false dirty state)
   const formValues = watch()
@@ -54,7 +64,7 @@ export function SendEmailConfigPanel({ stepConfig, onChange, availableVariables,
   }, [JSON.stringify(formValues)])
 
   const variables = availableVariables ?? []
-  const templates = emailTemplates ?? []
+  const templates = emailTemplates
 
   return (
     <div className="space-y-6">

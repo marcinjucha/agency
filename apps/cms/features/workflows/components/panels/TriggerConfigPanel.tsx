@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
@@ -13,6 +14,8 @@ import {
   SelectValue,
 } from '@agency/ui'
 import { messages } from '@/lib/messages'
+import { queryKeys } from '@/lib/query-keys'
+import { getSurveysForWorkflowFn } from '../../server'
 import {
   TRIGGER_TYPE_OPTIONS,
   type TriggerType,
@@ -45,7 +48,7 @@ interface TriggerFormValues {
   min_score?: number | null
 }
 
-export function TriggerConfigPanel({ stepConfig, onChange, surveys }: ConfigPanelProps) {
+export function TriggerConfigPanel({ stepConfig, onChange }: ConfigPanelProps) {
   const currentType = (stepConfig?.type as TriggerType) || 'manual'
   const schema = triggerSchemaMap[currentType] ?? triggerConfigManualSchema
 
@@ -67,7 +70,14 @@ export function TriggerConfigPanel({ stepConfig, onChange, surveys }: ConfigPane
     },
   })
 
-  // surveys are pre-loaded from route loader — no useQuery needed
+  // Cache pre-populated by the route loader's ensureQueryData — renders instantly.
+  const { data: surveys = [] } = useQuery({
+    queryKey: queryKeys.workflows.surveys,
+    queryFn: async () => {
+      const data = await getSurveysForWorkflowFn()
+      return data
+    },
+  })
 
   // Watch all fields and propagate changes (skip initial mount to avoid false dirty state)
   const formValues = watch()
@@ -127,7 +137,7 @@ export function TriggerConfigPanel({ stepConfig, onChange, surveys }: ConfigPane
                   <SelectValue placeholder={messages.workflows.editor.surveyIdPlaceholder} />
                 </SelectTrigger>
                 <SelectContent>
-                  {surveys?.map((survey) => (
+                  {surveys.map((survey) => (
                     <SelectItem key={survey.id} value={survey.id}>
                       {survey.title}
                     </SelectItem>
