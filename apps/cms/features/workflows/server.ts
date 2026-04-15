@@ -257,6 +257,7 @@ export const getWorkflowsFn = createServerFn().handler(async (): Promise<Workflo
 
 /**
  * Fetch a single workflow with steps and edges. Called from the /admin/workflows/$workflowId loader.
+ * Throws on error — ensureQueryData expects throws, not Result, to trigger TanStack Query error handling.
  */
 export const getWorkflowFn = createServerFn()
   .inputValidator((input: { id: string }) => input)
@@ -302,6 +303,7 @@ export const getWorkflowFn = createServerFn()
 /**
  * Fetch lightweight survey list for TriggerConfigPanel dropdown.
  * Called from the /admin/workflows/$workflowId loader.
+ * Throws on error — ensureQueryData expects throws, not Result, to trigger TanStack Query error handling.
  */
 export const getSurveysForWorkflowFn = createServerFn().handler(
   async (): Promise<SurveyOption[]> => {
@@ -317,6 +319,7 @@ export const getSurveysForWorkflowFn = createServerFn().handler(
 /**
  * Fetch lightweight email template list for SendEmailConfigPanel dropdown.
  * Called from the /admin/workflows/$workflowId loader.
+ * Throws on error — ensureQueryData expects throws, not Result, to trigger TanStack Query error handling.
  */
 export const getEmailTemplatesForWorkflowFn = createServerFn().handler(
   async (): Promise<EmailTemplateOption[]> => {
