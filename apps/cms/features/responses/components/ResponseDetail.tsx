@@ -352,11 +352,13 @@ export function ResponseDetail({ responseId }: ResponseDetailProps) {
                   )}
                 </div>
 
-                {/* Output payload: key-value pairs */}
+                {/* Output payload: key-value pairs with human-readable labels from output_schema */}
                 <div className="space-y-3">
-                  {Object.entries(result.outputPayload).map(([key, value]) => (
+                  {Object.entries(result.outputPayload).map(([key, value]) => {
+                    const label = result.outputSchema.find((f) => f.key === key)?.label ?? key
+                    return (
                     <div key={key}>
-                      <p className="text-xs font-semibold text-muted-foreground uppercase mb-1">{key}</p>
+                      <p className="text-xs font-semibold text-muted-foreground uppercase mb-1">{label}</p>
                       <div className="bg-muted rounded-lg p-3 border border-border">
                         {typeof value === 'object' && value !== null ? (
                           <pre className="text-xs text-foreground whitespace-pre-wrap break-words font-mono">
@@ -369,7 +371,8 @@ export function ResponseDetail({ responseId }: ResponseDetailProps) {
                         )}
                       </div>
                     </div>
-                  ))}
+                  )
+                  })}
                 </div>
               </div>
             ))}

@@ -152,6 +152,24 @@ export interface ResponseListItem {
 
 
 /**
+ * Single field definition from an ai_action step's output_schema config.
+ * Stored in workflow_steps.step_config as:
+ *   { output_schema: [{ key: "concerns", label: "Wątpliwości", type: "string" }, ...] }
+ *
+ * NOTE: This is user-defined content (free-text label entered in the CMS config panel),
+ * NOT an i18n key. Do not convert label to labelKey — the bridge pattern only applies
+ * to registry-level definitions in step-registry.ts.
+ */
+export interface OutputSchemaField {
+  /** CamelCase key matching the outputPayload field name */
+  key: string
+  /** Polish display label entered by the user in the AI Action config panel */
+  label: string
+  /** Field type hint (e.g. "string", "number") */
+  type: string
+}
+
+/**
  * AI Action step result from a workflow execution
  * Contains the output of an ai_action step that ran for a specific response
  */
@@ -162,6 +180,12 @@ export interface AiActionResult {
   outputPayload: Record<string, unknown>
   /** ISO 8601 timestamp when the step completed, or null if still running */
   completedAt: string | null
+  /**
+   * Field definitions from the step's output_schema config.
+   * Used to show human-readable Polish labels instead of raw camelCase keys.
+   * Empty array when step_config.output_schema is absent.
+   */
+  outputSchema: OutputSchemaField[]
 }
 
 /**

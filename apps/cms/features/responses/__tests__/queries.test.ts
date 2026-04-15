@@ -57,13 +57,16 @@ function buildExecution(id: string, responseId: string) {
 }
 
 /**
- * Build a mock workflow_step_executions row with nested join data
+ * Build a mock workflow_step_executions row with nested join data.
+ * step_config carries output_schema — the field label definitions entered by the user
+ * in the AI Action config panel.
  */
 function buildAiStepExecution(overrides: {
   workflowName?: string
   outputPayload?: Record<string, unknown>
   completedAt?: string | null
   stepType?: string
+  stepConfig?: Record<string, unknown> | null
 }) {
   return {
     output_payload: overrides.outputPayload ?? { overallScore: 8, recommendation: 'QUALIFIED' },
@@ -72,7 +75,17 @@ function buildAiStepExecution(overrides: {
       trigger_payload: { responseId: 'response-1' },
       workflows: { name: overrides.workflowName ?? 'Lead Scoring Workflow' },
     },
-    workflow_steps: { step_type: overrides.stepType ?? 'ai_action' },
+    workflow_steps: {
+      step_type: overrides.stepType ?? 'ai_action',
+      step_config: overrides.stepConfig !== undefined
+        ? overrides.stepConfig
+        : {
+            output_schema: [
+              { key: 'overallScore', label: 'Ocena ogólna', type: 'number' },
+              { key: 'recommendation', label: 'Rekomendacja', type: 'string' },
+            ],
+          },
+    },
   }
 }
 
@@ -147,6 +160,10 @@ describe('getResponseAiActionResults', () => {
         workflowName: 'Lead Scoring Workflow',
         outputPayload: { overallScore: 8, recommendation: 'QUALIFIED' },
         completedAt: '2026-04-12T10:00:00Z',
+        outputSchema: [
+          { key: 'overallScore', label: 'Ocena ogólna', type: 'number' },
+          { key: 'recommendation', label: 'Rekomendacja', type: 'string' },
+        ],
       })
     })
 
@@ -189,6 +206,38 @@ describe('getResponseAiActionResults', () => {
       expect(result).toHaveLength(2)
       expect(result[0].workflowName).toBe('Flow A')
       expect(result[1].workflowName).toBe('Flow B')
+    })
+
+    it('returns outputSchema from step_config.output_schema', async () => {
+      const executions = [buildExecution('exec-1', 'response-1')]
+      const stepExecs = [buildAiStepExecution({
+        stepConfig: {
+          output_schema: [
+            { key: 'concerns', label: 'Wątpliwości', type: 'string' },
+            { key: 'aiResponse', label: 'Analiza AI', type: 'string' },
+          ],
+        },
+      })]
+
+      mockWithTwoStepClient({ data: executions, error: null }, { data: stepExecs, error: null })
+
+      const result = await getResponseAiActionResults('response-1')
+
+      expect(result[0].outputSchema).toEqual([
+        { key: 'concerns', label: 'Wątpliwości', type: 'string' },
+        { key: 'aiResponse', label: 'Analiza AI', type: 'string' },
+      ])
+    })
+
+    it('returns empty outputSchema when step_config is null', async () => {
+      const executions = [buildExecution('exec-1', 'response-1')]
+      const stepExecs = [buildAiStepExecution({ stepConfig: null })]
+
+      mockWithTwoStepClient({ data: executions, error: null }, { data: stepExecs, error: null })
+
+      const result = await getResponseAiActionResults('response-1')
+
+      expect(result[0].outputSchema).toEqual([])
     })
 
     it('handles null completedAt (step still running)', async () => {

@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/client'
 import type { Tables } from '@agency/database'
-import type { ResponseListItem, ResponseWithRelations, ResponseSurveyLinkContext, Question, AiActionResult } from './types'
+import type { ResponseListItem, ResponseWithRelations, ResponseSurveyLinkContext, Question, AiActionResult, OutputSchemaField } from './types'
 
 /**
  * Raw Supabase response structure from nested join query
@@ -222,6 +222,7 @@ export async function getResponseCountBySurvey(surveyId: string): Promise<number
 type SupabaseAiStepExecutionRow = {
   output_payload: Record<string, unknown>
   completed_at: string | null
+  step_config: unknown
   workflow_executions: {
     workflows: {
       name: string
@@ -231,7 +232,8 @@ type SupabaseAiStepExecutionRow = {
 
 /**
  * Raw row shape returned by the step_executions select() query
- * Includes workflow_steps join needed to filter by step_type
+ * Includes workflow_steps join needed to filter by step_type and fetch step_config.
+ * step_config carries output_schema: user-defined field label definitions for AI Action steps.
  */
 type SupabaseStepExecQueryRow = {
   output_payload: unknown
@@ -240,7 +242,28 @@ type SupabaseStepExecQueryRow = {
     trigger_payload: unknown
     workflows: { name: string }
   }
-  workflow_steps: { step_type: string }
+  workflow_steps: {
+    step_type: string
+    step_config: unknown
+  }
+}
+
+/**
+ * Extract output_schema from step_config JSONB.
+ * step_config is stored as: { output_schema: [{ key, label, type }, ...] }
+ * Returns empty array when step_config is absent or malformed.
+ */
+function extractOutputSchema(stepConfig: unknown): OutputSchemaField[] {
+  if (!stepConfig || typeof stepConfig !== 'object') return []
+  const config = stepConfig as Record<string, unknown>
+  const schema = config['output_schema']
+  if (!Array.isArray(schema)) return []
+  return schema.filter(
+    (f): f is OutputSchemaField =>
+      typeof f === 'object' && f !== null &&
+      typeof (f as Record<string, unknown>)['key'] === 'string' &&
+      typeof (f as Record<string, unknown>)['label'] === 'string'
+  )
 }
 
 /**
@@ -251,6 +274,7 @@ function transformToAiActionResult(row: SupabaseAiStepExecutionRow): AiActionRes
     workflowName: row.workflow_executions.workflows.name,
     outputPayload: row.output_payload,
     completedAt: row.completed_at,
+    outputSchema: extractOutputSchema(row.step_config),
   }
 }
 
@@ -295,7 +319,8 @@ export async function getResponseAiActionResults(responseId: string): Promise<Ai
   if (matchingIds.length === 0) return []
 
   // Step 2: fetch ai_action step executions for those workflow execution IDs
-  // Join workflow_steps to filter by step_type, and workflow_executions > workflows for name
+  // Join workflow_steps to filter by step_type and read step_config (output_schema labels),
+  // and workflow_executions > workflows for workflow name.
   const { data: stepExecData, error: stepExecError } = await supabase
     .from('workflow_step_executions')
     .select(`
@@ -305,7 +330,7 @@ export async function getResponseAiActionResults(responseId: string): Promise<Ai
         trigger_payload,
         workflows!inner(name)
       ),
-      workflow_steps!inner(step_type)
+      workflow_steps!inner(step_type, step_config)
     `)
     .in('execution_id', matchingIds)
     .not('output_payload', 'is', null)
@@ -322,6 +347,7 @@ export async function getResponseAiActionResults(responseId: string): Promise<Ai
     transformToAiActionResult({
       output_payload: row.output_payload as Record<string, unknown>,
       completed_at: row.completed_at,
+      step_config: row.workflow_steps?.step_config,
       workflow_executions: {
         workflows: { name: row.workflow_executions.workflows.name },
       },
