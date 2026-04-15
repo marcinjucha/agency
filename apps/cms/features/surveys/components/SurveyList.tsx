@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getSurveys } from '../queries'
-import { deleteSurvey } from '../actions'
+import { deleteSurveyFn } from '../server-fns'
 import {
   Button, Card, LoadingState, ErrorState, EmptyState,
   AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader,
@@ -28,7 +28,7 @@ export function SurveyList() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const result = await deleteSurvey(id)
+      const result = await deleteSurveyFn({ data: { id } })
       if (!result.success) throw new Error(result.error)
       return result
     },

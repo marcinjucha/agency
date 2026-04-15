@@ -23,7 +23,7 @@ import { ArrowRight, FileText, Trash2 } from 'lucide-react'
 import { getResponseStatusColor } from '@/lib/utils/status'
 import { messages } from '@/lib/messages'
 import { RESPONSE_STATUSES } from '../validation'
-import { deleteResponse } from '../../responses/actions'
+import { deleteResponseFn } from '../../responses/server-fns'
 import { queryKeys } from '@/lib/query-keys'
 import { STATUS_LABELS, getAiScoreTextColor } from '../types'
 import type { PipelineResponse } from '../types'
@@ -57,7 +57,7 @@ export function ResponsesTable({ responses, onSelectResponse }: ResponsesTablePr
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const result = await deleteResponse(id)
+      const result = await deleteResponseFn({ data: { id } })
       if (!result.success) throw new Error(result.error)
       return result
     },
