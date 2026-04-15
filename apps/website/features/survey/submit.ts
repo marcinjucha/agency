@@ -24,25 +24,26 @@ export async function submitResponse({
 }: SubmitResponseParams): Promise<SubmitResponseResult> {
   const supabase = createAnonClient()
 
-  // Step 1: Get tenant_id from surveys table
-  const { data: survey, error: surveyError } = await supabase
-    .from('surveys')
-    .select('tenant_id')
-    .eq('id', surveyId)
+  // Step 1: Get tenant_id + workflow_id from survey link and survey in a single query
+  const { data: linkData, error: linkError } = await (supabase as any)
+    .from('survey_links')
+    .select('workflow_id, surveys!inner(tenant_id)')
+    .eq('id', linkId)
     .single()
 
-  if (surveyError || !survey) {
-    console.error('Failed to fetch survey tenant_id:', surveyError)
+  if (linkError || !linkData) {
+    console.error('Failed to fetch survey link data:', linkError)
     return { success: false, error: messages.survey.surveyNotFound, httpStatus: 404 }
   }
 
-  const surveyData = survey as { tenant_id: string }
+  const tenantId = (linkData.surveys as { tenant_id: string }).tenant_id
+  const workflowId: string | null = linkData.workflow_id ?? null
 
   // Step 2: Insert response into responses table
   const responseData: TablesInsert<'responses'> = {
     survey_link_id: linkId,
     answers: answers as unknown as TablesInsert<'responses'>['answers'],
-    tenant_id: surveyData.tenant_id,
+    tenant_id: tenantId,
     ai_qualification: null,
     status: 'new',
   }
@@ -78,8 +79,8 @@ export async function submitResponse({
     }).catch(err => console.error('[N8N] Email confirmation webhook failed:', err))
   }
 
-  // Trigger CMS workflow engine (fire-and-forget)
-  if (process.env.CMS_BASE_URL && process.env.WORKFLOW_TRIGGER_SECRET) {
+  // Trigger CMS workflow engine — only if link has a bound workflow_id (fixes all-workflows-fire bug)
+  if (workflowId && process.env.CMS_BASE_URL && process.env.WORKFLOW_TRIGGER_SECRET) {
     fetch(`${process.env.CMS_BASE_URL}/api/workflows/trigger`, {
       method: 'POST',
       headers: {
@@ -88,8 +89,9 @@ export async function submitResponse({
       },
       body: JSON.stringify({
         trigger_type: 'survey_submitted',
-        tenant_id: surveyData.tenant_id,
+        tenant_id: tenantId,
         payload: { responseId, surveyLinkId: linkId },
+        workflow_id: workflowId,
       }),
     }).catch(err => console.error('[Workflow] Trigger failed:', err))
   }

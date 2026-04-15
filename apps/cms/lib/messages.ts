@@ -128,6 +128,11 @@ export const messages = {
     editLink: 'Edytuj link',
     updateLinkSuccess: 'Link został zaktualizowany',
     updateLinkFailed: 'Nie udało się zaktualizować linku',
+    // Workflow selector
+    workflowSelectorLabel: 'Workflow',
+    workflowSelectorPlaceholder: 'Wybierz workflow…',
+    workflowSelectorNone: 'Brak (nie uruchamiaj workflow)',
+    workflowSelectorHint: 'Żaden workflow nie zostanie uruchomiony po wypełnieniu tego linku. Wybierz workflow, jeśli chcesz automatycznie kwalifikować odpowiedzi lub wysyłać powiadomienia.',
     active: 'Aktywny',
     inactive: 'Nieaktywny',
     noExpiry: 'Bez limitu czasowego',
@@ -548,6 +553,10 @@ export const messages = {
       'Ta odpowiedź zostanie trwale usunięta. Tej operacji nie można cofnąć.',
     deleteResponseWithAppointmentDescription:
       'Ta odpowiedź ma powiązaną wizytę, która również zostanie usunięta. Tej operacji nie można cofnąć.',
+    // AI Workflow results section
+    aiWorkflowTitle: 'Analiza AI (Workflow)',
+    aiWorkflowLoading: 'Ładowanie wyników analizy...',
+    aiWorkflowEmpty: 'Brak wyników analizy AI z workflow.',
   },
 
   appointments: {

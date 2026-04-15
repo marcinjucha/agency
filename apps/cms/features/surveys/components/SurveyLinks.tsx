@@ -7,15 +7,17 @@ import { generateSurveyLink, deleteSurveyLink, updateSurveyLink } from '../actio
 import type { UpdateSurveyLinkFormData } from '../validation'
 import {
   Button, Card, Input, Label, Switch,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
   AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader,
   AlertDialogFooter, AlertDialogTitle, AlertDialogDescription,
   AlertDialogAction, AlertDialogCancel,
 } from '@agency/ui'
-import { Link as LinkIcon, Copy, Trash2, Plus, Check, Pencil, X } from 'lucide-react'
+import { Link as LinkIcon, Copy, Trash2, Plus, Check, Pencil, X, TriangleAlert } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { queryKeys } from '@/lib/query-keys'
 import { messages } from '@/lib/messages'
 import type { Tables } from '@agency/database'
+import { getWorkflowsForSelector } from '@/features/workflows/queries'
 import { SurveyLinkCalendarSelect, useCalendarConnectionName } from './SurveyLinkCalendarSelect'
 
 type SurveyLinksProps = {
@@ -35,6 +37,78 @@ function CalendarConnectionDisplay({ connectionId }: { connectionId: string | nu
   )
 }
 
+function WorkflowDisplay({
+  workflowId,
+  workflows,
+}: {
+  workflowId: string | null
+  workflows: WorkflowSelectorOption[]
+}) {
+  const label = messages.surveys.workflowSelectorLabel
+  let displayValue: string
+  if (!workflowId) {
+    displayValue = messages.surveys.workflowSelectorNone
+  } else {
+    const found = workflows.find((w) => w.id === workflowId)
+    displayValue = found ? found.name : workflowId
+  }
+  return (
+    <div>
+      {label}: {displayValue}
+    </div>
+  )
+}
+
+type WorkflowSelectorOption = { id: string; name: string }
+
+type WorkflowSelectorProps = {
+  workflows: WorkflowSelectorOption[]
+  value: string | null
+  onChange: (workflowId: string | null) => void
+  selectId: string
+}
+
+function WorkflowSelector({ workflows, value, onChange, selectId }: WorkflowSelectorProps) {
+  const NONE_VALUE = '__none__'
+  const selectedValue = value ?? NONE_VALUE
+
+  return (
+    <div>
+      <Label htmlFor={selectId} className="text-sm">
+        {messages.surveys.workflowSelectorLabel}
+      </Label>
+      <Select
+        value={selectedValue}
+        onValueChange={(v) => onChange(v === NONE_VALUE ? null : v)}
+      >
+        <SelectTrigger id={selectId} className="mt-1 text-sm">
+          <SelectValue placeholder={messages.surveys.workflowSelectorPlaceholder} />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value={NONE_VALUE}>
+            {messages.surveys.workflowSelectorNone}
+          </SelectItem>
+          {workflows.map((wf) => (
+            <SelectItem key={wf.id} value={wf.id}>
+              {wf.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      {!value && (
+        <div
+          className="flex items-start gap-2 mt-2 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-400"
+          role="note"
+          aria-live="polite"
+        >
+          <TriangleAlert className="h-3.5 w-3.5 mt-0.5 shrink-0" aria-hidden="true" />
+          <span>{messages.surveys.workflowSelectorHint}</span>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function SurveyLinks({ surveyId }: SurveyLinksProps) {
   const queryClient = useQueryClient()
   const [showForm, setShowForm] = useState(false)
@@ -47,18 +121,26 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
     maxSubmissions: '',
     isActive: true,
     calendarConnectionId: null as string | null,
+    workflowId: null as string | null,
   })
   const [editFormData, setEditFormData] = useState({
     notificationEmail: '',
     expiresAt: '',
     maxSubmissions: '',
     calendarConnectionId: null as string | null,
+    workflowId: null as string | null,
   })
 
   // Query for links
   const { data: links, isLoading } = useQuery({
     queryKey: queryKeys.surveys.links(surveyId),
     queryFn: () => getSurveyLinks(surveyId),
+  })
+
+  // Query for active survey_submitted workflows — used in selector dropdown
+  const { data: workflows = [] } = useQuery<WorkflowSelectorOption[]>({
+    queryKey: queryKeys.workflows.list,
+    queryFn: () => getWorkflowsForSelector(),
   })
 
   // Mutation for generating link — wraps to throw on failure (known project pattern)
@@ -70,6 +152,7 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
         maxSubmissions: formData.maxSubmissions ? parseInt(formData.maxSubmissions) : null,
         isActive: formData.isActive,
         calendarConnectionId: formData.calendarConnectionId,
+        workflowId: formData.workflowId,
       })
       if (!result.success) throw new Error(result.error || messages.surveys.generateFailed)
       return result
@@ -78,7 +161,7 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
       queryClient.invalidateQueries({ queryKey: queryKeys.surveys.links(surveyId) })
       queryClient.invalidateQueries({ queryKey: queryKeys.surveys.all })
       setShowForm(false)
-      setFormData({ notificationEmail: '', expiresAt: '', maxSubmissions: '', isActive: true, calendarConnectionId: null })
+      setFormData({ notificationEmail: '', expiresAt: '', maxSubmissions: '', isActive: true, calendarConnectionId: null, workflowId: null })
       setError(null)
     },
     onError: (err: Error) => {
@@ -135,6 +218,7 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
         maxSubmissions: editFormData.maxSubmissions ? parseInt(editFormData.maxSubmissions) : null,
         isActive: link.is_active,
         calendarConnectionId: editFormData.calendarConnectionId,
+        workflowId: editFormData.workflowId,
       }
       const result = await updateSurveyLink(linkId, surveyId, data)
       if (!result.success) throw new Error(result.error || messages.surveys.updateLinkFailed)
@@ -173,6 +257,7 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
       expiresAt: link.expires_at ? link.expires_at.slice(0, 16) : '',
       maxSubmissions: link.max_submissions !== null ? String(link.max_submissions) : '',
       calendarConnectionId: link.calendar_connection_id ?? null,
+      workflowId: link.workflow_id ?? null,
     })
     setError(null)
   }
@@ -272,6 +357,13 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
               mode="controlled"
               value={formData.calendarConnectionId}
               onChange={(connectionId) => setFormData({ ...formData, calendarConnectionId: connectionId })}
+            />
+
+            <WorkflowSelector
+              workflows={workflows}
+              value={formData.workflowId}
+              onChange={(workflowId) => setFormData({ ...formData, workflowId })}
+              selectId="newLink-workflowId"
             />
 
             <div className="flex gap-2 pt-2">
@@ -491,6 +583,13 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
                       onChange={(connectionId) => setEditFormData({ ...editFormData, calendarConnectionId: connectionId })}
                     />
 
+                    <WorkflowSelector
+                      workflows={workflows}
+                      value={editFormData.workflowId}
+                      onChange={(workflowId) => setEditFormData({ ...editFormData, workflowId })}
+                      selectId={`edit-workflowId-${link.id}`}
+                    />
+
                     <div className="flex gap-2 pt-1">
                       <Button
                         size="sm"
@@ -528,6 +627,7 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
                       {link.max_submissions !== null ? link.max_submissions : messages.surveys.unlimited}
                     </div>
                     <CalendarConnectionDisplay connectionId={link.calendar_connection_id} />
+                    <WorkflowDisplay workflowId={link.workflow_id} workflows={workflows} />
                   </div>
                 )}
               </div>

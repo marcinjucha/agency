@@ -79,9 +79,9 @@ export async function getSurveyByToken(token: string) {
 export async function getSurveyLinks(surveyId: string): Promise<Tables<'survey_links'>[]> {
   const supabase = createClient()
 
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('survey_links')
-    .select('*')
+    .select('*, workflow_id')
     .eq('survey_id', surveyId)
     .order('created_at', { ascending: false })
 

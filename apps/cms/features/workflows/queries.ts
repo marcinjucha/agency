@@ -28,6 +28,33 @@ export interface ExecutionFilters {
 
 const LIST_FIELDS = 'id, name, description, trigger_type, is_active, created_at, updated_at' as const
 
+export interface WorkflowSelectorOption {
+  id: string
+  name: string
+}
+
+/**
+ * Fetch active workflows of a given trigger type for use in a selector dropdown.
+ * Used when binding a workflow to an entity (survey link, booking flow, etc.).
+ * Defaults to 'survey_submitted' for backward compatibility.
+ */
+export async function getWorkflowsForSelector(
+  triggerType: string = 'survey_submitted'
+): Promise<WorkflowSelectorOption[]> {
+  const supabase = createClient()
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JS v2.95.2 incompatibility
+  const { data, error } = await (supabase as any)
+    .from('workflows')
+    .select('id, name')
+    .eq('is_active', true)
+    .eq('trigger_type', triggerType)
+    .order('name', { ascending: true })
+
+  if (error) throw error
+  return (data || []) as WorkflowSelectorOption[]
+}
+
 export async function getWorkflows(): Promise<WorkflowListItem[]> {
   const supabase = createClient()
 

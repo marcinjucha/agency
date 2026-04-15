@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/client'
 import type { Tables } from '@agency/database'
-import type { ResponseListItem, ResponseWithRelations, ResponseSurveyLinkContext, Question } from './types'
+import type { ResponseListItem, ResponseWithRelations, ResponseSurveyLinkContext, Question, AiActionResult } from './types'
 
 /**
  * Raw Supabase response structure from nested join query
@@ -213,4 +213,118 @@ export async function getResponseCountBySurvey(surveyId: string): Promise<number
 
   if (error) throw error
   return count || 0
+}
+
+/**
+ * Raw Supabase row for ai_action step execution with workflow join
+ * step_type is on workflow_steps, not workflow_step_executions — requires join
+ */
+type SupabaseAiStepExecutionRow = {
+  output_payload: Record<string, unknown>
+  completed_at: string | null
+  workflow_executions: {
+    workflows: {
+      name: string
+    }
+  }
+}
+
+/**
+ * Raw row shape returned by the step_executions select() query
+ * Includes workflow_steps join needed to filter by step_type
+ */
+type SupabaseStepExecQueryRow = {
+  output_payload: unknown
+  completed_at: string | null
+  workflow_executions: {
+    trigger_payload: unknown
+    workflows: { name: string }
+  }
+  workflow_steps: { step_type: string }
+}
+
+/**
+ * Transform raw Supabase row to AiActionResult
+ */
+function transformToAiActionResult(row: SupabaseAiStepExecutionRow): AiActionResult {
+  return {
+    workflowName: row.workflow_executions.workflows.name,
+    outputPayload: row.output_payload,
+    completedAt: row.completed_at,
+  }
+}
+
+/**
+ * Fetch AI action step results for a specific survey response
+ *
+ * Two-step query:
+ * 1. Find workflow_executions where trigger_payload->>'responseId' = responseId
+ *    (Supabase JS doesn't support JSONB sub-field filtering in nested join conditions)
+ * 2. Fetch workflow_step_executions for those execution IDs, joining workflow_steps
+ *    to filter step_type = 'ai_action', and workflow_executions > workflows for name
+ *
+ * @param responseId - Response UUID to look up AI results for
+ * @returns Array of AI action results ordered by completion time (oldest first)
+ * @throws Error if either query fails
+ */
+export async function getResponseAiActionResults(responseId: string): Promise<AiActionResult[]> {
+  const supabase = createClient()
+
+  // Step 1: find executions triggered by this response
+  const { data: executions, error: executionsError } = await supabase
+    .from('workflow_executions')
+    .select('id, trigger_payload')
+
+  if (executionsError) throw executionsError
+
+  if (!executions || executions.length === 0) return []
+
+  // Filter client-side: trigger_payload is Json (JSONB), Supabase JS doesn't support
+  // PostgREST's ->>'field' filter syntax on the browser client for computed columns.
+  // WHY: Using .filter() or .eq() on a JSONB nested field requires raw PostgREST
+  // syntax (e.g., trigger_payload->>responseId=eq.value) which is not exposed by
+  // the typed Supabase JS client. Client-side filtering is safe here because RLS
+  // limits executions to the authenticated tenant — not an unbounded table scan.
+  const matchingIds = executions
+    .filter((ex) => {
+      const payload = ex as unknown as { id: string; trigger_payload: Record<string, unknown> }
+      return payload.trigger_payload?.['responseId'] === responseId
+    })
+    .map((ex) => (ex as unknown as { id: string }).id)
+
+  if (matchingIds.length === 0) return []
+
+  // Step 2: fetch ai_action step executions for those workflow execution IDs
+  // Join workflow_steps to filter by step_type, and workflow_executions > workflows for name
+  const { data: stepExecData, error: stepExecError } = await supabase
+    .from('workflow_step_executions')
+    .select(`
+      output_payload,
+      completed_at,
+      workflow_executions!inner(
+        trigger_payload,
+        workflows!inner(name)
+      ),
+      workflow_steps!inner(step_type)
+    `)
+    .in('execution_id', matchingIds)
+    .not('output_payload', 'is', null)
+    .order('completed_at', { ascending: true })
+
+  if (stepExecError) throw stepExecError
+
+  // Filter to ai_action steps only — step_type lives on workflow_steps join
+  const aiActionRows = (stepExecData as unknown as SupabaseStepExecQueryRow[] || []).filter(
+    (row) => row.workflow_steps?.step_type === 'ai_action'
+  )
+
+  return aiActionRows.map((row) =>
+    transformToAiActionResult({
+      output_payload: row.output_payload as Record<string, unknown>,
+      completed_at: row.completed_at,
+      workflow_executions: {
+        workflows: { name: row.workflow_executions.workflows.name },
+      },
+    })
+  )
 }

@@ -1182,6 +1182,7 @@ export type Database = {
           submission_count: number | null
           survey_id: string
           token: string
+          workflow_id: string | null
         }
         Insert: {
           calendar_connection_id?: string | null
@@ -1194,6 +1195,7 @@ export type Database = {
           submission_count?: number | null
           survey_id: string
           token: string
+          workflow_id?: string | null
         }
         Update: {
           calendar_connection_id?: string | null
@@ -1206,6 +1208,7 @@ export type Database = {
           submission_count?: number | null
           survey_id?: string
           token?: string
+          workflow_id?: string | null
         }
         Relationships: [
           {
@@ -1227,6 +1230,13 @@ export type Database = {
             columns: ["survey_id"]
             isOneToOne: false
             referencedRelation: "surveys"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "survey_links_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "workflows"
             referencedColumns: ["id"]
           },
         ]
@@ -1527,6 +1537,7 @@ export type Database = {
           created_at: string
           error_message: string | null
           id: string
+          is_dry_run: boolean
           started_at: string | null
           status: string
           tenant_id: string
@@ -1539,6 +1550,7 @@ export type Database = {
           created_at?: string
           error_message?: string | null
           id?: string
+          is_dry_run?: boolean
           started_at?: string | null
           status?: string
           tenant_id: string
@@ -1551,6 +1563,7 @@ export type Database = {
           created_at?: string
           error_message?: string | null
           id?: string
+          is_dry_run?: boolean
           started_at?: string | null
           status?: string
           tenant_id?: string
@@ -1850,13 +1863,6 @@ export type Database = {
       }
     }
     Functions: {
-      claim_due_delay_steps: {
-        Args: { p_limit?: number }
-        Returns: {
-          execution_id: string
-          id: string
-        }[]
-      }
       current_user_role: { Args: never; Returns: string }
       current_user_tenant_id: { Args: never; Returns: string }
       get_encryption_key: { Args: never; Returns: string }
