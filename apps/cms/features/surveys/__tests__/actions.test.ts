@@ -229,7 +229,8 @@ describe('updateSurveyLink', () => {
     const workflowId = 'wf-uuid-7777-7777-7777-777777777777'
 
     const supabase = buildSupabaseMock([
-      { data: null, error: null }, // update → void
+      { data: { id: workflowId }, error: null }, // verifyWorkflowAccess → workflow exists
+      { data: null, error: null },               // patchSurveyLink → void update
     ])
 
     zodParse.mockReturnValue(

@@ -52,19 +52,20 @@
 
 ---
 
-### Iteracja 2 — Auth Middleware + Login ⬜ TODO
+### Iteracja 2 — Auth Middleware + Login ✅ DONE (2026-04-15)
 
 **Cel:** Login → dashboard, logout → login, protected routes redirect
 
 | Deliverable | Status |
 |-------------|--------|
-| `lib/supabase/server-start.ts` — createServerClient z Web API Request (vinxi/http) | ⬜ |
-| `lib/middleware/auth.ts` — createMiddleware: cookie → session → `{userId, tenantId, isSuperAdmin}` | ⬜ |
-| `app/start.ts` — globalny requestMiddleware | ⬜ |
-| `lib/server-fns/auth.ts` — `loginFn`, `logoutFn` jako createServerFn + Zod | ⬜ |
-| `app/routes/login.tsx` — formularz logowania | ⬜ |
-| `app/routes/_admin.tsx` — pathless layout z beforeLoad redirect | ⬜ |
-| `app/routes/_admin/index.tsx` — chroniony dashboard placeholder | ⬜ |
+| `lib/supabase/server-start.ts` — createServerClient z `@tanstack/start-server-core` cookies | ✅ |
+| `lib/server-fns/auth.ts` — `getAuthContextFn`, `loginFn` (Zod), `logoutFn` | ✅ |
+| `lib/head.ts` — `buildCmsHead()` z noindex/nofollow | ✅ |
+| `app/routes/login.tsx` — formularz logowania z `loginFn` | ✅ |
+| `app/routes/_admin.tsx` — pathless layout z `beforeLoad` redirect | ✅ |
+| `app/routes/_admin/index.tsx` — chroniony dashboard placeholder | ✅ |
+| `router.tsx` — `RouterContext` type, `context: { auth: null }` | ✅ |
+| `__root.tsx` — `createRootRouteWithContext<RouterContext>()`, `beforeLoad` → `getAuthContextFn()` | ✅ |
 
 **Acceptance criteria:**
 - `/login` renderuje formularz
@@ -72,6 +73,12 @@
 - Wejście na `/admin` bez sesji → redirect do `/login`
 - Logout → cookie wyczyszczony → `/login`
 - Auth middleware wstrzykuje `{userId, tenantId, isSuperAdmin}` do context
+
+**Decyzja architektoniczna: `beforeLoad` zamiast global middleware**
+- `requestMiddleware` w `app/start.ts` działa TYLKO server-side (SSR requests)
+- NIE uruchamia się dla client-side navigations (kliknięcia linku w React)
+- `beforeLoad` w `__root.tsx` + `_admin.tsx` = pełne pokrycie (SSR + client nav)
+- `getAuthContextFn()` staje się RPC fetch na kliencie — cache'owany przez TanStack Router
 
 **Kluczowe różnice vs Next.js:**
 ```ts

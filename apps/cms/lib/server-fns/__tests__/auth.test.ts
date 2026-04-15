@@ -72,7 +72,7 @@ describe('loginFn', () => {
     }) => Promise<unknown>
     const result = await handler({ data: { email: 'wrong@test.pl', password: 'bad' } })
 
-    expect(result).toEqual({ success: false, error: 'Invalid login credentials' })
+    expect(result).toEqual({ success: false, error: 'Nieprawidłowy email lub hasło' })
   })
 
   it('calls signInWithPassword with provided credentials', async () => {
