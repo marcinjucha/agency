@@ -1,5 +1,5 @@
 import { createServerFn } from '@tanstack/react-start'
-import { ok, err, ResultAsync } from 'neverthrow'
+import { ok, err, errAsync, ResultAsync } from 'neverthrow'
 import { fromSupabase, fromSupabaseVoid } from '@/lib/result-helpers'
 import {
   createWorkflowSchema,
@@ -241,14 +241,14 @@ export const createWorkflowFromTemplateFn = createServerFn()
   )
   .handler(
     async ({ data }): Promise<{ success: boolean; data?: { id: string }; error?: string }> => {
-      const template = WORKFLOW_TEMPLATES.find((t) => t.id === data.templateId)
-      if (!template) {
-        return { success: false, error: messages.workflows.templateNotFound }
-      }
-
-      const result = await requireAuthContext().andThen((auth) =>
-        insertWorkflowFromTemplate(auth, template)
-      )
+      const result = await requireAuthContext()
+        .andThen((auth) => {
+          const template = WORKFLOW_TEMPLATES.find((t) => t.id === data.templateId)
+          if (!template) {
+            return errAsync(messages.workflows.templateNotFound)
+          }
+          return insertWorkflowFromTemplate(auth, template)
+        })
 
       return result.match(
         (created) => ({ success: true, data: { id: created.id } }),
