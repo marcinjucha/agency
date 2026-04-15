@@ -418,6 +418,41 @@ function SurveyList() {
 
 ---
 
+## 11. Znane pułapki monorepo
+
+### optimizeDeps — virtual imports
+
+```ts
+// vite.config.ts — WYMAGANE dla TanStack Start w monorepo
+optimizeDeps: {
+  exclude: [
+    '@tanstack/start-server-core',
+    '@tanstack/react-start',
+    '@tanstack/react-router',
+  ],
+},
+```
+
+**Dlaczego:** Vite pre-bundluje dependencies PRZED uruchomieniem pluginów. TanStack Start
+używa wirtualnych importów (`#tanstack-router-entry`) które plugin rejestruje jako aliasy.
+Pre-bundler nie ma dostępu do tych aliasów → crash z `Package import specifier is not defined`.
+
+### Pathless layout vs segmentowy layout
+
+```
+routes/
+├── _admin.tsx         → PATHLESS layout (underscore)
+│   _admin/page.tsx   → URL: /page (bez /admin/ prefiksu!)   ❌ jeśli chcesz /admin/page
+│
+├── admin.tsx          → SEGMENTOWY layout (bez underscore)
+│   admin/page.tsx    → URL: /admin/page                     ✅ jak Next.js app/admin/
+```
+
+**Używaj underscore (`_admin`) gdy:** grupujesz routes bez zmiany URL (jak Next.js route groups `(group)`).
+**Używaj bez underscore (`admin`) gdy:** chcesz `/admin/*` URL prefix — identycznie jak `app/admin/` w Next.js.
+
+---
+
 ## Powiązane pliki
 
 - `docs/TANSTACK_CMS_MIGRATION.md` — postęp migracji per iteracja
