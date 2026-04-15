@@ -3,8 +3,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
-import { getResponse } from '../queries'
-import type { ResponseWithRelations, QuestionAnswerPair } from '../types'
+import { getResponse, getResponseAiActionResults } from '../queries'
+import type { ResponseWithRelations, QuestionAnswerPair, AiActionResult } from '../types'
 import {
   Button, Card, Badge, LoadingState, ErrorState, EmptyState,
   AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader,
@@ -12,7 +12,7 @@ import {
   AlertDialogAction, AlertDialogCancel,
 } from '@agency/ui'
 import Link from 'next/link'
-import { ArrowLeft, FileX, Loader2, AlertTriangle, Trash2 } from 'lucide-react'
+import { ArrowLeft, FileX, Loader2, AlertTriangle, Trash2, Bot } from 'lucide-react'
 import { getResponseStatusColor } from '@/lib/utils/status'
 import { triggerAiAnalysis, deleteResponse } from '../actions'
 import { queryKeys } from '@/lib/query-keys'
@@ -58,6 +58,15 @@ export function ResponseDetail({ responseId }: ResponseDetailProps) {
       if (aiPhase === 'failed') return false
       return 10000
     },
+  })
+
+  const {
+    data: aiActionResults,
+    isLoading: isLoadingAiActionResults,
+  } = useQuery({
+    queryKey: queryKeys.responses.aiActionResults(responseId),
+    queryFn: () => getResponseAiActionResults(responseId),
+    enabled: !!responseId,
   })
 
   useEffect(() => {
@@ -309,6 +318,61 @@ export function ResponseDetail({ responseId }: ResponseDetailProps) {
             <div className="pt-4 border-t border-border text-xs text-muted-foreground">
               Przeanalizowano {new Date(response.ai_qualification.analyzed_at).toLocaleString('pl-PL')} · {response.ai_qualification.model}
             </div>
+          </div>
+        )}
+      </Card>
+
+      {/* AI Workflow Results Section */}
+      <Card className="p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Bot className="h-4 w-4 text-muted-foreground" />
+          <h2 className="text-lg font-semibold text-foreground">{messages.responses.aiWorkflowTitle}</h2>
+        </div>
+
+        {isLoadingAiActionResults ? (
+          <div className="flex items-center gap-2 text-muted-foreground py-4">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <p className="text-sm">{messages.responses.aiWorkflowLoading}</p>
+          </div>
+        ) : !aiActionResults || aiActionResults.length === 0 ? (
+          <p className="text-sm text-muted-foreground py-4 italic">
+            {messages.responses.aiWorkflowEmpty}
+          </p>
+        ) : (
+          <div className="space-y-6">
+            {aiActionResults.map((result: AiActionResult, index: number) => (
+              <div key={index} className={index > 0 ? 'pt-6 border-t border-border' : ''}>
+                {/* Result header: workflow name + timestamp */}
+                <div className="flex items-start justify-between gap-4 mb-4">
+                  <p className="text-sm font-semibold text-foreground">{result.workflowName}</p>
+                  {result.completedAt && (
+                    <p className="text-xs text-muted-foreground whitespace-nowrap">
+                      {new Date(result.completedAt).toLocaleString('pl-PL')}
+                    </p>
+                  )}
+                </div>
+
+                {/* Output payload: key-value pairs */}
+                <div className="space-y-3">
+                  {Object.entries(result.outputPayload).map(([key, value]) => (
+                    <div key={key}>
+                      <p className="text-xs font-semibold text-muted-foreground uppercase mb-1">{key}</p>
+                      <div className="bg-muted rounded-lg p-3 border border-border">
+                        {typeof value === 'object' && value !== null ? (
+                          <pre className="text-xs text-foreground whitespace-pre-wrap break-words font-mono">
+                            {JSON.stringify(value, null, 2)}
+                          </pre>
+                        ) : (
+                          <p className="text-sm text-foreground whitespace-pre-wrap break-words">
+                            {String(value)}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </Card>

@@ -152,6 +152,19 @@ export interface ResponseListItem {
 
 
 /**
+ * AI Action step result from a workflow execution
+ * Contains the output of an ai_action step that ran for a specific response
+ */
+export interface AiActionResult {
+  /** Name of the workflow that produced this result */
+  workflowName: string
+  /** Named output fields from the AI action step's output schema */
+  outputPayload: Record<string, unknown>
+  /** ISO 8601 timestamp when the step completed, or null if still running */
+  completedAt: string | null
+}
+
+/**
  * Question-answer pair for display
  * Combines question metadata with the answer value for detail view rendering
  *

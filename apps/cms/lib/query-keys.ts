@@ -21,6 +21,7 @@ export const queryKeys = {
   responses: {
     all: ['responses'] as const,
     detail: (id: string) => ['response', id] as const,
+    aiActionResults: (id: string) => ['response', id, 'ai-action-results'] as const,
   },
   appointments: {
     all: ['appointments'] as const,
