@@ -7,8 +7,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '@/lib/query-keys'
 import { usePermissions } from '@/contexts/permissions-context'
 import { useTenantScope } from '@/features/tenants/hooks/use-tenant-scope'
-import { createUser } from '../actions'
-import { getTenantRoles } from '../queries'
+import { createUserFn, getTenantRolesFn } from '../server'
 import { createUserSchema, type CreateUserFormData } from '../validation'
 import { messages } from '@/lib/messages'
 import {
@@ -43,7 +42,7 @@ export function AddUserDialog({ open, onOpenChange }: AddUserDialogProps) {
   // Roles are scoped to the currently selected tenant (from URL scope bar)
   const { data: roles } = useQuery({
     queryKey: queryKeys.roles.list(selectedTenantId),
-    queryFn: () => getTenantRoles(selectedTenantId ?? undefined),
+    queryFn: () => getTenantRolesFn({ data: { tenantId: selectedTenantId ?? undefined } }),
   })
 
   const {
@@ -67,7 +66,7 @@ export function AddUserDialog({ open, onOpenChange }: AddUserDialogProps) {
       const payload = isSuperAdmin && selectedTenantId
         ? { ...data, tenantId: selectedTenantId }
         : data
-      const result = await createUser(payload)
+      const result = await createUserFn({ data: payload })
       if (!result.success) throw new Error(result.error)
       return result
     },

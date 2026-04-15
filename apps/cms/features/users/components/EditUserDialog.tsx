@@ -6,8 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '@/lib/query-keys'
 import { usePermissions } from '@/contexts/permissions-context'
-import { updateUser, toggleSuperAdmin, changeUserPassword } from '../actions'
-import { getTenantRoles } from '../queries'
+import { updateUserFn, toggleSuperAdminFn, changeUserPasswordFn, getTenantRolesFn } from '../server'
 import { updateUserSchema, type UpdateUserFormData } from '../validation'
 import type { UserWithRole } from '../types'
 import { messages } from '@/lib/messages'
@@ -62,7 +61,7 @@ export function EditUserDialog({ user, open, onOpenChange }: EditUserDialogProps
 
   const { data: roles } = useQuery({
     queryKey: queryKeys.roles.list(editTenantId),
-    queryFn: () => getTenantRoles(editTenantId),
+    queryFn: () => getTenantRolesFn({ data: { tenantId: editTenantId } }),
   })
 
   const {
@@ -88,7 +87,7 @@ export function EditUserDialog({ user, open, onOpenChange }: EditUserDialogProps
 
   const mutation = useMutation({
     mutationFn: async (data: UpdateUserFormData) => {
-      const result = await updateUser(data)
+      const result = await updateUserFn({ data })
       if (!result.success) throw new Error(result.error)
       return result
     },
@@ -109,11 +108,11 @@ export function EditUserDialog({ user, open, onOpenChange }: EditUserDialogProps
     setLocalIsSuperAdmin(checked) // optimistic UI update
     setSuperAdminToggling(true)
     setSuperAdminError(null)
-    const result = await toggleSuperAdmin(user.id, checked)
+    const result = await toggleSuperAdminFn({ data: { userId: user.id, isSuperAdmin: checked } })
     setSuperAdminToggling(false)
     if (!result.success) {
       setLocalIsSuperAdmin(!checked) // revert on error
-      setSuperAdminError(result.error)
+      setSuperAdminError(result.error ?? null)
     } else {
       await queryClient.invalidateQueries({ queryKey: queryKeys.users.all })
     }
@@ -123,14 +122,14 @@ export function EditUserDialog({ user, open, onOpenChange }: EditUserDialogProps
     if (!user || newPassword.length < 8) return
     setPasswordChanging(true)
     setPasswordResult(null)
-    const result = await changeUserPassword({ userId: user.id, newPassword })
+    const result = await changeUserPasswordFn({ data: { userId: user.id, newPassword } })
     setPasswordChanging(false)
     if (result.success) {
       setPasswordResult({ success: true, message: messages.users.changePasswordSuccess })
       setNewPassword('')
       setShowPasswordForm(false)
     } else {
-      setPasswordResult({ success: false, message: result.error })
+      setPasswordResult({ success: false, message: result.error ?? messages.common.unknownError })
     }
   }
 

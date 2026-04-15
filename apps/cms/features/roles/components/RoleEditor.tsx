@@ -5,7 +5,7 @@ import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '@/lib/query-keys'
-import { createRole, updateRole } from '../actions'
+import { createRoleFn, updateRoleFn } from '../server'
 import { createRoleSchema, type CreateRoleFormData } from '../validation'
 import type { TenantRoleWithPermissions } from '../types'
 import type { PermissionKey } from '@/lib/permissions'
@@ -77,17 +77,21 @@ export function RoleEditor({ open, onOpenChange, role, enabledFeatures, tenantId
   const mutation = useMutation({
     mutationFn: async (data: CreateRoleFormData) => {
       const result = isEditing
-        ? await updateRole({
-            roleId: role.id,
-            name: data.name,
-            description: data.description ?? undefined,
-            permissions: data.permissions as PermissionKey[],
+        ? await updateRoleFn({
+            data: {
+              roleId: role.id,
+              name: data.name,
+              description: data.description ?? undefined,
+              permissions: data.permissions as PermissionKey[],
+            },
           })
-        : await createRole({
-            name: data.name,
-            description: data.description ?? undefined,
-            permissions: data.permissions as PermissionKey[],
-            tenantId,
+        : await createRoleFn({
+            data: {
+              name: data.name,
+              description: data.description ?? undefined,
+              permissions: data.permissions as PermissionKey[],
+              tenantId,
+            },
           })
       if (!result.success) throw new Error(result.error)
       return result

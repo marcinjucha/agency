@@ -4,8 +4,8 @@ import { useState, useEffect, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '@/lib/query-keys'
 import { createClient } from '@/lib/supabase/client'
-import { getUsers } from '../queries'
-import { deleteUser } from '../actions'
+import { getUsersFn } from '../server'
+import { deleteUserFn } from '../server'
 import type { UserWithRole } from '../types'
 import { messages } from '@/lib/messages'
 import {
@@ -79,13 +79,13 @@ export function UserList() {
     refetch,
   } = useQuery({
     queryKey: queryKeys.users.list(queryTenantId),
-    queryFn: () => getUsers(queryTenantId ?? undefined),
+    queryFn: () => getUsersFn({ data: { tenantId: queryTenantId ?? undefined } }),
   })
 
   const deleteMutation = useMutation({
     mutationFn: async (userId: string) => {
       setDeletingUserId(userId)
-      const result = await deleteUser(userId)
+      const result = await deleteUserFn({ data: { userId } })
       if (!result.success) throw new Error(result.error)
       return result
     },
