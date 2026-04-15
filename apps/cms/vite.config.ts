@@ -12,7 +12,7 @@ export default defineConfig(({ mode }) => {
 
   return {
   server: {
-    port: 3004,
+    port: 3001,
   },
   // Expose NEXT_PUBLIC_* vars to the browser bundle.
   // Next.js does this automatically; Vite requires explicit static replacement.
