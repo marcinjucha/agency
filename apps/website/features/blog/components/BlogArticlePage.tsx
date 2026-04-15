@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { Badge } from '@agency/ui'
+import { Image } from '@unpic/react'
 import type { WebsiteBlogPost } from '../types'
 import { formatPolishDate } from '../utils'
 import { routes } from '@/lib/routes'
@@ -64,12 +65,12 @@ export function BlogArticlePage({ post, isPreview = false }: BlogArticlePageProp
         {post.cover_image_url && (
           <div className="mx-auto mt-10 max-w-4xl px-4 sm:px-6 lg:px-8">
             <div className="overflow-hidden rounded-2xl shadow-lg">
-              <img
+              <Image
                 src={post.cover_image_url}
                 alt={post.title}
                 width={1200}
                 height={500}
-                loading="eager"
+                priority
                 className="w-full max-h-[500px] object-cover"
               />
             </div>

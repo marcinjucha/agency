@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { ArrowRight, Clock, BookOpen } from 'lucide-react'
+import { Image } from '@unpic/react'
 import type { WebsiteBlogListItem } from '../types'
 import { formatPolishDate } from '../utils'
 import { routes } from '@/lib/routes'
@@ -16,12 +17,12 @@ function CoverImage({
 }) {
   if (src) {
     return (
-      <img
+      <Image
         src={src}
         alt={alt}
         width={800}
         height={450}
-        loading={priority ? 'eager' : 'lazy'}
+        priority={priority}
         className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.03]"
       />
     )
