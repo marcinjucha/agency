@@ -14,7 +14,7 @@ import {
   AlertDialogAction,
   AlertDialogCancel,
 } from '@agency/ui'
-import { useRouter } from 'next/navigation'
+import { useNavigate } from '@tanstack/react-router'
 import { Trash2, X, CalendarDays } from 'lucide-react'
 import { formatDistanceToNow, format } from 'date-fns'
 import { pl } from 'date-fns/locale'
@@ -69,7 +69,7 @@ export function BlogPostListView({
   onDelete,
   isDeleting,
 }: BlogPostListViewProps) {
-  const router = useRouter()
+  const navigate = useNavigate()
 
   const filteredAndSorted = useMemo(() => {
     return posts.map((post) => ({
@@ -113,7 +113,7 @@ export function BlogPostListView({
               key={post.id}
               post={post}
               status={post.status}
-              onNavigate={() => router.push(routes.admin.blogPost(post.id))}
+              onNavigate={() => navigate({ to: routes.admin.blogPost(post.id) })}
               onDelete={() => onDelete(post.id)}
               isDeleting={isDeleting}
             />

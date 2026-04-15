@@ -18,7 +18,7 @@ import {
   AlertDialogAction,
   AlertDialogCancel,
 } from '@agency/ui'
-import { useRouter } from 'next/navigation'
+import { useNavigate } from '@tanstack/react-router'
 import { Trash2, ArrowUpDown } from 'lucide-react'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
@@ -68,7 +68,7 @@ export function ShopProductListView({
   marketplaceListings,
   connectedMarketplaces,
 }: ShopProductListViewProps) {
-  const router = useRouter()
+  const navigate = useNavigate()
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
   const [listingTypeFilter, setListingTypeFilter] = useState<string>('all')
@@ -177,7 +177,7 @@ export function ShopProductListView({
               key={product.id}
               product={product}
               categoryName={getCategoryName(product.category_id, categories)}
-              onNavigate={() => router.push(routes.admin.shopProduct(product.id))}
+              onNavigate={() => navigate({ to: routes.admin.shopProduct(product.id) })}
               onDelete={() => onDelete(product.id)}
               isDeleting={deletingId === product.id}
               marketplaceListings={marketplaceListings.filter((l) => l.product_id === product.id)}

@@ -11,7 +11,7 @@ beforeEach(() => {
   vi.resetAllMocks()
 })
 
-// Mock next/navigation
+// Mock next/navigation (legacy — kept for unmigrated action tests)
 vi.mock('next/navigation', () => ({
   useRouter: vi.fn(() => ({
     push: vi.fn(),
@@ -25,6 +25,15 @@ vi.mock('next/navigation', () => ({
   useSearchParams: vi.fn(() => new URLSearchParams()),
   redirect: vi.fn(),
   notFound: vi.fn(),
+}))
+
+// Mock @tanstack/react-router (TanStack Start migration)
+vi.mock('@tanstack/react-router', () => ({
+  useNavigate: vi.fn(() => vi.fn()),
+  useSearch: vi.fn(() => ({})),
+  useLocation: vi.fn(() => ({ pathname: '/', search: '', hash: '', href: '/', searchStr: '', state: {} })),
+  useRouterState: vi.fn(() => '/'),
+  Link: vi.fn(({ children }: { children: unknown }) => children),
 }))
 
 // Mock next/headers

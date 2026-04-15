@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useRouter } from 'next/navigation'
+import { useNavigate } from '@tanstack/react-router'
 import { queryKeys } from '@/lib/query-keys'
 import { getWorkflows } from '../queries'
 import { deleteWorkflowFn, toggleWorkflowActiveFn } from '../server'
@@ -25,7 +25,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@agency/ui'
-import Link from 'next/link'
+import { Link } from '@tanstack/react-router'
 import { Zap, Plus, Pencil, Trash2 } from 'lucide-react'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
@@ -44,7 +44,7 @@ function TriggerBadge({ type }: { type: string }) {
 }
 
 export function WorkflowList() {
-  const router = useRouter()
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [viewMode, setViewMode] = useViewMode('workflow-view-mode', 'grid')
@@ -218,18 +218,18 @@ interface WorkflowRowProps {
 }
 
 function WorkflowRow({ workflow, onDelete, onToggle, isDeleting, isToggling }: WorkflowRowProps) {
-  const router = useRouter()
+  const navigate = useNavigate()
 
   return (
     <tr
       className="border-b border-border last:border-b-0 transition-colors hover:bg-muted/50 cursor-pointer"
       role="link"
       tabIndex={0}
-      onClick={() => router.push(routes.admin.workflow(workflow.id))}
+      onClick={() => navigate({ to: routes.admin.workflow(workflow.id) })}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault()
-          router.push(routes.admin.workflow(workflow.id))
+          navigate({ to: routes.admin.workflow(workflow.id) })
         }
       }}
     >
@@ -259,7 +259,7 @@ function WorkflowRow({ workflow, onDelete, onToggle, isDeleting, isToggling }: W
       </td>
       <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-end gap-1">
-          <Link href={routes.admin.workflow(workflow.id)}>
+          <Link to={routes.admin.workflow(workflow.id)}>
             <Button variant="ghost" size="sm" aria-label={messages.common.edit}>
               <Pencil className="h-4 w-4" />
             </Button>

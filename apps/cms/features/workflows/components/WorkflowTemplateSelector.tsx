@@ -1,7 +1,7 @@
 
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useNavigate } from '@tanstack/react-router'
 import { useMutation } from '@tanstack/react-query'
 import { ChevronDown, ChevronUp, Loader2 } from 'lucide-react'
 import { Button, Badge } from '@agency/ui'
@@ -19,7 +19,7 @@ interface WorkflowTemplateSelectorProps {
 }
 
 export function WorkflowTemplateSelector({ workflowCount }: WorkflowTemplateSelectorProps) {
-  const router = useRouter()
+  const navigate = useNavigate()
   const [isVisible, setIsVisible] = useState(true)
   const [activeTemplateId, setActiveTemplateId] = useState<string | null>(null)
   const [errorTemplateId, setErrorTemplateId] = useState<string | null>(null)
@@ -51,7 +51,7 @@ export function WorkflowTemplateSelector({ workflowCount }: WorkflowTemplateSele
     onSuccess: (result) => {
       setActiveTemplateId(null)
       if (result.data?.id) {
-        router.push(routes.admin.workflowEditor(result.data.id))
+        navigate({ to: routes.admin.workflowEditor(result.data.id) })
       }
     },
     onError: (_err, templateId) => {

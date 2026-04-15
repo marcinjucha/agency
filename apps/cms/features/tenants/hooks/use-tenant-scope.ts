@@ -1,6 +1,6 @@
 
 
-import { useSearchParams, usePathname, useRouter } from 'next/navigation'
+import { useNavigate, useSearch, useLocation } from '@tanstack/react-router'
 import { useCallback, useMemo } from 'react'
 import { usePermissions } from '@/contexts/permissions-context'
 
@@ -16,11 +16,11 @@ import { usePermissions } from '@/contexts/permissions-context'
  */
 export function useTenantScope() {
   const { isSuperAdmin, tenantId: ownTenantId, tenants } = usePermissions()
-  const searchParams = useSearchParams()
-  const pathname = usePathname()
-  const router = useRouter()
+  const navigate = useNavigate()
+  const search = useSearch({ strict: false }) as Record<string, string | undefined>
+  const { pathname } = useLocation()
 
-  const urlTenantId = searchParams.get('tenant')
+  const urlTenantId = search.tenant ?? null
 
   const selectedTenantId = useMemo(() => {
     if (!isSuperAdmin) return ownTenantId
@@ -39,24 +39,22 @@ export function useTenantScope() {
 
   const setTenantScope = useCallback(
     (tenantId: string) => {
-      const params = new URLSearchParams(searchParams.toString())
+      const newSearch = { ...search }
       if (tenantId === ownTenantId) {
-        params.delete('tenant')
+        delete newSearch.tenant
       } else {
-        params.set('tenant', tenantId)
+        newSearch.tenant = tenantId
       }
-      const qs = params.toString()
-      router.push(qs ? `${pathname}?${qs}` : pathname)
+      navigate({ to: pathname, search: newSearch })
     },
-    [searchParams, pathname, router, ownTenantId],
+    [search, pathname, navigate, ownTenantId],
   )
 
   const resetToOwn = useCallback(() => {
-    const params = new URLSearchParams(searchParams.toString())
-    params.delete('tenant')
-    const qs = params.toString()
-    router.push(qs ? `${pathname}?${qs}` : pathname)
-  }, [searchParams, pathname, router])
+    const newSearch = { ...search }
+    delete newSearch.tenant
+    navigate({ to: pathname, search: newSearch })
+  }, [search, pathname, navigate])
 
   return {
     /** The tenant ID currently in scope (URL param or own). */

@@ -9,7 +9,7 @@ import {
   AlertDialogFooter, AlertDialogTitle, AlertDialogDescription,
   AlertDialogAction, AlertDialogCancel,
 } from '@agency/ui'
-import { useRouter } from 'next/navigation'
+import { useNavigate } from '@tanstack/react-router'
 import { ExternalLink, CalendarCheck, Trash2 } from 'lucide-react'
 import { format } from 'date-fns'
 import { pl } from 'date-fns/locale/pl'
@@ -20,7 +20,7 @@ import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
 
 export function AppointmentList() {
-  const router = useRouter()
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -102,7 +102,7 @@ export function AppointmentList() {
                 appointment={appointment}
                 onRowClick={() => {
                   if (appointment.response?.id) {
-                    router.push(routes.admin.response(appointment.response.id))
+                    navigate({ to: routes.admin.response(appointment.response.id) })
                   }
                 }}
                 onDelete={(id) => deleteMutation.mutate(id)}

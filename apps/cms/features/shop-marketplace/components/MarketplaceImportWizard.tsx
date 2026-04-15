@@ -1,7 +1,7 @@
 
 
 import { useState, useCallback, useEffect, useRef } from 'react'
-import { useRouter } from 'next/navigation'
+import { useNavigate } from '@tanstack/react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Card, CardContent, Badge, Button, Progress, LoadingState } from '@agency/ui'
 import { Store, CheckCircle2, AlertTriangle, ChevronRight, ChevronLeft, Loader2 } from 'lucide-react'
@@ -344,7 +344,7 @@ type Step3Props = {
 }
 
 function Step3Progress({ importId }: Step3Props) {
-  const router = useRouter()
+  const navigate = useNavigate()
   const headingRef = useRef<HTMLHeadingElement>(null)
 
   useEffect(() => {
@@ -489,7 +489,7 @@ function Step3Progress({ importId }: Step3Props) {
       {isDone && (
         <div className="flex justify-end">
           <Button
-            onClick={() => router.push(routes.admin.shopMarketplace)}
+            onClick={() => navigate({ to: routes.admin.shopMarketplace })}
             variant={status === 'failed' ? 'outline' : 'default'}
           >
             {messages.marketplace.importFinished}

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { useRouter } from 'next/navigation'
+import { useNavigate } from '@tanstack/react-router'
 import { queryKeys } from '@/lib/query-keys'
 import { deleteWorkflowFn, toggleWorkflowActiveFn } from '../server'
 import { getTriggerTypeLabel } from '../utils'
@@ -25,7 +25,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@agency/ui'
-import Link from 'next/link'
+import { Link } from '@tanstack/react-router'
 import { Pencil, Trash2 } from 'lucide-react'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
@@ -50,7 +50,7 @@ function formatDateTime(dateString: string | null): string {
 }
 
 export function WorkflowDetail({ workflow: initialWorkflow }: WorkflowDetailProps) {
-  const router = useRouter()
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [workflow, setWorkflow] = useState(initialWorkflow)
 
@@ -74,7 +74,7 @@ export function WorkflowDetail({ workflow: initialWorkflow }: WorkflowDetailProp
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.workflows.all })
-      router.push(routes.admin.workflows)
+      navigate({ to: routes.admin.workflows })
     },
   })
 
@@ -90,7 +90,7 @@ export function WorkflowDetail({ workflow: initialWorkflow }: WorkflowDetailProp
         </div>
         <div className="flex items-center gap-2">
           <Button asChild>
-            <Link href={routes.admin.workflowEditor(workflow.id)}>
+            <Link to={routes.admin.workflowEditor(workflow.id)}>
               <Pencil className="mr-2 h-4 w-4" />
               {messages.workflows.openEditor}
             </Link>

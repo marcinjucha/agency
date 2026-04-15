@@ -12,7 +12,7 @@ import {
   ErrorState,
   EmptyState,
 } from '@agency/ui'
-import Link from 'next/link'
+import { Link } from '@tanstack/react-router'
 import { ShoppingBag, Plus } from 'lucide-react'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
@@ -96,7 +96,7 @@ export function ShopProductList() {
           description={messages.shop.noProductsDescription}
           variant="card"
           action={
-            <Link href={routes.admin.shopProductNew}>
+            <Link to={routes.admin.shopProductNew}>
               <Button>
                 <Plus className="mr-2 h-4 w-4" />
                 {messages.shop.addProduct}
@@ -115,7 +115,7 @@ export function ShopProductList() {
         <h1 className="text-2xl font-bold text-foreground">{messages.shop.productsTitle}</h1>
         <div className="flex items-center gap-2">
           <ViewModeToggle value={viewMode} onChange={setViewMode} />
-          <Link href={routes.admin.shopProductNew}>
+          <Link to={routes.admin.shopProductNew}>
             <Button>
               <Plus className="mr-2 h-4 w-4" />
               {messages.shop.newProduct}

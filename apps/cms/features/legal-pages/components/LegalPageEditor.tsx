@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useRouter } from 'next/navigation'
+import { useNavigate } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { Button, Input, Label, Badge, Checkbox } from '@agency/ui'
 import { messages } from '@/lib/messages'
@@ -15,7 +15,7 @@ import type { LegalPage } from '../types'
 import type { TiptapContent } from '../../editor/types'
 import { TiptapEditor } from '../../editor/components/TiptapEditor'
 import { ArrowLeft } from 'lucide-react'
-import Link from 'next/link'
+import { Link } from '@tanstack/react-router'
 
 type SaveState = 'idle' | 'saving' | 'saved' | 'error'
 
@@ -26,7 +26,7 @@ interface LegalPageEditorProps {
 const EMPTY_CONTENT: TiptapContent = { type: 'doc', content: [] }
 
 export function LegalPageEditor({ legalPage }: LegalPageEditorProps) {
-  const router = useRouter()
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [saveState, setSaveState] = useState<SaveState>('idle')
   const [saveError, setSaveError] = useState<string>('')
@@ -72,7 +72,7 @@ export function LegalPageEditor({ legalPage }: LegalPageEditorProps) {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Link
-            href={routes.admin.legalPages}
+            to={routes.admin.legalPages}
             className="text-muted-foreground hover:text-foreground transition-colors"
           >
             <ArrowLeft size={20} />

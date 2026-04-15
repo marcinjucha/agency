@@ -1,6 +1,6 @@
 
 
-import Link from 'next/link'
+import { Link } from '@tanstack/react-router'
 import { Button, Switch, Label, Badge } from '@agency/ui'
 import { ArrowLeft } from 'lucide-react'
 import { routes } from '@/lib/routes'
@@ -33,7 +33,7 @@ export function WorkflowEditorHeader({
     <div className="h-14 border-b border-border bg-card px-4 flex items-center justify-between shrink-0">
       <div className="flex items-center gap-2">
         <Link
-          href={routes.admin.workflows}
+          to={routes.admin.workflows}
           className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />

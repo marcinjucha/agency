@@ -3,7 +3,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useRouter } from 'next/navigation'
+import { useNavigate } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import {
   Button,
@@ -52,7 +52,7 @@ const EMPTY_CONTENT: TiptapContent = { type: 'doc', content: [] }
 // --- Component ---
 
 export function ShopProductEditor({ product }: ShopProductEditorProps) {
-  const router = useRouter()
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const isEditing = !!product
 
@@ -184,7 +184,7 @@ export function ShopProductEditor({ product }: ShopProductEditorProps) {
       setTimeout(() => setSaveState('idle'), 2500)
 
       if (!isEditing && result.data) {
-        router.push(routes.admin.shopProduct(result.data.id))
+        navigate({ to: routes.admin.shopProduct(result.data.id) })
       }
     } else {
       setSaveState('error')
@@ -220,7 +220,7 @@ export function ShopProductEditor({ product }: ShopProductEditorProps) {
     const result = await deleteShopProduct(product.id)
     if (result.success) {
       queryClient.invalidateQueries({ queryKey: queryKeys.shopProducts.all })
-      router.push(routes.admin.shopProducts)
+      navigate({ to: routes.admin.shopProducts })
     } else {
       setDeleteState('idle')
       setErrorMessage(result.error ?? messages.shop.deleteProductFailed)
@@ -244,7 +244,7 @@ export function ShopProductEditor({ product }: ShopProductEditorProps) {
           <div className="flex flex-col gap-1">
             <button
               type="button"
-              onClick={() => router.push(routes.admin.shopProducts)}
+              onClick={() => navigate({ to: routes.admin.shopProducts })}
               className="text-sm text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-1 w-fit"
             >
               <span aria-hidden="true">&larr;</span>

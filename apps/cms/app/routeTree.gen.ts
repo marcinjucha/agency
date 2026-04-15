@@ -22,6 +22,7 @@ import { Route as AdminRolesIndexRouteImport } from './routes/admin/roles/index'
 import { Route as AdminResponsesIndexRouteImport } from './routes/admin/responses/index'
 import { Route as AdminIntakeIndexRouteImport } from './routes/admin/intake/index'
 import { Route as AdminEmailTemplatesIndexRouteImport } from './routes/admin/email-templates/index'
+import { Route as ApiCalendarCallbackRouteImport } from './routes/api/calendar/callback'
 import { Route as AdminWorkflowsWorkflowIdRouteImport } from './routes/admin/workflows/$workflowId'
 import { Route as AdminTenantsNewRouteImport } from './routes/admin/tenants/new'
 import { Route as AdminTenantsTenantIdRouteImport } from './routes/admin/tenants/$tenantId'
@@ -98,6 +99,11 @@ const AdminEmailTemplatesIndexRoute =
     path: '/email-templates/',
     getParentRoute: () => AdminRoute,
   } as any)
+const ApiCalendarCallbackRoute = ApiCalendarCallbackRouteImport.update({
+  id: '/api/calendar/callback',
+  path: '/api/calendar/callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminWorkflowsWorkflowIdRoute =
   AdminWorkflowsWorkflowIdRouteImport.update({
     id: '/workflows/$workflowId',
@@ -160,6 +166,7 @@ export interface FileRoutesByFullPath {
   '/admin/tenants/$tenantId': typeof AdminTenantsTenantIdRoute
   '/admin/tenants/new': typeof AdminTenantsNewRoute
   '/admin/workflows/$workflowId': typeof AdminWorkflowsWorkflowIdRouteWithChildren
+  '/api/calendar/callback': typeof ApiCalendarCallbackRoute
   '/admin/email-templates/': typeof AdminEmailTemplatesIndexRoute
   '/admin/intake/': typeof AdminIntakeIndexRoute
   '/admin/responses/': typeof AdminResponsesIndexRoute
@@ -183,6 +190,7 @@ export interface FileRoutesByTo {
   '/admin/tenants/$tenantId': typeof AdminTenantsTenantIdRoute
   '/admin/tenants/new': typeof AdminTenantsNewRoute
   '/admin/workflows/$workflowId': typeof AdminWorkflowsWorkflowIdRouteWithChildren
+  '/api/calendar/callback': typeof ApiCalendarCallbackRoute
   '/admin/email-templates': typeof AdminEmailTemplatesIndexRoute
   '/admin/intake': typeof AdminIntakeIndexRoute
   '/admin/responses': typeof AdminResponsesIndexRoute
@@ -208,6 +216,7 @@ export interface FileRoutesById {
   '/admin/tenants/$tenantId': typeof AdminTenantsTenantIdRoute
   '/admin/tenants/new': typeof AdminTenantsNewRoute
   '/admin/workflows/$workflowId': typeof AdminWorkflowsWorkflowIdRouteWithChildren
+  '/api/calendar/callback': typeof ApiCalendarCallbackRoute
   '/admin/email-templates/': typeof AdminEmailTemplatesIndexRoute
   '/admin/intake/': typeof AdminIntakeIndexRoute
   '/admin/responses/': typeof AdminResponsesIndexRoute
@@ -234,6 +243,7 @@ export interface FileRouteTypes {
     | '/admin/tenants/$tenantId'
     | '/admin/tenants/new'
     | '/admin/workflows/$workflowId'
+    | '/api/calendar/callback'
     | '/admin/email-templates/'
     | '/admin/intake/'
     | '/admin/responses/'
@@ -257,6 +267,7 @@ export interface FileRouteTypes {
     | '/admin/tenants/$tenantId'
     | '/admin/tenants/new'
     | '/admin/workflows/$workflowId'
+    | '/api/calendar/callback'
     | '/admin/email-templates'
     | '/admin/intake'
     | '/admin/responses'
@@ -281,6 +292,7 @@ export interface FileRouteTypes {
     | '/admin/tenants/$tenantId'
     | '/admin/tenants/new'
     | '/admin/workflows/$workflowId'
+    | '/api/calendar/callback'
     | '/admin/email-templates/'
     | '/admin/intake/'
     | '/admin/responses/'
@@ -298,6 +310,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRouteWithChildren
   LoginRoute: typeof LoginRoute
+  ApiCalendarCallbackRoute: typeof ApiCalendarCallbackRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -392,6 +405,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/email-templates/'
       preLoaderRoute: typeof AdminEmailTemplatesIndexRouteImport
       parentRoute: typeof AdminRoute
+    }
+    '/api/calendar/callback': {
+      id: '/api/calendar/callback'
+      path: '/api/calendar/callback'
+      fullPath: '/api/calendar/callback'
+      preLoaderRoute: typeof ApiCalendarCallbackRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/admin/workflows/$workflowId': {
       id: '/admin/workflows/$workflowId'
@@ -535,6 +555,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRouteWithChildren,
   LoginRoute: LoginRoute,
+  ApiCalendarCallbackRoute: ApiCalendarCallbackRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
