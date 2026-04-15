@@ -10,7 +10,7 @@ import {
 import { Globe, Mail } from 'lucide-react'
 import { queryKeys } from '@/lib/query-keys'
 import { messages } from '@/lib/messages'
-import { getCalendarConnections, updateSurveyLinkCalendar } from '@/features/calendar/actions'
+import { getCalendarConnectionsFn, updateSurveyLinkCalendarFn } from '@/features/calendar/server-fns'
 import type { CalendarConnection } from '@/features/calendar/types'
 
 /**
@@ -52,7 +52,7 @@ export function SurveyLinkCalendarSelect(props: SurveyLinkCalendarSelectProps) {
   const { data: connections, isLoading } = useQuery({
     queryKey: queryKeys.calendar.connections,
     queryFn: async () => {
-      const result = await getCalendarConnections()
+      const result = await getCalendarConnectionsFn()
       if (!result.success) throw new Error(result.error)
       return result.data
     },
@@ -61,7 +61,7 @@ export function SurveyLinkCalendarSelect(props: SurveyLinkCalendarSelectProps) {
   const updateMutation = useMutation({
     mutationFn: async (connectionId: string | null) => {
       if (isControlled) throw new Error('Cannot auto-save in controlled mode')
-      const result = await updateSurveyLinkCalendar(props.surveyLinkId, connectionId)
+      const result = await updateSurveyLinkCalendarFn({ data: { surveyLinkId: props.surveyLinkId, connectionId } })
       if (!result.success) throw new Error(result.error)
       return result
     },
@@ -137,7 +137,7 @@ export function useCalendarConnectionName(connectionId: string | null): string |
   const { data: connections } = useQuery({
     queryKey: queryKeys.calendar.connections,
     queryFn: async () => {
-      const result = await getCalendarConnections()
+      const result = await getCalendarConnectionsFn()
       if (!result.success) throw new Error(result.error)
       return result.data
     },

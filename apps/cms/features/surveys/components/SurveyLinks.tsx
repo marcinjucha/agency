@@ -166,6 +166,16 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
       setError(null)
     },
     onError: (err: Error) => {
+      // inputValidator throws Zod errors as JSON — extract first human-readable message
+      try {
+        const zodErrors = JSON.parse(err.message)
+        if (Array.isArray(zodErrors) && zodErrors[0]?.message) {
+          setError(zodErrors[0].message)
+          return
+        }
+      } catch {
+        // Not JSON — fall through to raw message
+      }
       setError(err.message)
     },
   })
