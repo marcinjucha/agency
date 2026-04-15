@@ -63,7 +63,7 @@ agency/
     └── SHOP_PROJECT_SPEC.yaml  # Platforma Sklepowa (AAA-P-9)
 ```
 
-Note: `apps/shop/tata/` and `apps/shop/kolega/` are PLANNED (AAA-T-138+) but not yet created. Shop CMS features already exist in `apps/cms/features/shop-*/`.
+Note: `apps/shop/jacek/` and `apps/shop/kolega/` migrated from Next.js 16 to TanStack Start v1.167 + Vite 8 (2026-04-15). `apps/shop/tata/` planned but not yet created. Shop CMS features exist in `apps/cms/features/shop-*/`.
 
 ---
 
@@ -152,7 +152,7 @@ This monorepo contains two Notion projects with separate PROJECT_SPEC files:
 | **database-patterns**    | `.claude/skills/database-patterns/SKILL.md`    | Supabase RLS policies, PostgreSQL functions, migrations, type regeneration, client selection (server vs browser), fromSupabaseVoid for void operations, is_super_admin() for global tables. Avoids RLS infinite recursion |
 | **development-workflow** | `.claude/skills/development-workflow/SKILL.md` | Testing decisions (3-Question Rule), severity classification (P0/P1/P2), implementation validation, PROJECT_SPEC.yaml updates, validate after each iteration   |
 | **n8n-patterns**         | `.claude/skills/n8n-patterns/SKILL.md`         | N8n background processing — fire-and-forget webhooks, ai_qualification JSONB, credential selection, Sentry Init subworkflow pattern                           |
-| **nextjs-patterns**      | `.claude/skills/nextjs-patterns/SKILL.md`      | Next.js routes, Server Actions (structured returns, no throws), foundation files (types/queries/validation), async params, correct Supabase client            |
+| **nextjs-patterns**      | `.claude/skills/nextjs-patterns/SKILL.md`      | Next.js routes, Server Actions (structured returns, no throws), foundation files (types/queries/validation), async params, correct Supabase client. **For Next.js apps only (cms, website).** Shop apps use tanstack-* skills. |
 | **notion-patterns**      | `.claude/skills/notion-patterns/SKILL.md`      | Notion MCP tools — task status updates, project tracking. Properties are CASE-SENSITIVE. Contains Agency database IDs and filter rules                        |
 | **design-patterns**      | `.claude/skills/ag-ui-components/SKILL.md`     | React components, shadcn/ui design system, WCAG 2.1 AA accessibility, responsive design, visual design decisions (dark/moody tonality, layout/spacing/typography choices, quality gates), edit pattern decisions (RHF form vs inline, DatePicker vs native). Controller for checkbox arrays, TanStack Query CMS-only, 4 UI states |
 | **validation-patterns**  | `.claude/skills/validation-patterns/SKILL.md`  | Two-pass validation (functional + architecture), YAML report formats, severity classification, 8-point architecture checklist. Loaded by validator-agent      |
@@ -205,7 +205,7 @@ This monorepo contains two Notion projects with separate PROJECT_SPEC files:
 - **Turbopack barrel re-export bug** — `export { X } from 'module'` in files used by Server Actions causes "Expected export to be in eval context". Fix: `import { X } from 'module'; export const Y = X`.
 - **Functional patterns: `remeda` + `neverthrow`** — Project adopts `remeda` for `pipe()`/functional composition and `neverthrow` for typed `Result<T, E>` error handling. **New Server Actions** use `ok().andThen().asyncAndThen().match()` instead of `try/catch`. Key patterns: `pipe()` for data transformations, `Result`/`ResultAsync` for error handling, `andThen` chaining with final `.match()`, `fromThrowable`/`ResultAsync.fromPromise` for wrapping unsafe code. **Not Effect.js** — lightweight (~5KB neverthrow + tree-shakeable remeda).
 - **Boy Scout Rule** — Always leave code better than you found it. When touching a file: migrate try/catch → Result types, imperative loops → `pipe()`, fix naming, add missing types. Only in files you're already changing — don't refactor untouched code proactively.
-- **React Compiler enabled (all 4 apps)** — `reactCompiler: true` in cms, website, jacek, kolega `next.config.ts`. Auto-memoizes — don't add `useCallback`/`useMemo` to new code. Boy Scout Rule: remove manual memoization when touching files. Only add back if profiling shows need.
+- **React Compiler enabled (cms, website)** — `reactCompiler: true` in cms and website `next.config.ts`. Shop apps (jacek, kolega) use TanStack Start + Vite 8 with `babel-plugin-react-compiler` in `vite.config.ts`. Auto-memoizes — don't add `useCallback`/`useMemo` to new code. Boy Scout Rule: remove manual memoization when touching files.
 - **Type-safe domain modeling** — Never pass plain `string` where a domain type exists. Derive typed unions from `as const` objects (single source of truth), validate at DB boundary with a validator function. Applied in RBAC (`PermissionKey`), should extend to all enum-like domain values (workflow step types, blog statuses, etc.). See `ag-coding-practices` skill for full pattern.
 
 ---

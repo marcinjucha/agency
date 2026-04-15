@@ -14,7 +14,7 @@ architecture:
     - "is_featured BOOLEAN on shop_products — homepage featured products, CMS toggle with Star icon. Affects all shops (shared table), DEFAULT false."
     - "Reuse packages — @agency/ui, @agency/database, @agency/email, editor, media, SEO, legal pages"
     - "Sidebar 'Sklep' section — hardcoded initially, feature flags later (AAA-T-141 in Core CMS)"
-    - "apps/shop/ parent folder — shared config/components possible, each client subfolder is a standalone Next.js app"
+    - "apps/shop/ parent folder — shared config/components possible, each client subfolder is a standalone TanStack Start + Vite 8 app (migrated from Next.js 2026-04-15)"
     - "Tata visual direction: dark + warm amber ('library at night'), serif headings (Merriweather/Lora) + sans body (Geist), editorial layout for book detail pages"
     - "Tata purchase flow: external_link → redirect to Zolix/platform for paid books, digital_download → free PDF from S3 for bonus materials"
     - "Tata nav: minimal 3 links (Książki, O Autorze, Kontakt), no hamburger, homepage grid = book listing"
@@ -85,7 +85,7 @@ features:
     iteration: 6
     size: M
     status: done
-    description: "apps/shop/jacek/ Next.js app — dark + warm amber theme ('library at night'), Merriweather serif headings + Geist Sans body, Supabase anon client (NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY), features/products/ foundation with tenant_id filtering, lib/routes.ts + lib/messages.ts, Plausible analytics, homepage placeholder. Port 3002."
+    description: "apps/shop/jacek/ TanStack Start + Vite 8 app — dark + warm amber theme ('library at night'), @fontsource Merriweather serif headings + Geist Sans body, Supabase anon client, createServerFn loaders, ISR via Cache-Control headers, Plausible analytics. Port 3002."
     why: "Standalone frontend app for jacek's product catalog (user's father's shop)"
     depends_on: ["DB Schema"]
     completion_notes: "Scaffolded apps/shop/jacek/ with 15 files. Migrated from Next.js 16 to TanStack Start v1.167 + Vite 8 (2026-04-15). Uses createServerFn for server-only loaders, ISR via Cache-Control headers, @fontsource fonts, @tailwindcss/vite. True anon client (publishable key, not service_role). TENANT_ID as server-only env var. Dev server runs on port 3002."
