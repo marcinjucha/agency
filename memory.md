@@ -28,6 +28,8 @@
 
 ## Bugs Found
 
+- **TanStack Start Vercel deployment requires `nitro()` vite plugin** — Without `import { nitro } from 'nitro/vite'` + `nitro()` in plugins, Vercel can't generate serverless functions → 404 on all SSR routes. Works locally without it. Vercel Framework Preset = "TanStack Start" (built-in). Add `nitro` to deps. See tanstack-setup skill.
+
 - **`apps/website` dev server broken after TanStack CMS migration (2026-04-15)** — Turbopack (Next.js 16 default) throws "Cannot find module 'enhanced-resolve'" from `@tailwindcss/node` 4.2.2. Root cause likely: npm install during CMS TanStack setup upgraded `@tailwindcss/node` to v4.2.2 which added `enhanced-resolve` as new dep — Turbopack's PostCSS resolution can't find it. Workaround tried: added `enhanced-resolve` to website devDependencies — did not fix. Next steps: (1) check if `@tailwindcss/postcss` version lock would help, (2) disable Turbopack for website via `next.config.ts` as fallback.
 
 - **supabase gen types prepends "Initialising login role..."** — Corrupts types.ts. Workaround: `grep -v "^Initialising"`. `db:types` uses --local, need --linked when local not running.
