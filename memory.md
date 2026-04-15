@@ -2,7 +2,7 @@
 
 ## Shop Platform — AAA-P-9 — IN PROGRESS (2026-04-02)
 
-**Status:** Iterations 1-8 done + kolega done. Remaining: iteration 9 (feature flags, Core CMS blocker) + iteration 10 (polish/deploy).
+**Status:** Iterations 1-8 done + kolega done. Both shops migrated from Next.js 16 to TanStack Start v1.167 (2026-04-15). Remaining: iteration 9 (feature flags, Core CMS blocker) + iteration 10 (polish/deploy).
 **Scope:** Two shops: Jacek (books, dark amber theme) + Kolega (general merchandise, light linen theme). Catalog-only, NO Stripe. Single Supabase (`shop_` prefix), CMS extended, separate frontends (`apps/shop/jacek/`, `apps/shop/kolega/`).
 **Key decisions:** `listing_type` ENUM, `gallery`/`editorial` display_layout, `is_featured BOOLEAN`, flat categories. Dual PROJECT_SPEC: `docs/PROJECT_SPEC.yaml` (AAA-P-4) + `docs/SHOP_PROJECT_SPEC.yaml` (AAA-P-9).
 
@@ -32,7 +32,7 @@
 
 ## Roadmap & Planning (2026-04-11)
 
-**Next:** email triggers → client onboarding. **Backlog:** Multi-language, CRM/Slack, Reporting, Newsletter.
+**Next:** TanStack Start migration for website + CMS (user wants CMS broken into per-feature tasks: surveys, shop, users, etc.), email triggers → client onboarding. **Backlog:** Multi-language, CRM/Slack, Reporting, Newsletter.
 
 ## Completed Features (compressed)
 
@@ -137,6 +137,10 @@
 - **n8n Set node v3.4 defaults to REPLACE mode, not merge** — Set node strips ALL fields not explicitly assigned. Assumed it merges (keeps existing + adds new). Cost: Persist Gate received `{ alreadyPersisted: false }` only, all pipeline data lost. Always use "Combine → Merge" or pass all needed fields explicitly. (2026-04-13, AAA-T-183)
 - **PostgREST handles JSONB serialization natively** — Never `JSON.stringify()` before writing to JSONB columns via Supabase REST API. PostgREST accepts raw objects and serializes them. Double-serialization produces escaped string `"{\"key\":\"value\"}"` instead of proper JSONB. (2026-04-13, AAA-T-183)
 - **All-workflows fire bug: no per-survey-link scoping** — Trigger route fires ALL active workflows matching trigger_type, not scoped to specific survey_link. Every survey submit triggers every survey_submitted workflow regardless of which link was used. Needs workflow-to-survey_link binding. (2026-04-13)
+- **npm overrides required in monorepo root for Vite 8** — When Next.js apps coexist with TanStack Start apps, Next.js pins Vite 7 via dependencies. Must add `"overrides": { "vite": "^8.0.0" }` in root package.json to force Vite 8 across all workspaces. Without this, TanStack Start apps silently get Vite 7 and fail with 404s. (2026-04-15)
+- **Vite 7 SSR middleware incompatibility with TanStack Start — silent 404** — Vite 7 returns silent 404 for all routes, no error message. Requires Vite 8. WHY silent: Vite 7's SSR middleware doesn't support the middleware pattern TanStack Start uses, but fails silently instead of throwing. (2026-04-15)
+- **Nitro plugin breaks @/ path aliases in FetchableDevEnvironment** — TanStack Start's Nitro dev plugin resolves @/ aliases incorrectly in its FetchableDevEnvironment. Manifests as module resolution failures during SSR dev. (2026-04-15)
+- **TanStack Start loaders are ISOMORPHIC (run on server AND client)** — Loaders execute on both server and client. process.env, DB calls, and any server-only code in loaders will fail on client hydration. MUST wrap in createServerFn for server-only operations. Non-obvious because Next.js loaders (getServerSideProps) were server-only. (2026-04-15)
 
 ## Preferences
 
@@ -170,3 +174,5 @@
 - **Trigger block must appear in StepLibraryPanel** — User noted it was missing ("nie byl, ale powinien byc"). Trigger is a step type users need to add from the library, not only via templates or context menu. (2026-04-13, AAA-T-190)
 
 - **Bridge pattern for zero-dep registry + i18n** — step-registry.ts stores `labelKey` (plain string) instead of importing messages.ts. Separate `utils/step-labels.ts` bridges registry to messages.ts for UI display. WHY: registry must be importable from tests and n8n-adjacent code without pulling in next-intl/server-only deps. (2026-04-13, AAA-T-190)
+- **Shorter skill names preferred** — User corrected "tanstack-start-setup" to "tanstack-setup". Drop framework prefix when context is already clear from the name. (2026-04-15)
+- **CMS migration should be per-feature tasks** — When migrating large apps (CMS) to new framework, break into separate tasks per feature area (surveys, shop, users, etc.) rather than one monolithic migration task. (2026-04-15)

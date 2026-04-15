@@ -1,14 +1,14 @@
 # apps/ - Applications Directory
 
-This directory contains the two Next.js applications that make up AI Agency.
+This directory contains the applications that make up AI Agency. CMS and Website use Next.js, shop frontends use TanStack Start.
 
 ## Structure
 
 ```
 apps/
-├── website/     # Public-facing marketing website (Halo Efekt)
-├── cms/         # Admin panel application
-└── shop/        # E-commerce frontends (per-client)
+├── website/     # Public-facing marketing website — Next.js (port 3000)
+├── cms/         # Admin panel — Next.js (port 3001)
+└── shop/        # E-commerce frontends — TanStack Start + Vite 8 (per-client)
     ├── jacek/   # Jacek's book shop (port 3002)
     └── kolega/  # Oleg's general merchandise shop (port 3003)
 ```

@@ -3,13 +3,13 @@ project:
   type: monorepo-extension
   notion_project: "AAA-P-9"
   parent_monorepo: "legal-mind (Halo Efekt)"
-  tech_stack: "Next.js 16, React 19, Tailwind CSS 4, shadcn/ui, Supabase (shared DB, shop_ prefix), TanStack Query 5, Tiptap editor (reuse), S3 media (reuse), Plausible Analytics (reuse)"
+  tech_stack: "TanStack Start v1.167, Vite 8, React 19, Tailwind CSS 4 (@tailwindcss/vite), shadcn/ui, Supabase (shared DB, shop_ prefix), Plausible Analytics (reuse). CMS features still Next.js 16."
 
 architecture:
   key_decisions:
     - "Single Supabase DB — shop_ prefixed tables in same project as Halo Efekt, shared RLS patterns"
     - "CMS extended — features/shop-products/ and features/shop-categories/ in apps/cms, NOT a separate CMS"
-    - "Separate frontends per client — apps/shop/jacek/ and apps/shop/kolega/ as independent Next.js apps (apps/shop/tata/ planned but not built)"
+    - "Separate frontends per client — apps/shop/jacek/ and apps/shop/kolega/ migrated to TanStack Start v1.167 + Vite 8 (2026-04-15). apps/shop/tata/ planned but not built."
     - "Tata: hybrid — external_link (paid books via Zolix/platform) + digital_download (free materials from S3). Kolega: external_link only (OLX/Allegro)"
     - "is_featured BOOLEAN on shop_products — homepage featured products, CMS toggle with Star icon. Affects all shops (shared table), DEFAULT false."
     - "Reuse packages — @agency/ui, @agency/database, @agency/email, editor, media, SEO, legal pages"
@@ -88,7 +88,7 @@ features:
     description: "apps/shop/jacek/ Next.js app — dark + warm amber theme ('library at night'), Merriweather serif headings + Geist Sans body, Supabase anon client (NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY), features/products/ foundation with tenant_id filtering, lib/routes.ts + lib/messages.ts, Plausible analytics, homepage placeholder. Port 3002."
     why: "Standalone frontend app for jacek's product catalog (user's father's shop)"
     depends_on: ["DB Schema"]
-    completion_notes: "Scaffolded apps/shop/jacek/ with 15 files. True anon client (publishable key, not service_role). TENANT_ID as server-only env var (no NEXT_PUBLIC_ prefix). shop_categories RLS USING(true) confirmed correct — anon has no tenant context. Warm amber hsl(36 90% 50%) distinct from main Halo Efekt website. Root package.json updated with apps/shop/* workspace glob + dev:shop-jacek script. Dev server runs on port 3002."
+    completion_notes: "Scaffolded apps/shop/jacek/ with 15 files. Migrated from Next.js 16 to TanStack Start v1.167 + Vite 8 (2026-04-15). Uses createServerFn for server-only loaders, ISR via Cache-Control headers, @fontsource fonts, @tailwindcss/vite. True anon client (publishable key, not service_role). TENANT_ID as server-only env var. Dev server runs on port 3002."
 
   # Iteration 7
   - name: "Product Catalog (Listing + Detail)"
@@ -121,7 +121,7 @@ features:
     description: "apps/shop/kolega/ — full e-commerce frontend for general merchandise. Light warm linen theme (hsl(40 30% 97%)), steel blue primary, Inter font. Sidebar category filters (240px, server component), featured products via is_featured flag, ProductCard (aspect-[4/5], hover shadow), responsive grid, homepage hero + featured section, sitemap, OG image, JSON-LD. Port 3003."
     why: "Second shop client — validates multi-tenant shop architecture and different visual direction from jacek (dark amber) vs kolega (light linen)"
     depends_on: ["DB Schema", "CMS Product Editor", "Shop App Scaffolding"]
-    completion_notes: "28 new files. is_featured migration added to shared shop_products table. CMS product editor has prominent 'Polecane' toggle with Star icon (validation, actions, editor, sidebar, messages updated). Build passes clean (kolega + CMS). Validated: 0 blocking issues."
+    completion_notes: "28 new files. Migrated from Next.js 16 to TanStack Start v1.167 + Vite 8 (2026-04-15). Same patterns as jacek: createServerFn loaders, ISR headers, @fontsource-variable/inter, CategorySidebar. is_featured migration added to shared shop_products table. Port 3003."
 
   # Marketplace Integration — AAA-T-157
   - name: "Marketplace Integration (OLX + Allegro)"
