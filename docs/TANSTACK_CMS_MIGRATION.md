@@ -132,7 +132,7 @@ redirect('/path')    → throw redirect({ to: '/path' })
 
 | Etap | Zakres | Blokuje |
 |------|--------|---------|
-| **AAA-T-?** Migracja Surveys & Intake | features/surveys, features/intake, app/admin/surveys, app/admin/intake, app/admin/responses | — |
+| **AAA-T-193** Migracja Surveys & Intake | features/surveys, features/intake, app/admin/surveys, app/admin/intake, app/admin/responses | ✅ DONE (2026-04-15) |
 | **AAA-T-?** Migracja Workflows & Calendar | features/workflows, features/calendar, API routes workflows/trigger | Survey & Intake |
 | **AAA-T-?** Migracja Content | features/blog, features/landing, features/media, features/email | — |
 | **AAA-T-?** Migracja Shop & Marketplace | features/shop-*, features/site-settings | — |
@@ -140,36 +140,88 @@ redirect('/path')    → throw redirect({ to: '/path' })
 
 ---
 
-## Konwencje migracji per-feature
+## Konwencje migracji per-feature (AAA-T-193 learnings)
 
 Przy migracji każdego feature (osobne taski):
 
-1. **Server Actions → createServerFn**
+1. **Server Actions → `features/{name}/server-fns.ts`** (NIE `lib/server-fns/`)
+   - `lib/server-fns/` = infrastruktura cross-feature (auth, admin-layout, dashboard)
+   - Feature business logic → `features/{name}/server-fns.ts` (obok `actions.ts`)
    ```ts
-   // Przed (Next.js)
-   'use server'
-   export async function createSurvey(data: FormData) {
-     const { supabase, tenantId } = await requireAuth('surveys.manage')
-     ...
-   }
-   
-   // Po (TanStack Start)
+   // Po (TanStack Start) — features/surveys/server-fns.ts
    export const createSurveyFn = createServerFn()
-     .middleware([authMiddleware])
-     .validator(z.object({ ... }))
-     .handler(async ({ data, context }) => {
-       const { supabase, tenantId } = context.auth
-       ...
+     .inputValidator((input: { title: string }) => createSurveySchema.parse(input))
+     .handler(async ({ data }): Promise<{ success: boolean; surveyId?: string; error?: string }> => {
+       const auth = await getAuth()  // inline, nie middleware (auth middleware = Iter 3 zadania)
+       if (!auth) return { success: false, error: 'Not authenticated' }
+       // ... logika DB
      })
    ```
+   Auth pattern (do czasu authMiddleware): lokalny `getAuth()` → `createStartClient()` + `auth.getUser()` + `users.tenant_id`
 
-2. **Queries — bez zmian** (TanStack Query nie jest dep Next.js)
+2. **Queries — bez zmian** (TanStack Query nie zależy od Next.js)
 
 3. **Components — usunąć `'use client'`** (TanStack Start jest client-first)
 
-4. **next/link → Link z @tanstack/react-router** (`href` → `to`)
+4. **`next/link` → `Link` z `@tanstack/react-router`** (`href` → `to`)
 
-5. **next/image → `<img>` lub @unpic/react**
+5. **`next/image` → `<img>` lub `@unpic/react`**
+
+6. **SurveyBuilder: survey-object prop → surveyId prop**
+   - Next.js RSC przekazywał pełny obiekt z serwera (Server Component fetch)
+   - TanStack Start: komponent dostaje `surveyId` string, sam fetchuje przez `useQuery`
+   - Next.js route page zaktualizowany do `<SurveyBuilder surveyId={id} />` (koegzystencja)
+
+---
+
+## Gotchas per-feature: URL Search Params (validateSearch)
+
+Odkryte podczas AAA-T-193 (intake filters). Dotyczy każdego feature z filtrami URL.
+
+### Problem: `navigate({ search: fn })` type error — `never`
+
+Gdy żaden route w tree nie ma `validateSearch`, TanStack Router typuje search jako `{}`.
+Functional updater `(prev: {}) => { key: value }` → TS error: `not assignable to never`.
+
+### Rozwiązanie: 3-krokowy pattern
+
+**Krok 1:** Dodaj `validateSearch` do route z explicit optional return type:
+```ts
+// app/routes/admin/intake/index.tsx
+export const Route = createFileRoute('/admin/intake')({
+  validateSearch: (search: Record<string, unknown>): { status?: string; survey?: string; appointmentStatus?: string } => ({
+    status: search.status as string | undefined,
+    survey: search.survey as string | undefined,
+    appointmentStatus: search.appointmentStatus as string | undefined,
+  }),
+  component: () => <IntakeHub />,
+})
+```
+**WAŻNE:** Explicit return type z `?:` (optional) — inaczej TanStack wymaga wszystkich kluczy w `search={}`.
+
+**Krok 2:** W komponentach z filtrami — dodaj `to` w navigate:
+```ts
+// features/intake/components/ResponsesTable.tsx
+navigate({
+  to: '/admin/intake',      // ← pin'uje search type do tego route
+  search: (prev) => ({ ...prev, [key]: value || undefined }),
+  replace: true,
+})
+```
+
+**Krok 3:** Linki i redirecty DO intake muszą mieć `search={}`:
+```tsx
+<Link to={routes.admin.intake} search={{}}>...</Link>
+throw redirect({ to: routes.admin.intake, search: {} })
+```
+
+### Komponenty z `useSearch` (odczyt)
+
+`useSearch({ strict: false })` — działa bez rejestracji w route. Odczyt przez cast:
+```ts
+const search = useSearch({ strict: false })
+const status = (search as Record<string, unknown>).status as string | undefined
+```
 
 ---
 
@@ -188,7 +240,8 @@ Przy migracji każdego feature (osobne taski):
 
 | Problem | Rozwiązanie |
 |---------|-------------|
-| `cookies()` z `next/headers` nie działa w TanStack Start | `getWebRequest()` z `vinxi/http` + ręczne parsowanie cookies |
+| `cookies()` z `next/headers` nie działa w TanStack Start | `createStartClient()` z `lib/supabase/server-start.ts` (używa `getWebRequest()` z `vinxi/http`) |
+| `navigate({ search: fn })` → TS error `never` | Dodaj `validateSearch` do docelowego route z explicit optional return type + `to:` w navigate call + `search={}` w Link/redirect. Patrz sekcja "Gotchas per-feature: URL Search Params" powyżej |
 | `'use server'` directive → build error | `createServerFn()` zamiast `'use server'` |
 | `'use client'` directive → zbędny | Usuń — TanStack Start jest client-first |
 | `unstable_cache` / ISR przez `revalidate` | `headers: () => ({ 'Cache-Control': '...' })` w route |
