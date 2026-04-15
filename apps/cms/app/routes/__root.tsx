@@ -1,14 +1,17 @@
 /// <reference types="vite/client" />
-import { createRootRoute, HeadContent, Outlet, Scripts, ScrollRestoration } from '@tanstack/react-router'
+import { createRootRouteWithContext, HeadContent, Outlet, Scripts, ScrollRestoration } from '@tanstack/react-router'
 import appCss from '../globals.css?url'
+import { getAuthContextFn } from '@/lib/server-fns/auth'
+import type { RouterContext } from '../router'
+import { buildCmsHead } from '@/lib/head'
 
-export const Route = createRootRoute({
+export const Route = createRootRouteWithContext<RouterContext>()({
+  beforeLoad: async () => {
+    const auth = await getAuthContextFn()
+    return { auth }
+  },
   head: () => ({
-    meta: [
-      { charSet: 'utf-8' },
-      { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-      { title: 'Halo Efekt CMS' },
-    ],
+    ...buildCmsHead(),
     links: [
       { rel: 'stylesheet', href: appCss },
       { rel: 'icon', href: '/favicon.ico' },

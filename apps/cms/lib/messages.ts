@@ -696,6 +696,7 @@ export const messages = {
     passwordLabel: 'Hasło',
     signingIn: 'Logowanie…',
     signIn: 'Zaloguj się',
+    invalidCredentials: 'Nieprawidłowy email lub hasło',
   },
 
   dashboard: {
