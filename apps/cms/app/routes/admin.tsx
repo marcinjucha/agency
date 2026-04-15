@@ -65,7 +65,7 @@ function AdminShell({ onLogout }: { onLogout: () => Promise<void> }) {
         href="#main-content"
         className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:top-4 focus:left-4 focus:bg-primary focus:text-primary-foreground focus:px-4 focus:py-2 focus:rounded-md focus:shadow-lg"
       >
-        {messages.navigation.skipToContent}
+        {messages.nav.skipToContent}
       </a>
       <SidebarV2 onLogout={onLogout} />
       <main id="main-content" tabIndex={-1} className="flex-1 overflow-y-auto bg-background">

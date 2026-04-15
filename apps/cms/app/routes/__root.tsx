@@ -4,7 +4,6 @@ import {
   HeadContent,
   Outlet,
   Scripts,
-  ScrollRestoration,
 } from '@tanstack/react-router'
 import * as Sentry from '@sentry/tanstackstart-react'
 import appCss from '../globals.css?url'
@@ -40,7 +39,6 @@ function RootLayout() {
       </head>
       <body className="antialiased bg-background text-foreground">
         <Outlet />
-        <ScrollRestoration />
         <Scripts />
       </body>
     </html>
