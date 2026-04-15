@@ -51,11 +51,11 @@ export function WorkflowCard({
       className={`bg-card border border-border rounded-lg p-3 cursor-pointer hover:border-primary/50 transition-transform hover:-translate-y-0.5 ${borderColor}`}
       role="link"
       tabIndex={0}
-      onClick={() => router.push(routes.admin.workflowEditor(workflow.id))}
+      onClick={() => router.push(routes.admin.workflow(workflow.id))}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault()
-          router.push(routes.admin.workflowEditor(workflow.id))
+          router.push(routes.admin.workflow(workflow.id))
         }
       }}
     >

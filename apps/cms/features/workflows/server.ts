@@ -10,7 +10,16 @@ import {
   type UpdateWorkflowFormData,
   type SaveCanvasFormData,
 } from './validation'
-import { toWorkflow } from './types'
+import {
+  toWorkflow,
+  toWorkflowListItem,
+  toWorkflowStep,
+  toWorkflowEdge,
+  type WorkflowListItem,
+  type WorkflowWithSteps,
+  type EmailTemplateOption,
+  type SurveyOption,
+} from './types'
 import { createServiceClient } from '@/lib/supabase/service'
 import { messages } from '@/lib/messages'
 import { WORKFLOW_TEMPLATES } from './templates/workflow-templates'
@@ -256,6 +265,105 @@ export const createWorkflowFromTemplateFn = createServerFn()
       )
     }
   )
+
+// ---------------------------------------------------------------------------
+// Query Server Functions (used by route loaders)
+// ---------------------------------------------------------------------------
+
+const LIST_FIELDS = 'id, name, description, trigger_type, is_active, created_at, updated_at' as const
+
+/**
+ * Fetch the workflow list. Called from the /admin/workflows/ loader.
+ */
+export const getWorkflowsFn = createServerFn().handler(async (): Promise<WorkflowListItem[]> => {
+  const supabase = createStartClient()
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JS v2.95.2 incompatibility
+  const { data, error } = await (supabase as any)
+    .from('workflows')
+    .select(LIST_FIELDS)
+    .order('updated_at', { ascending: false })
+
+  if (error) throw new Error(error.message)
+  return (data || []).map(toWorkflowListItem)
+})
+
+/**
+ * Fetch a single workflow with steps and edges. Called from the /admin/workflows/$workflowId loader.
+ */
+export const getWorkflowFn = createServerFn()
+  .inputValidator((input: { id: string }) => input)
+  .handler(async ({ data }): Promise<WorkflowWithSteps> => {
+    const supabase = createStartClient()
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JS v2.95.2 incompatibility
+    const { data: workflowData, error: workflowError } = await (supabase as any)
+      .from('workflows')
+      .select('*')
+      .eq('id', data.id)
+      .maybeSingle()
+
+    if (workflowError) throw new Error(workflowError.message)
+    if (!workflowData) throw new Error(messages.workflows.workflowNotFound)
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: stepsData, error: stepsError } = await (supabase as any)
+      .from('workflow_steps')
+      .select('*')
+      .eq('workflow_id', data.id)
+      .order('created_at', { ascending: true })
+
+    if (stepsError) throw new Error(stepsError.message)
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: edgesData, error: edgesError } = await (supabase as any)
+      .from('workflow_edges')
+      .select('*')
+      .eq('workflow_id', data.id)
+      .order('sort_order', { ascending: true })
+
+    if (edgesError) throw new Error(edgesError.message)
+
+    const workflow = toWorkflow(workflowData)
+    return {
+      ...workflow,
+      steps: (stepsData || []).map(toWorkflowStep),
+      edges: (edgesData || []).map(toWorkflowEdge),
+    }
+  })
+
+/**
+ * Fetch lightweight survey list for TriggerConfigPanel dropdown.
+ * Called from the /admin/workflows/$workflowId loader.
+ */
+export const getSurveysForWorkflowFn = createServerFn().handler(
+  async (): Promise<SurveyOption[]> => {
+    const supabase = createStartClient()
+
+    const { data, error } = await supabase.from('surveys').select('id, title').order('title')
+
+    if (error) throw new Error(error.message)
+    return (data || []) as SurveyOption[]
+  }
+)
+
+/**
+ * Fetch lightweight email template list for SendEmailConfigPanel dropdown.
+ * Called from the /admin/workflows/$workflowId loader.
+ */
+export const getEmailTemplatesForWorkflowFn = createServerFn().handler(
+  async (): Promise<EmailTemplateOption[]> => {
+    const supabase = createStartClient()
+
+    const { data, error } = await supabase
+      .from('email_templates')
+      .select('id, type, subject')
+      .order('type')
+
+    if (error) throw new Error(error.message)
+    return (data || []) as EmailTemplateOption[]
+  }
+)
 
 // ---------------------------------------------------------------------------
 // DB helpers

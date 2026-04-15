@@ -14,6 +14,8 @@ import {
   type WorkflowWithSteps,
   type TriggerType,
   type StepType,
+  type SurveyOption,
+  type EmailTemplateOption,
 } from '../types'
 import { LayoutGrid, FlaskConical } from 'lucide-react'
 import { Button } from '@agency/ui'
@@ -59,9 +61,13 @@ function getLabel(stepType: string): string {
 
 interface WorkflowEditorProps {
   workflow: WorkflowWithSteps
+  /** Pre-loaded survey list from route loader — passed to TriggerConfigPanel */
+  surveys?: SurveyOption[]
+  /** Pre-loaded email template list from route loader — passed to SendEmailConfigPanel */
+  emailTemplates?: EmailTemplateOption[]
 }
 
-export function WorkflowEditor({ workflow }: WorkflowEditorProps) {
+export function WorkflowEditor({ workflow, surveys, emailTemplates }: WorkflowEditorProps) {
   const queryClient = useQueryClient()
 
   // Stable UUID for synthetic trigger node (when no trigger step exists in DB)
@@ -341,6 +347,8 @@ export function WorkflowEditor({ workflow }: WorkflowEditorProps) {
                 onChange={handleConfigChange}
                 triggerType={workflow.trigger_type}
                 availableVariables={availableVariables}
+                surveys={surveys}
+                emailTemplates={emailTemplates}
               />
             </ConfigPanelWrapper>
           )

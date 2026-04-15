@@ -43,7 +43,12 @@ function TriggerBadge({ type }: { type: string }) {
   )
 }
 
-export function WorkflowList() {
+interface WorkflowListProps {
+  /** Pre-loaded workflow list from route loader — used as initialData for the query */
+  initialWorkflows?: WorkflowListItem[]
+}
+
+export function WorkflowList({ initialWorkflows }: WorkflowListProps) {
   const router = useRouter()
   const queryClient = useQueryClient()
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
@@ -57,6 +62,7 @@ export function WorkflowList() {
   } = useQuery({
     queryKey: queryKeys.workflows.list,
     queryFn: getWorkflows,
+    initialData: initialWorkflows,
   })
 
   const deleteMutation = useMutation({
@@ -223,11 +229,11 @@ function WorkflowRow({ workflow, onDelete, onToggle, isDeleting, isToggling }: W
       className="border-b border-border last:border-b-0 transition-colors hover:bg-muted/50 cursor-pointer"
       role="link"
       tabIndex={0}
-      onClick={() => router.push(routes.admin.workflowEditor(workflow.id))}
+      onClick={() => router.push(routes.admin.workflow(workflow.id))}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault()
-          router.push(routes.admin.workflowEditor(workflow.id))
+          router.push(routes.admin.workflow(workflow.id))
         }
       }}
     >
@@ -257,7 +263,7 @@ function WorkflowRow({ workflow, onDelete, onToggle, isDeleting, isToggling }: W
       </td>
       <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-end gap-1">
-          <Link href={routes.admin.workflowEditor(workflow.id)}>
+          <Link href={routes.admin.workflow(workflow.id)}>
             <Button variant="ghost" size="sm" aria-label={messages.common.edit}>
               <Pencil className="h-4 w-4" />
             </Button>

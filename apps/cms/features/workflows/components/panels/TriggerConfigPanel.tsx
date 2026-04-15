@@ -3,7 +3,6 @@
 import { useEffect, useRef } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useQuery } from '@tanstack/react-query'
 import {
   Label,
   Input,
@@ -14,12 +13,10 @@ import {
   SelectValue,
 } from '@agency/ui'
 import { messages } from '@/lib/messages'
-import { queryKeys } from '@/lib/query-keys'
 import {
   TRIGGER_TYPE_OPTIONS,
   type TriggerType,
 } from '../../types'
-import { getSurveysForWorkflow } from '../../queries'
 import {
   triggerConfigSurveySubmittedSchema,
   triggerConfigBookingCreatedSchema,
@@ -48,7 +45,7 @@ interface TriggerFormValues {
   min_score?: number | null
 }
 
-export function TriggerConfigPanel({ stepConfig, onChange }: ConfigPanelProps) {
+export function TriggerConfigPanel({ stepConfig, onChange, surveys }: ConfigPanelProps) {
   const currentType = (stepConfig?.type as TriggerType) || 'manual'
   const schema = triggerSchemaMap[currentType] ?? triggerConfigManualSchema
 
@@ -70,10 +67,7 @@ export function TriggerConfigPanel({ stepConfig, onChange }: ConfigPanelProps) {
     },
   })
 
-  const { data: surveys, isLoading: isLoadingSurveys, isError: isErrorSurveys } = useQuery({
-    queryKey: queryKeys.workflows.surveys,
-    queryFn: getSurveysForWorkflow,
-  })
+  // surveys are pre-loaded from route loader — no useQuery needed
 
   // Watch all fields and propagate changes (skip initial mount to avoid false dirty state)
   const formValues = watch()
@@ -128,10 +122,9 @@ export function TriggerConfigPanel({ stepConfig, onChange }: ConfigPanelProps) {
               <Select
                 value={field.value ?? ''}
                 onValueChange={(value) => field.onChange(value || undefined)}
-                disabled={isLoadingSurveys}
               >
                 <SelectTrigger id="survey-id" aria-invalid={!!errors.survey_id} aria-describedby={errors.survey_id ? 'survey-id-error' : undefined}>
-                  <SelectValue placeholder={isLoadingSurveys ? messages.common.loading : messages.workflows.editor.surveyIdPlaceholder} />
+                  <SelectValue placeholder={messages.workflows.editor.surveyIdPlaceholder} />
                 </SelectTrigger>
                 <SelectContent>
                   {surveys?.map((survey) => (
@@ -143,11 +136,6 @@ export function TriggerConfigPanel({ stepConfig, onChange }: ConfigPanelProps) {
               </Select>
             )}
           />
-          {isErrorSurveys && (
-            <p role="alert" className="text-xs text-destructive">
-              {messages.workflows.editor.surveyLoadError}
-            </p>
-          )}
           {errors.survey_id && (
             <p id="survey-id-error" role="alert" className="text-xs text-destructive">
               {errors.survey_id.message}

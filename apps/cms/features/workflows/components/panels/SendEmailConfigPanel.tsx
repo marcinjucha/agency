@@ -3,7 +3,6 @@
 import { useEffect, useRef } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useQuery } from '@tanstack/react-query'
 import {
   Label,
   Input,
@@ -14,16 +13,14 @@ import {
   SelectValue,
 } from '@agency/ui'
 import { messages } from '@/lib/messages'
-import { queryKeys } from '@/lib/query-keys'
 import { VariableInserter } from '@/features/email/components/VariableInserter'
-import { getEmailTemplatesForWorkflow } from '../../queries'
 import { sendEmailConfigSchema } from '../../validation'
 import type { StepConfigSendEmail } from '../../types'
 import type { ConfigPanelProps } from './index'
 
 type SendEmailFormData = StepConfigSendEmail
 
-export function SendEmailConfigPanel({ stepConfig, onChange, availableVariables }: ConfigPanelProps) {
+export function SendEmailConfigPanel({ stepConfig, onChange, availableVariables, emailTemplates }: ConfigPanelProps) {
   const isFirstRender = useRef(true)
   const onChangeRef = useRef(onChange)
   onChangeRef.current = onChange
@@ -31,7 +28,6 @@ export function SendEmailConfigPanel({ stepConfig, onChange, availableVariables 
   const toExpressionRef = useRef<HTMLInputElement>(null)
 
   const {
-    register,
     watch,
     setValue,
     control,
@@ -45,10 +41,7 @@ export function SendEmailConfigPanel({ stepConfig, onChange, availableVariables 
     },
   })
 
-  const { data: templates, isLoading: isLoadingTemplates, isError: isErrorTemplates } = useQuery({
-    queryKey: queryKeys.workflows.emailTemplates,
-    queryFn: getEmailTemplatesForWorkflow,
-  })
+  // emailTemplates are pre-loaded from route loader — no useQuery needed
 
   // Watch all fields and propagate changes (skip initial mount to avoid false dirty state)
   const formValues = watch()
@@ -61,6 +54,7 @@ export function SendEmailConfigPanel({ stepConfig, onChange, availableVariables 
   }, [JSON.stringify(formValues)])
 
   const variables = availableVariables ?? []
+  const templates = emailTemplates ?? []
 
   return (
     <div className="space-y-6">
@@ -72,24 +66,18 @@ export function SendEmailConfigPanel({ stepConfig, onChange, availableVariables 
         <Select
           value={formValues.template_id ?? ''}
           onValueChange={(value) => setValue('template_id', value || undefined, { shouldDirty: true })}
-          disabled={isLoadingTemplates}
         >
           <SelectTrigger id="template-id">
-            <SelectValue placeholder={isLoadingTemplates ? messages.common.loading : messages.workflows.editor.templateIdPlaceholder} />
+            <SelectValue placeholder={messages.workflows.editor.templateIdPlaceholder} />
           </SelectTrigger>
           <SelectContent>
-            {templates?.map((tpl) => (
+            {templates.map((tpl) => (
               <SelectItem key={tpl.id} value={tpl.id}>
                 {tpl.subject} ({tpl.type})
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
-        {isErrorTemplates && (
-          <p role="alert" className="text-xs text-destructive">
-            {messages.workflows.editor.templateLoadError}
-          </p>
-        )}
         {errors.template_id && (
           <p role="alert" className="text-xs text-destructive">
             {errors.template_id.message}

@@ -13,12 +13,16 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
+import { Route as AdminWorkflowsIndexRouteImport } from './routes/admin/workflows/index'
 import { Route as AdminSurveysIndexRouteImport } from './routes/admin/surveys/index'
 import { Route as AdminResponsesIndexRouteImport } from './routes/admin/responses/index'
 import { Route as AdminIntakeIndexRouteImport } from './routes/admin/intake/index'
+import { Route as AdminWorkflowsWorkflowIdRouteImport } from './routes/admin/workflows/$workflowId'
 import { Route as AdminSurveysNewRouteImport } from './routes/admin/surveys/new'
 import { Route as AdminSurveysSurveyIdRouteImport } from './routes/admin/surveys/$surveyId'
 import { Route as AdminResponsesResponseIdRouteImport } from './routes/admin/responses/$responseId'
+import { Route as AdminWorkflowsWorkflowIdExecutionsRouteImport } from './routes/admin/workflows/$workflowId/executions'
+import { Route as AdminWorkflowsWorkflowIdExecutionsExecutionIdRouteImport } from './routes/admin/workflows/$workflowId/executions/$executionId'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -40,6 +44,11 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminWorkflowsIndexRoute = AdminWorkflowsIndexRouteImport.update({
+  id: '/workflows/',
+  path: '/workflows/',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminSurveysIndexRoute = AdminSurveysIndexRouteImport.update({
   id: '/surveys/',
   path: '/surveys/',
@@ -55,6 +64,12 @@ const AdminIntakeIndexRoute = AdminIntakeIndexRouteImport.update({
   path: '/intake/',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminWorkflowsWorkflowIdRoute =
+  AdminWorkflowsWorkflowIdRouteImport.update({
+    id: '/workflows/$workflowId',
+    path: '/workflows/$workflowId',
+    getParentRoute: () => AdminRoute,
+  } as any)
 const AdminSurveysNewRoute = AdminSurveysNewRouteImport.update({
   id: '/surveys/new',
   path: '/surveys/new',
@@ -71,6 +86,18 @@ const AdminResponsesResponseIdRoute =
     path: '/responses/$responseId',
     getParentRoute: () => AdminRoute,
   } as any)
+const AdminWorkflowsWorkflowIdExecutionsRoute =
+  AdminWorkflowsWorkflowIdExecutionsRouteImport.update({
+    id: '/executions',
+    path: '/executions',
+    getParentRoute: () => AdminWorkflowsWorkflowIdRoute,
+  } as any)
+const AdminWorkflowsWorkflowIdExecutionsExecutionIdRoute =
+  AdminWorkflowsWorkflowIdExecutionsExecutionIdRouteImport.update({
+    id: '/$executionId',
+    path: '/$executionId',
+    getParentRoute: () => AdminWorkflowsWorkflowIdExecutionsRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -80,9 +107,13 @@ export interface FileRoutesByFullPath {
   '/admin/responses/$responseId': typeof AdminResponsesResponseIdRoute
   '/admin/surveys/$surveyId': typeof AdminSurveysSurveyIdRoute
   '/admin/surveys/new': typeof AdminSurveysNewRoute
+  '/admin/workflows/$workflowId': typeof AdminWorkflowsWorkflowIdRouteWithChildren
   '/admin/intake/': typeof AdminIntakeIndexRoute
   '/admin/responses/': typeof AdminResponsesIndexRoute
   '/admin/surveys/': typeof AdminSurveysIndexRoute
+  '/admin/workflows/': typeof AdminWorkflowsIndexRoute
+  '/admin/workflows/$workflowId/executions': typeof AdminWorkflowsWorkflowIdExecutionsRouteWithChildren
+  '/admin/workflows/$workflowId/executions/$executionId': typeof AdminWorkflowsWorkflowIdExecutionsExecutionIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -91,9 +122,13 @@ export interface FileRoutesByTo {
   '/admin/responses/$responseId': typeof AdminResponsesResponseIdRoute
   '/admin/surveys/$surveyId': typeof AdminSurveysSurveyIdRoute
   '/admin/surveys/new': typeof AdminSurveysNewRoute
+  '/admin/workflows/$workflowId': typeof AdminWorkflowsWorkflowIdRouteWithChildren
   '/admin/intake': typeof AdminIntakeIndexRoute
   '/admin/responses': typeof AdminResponsesIndexRoute
   '/admin/surveys': typeof AdminSurveysIndexRoute
+  '/admin/workflows': typeof AdminWorkflowsIndexRoute
+  '/admin/workflows/$workflowId/executions': typeof AdminWorkflowsWorkflowIdExecutionsRouteWithChildren
+  '/admin/workflows/$workflowId/executions/$executionId': typeof AdminWorkflowsWorkflowIdExecutionsExecutionIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -104,9 +139,13 @@ export interface FileRoutesById {
   '/admin/responses/$responseId': typeof AdminResponsesResponseIdRoute
   '/admin/surveys/$surveyId': typeof AdminSurveysSurveyIdRoute
   '/admin/surveys/new': typeof AdminSurveysNewRoute
+  '/admin/workflows/$workflowId': typeof AdminWorkflowsWorkflowIdRouteWithChildren
   '/admin/intake/': typeof AdminIntakeIndexRoute
   '/admin/responses/': typeof AdminResponsesIndexRoute
   '/admin/surveys/': typeof AdminSurveysIndexRoute
+  '/admin/workflows/': typeof AdminWorkflowsIndexRoute
+  '/admin/workflows/$workflowId/executions': typeof AdminWorkflowsWorkflowIdExecutionsRouteWithChildren
+  '/admin/workflows/$workflowId/executions/$executionId': typeof AdminWorkflowsWorkflowIdExecutionsExecutionIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -118,9 +157,13 @@ export interface FileRouteTypes {
     | '/admin/responses/$responseId'
     | '/admin/surveys/$surveyId'
     | '/admin/surveys/new'
+    | '/admin/workflows/$workflowId'
     | '/admin/intake/'
     | '/admin/responses/'
     | '/admin/surveys/'
+    | '/admin/workflows/'
+    | '/admin/workflows/$workflowId/executions'
+    | '/admin/workflows/$workflowId/executions/$executionId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -129,9 +172,13 @@ export interface FileRouteTypes {
     | '/admin/responses/$responseId'
     | '/admin/surveys/$surveyId'
     | '/admin/surveys/new'
+    | '/admin/workflows/$workflowId'
     | '/admin/intake'
     | '/admin/responses'
     | '/admin/surveys'
+    | '/admin/workflows'
+    | '/admin/workflows/$workflowId/executions'
+    | '/admin/workflows/$workflowId/executions/$executionId'
   id:
     | '__root__'
     | '/'
@@ -141,9 +188,13 @@ export interface FileRouteTypes {
     | '/admin/responses/$responseId'
     | '/admin/surveys/$surveyId'
     | '/admin/surveys/new'
+    | '/admin/workflows/$workflowId'
     | '/admin/intake/'
     | '/admin/responses/'
     | '/admin/surveys/'
+    | '/admin/workflows/'
+    | '/admin/workflows/$workflowId/executions'
+    | '/admin/workflows/$workflowId/executions/$executionId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -182,6 +233,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminIndexRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/workflows/': {
+      id: '/admin/workflows/'
+      path: '/workflows'
+      fullPath: '/admin/workflows/'
+      preLoaderRoute: typeof AdminWorkflowsIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/surveys/': {
       id: '/admin/surveys/'
       path: '/surveys'
@@ -201,6 +259,13 @@ declare module '@tanstack/react-router' {
       path: '/intake'
       fullPath: '/admin/intake/'
       preLoaderRoute: typeof AdminIntakeIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/workflows/$workflowId': {
+      id: '/admin/workflows/$workflowId'
+      path: '/workflows/$workflowId'
+      fullPath: '/admin/workflows/$workflowId'
+      preLoaderRoute: typeof AdminWorkflowsWorkflowIdRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/surveys/new': {
@@ -224,17 +289,63 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminResponsesResponseIdRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/workflows/$workflowId/executions': {
+      id: '/admin/workflows/$workflowId/executions'
+      path: '/executions'
+      fullPath: '/admin/workflows/$workflowId/executions'
+      preLoaderRoute: typeof AdminWorkflowsWorkflowIdExecutionsRouteImport
+      parentRoute: typeof AdminWorkflowsWorkflowIdRoute
+    }
+    '/admin/workflows/$workflowId/executions/$executionId': {
+      id: '/admin/workflows/$workflowId/executions/$executionId'
+      path: '/$executionId'
+      fullPath: '/admin/workflows/$workflowId/executions/$executionId'
+      preLoaderRoute: typeof AdminWorkflowsWorkflowIdExecutionsExecutionIdRouteImport
+      parentRoute: typeof AdminWorkflowsWorkflowIdExecutionsRoute
+    }
   }
 }
+
+interface AdminWorkflowsWorkflowIdExecutionsRouteChildren {
+  AdminWorkflowsWorkflowIdExecutionsExecutionIdRoute: typeof AdminWorkflowsWorkflowIdExecutionsExecutionIdRoute
+}
+
+const AdminWorkflowsWorkflowIdExecutionsRouteChildren: AdminWorkflowsWorkflowIdExecutionsRouteChildren =
+  {
+    AdminWorkflowsWorkflowIdExecutionsExecutionIdRoute:
+      AdminWorkflowsWorkflowIdExecutionsExecutionIdRoute,
+  }
+
+const AdminWorkflowsWorkflowIdExecutionsRouteWithChildren =
+  AdminWorkflowsWorkflowIdExecutionsRoute._addFileChildren(
+    AdminWorkflowsWorkflowIdExecutionsRouteChildren,
+  )
+
+interface AdminWorkflowsWorkflowIdRouteChildren {
+  AdminWorkflowsWorkflowIdExecutionsRoute: typeof AdminWorkflowsWorkflowIdExecutionsRouteWithChildren
+}
+
+const AdminWorkflowsWorkflowIdRouteChildren: AdminWorkflowsWorkflowIdRouteChildren =
+  {
+    AdminWorkflowsWorkflowIdExecutionsRoute:
+      AdminWorkflowsWorkflowIdExecutionsRouteWithChildren,
+  }
+
+const AdminWorkflowsWorkflowIdRouteWithChildren =
+  AdminWorkflowsWorkflowIdRoute._addFileChildren(
+    AdminWorkflowsWorkflowIdRouteChildren,
+  )
 
 interface AdminRouteChildren {
   AdminIndexRoute: typeof AdminIndexRoute
   AdminResponsesResponseIdRoute: typeof AdminResponsesResponseIdRoute
   AdminSurveysSurveyIdRoute: typeof AdminSurveysSurveyIdRoute
   AdminSurveysNewRoute: typeof AdminSurveysNewRoute
+  AdminWorkflowsWorkflowIdRoute: typeof AdminWorkflowsWorkflowIdRouteWithChildren
   AdminIntakeIndexRoute: typeof AdminIntakeIndexRoute
   AdminResponsesIndexRoute: typeof AdminResponsesIndexRoute
   AdminSurveysIndexRoute: typeof AdminSurveysIndexRoute
+  AdminWorkflowsIndexRoute: typeof AdminWorkflowsIndexRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
@@ -242,9 +353,11 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminResponsesResponseIdRoute: AdminResponsesResponseIdRoute,
   AdminSurveysSurveyIdRoute: AdminSurveysSurveyIdRoute,
   AdminSurveysNewRoute: AdminSurveysNewRoute,
+  AdminWorkflowsWorkflowIdRoute: AdminWorkflowsWorkflowIdRouteWithChildren,
   AdminIntakeIndexRoute: AdminIntakeIndexRoute,
   AdminResponsesIndexRoute: AdminResponsesIndexRoute,
   AdminSurveysIndexRoute: AdminSurveysIndexRoute,
+  AdminWorkflowsIndexRoute: AdminWorkflowsIndexRoute,
 }
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
