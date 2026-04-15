@@ -1,0 +1,23 @@
+import { createServerFn } from '@tanstack/react-start'
+import { createServiceClient } from '@/lib/supabase/service'
+import type { Tables } from '@agency/database'
+
+export type SiteSettings = Tables<'site_settings'>
+
+export const getSiteSettingsFn = createServerFn().handler(
+  async (): Promise<SiteSettings | null> => {
+    const supabase = createServiceClient()
+    const { data, error } = await supabase
+      .from('site_settings')
+      .select('*')
+      .limit(1)
+      .maybeSingle()
+
+    if (error) {
+      console.error('Failed to fetch site_settings:', error.message)
+      return null
+    }
+
+    return data
+  }
+)
