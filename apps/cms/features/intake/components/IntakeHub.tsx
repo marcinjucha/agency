@@ -1,7 +1,5 @@
-'use client'
-
 import { useState, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
+import { useNavigate } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@agency/ui'
 import { LoadingState, ErrorState, EmptyState } from '@agency/ui'
@@ -23,7 +21,7 @@ const REFETCH_INTERVAL = 30_000
 const XL_BREAKPOINT = 1280
 
 export function IntakeHub() {
-  const router = useRouter()
+  const navigate = useNavigate()
   const [selectedResponse, setSelectedResponse] = useState<PipelineResponse | null>(null)
 
   const {
@@ -47,10 +45,10 @@ export function IntakeHub() {
       if (window.innerWidth >= XL_BREAKPOINT) {
         setSelectedResponse(response)
       } else {
-        router.push(routes.admin.response(response.id))
+        navigate({ to: routes.admin.response(response.id) })
       }
     },
-    [router]
+    [navigate]
   )
 
   const handleClosePanel = useCallback(() => {

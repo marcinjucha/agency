@@ -14,8 +14,11 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as AdminSurveysIndexRouteImport } from './routes/admin/surveys/index'
+import { Route as AdminResponsesIndexRouteImport } from './routes/admin/responses/index'
+import { Route as AdminIntakeIndexRouteImport } from './routes/admin/intake/index'
 import { Route as AdminSurveysNewRouteImport } from './routes/admin/surveys/new'
 import { Route as AdminSurveysSurveyIdRouteImport } from './routes/admin/surveys/$surveyId'
+import { Route as AdminResponsesResponseIdRouteImport } from './routes/admin/responses/$responseId'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -42,6 +45,16 @@ const AdminSurveysIndexRoute = AdminSurveysIndexRouteImport.update({
   path: '/surveys/',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminResponsesIndexRoute = AdminResponsesIndexRouteImport.update({
+  id: '/responses/',
+  path: '/responses/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminIntakeIndexRoute = AdminIntakeIndexRouteImport.update({
+  id: '/intake/',
+  path: '/intake/',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminSurveysNewRoute = AdminSurveysNewRouteImport.update({
   id: '/surveys/new',
   path: '/surveys/new',
@@ -52,22 +65,34 @@ const AdminSurveysSurveyIdRoute = AdminSurveysSurveyIdRouteImport.update({
   path: '/surveys/$surveyId',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminResponsesResponseIdRoute =
+  AdminResponsesResponseIdRouteImport.update({
+    id: '/responses/$responseId',
+    path: '/responses/$responseId',
+    getParentRoute: () => AdminRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/login': typeof LoginRoute
   '/admin/': typeof AdminIndexRoute
+  '/admin/responses/$responseId': typeof AdminResponsesResponseIdRoute
   '/admin/surveys/$surveyId': typeof AdminSurveysSurveyIdRoute
   '/admin/surveys/new': typeof AdminSurveysNewRoute
+  '/admin/intake/': typeof AdminIntakeIndexRoute
+  '/admin/responses/': typeof AdminResponsesIndexRoute
   '/admin/surveys/': typeof AdminSurveysIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/admin': typeof AdminIndexRoute
+  '/admin/responses/$responseId': typeof AdminResponsesResponseIdRoute
   '/admin/surveys/$surveyId': typeof AdminSurveysSurveyIdRoute
   '/admin/surveys/new': typeof AdminSurveysNewRoute
+  '/admin/intake': typeof AdminIntakeIndexRoute
+  '/admin/responses': typeof AdminResponsesIndexRoute
   '/admin/surveys': typeof AdminSurveysIndexRoute
 }
 export interface FileRoutesById {
@@ -76,8 +101,11 @@ export interface FileRoutesById {
   '/admin': typeof AdminRouteWithChildren
   '/login': typeof LoginRoute
   '/admin/': typeof AdminIndexRoute
+  '/admin/responses/$responseId': typeof AdminResponsesResponseIdRoute
   '/admin/surveys/$surveyId': typeof AdminSurveysSurveyIdRoute
   '/admin/surveys/new': typeof AdminSurveysNewRoute
+  '/admin/intake/': typeof AdminIntakeIndexRoute
+  '/admin/responses/': typeof AdminResponsesIndexRoute
   '/admin/surveys/': typeof AdminSurveysIndexRoute
 }
 export interface FileRouteTypes {
@@ -87,16 +115,22 @@ export interface FileRouteTypes {
     | '/admin'
     | '/login'
     | '/admin/'
+    | '/admin/responses/$responseId'
     | '/admin/surveys/$surveyId'
     | '/admin/surveys/new'
+    | '/admin/intake/'
+    | '/admin/responses/'
     | '/admin/surveys/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/login'
     | '/admin'
+    | '/admin/responses/$responseId'
     | '/admin/surveys/$surveyId'
     | '/admin/surveys/new'
+    | '/admin/intake'
+    | '/admin/responses'
     | '/admin/surveys'
   id:
     | '__root__'
@@ -104,8 +138,11 @@ export interface FileRouteTypes {
     | '/admin'
     | '/login'
     | '/admin/'
+    | '/admin/responses/$responseId'
     | '/admin/surveys/$surveyId'
     | '/admin/surveys/new'
+    | '/admin/intake/'
+    | '/admin/responses/'
     | '/admin/surveys/'
   fileRoutesById: FileRoutesById
 }
@@ -152,6 +189,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminSurveysIndexRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/responses/': {
+      id: '/admin/responses/'
+      path: '/responses'
+      fullPath: '/admin/responses/'
+      preLoaderRoute: typeof AdminResponsesIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/intake/': {
+      id: '/admin/intake/'
+      path: '/intake'
+      fullPath: '/admin/intake/'
+      preLoaderRoute: typeof AdminIntakeIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/surveys/new': {
       id: '/admin/surveys/new'
       path: '/surveys/new'
@@ -166,20 +217,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminSurveysSurveyIdRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/responses/$responseId': {
+      id: '/admin/responses/$responseId'
+      path: '/responses/$responseId'
+      fullPath: '/admin/responses/$responseId'
+      preLoaderRoute: typeof AdminResponsesResponseIdRouteImport
+      parentRoute: typeof AdminRoute
+    }
   }
 }
 
 interface AdminRouteChildren {
   AdminIndexRoute: typeof AdminIndexRoute
+  AdminResponsesResponseIdRoute: typeof AdminResponsesResponseIdRoute
   AdminSurveysSurveyIdRoute: typeof AdminSurveysSurveyIdRoute
   AdminSurveysNewRoute: typeof AdminSurveysNewRoute
+  AdminIntakeIndexRoute: typeof AdminIntakeIndexRoute
+  AdminResponsesIndexRoute: typeof AdminResponsesIndexRoute
   AdminSurveysIndexRoute: typeof AdminSurveysIndexRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
   AdminIndexRoute: AdminIndexRoute,
+  AdminResponsesResponseIdRoute: AdminResponsesResponseIdRoute,
   AdminSurveysSurveyIdRoute: AdminSurveysSurveyIdRoute,
   AdminSurveysNewRoute: AdminSurveysNewRoute,
+  AdminIntakeIndexRoute: AdminIntakeIndexRoute,
+  AdminResponsesIndexRoute: AdminResponsesIndexRoute,
   AdminSurveysIndexRoute: AdminSurveysIndexRoute,
 }
 

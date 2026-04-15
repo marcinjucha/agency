@@ -1,15 +1,13 @@
-'use client'
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getResponses } from '../queries'
-import { deleteResponse } from '../actions'
+import { deleteResponseFn } from '../server-fns'
 import {
   Card, LoadingState, ErrorState, EmptyState,
   AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader,
   AlertDialogFooter, AlertDialogTitle, AlertDialogDescription,
   AlertDialogAction, AlertDialogCancel,
 } from '@agency/ui'
-import { useRouter } from 'next/navigation'
+import { useNavigate } from '@tanstack/react-router'
 import { ArrowRight, FileText, Trash2 } from 'lucide-react'
 import type { ResponseListItem, ResponseStatus } from '../types'
 import { getResponseStatusColor } from '@/lib/utils/status'
@@ -38,11 +36,11 @@ import { routes } from '@/lib/routes'
  * @returns Responses table component
  */
 export function ResponseList() {
-  const router = useRouter()
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const result = await deleteResponse(id)
+      const result = await deleteResponseFn({ data: { id } })
       if (!result.success) throw new Error(result.error)
       return result
     },
@@ -123,7 +121,7 @@ export function ResponseList() {
               <ResponseRow
                 key={response.id}
                 response={response}
-                onRowClick={() => router.push(routes.admin.response(response.id))}
+                onRowClick={() => navigate({ to: routes.admin.response(response.id) })}
                 onDelete={(id) => deleteMutation.mutate(id)}
               />
             ))}
