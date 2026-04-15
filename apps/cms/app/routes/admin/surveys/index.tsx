@@ -1,14 +1,25 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { Link } from '@tanstack/react-router'
 import { SurveyList } from '@/features/surveys/components/SurveyList'
+import { getSurveysFn } from '@/features/surveys/server'
 import { Button } from '@agency/ui'
 import { Plus } from 'lucide-react'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
+import { queryKeys } from '@/lib/query-keys'
 import { buildCmsHead } from '@/lib/head'
 
 export const Route = createFileRoute('/admin/surveys/')({
   head: () => buildCmsHead(messages.nav.surveys),
+  // Pre-populate TanStack Query cache so SurveyList renders instantly from cache.
+  loader: ({ context: { queryClient } }) =>
+    queryClient.ensureQueryData({
+      queryKey: queryKeys.surveys.all,
+      queryFn: async () => {
+        const data = await getSurveysFn()
+        return data
+      },
+    }),
   component: SurveysPage,
 })
 

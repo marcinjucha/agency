@@ -1,4 +1,4 @@
-'use client'
+
 
 import { Image, FileText } from 'lucide-react'
 import { cn } from '@agency/ui'

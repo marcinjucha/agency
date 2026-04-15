@@ -1,4 +1,4 @@
-'use client'
+
 
 import { useCallback, useId } from 'react'
 import { PERMISSION_GROUPS, type PermissionKey } from '@/lib/permissions'

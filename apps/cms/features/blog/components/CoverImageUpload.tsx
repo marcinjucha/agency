@@ -1,4 +1,4 @@
-'use client'
+
 
 import { Button } from '@agency/ui'
 import { InsertMediaModal } from '@/features/media/components/InsertMediaModal'

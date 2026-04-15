@@ -55,6 +55,28 @@ function requireAuthContext(): ResultAsync<AuthContext, string> {
 // ---------------------------------------------------------------------------
 
 /**
+ * Fetch all surveys for current tenant (with embedded survey_links).
+ * Used by route loader ensureQueryData + SurveyList useQuery.
+ */
+export const getSurveysFn = createServerFn().handler(async () => {
+  const supabase = createStartClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return []
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase as any)
+    .from('surveys')
+    .select('*, survey_links(id, is_active, expires_at, max_submissions, submission_count)')
+    .order('created_at', { ascending: false })
+
+  if (error) throw error
+  return data || []
+})
+
+/**
  * Create a new survey.
  * TanStack Start port of features/surveys/actions.ts#createSurvey.
  */

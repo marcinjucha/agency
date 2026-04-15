@@ -1,4 +1,4 @@
-'use client'
+
 
 import { createContext, useContext, type ReactNode } from 'react'
 import { hasPermission as checkPermission, type PermissionKey } from '@/lib/permissions'

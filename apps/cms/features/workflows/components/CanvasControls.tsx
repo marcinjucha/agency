@@ -1,4 +1,4 @@
-'use client'
+
 
 import { useReactFlow } from '@xyflow/react'
 import { Button } from '@agency/ui'

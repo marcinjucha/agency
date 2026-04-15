@@ -89,4 +89,9 @@ export const queryKeys = {
     detail: (id: string) => ['docforge-licenses', 'detail', id] as const,
     activations: (licenseId: string) => ['docforge-licenses', 'activations', licenseId] as const,
   },
+  email: {
+    all: ['email-templates'] as const,
+    templates: ['email-templates', 'list'] as const,
+    template: (type: string) => ['email-templates', 'detail', type] as const,
+  },
 } as const

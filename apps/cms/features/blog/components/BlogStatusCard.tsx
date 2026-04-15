@@ -1,4 +1,4 @@
-'use client'
+
 
 import { Button, Card, CardContent, CardHeader, CardTitle, DatePicker, TimePicker } from '@agency/ui'
 import { format } from 'date-fns'

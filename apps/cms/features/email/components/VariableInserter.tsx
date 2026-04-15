@@ -1,4 +1,4 @@
-'use client'
+
 
 import { type RefObject } from 'react'
 import { Button, VariableInserterPopover, type VariableItem } from '@agency/ui'

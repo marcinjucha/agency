@@ -1,4 +1,4 @@
-'use client'
+
 
 import { Link, useRouter } from '@tanstack/react-router'
 import { Card, CardContent } from '@agency/ui'

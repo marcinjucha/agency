@@ -1,4 +1,4 @@
-'use client'
+
 
 import { Tabs, TabsList, TabsTrigger } from '@agency/ui'
 import type { MediaType } from '../types'

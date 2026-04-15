@@ -1,4 +1,4 @@
-'use client'
+
 
 import { Badge } from '@agency/ui'
 import { messages } from '@/lib/messages'

@@ -32,6 +32,29 @@ async function getAuth() {
 // ---------------------------------------------------------------------------
 
 /**
+ * Fetch pipeline responses for Intake Hub.
+ * Used by route loader ensureQueryData + IntakeHub useQuery.
+ * Mirrors getPipelineResponses from queries.ts but uses server client.
+ */
+export const getPipelineResponsesFn = createServerFn().handler(async () => {
+  const auth = await getAuth()
+  if (!auth) return []
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (auth.supabase as any)
+    .from('responses')
+    .select(`
+      id, status, answers, ai_qualification, created_at, internal_notes, status_changed_at, survey_link_id,
+      survey_links(survey_id, surveys(title, questions)),
+      appointments(id, start_time, end_time, status)
+    `)
+    .order('created_at', { ascending: false })
+
+  if (error) throw error
+  return data || []
+})
+
+/**
  * Update response status from Pipeline drag-and-drop or Sheet status selector.
  * TanStack Start port of features/intake/actions.ts#updateResponseStatus.
  * Sets status_changed_at timestamp for pipeline sorting.

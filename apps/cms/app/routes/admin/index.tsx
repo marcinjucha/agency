@@ -6,8 +6,18 @@ import { buildCmsHead } from '@/lib/head'
 import { getDashboardStatsFn } from '@/lib/server-fns/dashboard'
 import type { DashboardStats } from '@/lib/server-fns/dashboard'
 
+const dashboardKeys = {
+  stats: ['dashboard', 'stats'] as const,
+}
+
 export const Route = createFileRoute('/admin/')({
   head: () => buildCmsHead(messages.nav.dashboard),
+  // Pre-populate TanStack Query cache so dashboard stats render instantly.
+  loader: ({ context: { queryClient } }) =>
+    queryClient.ensureQueryData({
+      queryKey: dashboardKeys.stats,
+      queryFn: () => getDashboardStatsFn(),
+    }),
   component: DashboardPage,
 })
 
@@ -18,7 +28,7 @@ export const Route = createFileRoute('/admin/')({
 function DashboardPage() {
   const { tenantName, isSuperAdmin } = usePermissions()
   const { data: stats, isLoading } = useQuery<DashboardStats>({
-    queryKey: ['dashboard', 'stats'],
+    queryKey: dashboardKeys.stats,
     queryFn: () => getDashboardStatsFn(),
   })
 

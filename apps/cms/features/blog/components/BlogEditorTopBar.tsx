@@ -1,4 +1,4 @@
-'use client'
+
 
 import { Button } from '@agency/ui'
 import { useRouter } from 'next/navigation'

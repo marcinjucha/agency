@@ -1,4 +1,4 @@
-'use client'
+
 
 import Link from 'next/link'
 import { Button, Switch, Label, Badge } from '@agency/ui'

@@ -1,4 +1,4 @@
-'use client'
+
 
 import type { UseFormRegister, UseFormWatch, Control } from 'react-hook-form'
 import { Controller } from 'react-hook-form'
