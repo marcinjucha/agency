@@ -5,7 +5,7 @@ import { createRoleSchema, updateRoleSchema } from './validation'
 import type { CreateRoleInput, UpdateRoleInput, TenantRoleWithPermissions } from './types'
 import { messages } from '@/lib/messages'
 import { hasPermission, validatePermissionKeys, type PermissionKey } from '@/lib/permissions'
-import { createStartClient } from '@/lib/supabase/server-start'
+import { createServerClient } from '@/lib/supabase/server-start'
 import { type AuthContextFull as AuthContext, requireAuthContextFull as requireAuthContext } from '@/lib/server-auth'
 
 // ---------------------------------------------------------------------------
@@ -26,7 +26,7 @@ const dbError = (e: unknown) =>
 export const getRolesFn = createServerFn({ method: 'POST' })
   .inputValidator((input: { tenantId?: string }) => input)
   .handler(async ({ data }): Promise<TenantRoleWithPermissions[]> => {
-    const supabase = createStartClient()
+    const supabase = createServerClient()
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let query = (supabase as any)

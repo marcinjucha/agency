@@ -1,5 +1,5 @@
 import { createServerFn } from '@tanstack/react-start'
-import { createStartClient } from '@/lib/supabase/server-start'
+import { createServerClient } from '@/lib/supabase/server-start'
 import { ALL_PERMISSION_KEYS, validatePermissionKeys, type PermissionKey } from '@/lib/permissions'
 import type { Tenant } from '@/features/tenants/types'
 
@@ -25,7 +25,7 @@ export type AdminLayoutData = {
  */
 export const getAdminLayoutDataFn = createServerFn({ method: 'POST' }).handler(
   async (): Promise<AdminLayoutData | null> => {
-    const supabase = createStartClient()
+    const supabase = createServerClient()
 
     const {
       data: { user },
@@ -86,7 +86,7 @@ export const getAdminLayoutDataFn = createServerFn({ method: 'POST' }).handler(
 // Private helpers — each accepts a supabase client (DI pattern)
 // ---------------------------------------------------------------------------
 
-type SupabaseClient = ReturnType<typeof createStartClient>
+type SupabaseClient = ReturnType<typeof createServerClient>
 
 async function fetchTenantName(
   tenantId: string,

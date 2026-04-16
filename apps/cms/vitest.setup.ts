@@ -68,8 +68,8 @@ vi.mock('@/lib/supabase/client', () => ({
 }))
 
 // Mock Supabase server client
-vi.mock('@/lib/supabase/server', () => ({
-  createClient: vi.fn(async () => ({
+vi.mock('@/lib/supabase/server-start', () => ({
+  createServerClient: vi.fn(() => ({
     from: vi.fn(() => ({
       select: vi.fn().mockReturnThis(),
       insert: vi.fn().mockReturnThis(),

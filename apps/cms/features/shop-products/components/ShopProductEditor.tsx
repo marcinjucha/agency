@@ -26,7 +26,8 @@ import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
 import { queryKeys } from '@/lib/query-keys'
 import { createShopProductSchema, type CreateShopProductFormData } from '../validation'
-import { createShopProduct, updateShopProduct, deleteShopProduct } from '../actions'
+// Mutation functions injected as props (framework-agnostic dependency injection)
+// Callers (TanStack route files) pass server fns; legacy Next.js callers pass Server Actions
 import { generateSlug } from '../utils'
 import type { ShopProduct } from '../types'
 import type { TiptapContent } from '../../editor/types'
@@ -41,8 +42,17 @@ import { MarketplacePublishPanel } from '../../shop-marketplace/components/Marke
 
 type SaveState = 'idle' | 'saving' | 'saved' | 'error'
 
+// --- Mutation prop types (same return shapes as actions.ts + server.ts) ---
+
+type CreateFn = (data: CreateShopProductFormData) => Promise<{ success: boolean; data?: ShopProduct; error?: string }>
+type UpdateFn = (id: string, data: Partial<CreateShopProductFormData>) => Promise<{ success: boolean; data?: ShopProduct; error?: string }>
+type DeleteFn = (id: string) => Promise<{ success: boolean; error?: string }>
+
 interface ShopProductEditorProps {
   product?: ShopProduct
+  createFn?: CreateFn
+  updateFn?: UpdateFn
+  deleteFn?: DeleteFn
 }
 
 // --- Constants ---
@@ -51,7 +61,7 @@ const EMPTY_CONTENT: TiptapContent = { type: 'doc', content: [] }
 
 // --- Component ---
 
-export function ShopProductEditor({ product }: ShopProductEditorProps) {
+export function ShopProductEditor({ product, createFn, updateFn, deleteFn }: ShopProductEditorProps) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const isEditing = !!product
@@ -174,8 +184,8 @@ export function ShopProductEditor({ product }: ShopProductEditorProps) {
     }
 
     const result = isEditing
-      ? await updateShopProduct(product.id, payload)
-      : await createShopProduct(payload)
+      ? await updateFn!(product.id, payload)
+      : await createFn!(payload)
 
     if (result.success) {
       setSaveState('saved')
@@ -217,7 +227,7 @@ export function ShopProductEditor({ product }: ShopProductEditorProps) {
   async function handleDelete() {
     if (!product) return
     setDeleteState('deleting')
-    const result = await deleteShopProduct(product.id)
+    const result = await deleteFn!(product.id)
     if (result.success) {
       queryClient.invalidateQueries({ queryKey: queryKeys.shopProducts.all })
       navigate({ to: routes.admin.shopProducts })

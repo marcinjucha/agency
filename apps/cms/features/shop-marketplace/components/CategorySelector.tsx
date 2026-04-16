@@ -19,7 +19,7 @@ import { ChevronsUpDown, Check, AlertCircle, Loader2 } from 'lucide-react'
 import { cn } from '@agency/ui'
 import { queryKeys } from '@/lib/query-keys'
 import { messages, templates } from '@/lib/messages'
-import { getMarketplaceCategories } from '../actions.categories'
+import { getMarketplaceCategoriesFn } from '../server'
 
 interface CategorySelectorProps {
   connectionId: string
@@ -45,7 +45,7 @@ export function CategorySelector({ connectionId, value, valueName, onChange }: C
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: queryKeys.marketplace.categories(connectionId),
     queryFn: async () => {
-      const result = await getMarketplaceCategories(connectionId)
+      const result = await getMarketplaceCategoriesFn({ data: { connectionId } })
       if (!result.success) {
         throw new Error(result.error ?? messages.marketplace.categoryLoadingError)
       }

@@ -32,14 +32,21 @@ import { Route as AdminTenantsNewRouteImport } from './routes/admin/tenants/new'
 import { Route as AdminTenantsTenantIdRouteImport } from './routes/admin/tenants/$tenantId'
 import { Route as AdminSurveysNewRouteImport } from './routes/admin/surveys/new'
 import { Route as AdminSurveysSurveyIdRouteImport } from './routes/admin/surveys/$surveyId'
+import { Route as AdminShopCategoriesRouteImport } from './routes/admin/shop/categories'
 import { Route as AdminResponsesResponseIdRouteImport } from './routes/admin/responses/$responseId'
 import { Route as AdminLegalPagesPageIdRouteImport } from './routes/admin/legal-pages/$pageId'
 import { Route as AdminEmailTemplatesTypeRouteImport } from './routes/admin/email-templates/$type'
 import { Route as AdminBlogNewRouteImport } from './routes/admin/blog/new'
 import { Route as AdminBlogPostIdRouteImport } from './routes/admin/blog/$postId'
 import { Route as AdminWorkflowsExecutionsIndexRouteImport } from './routes/admin/workflows/executions/index'
+import { Route as AdminShopProductsIndexRouteImport } from './routes/admin/shop/products/index'
+import { Route as AdminShopMarketplaceIndexRouteImport } from './routes/admin/shop/marketplace/index'
+import { Route as ApiMarketplaceMarketplaceCallbackRouteImport } from './routes/api/marketplace/$marketplace/callback'
 import { Route as AdminWorkflowsExecutionsExecutionIdRouteImport } from './routes/admin/workflows/executions/$executionId'
 import { Route as AdminWorkflowsWorkflowIdExecutionsRouteImport } from './routes/admin/workflows/$workflowId/executions'
+import { Route as AdminShopProductsNewRouteImport } from './routes/admin/shop/products/new'
+import { Route as AdminShopProductsProductIdRouteImport } from './routes/admin/shop/products/$productId'
+import { Route as AdminShopMarketplaceImportRouteImport } from './routes/admin/shop/marketplace/import'
 import { Route as AdminWorkflowsWorkflowIdExecutionsExecutionIdRouteImport } from './routes/admin/workflows/$workflowId/executions/$executionId'
 
 const LoginRoute = LoginRouteImport.update({
@@ -159,6 +166,11 @@ const AdminSurveysSurveyIdRoute = AdminSurveysSurveyIdRouteImport.update({
   path: '/surveys/$surveyId',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminShopCategoriesRoute = AdminShopCategoriesRouteImport.update({
+  id: '/shop/categories',
+  path: '/shop/categories',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminResponsesResponseIdRoute =
   AdminResponsesResponseIdRouteImport.update({
     id: '/responses/$responseId',
@@ -191,6 +203,23 @@ const AdminWorkflowsExecutionsIndexRoute =
     path: '/workflows/executions/',
     getParentRoute: () => AdminRoute,
   } as any)
+const AdminShopProductsIndexRoute = AdminShopProductsIndexRouteImport.update({
+  id: '/shop/products/',
+  path: '/shop/products/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminShopMarketplaceIndexRoute =
+  AdminShopMarketplaceIndexRouteImport.update({
+    id: '/shop/marketplace/',
+    path: '/shop/marketplace/',
+    getParentRoute: () => AdminRoute,
+  } as any)
+const ApiMarketplaceMarketplaceCallbackRoute =
+  ApiMarketplaceMarketplaceCallbackRouteImport.update({
+    id: '/api/marketplace/$marketplace/callback',
+    path: '/api/marketplace/$marketplace/callback',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AdminWorkflowsExecutionsExecutionIdRoute =
   AdminWorkflowsExecutionsExecutionIdRouteImport.update({
     id: '/workflows/executions/$executionId',
@@ -202,6 +231,23 @@ const AdminWorkflowsWorkflowIdExecutionsRoute =
     id: '/executions',
     path: '/executions',
     getParentRoute: () => AdminWorkflowsWorkflowIdRoute,
+  } as any)
+const AdminShopProductsNewRoute = AdminShopProductsNewRouteImport.update({
+  id: '/shop/products/new',
+  path: '/shop/products/new',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminShopProductsProductIdRoute =
+  AdminShopProductsProductIdRouteImport.update({
+    id: '/shop/products/$productId',
+    path: '/shop/products/$productId',
+    getParentRoute: () => AdminRoute,
+  } as any)
+const AdminShopMarketplaceImportRoute =
+  AdminShopMarketplaceImportRouteImport.update({
+    id: '/shop/marketplace/import',
+    path: '/shop/marketplace/import',
+    getParentRoute: () => AdminRoute,
   } as any)
 const AdminWorkflowsWorkflowIdExecutionsExecutionIdRoute =
   AdminWorkflowsWorkflowIdExecutionsExecutionIdRouteImport.update({
@@ -220,6 +266,7 @@ export interface FileRoutesByFullPath {
   '/admin/email-templates/$type': typeof AdminEmailTemplatesTypeRoute
   '/admin/legal-pages/$pageId': typeof AdminLegalPagesPageIdRoute
   '/admin/responses/$responseId': typeof AdminResponsesResponseIdRoute
+  '/admin/shop/categories': typeof AdminShopCategoriesRoute
   '/admin/surveys/$surveyId': typeof AdminSurveysSurveyIdRoute
   '/admin/surveys/new': typeof AdminSurveysNewRoute
   '/admin/tenants/$tenantId': typeof AdminTenantsTenantIdRoute
@@ -239,8 +286,14 @@ export interface FileRoutesByFullPath {
   '/admin/tenants/': typeof AdminTenantsIndexRoute
   '/admin/users/': typeof AdminUsersIndexRoute
   '/admin/workflows/': typeof AdminWorkflowsIndexRoute
+  '/admin/shop/marketplace/import': typeof AdminShopMarketplaceImportRoute
+  '/admin/shop/products/$productId': typeof AdminShopProductsProductIdRoute
+  '/admin/shop/products/new': typeof AdminShopProductsNewRoute
   '/admin/workflows/$workflowId/executions': typeof AdminWorkflowsWorkflowIdExecutionsRouteWithChildren
   '/admin/workflows/executions/$executionId': typeof AdminWorkflowsExecutionsExecutionIdRoute
+  '/api/marketplace/$marketplace/callback': typeof ApiMarketplaceMarketplaceCallbackRoute
+  '/admin/shop/marketplace/': typeof AdminShopMarketplaceIndexRoute
+  '/admin/shop/products/': typeof AdminShopProductsIndexRoute
   '/admin/workflows/executions/': typeof AdminWorkflowsExecutionsIndexRoute
   '/admin/workflows/$workflowId/executions/$executionId': typeof AdminWorkflowsWorkflowIdExecutionsExecutionIdRoute
 }
@@ -253,6 +306,7 @@ export interface FileRoutesByTo {
   '/admin/email-templates/$type': typeof AdminEmailTemplatesTypeRoute
   '/admin/legal-pages/$pageId': typeof AdminLegalPagesPageIdRoute
   '/admin/responses/$responseId': typeof AdminResponsesResponseIdRoute
+  '/admin/shop/categories': typeof AdminShopCategoriesRoute
   '/admin/surveys/$surveyId': typeof AdminSurveysSurveyIdRoute
   '/admin/surveys/new': typeof AdminSurveysNewRoute
   '/admin/tenants/$tenantId': typeof AdminTenantsTenantIdRoute
@@ -272,8 +326,14 @@ export interface FileRoutesByTo {
   '/admin/tenants': typeof AdminTenantsIndexRoute
   '/admin/users': typeof AdminUsersIndexRoute
   '/admin/workflows': typeof AdminWorkflowsIndexRoute
+  '/admin/shop/marketplace/import': typeof AdminShopMarketplaceImportRoute
+  '/admin/shop/products/$productId': typeof AdminShopProductsProductIdRoute
+  '/admin/shop/products/new': typeof AdminShopProductsNewRoute
   '/admin/workflows/$workflowId/executions': typeof AdminWorkflowsWorkflowIdExecutionsRouteWithChildren
   '/admin/workflows/executions/$executionId': typeof AdminWorkflowsExecutionsExecutionIdRoute
+  '/api/marketplace/$marketplace/callback': typeof ApiMarketplaceMarketplaceCallbackRoute
+  '/admin/shop/marketplace': typeof AdminShopMarketplaceIndexRoute
+  '/admin/shop/products': typeof AdminShopProductsIndexRoute
   '/admin/workflows/executions': typeof AdminWorkflowsExecutionsIndexRoute
   '/admin/workflows/$workflowId/executions/$executionId': typeof AdminWorkflowsWorkflowIdExecutionsExecutionIdRoute
 }
@@ -288,6 +348,7 @@ export interface FileRoutesById {
   '/admin/email-templates/$type': typeof AdminEmailTemplatesTypeRoute
   '/admin/legal-pages/$pageId': typeof AdminLegalPagesPageIdRoute
   '/admin/responses/$responseId': typeof AdminResponsesResponseIdRoute
+  '/admin/shop/categories': typeof AdminShopCategoriesRoute
   '/admin/surveys/$surveyId': typeof AdminSurveysSurveyIdRoute
   '/admin/surveys/new': typeof AdminSurveysNewRoute
   '/admin/tenants/$tenantId': typeof AdminTenantsTenantIdRoute
@@ -307,8 +368,14 @@ export interface FileRoutesById {
   '/admin/tenants/': typeof AdminTenantsIndexRoute
   '/admin/users/': typeof AdminUsersIndexRoute
   '/admin/workflows/': typeof AdminWorkflowsIndexRoute
+  '/admin/shop/marketplace/import': typeof AdminShopMarketplaceImportRoute
+  '/admin/shop/products/$productId': typeof AdminShopProductsProductIdRoute
+  '/admin/shop/products/new': typeof AdminShopProductsNewRoute
   '/admin/workflows/$workflowId/executions': typeof AdminWorkflowsWorkflowIdExecutionsRouteWithChildren
   '/admin/workflows/executions/$executionId': typeof AdminWorkflowsExecutionsExecutionIdRoute
+  '/api/marketplace/$marketplace/callback': typeof ApiMarketplaceMarketplaceCallbackRoute
+  '/admin/shop/marketplace/': typeof AdminShopMarketplaceIndexRoute
+  '/admin/shop/products/': typeof AdminShopProductsIndexRoute
   '/admin/workflows/executions/': typeof AdminWorkflowsExecutionsIndexRoute
   '/admin/workflows/$workflowId/executions/$executionId': typeof AdminWorkflowsWorkflowIdExecutionsExecutionIdRoute
 }
@@ -324,6 +391,7 @@ export interface FileRouteTypes {
     | '/admin/email-templates/$type'
     | '/admin/legal-pages/$pageId'
     | '/admin/responses/$responseId'
+    | '/admin/shop/categories'
     | '/admin/surveys/$surveyId'
     | '/admin/surveys/new'
     | '/admin/tenants/$tenantId'
@@ -343,8 +411,14 @@ export interface FileRouteTypes {
     | '/admin/tenants/'
     | '/admin/users/'
     | '/admin/workflows/'
+    | '/admin/shop/marketplace/import'
+    | '/admin/shop/products/$productId'
+    | '/admin/shop/products/new'
     | '/admin/workflows/$workflowId/executions'
     | '/admin/workflows/executions/$executionId'
+    | '/api/marketplace/$marketplace/callback'
+    | '/admin/shop/marketplace/'
+    | '/admin/shop/products/'
     | '/admin/workflows/executions/'
     | '/admin/workflows/$workflowId/executions/$executionId'
   fileRoutesByTo: FileRoutesByTo
@@ -357,6 +431,7 @@ export interface FileRouteTypes {
     | '/admin/email-templates/$type'
     | '/admin/legal-pages/$pageId'
     | '/admin/responses/$responseId'
+    | '/admin/shop/categories'
     | '/admin/surveys/$surveyId'
     | '/admin/surveys/new'
     | '/admin/tenants/$tenantId'
@@ -376,8 +451,14 @@ export interface FileRouteTypes {
     | '/admin/tenants'
     | '/admin/users'
     | '/admin/workflows'
+    | '/admin/shop/marketplace/import'
+    | '/admin/shop/products/$productId'
+    | '/admin/shop/products/new'
     | '/admin/workflows/$workflowId/executions'
     | '/admin/workflows/executions/$executionId'
+    | '/api/marketplace/$marketplace/callback'
+    | '/admin/shop/marketplace'
+    | '/admin/shop/products'
     | '/admin/workflows/executions'
     | '/admin/workflows/$workflowId/executions/$executionId'
   id:
@@ -391,6 +472,7 @@ export interface FileRouteTypes {
     | '/admin/email-templates/$type'
     | '/admin/legal-pages/$pageId'
     | '/admin/responses/$responseId'
+    | '/admin/shop/categories'
     | '/admin/surveys/$surveyId'
     | '/admin/surveys/new'
     | '/admin/tenants/$tenantId'
@@ -410,8 +492,14 @@ export interface FileRouteTypes {
     | '/admin/tenants/'
     | '/admin/users/'
     | '/admin/workflows/'
+    | '/admin/shop/marketplace/import'
+    | '/admin/shop/products/$productId'
+    | '/admin/shop/products/new'
     | '/admin/workflows/$workflowId/executions'
     | '/admin/workflows/executions/$executionId'
+    | '/api/marketplace/$marketplace/callback'
+    | '/admin/shop/marketplace/'
+    | '/admin/shop/products/'
     | '/admin/workflows/executions/'
     | '/admin/workflows/$workflowId/executions/$executionId'
   fileRoutesById: FileRoutesById
@@ -421,6 +509,7 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRouteWithChildren
   LoginRoute: typeof LoginRoute
   ApiCalendarCallbackRoute: typeof ApiCalendarCallbackRoute
+  ApiMarketplaceMarketplaceCallbackRoute: typeof ApiMarketplaceMarketplaceCallbackRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -586,6 +675,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminSurveysSurveyIdRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/shop/categories': {
+      id: '/admin/shop/categories'
+      path: '/shop/categories'
+      fullPath: '/admin/shop/categories'
+      preLoaderRoute: typeof AdminShopCategoriesRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/responses/$responseId': {
       id: '/admin/responses/$responseId'
       path: '/responses/$responseId'
@@ -628,6 +724,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminWorkflowsExecutionsIndexRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/shop/products/': {
+      id: '/admin/shop/products/'
+      path: '/shop/products'
+      fullPath: '/admin/shop/products/'
+      preLoaderRoute: typeof AdminShopProductsIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/shop/marketplace/': {
+      id: '/admin/shop/marketplace/'
+      path: '/shop/marketplace'
+      fullPath: '/admin/shop/marketplace/'
+      preLoaderRoute: typeof AdminShopMarketplaceIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/api/marketplace/$marketplace/callback': {
+      id: '/api/marketplace/$marketplace/callback'
+      path: '/api/marketplace/$marketplace/callback'
+      fullPath: '/api/marketplace/$marketplace/callback'
+      preLoaderRoute: typeof ApiMarketplaceMarketplaceCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/workflows/executions/$executionId': {
       id: '/admin/workflows/executions/$executionId'
       path: '/workflows/executions/$executionId'
@@ -641,6 +758,27 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/workflows/$workflowId/executions'
       preLoaderRoute: typeof AdminWorkflowsWorkflowIdExecutionsRouteImport
       parentRoute: typeof AdminWorkflowsWorkflowIdRoute
+    }
+    '/admin/shop/products/new': {
+      id: '/admin/shop/products/new'
+      path: '/shop/products/new'
+      fullPath: '/admin/shop/products/new'
+      preLoaderRoute: typeof AdminShopProductsNewRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/shop/products/$productId': {
+      id: '/admin/shop/products/$productId'
+      path: '/shop/products/$productId'
+      fullPath: '/admin/shop/products/$productId'
+      preLoaderRoute: typeof AdminShopProductsProductIdRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/shop/marketplace/import': {
+      id: '/admin/shop/marketplace/import'
+      path: '/shop/marketplace/import'
+      fullPath: '/admin/shop/marketplace/import'
+      preLoaderRoute: typeof AdminShopMarketplaceImportRouteImport
+      parentRoute: typeof AdminRoute
     }
     '/admin/workflows/$workflowId/executions/$executionId': {
       id: '/admin/workflows/$workflowId/executions/$executionId'
@@ -689,6 +827,7 @@ interface AdminRouteChildren {
   AdminEmailTemplatesTypeRoute: typeof AdminEmailTemplatesTypeRoute
   AdminLegalPagesPageIdRoute: typeof AdminLegalPagesPageIdRoute
   AdminResponsesResponseIdRoute: typeof AdminResponsesResponseIdRoute
+  AdminShopCategoriesRoute: typeof AdminShopCategoriesRoute
   AdminSurveysSurveyIdRoute: typeof AdminSurveysSurveyIdRoute
   AdminSurveysNewRoute: typeof AdminSurveysNewRoute
   AdminTenantsTenantIdRoute: typeof AdminTenantsTenantIdRoute
@@ -707,7 +846,12 @@ interface AdminRouteChildren {
   AdminTenantsIndexRoute: typeof AdminTenantsIndexRoute
   AdminUsersIndexRoute: typeof AdminUsersIndexRoute
   AdminWorkflowsIndexRoute: typeof AdminWorkflowsIndexRoute
+  AdminShopMarketplaceImportRoute: typeof AdminShopMarketplaceImportRoute
+  AdminShopProductsProductIdRoute: typeof AdminShopProductsProductIdRoute
+  AdminShopProductsNewRoute: typeof AdminShopProductsNewRoute
   AdminWorkflowsExecutionsExecutionIdRoute: typeof AdminWorkflowsExecutionsExecutionIdRoute
+  AdminShopMarketplaceIndexRoute: typeof AdminShopMarketplaceIndexRoute
+  AdminShopProductsIndexRoute: typeof AdminShopProductsIndexRoute
   AdminWorkflowsExecutionsIndexRoute: typeof AdminWorkflowsExecutionsIndexRoute
 }
 
@@ -718,6 +862,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminEmailTemplatesTypeRoute: AdminEmailTemplatesTypeRoute,
   AdminLegalPagesPageIdRoute: AdminLegalPagesPageIdRoute,
   AdminResponsesResponseIdRoute: AdminResponsesResponseIdRoute,
+  AdminShopCategoriesRoute: AdminShopCategoriesRoute,
   AdminSurveysSurveyIdRoute: AdminSurveysSurveyIdRoute,
   AdminSurveysNewRoute: AdminSurveysNewRoute,
   AdminTenantsTenantIdRoute: AdminTenantsTenantIdRoute,
@@ -736,8 +881,13 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminTenantsIndexRoute: AdminTenantsIndexRoute,
   AdminUsersIndexRoute: AdminUsersIndexRoute,
   AdminWorkflowsIndexRoute: AdminWorkflowsIndexRoute,
+  AdminShopMarketplaceImportRoute: AdminShopMarketplaceImportRoute,
+  AdminShopProductsProductIdRoute: AdminShopProductsProductIdRoute,
+  AdminShopProductsNewRoute: AdminShopProductsNewRoute,
   AdminWorkflowsExecutionsExecutionIdRoute:
     AdminWorkflowsExecutionsExecutionIdRoute,
+  AdminShopMarketplaceIndexRoute: AdminShopMarketplaceIndexRoute,
+  AdminShopProductsIndexRoute: AdminShopProductsIndexRoute,
   AdminWorkflowsExecutionsIndexRoute: AdminWorkflowsExecutionsIndexRoute,
 }
 
@@ -748,6 +898,8 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRouteWithChildren,
   LoginRoute: LoginRoute,
   ApiCalendarCallbackRoute: ApiCalendarCallbackRoute,
+  ApiMarketplaceMarketplaceCallbackRoute:
+    ApiMarketplaceMarketplaceCallbackRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

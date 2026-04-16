@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createServerClient } from '@/lib/supabase/server-start'
 import type { ShopProduct, ShopProductListItem } from './types'
 import { toShopProduct, toShopProductListItem } from './types'
 
@@ -6,7 +6,7 @@ const LIST_FIELDS = 'id, title, slug, cover_image_url, listing_type, display_lay
 
 /** Server-side query for use in Server Components (route pages) */
 export async function getShopProductsServer(): Promise<ShopProductListItem[]> {
-  const supabase = await createClient()
+  const supabase = createServerClient()
   const { data, error } = await supabase
     .from('shop_products')
     .select(LIST_FIELDS)
@@ -19,7 +19,7 @@ export async function getShopProductsServer(): Promise<ShopProductListItem[]> {
 
 /** Server-side query for use in Server Components (route pages) */
 export async function getShopProductServer(id: string): Promise<ShopProduct | null> {
-  const supabase = await createClient()
+  const supabase = createServerClient()
   const { data, error } = await supabase
     .from('shop_products')
     .select('*')

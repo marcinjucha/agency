@@ -1,5 +1,4 @@
-import { createFileRoute, notFound, useParams } from '@tanstack/react-router'
-import { useQuery } from '@tanstack/react-query'
+import { createFileRoute, notFound } from '@tanstack/react-router'
 import { getPublishedBlogPostFn } from '@/features/blog/server'
 import { BlogArticlePage } from '@/features/blog/components/BlogArticlePage'
 import { buildArticleJsonLd } from '@/features/blog/utils'
@@ -114,13 +113,9 @@ function BlogArticleSkeleton() {
 }
 
 function BlogPostPage() {
-  const { slug } = useParams({ from: '/blog/$slug' })
-  const { data: post } = useQuery({
-    queryKey: queryKeys.blog.detail(slug),
-    queryFn: () => getPublishedBlogPostFn({ data: { slug } }),
-  })
-
-  if (!post) return null
+  // ensureQueryData in loader guarantees post is in cache — useLoaderData() is safe here.
+  // WHY: website is not CMS, useQuery is CMS-only (memory.md architecture decision).
+  const { post } = Route.useLoaderData()
 
   const jsonLd = buildArticleJsonLd(post)
 

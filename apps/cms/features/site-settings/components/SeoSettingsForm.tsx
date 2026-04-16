@@ -7,7 +7,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Loader2, CheckCircle, AlertCircle } from 'lucide-react'
 import { Button, Card, Input, LoadingState, ErrorState, TooltipProvider } from '@agency/ui'
 import { getSiteSettings, getKeywordPool } from '../queries'
-import { saveSiteSettings } from '../actions'
+import { updateSiteSettingsFn } from '../server'
 import { siteSettingsSchema, type SiteSettingsInput } from '../validation'
 import { siteSettingsKeys } from '../types'
 import { FormFieldWithTooltip } from './FormFieldWithTooltip'
@@ -69,7 +69,7 @@ export function SeoSettingsForm() {
     setSaveState('saving')
     setSaveError(null)
     try {
-      const result = await saveSiteSettings(values)
+      const result = await updateSiteSettingsFn({ data: values })
       if (result.success) {
         setSaveState('saved')
       } else {

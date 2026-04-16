@@ -1,50 +1,12 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { buildCmsHead } from '@/lib/head'
 import { messages } from '@/lib/messages'
-import { queryKeys } from '@/lib/query-keys'
-import { siteSettingsKeys } from '@/features/site-settings/types'
-import { getCalendarConnectionsFn, getCalendarSettingsFn } from '@/features/calendar/server'
-import { getSiteSettingsFn, getKeywordPoolFn } from '@/features/site-settings/server'
 import { CalendarConnectionList } from '@/features/calendar/components/CalendarConnectionList'
 import { CalendarSettingsForm } from '@/features/calendar/components/CalendarSettingsForm'
 import { SeoSettingsForm } from '@/features/site-settings/components/SeoSettingsForm'
 
 export const Route = createFileRoute('/admin/settings/')({
   head: () => buildCmsHead(messages.nav.settings),
-  loader: ({ context: { queryClient } }) => {
-    queryClient.prefetchQuery({
-      queryKey: queryKeys.calendar.connections,
-      queryFn: async () => {
-        const result = await getCalendarConnectionsFn()
-        if (!result.success) throw new Error(result.error)
-        return result.data
-      },
-    })
-    queryClient.prefetchQuery({
-      queryKey: queryKeys.calendar.settings,
-      queryFn: async () => {
-        const result = await getCalendarSettingsFn()
-        if (!result.success) throw new Error(result.error)
-        return result.data
-      },
-    })
-    queryClient.prefetchQuery({
-      queryKey: siteSettingsKeys.detail,
-      queryFn: async () => {
-        const result = await getSiteSettingsFn()
-        if (!result.success) throw new Error(result.error)
-        return result.data
-      },
-    })
-    queryClient.prefetchQuery({
-      queryKey: siteSettingsKeys.keywordPool,
-      queryFn: async () => {
-        const result = await getKeywordPoolFn()
-        if (!result.success) throw new Error(result.error)
-        return result.data
-      },
-    })
-  },
   component: SettingsPage,
 })
 

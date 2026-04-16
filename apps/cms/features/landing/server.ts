@@ -6,7 +6,7 @@ import { landingPageSchema } from './validation'
 import type { LandingBlock, SeoMetadata } from '@agency/database'
 import { messages } from '@/lib/messages'
 import { toLandingPage, type LandingPage } from './types'
-import { createStartClient } from '@/lib/supabase/server-start'
+import { createServerClient } from '@/lib/supabase/server-start'
 import { type AuthContext, requireAuthContext } from '@/lib/server-auth'
 
 // ---------------------------------------------------------------------------
@@ -30,7 +30,7 @@ const dbError = (e: unknown) => (e instanceof Error ? e.message : messages.commo
 
 export const getLandingPageFn = createServerFn({ method: 'POST' }).handler(
   async (): Promise<LandingPage | null> => {
-    const supabase = createStartClient()
+    const supabase = createServerClient()
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error } = await (supabase as any)
       .from('landing_pages')
@@ -49,7 +49,7 @@ export const getLandingPageFn = createServerFn({ method: 'POST' }).handler(
 // ---------------------------------------------------------------------------
 
 export const updateLandingPageFn = createServerFn({ method: 'POST' })
-  .inputValidator((input: unknown) => updateLandingPageInputSchema.parse(input))
+  .inputValidator((input: z.infer<typeof updateLandingPageInputSchema>) => updateLandingPageInputSchema.parse(input))
   .handler(async ({ data: input }): Promise<{ success: boolean; error?: string }> => {
     const result = await requireAuthContext().andThen((auth) =>
       updatePage(auth, input.id, input.data)

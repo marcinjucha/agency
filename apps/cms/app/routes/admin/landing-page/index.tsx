@@ -9,11 +9,6 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 
 export const Route = createFileRoute('/admin/landing-page/')({
   head: () => buildCmsHead(messages.nav.landingPage),
-  loader: ({ context: { queryClient } }) =>
-    queryClient.ensureQueryData({
-      queryKey: queryKeys.landing.all,
-      queryFn: () => getLandingPageFn(),
-    }),
   component: LandingPageRoute,
 })
 

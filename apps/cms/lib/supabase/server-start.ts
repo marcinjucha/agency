@@ -1,8 +1,8 @@
-import { createServerClient, type CookieMethodsServer } from '@supabase/ssr'
+import { createServerClient as createSupabaseClient, type CookieMethodsServer } from '@supabase/ssr'
 import { getCookies, setCookie } from '@tanstack/start-server-core'
 import type { Database } from '@agency/database'
 
-export function createStartClient() {
+export function createServerClient() {
   const url = import.meta.env.VITE_SUPABASE_URL as string | undefined
   const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined
 
@@ -12,7 +12,7 @@ export function createStartClient() {
     )
   }
 
-  return createServerClient<Database>(url, key, {
+  return createSupabaseClient<Database>(url, key, {
     cookies: {
       getAll() {
         const cookies = getCookies()

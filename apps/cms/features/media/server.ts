@@ -4,7 +4,7 @@ import { DeleteObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import { fromSupabaseVoid } from '@/lib/result-helpers'
 import { getS3Client, S3_BUCKET, S3_REGION } from '@/lib/s3'
-import { createStartClient } from '@/lib/supabase/server-start'
+import { createServerClient } from '@/lib/supabase/server-start'
 import { type AuthContext, requireAuthContext } from '@/lib/server-auth'
 import {
   createMediaItemSchema,
@@ -45,7 +45,7 @@ export const getMediaItemsFn = createServerFn({ method: 'POST' })
     (input: { type?: MediaType; search?: string; folder_id?: string | null }) => input
   )
   .handler(async ({ data: filters }): Promise<MediaItemListItem[]> => {
-    const supabase = createStartClient()
+    const supabase = createServerClient()
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let query = (supabase as any)
       .from('media_items')
@@ -78,7 +78,7 @@ export const getMediaItemsFn = createServerFn({ method: 'POST' })
 export const getMediaItemFn = createServerFn({ method: 'POST' })
   .inputValidator((input: { id: string }) => input)
   .handler(async ({ data }): Promise<MediaItem | null> => {
-    const supabase = createStartClient()
+    const supabase = createServerClient()
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: row, error } = await (supabase as any)
       .from('media_items')

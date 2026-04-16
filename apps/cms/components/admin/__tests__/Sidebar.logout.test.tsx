@@ -1,6 +1,6 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
-import { useRouter } from 'next/navigation'
+import { useNavigate, useRouterState } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { usePermissions } from '@/contexts/permissions-context'
@@ -35,14 +35,8 @@ describe('Sidebar logout', () => {
       hasPermission: () => true,
     } as any)
 
-    vi.mocked(useRouter).mockReturnValue({
-      push: mockPush,
-      replace: vi.fn(),
-      back: vi.fn(),
-      forward: vi.fn(),
-      refresh: vi.fn(),
-      prefetch: vi.fn(),
-    })
+    vi.mocked(useNavigate).mockReturnValue(mockPush)
+    vi.mocked(useRouterState).mockReturnValue({ location: { pathname: '/admin' } } as any)
 
     vi.mocked(useQueryClient).mockReturnValue({
       clear: mockClear,
@@ -60,7 +54,7 @@ describe('Sidebar logout', () => {
     await waitFor(() => {
       expect(mockSignOut).toHaveBeenCalled()
       expect(mockClear).toHaveBeenCalled()
-      expect(mockPush).toHaveBeenCalledWith('/login')
+      expect(mockPush).toHaveBeenCalledWith({ to: '/login' })
     })
   })
 })

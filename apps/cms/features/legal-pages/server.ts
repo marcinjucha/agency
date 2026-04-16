@@ -32,7 +32,7 @@ const updateLegalPageInputSchema = z.object({
 // ---------------------------------------------------------------------------
 
 export const updateLegalPageFn = createServerFn({ method: 'POST' })
-  .inputValidator((input: unknown) => updateLegalPageInputSchema.parse(input))
+  .inputValidator((input: z.infer<typeof updateLegalPageInputSchema>) => updateLegalPageInputSchema.parse(input))
   .handler(
     async ({ data: input }): Promise<{ success: boolean; error?: string }> => {
       const result = await requireAuthContextFull()

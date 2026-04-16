@@ -5,10 +5,10 @@ import {
   ALL_PERMISSION_KEYS,
   type PermissionKey,
 } from '@/lib/permissions'
-import { createStartClient } from '@/lib/supabase/server-start'
+import { createServerClient } from '@/lib/supabase/server-start'
 
 /** Supabase client type from TanStack Start — re-exported for feature files. */
-export type StartClient = ReturnType<typeof createStartClient>
+export type StartClient = ReturnType<typeof createServerClient>
 
 /**
  * Minimal auth context — userId, tenantId, Supabase client.
@@ -42,7 +42,7 @@ const FULL_ACCESS_ROLES = new Set(['owner', 'admin'])
  * Returns null if unauthenticated or tenant not found.
  */
 export async function getAuth(): Promise<AuthContext | null> {
-  const supabase = createStartClient()
+  const supabase = createServerClient()
 
   const {
     data: { user },
@@ -66,7 +66,7 @@ export async function getAuth(): Promise<AuthContext | null> {
  * Returns null if unauthenticated or tenant not found.
  */
 export async function getAuthFull(): Promise<AuthContextFull | null> {
-  const supabase = createStartClient()
+  const supabase = createServerClient()
 
   const {
     data: { user },

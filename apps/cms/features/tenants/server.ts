@@ -4,7 +4,7 @@ import { fromSupabase, fromSupabaseVoid } from '@/lib/result-helpers'
 import { tenantSchema } from './validation'
 import type { TenantFormData, Tenant } from './types'
 import { messages } from '@/lib/messages'
-import { createStartClient } from '@/lib/supabase/server-start'
+import { createServerClient } from '@/lib/supabase/server-start'
 import { createServiceClient } from '@/lib/supabase/service'
 import {
   ALL_PERMISSION_KEYS,
@@ -32,7 +32,7 @@ function requireSuperAdmin(): ResultAsync<AuthContext, string> {
  * TanStack Start port of features/tenants/queries.ts#getTenants.
  */
 export const getTenantsFn = createServerFn({ method: 'POST' }).handler(async (): Promise<Tenant[]> => {
-  const supabase = createStartClient()
+  const supabase = createServerClient()
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (supabase as any)
@@ -51,7 +51,7 @@ export const getTenantsFn = createServerFn({ method: 'POST' }).handler(async ():
 export const getTenantFn = createServerFn({ method: 'POST' })
   .inputValidator((input: { id: string }) => input)
   .handler(async ({ data }): Promise<Tenant> => {
-    const supabase = createStartClient()
+    const supabase = createServerClient()
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: tenant, error } = await (supabase as any)

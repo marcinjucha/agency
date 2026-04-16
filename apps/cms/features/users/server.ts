@@ -10,7 +10,7 @@ import type { CreateUserInput, UpdateUserInput } from './types'
 import type { ChangePasswordFormData } from './validation'
 import type { UserWithRole } from './types'
 import { messages } from '@/lib/messages'
-import { createStartClient } from '@/lib/supabase/server-start'
+import { createServerClient } from '@/lib/supabase/server-start'
 import { createServiceClient } from '@/lib/supabase/service'
 import { hasPermission } from '@/lib/permissions'
 import {
@@ -36,7 +36,7 @@ const dbError = (e: unknown) =>
 export const getUsersFn = createServerFn({ method: 'POST' })
   .inputValidator((input: { tenantId?: string }) => input)
   .handler(async ({ data }): Promise<UserWithRole[]> => {
-    const supabase = createStartClient()
+    const supabase = createServerClient()
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let query = (supabase as any)
@@ -81,7 +81,7 @@ export const getUsersFn = createServerFn({ method: 'POST' })
 export const getTenantRolesFn = createServerFn({ method: 'POST' })
   .inputValidator((input: { tenantId?: string }) => input)
   .handler(async ({ data }): Promise<{ id: string; name: string; description: string | null; is_default: boolean }[]> => {
-    const supabase = createStartClient()
+    const supabase = createServerClient()
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let query = (supabase as any)

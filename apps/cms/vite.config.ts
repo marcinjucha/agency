@@ -16,6 +16,23 @@ export default defineConfig(({ command }) => ({
     exclude: ['@tanstack/start-server-core', '@tanstack/react-start', '@tanstack/react-router'],
   },
   plugins: [
+    // Workaround: vite:import-analysis fails to resolve TanStack Start virtual modules
+    // before the tanstackStart plugin registers them. This pre-enforce stub prevents
+    // the "Failed to resolve import" error during dev SSR.
+    {
+      name: 'tanstack-start-virtual-modules-stub',
+      enforce: 'pre' as const,
+      resolveId(id: string) {
+        if (id === 'tanstack-start-injected-head-scripts:v') {
+          return '\0tanstack-start-injected-head-scripts:v'
+        }
+      },
+      load(id: string) {
+        if (id === '\0tanstack-start-injected-head-scripts:v') {
+          return 'export const injectedHeadScripts = undefined'
+        }
+      },
+    },
     tsConfigPaths(),
     tailwindcss(),
     // nitro() required for Vercel serverless functions — dev mode fails with ERR_LOAD_URL

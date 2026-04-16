@@ -1,5 +1,4 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useQuery } from '@tanstack/react-query'
 import { getPublishedBlogPostsFn } from '@/features/blog/server'
 import { BlogListPage } from '@/features/blog/components/BlogListPage'
 import { buildWebsiteHead } from '@/lib/head'
@@ -124,10 +123,9 @@ function BlogListSkeleton() {
 }
 
 function BlogPage() {
-  const { data: posts = [] } = useQuery({
-    queryKey: queryKeys.blog.all,
-    queryFn: () => getPublishedBlogPostsFn(),
-  })
+  // ensureQueryData in loader guarantees data is in cache — useLoaderData() is safe here.
+  // WHY: website is not CMS, useQuery is CMS-only (memory.md architecture decision).
+  const posts = Route.useLoaderData() ?? []
 
   return (
     <>

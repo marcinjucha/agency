@@ -11,12 +11,6 @@ import type { LegalPageFormData } from '@/features/legal-pages/validation'
 
 export const Route = createFileRoute('/admin/legal-pages/$pageId')({
   head: () => buildCmsHead(messages.legalPages.editTitle),
-  loader: ({ params, context: { queryClient } }) => {
-    queryClient.prefetchQuery({
-      queryKey: legalPageKeys.detail(params.pageId),
-      queryFn: () => getLegalPage(params.pageId),
-    })
-  },
   component: LegalPageEditorPage,
 })
 

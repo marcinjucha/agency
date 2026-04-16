@@ -5,7 +5,7 @@ import { blogPostSchema, type BlogPostFormData } from './validation'
 import { toBlogPost, toBlogPostListItem, type BlogPost, type BlogPostListItem } from './types'
 import { parseContent } from './utils'
 import { messages } from '@/lib/messages'
-import { createStartClient } from '@/lib/supabase/server-start'
+import { createServerClient } from '@/lib/supabase/server-start'
 import { requireAuthContextFull, type AuthContextFull } from '@/lib/server-auth'
 import { hasPermission } from '@/lib/permissions'
 import { z } from 'zod'
@@ -41,7 +41,7 @@ const dbError = (e: unknown) => (e instanceof Error ? e.message : messages.commo
 
 export const getBlogPostsFn = createServerFn({ method: 'POST' }).handler(
   async (): Promise<BlogPostListItem[]> => {
-    const supabase = createStartClient()
+    const supabase = createServerClient()
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error } = await (supabase as any)
       .from('blog_posts')
@@ -55,10 +55,12 @@ export const getBlogPostsFn = createServerFn({ method: 'POST' }).handler(
   }
 )
 
+const blogPostByIdSchema = z.object({ id: z.string().uuid() })
+
 export const getBlogPostFn = createServerFn({ method: 'POST' })
-  .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
+  .inputValidator((input: z.infer<typeof blogPostByIdSchema>) => blogPostByIdSchema.parse(input))
   .handler(async ({ data: { id } }): Promise<BlogPost | null> => {
-    const supabase = createStartClient()
+    const supabase = createServerClient()
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: row, error } = await (supabase as any)
       .from('blog_posts')
@@ -73,7 +75,7 @@ export const getBlogPostFn = createServerFn({ method: 'POST' })
 
 export const getCategoriesFn = createServerFn({ method: 'POST' }).handler(
   async (): Promise<string[]> => {
-    const supabase = createStartClient()
+    const supabase = createServerClient()
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error } = await (supabase as any).from('blog_posts').select('category')
 
@@ -96,7 +98,7 @@ export const getCategoriesFn = createServerFn({ method: 'POST' }).handler(
 // ---------------------------------------------------------------------------
 
 export const createBlogPostFn = createServerFn({ method: 'POST' })
-  .inputValidator((input: unknown) => blogPostInputSchema.parse(input))
+  .inputValidator((input: z.infer<typeof blogPostInputSchema>) => blogPostInputSchema.parse(input))
   .handler(
     async ({ data }): Promise<{ success: boolean; data?: BlogPost; error?: string }> => {
       const result = await requireAuthContextFull().andThen((auth) => {
@@ -114,7 +116,7 @@ export const createBlogPostFn = createServerFn({ method: 'POST' })
   )
 
 export const updateBlogPostFn = createServerFn({ method: 'POST' })
-  .inputValidator((input: unknown) => updateBlogPostInputSchema.parse(input))
+  .inputValidator((input: z.infer<typeof updateBlogPostInputSchema>) => updateBlogPostInputSchema.parse(input))
   .handler(
     async ({ data: input }): Promise<{ success: boolean; data?: BlogPost; error?: string }> => {
       const result = await requireAuthContextFull()
@@ -136,7 +138,7 @@ export const updateBlogPostFn = createServerFn({ method: 'POST' })
   )
 
 export const deleteBlogPostFn = createServerFn({ method: 'POST' })
-  .inputValidator((input: unknown) => blogPostIdSchema.parse(input))
+  .inputValidator((input: z.infer<typeof blogPostIdSchema>) => blogPostIdSchema.parse(input))
   .handler(
     async ({ data }): Promise<{ success: boolean; error?: string }> => {
       const result = await requireAuthContextFull().andThen((auth) => {

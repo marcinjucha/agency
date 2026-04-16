@@ -8,7 +8,7 @@ import type { Tables } from '@agency/database'
 import { messages } from '@/lib/messages'
 import { z } from 'zod'
 import { TEMPLATE_TYPE_LABELS, type EmailTemplate, type EmailTemplateType } from './types'
-import { createStartClient } from '@/lib/supabase/server-start'
+import { createServerClient } from '@/lib/supabase/server-start'
 import { type AuthContext, requireAuthContext } from '@/lib/server-auth'
 
 // ---------------------------------------------------------------------------
@@ -80,8 +80,10 @@ function extractTemplateVariables(
 // Server Functions — Preview
 // ---------------------------------------------------------------------------
 
+const renderEmailPreviewSchema = z.object({ blocks: z.array(z.any()) })
+
 export const renderEmailPreviewFn = createServerFn({ method: 'POST' })
-  .inputValidator((input: unknown) => z.object({ blocks: z.array(z.any()) }).parse(input))
+  .inputValidator((input: z.infer<typeof renderEmailPreviewSchema>) => renderEmailPreviewSchema.parse(input))
   .handler(async ({ data: { blocks } }): Promise<{ html: string }> => {
     const html = await renderEmailBlocks(blocks as Block[])
     return { html }
@@ -93,7 +95,7 @@ export const renderEmailPreviewFn = createServerFn({ method: 'POST' })
 
 export const getEmailTemplatesFn = createServerFn({ method: 'POST' }).handler(
   async (): Promise<EmailTemplate[]> => {
-    const supabase = createStartClient()
+    const supabase = createServerClient()
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error } = await (supabase as any)
       .from('email_templates')
@@ -106,9 +108,9 @@ export const getEmailTemplatesFn = createServerFn({ method: 'POST' }).handler(
 )
 
 export const getEmailTemplateFn = createServerFn({ method: 'POST' })
-  .inputValidator((input: unknown) => getEmailTemplateInputSchema.parse(input))
+  .inputValidator((input: z.infer<typeof getEmailTemplateInputSchema>) => getEmailTemplateInputSchema.parse(input))
   .handler(async ({ data }): Promise<EmailTemplate | null> => {
-    const supabase = createStartClient()
+    const supabase = createServerClient()
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: row, error } = await (supabase as any)
       .from('email_templates')
@@ -126,7 +128,7 @@ export const getEmailTemplateFn = createServerFn({ method: 'POST' })
 // ---------------------------------------------------------------------------
 
 export const updateEmailTemplateFn = createServerFn({ method: 'POST' })
-  .inputValidator((input: unknown) => updateEmailTemplateInputSchema.parse(input))
+  .inputValidator((input: z.infer<typeof updateEmailTemplateInputSchema>) => updateEmailTemplateInputSchema.parse(input))
   .handler(async ({ data: input }): Promise<{ success: boolean; error?: string }> => {
     const result = await requireAuthContext().andThen((auth) =>
       saveTemplate(auth, input.type, input.data.subject, input.data.blocks)
@@ -139,7 +141,7 @@ export const updateEmailTemplateFn = createServerFn({ method: 'POST' })
   })
 
 export const resetEmailTemplateToDefaultFn = createServerFn({ method: 'POST' })
-  .inputValidator((input: unknown) => resetEmailTemplateInputSchema.parse(input))
+  .inputValidator((input: z.infer<typeof resetEmailTemplateInputSchema>) => resetEmailTemplateInputSchema.parse(input))
   .handler(async ({ data }): Promise<{ success: boolean; error?: string }> => {
     const defaultSubject = 'Dziękujemy za wypełnienie formularza - {{surveyTitle}}'
     const result = await requireAuthContext().andThen((auth) =>
