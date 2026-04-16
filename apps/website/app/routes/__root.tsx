@@ -1,16 +1,18 @@
 /// <reference types="vite/client" />
 import {
-  createRootRoute,
+  createRootRouteWithContext,
   HeadContent,
   Outlet,
   Scripts,
   useRouterState,
 } from '@tanstack/react-router'
+import { QueryClientProvider, useQuery } from '@tanstack/react-query'
 import {
   DEFAULT_BLOCKS,
   type NavbarBlock,
   type FooterBlock,
 } from '@agency/database'
+import type { RouterContext } from '../router'
 import appCss from '../globals.css?url'
 import { buildWebsiteHead } from '@/lib/head'
 import { getPublicLandingPageFn } from '@/features/marketing/server'
@@ -21,14 +23,23 @@ import { Footer } from '@/features/marketing/components/Footer'
 const defaultNavbar = DEFAULT_BLOCKS.find((b) => b.type === 'navbar') as NavbarBlock
 const defaultFooter = DEFAULT_BLOCKS.find((b) => b.type === 'footer') as FooterBlock
 
-export const Route = createRootRoute({
-  loader: async () => {
-    const page = await getPublicLandingPageFn()
-    const blocks = page?.blocks?.length ? page.blocks : DEFAULT_BLOCKS
-    const navbar = (blocks.find((b: { type: string }) => b.type === 'navbar') as NavbarBlock) ?? defaultNavbar
-    const footer = (blocks.find((b: { type: string }) => b.type === 'footer') as FooterBlock) ?? defaultFooter
-    return { navbar, footer }
-  },
+const landingQueryKey = ['landing-page'] as const
+
+async function fetchLandingBlocks() {
+  const page = await getPublicLandingPageFn()
+  const blocks = page?.blocks?.length ? page.blocks : DEFAULT_BLOCKS
+  return {
+    navbar: (blocks.find((b: { type: string }) => b.type === 'navbar') as NavbarBlock) ?? defaultNavbar,
+    footer: (blocks.find((b: { type: string }) => b.type === 'footer') as FooterBlock) ?? defaultFooter,
+  }
+}
+
+export const Route = createRootRouteWithContext<RouterContext>()({
+  loader: ({ context: { queryClient } }) =>
+    queryClient.ensureQueryData({
+      queryKey: landingQueryKey,
+      queryFn: fetchLandingBlocks,
+    }),
   head: () => ({
     ...buildWebsiteHead('Halo Efekt — Automatyzacja procesów biznesowych'),
     links: [
@@ -47,22 +58,31 @@ export const Route = createRootRoute({
 })
 
 function RootLayout() {
-  const { navbar, footer } = Route.useLoaderData()
+  const { queryClient } = Route.useRouteContext()
+  const { data } = useQuery({
+    queryKey: landingQueryKey,
+    queryFn: fetchLandingBlocks,
+  })
+  const navbar = data?.navbar ?? defaultNavbar
+  const footer = data?.footer ?? defaultFooter
+
   const pathname = useRouterState({ select: (s) => s.location.pathname })
   const isSurvey = pathname.startsWith('/survey')
 
   return (
-    <html lang="pl">
-      <head>
-        <HeadContent />
-      </head>
-      <body className="antialiased bg-background text-foreground overflow-x-hidden">
-        {!isSurvey && <Navbar {...navbar} />}
-        <Outlet />
-        {!isSurvey && <Footer {...footer} />}
-        <CookieBanner />
-        <Scripts />
-      </body>
-    </html>
+    <QueryClientProvider client={queryClient}>
+      <html lang="pl">
+        <head>
+          <HeadContent />
+        </head>
+        <body className="antialiased bg-background text-foreground overflow-x-hidden">
+          {!isSurvey && <Navbar {...navbar} />}
+          <Outlet />
+          {!isSurvey && <Footer {...footer} />}
+          <CookieBanner />
+          <Scripts />
+        </body>
+      </html>
+    </QueryClientProvider>
   )
 }
