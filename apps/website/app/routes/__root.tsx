@@ -6,7 +6,7 @@ import {
   Scripts,
   useRouterState,
 } from '@tanstack/react-router'
-import { QueryClientProvider, useQuery } from '@tanstack/react-query'
+import { QueryClientProvider } from '@tanstack/react-query'
 import {
   DEFAULT_BLOCKS,
   type NavbarBlock,
@@ -59,12 +59,9 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 
 function RootLayout() {
   const { queryClient } = Route.useRouteContext()
-  const { data } = useQuery({
-    queryKey: queryKeys.landing.all,
-    queryFn: fetchLandingBlocks,
-  })
-  const navbar = data?.navbar ?? defaultNavbar
-  const footer = data?.footer ?? defaultFooter
+  const loaderData = Route.useLoaderData()
+  const navbar = loaderData?.navbar ?? defaultNavbar
+  const footer = loaderData?.footer ?? defaultFooter
 
   const pathname = useRouterState({ select: (s) => s.location.pathname })
   const isSurvey = pathname.startsWith('/survey')
