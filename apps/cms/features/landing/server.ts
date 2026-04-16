@@ -82,7 +82,7 @@ function updatePage(
 
   return ResultAsync.fromPromise(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- landing_pages not in generated types
-    (auth.supabase as any).from('landing_pages').update(updatePayload).eq('id', id).select().single(),
+    (auth.supabase as any).from('landing_pages').update(updatePayload).eq('id', id),
     dbError
   ).andThen(fromSupabaseVoid())
 }

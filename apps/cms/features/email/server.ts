@@ -77,6 +77,17 @@ function extractTemplateVariables(
 }
 
 // ---------------------------------------------------------------------------
+// Server Functions — Preview
+// ---------------------------------------------------------------------------
+
+export const renderEmailPreviewFn = createServerFn()
+  .inputValidator((input: unknown) => z.object({ blocks: z.array(z.any()) }).parse(input))
+  .handler(async ({ data: { blocks } }): Promise<{ html: string }> => {
+    const html = await renderEmailBlocks(blocks as Block[])
+    return { html }
+  })
+
+// ---------------------------------------------------------------------------
 // Server Functions — Queries
 // ---------------------------------------------------------------------------
 

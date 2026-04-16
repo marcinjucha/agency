@@ -95,6 +95,7 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
     control,
     setValue,
     watch,
+    reset,
     formState: { errors },
   } = useForm<BlogPostFormData>({
     resolver: zodResolver(blogPostSchema),
@@ -140,6 +141,28 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
     }
     return '09:00'
   })
+
+  useEffect(() => {
+    if (!blogPost) return
+    reset({
+      title: blogPost.title,
+      slug: blogPost.slug,
+      excerpt: blogPost.excerpt ?? '',
+      content: blogPost.content ?? EMPTY_CONTENT,
+      cover_image_url: blogPost.cover_image_url ?? '',
+      category: blogPost.category ?? '',
+      author_name: blogPost.author_name ?? '',
+      seo_metadata: {
+        title: blogPost.seo_metadata?.title ?? '',
+        description: blogPost.seo_metadata?.description ?? '',
+        ogImage: blogPost.seo_metadata?.ogImage ?? '',
+        keywords: blogPost.seo_metadata?.keywords ?? [],
+      },
+      is_published: blogPost.is_published ?? false,
+      published_at: blogPost.published_at ?? null,
+    })
+    setCoverPreview(blogPost.cover_image_url ?? null)
+  }, [blogPost?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (slugManuallyEdited.current) return

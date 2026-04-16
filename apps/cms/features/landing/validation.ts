@@ -5,7 +5,7 @@ export const navbarBlockSchema = z.object({
   type: z.literal('navbar'),
   ctaText: z.string().min(1, messages.validation.ctaTextRequired),
   ctaHref: z.string().min(1, messages.validation.ctaLinkRequired),
-})
+}).passthrough()
 
 export const heroBlockSchema = z.object({
   type: z.literal('hero'),
@@ -16,7 +16,7 @@ export const heroBlockSchema = z.object({
     href: z.string(),
   }),
   trustLine: z.string(),
-})
+}).passthrough()
 
 export const identificationBlockSchema = z.object({
   type: z.literal('identification'),
@@ -28,14 +28,14 @@ export const identificationBlockSchema = z.object({
     })
   ),
   transition: z.string(),
-})
+}).passthrough()
 
 export const problemsBlockSchema = z.object({
   type: z.literal('problems'),
   title: z.string(),
   stat: z.string(),
   items: z.array(z.string()),
-})
+}).passthrough()
 
 export const processBlockSchema = z.object({
   type: z.literal('process'),
@@ -52,7 +52,7 @@ export const processBlockSchema = z.object({
   riskTitle: z.string(),
   riskDescription: z.string(),
   proof: z.string(),
-})
+}).passthrough()
 
 export const resultsBlockSchema = z.object({
   type: z.literal('results'),
@@ -71,7 +71,7 @@ export const resultsBlockSchema = z.object({
   ),
   qualificationTitle: z.string(),
   qualificationItems: z.array(z.string()),
-})
+}).passthrough()
 
 export const ctaBlockSchema = z.object({
   type: z.literal('cta'),
@@ -82,7 +82,7 @@ export const ctaBlockSchema = z.object({
     href: z.string(),
   }),
   trustLine: z.string(),
-})
+}).passthrough()
 
 export const footerBlockSchema = z.object({
   type: z.literal('footer'),
@@ -90,7 +90,7 @@ export const footerBlockSchema = z.object({
   privacy: z.string(),
   terms: z.string(),
   copyright: z.string(),
-})
+}).passthrough()
 
 export const landingBlockSchema = z.discriminatedUnion('type', [
   navbarBlockSchema,

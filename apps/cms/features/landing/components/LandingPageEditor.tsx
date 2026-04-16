@@ -95,7 +95,8 @@ export function LandingPageEditor() {
       } else {
         setSaveState('error')
       }
-    } catch {
+    } catch (err) {
+      console.error('[LandingPage] Save failed:', err)
       setSaveState('error')
     } finally {
       setTimeout(() => setSaveState('idle'), 2500)
