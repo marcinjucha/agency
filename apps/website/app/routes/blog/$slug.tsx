@@ -27,7 +27,7 @@ export const Route = createFileRoute('/blog/$slug')({
     const keywords = seo?.keywords?.length ? seo.keywords : undefined
 
     return {
-      ...buildWebsiteHead(title, description, ogImage, keywords),
+      ...buildWebsiteHead(title, description, ogImage, keywords, `/blog/${post.slug}`),
       meta: [
         ...buildWebsiteHead(title, description, ogImage, keywords).meta,
         { property: 'og:type', content: 'article' },
