@@ -14,21 +14,17 @@
  * @module apps/website/features/survey/components/SurveyForm
  */
 
-'use client'
-
 import { useState, useEffect, useMemo } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useRouter } from 'next/navigation'
+import { useNavigate } from '@tanstack/react-router'
 import { Button, Card, Progress } from '@agency/ui'
 import { Loader2 } from 'lucide-react'
 import { QuestionField } from './QuestionField'
 import { generateSurveySchema } from '../validation'
 import type { SurveyData, SurveyAnswers } from '../types'
 import { messages } from '@/lib/messages'
-import { usePlausible } from 'next-plausible'
-import type { PlausibleEvents } from '@/lib/plausible'
-import { routes } from '@/lib/routes'
+import { submitResponseFn } from '../server'
 
 interface SurveyFormProps {
   /** Survey data including title, description, and questions */
@@ -40,13 +36,12 @@ interface SurveyFormProps {
 }
 
 export function SurveyForm({ survey, linkId, token }: SurveyFormProps) {
-  const router = useRouter()
-  const plausible = usePlausible<PlausibleEvents>()
+  const navigate = useNavigate()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
 
   useEffect(() => {
-    plausible('Survey Started')
+    // Analytics: survey started — plausible is not used in TanStack Start iteration
   }, [])
 
   // Generate dynamic Zod schema from survey questions
@@ -100,27 +95,19 @@ export function SurveyForm({ survey, linkId, token }: SurveyFormProps) {
     setSubmitError(null)
 
     try {
-      const response = await fetch(routes.api.surveySubmit, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          linkId,
-          surveyId: survey.id,
-          answers: data,
-        }),
+      const result = await submitResponseFn({
+        data: { linkId, surveyId: survey.id, answers: data },
       })
 
-      const result = await response.json()
-
       if (result.success) {
-        plausible('Survey Submitted')
-        const params = new URLSearchParams()
-        if (result.responseId) params.append('responseId', result.responseId)
-        if (result.linkId) params.append('linkId', result.linkId)
-        const queryString = params.toString() ? `?${params.toString()}` : ''
-        router.push(`${routes.surveySuccess(token)}${queryString}`)
+        void navigate({
+          to: '/survey/$token/success',
+          params: { token },
+          search: {
+            responseId: result.responseId,
+            linkId: result.linkId,
+          },
+        })
       } else {
         setSubmitError(result.error || messages.survey.submitFailed)
       }

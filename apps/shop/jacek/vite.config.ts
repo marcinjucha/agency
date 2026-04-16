@@ -3,11 +3,14 @@ import { tanstackStart } from '@tanstack/react-start/plugin/vite'
 import viteReact from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import tsConfigPaths from 'vite-tsconfig-paths'
+import { nitro } from 'nitro/vite'
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   plugins: [
     tsConfigPaths(),
     tailwindcss(),
+    // nitro() required for Vercel serverless functions — dev mode fails with ERR_LOAD_URL
+    ...(command === 'build' ? [nitro()] : []),
     tanstackStart({
       srcDirectory: 'app',
       router: {
@@ -20,4 +23,4 @@ export default defineConfig({
       },
     }),
   ],
-})
+}))

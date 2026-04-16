@@ -21,11 +21,4 @@ export const routes = {
 
   // Survey
   surveySuccess: (token: string) => `/survey/${token}/success`,
-
-  // API routes
-  api: {
-    surveySubmit: '/api/survey/submit',
-    calendarSlots: '/api/calendar/slots',
-    calendarBook: '/api/calendar/book',
-  },
 } as const

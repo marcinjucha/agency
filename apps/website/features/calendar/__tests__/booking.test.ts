@@ -10,16 +10,17 @@ import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest'
 import { ok, err } from 'neverthrow'
 
 // ---------------------------------------------------------------------------
-// Environment variables (must be set before module import)
+// Environment variables
 // ---------------------------------------------------------------------------
 
-vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'https://test.supabase.co')
-vi.stubEnv('SUPABASE_SERVICE_ROLE_KEY', 'test-service-role-key')
 vi.stubEnv('CMS_BASE_URL', 'https://cms.test.com')
 vi.stubEnv('WORKFLOW_TRIGGER_SECRET', 'test-secret')
 
 // ---------------------------------------------------------------------------
 // Supabase mock — chainable query builder
+//
+// bookAppointment now accepts a supabase client as the first parameter.
+// We pass mockSupabase directly instead of mocking createClient.
 // ---------------------------------------------------------------------------
 
 type MockResponse = { data: unknown; error: unknown }
@@ -65,10 +66,6 @@ const mockSupabase = {
   from: vi.fn((table: string) => getTableQuery(table).proxy),
   rpc: mockRpc,
 }
-
-vi.mock('@supabase/supabase-js', () => ({
-  createClient: vi.fn(() => mockSupabase),
-}))
 
 // ---------------------------------------------------------------------------
 // @agency/calendar mock
@@ -127,6 +124,7 @@ vi.stubGlobal('fetch', mockFetch)
 // Import module under test (AFTER all mocks)
 // ---------------------------------------------------------------------------
 
+// bookAppointment now takes supabase as the first parameter — no createClient mock needed.
 const { bookAppointment } = await import('../booking')
 
 // ---------------------------------------------------------------------------
@@ -297,7 +295,7 @@ describe('bookAppointment', () => {
     mockCalendarConnectionActive()
     mockCalendarEventCreated('cal-event-456')
 
-    const result = await bookAppointment(validBookingRequest())
+    const result = await bookAppointment(mockSupabase as any, validBookingRequest())
 
     expect(result.success).toBe(true)
     if (!result.success) return
@@ -323,7 +321,7 @@ describe('bookAppointment', () => {
       err('No calendar connection for survey link')
     )
 
-    const result = await bookAppointment(validBookingRequest())
+    const result = await bookAppointment(mockSupabase as any, validBookingRequest())
 
     expect(result.success).toBe(true)
     if (!result.success) return
@@ -346,7 +344,7 @@ describe('bookAppointment', () => {
     // Calendar event creation fails
     mockCreateEvent.mockResolvedValue(err('Google API error'))
 
-    const result = await bookAppointment(validBookingRequest())
+    const result = await bookAppointment(mockSupabase as any, validBookingRequest())
 
     expect(result.success).toBe(true)
     if (!result.success) return
@@ -384,7 +382,7 @@ describe('bookAppointment', () => {
       return getTableQuery(table).proxy
     })
 
-    const result = await bookAppointment(validBookingRequest())
+    const result = await bookAppointment(mockSupabase as any, validBookingRequest())
 
     expect(result.success).toBe(false)
     if (result.success) return
@@ -403,7 +401,7 @@ describe('bookAppointment', () => {
       error: { message: 'not found', code: 'PGRST116' },
     })
 
-    const result = await bookAppointment(validBookingRequest())
+    const result = await bookAppointment(mockSupabase as any, validBookingRequest())
 
     expect(result.success).toBe(false)
     if (result.success) return
@@ -424,7 +422,7 @@ describe('bookAppointment', () => {
       error: { message: 'not found', code: 'PGRST116' },
     })
 
-    const result = await bookAppointment(validBookingRequest())
+    const result = await bookAppointment(mockSupabase as any, validBookingRequest())
 
     expect(result.success).toBe(false)
     if (result.success) return
@@ -443,7 +441,7 @@ describe('bookAppointment', () => {
     mockAppointmentCreated()
     mockGetConnectionForSurveyLink.mockResolvedValue(err('No connection'))
 
-    await bookAppointment(validBookingRequest())
+    await bookAppointment(mockSupabase as any, validBookingRequest())
 
     // Wait for fire-and-forget fetch to be called
     await vi.waitFor(() => {
@@ -487,7 +485,7 @@ describe('bookAppointment', () => {
       })
     )
 
-    const result = await bookAppointment(validBookingRequest())
+    const result = await bookAppointment(mockSupabase as any, validBookingRequest())
 
     expect(result.success).toBe(true)
     // Provider should NOT be created for inactive connection
@@ -518,7 +516,7 @@ describe('bookAppointment', () => {
       return getTableQuery(table).proxy
     })
 
-    const result = await bookAppointment(validBookingRequest())
+    const result = await bookAppointment(mockSupabase as any, validBookingRequest())
 
     expect(result.success).toBe(false)
     if (result.success) return
@@ -539,7 +537,7 @@ describe('bookAppointment', () => {
     mockAppointmentCreated()
     mockGetConnectionForSurveyLink.mockResolvedValue(err('No connection'))
 
-    await bookAppointment(validBookingRequest())
+    await bookAppointment(mockSupabase as any, validBookingRequest())
 
     // fetch should not be called for workflow trigger
     expect(mockFetch).not.toHaveBeenCalled()

@@ -1,13 +1,8 @@
-'use client'
-
 import { useState, useEffect } from 'react'
 import { Menu, X, ArrowRight } from 'lucide-react'
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { Link, useRouterState } from '@tanstack/react-router'
 import { Button } from '@agency/ui'
 import type { NavbarBlock } from '@agency/database'
-import { usePlausible } from 'next-plausible'
-import type { PlausibleEvents } from '@/lib/plausible'
 import { routes } from '@/lib/routes'
 
 const NAV_LINKS = [
@@ -19,8 +14,7 @@ export function Navbar({ ctaText, ctaHref }: NavbarBlock) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isScrolled, setIsScrolled] = useState(false)
   const [showNavCta, setShowNavCta] = useState(false)
-  const pathname = usePathname()
-  const plausible = usePlausible<PlausibleEvents>()
+  const pathname = useRouterState({ select: (s) => s.location.pathname })
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 20)
@@ -63,7 +57,7 @@ export function Navbar({ ctaText, ctaHref }: NavbarBlock) {
         <nav className="mx-auto px-4 sm:px-6 py-3 max-w-6xl">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-8">
-              <Link href={routes.home} className="group flex items-center gap-2">
+              <Link to={routes.home} className="group flex items-center gap-2">
                 <span className="text-lg font-bold tracking-tight bg-linear-to-r from-foreground via-foreground to-primary bg-clip-text text-gradient transition-all duration-300 group-hover:from-primary group-hover:to-primary/70">
                   Halo Efekt
                 </span>
@@ -73,7 +67,7 @@ export function Navbar({ ctaText, ctaHref }: NavbarBlock) {
                 {NAV_LINKS.map((link) => (
                   <Link
                     key={link.href}
-                    href={link.href}
+                    to={link.href}
                     className={`nav-link-underline px-3 py-1.5 text-sm font-medium transition-colors duration-200 ${
                       isActive(link.href)
                         ? 'text-foreground'
@@ -96,7 +90,7 @@ export function Navbar({ ctaText, ctaHref }: NavbarBlock) {
                   : 'opacity-0 translate-y-1 scale-95 pointer-events-none'
               }`}
             >
-              <Link href={ctaHref} onClick={() => plausible('CTA Clicked', { props: { location: 'navbar' } })}>
+              <Link to={ctaHref}>
                 <Button
                   size="sm"
                   className="cta-glow bg-primary hover:bg-primary/90 text-primary-foreground transition-all duration-200 gap-1.5 group/cta"
@@ -149,7 +143,7 @@ export function Navbar({ ctaText, ctaHref }: NavbarBlock) {
           {NAV_LINKS.map((link) => (
             <Link
               key={link.href}
-              href={link.href}
+              to={link.href}
               className={`px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
                 isActive(link.href)
                   ? 'text-foreground bg-accent/50 border border-border/30'
@@ -162,7 +156,7 @@ export function Navbar({ ctaText, ctaHref }: NavbarBlock) {
         </div>
 
         <div className="px-4 py-4 mt-auto border-t border-border/30 absolute bottom-0 left-0 right-0">
-          <Link href={ctaHref} onClick={() => plausible('CTA Clicked', { props: { location: 'navbar' } })}>
+          <Link to={ctaHref}>
             <Button className="cta-glow bg-primary hover:bg-primary/90 text-primary-foreground w-full gap-1.5 group/cta">
               {ctaText}
               <ArrowRight className="h-3.5 w-3.5 transition-transform duration-200 group-hover/cta:translate-x-0.5" />

@@ -1,8 +1,4 @@
-'use client'
-
-import Link from 'next/link'
-import { usePlausible } from 'next-plausible'
-import type { PlausibleEvents } from '@/lib/plausible'
+import { Link } from '@tanstack/react-router'
 
 interface CtaLinkProps {
   href: string
@@ -12,15 +8,12 @@ interface CtaLinkProps {
   id?: string
 }
 
-export function CtaLink({ href, location, className, children, id }: CtaLinkProps) {
-  const plausible = usePlausible<PlausibleEvents>()
-
+export function CtaLink({ href, location: _location, className, children, id }: CtaLinkProps) {
   return (
     <Link
       id={id}
-      href={href}
+      to={href}
       className={className}
-      onClick={() => plausible('CTA Clicked', { props: { location } })}
     >
       {children}
     </Link>

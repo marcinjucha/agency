@@ -1,42 +1,41 @@
-# PROJECT_SPEC.yaml — Project Specification (NOT a task log)
-#
-# PURPOSE: Describe what this system does and why. Used by AI agents to understand
-#          project capabilities, architecture decisions, and feature status.
-#
-# WHAT BELONGS HERE:
-#   - features: name, status, description (current capability), why (business value), depends_on
-#   - architecture.key_decisions: non-obvious trade-offs, constraints, cross-feature contracts
-#
-# WHAT DOES NOT BELONG HERE:
-#   - completion_notes, iteration logs, bug fix history, test counts → use memory.md or git log
-#   - Implementation details ("fixed X", "iter 1-3 complete", "key gotchas") → not spec content
-#   - Obvious framework patterns derivable from code → not architectural decisions
-#
-# UPDATE RULE: When a feature ships, set status: done and write a 1-2 sentence capability
-#              description. Do not record HOW it was built — only WHAT it does.
-
 project:
   name: "Halo Efekt"
   type: monorepo
   notion_project: "AAA-P-4"
-  tech_stack: "Turborepo, CMS: TanStack Start v1.167 + Vite 8 (port 3004, migrating) + Next.js 16 App Router (port 3001, legacy coexisting during migration), Website: Next.js 16, React 19, Tailwind CSS 4, shadcn/ui, Supabase (PostgreSQL 17 + RLS), TanStack Query 5, React Hook Form 7, Zod 3, neverthrow + remeda (functional patterns), n8n (self-hosted), Resend, AWS S3, Google Calendar API"
+  tech_stack: "Turborepo, Next.js 16 (App Router), React 19, Tailwind CSS 4, shadcn/ui, Supabase (PostgreSQL 17 + RLS), TanStack Query 5, React Hook Form 7, Zod 3, n8n (self-hosted), Resend, AWS S3, Google Calendar API"
 
 architecture:
   key_decisions:
+    - "API Routes for public submissions — better HTTP context for anonymous ops, service role key safe when tenant_id from DB"
     - "RLS for multi-tenancy — database-level enforcement prevents data leaks"
     - "JSONB for survey responses — dynamic schemas, no migration for new question types"
+    - "TanStack Query in CMS (mutations + list caching) and Website (ensureQueryData in loaders with per-route staleTime: landing=1h, blog=5min)"
+    - "DISPLAY_GROUPS for PermissionPicker visual grouping — separate from PERMISSION_GROUPS (backend). UI groups (System/Zarządzanie) are independent of authorization logic; adding new visual group = new DISPLAY_GROUPS entry only"
+    - "expandPermissionKeys in lib/permissions.ts — shared between PermissionPicker component and test utilities; single source of truth for parent→children permission hierarchy traversal"
+    - "Scope Bar pattern for cross-tenant management — super admins switch active tenant context in a sticky header bar; no separate route per tenant, context stored in component state"
+    - "is_super_admin() RLS for global tables (no tenant_id) — DocForge licenses are cross-tenant, accessible to super admins only; RLS policy uses is_super_admin() PostgreSQL function instead of current_user_tenant_id() pattern used elsewhere"
+    - "fromSupabaseVoid() for void DB operations — Supabase JS returns {data,error} even on delete/update without select; fromSupabaseVoid() wraps these calls into Result<void,AppError> so callers don't need to handle the unused data field"
+    - "seedDefaultRoles + syncFeaturePermissions on feature flag change — when enabled_features JSONB is updated, role defaults are re-seeded and permission mappings synced automatically to keep RBAC consistent"
+    - "enabled_features JSONB on tenants table — stores PermissionKey[] for features enabled per tenant; checked in requireAuth() and sidebar rendering"
+    - "getUserWithTenant() shared auth — extracted from 4x duplication, returns { supabase, userId, tenantId }"
+    - "createAnonClient() replaced by createServiceClient() in website server.ts files — Next.js anon client pattern obsolete after TanStack Start migration; server functions run server-only, no ISR/build-time constraint"
+    - "ensureQueryData pattern for TanStack Query on website — loaders prefetch data server-side, client hydrates from cache; per-query staleTime controls revalidation frequency (landing=1h, blog=5min)"
+    - "nitro() plugin build-only in all TanStack Start apps — nitro() crashes Vite dev server if not guarded; wrap in NODE_ENV check or separate vite.config build variant. Affects cms, website, jacek, kolega"
+    - "ConsentBanner.tsx not CookieBanner.tsx — ad blockers match 'cookie' substring in filenames, blocking the file entirely; naming with 'consent' avoids the false-positive block"
+    - "queries.ts (browser) vs queries.server.ts (server) — wrong naming causes silent build-time bugs"
     - "Feature-based folder structure (ADR-005) — thin route files <20 lines, business logic in features/"
+    - "Centralized messages in lib/messages.ts — ~220 strings, nested by feature, prepares for i18n"
+    - "Centralized routes in lib/routes.ts — prevents typos in hrefs, revalidatePath, API fetch calls"
     - "Fire-and-forget webhook pattern for n8n — don't block user requests, workflow runs async"
-    - "n8n Orchestrator owns ALL execution — CMS trigger route is ~70 LOC fire-and-forget. Vercel serverless timeout can't handle multi-hour workflow delays"
-    - "Multi-provider calendar via CalendarProvider interface — tsdav for CalDAV, googleapis for Google Calendar. Adding new provider = implement interface only"
-    - "app_config table for encryption key — Supabase Cloud blocks ALTER DATABASE SET for custom GUCs"
-    - "is_super_admin() RLS for global tables (no tenant_id) — DocForge licenses are cross-tenant, accessible to super admins only"
-    - "enabled_features JSONB on tenants table — per-tenant feature flags at PermissionKey[] granularity, checked in requireAuth() and sidebar rendering"
-    - "Two-step JSONB query for AI results — workflow_executions filtered client-side by trigger_payload->responseId, then step_executions joined. Avoids PostgREST JSONB filter limitation on nested fields"
-    - "consent question type always required — enforced in website validation (Zod refine), not in shared schema"
-    - "NULL survey_link.workflow_id = no workflow fires — per-link binding, links without workflow_id skip engine entirely"
-    - "createAnonClient() for ALL website queries — server client calls cookies() which fails at build time during ISR"
-    - "TanStack Start migration via parent branch strategy — child branches per feature merge back to parent; parent merges to main when ALL features done"
+    - "TiptapEditor extracted to features/editor/ with dependency injection — blog and legal pages share editor, no duplication"
+    - "consent question type always required — enforced in website validation (always-required Zod refine), not in shared schema (packages/validators); CMS builder uses it like any other question type"
+    - "google-calendar OAuth helpers moved to features/calendar/oauth.ts — lib/ is for cross-feature utilities, not feature-specific business logic (ADR-005)"
+    - "LandingPage type canonical in @agency/database (seo_metadata included) — removed 2 duplicate definitions in CMS + website"
+    - "ResponseStatus single source of truth in @agency/validators — status.ts re-exports with | null extension"
+    - "Multi-provider calendar via CalendarProvider interface — calendar_connections table with pgcrypto-encrypted BYTEA credentials + decrypted view, survey_links.calendar_connection_id for calendar-per-survey model, tsdav for CalDAV, googleapis for Google Calendar. Adding new provider = implement CalendarProvider interface only."
+    - "app_config table for encryption key instead of custom GUC — Supabase Cloud blocks ALTER DATABASE SET for app.* parameters (unlike self-hosted PostgreSQL). app_config stores key-value pairs; calendar_connection_rpc reads encryption key from app_config instead of current_setting('app.encryption_key')."
+    - "NULL survey_link.workflow_id = no workflow fires — fixes all-workflows-fire bug (AAA-T-186); trigger route reads workflow_id from survey_links when surveyLinkId provided, fires only the bound workflow; NULL = skip engine entirely. Existing links need explicit workflow assignment after migration."
+    - "Two-step JSONB query for AI results (AAA-T-189): workflow_executions filtered client-side by trigger_payload->responseId (RLS scoped), then step_executions joined for ai_action output_payload — avoids PostgREST JSONB filter limitation on nested fields."
 
 features:
   # Phase 1: Foundation
@@ -52,203 +51,208 @@ features:
 
   - name: "Database Schema & Multi-Tenancy"
     status: done
-    description: "RLS-enforced multi-tenant schema with JSONB responses and auto-generated TS types"
-    why: "Multi-tenant data isolation, flexible survey schemas"
+    description: "6 tables with RLS (tenants, users, surveys, survey_links, responses, appointments), JSONB responses, auto-generated TS types"
+    why: "Multi-tenant data isolation, flexible survey schemas, performance indexes"
 
   - name: "CMS Admin Layout"
     status: done
-    description: "Responsive sidebar with grouped navigation, dashboard with real-time stats, gallery/list toggle with localStorage persistence"
-    why: "Navigation hub for business users"
+    description: "Responsive sidebar (grouped: Intake/Content/System), dashboard with real-time stats. All CMS list pages have gallery/list toggle with localStorage persistence (useViewMode hook). Gallery is default view; unified grid breakpoints: 1col/<768px, 2col/<1280px, 3col/<1536px, 4col/>=1536px."
+    why: "Navigation hub for business users; gallery-first views reduce cognitive load for visual content"
 
   # Phase 1: Survey System
   - name: "Survey Builder"
     status: done
-    description: "7 question types (text, textarea, email, tel, select, radio, checkbox) with drag-and-drop ordering"
+    description: "7 question types (text, textarea, email, tel, select, radio, checkbox), RHF + TanStack Query, delete with cascade"
     why: "Empower users to create custom surveys without code"
 
   - name: "Survey Link Generation"
     status: done
-    description: "UUID tokens with expiration, submission limits, is_active toggle, atomic counter via PostgreSQL function"
+    description: "UUID tokens with expiration, submission limits, inline editing, is_active toggle. Atomic counter via PostgreSQL function. Survey cards show computed Aktywna/Nieaktywna indicator derived from survey_links activity (not raw DB status). getSurveys() embeds survey_links; hasActiveLink() util drives badge; all 4 SurveyLinks mutations invalidate surveys.all for immediate badge refresh."
     why: "Secure, shareable links with expiration and submission controls"
 
   - name: "Dynamic Survey Form"
     status: done
-    description: "Client-facing form rendered from JSON with Zod schema generation"
+    description: "Client-facing form rendered from JSON, Zod schema generation, RHF Controller for checkboxes"
     why: "Anonymous survey submission with runtime validation"
 
   - name: "Form Submission & Response Storage"
     status: done
-    description: "API Route for anonymous inserts with JSONB answers and atomic submission counter"
+    description: "API Route for anonymous inserts, JSONB answers, atomic submission counter, service role key"
     why: "Persist client responses with multi-tenant isolation"
 
   - name: "Response Management UI"
     status: done
-    description: "Response list and detail view in CMS with question-answer pairs and delete with appointment-aware warning"
+    description: "Response list + detail view in CMS, question-answer pairs, delete with appointment-aware warning"
     why: "CMS users view and manage submitted responses"
 
   # Phase 3: Calendar
   - name: "Calendar Integration"
     status: done
     task_id: "AAA-T-126"
-    description: "Multi-provider calendar system (CalDAV + Google Calendar) behind CalendarProvider interface. Per-tenant and per-user connections with per-survey calendar assignment. Encrypted credentials storage"
-    why: "Appointment scheduling after form submission, supporting company's own CalDAV server alongside Google Calendar"
+    description: "Multi-provider calendar system (CalDAV via tsdav + Google Calendar via googleapis) behind CalendarProvider interface. calendar_connections table with pgcrypto-encrypted credentials (BYTEA + decrypted view). Per-tenant + per-user connections. survey_links.calendar_connection_id for calendar-per-survey model. CMS UI: CalendarConnectionCard, AddCalDAVDialog, CalendarConnectionList, CalendarSettings, SurveyLinkCalendarSelect. Slots API and booking flow rewritten for multi-provider. app_config table stores encryption key (Supabase Cloud blocks ALTER DATABASE SET for app.* GUC). google_calendar_event_id renamed to calendar_event_id in appointments. 49 tests."
+    why: "Appointment scheduling after form submission. Multi-provider needed to support company's own Baikal CalDAV server (cal.haloefekt.pl) alongside Google Calendar, with per-survey calendar assignment for flexibility."
     depends_on: ["Form Submission & Response Storage"]
+    completion_notes: "Tenants can connect CalDAV or Google Calendar from CMS and assign different calendars per survey link. CalDAV tested against production Baikal server. All 5 iterations complete."
 
   # Phase 4: UI/UX
   - name: "Design System & Accessibility"
     status: done
-    description: "shadcn/ui components, WCAG 2.1 AA compliance, loading/error/empty states, CMS dark+orange theme"
+    description: "shadcn/ui components, WCAG 2.1 AA (semantic HTML, keyboard nav, focus management), LoadingState/ErrorState/EmptyState, responsive layouts, CMS dark+orange theme"
     why: "Consistent component library, accessibility compliance, brand consistency"
 
   # Phase 5: n8n & AI
   - name: "n8n Infrastructure"
     status: done
-    description: "Self-hosted on Hetzner VPS, Docker Compose with queue mode (2 workers), Redis, PostgreSQL, Traefik SSL"
+    description: "Self-hosted on Hetzner VPS, Docker Compose (9 services), queue mode with 2 workers, Redis, PostgreSQL 16, Traefik SSL"
     why: "Workflow automation for AI analysis and email notifications"
 
   - name: "AI Qualification Workflow"
     status: done
-    description: "n8n workflow: webhook trigger, Claude Haiku 4.5 analysis, JSONB scoring (0-10), fire-and-forget from website"
+    description: "8-node n8n workflow: webhook trigger, Claude Haiku 4.5 analysis, JSONB scoring (0-10), fire-and-forget from website"
     why: "Automated client qualification to prioritize high-value leads"
     depends_on: ["n8n Infrastructure", "Form Submission & Response Storage"]
 
   - name: "Email Notifications + Template Management"
     status: done
-    description: "n8n Send Email subworkflow with per-tenant config and Resend fallback. CMS block editor with live preview for email templates"
+    description: "n8n Send Email subworkflow (per-tenant config, Resend fallback), Form Confirmation workflow, CMS block editor with live preview, email_templates table with RLS"
     why: "Automated confirmation emails with per-tenant template customization"
     depends_on: ["n8n Infrastructure"]
 
   - name: "Monitoring & Error Handling"
     status: done
-    description: "GlitchTip error tracking, Prometheus + Grafana + AlertManager, Slack/email alerts"
+    description: "GlitchTip error tracking, Prometheus + Grafana + AlertManager, Slack/email alerts, 30-day retention"
     why: "Track workflow execution, alert on failures, monitor AI costs"
     depends_on: ["n8n Infrastructure"]
 
   # Phase 6: Marketing & Content
   - name: "Blog / Articles with WYSIWYG Editor"
     status: done
-    description: "Tiptap editor (JSON+HTML), S3 images, categories, SEO metadata, scheduled publishing, ISR. Public /blog listing and detail pages with sort control"
+    description: "Tiptap editor (JSON+HTML), S3 images, categories, SEO metadata, scheduled publishing (draft/scheduled/published derived from is_published+published_at), ISR revalidate=60. Website: /blog listing + /blog/[slug] detail + /blog/preview/[token]. Blog list page has sort control (Najnowsze/Najstarsze/Tytuł A-Z/Z-A) with localStorage persistence (useSortMode hook). Status filter moved to shared toolbar visible in both gallery and list views."
     why: "CMS-managed blog for agency marketing, SEO-optimized public pages"
 
   - name: "Landing Page CMS"
     status: done
-    description: "7 block types (navbar, hero, identification, problems, process, results, cta, footer), block editor with live preview, ISR"
+    description: "7 block types (navbar, hero, identification, problems, process, results, cta, footer), block editor + live preview, DEFAULT_BLOCKS fallback, ISR revalidate=3600"
     why: "Editable marketing website without code deployment"
 
   - name: "Media Library"
     status: done
-    description: "Multi-tenant media management (S3), drag-drop upload, 6 media types (image, video, youtube, vimeo, instagram, tiktok), Tiptap extensions, nested folder hierarchy"
-    why: "Centralized asset management, reuse across blog posts"
+    description: "Multi-tenant media management (S3), drag-drop upload, 6 types (image, video, youtube, vimeo, instagram, tiktok), Tiptap extensions for all types, Insert Media modal in blog editor (unified layout: upload zone → link input → filters → grid, no tabs). Inline rename via pencil icon or clicking the file name, available in both card and list row views. MediaPreviewDialog shows portrait iframe previews (aspect-[9/16]) for Instagram and TikTok using buildEmbedUrl(); vt.tiktok.com share URL format recognized in extractVideoId() and TikTokExtension paste rule. DialogDescription added for a11y compliance."
+    why: "Centralized asset management, reuse across blog posts, no duplicate uploads"
     depends_on: ["Blog / Articles with WYSIWYG Editor"]
+
+  - name: "Media Library Folders"
+    status: done
+    task_id: "AAA-T-136"
+    description: "Folder tree sidebar with nested hierarchy, CRUD (create/rename/delete), move items between folders, filter by folder. Backward compatible — existing media items visible in all views. Upload inherits current folder context."
+    why: "Organize growing media libraries by project or client, unblocks shop product editor (AAA-T-137)"
+    depends_on: ["Media Library"]
+    completion_notes: "Admins can create nested folder hierarchies, move media items between folders, and filter by folder. Existing media items remain visible in root view without migration."
 
   - name: "Legal Pages & Cookie Banner"
     status: done
     task_id: "AAA-T-162"
-    description: "CMS-managed privacy policy with shared Tiptap editor, cookie consent banner, consent question type in survey builder with configurable consent_url"
+    description: "CMS-managed /polityka-prywatnosci with shared Tiptap editor (dependency injection), cookie consent via localStorage, sitemap integration. Simplified cookie banner (Plausible-only, no marketing cookies). New 'consent' question type in survey builder — required RODO checkbox with configurable consent_url linking to privacy policy. /regulamin removed from website footer (hidden when unpublished). Privacy policy markdown file at docs/polityka-prywatnosci.md ready for CMS. Pre-existing CMS bugs fixed: radio/checkbox label swap in messages.ts, disabled submit when form invalid (mode: onChange), question spacing improvements."
     why: "RODO compliance before analytics and lead collection go live"
     depends_on: ["Landing Page CMS", "Survey Builder"]
+    completion_notes: "Visitors see an accurate privacy policy (Plausible-only, no marketing cookies). Survey forms include a required RODO consent checkbox with link to privacy policy, blocking submission without consent. Cookie banner copy simplified to reflect reality. Regulamin removed from footer."
 
   - name: "SEO Foundations"
     status: done
-    description: "site_settings table, OG+Twitter meta tags, JSON-LD, robots.txt, sitemap with DB timestamps, keyword management, Search Console verification"
+    description: "site_settings table (org-level config), OG+Twitter meta tags, Organization+Article JSON-LD, robots.ts, sitemap with DB timestamps, keyword management, Google Search Console verification"
     why: "Marketing content discoverable and shareable"
     depends_on: ["Blog / Articles with WYSIWYG Editor", "Landing Page CMS"]
 
   - name: "CTA → Survey Flow Integration"
     status: not_started
-    description: "Connect landing page CTA buttons to survey+calendar flow for lead acquisition"
+    description: "Connect landing page CTA buttons to existing survey+calendar flow for lead acquisition"
     why: "Close the marketing-to-intake loop — visitor clicks CTA, fills survey, books appointment"
     depends_on: ["Landing Page CMS", "Survey Link Generation", "Calendar Integration"]
-    blockers: ["Survey needs to be created in CMS with contact questions"]
+    blockers: ["Survey needs to be created in CMS with contact questions (imie, firma, email, telefon, opis potrzeby)"]
 
   # Phase 7: Intake & Permissions
   - name: "Intake Hub"
     status: done
-    description: "Unified /admin/intake with @dnd-kit Kanban board, JIRA-style inline detail panel, autosave notes, StatsBar, URL searchParams filters"
+    description: "Unified /admin/intake replacing 3 pages. @dnd-kit Kanban (Nowy→Skwalifikowany→W kontakcie→Zamkniety), JIRA-style inline detail panel (xl+), autosave notes, StatsBar, URL searchParams filters"
     why: "Single view for full lead lifecycle from first contact to closure"
     depends_on: ["Response Management UI", "AI Qualification Workflow"]
 
   - name: "Roles & Permissions System"
     status: done
     task_id: "AAA-T-61"
-    description: "Complete RBAC: tenant_roles, role_permissions, user_roles tables. Type-safe PermissionKey union. requireAuth() consolidates auth+permission check across all Server Actions. User and role management CRUD with PermissionPicker. Super admin cross-tenant access"
-    why: "Multi-user access control needed before client onboarding"
+    related_tasks: ["AAA-T-76"]
+    description: "Complete RBAC system (6 iterations). DB schema: tenant_roles, role_permissions, user_roles tables + is_super_admin() PostgreSQL function + seed data for default roles (super_admin/admin/member). Type-safe PermissionKey union derived from as const PERMISSION_GROUPS validated at DB boundary. requireAuth() helper consolidates auth+permission check across 48 Server Actions in 18 files. Middleware route protection blocks unauthorized routes, redirects to /admin?unauthorized=1. Sidebar filters menu items per permissions, new Zarządzanie group. User Management CRUD: list (shadcn Table), add (email+password), edit (name+role), delete with guards. Role Management: list, create/edit custom roles with PermissionPicker (indeterminate checkboxes, card-based groups). 47 Server Actions across 15+ features guarded with hasPermission(). Super admin toggle (visible to super admins only, optimistic UI). Change password (hierarchical: super_admin > admin > member, self-change for everyone). Tenant column visible only for super admins with filter dropdown. @agency/ui Table + Checkbox indeterminate added as shared components."
+    why: "Multi-user access control needed before client onboarding — prevents any team member from accessing features they should not see or modify"
     depends_on: ["Authentication System"]
+    completion_notes: "Admins can create and assign custom roles with granular permissions. All 47 Server Actions are guarded. Super admins see cross-tenant data. Users can change their own password. Role management UI supports indeterminate checkboxes for partial permission group selection."
 
   - name: "Tenant Management + Feature Flags"
     status: done
     task_id: "AAA-T-170"
-    description: "Tenant CRUD with per-tenant feature flags at PermissionKey[] granularity. Scope Bar for super admin cross-tenant context switching. Auto-syncing role permissions on feature flag changes"
-    why: "Control feature access per organisation before client onboarding"
+    description: "Tenant CRUD (create/edit/deactivate/delete) from /admin/tenants page. Per-tenant feature flags at PermissionKey[] granularity — controls which CMS features each tenant can access. Scope Bar pattern: super admins switch active tenant context via header bar without leaving CMS. PermissionPicker split into DISPLAY_GROUPS (System/Zarządzanie) for visual grouping independent of backend permission structure. seedDefaultRoles + syncFeaturePermissions called on feature flag changes to keep role-permission mapping consistent. expandPermissionKeys extracted to lib/permissions.ts (shared by UI + test utilities). Vitest test infrastructure (vitest.config.ts, vitest.setup.ts) + 84 tests across lib/permissions, tenants, roles, hooks, components — true TDD (Red-Green-Refactor) with Page Object Pattern. Cache fixes: await invalidateQueries prevents stale data on fast navigation; queryClient.clear() on logout prevents cross-user cache leakage. Cross-tenant RLS migration (20260407100000) allows super admins to read/write all tenants. enabled_features JSONB column on tenants table."
+    why: "Admins needed UI to manage the growing list of tenants and control feature access per organisation before client onboarding"
     depends_on: ["Roles & Permissions System"]
+    completion_notes: "Super admins can create, edit, deactivate, and delete tenant organisations. Each tenant's feature set is controllable via granular flags. Scope Bar allows cross-tenant management without route changes. 84 tests provide regression coverage for permissions, tenant CRUD, and cache behaviour."
 
   - name: "Email: Booking Confirmation"
     status: not_started
-    description: "n8n workflow for booking confirmation emails to client and firm"
+    description: "n8n workflow triggered after booking creation — email to client (date, time, link) + notification to firm"
     why: "Client and firm need confirmation after appointment booking"
     depends_on: ["Calendar Integration", "Email Notifications + Template Management"]
 
   - name: "Email: Booking Reminder"
     status: not_started
-    description: "n8n scheduled workflow for 24h appointment reminders"
-    why: "Reduce no-shows by reminding clients before appointment"
+    description: "n8n scheduled workflow — daily check for tomorrow's appointments, reminder email to client"
+    why: "Reduce no-shows by reminding clients 24h before appointment"
     depends_on: ["Email: Booking Confirmation"]
 
   # Phase 8: Infrastructure
   - name: "Plausible Analytics"
     status: done
-    description: "Self-hosted Plausible with typed conversion funnel (CTA Clicked→Survey Started→Survey Submitted→Booking Completed)"
+    description: "Self-hosted on VPS, 4 script extensions, typed conversion funnel (CTA Clicked→Survey Started→Survey Submitted→Booking Completed), CtaLink client component"
     why: "Privacy-friendly analytics without cookie consent"
 
-  # Workflow Engine
+  # Workflow Engine (AAA-P-4 extension)
   - name: "Workflow Engine"
     status: done
     task_id: "AAA-T-143"
-    description: "Per-tenant workflow automation with visual ReactFlow builder, 6 step types (trigger/send_email/condition/delay/webhook/ai_action), n8n Orchestrator for execution, test mode with dry-run, execution logs UI with step timeline. Plugin architecture via step-registry.ts (defineStep factory). 3 built-in templates"
-    why: "Automate repetitive business processes per tenant without code changes"
+    related_tasks: ["AAA-T-177", "AAA-T-179", "AAA-T-182", "AAA-T-183", "AAA-T-186", "AAA-T-189", "AAA-T-190"]
+    description: "Per-tenant workflow automation. Visual builder (reactflow), CMS UI + n8n Orchestrator execution. DB schema, CMS foundation, list+CRUD, email template variables, ReactFlow canvas, config panels (6 types: trigger/send_email/condition/delay/webhook/ai_action), save/load canvas to DB, panel registry pattern, variable inserter in SendEmail, survey selector in trigger, execution engine (trigger matching, topological sort step sequencing, condition branching, async n8n dispatch, circular protection depth=1, webhook SSRF guard, fire-and-forget survey trigger from website), delay step (resume_at in DB, paused/waiting/processing statuses), execution logs UI (global list with filters by workflow/status, 5s polling, execution detail with step timeline, collapsible JSON payloads, error blocks, sidebar Historia nav, waiting_for_callback status added), booking+lead_score triggers (booking_created fire-and-forget in booking.ts with rich payload: appointmentId/responseId/surveyLinkId/clientEmail/appointmentAt; lead_scored from n8n AI analysis workflow via HTTP Request node; condition evaluator strips {{}} syntax; HOST_URL reused for website→CMS communication; score remapped to overallScore in buildTriggerContext), 3 built-in workflow templates (form_confirmation/booking_notification/follow_up) with WorkflowTemplateSelector UI, ConditionNode handle IDs corrected (yes/no → true/false), WORKFLOW_CALLBACK_URL deduped into HOST_URL, manual E2E test guide (docs/guides/workflow/WORKFLOW_E2E_TEST.md). AAA-T-177 UX Overhaul: StepLibraryPanel (drag from sidebar to canvas, 3 categories: Actions/Logic/AI), right-click context menu with delete, graph-aware variable collector (upstream step output schema + trigger vars, grouped by source in all config panels), AI action prompt editor with output schema field definitions (named fields available to downstream steps), TestModePanel (mock data editor, dry-run executor with is_dry_run flag, canvas status overlay green/red/gray per node, execution replay, single step run). is_dry_run migration on workflow_executions. Payload size validation. 396 tests. AAA-T-182 Per-Step Testing: executeWorkflowStep() separate code path, dry-run-handlers.ts for mock step execution, upstream chain uses real handlers for authentic context, only target step runs in dry-run mode. AAA-T-183 n8n Orchestrator Migration: CMS executor.ts (~874 LOC) fully removed; n8n Workflow Orchestrator (21 nodes) now owns all execution — reads definition, dispatches steps, writes state directly to Supabase. CMS trigger route simplified to ~70 LOC (validate → POST n8n → 202). Deleted: engine/executor.ts, engine/action-handlers.ts, engine/trigger-matcher.ts, /api/workflows/callback, /api/workflows/resume, /api/workflows/process-due-delays, claim_due_delay_steps() RPC. N8N_WORKFLOW_ORCHESTRATOR_URL replaces N8N_WORKFLOW_EXECUTOR_URL."
+    why: "Automate repetitive business processes (email sequences, status updates, notifications) per tenant without code changes"
     depends_on: ["Email Notifications + Template Management", "n8n Infrastructure"]
+    completion_notes: "Full workflow automation engine with visual drag-and-drop builder, dynamic variable flow across steps, AI action configuration with output schema, test mode dispatching to real n8n, and n8n Orchestrator for production execution. AAA-T-183 stabilization: $getWorkflowStaticData('global') for state persistence across SplitInBatches iterations (variableContext, skippedStepIds, failed). New Trigger Handler subworkflow hydrates context with real Supabase data (survey answers, appointments). Route by Step Type rebuilt (failed@0, __skipped__@1, 5 step types, trigger types OR). executeWorkflow: autoMapInputData + convertFieldsToString=false. Condition evaluator literal value fallback. CMS trigger-schemas.ts updated with hydrated variables (qaContext, respondentName, surveyTitle, etc). 9 obsolete n8n docs removed (-4724 lines). Full architecture documentation rewritten with 8 Mermaid diagrams. AAA-T-190 Plugin Architecture: step-registry.ts centralizes step type data (defineStep() factory, derived StepType union, STEP_MAP, STEP_OUTPUT_SCHEMAS). Record<string> → Record<StepType> in UI registries. labelKey pattern for i18n (utils/step-labels.ts bridge to messages.ts). companyName fixed in all 4 n8n Trigger Handler types. answers variable added to CMS schema. Trigger added to StepLibraryPanel."
 
   - name: "DocForge License Management"
     status: done
     task_id: "AAA-T-171"
-    description: "CMS admin panel for DocForge desktop app licenses. License CRUD, seat enforcement, machine activation tracking with freshness indicators"
-    why: "Super admins need license management UI without direct DB access"
+    description: "CMS admin panel for managing DocForge desktop app licenses. DB migration: ALTER docforge_licenses (max_seats, grace_days) + CREATE docforge_activations + updated RPC verify_docforge_license (machine_id param, seat count enforcement). List page with gallery/table toggle + stats bar (total/active/expired/inactive) + CreateLicenseDialog (auto-generated DF-XXXX-XXXX-XXXX key). JIRA-style detail panel: RHF inline editing, DatePicker for expires_at, SeatsIndicator (3 color thresholds: orange<80%, amber 80-99%, red=100%), activations section with MachineCard (freshness dot + deactivate). Permission: system.docforge_licenses. RLS via is_super_admin() (no tenant_id). Sidebar: KeyRound entry under Zarządzanie group. 9 components, tests for actions/queries."
+    why: "DocForge desktop app validates licenses via Supabase RPC but had no UI for license management — only manual Supabase Dashboard INSERT. Super admins need CRUD without direct DB access."
     depends_on: ["Roles & Permissions System"]
+    completion_notes: "Super admins can create, edit, activate/deactivate, and delete licenses. Machine activations are visible per license with freshness indicators and per-machine deactivation. All 19 acceptance criteria met. Fix loop: required client_name, DatePicker, form-based editing in detail panel."
 
   - name: "TanStack Start Migration — CMS Core"
     status: done
     task_id: "AAA-T-192"
-    description: "TanStack Start scaffold in apps/cms/ alongside Next.js (dual-framework coexistence). Auth flow via createServerFn, admin layout with sidebar, Sentry integration"
-    why: "Migrate off Next.js App Router to enable self-hosted VPS deployment without Vercel"
+    description: "TanStack Start scaffold in apps/cms/ alongside Next.js 16 (dual-framework, ports 3001/3004). Entry points (vite.config.ts, router.tsx, ssr.tsx, client.tsx), auth flow (createServerFn loginFn/logoutFn/getAuthContextFn, beforeLoad auth guard in __root.tsx), admin layout with SidebarV2 + PermissionsProvider + QueryClientProvider + Sentry. lib/supabase/server-start.ts for TanStack-compatible cookies. Migration docs: docs/TANSTACK_CMS_MIGRATION.md, docs/TANSTACK_START_GUIDE.md. Website migration (AAA-T-191) also complete — see 'TanStack Start Migration — Website' feature."
+    why: "Next.js App Router creates hard coupling to Vercel edge; TanStack Start enables migration to self-hosted VPS deployment without Vercel. Per-feature migration tasks (Surveys & Intake, Workflow & Calendar, Content, Shop) unblocked after this foundation."
     depends_on: ["Workflow Engine"]
+    completion_notes: "Iter 1-3 complete. Dual framework coexists: Next.js on 3001, TanStack Start on 3004 (npm run dev:vite). Key gotchas: optimizeDeps.exclude for virtual imports, admin.tsx vs _admin.tsx (pathless layout), server-start.ts for cookies, beforeLoad mandatory over requestMiddleware. 337/337 tests pass."
+
+  - name: "TanStack Start Migration — Website"
+    status: done
+    task_id: "AAA-T-191"
+    description: "Full migration of apps/website/ from Next.js 16 to TanStack Start v1.167 + Vite 8. 5 iterations: Setup, Static Pages, Survey Flow, Booking Flow, SEO+Cleanup. All Next.js files deleted (18 route files, 3 API routes, 5 query files, 3 Supabase clients, next.config.ts, postcss.config.mjs). TanStack Query integrated via ensureQueryData in loaders with per-query staleTime (landing=1h, blog=5min). Navbar/Footer DB data fetched once in __root.tsx and passed via router context. @unpic/react replaces next/image. Centralized lib/query-keys.ts and lib/cache-headers.ts. nitro() plugin build-only across all TanStack Start apps (cms, website, jacek, kolega). Key bug fixes: CookieBanner.tsx renamed to ConsentBanner.tsx (ad blocker filename match), ScrollReveal HMR singleton fixed, nitro() dev mode crash resolved. Server functions via features/*/server.ts for blog, marketing, site-settings, legal, survey, calendar features. lib/supabase/service.ts for server-only Supabase access (replaces createAnonClient on server)."
+    why: "Same motivation as CMS migration — eliminate Vercel dependency, enable self-hosted VPS deployment. Website migrated after CMS scaffold proven stable."
+    depends_on: ["TanStack Start Migration — CMS Core", "TanStack Start Migration — Surveys & Intake"]
+    completion_notes: "All static pages, survey flow, booking flow, SEO routes, and analytics fully migrated. Key patterns: ensureQueryData for SSR with TanStack Query, nitro() build-only, ConsentBanner naming to avoid ad blockers. apps/website/ has zero Next.js dependencies."
 
   - name: "TanStack Start Migration — Surveys & Intake"
     status: done
     task_id: "AAA-T-193"
-    description: "Surveys, Intake, and Responses migrated from Next.js Server Actions to TanStack Start createServerFn"
-    why: "Heaviest CMS features — migrating them unblocks Next.js removal"
+    description: "Migration of Surveys, Intake, and Responses feature areas from Next.js Server Actions to TanStack Start createServerFn. Includes surveys CRUD, survey links, intake hub (response status/notes), response management, and calendar connection server functions. Key fix: googleapis (CJS) leak from SurveyLinkCalendarSelect resolved by extracting calendar calls to features/calendar/server-fns.ts."
+    why: "Surveys & Intake are the heaviest CMS features. Migrating them unblocks removal of Next.js from the CMS app and enables self-hosted VPS deployment without Vercel."
     depends_on: ["TanStack Start Migration — CMS Core"]
-
-  - name: "TanStack Start Migration — Workflow & Calendar"
-    status: done
-    task_id: "AAA-T-194"
-    description: "Workflow Builder, Calendar, Settings, Users, Roles, Tenants, and Email Templates migrated to TanStack Start with prefetchQuery loaders"
-    why: "Unblocks Next.js removal from CMS"
-    depends_on: ["TanStack Start Migration — Surveys & Intake"]
-
-  - name: "TanStack Start Migration — Content"
-    status: done
-    task_id: "AAA-T-195"
-    description: "Blog (list/editor/new), Landing Page, Email Templates, and Media Library migrated to TanStack Start. S3 presigned URLs via createServerFn with auth, @unpic/react image rendering, as const domain unions for MediaType/BlogPostStatus/EmailTemplateType"
-    why: "Unblocks Next.js removal from CMS"
-    depends_on: ["TanStack Start Migration — CMS Core"]
-
-  - name: "TanStack Start Migration — Shop & Marketplace"
-    status: not_started
-    task_id: "AAA-T-196"
-    description: "Shop products, categories, and marketplace integrations migrated to TanStack Start"
-    why: "Unblocks Next.js removal from CMS"
-    depends_on: ["TanStack Start Migration — CMS Core"]
+    completion_notes: "All route files migrated: admin/surveys/*, admin/intake/*, admin/responses/*. Server fns created for surveys, intake, responses, and calendar features. Fixed googleapis browser bundle leak via createServerFn isolation. Fixed raw Zod JSON error display in SurveyLinks.tsx. Known bug: apps/website dev server broken (Turbopack + @tailwindcss/node 4.2.2 enhanced-resolve issue) — tracked in memory.md."
 
   # Backlog
   - name: "Multi-language Support (PL/EN)"
