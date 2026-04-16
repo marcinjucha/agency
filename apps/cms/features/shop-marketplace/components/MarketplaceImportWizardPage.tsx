@@ -7,7 +7,7 @@ import { ChevronLeft } from 'lucide-react'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
 import { queryKeys } from '@/lib/query-keys'
-import { getMarketplaceConnections } from '../queries'
+import { getMarketplaceConnectionsFn } from '../server'
 import { MarketplaceImportWizard } from './MarketplaceImportWizard'
 
 export function MarketplaceImportWizardPage() {
@@ -18,7 +18,7 @@ export function MarketplaceImportWizardPage() {
     refetch,
   } = useQuery({
     queryKey: queryKeys.marketplace.connections,
-    queryFn: () => getMarketplaceConnections(),
+    queryFn: () => getMarketplaceConnectionsFn(),
     enabled: typeof window !== 'undefined',
   })
 

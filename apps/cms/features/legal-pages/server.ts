@@ -1,13 +1,15 @@
 import { createServerFn } from '@tanstack/react-start'
 import { err, ResultAsync } from 'neverthrow'
 import { fromSupabaseVoid } from '@/lib/result-helpers'
-import { legalPageSchema, type LegalPageFormData } from './validation'
+import { legalPageSchema } from './validation'
 import { parseContent, generateHtmlFromContent } from '../editor/utils'
 import { messages } from '@/lib/messages'
-import { requireAuthContextFull, type AuthContextFull } from '@/lib/server-auth'
+import { getAuth, requireAuthContextFull, type AuthContextFull } from '@/lib/server-auth'
 import { hasPermission } from '@/lib/permissions'
 import { z } from 'zod'
 import type { TiptapContent } from '../editor/types'
+import type { LegalPageListItem } from './types'
+import { toLegalPageListItem } from './types'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -30,6 +32,23 @@ const updateLegalPageInputSchema = z.object({
 // ---------------------------------------------------------------------------
 // Server Functions
 // ---------------------------------------------------------------------------
+
+/**
+ * Fetch all legal pages for the authenticated tenant.
+ * Mirrors getLegalPages from queries.ts but uses server client.
+ */
+export const getLegalPagesFn = createServerFn({ method: 'POST' }).handler(async (): Promise<LegalPageListItem[]> => {
+  const auth = await getAuth()
+  if (!auth) return []
+
+  const { data, error } = await pagesTable(auth.supabase)
+    .select('id, slug, title, is_published, updated_at')
+    .eq('page_type', 'legal')
+    .order('title', { ascending: true })
+
+  if (error) throw error
+  return (data || []).map(toLegalPageListItem)
+})
 
 export const updateLegalPageFn = createServerFn({ method: 'POST' })
   .inputValidator((input: z.infer<typeof updateLegalPageInputSchema>) => updateLegalPageInputSchema.parse(input))

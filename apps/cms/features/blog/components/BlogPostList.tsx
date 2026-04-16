@@ -2,8 +2,7 @@
 
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { deleteBlogPostFn } from '../server'
-import { getBlogPosts } from '../queries'
+import { deleteBlogPostFn, getBlogPostsFn } from '../server'
 import { queryKeys } from '@/lib/query-keys'
 import {
   Button,
@@ -53,7 +52,7 @@ export function BlogPostList() {
     refetch,
   } = useQuery({
     queryKey: queryKeys.blog.list,
-    queryFn: () => getBlogPosts(),
+    queryFn: () => getBlogPostsFn(),
   })
 
   const deleteMutation = useMutation({
@@ -107,7 +106,7 @@ export function BlogPostList() {
     }
   })
 
-  if (isLoading) return <BlogPostListSkeleton />
+  if (isLoading) return <BlogPostListSkeleton viewMode={viewMode} />
 
   if (error) {
     return (
@@ -218,7 +217,7 @@ export function BlogPostList() {
 
 // --- Skeleton ---
 
-function BlogPostListSkeleton() {
+function BlogPostListSkeleton({ viewMode }: { viewMode: 'grid' | 'list' }) {
   return (
     <div className="space-y-6">
       {/* Header skeleton */}
@@ -230,21 +229,40 @@ function BlogPostListSkeleton() {
         </div>
       </div>
 
-      {/* Row skeletons */}
-      <div className="divide-y divide-border rounded-lg border border-border">
-        {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="flex items-center gap-4 px-4 py-3">
-            <Skeleton className="hidden sm:block h-10 w-10 rounded" />
-            <div className="flex-1 space-y-1.5">
-              <Skeleton className="h-4 w-3/4" />
-              <Skeleton className="h-3 w-1/2" />
+      {viewMode === 'grid' ? (
+        /* Grid skeleton — matches BlogPostGridView card layout */
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="rounded-xl border border-border bg-muted overflow-hidden">
+              <Skeleton className="h-40 w-full" />
+              <div className="p-4 space-y-2">
+                <Skeleton className="h-5 w-3/4" />
+                <Skeleton className="h-3 w-full" />
+                <div className="flex items-center gap-2 pt-1">
+                  <Skeleton className="h-5 w-16 rounded-full" />
+                  <Skeleton className="h-3 w-20" />
+                </div>
+              </div>
             </div>
-            <Skeleton className="hidden md:block h-5 w-20 rounded-full" />
-            <Skeleton className="hidden sm:block h-3 w-24" />
-            <Skeleton className="h-8 w-8" />
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      ) : (
+        /* List skeleton */
+        <div className="divide-y divide-border rounded-lg border border-border">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-4 px-4 py-3">
+              <Skeleton className="hidden sm:block h-10 w-10 rounded" />
+              <div className="flex-1 space-y-1.5">
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-3 w-1/2" />
+              </div>
+              <Skeleton className="hidden md:block h-5 w-20 rounded-full" />
+              <Skeleton className="hidden sm:block h-3 w-24" />
+              <Skeleton className="h-8 w-8" />
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

@@ -3,8 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '@/lib/query-keys'
-import { createShopCategoryFn, updateShopCategoryFn, deleteShopCategoryFn } from '../server'
-import { getShopCategories } from '../queries'
+import { createShopCategoryFn, updateShopCategoryFn, deleteShopCategoryFn, getShopCategoriesFn } from '../server'
 import type { CreateShopCategoryFormData } from '../validation'
 import type { ShopCategory } from '../types'
 import {
@@ -62,7 +61,7 @@ export function CategoryManager() {
     refetch,
   } = useQuery({
     queryKey: queryKeys.shopCategories.list,
-    queryFn: getShopCategories,
+    queryFn: () => getShopCategoriesFn(),
   })
 
   const createMutation = useMutation({

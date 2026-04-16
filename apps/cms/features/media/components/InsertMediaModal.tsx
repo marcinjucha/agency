@@ -18,10 +18,10 @@ import {
 import { Folder } from 'lucide-react'
 import { Link2, Loader2, UploadCloud } from 'lucide-react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { getMediaItems, mediaKeys } from '@/features/media/queries'
-import { getMediaFolders, folderKeys } from '@/features/media/folder-queries'
+import { mediaKeys } from '@/features/media/queries'
+import { folderKeys } from '@/features/media/folder-queries'
 import { buildFolderTree } from '@/features/media/folder-types'
-import { createMediaItemFn } from '@/features/media/server'
+import { createMediaItemFn, getMediaItemsFn, getMediaFoldersFn } from '@/features/media/server'
 import {
   uploadMediaToS3,
   ALLOWED_MIME_TYPES,
@@ -215,12 +215,12 @@ function LibraryTab({
 
   const { data: items, isLoading } = useQuery({
     queryKey: mediaKeys.list({ type: typeFilter, folder_id: folderFilter }),
-    queryFn: () => getMediaItems({ type: typeFilter, folder_id: folderFilter }),
+    queryFn: () => getMediaItemsFn({ data: { type: typeFilter, folder_id: folderFilter } }),
   })
 
   const { data: folders } = useQuery({
     queryKey: folderKeys.list,
-    queryFn: getMediaFolders,
+    queryFn: () => getMediaFoldersFn(),
   })
 
   const folderTree = folders ? buildFolderTree(folders) : []

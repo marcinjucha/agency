@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Skeleton } from '@agency/ui'
 import { Inbox, Phone, CalendarDays, CalendarClock } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
-import { getIntakeStats } from '../queries'
+import { getIntakeStatsFn } from '../server'
 import { queryKeys } from '@/lib/query-keys'
 import { messages } from '@/lib/messages'
 
@@ -47,7 +47,7 @@ function StatsBarSkeleton() {
 export function StatsBar() {
   const { data, isLoading } = useQuery({
     queryKey: queryKeys.intake.stats,
-    queryFn: getIntakeStats,
+    queryFn: () => getIntakeStatsFn(),
     refetchInterval: REFETCH_INTERVAL,
   })
 

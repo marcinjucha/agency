@@ -1,8 +1,7 @@
 
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getAppointments } from '../queries'
-import { deleteAppointment } from '../actions'
+import { getAppointmentsFn, deleteAppointmentFn } from '../server'
 import {
   Card, LoadingState, ErrorState, EmptyState,
   AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader,
@@ -24,7 +23,7 @@ export function AppointmentList() {
   const queryClient = useQueryClient()
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const result = await deleteAppointment(id)
+      const result = await deleteAppointmentFn({ data: { id } })
       if (!result.success) throw new Error(result.error)
       return result
     },
@@ -37,7 +36,7 @@ export function AppointmentList() {
     refetch
   } = useQuery({
     queryKey: queryKeys.appointments.all,
-    queryFn: getAppointments,
+    queryFn: () => getAppointmentsFn(),
     refetchInterval: 5000,
     staleTime: 0
   })

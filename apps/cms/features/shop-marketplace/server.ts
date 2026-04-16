@@ -8,7 +8,7 @@ import { messages } from '@/lib/messages'
 import { isMarketplaceRegistered } from './adapters/registry'
 import { getMarketplaceCredentials } from './adapters/credentials'
 import { getMarketplaceAdapter } from './adapters/registry'
-import type { MarketplaceId } from './types'
+import type { MarketplaceId, MarketplaceConnection, MarketplaceListing, MarketplaceImport } from './types'
 import type { MarketplaceCategory } from './adapters/types'
 import type { ImportedListing } from './adapters/types'
 import {
@@ -20,6 +20,10 @@ import {
   type UpdateListingFormData,
 } from './validation'
 import { z } from 'zod'
+import { getAuth } from '@/lib/server-auth'
+import { toMarketplaceConnection, toMarketplaceListing, toMarketplaceImport } from './types'
+
+const CONNECTION_FIELDS = 'id, tenant_id, marketplace, display_name, is_active, token_expires_at, account_id, account_name, scopes, last_synced_at, created_at, updated_at' as const
 
 // ---------------------------------------------------------------------------
 // Public type re-export
@@ -86,6 +90,71 @@ function dispatchMarketplaceWebhook(payload: Record<string, unknown>): void {
     console.error('[marketplace] n8n dispatch failed:', e)
   })
 }
+
+// ---------------------------------------------------------------------------
+// Server Functions — reads (Pattern A: server client for all reads)
+// ---------------------------------------------------------------------------
+
+/**
+ * Fetch all marketplace connections for the authenticated tenant.
+ * Mirrors getMarketplaceConnections from queries.ts but uses server client.
+ */
+export const getMarketplaceConnectionsFn = createServerFn({ method: 'POST' }).handler(async (): Promise<MarketplaceConnection[]> => {
+  const auth = await getAuth()
+  if (!auth) return []
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (auth.supabase as any)
+    .from('shop_marketplace_connections')
+    .select(CONNECTION_FIELDS)
+    .order('created_at', { ascending: false })
+
+  if (error) throw error
+  return (data || []).map(toMarketplaceConnection)
+})
+
+/**
+ * Fetch marketplace listings for a product.
+ * Mirrors getMarketplaceListings from queries.ts but uses server client.
+ */
+export const getMarketplaceListingsFn = createServerFn({ method: 'POST' })
+  .inputValidator((input: { productId: string }) => input)
+  .handler(async ({ data: { productId } }): Promise<MarketplaceListing[]> => {
+    const auth = await getAuth()
+    if (!auth) return []
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (auth.supabase as any)
+      .from('shop_marketplace_listings')
+      .select('*')
+      .eq('product_id', productId)
+      .order('created_at', { ascending: false })
+
+    if (error) throw error
+    return (data || []).map(toMarketplaceListing)
+  })
+
+/**
+ * Fetch a single import record by ID for progress polling.
+ * Mirrors getImportProgress from queries.ts but uses server client.
+ */
+export const getImportProgressFn = createServerFn({ method: 'POST' })
+  .inputValidator((input: { importId: string }) => input)
+  .handler(async ({ data: { importId } }): Promise<MarketplaceImport> => {
+    const auth = await getAuth()
+    if (!auth) throw new Error('Not authenticated')
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (auth.supabase as any)
+      .from('shop_marketplace_imports')
+      .select('*')
+      .eq('id', importId)
+      .maybeSingle()
+
+    if (error) throw error
+    if (!data) throw new Error('Import record not found')
+    return toMarketplaceImport(data)
+  })
 
 // ---------------------------------------------------------------------------
 // Server Functions — connectMarketplace

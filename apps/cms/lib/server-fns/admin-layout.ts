@@ -155,7 +155,7 @@ async function fetchAllTenants(supabase: SupabaseClient): Promise<Tenant[]> {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data } = await (supabase as any)
       .from('tenants')
-      .select('id, name, is_active')
+      .select('id, name')
       .order('name')
     return (data ?? []) as Tenant[]
   } catch {

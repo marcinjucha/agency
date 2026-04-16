@@ -24,7 +24,7 @@ All server functions use `createServiceClient()` (service role, no cookies).
 
 ### Server Functions in `features/*/server.ts` (Not queries.ts)
 
-Each feature exposes data-fetching via `createServerFn` in a `server.ts` file (NOT a Next.js-style `queries.ts`). Routes call these from their `loader` function, and components read data via `Route.useLoaderData()`.
+Each feature exposes data-fetching via `createServerFn` in a `server.ts` file. Routes call these from their `loader` function, and components read data via `Route.useLoaderData()`.
 
 ```typescript
 // features/blog/server.ts
@@ -44,7 +44,7 @@ export const Route = createFileRoute('/blog/')({
 
 `features/survey/server.ts` contains `submitSurveyFn` called from the survey route's `onSubmit` handler.
 
-**Why:** TanStack `createServerFn` replaces Next.js API routes for server-side mutations. Uses `createServiceClient()` (service role) — no cookies needed for anonymous respondents.
+**Why:** `createServerFn` handles server-side mutations. Uses `createServiceClient()` (service role) — no cookies needed for anonymous respondents.
 
 ### CalendarBooking Sub-Component Architecture
 

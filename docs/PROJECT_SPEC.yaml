@@ -19,7 +19,8 @@ architecture:
     - "enabled_features JSONB on tenants table — stores PermissionKey[] for features enabled per tenant; checked in requireAuth() and sidebar rendering"
     - "getUserWithTenant() shared auth — extracted from 4x duplication, returns { supabase, userId, tenantId }"
     - "createAnonClient() replaced by createServiceClient() in website server.ts files — Next.js anon client pattern obsolete after TanStack Start migration; server functions run server-only, no ISR/build-time constraint"
-    - "CMS loader Pattern A — no loaders in routes, components own data via useQuery (browser queries for reads, server fns for mutations only). Browser client returns empty on SSR server → no hydration mismatch. Simpler than prefetchQuery pattern used in website."
+    - "CMS loader Pattern A (updated AAA-T-198) — no loaders in routes, components own data via useQuery with createServerFn as queryFn (NOT browser client). Server fns run on server-only code path with full auth context. Browser client was interim pattern during Next.js coexistence only. All 28+ CMS components migrated to server fn queryFn in AAA-T-198."
+    - "React Refresh preamble must be injected via virtual module stub in vite.config.ts — TanStack Start v1.167 does not register tanstack-start-injected-head-scripts:v plugin; stub must call addHotContext() / injectIntoGlobalHook() preamble, not return undefined"
     - "createServerClient (in lib/supabase/server-start.ts) reads cookies from request context via getCookies() from @tanstack/start-server-core — use inside createServerFn for all server-side Supabase access. Browser client (createClient) used for component useQuery reads in CMS."
     - "ensureQueryData pattern for TanStack Query on website — loaders prefetch data server-side, client hydrates from cache; per-query staleTime controls revalidation frequency (landing=1h, blog=5min)"
     - "nitro() plugin build-only in all TanStack Start apps — nitro() crashes Vite dev server if not guarded; wrap in NODE_ENV check or separate vite.config build variant. Affects cms, website, jacek, kolega"
@@ -58,7 +59,7 @@ features:
 
   - name: "CMS Admin Layout"
     status: done
-    description: "Responsive sidebar (grouped: Intake/Content/System), dashboard with real-time stats. All CMS list pages have gallery/list toggle with localStorage persistence (useViewMode hook). Gallery is default view; unified grid breakpoints: 1col/<768px, 2col/<1280px, 3col/<1536px, 4col/>=1536px."
+    description: "Responsive sidebar (grouped: Intake/Content/System), dashboard with real-time stats. All CMS list pages have gallery/list toggle with localStorage persistence (useViewMode hook). Gallery is default view; unified grid breakpoints: 1col/<768px, 2col/<1280px, 3col/<1536px, 4col/>=1536px. Pattern A: all components use createServerFn as queryFn (NOT browser client) — server fn runs server-only code path with full auth context. skeleton-grid LoadingState variant available for gallery views."
     why: "Navigation hub for business users; gallery-first views reduce cognitive load for visual content"
 
   # Phase 1: Survey System

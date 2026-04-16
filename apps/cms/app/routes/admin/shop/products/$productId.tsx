@@ -12,7 +12,8 @@ import type { ShopProduct } from '@/features/shop-products/types'
 import type { CreateShopProductFormData } from '@/features/shop-products/validation'
 import { useQuery } from '@tanstack/react-query'
 import { getShopProduct } from '@/features/shop-products/queries'
-import { LoadingState } from '@agency/ui'
+import { LoadingState, ErrorState, EmptyState } from '@agency/ui'
+import { FileX } from 'lucide-react'
 
 export const Route = createFileRoute('/admin/shop/products/$productId')({
   head: () => buildCmsHead(messages.shop.editProduct),
@@ -21,12 +22,14 @@ export const Route = createFileRoute('/admin/shop/products/$productId')({
 
 function ShopProductEditorPage() {
   const { productId } = Route.useParams()
-  const { data: product, isLoading } = useQuery<ShopProduct>({
+  const { data: product, isLoading, error } = useQuery<ShopProduct>({
     queryKey: queryKeys.shopProducts.detail(productId),
     queryFn: () => getShopProduct(productId),
   })
 
   if (isLoading) return <LoadingState variant="skeleton-card" rows={4} />
+  if (error) return <ErrorState message={error.message} />
+  if (!product) return <EmptyState icon={FileX} title={messages.shop.productNotFound} />
 
   return (
     <ShopProductEditor

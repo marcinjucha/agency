@@ -1226,6 +1226,7 @@ export const messages = {
 
   legalPages: {
     title: 'Strony prawne',
+    description: 'Zarządzaj regulaminem, polityką prywatności i innymi stronami prawnymi.',
     editTitle: 'Edycja strony prawnej',
     updateSuccess: 'Strona prawna została zaktualizowana',
     updateError: 'Błąd aktualizacji strony prawnej',

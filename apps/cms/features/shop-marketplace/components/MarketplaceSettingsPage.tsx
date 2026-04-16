@@ -6,7 +6,7 @@ import { useQuery } from '@tanstack/react-query'
 import { ErrorState, LoadingState } from '@agency/ui'
 import { queryKeys } from '@/lib/query-keys'
 import { messages } from '@/lib/messages'
-import { getMarketplaceConnections } from '../queries'
+import { getMarketplaceConnectionsFn } from '../server'
 import { MARKETPLACE_OPTIONS } from '../types'
 import type { MarketplaceConnection } from '../types'
 import { MarketplaceConnectionCard } from './MarketplaceConnectionCard'
@@ -24,7 +24,7 @@ export function MarketplaceSettingsPage() {
     refetch,
   } = useQuery({
     queryKey: queryKeys.marketplace.connections,
-    queryFn: () => getMarketplaceConnections(),
+    queryFn: () => getMarketplaceConnectionsFn(),
     enabled: typeof window !== 'undefined',
   })
 

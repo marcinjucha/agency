@@ -1,7 +1,7 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
-import { getResponse, getResponseAiActionResults } from '../queries'
+import { getResponseFn, getResponseAiActionResultsFn } from '../server'
 import type { ResponseWithRelations, QuestionAnswerPair, AiActionResult } from '../types'
 import {
   Button, Card, Badge, LoadingState, ErrorState, EmptyState,
@@ -49,7 +49,7 @@ export function ResponseDetail({ responseId }: ResponseDetailProps) {
   const [deleting, setDeleting] = useState(false)
   const { data: response, isLoading, error } = useQuery({
     queryKey: queryKeys.responses.detail(responseId),
-    queryFn: () => getResponse(responseId),
+    queryFn: () => getResponseFn({ data: { id: responseId } }),
     enabled: !!responseId,
     refetchInterval: (query) => {
       if (query.state.data?.ai_qualification) return false
@@ -63,7 +63,7 @@ export function ResponseDetail({ responseId }: ResponseDetailProps) {
     isLoading: isLoadingAiActionResults,
   } = useQuery({
     queryKey: queryKeys.responses.aiActionResults(responseId),
-    queryFn: () => getResponseAiActionResults(responseId),
+    queryFn: () => getResponseAiActionResultsFn({ data: { responseId } }),
     enabled: !!responseId,
   })
 

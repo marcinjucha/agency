@@ -148,21 +148,22 @@ This monorepo contains two Notion projects with separate PROJECT_SPEC files:
 
 | Skill                    | Path                                           | When to use                                                                                                                                                   |
 | ------------------------ | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **architecture**         | `.claude/skills/architecture/SKILL.md`         | Monorepo structure, app/features separation (ADR-005), import rules, CMS↔Website communication, N8n vs Next.js API routes                                     |
+| **architecture**         | `.claude/skills/architecture/SKILL.md`         | Monorepo structure, app/features separation (ADR-005), import rules, CMS↔Website communication, N8n vs TanStack Start server routes                           |
 | **database-patterns**    | `.claude/skills/database-patterns/SKILL.md`    | Supabase RLS policies, PostgreSQL functions, migrations, type regeneration, client selection (server vs browser), fromSupabaseVoid for void operations, is_super_admin() for global tables. Avoids RLS infinite recursion |
 | **development-workflow** | `.claude/skills/development-workflow/SKILL.md` | Testing decisions (3-Question Rule), severity classification (P0/P1/P2), implementation validation, PROJECT_SPEC.yaml updates, validate after each iteration   |
 | **n8n-patterns**         | `.claude/skills/n8n-patterns/SKILL.md`         | N8n background processing — fire-and-forget webhooks, ai_qualification JSONB, credential selection, Sentry Init subworkflow pattern                           |
-| **nextjs-patterns**      | `.claude/skills/nextjs-patterns/SKILL.md`      | Next.js routes, Server Actions (structured returns, no throws), foundation files (types/queries/validation), async params, correct Supabase client. **For Next.js apps only (cms, website).** Shop apps use tanstack-* skills. |
 | **notion-patterns**      | `.claude/skills/notion-patterns/SKILL.md`      | Notion MCP tools — task status updates, project tracking. Properties are CASE-SENSITIVE. Contains Agency database IDs and filter rules                        |
 | **design-patterns**      | `.claude/skills/ag-ui-components/SKILL.md`     | React components, shadcn/ui design system, WCAG 2.1 AA accessibility, responsive design, visual design decisions (dark/moody tonality, layout/spacing/typography choices, quality gates), edit pattern decisions (RHF form vs inline, DatePicker vs native). Controller for checkbox arrays, TanStack Query CMS-only, 4 UI states |
 | **validation-patterns**  | `.claude/skills/validation-patterns/SKILL.md`  | Two-pass validation (functional + architecture), YAML report formats, severity classification, 8-point architecture checklist. Loaded by validator-agent      |
 | **iterative-planning**   | `.claude/skills/iterative-planning/SKILL.md`   | Task size assessment (S/M/L/XL), iterative breakdown for M/L/XL tasks, dependency graph patterns (sequential/parallel/convergent), iteration sizing, parallelization identification. Used by analyst-agent in /develop Phase 2 |
 | **tanstack-setup**       | `.claude/skills/tanstack-setup/SKILL.md`       | TanStack Start project setup — vite.config.ts, entry points (router/ssr/client), Tailwind v4 vite plugin, @fontsource fonts, Vite 8 requirement, monorepo npm overrides |
-| **tanstack-routing**     | `.claude/skills/tanstack-routing/SKILL.md`     | TanStack Start routing — file conventions (__root, $param, [.ext]), createFileRoute (loader, head, headers, validateSearch), ISR via Cache-Control, HeadContent/Scripts, @unpic/react images. Resources: nextjs-migration-map.md |
+| **tanstack-routing**     | `.claude/skills/tanstack-routing/SKILL.md`     | TanStack Start routing — file conventions (__root, $param, [.ext]), createFileRoute (loader, head, headers, validateSearch), ISR via Cache-Control, HeadContent/Scripts, @unpic/react images |
 | **tanstack-server**      | `.claude/skills/tanstack-server/SKILL.md`      | TanStack Start server — createServerFn (CRITICAL for server-only code), server routes (server.handlers), middleware (createMiddleware, global via start.ts), isomorphic execution model |
 | **workflow-engine**      | `.claude/skills/ag-workflow-engine/SKILL.md`   | Workflow execution engine — n8n Orchestrator + Process Step subworkflow (two-workflow architecture), $getWorkflowStaticData state management (per workflow ID, not per execution), state[executionId] concurrent isolation, condition branching (literal fallback), variable context (trigger hydration), SSRF protection, service role client, test mode, adding new step/trigger types |
 | **n8n-step-handlers**   | `.claude/skills/ag-n8n-step-handlers/SKILL.md` | N8n step handler subworkflows — handler contract (input/output, context preservation), supabaseRequest() boilerplate, payload flattening, alreadyPersisted flag, trigger handler (data hydration), executeWorkflow config (autoMapInputData), anti-patterns (convertFieldsToString, SplitInBatches state loss) |
 | **agency-knowledge**     | `.claude/skills/agency-knowledge/SKILL.md`     | Halo Efekt positioning, ICP, pricing, brand voice, competitive framing, sales playbook, product portfolio (DocForge). Dual positioning (narrow vs broad), copy decisions, marketing angles. Updated by agents after strategy sessions |
+
+**Additional reference:** `docs/TANSTACK_START_PATTERNS.md` — TanStack Start migration patterns and decisions (complements tanstack-* skills above).
 
 ---
 
@@ -188,6 +189,11 @@ This monorepo contains two Notion projects with separate PROJECT_SPEC files:
 3. Verify structure compliance (9 required sections from command-creation skill)
 4. Add production WHY context (not just WHAT)
 
+**Production State:**
+
+- **Tenant "Halo Efekt"** — email: kontakt@haloefekt.pl, id: `19342448-4e4e-49ba-8bf0-694d5376f953`
+- **email_configs table empty** — N8n uses hardcoded Resend fallback (`noreply@haloefekt.pl`)
+
 **When committing:**
 
 - **No Co-Authored-By in commits** — Never add AI attribution footer ("Co-Authored-By: Claude" or similar) to commit messages.
@@ -197,13 +203,14 @@ This monorepo contains two Notion projects with separate PROJECT_SPEC files:
 - **Worktree needs .env.local** — Git worktrees don't include .env.local (gitignored). Copy from main: `cp apps/cms/.env.local worktree/apps/cms/.env.local` (same for website).
 - **Stage agent-created files explicitly** — The Write tool creates files on disk but does NOT `git add` them. After any file creation step, verify the file appears in `git status` and stage it before committing. WHY: docs/polityka-prywatnosci.md was created during AAA-T-162 but never staged — untracked files are lost on branch switch.
 - **`chore/` branch prefix for tech-debt without a Notion task** — Use `chore/{slug}` branch naming (no `AAA-T-xxx` prefix) for internal cleanup/refactoring work that doesn't correspond to a tracked Notion task. Mirrors npm semver convention. Example: `chore/plugin-arch-cleanup`.
+- **Clean git history before merge** — Before merging any feature branch, squash/reorganize commits into logical groups using `git reset --soft <base>` + re-commit. WHY: user explicitly confirmed this pattern (AAA-T-196) — prevents WIP/fix commit noise in main history.
 
 **When writing code:**
 
 - **Always use defined agents for code changes** — Use code-developer-agent, design-agent etc. via Agent tool for ALL feature-level code changes. Direct edits only for trivial string changes (3 href values, 1 className).
 - **Visual decisions → design-agent** — Embed heights, widths, spacing, layout dimensions, typography sizes, card styling are design decisions. Use design-agent (not code-developer-agent) for visual tuning. Code-developer-agent for CSS implementation only.
-- **Turbopack barrel re-export bug** — `export { X } from 'module'` in files used by Server Actions causes "Expected export to be in eval context". Fix: `import { X } from 'module'; export const Y = X`.
-- **Functional patterns: `remeda` + `neverthrow`** — Project adopts `remeda` for `pipe()`/functional composition and `neverthrow` for typed `Result<T, E>` error handling. **New Server Actions** use `ok().andThen().asyncAndThen().match()` instead of `try/catch`. Key patterns: `pipe()` for data transformations, `Result`/`ResultAsync` for error handling, `andThen` chaining with final `.match()`, `fromThrowable`/`ResultAsync.fromPromise` for wrapping unsafe code. **Not Effect.js** — lightweight (~5KB neverthrow + tree-shakeable remeda).
+- **~~Turbopack barrel re-export bug~~** — Historical (Next.js era, no longer relevant). Removed with TanStack Start migration.
+- **Functional patterns: `remeda` + `neverthrow`** — Project adopts `remeda` for `pipe()`/functional composition and `neverthrow` for typed `Result<T, E>` error handling. **New server functions** use `ok().andThen().asyncAndThen().match()` instead of `try/catch`. Key patterns: `pipe()` for data transformations, `Result`/`ResultAsync` for error handling, `andThen` chaining with final `.match()`, `fromThrowable`/`ResultAsync.fromPromise` for wrapping unsafe code. **Not Effect.js** — lightweight (~5KB neverthrow + tree-shakeable remeda).
 - **Boy Scout Rule** — Always leave code better than you found it. When touching a file: migrate try/catch → Result types, imperative loops → `pipe()`, fix naming, add missing types. Only in files you're already changing — don't refactor untouched code proactively.
 - **React Compiler enabled (cms, website)** — `reactCompiler: true` in cms and website `next.config.ts`. Shop apps (jacek, kolega) use TanStack Start + Vite 8 with `babel-plugin-react-compiler` in `vite.config.ts`. Auto-memoizes — don't add `useCallback`/`useMemo` to new code. Boy Scout Rule: remove manual memoization when touching files.
 - **Type-safe domain modeling** — Never pass plain `string` where a domain type exists. Derive typed unions from `as const` objects (single source of truth), validate at DB boundary with a validator function. Applied in RBAC (`PermissionKey`), should extend to all enum-like domain values (workflow step types, blog statuses, etc.). See `ag-coding-practices` skill for full pattern.
@@ -223,5 +230,4 @@ Index of all CLAUDE.md files and their scope:
 - `./packages/CLAUDE.md` — Shared packages (ui, database, validators)
 - `./packages/calendar/CLAUDE.md` — Google Calendar integration
 - `./supabase/CLAUDE.md` — Database config and migrations
-- `./infra/CLAUDE.md` — VPS infrastructure overview (4 stacks, shared Traefik, network topology)
 - `./n8n-workflows/CLAUDE.md` — N8n AI survey analysis workflows

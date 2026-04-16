@@ -1,7 +1,8 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@agency/ui'
 import { buildCmsHead } from '@/lib/head'
 import { messages } from '@/lib/messages'
-import { CalendarConnectionList } from '@/features/calendar/components/CalendarConnectionList'
+import { CalendarSettings } from '@/features/calendar/components/CalendarSettings'
 import { CalendarSettingsForm } from '@/features/calendar/components/CalendarSettingsForm'
 import { SeoSettingsForm } from '@/features/site-settings/components/SeoSettingsForm'
 
@@ -12,48 +13,29 @@ export const Route = createFileRoute('/admin/settings/')({
 
 function SettingsPage() {
   return (
-    <div className="space-y-10">
-      <SettingsPageHeader />
-      <CalendarSection />
-      <SeoSection />
-    </div>
-  )
-}
+    <div className="space-y-8 pb-8">
+      <div>
+        <h1 className="text-2xl font-bold">{messages.pages.settingsTitle}</h1>
+        <p className="text-muted-foreground mt-2">
+          {messages.pages.settingsDescription}
+        </p>
+      </div>
 
-function SettingsPageHeader() {
-  return (
-    <div>
-      <h1 className="text-2xl font-semibold">{messages.nav.settings}</h1>
-    </div>
-  )
-}
+      <Tabs defaultValue="seo">
+        <TabsList>
+          <TabsTrigger value="seo">{messages.siteSettings.tabSeo}</TabsTrigger>
+          <TabsTrigger value="calendar">{messages.siteSettings.tabCalendar}</TabsTrigger>
+        </TabsList>
 
-function CalendarSection() {
-  return (
-    <section className="space-y-6">
-      <SectionHeading title={messages.calendar.connectionsTitle} />
-      {/* CalendarConnectionList owns its own useQuery — cache pre-populated by loader */}
-      <CalendarConnectionList />
-      {/* CalendarSettingsForm owns its own useQuery — cache pre-populated by loader */}
-      <CalendarSettingsForm />
-    </section>
-  )
-}
+        <TabsContent value="seo" className="mt-6">
+          <SeoSettingsForm />
+        </TabsContent>
 
-function SeoSection() {
-  return (
-    <section className="space-y-6">
-      <SectionHeading title={messages.siteSettings.organizationCard} />
-      {/* SeoSettingsForm owns its own useQuery — cache pre-populated by loader */}
-      <SeoSettingsForm />
-    </section>
-  )
-}
-
-function SectionHeading({ title }: { title: string }) {
-  return (
-    <div className="border-b border-border pb-3">
-      <h2 className="text-lg font-semibold">{title}</h2>
+        <TabsContent value="calendar" className="mt-6 space-y-8">
+          <CalendarSettings />
+          <CalendarSettingsForm />
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }

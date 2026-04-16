@@ -16,7 +16,7 @@ import {
   Button,
   cn,
 } from '@agency/ui'
-import { getBlogCategories } from '../queries'
+import { getCategoriesFn } from '../server'
 import { queryKeys } from '@/lib/query-keys'
 import { messages, templates } from '@/lib/messages'
 
@@ -32,7 +32,7 @@ export function CategoryCombobox({ id, value, onChange }: CategoryComboboxProps)
 
   const { data: categories = [] } = useQuery({
     queryKey: queryKeys.blog.categories,
-    queryFn: getBlogCategories,
+    queryFn: () => getCategoriesFn(),
   })
 
   const searchNormalized = search.trim().toLowerCase()

@@ -28,12 +28,14 @@ import {
   AlertDialogAction,
 } from '@agency/ui'
 import { Image as ImageIcon, Link2, Loader2 } from 'lucide-react'
-import { mediaKeys, getMediaItems } from '../queries'
+import { mediaKeys } from '../queries'
 import {
   deleteMediaItemFn,
   createMediaItemFn,
   updateMediaItemFn,
   moveMediaItemFn,
+  getMediaItemsFn,
+  getMediaFoldersFn,
 } from '../server'
 import { extractVideoId, generateThumbnailUrl, buildEmbedUrl, fetchVimeoThumbnail } from '@/lib/video-utils'
 import { MediaUploadZone } from './MediaUploadZone'
@@ -43,7 +45,7 @@ import { MediaPreviewDialog } from './MediaPreviewDialog'
 import { MediaCardInner } from './MediaCard'
 import { FolderTree } from './FolderTree'
 import { FolderCreateDialog } from './FolderCreateDialog'
-import { getMediaFolders, folderKeys } from '../folder-queries'
+import { folderKeys } from '../folder-queries'
 import { deleteFolderFn } from '../server'
 import { buildFolderTree } from '../folder-types'
 import { formatBytes } from '../utils'
@@ -102,7 +104,7 @@ export function MediaLibrary() {
   // Folder data
   const { data: folders } = useQuery({
     queryKey: folderKeys.list,
-    queryFn: getMediaFolders,
+    queryFn: () => getMediaFoldersFn(),
   })
 
   const folderTree = folders ? buildFolderTree(folders) : []
@@ -115,19 +117,19 @@ export function MediaLibrary() {
     refetch,
   } = useQuery({
     queryKey: mediaKeys.list({ type: typeFilter, folder_id: selectedFolderId }),
-    queryFn: () => getMediaItems({ type: typeFilter, folder_id: selectedFolderId }),
+    queryFn: () => getMediaItemsFn({ data: { type: typeFilter, folder_id: selectedFolderId } }),
   })
 
   // All items query (for total count in sidebar)
   const { data: allItems } = useQuery({
     queryKey: mediaKeys.list({ type: typeFilter }),
-    queryFn: () => getMediaItems({ type: typeFilter }),
+    queryFn: () => getMediaItemsFn({ data: { type: typeFilter } }),
   })
 
   // Unsorted items query (for unsorted count in sidebar)
   const { data: unsortedItems } = useQuery({
     queryKey: mediaKeys.list({ type: typeFilter, folder_id: null }),
-    queryFn: () => getMediaItems({ type: typeFilter, folder_id: null }),
+    queryFn: () => getMediaItemsFn({ data: { type: typeFilter, folder_id: null } }),
   })
 
   const deleteMutation = useMutation({
