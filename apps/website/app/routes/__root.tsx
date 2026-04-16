@@ -15,6 +15,7 @@ import {
 import type { RouterContext } from '../router'
 import appCss from '../globals.css?url'
 import { buildWebsiteHead } from '@/lib/head'
+import { queryKeys } from '@/lib/query-keys'
 import { getPublicLandingPageFn } from '@/features/marketing/server'
 import { CookieBanner } from '@/features/legal/components/ConsentBanner'
 import { Navbar } from '@/features/marketing/components/Navbar'
@@ -23,7 +24,6 @@ import { Footer } from '@/features/marketing/components/Footer'
 const defaultNavbar = DEFAULT_BLOCKS.find((b) => b.type === 'navbar') as NavbarBlock
 const defaultFooter = DEFAULT_BLOCKS.find((b) => b.type === 'footer') as FooterBlock
 
-const landingQueryKey = ['landing-page'] as const
 
 async function fetchLandingBlocks() {
   const page = await getPublicLandingPageFn()
@@ -37,7 +37,7 @@ async function fetchLandingBlocks() {
 export const Route = createRootRouteWithContext<RouterContext>()({
   loader: ({ context: { queryClient } }) =>
     queryClient.ensureQueryData({
-      queryKey: landingQueryKey,
+      queryKey: queryKeys.landing.all,
       queryFn: fetchLandingBlocks,
     }),
   head: () => ({

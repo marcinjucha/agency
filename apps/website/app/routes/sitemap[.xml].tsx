@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { getPublishedBlogSlugsForSitemapFn } from '@/features/blog/server'
 import { getPublishedLegalSlugsFn } from '@/features/legal/server'
+import { CACHE_STATIC } from '@/lib/cache-headers'
 
 const BASE_URL = 'https://haloefekt.pl'
 
@@ -54,7 +55,7 @@ export const Route = createFileRoute('/sitemap.xml')({
     return new Response(xml, {
       headers: {
         'Content-Type': 'application/xml; charset=utf-8',
-        'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400',
+        ...CACHE_STATIC,
       },
     })
   },

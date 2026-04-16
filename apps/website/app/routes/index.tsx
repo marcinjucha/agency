@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { CACHE_STATIC } from '@/lib/cache-headers'
 import {
   DEFAULT_BLOCKS,
   type SeoMetadata,
@@ -60,9 +61,7 @@ export const Route = createFileRoute('/')({
       ],
     }
   },
-  headers: () => ({
-    'Cache-Control': 'public, max-age=60, s-maxage=3600, stale-while-revalidate=86400',
-  }),
+  headers: () => CACHE_STATIC,
   component: HomePage,
 })
 
