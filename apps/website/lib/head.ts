@@ -4,13 +4,12 @@
  * Website pages are indexed — no noindex/nofollow.
  * Title pattern: "{page} | Halo Efekt" or the full title for root.
  * Plausible analytics is added via script tag in root layout (iteration 2).
+ *
+ * NOTE: og:type is NOT emitted here — each route sets it explicitly
+ * (website vs article) to avoid duplicate meta tags.
  */
-interface HeadOptions {
-  title: string
-  description?: string
-  ogImage?: string
-  keywords?: string[]
-}
+
+export const BASE_URL = 'https://haloefekt.pl'
 
 export function buildWebsiteHead(title: string, description?: string, ogImage?: string, keywords?: string[]) {
   const metaTags: Array<Record<string, string>> = [
@@ -29,13 +28,13 @@ export function buildWebsiteHead(title: string, description?: string, ogImage?: 
   }
 
   metaTags.push({ property: 'og:title', content: title })
-  metaTags.push({ property: 'og:type', content: 'website' })
   metaTags.push({ property: 'og:site_name', content: 'Halo Efekt' })
 
   if (ogImage) {
-    metaTags.push({ property: 'og:image', content: ogImage })
+    const absoluteImage = ogImage.startsWith('/') ? `${BASE_URL}${ogImage}` : ogImage
+    metaTags.push({ property: 'og:image', content: absoluteImage })
     metaTags.push({ name: 'twitter:card', content: 'summary_large_image' })
-    metaTags.push({ name: 'twitter:image', content: ogImage })
+    metaTags.push({ name: 'twitter:image', content: absoluteImage })
   }
 
   return {

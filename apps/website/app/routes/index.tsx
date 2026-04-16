@@ -13,7 +13,7 @@ import {
 import { getPublicLandingPageFn } from '@/features/marketing/server'
 import { getSiteSettingsFn } from '@/features/site-settings/server'
 import { findBlock, hasNewBlockTypes } from '@/features/marketing/utils'
-import { buildWebsiteHead } from '@/lib/head'
+import { buildWebsiteHead, BASE_URL } from '@/lib/head'
 import { Hero } from '@/features/marketing/components/Hero'
 import { Identification } from '@/features/marketing/components/Identification'
 import { Problems } from '@/features/marketing/components/Problems'
@@ -47,9 +47,18 @@ export const Route = createFileRoute('/')({
     const title = seo.title || FALLBACK_TITLE
     const description = seo.description || FALLBACK_DESCRIPTION
     const ogImage = seo.ogImage || FALLBACK_OG_IMAGE
-    const keywords = seo.keywords?.length
-      ? seo.keywords
-      : loaderData?.siteSettings?.default_keywords ?? undefined
+
+    // Merge page keywords + site defaults with deduplication (old Next.js behavior)
+    const mergedKeywords = [
+      ...new Set(
+        [...(seo.keywords ?? []), ...(loaderData?.siteSettings?.default_keywords ?? [])].map(
+          (k) => k.toLowerCase(),
+        ),
+      ),
+    ]
+    const keywords = mergedKeywords.length ? mergedKeywords : undefined
+
+    const absoluteOgImage = ogImage.startsWith('/') ? `${BASE_URL}${ogImage}` : ogImage
     const base = buildWebsiteHead(title, description, ogImage, keywords)
 
     return {
@@ -58,6 +67,9 @@ export const Route = createFileRoute('/')({
         ...base.meta,
         { property: 'og:locale', content: 'pl_PL' },
         { property: 'og:type', content: 'website' },
+        { property: 'og:image:width', content: '1200' },
+        { property: 'og:image:height', content: '630' },
+        { property: 'og:image:alt', content: title },
         { name: 'twitter:card', content: 'summary_large_image' },
         { name: 'twitter:title', content: title },
         { name: 'twitter:description', content: description },
