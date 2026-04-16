@@ -53,7 +53,7 @@ export function BlogPostList() {
     refetch,
   } = useQuery({
     queryKey: queryKeys.blog.list,
-    queryFn: getBlogPosts,
+    queryFn: () => getBlogPosts(),
   })
 
   const deleteMutation = useMutation({
