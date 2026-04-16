@@ -4,96 +4,36 @@
 
 **Shop Platform (AAA-P-9):** Iter 1-8 done + kolega done. Remaining: iter 9 (feature flags) + iter 10 (polish/deploy). Both shops migrated to TanStack Start v1.167.
 **Marketplace Integration (AAA-P-9):** Iter 1-10 done. Manual testing remaining. 4 standalone n8n workflows.
-**CMS TanStack Start migration (AAA-T-192):** Core Setup + Auth + Layout DONE (2026-04-15). AAA-T-195 Content migration (blog, landing pages, media) DONE (2026-04-16). Blog confirmed working. Next: remaining per-feature tasks.
-
-## Completed Features (compressed)
-
-- Email Notifications, Media Library, CTA→Survey Flow, Intake Hub, Survey Improvements, SEO Foundations, Architecture Audit — Done (2026-03-13 to 2026-03-29)
-- RBAC System (AAA-T-61+76), Tenant Management (AAA-T-170), DocForge Licenses (AAA-T-171) — Done (2026-04-06)
-- Workflow Engine + n8n Orchestrator (AAA-T-143, AAA-T-177, AAA-T-179, AAA-T-182, AAA-T-183) — Done (2026-04-10/11). n8n owns all execution.
-- Survey→Workflow Binding + AI Results (AAA-T-186, AAA-T-189) — Done (2026-04-14)
-- Plugin Architecture (AAA-T-190), CMS TanStack Start scaffold (AAA-T-192) — Done (2026-04-15)
+**CMS TanStack Start migration:** Full migration DONE (AAA-T-192..198, 2026-04-16). Next.js fully removed from CMS. All features migrated to createServerFn Pattern A. See `docs/TANSTACK_START_PATTERNS.md`.
 
 ## Feedback & Corrections
 
-- **Feature server functions file = `server.ts`, NOT `server-fns.ts`** — User corrected naming convention (2026-04-15). File in `features/{name}/server.ts`. WHY: shorter, matches TanStack Start conventions.
 - **"dawaj auto"/"auto" = switch to auto mode** — All phases without confirmation. Always stop at Phase 5 (manual testing).
 - **No backward compatibility (pre-launch only)** — No clients yet. Once clients onboard, backward compat required.
-- **Validate after EACH iteration, not batched** — Run Phase 3+3b after every iteration completion.
-- **Aggressive Boy Scout Rule for remeda/neverthrow** — Every file you touch must be converted to neverthrow + remeda. Not optional.
-- **Always fix ALL found bugs immediately** — Never note-and-defer pre-existing bugs. Fix when you have context.
-- **n8n Trigger Handler: Switch per trigger type, not if/else** — Each trigger type in dedicated Code node.
 - **"do all now" = don't defer P2 items** — When design agent recommends deferring, user overrides.
 - **Commit per change, test later** — Individual commits, deferred manual testing.
-- **CMS migration per-feature tasks** — When migrating large apps, break into separate tasks per feature area.
+- **Don't commit fixes without testing them first (2026-04-16)** — Verify the fix actually works before creating a commit.
 
 ## Bugs Found
 
-- **TanStack Start Vercel deployment requires `nitro()` vite plugin** — Without `import { nitro } from 'nitro/vite'` + `nitro()` in plugins, Vercel can't generate serverless functions → 404 on all SSR routes. Works locally without it. Vercel Framework Preset = "TanStack Start" (built-in). Add `nitro` to deps. See tanstack-setup skill.
-
-- **`apps/website` dev server broken after TanStack CMS migration (2026-04-15)** — Turbopack (Next.js 16 default) throws "Cannot find module 'enhanced-resolve'" from `@tailwindcss/node` 4.2.2. Root cause likely: npm install during CMS TanStack setup upgraded `@tailwindcss/node` to v4.2.2 which added `enhanced-resolve` as new dep — Turbopack's PostCSS resolution can't find it. Workaround tried: added `enhanced-resolve` to website devDependencies — did not fix. Next steps: (1) check if `@tailwindcss/postcss` version lock would help, (2) disable Turbopack for website via `next.config.ts` as fallback.
-
 - **supabase gen types prepends "Initialising login role..."** — Corrupts types.ts. Workaround: `grep -v "^Initialising"`. `db:types` uses --local, need --linked when local not running.
-- **Supabase JS v2.95.2 `as any` needed** — `.from('table')` resolves to `never` in complex chains.
-- **DatePicker toISOString() timezone bug** — `.split('T')[0]` shifts date -1 day in CEST. Fix: `getFullYear()/getMonth()/getDate()`. Affects any date stored as YYYY-MM-DD.
-- **TanStack Query queryFn receives QueryFunctionContext as first arg** — Direct fn reference `queryFn: fn` injects Context object. Fix: wrap `queryFn: () => fn()` + explicit generic `useQuery<T>`.
-- **Supabase `.select('id')` returns ONLY requested columns** — Test mocks returning full objects mask this. Always match mock shape to select list.
-- **`step_type` on `workflow_steps`, NOT `workflow_step_executions`** — Must JOIN steps when querying step_type.
-- **NULL `survey_link.workflow_id` = no workflow fires** — After per-link binding, links without workflow_id skip triggering. Backfill existing links.
-- **Trigger route missing tenant_id verification** — Security: add tenant_id filter when looking up workflow by workflow_id.
-- **Supabase mock arrays: count ALL `.from()` calls in pipeline** — Each call consumes one mock array entry. Short array = silent failure on second call.
-- **`messages.nav.xxx` not `messages.navigation.xxx`** — Agent hallucinated key name. Always grep messages.ts. CMS uses `messages.nav` section.
-- **TanStack Router: static file = layout, not page** — `executions.tsx` becomes a layout for `executions/*` routes (requires `<Outlet />`). Without Outlet, child routes render nothing. Fix: rename to `executions/index.tsx` for standalone index route. Applies to any route file matching a directory name.
-- **`next/dynamic` → "Rendered more hooks" in TanStack Start** — `dynamic(() => import('./X'), { ssr: false })` is Next.js-only. Causes hook count instability per render. Fix: `React.lazy()` + `<Suspense>`. Agent copied Next.js pattern during migration — grep for `next/dynamic` in migrated files.
-- **`import.meta.env.VITE_*` not `process.env.NEXT_PUBLIC_*` in TanStack Start** — Vite SSR context (createServerFn, server-start.ts, client.ts) uses `import.meta.env.VITE_*` for .env.local vars. `process.env` is undefined in Vite bundles.
-- **Dual-context browser client pattern during migration** — Shared components (used by both frameworks) must use browser client (queries.ts) for useQuery queryFn, NOT server fns (createServerFn). Server fns only in route loaders for prefetch. Mixing causes cache poisoning with `undefined` when server fn 500s during dev warmup.
-- **createServerFn as queryFn breaks during Next.js coexistence** — Using `createServerFn` directly as TanStack Query `queryFn` works in pure TanStack Start, but during migration (Next.js still in deps) the dual-context bundler resolves server functions incorrectly → runtime errors. Fix: wrap in arrow function `queryFn: () => myServerFn()` or use plain fetch wrapper until Next.js fully removed.
-- **useState with async prefetchQuery = empty on first render** — `prefetchQuery` in loader is non-blocking, so component renders before data arrives. If a `useState` initializer reads query cache synchronously (e.g., `useState(queryClient.getQueryData(key))`), it gets `undefined`. Fix: use `useSuspenseQuery` or `useQuery` directly — never initialize useState from cache after prefetchQuery.
-- **generatePresignedUrlFn had no auth check** — Server function for S3 presigned URLs was callable without authentication. Any unauthenticated request could generate upload URLs. Fix: add `getUser()` check at top of every createServerFn that accesses storage/DB.
-- **Tiptap useEditor ignores content prop changes** — useEditor() only reads `content` on creation. When RHF reset() updates content prop after async data load, Tiptap doesn't re-render. Fix: useEffect with `editor.commands.setContent()`.
-- **Server fn returning null via RPC → undefined in TanStack Query** — createServerFn returning null serializes as undefined through TanStack Start RPC, triggering "Query data cannot be undefined". Fix: return empty object or wrap in Result.
-- **ALL createServerFn must use `{ method: 'POST' }`** — Default GET serializes data in URL params → 431 on large payloads (blog content, landing page blocks). User confirmed: always POST for all server fns, not just large ones. WHY: prevents subtle size-dependent failures.
-- **`@tiptap/html` requires `happy-dom` for Vite SSR** — Vite SSR auto-selects `@tiptap/html/dist/server/index.js` which needs happy-dom as DOM environment. Without it, any route importing `generateHTML` crashes with 500 on SSR. Root cause is invisible — error happens before server fn handler is reached, so auth/payload/Zod debugging is a red herring.
-- **JSON.stringify(content) before server fn breaks Zod validation** — If component stringifies Tiptap JSON content before passing to createServerFn, but Zod schema expects object → validation fails silently. Pass objects as-is; let server handle DB serialization.
-- **createServerFn returns undefined on 500, doesn't throw** — TanStack Start RPC doesn't propagate server errors as exceptions. Code doing `result.success` crashes with TypeError on undefined. Always null-check server fn results before accessing properties.
-- **TanStack Router flat file dots = parent-child nesting** — `survey.$token.success.tsx` is a CHILD of `survey.$token.tsx` (dots = hierarchy). Child renders inside parent's `<Outlet />`. If parent has no Outlet, child never renders. Fix: split parent into layout (`survey.$token.tsx` with Outlet) + index (`survey.$token.index.tsx` for form content).
-- **`useQuery` before `QueryClientProvider` crashes SSR** — In `__root.tsx`, calling `useQuery` in RootLayout before QueryClientProvider is rendered fails. Fix: use `Route.useLoaderData()` in root (data from `ensureQueryData` in loader). `useQuery` only in child routes inside the provider.
-- **`npm install` after removing deps can downgrade unrelated packages** — Removing `next` from CMS and running `npm install` changed lockfile → downgraded TanStack Start (1.167 → 1.120) → `tanstack-start-injected-head-scripts:v` virtual module resolution fails. Fix: always `rm -rf node_modules` + fresh `npm install` when changing deps. WHY: npm recalculates entire dependency tree on lockfile change.
-- **SEO elements lost during Next.js → TanStack migration** — Easy to miss: `metadataBase` (absolute OG image URLs), Organization JSON-LD, google-site-verification from site_settings, keywords merge (page + site defaults), og:type duplicate from shared helper. `buildWebsiteHead` helper should NOT emit og:type — each route sets it explicitly.
+- **`inputValidator(zodSchema)` direct form silently fails in TanStack Start** — Must use function wrapper: `.inputValidator((input) => schema.parse(input))`. WHY: RPC layer doesn't invoke `.parse()` on raw schema objects. Recurs across features.
 
 ## Domain Concepts
 
-- **TanStack Router `validateSearch` + `navigate({ search: fn })` 3-step pattern** — Search params require: (1) `validateSearch` with zod schema on route, (2) `useSearch({ from: routeId })` to read, (3) `navigate({ search: (prev) => ({ ...prev, key: val }) })` function form to update. Missing any step = type errors or silent failures.
-- **`supabase.getAll/setAll` is correct API (not deprecated)** — In server-start.ts cookie handler, getAll/setAll are the current @supabase/ssr methods for reading/writing all cookies. Agent incorrectly flagged as deprecated.
 - **Tenant "Halo Efekt" in production** — email: kontakt@haloefekt.pl, id: 19342448-4e4e-49ba-8bf0-694d5376f953.
 - **email_configs table empty in production** — N8n uses hardcoded Resend fallback (`noreply@haloefekt.pl`).
 - **notification_email per survey_link, not per tenant** — Each link has own notification address.
 - **surveys.status DB column is vestigial** — Status computed from survey_links. Manual enum management is wrong model.
-- **responses.answers + surveys.questions are JSONB, no separate tables** — Trigger Handler reads both from parent tables.
 - **Condition evaluator operators** — >=, <=, !=, ==, >, <, contains, in. NO single `=`. No `{{ }}` wrappers on field names.
 - **Baikal CalDAV has 2 calendars** — tsdav auto-discovers "Appointments" + "Default calendar". Must filter.
 - **Nil UUID fallback for Supabase filters** — `?? '00000000-...'` prevents PostgreSQL UUID parse errors on null values.
-- **@unpic/react used in CMS for optimized images** — Added during AAA-T-195 content migration. Replaces native `<img>` with `<Image>` component (lazy loading, responsive srcset). Same package already used in shop apps. User explicitly requested this for all blog/media/shop-products components.
-- **Dependency injection for shared components across frameworks** — Components used by both Next.js and TanStack Start must NOT import from server.ts or actions.ts directly. Pass mutation functions as props from route files (which are framework-specific). WHY: server.ts imports are framework-bound; props decouple the component.
 
 ## Architecture Decisions
 
 - **Cross-project update rule** — AAA-P-9 tasks affecting shared tables/packages require updating BOTH PROJECT_SPECs.
 - **app_config table for encryption key** — Supabase Cloud blocks ALTER DATABASE SET for custom GUCs. `app_config` table + `get_encryption_key()` SECURITY DEFINER.
-- **SurveyLinkCalendarSelect dual mode** — Discriminated union props: `{ mode: 'standalone' }` vs `{ mode: 'controlled' }`. Pattern for any component appearing both standalone and in forms.
-- **Extract pure logic from .tsx to utils/ for TDD** — `.tsx` = rendering + hooks, `utils/*.ts` = pure testable functions.
 - **n8n Orchestrator owns ALL execution** — CMS trigger route = ~70 LOC fire-and-forget. WHY: Vercel serverless timeout can't handle multi-hour workflow delays.
-- **TanStack Start auth: beforeLoad mandatory, requestMiddleware optional** — beforeLoad (isomorphic) handles SSR + client navigation. requestMiddleware = server-only, misses client nav. See tanstack-server skill.
-- **`admin.tsx` not `_admin.tsx` for /admin/* routes** — Pathless layout (underscore) adds no URL segment. `_admin/index.tsx` → URL `/`. See tanstack-setup skill.
-- **Feature server functions in `features/{name}/server.ts`, NOT `lib/server-fns/`** — User corrected both location (lib/ → features/) and filename (server-fns.ts → server.ts). Each feature owns its server functions colocated. WHY: ADR-005 feature isolation + shorter naming convention.
-- **CMS routes: Pattern A — NO loader, components own data via `useQuery`** — Browser client (`createBrowserClient`) on SSR server has no auth → returns empty data → client also starts empty → no hydration mismatch. Components use `useQuery` + browser queries for all reads. Server fns (`createServerClient`) only for mutations (have request cookies/auth). WHY: CMS is auth-required with no SEO needs, so blocking SSR data fetch is pure waste. Pattern evolved 3x in one session before settling here (2026-04-16).
-- **No `'use client'` in TanStack Start** — Directive is meaningless (no RSC boundary). User flagged for removal during migration. Agent was copying Next.js patterns. WHY: TanStack Start is fully client-rendered with SSR hydration, not RSC.
-- **Router `queryClient` context via `routerOptions.context`** — Pass queryClient to router via `createRouter({ context: { queryClient } })`, access in loaders via `context.queryClient.ensureQueryData()`. Declared in `routeTree.gen.ts` via `RootRoute['types']['routerContext']`. WHY: enables type-safe queryClient access in all route loaders without imports.
-- **All `createServerFn` must use `{ method: 'POST' }`** — Default GET causes issues. Apply to ALL server functions, not just mutations. User-corrected pattern.
-- **Landing page `staleTime: 1h`, not `Infinity`** — Survey CTA link changes occasionally. `Infinity` would serve stale link until hard reload. Use `1000 * 60 * 60` aligned with CACHE_STATIC `s-maxage=3600`.
-- **Website uses NO TanStack Query (except blog routes)** — Website root/landing: `ensureQueryData` in loader + `Route.useLoaderData()` (no QueryClient available above). Blog routes: `ensureQueryData` in loader + `useQuery` in component (inside QueryClientProvider). CMS: always `ensureQueryData` + `useQuery`. WHY: website is public/cacheable (ISR via Cache-Control), no client-side mutations outside blog.
-- **`createStartClient` renamed to `createServerClient` (2026-04-16)** — Clearer name: "server client" = has request cookies/auth, used in server fns for mutations. Distinct from `createBrowserClient` (no auth on server, used in queries.ts for components).
-- **createServiceClient() replaces createAnonClient() in website** — Old `createAnonClient()` misleadingly created a service-role client. New pattern: `createServiceClient()` in `lib/supabase/service.ts` using `import.meta.env.VITE_SUPABASE_URL` + `process.env.SUPABASE_SERVICE_ROLE_KEY`. Must be called INSIDE createServerFn, never at module level.
 
 ## Preferences
 
@@ -103,15 +43,4 @@
 - **Native input type="date" rejected** — Always use shadcn/ui DatePicker (Popover + Calendar).
 - **Always test with local database** — Never point dev to production Supabase.
 - **Always design bidirectional state transitions** — If deactivate exists, activate must too.
-- **Always use `vitest watch` during TDD** — Not `vitest run`. Watch mode for development, run for CI.
 - **Collapsible panels: close button inside panel** — Not only external toggle.
-- **Shorter skill names preferred** — Drop framework prefix when context is clear (e.g., "tanstack-setup" not "tanstack-start-setup").
-- **User wants port 3001 to work** — CMS testing happens on port 3001, not 3004. Ensure dev server config uses 3001.
-- **Clean git history before merge** — Before merging any feature branch, squash/reorganize commits into logical groups using `git reset --soft <base>` + re-commit. Avoids "śmietnik" (garbage) of WIP/fix commits in main history. WHY: user explicitly confirmed this pattern after AAA-T-196 where 16 commits were squashed to 2 before merge.
-
-## Migration Coexistence Rules
-
-- **`inputValidator(zodSchema)` direct form silently fails in TanStack Start** — Passing Zod schema directly to `inputValidator` causes handler to never be called (silent failure). Must use function wrapper: `.inputValidator((input: z.infer<typeof schema>) => schema.parse(input))`. WHY: TanStack Start's RPC layer doesn't invoke `.parse()` on raw schema objects.
-- **Browser client returns empty on SSR — this is intentional for CMS** — `createBrowserClient()` on server has no cookies → returns empty data. This is the CORRECT pattern for CMS (Pattern A): both server and client render empty → no hydration mismatch → component fills via `useQuery` on client. Only a problem if you expect SSR to have data.
-- **`next` package removed from CMS (2026-04-16)** — Next.js fully removed from CMS app. After removing deps, must clear `.vite` + `.vinxi` + `.next` caches and run `npm install`. Stale caches cause phantom import errors from removed packages.
-- **Legacy Next.js files coexist with TanStack routes during migration** — `oauth-callback.ts` (Next.js API route) stays even after `callback.ts` (TanStack route) exists. Validator incorrectly flagged legacy file as dead code. Both are needed until full migration completes and Next.js infrastructure is removed. Don't delete legacy files just because a TanStack equivalent exists.

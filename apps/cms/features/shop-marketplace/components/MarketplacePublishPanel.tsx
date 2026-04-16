@@ -30,8 +30,7 @@ import {
 import { differenceInDays, addDays } from 'date-fns'
 import { queryKeys } from '@/lib/query-keys'
 import { messages, templates } from '@/lib/messages'
-import { getMarketplaceConnections, getMarketplaceListings } from '../queries'
-import { publishToMarketplaceFn, updateMarketplaceListingFn, removeMarketplaceListingFn } from '../server'
+import { getMarketplaceConnectionsFn, getMarketplaceListingsFn, publishToMarketplaceFn, updateMarketplaceListingFn, removeMarketplaceListingFn } from '../server'
 import { MARKETPLACE_LABELS } from '../types'
 import type { MarketplaceConnection, MarketplaceListing, MarketplaceId } from '../types'
 import { ListingStatusBadge } from './ListingStatusBadge'
@@ -371,7 +370,7 @@ export function MarketplacePublishPanel({ productId }: MarketplacePublishPanelPr
     refetch: refetchConnections,
   } = useQuery({
     queryKey: queryKeys.marketplace.connections,
-    queryFn: getMarketplaceConnections,
+    queryFn: () => getMarketplaceConnectionsFn(),
   })
 
   // --- Listings query (disabled for new products) ---
@@ -382,7 +381,7 @@ export function MarketplacePublishPanel({ productId }: MarketplacePublishPanelPr
     refetch: refetchListings,
   } = useQuery({
     queryKey: productId ? queryKeys.marketplace.listings(productId) : ['marketplace', 'listings-disabled'],
-    queryFn: () => getMarketplaceListings(productId!),
+    queryFn: () => getMarketplaceListingsFn({ data: { productId: productId! } }),
     enabled: !!productId,
   })
 

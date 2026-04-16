@@ -24,7 +24,7 @@ import { DEFAULT_BLOCKS, BLOCK_TYPE_LABELS } from '@agency/database'
 import { BlockFieldEditor } from './BlockFieldEditor'
 import type { LandingPage } from '../types'
 import { KeywordSelect } from '@/features/site-settings/components/KeywordSelect'
-import { getKeywordPool } from '@/features/site-settings/queries'
+import { getKeywordPoolFn } from '@/features/site-settings/server'
 import { siteSettingsKeys } from '@/features/site-settings/types'
 import { messages } from '@/lib/messages'
 
@@ -43,7 +43,10 @@ interface LandingPageEditorProps {
 export function LandingPageEditor({ page, isLoading, error, saveFn }: LandingPageEditorProps) {
   const { data: keywordPool = [], isLoading: isPoolLoading } = useQuery({
     queryKey: siteSettingsKeys.keywordPool,
-    queryFn: getKeywordPool,
+    queryFn: async () => {
+      const res = await getKeywordPoolFn()
+      return res.success ? res.data : []
+    },
   })
 
   const [blocks, setBlocks] = useState<LandingBlock[] | null>(null)

@@ -20,8 +20,7 @@ import { Check, ChevronsUpDown, Plus, Loader2 } from 'lucide-react'
 import { cn } from '@agency/ui'
 import { queryKeys } from '@/lib/query-keys'
 import { messages } from '@/lib/messages'
-import { getShopCategories } from '@/features/shop-categories/queries'
-import { createShopCategoryFn } from '@/features/shop-categories/server'
+import { getShopCategoriesFn, createShopCategoryFn } from '@/features/shop-categories/server'
 import { generateSlug } from '@/lib/utils/slug'
 
 interface ShopCategorySelectProps {
@@ -39,7 +38,7 @@ export function ShopCategorySelect({ id, value, onChange }: ShopCategorySelectPr
 
   const { data: categories = [], isLoading } = useQuery({
     queryKey: queryKeys.shopCategories.list,
-    queryFn: () => getShopCategories(),
+    queryFn: () => getShopCategoriesFn(),
   })
 
   const createMutation = useMutation({

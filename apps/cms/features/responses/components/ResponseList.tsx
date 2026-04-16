@@ -1,6 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getResponses } from '../queries'
-import { deleteResponseFn } from '../server'
+import { getResponsesFn, deleteResponseFn } from '../server'
 import {
   Card, LoadingState, ErrorState, EmptyState,
   AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader,
@@ -56,7 +55,7 @@ export function ResponseList() {
     refetch
   } = useQuery({
     queryKey: queryKeys.responses.all,
-    queryFn: getResponses,
+    queryFn: () => getResponsesFn(),
     refetchInterval: 5000, // Auto-refresh every 5 seconds
     staleTime: 0 // Data is always considered stale
   })

@@ -1,7 +1,8 @@
 
 
 import { useQuery } from '@tanstack/react-query'
-import { getLegalPages, legalPageKeys } from '../queries'
+import { legalPageKeys } from '../queries'
+import { getLegalPagesFn } from '../server'
 import { Badge, Card, CardContent, LoadingState, ErrorState, EmptyState } from '@agency/ui'
 import { Link } from '@tanstack/react-router'
 import { Scale, Pencil } from 'lucide-react'
@@ -20,7 +21,7 @@ export function LegalPageList() {
     refetch,
   } = useQuery({
     queryKey: legalPageKeys.all,
-    queryFn: getLegalPages,
+    queryFn: () => getLegalPagesFn(),
   })
 
   if (isLoading) return <LoadingState variant="skeleton-table" rows={3} />

@@ -29,7 +29,7 @@ import { getPostStatus, type BlogPostStatus, type SaveState } from '../types'
 import type { BlogPost, TiptapContent } from '../types'
 import { TiptapEditor } from './TiptapEditor'
 import { CategoryCombobox } from './CategoryCombobox'
-import { getKeywordPool } from '@/features/site-settings/queries'
+import { getKeywordPoolFn } from '@/features/site-settings/server'
 import { siteSettingsKeys } from '@/features/site-settings/types'
 import { BlogEditorTopBar } from './BlogEditorTopBar'
 import { CoverImageUpload } from './CoverImageUpload'
@@ -87,7 +87,10 @@ export function BlogPostEditor({ blogPost, createFn, updateFn, deleteFn, onSucce
 
   const { data: keywordPool = [], isLoading: isPoolLoading } = useQuery({
     queryKey: siteSettingsKeys.keywordPool,
-    queryFn: getKeywordPool,
+    queryFn: async () => {
+      const res = await getKeywordPoolFn()
+      return res.success ? res.data : []
+    },
   })
 
   const [saveState, setSaveState] = useState<SaveState>('idle')

@@ -20,7 +20,7 @@ import { RefreshCw } from 'lucide-react'
 import { messages } from '@/lib/messages'
 import { queryKeys } from '@/lib/query-keys'
 import { createLicenseSchema, type CreateLicenseValues } from '../validation'
-import { createLicense } from '../actions'
+import { createLicenseFn } from '../server'
 import { generateLicenseKey } from '../utils'
 
 interface CreateLicenseDialogProps {
@@ -57,7 +57,7 @@ export function CreateLicenseDialog({ open, onOpenChange }: CreateLicenseDialogP
 
   const createMutation = useMutation({
     mutationFn: async (data: CreateLicenseValues) => {
-      const result = await createLicense(data)
+      const result = await createLicenseFn({ data })
       if (!result.success) throw new Error(result.error)
       return result
     },

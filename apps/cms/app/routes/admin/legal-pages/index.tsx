@@ -9,5 +9,13 @@ export const Route = createFileRoute('/admin/legal-pages/')({
 })
 
 function LegalPagesPage() {
-  return <LegalPageList />
+  return (
+    <div>
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold text-foreground">{messages.nav.legalPages}</h1>
+        <p className="text-muted-foreground mt-1">{messages.legalPages.description}</p>
+      </div>
+      <LegalPageList />
+    </div>
+  )
 }

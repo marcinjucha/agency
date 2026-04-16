@@ -24,8 +24,7 @@ import {
   AlertDialogTitle,
 } from '@agency/ui'
 import { APPOINTMENT_STATUS_LABELS } from '../types'
-import { getAppointments } from '../../appointments/queries'
-import { deleteAppointment } from '../../appointments/actions'
+import { getAppointmentsFn, deleteAppointmentFn } from '../../appointments/server'
 import type { AppointmentListItem, AppointmentStatus } from '../../appointments/types'
 import { getAppointmentStatusColor } from '@/lib/utils/status'
 import { queryKeys } from '@/lib/query-keys'
@@ -63,7 +62,7 @@ export function AppointmentsTable() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const result = await deleteAppointment(id)
+      const result = await deleteAppointmentFn({ data: { id } })
       if (!result.success) throw new Error(result.error)
       return result
     },
@@ -80,7 +79,7 @@ export function AppointmentsTable() {
     refetch,
   } = useQuery({
     queryKey: queryKeys.intake.appointments,
-    queryFn: getAppointments,
+    queryFn: () => getAppointmentsFn(),
     refetchInterval: REFETCH_INTERVAL,
   })
 

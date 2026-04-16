@@ -20,7 +20,7 @@ import type { Question } from '@agency/validators'
  * Uses semantic_role to find name/email/company/phone fields.
  * Falls back to positional guess (first answer = name) for old surveys without semantic_role.
  */
-function extractClientInfo(
+export function extractClientInfo(
   answers: Record<string, unknown>,
   questions: unknown[],
   fallbackIndex: number

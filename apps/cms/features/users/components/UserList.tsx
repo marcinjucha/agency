@@ -80,6 +80,7 @@ export function UserList() {
   } = useQuery({
     queryKey: queryKeys.users.list(queryTenantId),
     queryFn: () => getUsersFn({ data: { tenantId: queryTenantId ?? undefined } }),
+    refetchOnMount: 'always',
   })
 
   const deleteMutation = useMutation({

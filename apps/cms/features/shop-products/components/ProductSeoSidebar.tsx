@@ -15,7 +15,7 @@ import {
 import { HelpCircle } from 'lucide-react'
 import { messages } from '@/lib/messages'
 import { KeywordSelect } from '@/features/site-settings/components/KeywordSelect'
-import { getKeywordPool } from '@/features/site-settings/queries'
+import { getKeywordPoolFn } from '@/features/site-settings/server'
 import { siteSettingsKeys } from '@/features/site-settings/types'
 import { useQuery } from '@tanstack/react-query'
 import type { CreateShopProductFormData } from '../validation'
@@ -32,7 +32,10 @@ export function ProductSeoSidebar({ register, watch, control, errors }: ProductS
 
   const { data: keywordPool = [], isLoading: isPoolLoading } = useQuery({
     queryKey: siteSettingsKeys.keywordPool,
-    queryFn: getKeywordPool,
+    queryFn: async () => {
+      const res = await getKeywordPoolFn()
+      return res.success ? res.data : []
+    },
   })
 
   return (

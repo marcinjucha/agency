@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@agency/ui'
 import { LoadingState, ErrorState, EmptyState } from '@agency/ui'
 import { Inbox } from 'lucide-react'
-import { getPipelineResponses } from '../queries'
+import { getPipelineResponsesFn } from '../server'
 import { PipelineView } from './PipelineView'
 import { ResponsesTable } from './ResponsesTable'
 import { AppointmentsTable } from './AppointmentsTable'
@@ -31,7 +31,7 @@ export function IntakeHub() {
     refetch,
   } = useQuery({
     queryKey: queryKeys.intake.pipeline,
-    queryFn: getPipelineResponses,
+    queryFn: () => getPipelineResponsesFn(),
     refetchInterval: REFETCH_INTERVAL,
   })
 

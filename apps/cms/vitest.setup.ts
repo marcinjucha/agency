@@ -11,22 +11,6 @@ beforeEach(() => {
   vi.resetAllMocks()
 })
 
-// Mock next/navigation (legacy — kept for unmigrated action tests)
-vi.mock('next/navigation', () => ({
-  useRouter: vi.fn(() => ({
-    push: vi.fn(),
-    replace: vi.fn(),
-    back: vi.fn(),
-    forward: vi.fn(),
-    refresh: vi.fn(),
-    prefetch: vi.fn(),
-  })),
-  usePathname: vi.fn(() => '/'),
-  useSearchParams: vi.fn(() => new URLSearchParams()),
-  redirect: vi.fn(),
-  notFound: vi.fn(),
-}))
-
 // Mock @tanstack/react-router (TanStack Start migration)
 vi.mock('@tanstack/react-router', () => ({
   useNavigate: vi.fn(() => vi.fn()),
@@ -34,18 +18,6 @@ vi.mock('@tanstack/react-router', () => ({
   useLocation: vi.fn(() => ({ pathname: '/', search: '', hash: '', href: '/', searchStr: '', state: {} })),
   useRouterState: vi.fn(() => '/'),
   Link: vi.fn(({ children }: { children: unknown }) => children),
-}))
-
-// Mock next/headers
-vi.mock('next/headers', () => ({
-  cookies: vi.fn(() => ({
-    get: vi.fn(),
-    set: vi.fn(),
-    delete: vi.fn(),
-    getAll: vi.fn(() => []),
-    has: vi.fn(() => false),
-  })),
-  headers: vi.fn(() => new Headers()),
 }))
 
 // Mock Supabase browser client

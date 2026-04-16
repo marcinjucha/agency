@@ -6,8 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useQuery } from '@tanstack/react-query'
 import { Button, Card, Input, Label, LoadingState } from '@agency/ui'
 import { Loader2 } from 'lucide-react'
-import { getCalendarSettings } from '../queries'
-import { updateCalendarSettingsFn } from '../server'
+import { getCalendarSettingsFn, updateCalendarSettingsFn } from '../server'
 import { calendarSettingsSchema, type CalendarSettingsSchema } from '../validation'
 import { useState } from 'react'
 import { queryKeys } from '@/lib/query-keys'
@@ -18,7 +17,10 @@ export function CalendarSettingsForm() {
 
   const { data, isLoading, error } = useQuery({
     queryKey: queryKeys.calendar.settings,
-    queryFn: getCalendarSettings,
+    queryFn: async () => {
+      const res = await getCalendarSettingsFn()
+      return res.success ? res.data : null
+    },
   })
 
   const {

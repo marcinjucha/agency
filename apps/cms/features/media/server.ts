@@ -75,6 +75,21 @@ export const getMediaItemsFn = createServerFn({ method: 'POST' })
     return (data ?? []).map(toMediaItemListItem)
   })
 
+export const getMediaFoldersFn = createServerFn({ method: 'POST' }).handler(
+  async (): Promise<MediaFolder[]> => {
+    const supabase = createServerClient()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase as any)
+      .from('media_folders')
+      .select('*')
+      .order('sort_order', { ascending: true })
+      .order('name', { ascending: true })
+
+    if (error) throw error
+    return (data || []) as MediaFolder[]
+  }
+)
+
 export const getMediaItemFn = createServerFn({ method: 'POST' })
   .inputValidator((input: { id: string }) => input)
   .handler(async ({ data }): Promise<MediaItem | null> => {

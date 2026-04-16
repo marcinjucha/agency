@@ -9,8 +9,7 @@ import { messages, templates } from '@/lib/messages'
 import { differenceInMinutes } from 'date-fns'
 import { routes } from '@/lib/routes'
 import { queryKeys } from '@/lib/query-keys'
-import { startMarketplaceImportFn, getImportPreviewListingsFn } from '../server'
-import { getImportProgress } from '../queries'
+import { startMarketplaceImportFn, getImportPreviewListingsFn, getImportProgressFn } from '../server'
 import { MARKETPLACE_LABELS } from '../types'
 import { ImportPreviewTable } from './ImportPreviewTable'
 import type { MarketplaceConnection } from '../types'
@@ -352,7 +351,7 @@ function Step3Progress({ importId }: Step3Props) {
 
   const { data: importRecord } = useQuery({
     queryKey: queryKeys.marketplace.importProgress(importId),
-    queryFn: () => getImportProgress(importId),
+    queryFn: () => getImportProgressFn({ data: { importId } }),
     refetchInterval: (query) => {
       const status = query.state.data?.status
       if (status === 'completed' || status === 'failed') return false

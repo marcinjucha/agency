@@ -9,16 +9,16 @@ export default defineConfig(({ command }) => ({
   server: {
     port: 3001,
   },
-  // Exclude TanStack Start internals from dep pre-bundling.
-  // These packages use #virtual imports resolved by the tanstackStart plugin
-  // at main-build time — pre-bundling runs before plugin context is ready.
+  // These packages use #virtual imports resolved by tanstackStart plugin at build time.
+  // Pre-bundling runs before plugin context is ready — must exclude.
   optimizeDeps: {
     exclude: ['@tanstack/start-server-core', '@tanstack/react-start', '@tanstack/react-router'],
   },
   plugins: [
-    // Workaround: vite:import-analysis fails to resolve TanStack Start virtual modules
-    // before the tanstackStart plugin registers them. This pre-enforce stub prevents
-    // the "Failed to resolve import" error during dev SSR.
+    // Required: vite:import-analysis encounters `import("tanstack-start-injected-head-scripts:v")`
+    // in @tanstack/start-server-core/router-manifest.js during dev transform, before tanstackStart
+    // plugin registers the virtual module. Pre-enforce stub prevents the resolution failure.
+    // jacek/kolega don't need this because they don't hit this code path in their build.
     {
       name: 'tanstack-start-virtual-modules-stub',
       enforce: 'pre' as const,
@@ -29,7 +29,14 @@ export default defineConfig(({ command }) => ({
       },
       load(id: string) {
         if (id === '\0tanstack-start-injected-head-scripts:v') {
-          return 'export const injectedHeadScripts = undefined'
+          // Inject React Refresh preamble so that window.__vite_plugin_react_preamble_installed__
+          // is set before any React component loads. Without this, @vitejs/plugin-react
+          // throws "can't detect preamble" and hook state updates never re-render.
+          // This is only needed in dev — production builds don't use React Refresh.
+          const preamble = command === 'serve'
+            ? 'import RefreshRuntime from "/@react-refresh";RefreshRuntime.injectIntoGlobalHook(window);window.$RefreshReg$=()=>{};window.$RefreshSig$=()=>(type)=>type;window.__vite_plugin_react_preamble_installed__=true'
+            : undefined
+          return `export const injectedHeadScripts = ${JSON.stringify(preamble)}`
         }
       },
     },

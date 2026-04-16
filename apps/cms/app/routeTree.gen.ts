@@ -36,6 +36,7 @@ import { Route as AdminShopCategoriesRouteImport } from './routes/admin/shop/cat
 import { Route as AdminResponsesResponseIdRouteImport } from './routes/admin/responses/$responseId'
 import { Route as AdminLegalPagesPageIdRouteImport } from './routes/admin/legal-pages/$pageId'
 import { Route as AdminEmailTemplatesTypeRouteImport } from './routes/admin/email-templates/$type'
+import { Route as AdminDocforgeLicensesRouteImport } from './routes/admin/docforge/licenses'
 import { Route as AdminBlogNewRouteImport } from './routes/admin/blog/new'
 import { Route as AdminBlogPostIdRouteImport } from './routes/admin/blog/$postId'
 import { Route as AdminWorkflowsExecutionsIndexRouteImport } from './routes/admin/workflows/executions/index'
@@ -187,6 +188,11 @@ const AdminEmailTemplatesTypeRoute = AdminEmailTemplatesTypeRouteImport.update({
   path: '/email-templates/$type',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminDocforgeLicensesRoute = AdminDocforgeLicensesRouteImport.update({
+  id: '/docforge/licenses',
+  path: '/docforge/licenses',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminBlogNewRoute = AdminBlogNewRouteImport.update({
   id: '/blog/new',
   path: '/blog/new',
@@ -263,6 +269,7 @@ export interface FileRoutesByFullPath {
   '/admin/': typeof AdminIndexRoute
   '/admin/blog/$postId': typeof AdminBlogPostIdRoute
   '/admin/blog/new': typeof AdminBlogNewRoute
+  '/admin/docforge/licenses': typeof AdminDocforgeLicensesRoute
   '/admin/email-templates/$type': typeof AdminEmailTemplatesTypeRoute
   '/admin/legal-pages/$pageId': typeof AdminLegalPagesPageIdRoute
   '/admin/responses/$responseId': typeof AdminResponsesResponseIdRoute
@@ -303,6 +310,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminIndexRoute
   '/admin/blog/$postId': typeof AdminBlogPostIdRoute
   '/admin/blog/new': typeof AdminBlogNewRoute
+  '/admin/docforge/licenses': typeof AdminDocforgeLicensesRoute
   '/admin/email-templates/$type': typeof AdminEmailTemplatesTypeRoute
   '/admin/legal-pages/$pageId': typeof AdminLegalPagesPageIdRoute
   '/admin/responses/$responseId': typeof AdminResponsesResponseIdRoute
@@ -345,6 +353,7 @@ export interface FileRoutesById {
   '/admin/': typeof AdminIndexRoute
   '/admin/blog/$postId': typeof AdminBlogPostIdRoute
   '/admin/blog/new': typeof AdminBlogNewRoute
+  '/admin/docforge/licenses': typeof AdminDocforgeLicensesRoute
   '/admin/email-templates/$type': typeof AdminEmailTemplatesTypeRoute
   '/admin/legal-pages/$pageId': typeof AdminLegalPagesPageIdRoute
   '/admin/responses/$responseId': typeof AdminResponsesResponseIdRoute
@@ -388,6 +397,7 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/admin/blog/$postId'
     | '/admin/blog/new'
+    | '/admin/docforge/licenses'
     | '/admin/email-templates/$type'
     | '/admin/legal-pages/$pageId'
     | '/admin/responses/$responseId'
@@ -428,6 +438,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/admin/blog/$postId'
     | '/admin/blog/new'
+    | '/admin/docforge/licenses'
     | '/admin/email-templates/$type'
     | '/admin/legal-pages/$pageId'
     | '/admin/responses/$responseId'
@@ -469,6 +480,7 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/admin/blog/$postId'
     | '/admin/blog/new'
+    | '/admin/docforge/licenses'
     | '/admin/email-templates/$type'
     | '/admin/legal-pages/$pageId'
     | '/admin/responses/$responseId'
@@ -703,6 +715,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminEmailTemplatesTypeRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/docforge/licenses': {
+      id: '/admin/docforge/licenses'
+      path: '/docforge/licenses'
+      fullPath: '/admin/docforge/licenses'
+      preLoaderRoute: typeof AdminDocforgeLicensesRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/blog/new': {
       id: '/admin/blog/new'
       path: '/blog/new'
@@ -824,6 +843,7 @@ interface AdminRouteChildren {
   AdminIndexRoute: typeof AdminIndexRoute
   AdminBlogPostIdRoute: typeof AdminBlogPostIdRoute
   AdminBlogNewRoute: typeof AdminBlogNewRoute
+  AdminDocforgeLicensesRoute: typeof AdminDocforgeLicensesRoute
   AdminEmailTemplatesTypeRoute: typeof AdminEmailTemplatesTypeRoute
   AdminLegalPagesPageIdRoute: typeof AdminLegalPagesPageIdRoute
   AdminResponsesResponseIdRoute: typeof AdminResponsesResponseIdRoute
@@ -859,6 +879,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminIndexRoute: AdminIndexRoute,
   AdminBlogPostIdRoute: AdminBlogPostIdRoute,
   AdminBlogNewRoute: AdminBlogNewRoute,
+  AdminDocforgeLicensesRoute: AdminDocforgeLicensesRoute,
   AdminEmailTemplatesTypeRoute: AdminEmailTemplatesTypeRoute,
   AdminLegalPagesPageIdRoute: AdminLegalPagesPageIdRoute,
   AdminResponsesResponseIdRoute: AdminResponsesResponseIdRoute,

@@ -1,6 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getSurveys } from '../queries'
-import { deleteSurveyFn } from '../server'
+import { deleteSurveyFn, getSurveysFn } from '../server'
 import {
   Button, Card, LoadingState, ErrorState, EmptyState,
   AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader,
@@ -23,7 +22,7 @@ export function SurveyList() {
 
   const { data: surveys, isLoading, error } = useQuery({
     queryKey: queryKeys.surveys.all,
-    queryFn: getSurveys,
+    queryFn: () => getSurveysFn(),
   })
 
   const deleteMutation = useMutation({
@@ -39,7 +38,7 @@ export function SurveyList() {
   })
 
   if (isLoading) {
-    return <LoadingState variant="spinner" message={messages.surveys.loadingSurveys} />
+    return <LoadingState variant="skeleton-grid" rows={8} />
   }
 
   if (error) {
