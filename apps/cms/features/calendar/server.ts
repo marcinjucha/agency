@@ -122,7 +122,7 @@ function buildTokenRefreshCallback(supabase: StartClient) {
  * Fetch all calendar connections for the current tenant.
  * Reads from the decrypted view — must stay server-side.
  */
-export const getCalendarConnectionsFn = createServerFn().handler(
+export const getCalendarConnectionsFn = createServerFn({ method: 'POST' }).handler(
   async (): Promise<
     { success: true; data: CalendarConnection[] } | { success: false; error: string }
   > => {
@@ -139,7 +139,7 @@ export const getCalendarConnectionsFn = createServerFn().handler(
  * Assign (or remove) a calendar connection for a survey link.
  * Pass null connectionId to disconnect.
  */
-export const updateSurveyLinkCalendarFn = createServerFn()
+export const updateSurveyLinkCalendarFn = createServerFn({ method: 'POST' })
   .inputValidator((input: { surveyLinkId: string; connectionId: string | null }) => input)
   .handler(
     async ({ data }): Promise<{ success: true } | { success: false; error: string }> => {
@@ -172,7 +172,7 @@ export const updateSurveyLinkCalendarFn = createServerFn()
  * Get per-user calendar settings (work hours, slot duration, buffer).
  * Returns defaults if no settings row exists yet.
  */
-export const getCalendarSettingsFn = createServerFn().handler(
+export const getCalendarSettingsFn = createServerFn({ method: 'POST' }).handler(
   async (): Promise<
     | { success: true; data: CalendarSettingsFormValues }
     | { success: false; error: string }
@@ -210,7 +210,7 @@ export const getCalendarSettingsFn = createServerFn().handler(
 /**
  * Update per-user calendar settings (slot duration, buffer, advance booking, etc.).
  */
-export const updateCalendarSettingsFn = createServerFn()
+export const updateCalendarSettingsFn = createServerFn({ method: 'POST' })
   .inputValidator((input: CalendarSettingsFormValues) => calendarSettingsSchema.parse(input))
   .handler(
     async ({ data }): Promise<{ success: true } | { success: false; error: string }> => {
@@ -242,7 +242,7 @@ export const updateCalendarSettingsFn = createServerFn()
  * Flow: validate → test CalDAV connection → discover calendars →
  * persist via upsert_calendar_connection RPC (pgcrypto encrypted).
  */
-export const addCalDAVConnectionFn = createServerFn()
+export const addCalDAVConnectionFn = createServerFn({ method: 'POST' })
   .inputValidator((input: CalDAVConnectionFormValues) => caldavConnectionSchema.parse(input))
   .handler(
     async ({
@@ -268,7 +268,7 @@ export const addCalDAVConnectionFn = createServerFn()
  * Test an existing calendar connection (any provider).
  * Fetches decrypted credentials, creates provider, calls testConnection().
  */
-export const testConnectionFn = createServerFn()
+export const testConnectionFn = createServerFn({ method: 'POST' })
   .inputValidator((input: { connectionId: string }) => input)
   .handler(
     async ({ data }): Promise<{ success: true } | { success: false; error: string }> => {
@@ -292,7 +292,7 @@ export const testConnectionFn = createServerFn()
  * Set a calendar connection as the tenant-level default.
  * Unsets previous default first, then sets the new one.
  */
-export const setDefaultConnectionFn = createServerFn()
+export const setDefaultConnectionFn = createServerFn({ method: 'POST' })
   .inputValidator((input: { connectionId: string }) => input)
   .handler(
     async ({ data }): Promise<{ success: true } | { success: false; error: string }> => {
@@ -311,7 +311,7 @@ export const setDefaultConnectionFn = createServerFn()
  * Permanently remove a calendar connection.
  * ON DELETE SET NULL on survey_links.calendar_connection_id handles FK cleanup.
  */
-export const removeConnectionFn = createServerFn()
+export const removeConnectionFn = createServerFn({ method: 'POST' })
   .inputValidator((input: { connectionId: string }) => input)
   .handler(
     async ({ data }): Promise<{ success: true } | { success: false; error: string }> => {
@@ -341,7 +341,7 @@ export const removeConnectionFn = createServerFn()
  * Deactivate a calendar connection (soft delete — set is_active=false).
  * Keeps credentials in DB for potential reactivation.
  */
-export const disconnectConnectionFn = createServerFn()
+export const disconnectConnectionFn = createServerFn({ method: 'POST' })
   .inputValidator((input: { connectionId: string }) => input)
   .handler(
     async ({ data }): Promise<{ success: true } | { success: false; error: string }> => {
@@ -373,7 +373,7 @@ export const disconnectConnectionFn = createServerFn()
 /**
  * Re-activate a previously deactivated calendar connection.
  */
-export const activateConnectionFn = createServerFn()
+export const activateConnectionFn = createServerFn({ method: 'POST' })
   .inputValidator((input: { connectionId: string }) => input)
   .handler(
     async ({ data }): Promise<{ success: true } | { success: false; error: string }> => {
@@ -411,7 +411,7 @@ export const activateConnectionFn = createServerFn()
  * WHY: TanStack Start createServerFn does not support redirect(). The component
  * receives the URL and performs client-side navigation to the Google OAuth consent screen.
  */
-export const initiateGoogleOAuthFn = createServerFn().handler(
+export const initiateGoogleOAuthFn = createServerFn({ method: 'POST' }).handler(
   async (): Promise<
     { success: true; data: { authUrl: string } } | { success: false; error: string }
   > => {

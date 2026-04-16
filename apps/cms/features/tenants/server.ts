@@ -31,7 +31,7 @@ function requireSuperAdmin(): ResultAsync<AuthContext, string> {
  * Fetch all tenants. Super admin sees all; regular users see only own tenant.
  * TanStack Start port of features/tenants/queries.ts#getTenants.
  */
-export const getTenantsFn = createServerFn().handler(async (): Promise<Tenant[]> => {
+export const getTenantsFn = createServerFn({ method: 'POST' }).handler(async (): Promise<Tenant[]> => {
   const supabase = createStartClient()
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -48,7 +48,7 @@ export const getTenantsFn = createServerFn().handler(async (): Promise<Tenant[]>
  * Fetch a single tenant by ID.
  * TanStack Start port of features/tenants/queries.ts#getTenant.
  */
-export const getTenantFn = createServerFn()
+export const getTenantFn = createServerFn({ method: 'POST' })
   .inputValidator((input: { id: string }) => input)
   .handler(async ({ data }): Promise<Tenant> => {
     const supabase = createStartClient()
@@ -74,7 +74,7 @@ export const getTenantFn = createServerFn()
  * Create a new tenant.
  * TanStack Start port of features/tenants/actions.ts#createTenant.
  */
-export const createTenantFn = createServerFn()
+export const createTenantFn = createServerFn({ method: 'POST' })
   .inputValidator((input: TenantFormData) => tenantSchema.parse(input))
   .handler(
     async ({ data }): Promise<{ success: boolean; data?: Tenant; error?: string }> => {
@@ -95,7 +95,7 @@ export const createTenantFn = createServerFn()
  * Update an existing tenant.
  * TanStack Start port of features/tenants/actions.ts#updateTenant.
  */
-export const updateTenantFn = createServerFn()
+export const updateTenantFn = createServerFn({ method: 'POST' })
   .inputValidator((input: { id: string; data: TenantFormData }) => {
     tenantSchema.parse(input.data)
     return input
@@ -126,7 +126,7 @@ export const updateTenantFn = createServerFn()
  * Deactivate a tenant (soft delete).
  * TanStack Start port of features/tenants/actions.ts#deactivateTenant.
  */
-export const deactivateTenantFn = createServerFn()
+export const deactivateTenantFn = createServerFn({ method: 'POST' })
   .inputValidator((input: { id: string }) => input)
   .handler(async ({ data }): Promise<{ success: boolean; error?: string }> => {
     const result = await requireSuperAdmin().andThen(() => deactivateTenantRow(data.id))
@@ -141,7 +141,7 @@ export const deactivateTenantFn = createServerFn()
  * Hard delete a tenant and ALL related data.
  * TanStack Start port of features/tenants/actions.ts#deleteTenant.
  */
-export const deleteTenantFn = createServerFn()
+export const deleteTenantFn = createServerFn({ method: 'POST' })
   .inputValidator((input: { id: string }) => input)
   .handler(async ({ data }): Promise<{ success: boolean; error?: string }> => {
     const result = await requireSuperAdmin().andThen((auth) => {

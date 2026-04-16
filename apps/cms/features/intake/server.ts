@@ -19,7 +19,7 @@ const dbError = (e: unknown) => (e instanceof Error ? e.message : messages.commo
  * Used by route loader ensureQueryData + IntakeHub useQuery.
  * Mirrors getPipelineResponses from queries.ts but uses server client.
  */
-export const getPipelineResponsesFn = createServerFn().handler(async () => {
+export const getPipelineResponsesFn = createServerFn({ method: 'POST' }).handler(async () => {
   const auth = await getAuth()
   if (!auth) return []
 
@@ -42,7 +42,7 @@ export const getPipelineResponsesFn = createServerFn().handler(async () => {
  * TanStack Start port of features/intake/actions.ts#updateResponseStatus.
  * Sets status_changed_at timestamp for pipeline sorting.
  */
-export const updateResponseStatusFn = createServerFn()
+export const updateResponseStatusFn = createServerFn({ method: 'POST' })
   .inputValidator((input: { responseId: string; status: string }) =>
     updateStatusSchema.parse(input)
   )
@@ -62,7 +62,7 @@ export const updateResponseStatusFn = createServerFn()
  * TanStack Start port of features/intake/actions.ts#updateInternalNotes.
  * Notes are CMS-internal (not visible to clients).
  */
-export const updateInternalNotesFn = createServerFn()
+export const updateInternalNotesFn = createServerFn({ method: 'POST' })
   .inputValidator((input: { responseId: string; notes: string }) =>
     updateNotesSchema.parse(input)
   )

@@ -23,7 +23,7 @@ const dbError = (e: unknown) =>
  * Fetch all tenant roles with their permissions and user count.
  * TanStack Start port of features/roles/queries.ts#getRoles.
  */
-export const getRolesFn = createServerFn()
+export const getRolesFn = createServerFn({ method: 'POST' })
   .inputValidator((input: { tenantId?: string }) => input)
   .handler(async ({ data }): Promise<TenantRoleWithPermissions[]> => {
     const supabase = createStartClient()
@@ -68,7 +68,7 @@ export const getRolesFn = createServerFn()
  * Create a new tenant role with permissions.
  * TanStack Start port of features/roles/actions.ts#createRole.
  */
-export const createRoleFn = createServerFn()
+export const createRoleFn = createServerFn({ method: 'POST' })
   .inputValidator((input: CreateRoleInput) => createRoleSchema.parse(input))
   .handler(
     async ({
@@ -97,7 +97,7 @@ export const createRoleFn = createServerFn()
  * Update role name, description, and permissions.
  * TanStack Start port of features/roles/actions.ts#updateRole.
  */
-export const updateRoleFn = createServerFn()
+export const updateRoleFn = createServerFn({ method: 'POST' })
   .inputValidator((input: UpdateRoleInput) => updateRoleSchema.parse(input))
   .handler(async ({ data }): Promise<{ success: boolean; error?: string }> => {
     const result = await requireAuthContext().andThen((auth) => {
@@ -126,7 +126,7 @@ export const updateRoleFn = createServerFn()
  * Delete a role.
  * TanStack Start port of features/roles/actions.ts#deleteRole.
  */
-export const deleteRoleFn = createServerFn()
+export const deleteRoleFn = createServerFn({ method: 'POST' })
   .inputValidator((input: { roleId: string }) => input)
   .handler(async ({ data }): Promise<{ success: boolean; error?: string }> => {
     const result = await requireAuthContext().andThen((auth) => {

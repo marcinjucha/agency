@@ -28,7 +28,7 @@ const dbError = (e: unknown) => (e instanceof Error ? e.message : messages.commo
 // Server Functions — Queries
 // ---------------------------------------------------------------------------
 
-export const getLandingPageFn = createServerFn().handler(
+export const getLandingPageFn = createServerFn({ method: 'POST' }).handler(
   async (): Promise<LandingPage | null> => {
     const supabase = createStartClient()
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

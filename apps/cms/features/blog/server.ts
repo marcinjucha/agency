@@ -39,7 +39,7 @@ const dbError = (e: unknown) => (e instanceof Error ? e.message : messages.commo
 // Server Functions — Queries (no requireAuthContextFull — RLS handles tenant scoping)
 // ---------------------------------------------------------------------------
 
-export const getBlogPostsFn = createServerFn().handler(
+export const getBlogPostsFn = createServerFn({ method: 'POST' }).handler(
   async (): Promise<BlogPostListItem[]> => {
     const supabase = createStartClient()
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -55,7 +55,7 @@ export const getBlogPostsFn = createServerFn().handler(
   }
 )
 
-export const getBlogPostFn = createServerFn()
+export const getBlogPostFn = createServerFn({ method: 'POST' })
   .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data: { id } }): Promise<BlogPost | null> => {
     const supabase = createStartClient()
@@ -71,7 +71,7 @@ export const getBlogPostFn = createServerFn()
     return toBlogPost(row)
   })
 
-export const getCategoriesFn = createServerFn().handler(
+export const getCategoriesFn = createServerFn({ method: 'POST' }).handler(
   async (): Promise<string[]> => {
     const supabase = createStartClient()
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -95,7 +95,7 @@ export const getCategoriesFn = createServerFn().handler(
 // Server Functions — Mutations (requireAuthContextFull + permission check)
 // ---------------------------------------------------------------------------
 
-export const createBlogPostFn = createServerFn()
+export const createBlogPostFn = createServerFn({ method: 'POST' })
   .inputValidator((input: unknown) => blogPostInputSchema.parse(input))
   .handler(
     async ({ data }): Promise<{ success: boolean; data?: BlogPost; error?: string }> => {
@@ -113,7 +113,7 @@ export const createBlogPostFn = createServerFn()
     }
   )
 
-export const updateBlogPostFn = createServerFn()
+export const updateBlogPostFn = createServerFn({ method: 'POST' })
   .inputValidator((input: unknown) => updateBlogPostInputSchema.parse(input))
   .handler(
     async ({ data: input }): Promise<{ success: boolean; data?: BlogPost; error?: string }> => {
@@ -135,7 +135,7 @@ export const updateBlogPostFn = createServerFn()
     }
   )
 
-export const deleteBlogPostFn = createServerFn()
+export const deleteBlogPostFn = createServerFn({ method: 'POST' })
   .inputValidator((input: unknown) => blogPostIdSchema.parse(input))
   .handler(
     async ({ data }): Promise<{ success: boolean; error?: string }> => {

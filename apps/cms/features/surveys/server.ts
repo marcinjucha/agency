@@ -21,7 +21,7 @@ import { type AuthContext, requireAuthContext, getAuth } from '@/lib/server-auth
  * Fetch all surveys for current tenant (with embedded survey_links).
  * Used by route loader ensureQueryData + SurveyList useQuery.
  */
-export const getSurveysFn = createServerFn().handler(async () => {
+export const getSurveysFn = createServerFn({ method: 'POST' }).handler(async () => {
   const supabase = createStartClient()
 
   const {
@@ -43,7 +43,7 @@ export const getSurveysFn = createServerFn().handler(async () => {
  * Create a new survey.
  * TanStack Start port of features/surveys/actions.ts#createSurvey.
  */
-export const createSurveyFn = createServerFn()
+export const createSurveyFn = createServerFn({ method: 'POST' })
   .inputValidator((input: { title: string; description?: string }) =>
     createSurveySchema.parse(input)
   )
@@ -60,7 +60,7 @@ export const createSurveyFn = createServerFn()
  * Update survey details.
  * TanStack Start port of features/surveys/actions.ts#updateSurvey.
  */
-export const updateSurveyFn = createServerFn()
+export const updateSurveyFn = createServerFn({ method: 'POST' })
   .inputValidator(
     (input: {
       id: string
@@ -85,7 +85,7 @@ export const updateSurveyFn = createServerFn()
  * Delete a survey.
  * TanStack Start port of features/surveys/actions.ts#deleteSurvey.
  */
-export const deleteSurveyFn = createServerFn()
+export const deleteSurveyFn = createServerFn({ method: 'POST' })
   .inputValidator((input: { id: string }) => input)
   .handler(async ({ data }): Promise<{ success: boolean; error?: string }> => {
     const result = await requireAuthContext().andThen((auth) => deleteSurveyRow(auth, data.id))
@@ -100,7 +100,7 @@ export const deleteSurveyFn = createServerFn()
  * Generate a new survey link.
  * TanStack Start port of features/surveys/actions.ts#generateSurveyLink.
  */
-export const generateSurveyLinkFn = createServerFn()
+export const generateSurveyLinkFn = createServerFn({ method: 'POST' })
   .inputValidator(
     (input: {
       surveyId: string
@@ -151,7 +151,7 @@ export const generateSurveyLinkFn = createServerFn()
  * Delete a survey link.
  * TanStack Start port of features/surveys/actions.ts#deleteSurveyLink.
  */
-export const deleteSurveyLinkFn = createServerFn()
+export const deleteSurveyLinkFn = createServerFn({ method: 'POST' })
   .inputValidator((input: { linkId: string; surveyId: string }) => input)
   .handler(async ({ data }): Promise<{ success: boolean; error?: string }> => {
     const result = await requireAuthContext().andThen((auth) => deleteLinkRow(auth, data.linkId))
@@ -166,7 +166,7 @@ export const deleteSurveyLinkFn = createServerFn()
  * Update an existing survey link.
  * TanStack Start port of features/surveys/actions.ts#updateSurveyLink.
  */
-export const updateSurveyLinkFn = createServerFn()
+export const updateSurveyLinkFn = createServerFn({ method: 'POST' })
   .inputValidator((input: { linkId: string; surveyId: string; data: UpdateSurveyLinkFormData }) => {
     updateSurveyLinkSchema.parse(input.data)
     return input

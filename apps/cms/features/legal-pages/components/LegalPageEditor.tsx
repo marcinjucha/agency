@@ -1,15 +1,13 @@
 
 
-import { useState, useCallback } from 'react'
+import { useState } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useNavigate } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { Button, Input, Label, Badge, Checkbox } from '@agency/ui'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
 import { legalPageSchema, type LegalPageFormData } from '../validation'
-import { updateLegalPage } from '../actions'
 import { legalPageKeys } from '../queries'
 import type { LegalPage } from '../types'
 import type { TiptapContent } from '../../editor/types'
@@ -21,12 +19,12 @@ type SaveState = 'idle' | 'saving' | 'saved' | 'error'
 
 interface LegalPageEditorProps {
   legalPage: LegalPage
+  updateFn: (id: string, data: LegalPageFormData) => Promise<{ success: boolean; error?: string }>
 }
 
 const EMPTY_CONTENT: TiptapContent = { type: 'doc', content: [] }
 
-export function LegalPageEditor({ legalPage }: LegalPageEditorProps) {
-  const navigate = useNavigate()
+export function LegalPageEditor({ legalPage, updateFn }: LegalPageEditorProps) {
   const queryClient = useQueryClient()
   const [saveState, setSaveState] = useState<SaveState>('idle')
   const [saveError, setSaveError] = useState<string>('')
@@ -42,18 +40,20 @@ export function LegalPageEditor({ legalPage }: LegalPageEditorProps) {
 
   const isPublished = watch('is_published')
 
-  const onContentChange = useCallback(
-    (content: TiptapContent) => {
-      setValue('content', JSON.stringify(content))
-    },
-    [setValue]
-  )
+  const onContentChange = (content: TiptapContent) => {
+    setValue('content', content)
+  }
 
   const onSubmit = async (data: LegalPageFormData) => {
     setSaveState('saving')
     setSaveError('')
 
-    const result = await updateLegalPage(legalPage.id, data)
+    let result: { success: boolean; error?: string }
+    try {
+      result = await updateFn(legalPage.id, data)
+    } catch (e) {
+      result = { success: false, error: e instanceof Error ? e.message : messages.common.unknownError }
+    }
 
     if (result.success) {
       setSaveState('saved')

@@ -17,7 +17,7 @@ const dbError = (e: unknown) => (e instanceof Error ? e.message : messages.commo
  * Delete a response, checking for and removing linked appointment first.
  * TanStack Start port of features/responses/actions.ts#deleteResponse.
  */
-export const deleteResponseFn = createServerFn()
+export const deleteResponseFn = createServerFn({ method: 'POST' })
   .inputValidator((input: { id: string }) => input)
   .handler(
     async ({ data }): Promise<{ success: boolean; error?: string; hadAppointment?: boolean }> => {
@@ -37,7 +37,7 @@ export const deleteResponseFn = createServerFn()
  * TanStack Start port of features/responses/actions.ts#triggerAiAnalysis.
  * process.env is safe here — createServerFn is server-only.
  */
-export const triggerAiAnalysisFn = createServerFn()
+export const triggerAiAnalysisFn = createServerFn({ method: 'POST' })
   .inputValidator((input: { responseId: string }) => input)
   .handler(async ({ data }): Promise<{ success: boolean; error?: string }> => {
     const auth = await getAuth()

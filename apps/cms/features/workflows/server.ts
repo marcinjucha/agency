@@ -40,7 +40,7 @@ const dbError = (e: unknown) => (e instanceof Error ? e.message : messages.commo
  * Create a new workflow.
  * TanStack Start port of features/workflows/actions.ts#createWorkflow.
  */
-export const createWorkflowFn = createServerFn()
+export const createWorkflowFn = createServerFn({ method: 'POST' })
   .inputValidator((input: CreateWorkflowFormData) => createWorkflowSchema.parse(input))
   .handler(
     async ({ data }): Promise<{ success: boolean; data?: { id: string; name: string }; error?: string }> => {
@@ -57,7 +57,7 @@ export const createWorkflowFn = createServerFn()
  * Update workflow metadata.
  * TanStack Start port of features/workflows/actions.ts#updateWorkflow.
  */
-export const updateWorkflowFn = createServerFn()
+export const updateWorkflowFn = createServerFn({ method: 'POST' })
   .inputValidator((input: { id: string; data: UpdateWorkflowFormData }) => {
     updateWorkflowSchema.parse(input.data)
     return input
@@ -79,7 +79,7 @@ export const updateWorkflowFn = createServerFn()
  * Delete a workflow.
  * TanStack Start port of features/workflows/actions.ts#deleteWorkflow.
  */
-export const deleteWorkflowFn = createServerFn()
+export const deleteWorkflowFn = createServerFn({ method: 'POST' })
   .inputValidator((input: { id: string }) => input)
   .handler(async ({ data }): Promise<{ success: boolean; error?: string }> => {
     const result = await requireAuthContext().andThen((auth) =>
@@ -96,7 +96,7 @@ export const deleteWorkflowFn = createServerFn()
  * Toggle workflow active/inactive.
  * TanStack Start port of features/workflows/actions.ts#toggleWorkflowActive.
  */
-export const toggleWorkflowActiveFn = createServerFn()
+export const toggleWorkflowActiveFn = createServerFn({ method: 'POST' })
   .inputValidator((input: { id: string; isActive: boolean }) => input)
   .handler(async ({ data }): Promise<{ success: boolean; error?: string }> => {
     const result = await requireAuthContext().andThen((auth) =>
@@ -113,7 +113,7 @@ export const toggleWorkflowActiveFn = createServerFn()
  * Save the visual canvas (bulk upsert steps + edges).
  * TanStack Start port of features/workflows/actions.ts#saveWorkflowCanvas.
  */
-export const saveWorkflowCanvasFn = createServerFn()
+export const saveWorkflowCanvasFn = createServerFn({ method: 'POST' })
   .inputValidator((input: { workflowId: string; data: SaveCanvasFormData }) => {
     saveCanvasSchema.parse(input.data)
     return input
@@ -133,7 +133,7 @@ export const saveWorkflowCanvasFn = createServerFn()
  * Trigger a manual workflow execution via n8n Orchestrator.
  * TanStack Start port of features/workflows/actions.ts#triggerManualWorkflow.
  */
-export const triggerManualWorkflowFn = createServerFn()
+export const triggerManualWorkflowFn = createServerFn({ method: 'POST' })
   .inputValidator((input: { workflowId: string }) => input)
   .handler(
     async ({ data }): Promise<{ success: boolean; executionId?: string; error?: string }> => {
@@ -159,7 +159,7 @@ export const triggerManualWorkflowFn = createServerFn()
  * Test workflow dispatch (custom trigger payload).
  * TanStack Start port of features/workflows/actions.ts#testWorkflow.
  */
-export const testWorkflowFn = createServerFn()
+export const testWorkflowFn = createServerFn({ method: 'POST' })
   .inputValidator((input: { workflowId: string; triggerPayload: Record<string, unknown> }) => input)
   .handler(
     async ({ data }): Promise<{ success: boolean; executionId?: string; error?: string }> => {
@@ -190,7 +190,7 @@ export const testWorkflowFn = createServerFn()
  * Cancel a workflow execution.
  * TanStack Start port of features/workflows/actions.ts#cancelWorkflowExecution.
  */
-export const cancelWorkflowExecutionFn = createServerFn()
+export const cancelWorkflowExecutionFn = createServerFn({ method: 'POST' })
   .inputValidator((input: { executionId: string }) => input)
   .handler(async ({ data }): Promise<{ success: boolean; error?: string }> => {
     const result = await requireAuthContext().andThen(({ tenantId }) =>
@@ -207,7 +207,7 @@ export const cancelWorkflowExecutionFn = createServerFn()
  * Create workflow from template.
  * TanStack Start port of features/workflows/actions.ts#createWorkflowFromTemplate.
  */
-export const createWorkflowFromTemplateFn = createServerFn()
+export const createWorkflowFromTemplateFn = createServerFn({ method: 'POST' })
   .inputValidator((input: { templateId: string }) =>
     createWorkflowFromTemplateSchema.parse(input)
   )
@@ -242,7 +242,7 @@ const LIST_FIELDS = 'id, name, description, trigger_type, is_active, created_at,
  * used with ensureQueryData — TanStack Query expects throws, not structured
  * error returns, to trigger its error handling + retry behaviour.
  */
-export const getWorkflowsFn = createServerFn().handler(async (): Promise<WorkflowListItem[]> => {
+export const getWorkflowsFn = createServerFn({ method: 'POST' }).handler(async (): Promise<WorkflowListItem[]> => {
   const supabase = createStartClient()
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JS v2.95.2 incompatibility
@@ -259,7 +259,7 @@ export const getWorkflowsFn = createServerFn().handler(async (): Promise<Workflo
  * Fetch a single workflow with steps and edges. Called from the /admin/workflows/$workflowId loader.
  * Throws on error — ensureQueryData expects throws, not Result, to trigger TanStack Query error handling.
  */
-export const getWorkflowFn = createServerFn()
+export const getWorkflowFn = createServerFn({ method: 'POST' })
   .inputValidator((input: { id: string }) => input)
   .handler(async ({ data }): Promise<WorkflowWithSteps> => {
     const supabase = createStartClient()
@@ -305,7 +305,7 @@ export const getWorkflowFn = createServerFn()
  * Called from the /admin/workflows/$workflowId loader.
  * Throws on error — ensureQueryData expects throws, not Result, to trigger TanStack Query error handling.
  */
-export const getSurveysForWorkflowFn = createServerFn().handler(
+export const getSurveysForWorkflowFn = createServerFn({ method: 'POST' }).handler(
   async (): Promise<SurveyOption[]> => {
     const supabase = createStartClient()
 
@@ -321,7 +321,7 @@ export const getSurveysForWorkflowFn = createServerFn().handler(
  * Called from the /admin/workflows/$workflowId loader.
  * Throws on error — ensureQueryData expects throws, not Result, to trigger TanStack Query error handling.
  */
-export const getEmailTemplatesForWorkflowFn = createServerFn().handler(
+export const getEmailTemplatesForWorkflowFn = createServerFn({ method: 'POST' }).handler(
   async (): Promise<EmailTemplateOption[]> => {
     const supabase = createStartClient()
 

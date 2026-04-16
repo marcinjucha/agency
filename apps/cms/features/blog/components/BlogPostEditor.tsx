@@ -47,9 +47,7 @@ export interface SaveBlogPostResult {
   data?: BlogPost
 }
 
-// Payload passed to createFn/updateFn — content is pre-serialized to JSON string
-export type BlogPostPayload = Omit<BlogPostFormData, 'content'> & {
-  content: string
+export type BlogPostPayload = BlogPostFormData & {
   html_body?: string
   estimated_reading_time?: number
 }
@@ -209,28 +207,39 @@ export function BlogPostEditor({ blogPost, createFn, updateFn, deleteFn, onSucce
 
     const payload = {
       ...(publishOverride !== undefined ? { ...data, is_published: publishOverride } : data),
-      content: JSON.stringify(data.content),
+      content: data.content,
       html_body,
       estimated_reading_time,
     }
 
-    const result = isEditing
-      ? await updateFn(blogPost.id, payload)
-      : await createFn(payload)
+    try {
+      const result = isEditing
+        ? await updateFn(blogPost.id, payload)
+        : await createFn(payload)
 
-    if (result.success) {
-      setSaveState('saved')
-      if (publishOverride !== undefined) setValue('is_published', publishOverride)
-      queryClient.invalidateQueries({ queryKey: queryKeys.blog.all })
-      setTimeout(() => setSaveState('idle'), 2500)
-      onSuccess?.()
-
-      if (!isEditing && result.data) {
-        navigate({ to: routes.admin.blogPost(result.data.id) })
+      if (!result) {
+        throw new Error('Server returned empty response')
       }
-    } else {
+
+      if (result.success) {
+        setSaveState('saved')
+        if (publishOverride !== undefined) setValue('is_published', publishOverride)
+        queryClient.invalidateQueries({ queryKey: queryKeys.blog.all })
+        setTimeout(() => setSaveState('idle'), 2500)
+        onSuccess?.()
+
+        if (!isEditing && result.data) {
+          navigate({ to: routes.admin.blogPost(result.data.id) })
+        }
+      } else {
+        setSaveState('error')
+        setErrorMessage(result.error ?? messages.blog.saveFailed)
+        setTimeout(() => setSaveState('idle'), 4000)
+      }
+    } catch (err) {
+      console.error('Blog save failed:', err)
       setSaveState('error')
-      setErrorMessage(result.error ?? messages.blog.saveFailed)
+      setErrorMessage(messages.blog.saveFailed)
       setTimeout(() => setSaveState('idle'), 4000)
     }
   }

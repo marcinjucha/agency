@@ -80,7 +80,7 @@ function extractTemplateVariables(
 // Server Functions — Preview
 // ---------------------------------------------------------------------------
 
-export const renderEmailPreviewFn = createServerFn()
+export const renderEmailPreviewFn = createServerFn({ method: 'POST' })
   .inputValidator((input: unknown) => z.object({ blocks: z.array(z.any()) }).parse(input))
   .handler(async ({ data: { blocks } }): Promise<{ html: string }> => {
     const html = await renderEmailBlocks(blocks as Block[])
@@ -91,7 +91,7 @@ export const renderEmailPreviewFn = createServerFn()
 // Server Functions — Queries
 // ---------------------------------------------------------------------------
 
-export const getEmailTemplatesFn = createServerFn().handler(
+export const getEmailTemplatesFn = createServerFn({ method: 'POST' }).handler(
   async (): Promise<EmailTemplate[]> => {
     const supabase = createStartClient()
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -105,7 +105,7 @@ export const getEmailTemplatesFn = createServerFn().handler(
   }
 )
 
-export const getEmailTemplateFn = createServerFn()
+export const getEmailTemplateFn = createServerFn({ method: 'POST' })
   .inputValidator((input: unknown) => getEmailTemplateInputSchema.parse(input))
   .handler(async ({ data }): Promise<EmailTemplate | null> => {
     const supabase = createStartClient()
@@ -125,7 +125,7 @@ export const getEmailTemplateFn = createServerFn()
 // Server Functions — Mutations
 // ---------------------------------------------------------------------------
 
-export const updateEmailTemplateFn = createServerFn()
+export const updateEmailTemplateFn = createServerFn({ method: 'POST' })
   .inputValidator((input: unknown) => updateEmailTemplateInputSchema.parse(input))
   .handler(async ({ data: input }): Promise<{ success: boolean; error?: string }> => {
     const result = await requireAuthContext().andThen((auth) =>
@@ -138,7 +138,7 @@ export const updateEmailTemplateFn = createServerFn()
     )
   })
 
-export const resetEmailTemplateToDefaultFn = createServerFn()
+export const resetEmailTemplateToDefaultFn = createServerFn({ method: 'POST' })
   .inputValidator((input: unknown) => resetEmailTemplateInputSchema.parse(input))
   .handler(async ({ data }): Promise<{ success: boolean; error?: string }> => {
     const defaultSubject = 'Dziękujemy za wypełnienie formularza - {{surveyTitle}}'

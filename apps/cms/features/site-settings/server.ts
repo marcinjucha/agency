@@ -16,7 +16,7 @@ const dbError = (e: unknown) => (e instanceof Error ? e.message : messages.commo
  * Fetch site-wide settings for the current tenant.
  * Returns null if no row exists yet (tenant has not configured settings).
  */
-export const getSiteSettingsFn = createServerFn().handler(
+export const getSiteSettingsFn = createServerFn({ method: 'POST' }).handler(
   async (): Promise<
     { success: true; data: SiteSettings | null } | { success: false; error: string }
   > => {
@@ -46,7 +46,7 @@ export const getSiteSettingsFn = createServerFn().handler(
  * Supabase JS doesn't support JSONB array extraction natively —
  * blog keywords are extracted in JS after fetching seo_metadata.
  */
-export const getKeywordPoolFn = createServerFn().handler(
+export const getKeywordPoolFn = createServerFn({ method: 'POST' }).handler(
   async (): Promise<{ success: true; data: string[] } | { success: false; error: string }> => {
     const result = await requireAuthContext().andThen((auth) =>
       ResultAsync.fromPromise(
@@ -80,7 +80,7 @@ export const getKeywordPoolFn = createServerFn().handler(
 /**
  * Upsert site-wide settings for the current tenant.
  */
-export const updateSiteSettingsFn = createServerFn()
+export const updateSiteSettingsFn = createServerFn({ method: 'POST' })
   .inputValidator((input: SiteSettingsInput) => siteSettingsSchema.parse(input))
   .handler(
     async ({

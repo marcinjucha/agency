@@ -33,7 +33,7 @@ const dbError = (e: unknown) =>
  * Fetch all users for a tenant with their assigned role.
  * TanStack Start port of features/users/queries.ts#getUsers.
  */
-export const getUsersFn = createServerFn()
+export const getUsersFn = createServerFn({ method: 'POST' })
   .inputValidator((input: { tenantId?: string }) => input)
   .handler(async ({ data }): Promise<UserWithRole[]> => {
     const supabase = createStartClient()
@@ -78,7 +78,7 @@ export const getUsersFn = createServerFn()
  * Fetch available tenant roles for role selector dropdown.
  * TanStack Start port of features/users/queries.ts#getTenantRoles.
  */
-export const getTenantRolesFn = createServerFn()
+export const getTenantRolesFn = createServerFn({ method: 'POST' })
   .inputValidator((input: { tenantId?: string }) => input)
   .handler(async ({ data }): Promise<{ id: string; name: string; description: string | null; is_default: boolean }[]> => {
     const supabase = createStartClient()
@@ -107,7 +107,7 @@ export const getTenantRolesFn = createServerFn()
  * Create a new user in the same tenant as the current user.
  * TanStack Start port of features/users/actions.ts#createUser.
  */
-export const createUserFn = createServerFn()
+export const createUserFn = createServerFn({ method: 'POST' })
   .inputValidator((input: CreateUserInput) => createUserSchema.parse(input))
   .handler(
     async ({
@@ -137,7 +137,7 @@ export const createUserFn = createServerFn()
  * Update user's full name and/or role assignment.
  * TanStack Start port of features/users/actions.ts#updateUser.
  */
-export const updateUserFn = createServerFn()
+export const updateUserFn = createServerFn({ method: 'POST' })
   .inputValidator((input: UpdateUserInput) => updateUserSchema.parse(input))
   .handler(async ({ data }): Promise<{ success: boolean; error?: string }> => {
     const result = await requireAuthContext().andThen((auth) => {
@@ -157,7 +157,7 @@ export const updateUserFn = createServerFn()
  * Delete a user completely: user_roles -> users -> auth.users.
  * TanStack Start port of features/users/actions.ts#deleteUser.
  */
-export const deleteUserFn = createServerFn()
+export const deleteUserFn = createServerFn({ method: 'POST' })
   .inputValidator((input: { userId: string }) => input)
   .handler(async ({ data }): Promise<{ success: boolean; error?: string }> => {
     const result = await requireAuthContext().andThen((auth) => {
@@ -180,7 +180,7 @@ export const deleteUserFn = createServerFn()
  * Toggle super_admin status on a user.
  * TanStack Start port of features/users/actions.ts#toggleSuperAdmin.
  */
-export const toggleSuperAdminFn = createServerFn()
+export const toggleSuperAdminFn = createServerFn({ method: 'POST' })
   .inputValidator((input: { userId: string; isSuperAdmin: boolean }) => input)
   .handler(async ({ data }): Promise<{ success: boolean; error?: string }> => {
     const result = await requireAuthContext().andThen((auth) => {
@@ -203,7 +203,7 @@ export const toggleSuperAdminFn = createServerFn()
  * Change password for a user.
  * TanStack Start port of features/users/actions.ts#changeUserPassword.
  */
-export const changeUserPasswordFn = createServerFn()
+export const changeUserPasswordFn = createServerFn({ method: 'POST' })
   .inputValidator((input: ChangePasswordFormData) =>
     changePasswordSchema.parse(input),
   )

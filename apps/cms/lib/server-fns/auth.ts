@@ -14,7 +14,7 @@ const loginSchema = z.object({
   password: z.string().min(1),
 })
 
-export const getAuthContextFn = createServerFn().handler(async (): Promise<AuthContext | null> => {
+export const getAuthContextFn = createServerFn({ method: 'POST' }).handler(async (): Promise<AuthContext | null> => {
   const supabase = createStartClient()
 
   const {
@@ -39,7 +39,7 @@ export const getAuthContextFn = createServerFn().handler(async (): Promise<AuthC
   }
 })
 
-export const loginFn = createServerFn()
+export const loginFn = createServerFn({ method: 'POST' })
   .inputValidator((input: z.infer<typeof loginSchema>) => loginSchema.parse(input))
   .handler(
     async ({
@@ -61,7 +61,7 @@ export const loginFn = createServerFn()
     }
   )
 
-export const logoutFn = createServerFn().handler(
+export const logoutFn = createServerFn({ method: 'POST' }).handler(
   async (): Promise<{ success: true }> => {
     const supabase = createStartClient()
     await supabase.auth.signOut()

@@ -23,7 +23,7 @@ export type AdminLayoutData = {
  * SRP: separate from auth.ts because this is layout-scoped data,
  * not the narrow auth context needed by getAuthContextFn.
  */
-export const getAdminLayoutDataFn = createServerFn().handler(
+export const getAdminLayoutDataFn = createServerFn({ method: 'POST' }).handler(
   async (): Promise<AdminLayoutData | null> => {
     const supabase = createStartClient()
 

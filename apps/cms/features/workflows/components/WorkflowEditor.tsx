@@ -1,8 +1,7 @@
 
 
-import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
+import { useState, useCallback, useEffect, useRef, useMemo, lazy, Suspense } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import dynamic from 'next/dynamic'
 import { messages } from '@/lib/messages'
 import { getWorkflowFn, saveWorkflowCanvasFn, toggleWorkflowActiveFn } from '../server'
 import { queryKeys } from '@/lib/query-keys'
@@ -24,14 +23,7 @@ import { TestModePanel } from './TestModePanel'
 import { collectAvailableVariables } from '../engine/utils'
 import { getStepTypeLabel, getOutputFieldLabel } from '../utils/step-labels'
 
-const WorkflowCanvas = dynamic(() => import('./WorkflowCanvas'), {
-  ssr: false,
-  loading: () => (
-    <div className="flex-1 flex items-center justify-center text-muted-foreground">
-      {messages.workflows.editor.canvasLoading}
-    </div>
-  ),
-})
+const WorkflowCanvas = lazy(() => import('./WorkflowCanvas'))
 
 const TRIGGER_TYPES = new Set<string>([
   'survey_submitted',
@@ -63,9 +55,6 @@ interface WorkflowEditorProps {
 }
 
 export function WorkflowEditor({ workflowId }: WorkflowEditorProps) {
-  const queryClient = useQueryClient()
-
-  // Cache pre-populated by the route loader's ensureQueryData — renders instantly.
   const { data: workflow, error: workflowError } = useQuery({
     queryKey: queryKeys.workflows.detail(workflowId),
     queryFn: async () => {
@@ -85,6 +74,17 @@ export function WorkflowEditor({ workflowId }: WorkflowEditorProps) {
   }
 
   if (!workflow) return null
+
+  return <WorkflowEditorContent workflow={workflow} workflowId={workflowId} />
+}
+
+interface WorkflowEditorContentProps {
+  workflow: WorkflowWithSteps
+  workflowId: string
+}
+
+function WorkflowEditorContent({ workflow, workflowId }: WorkflowEditorContentProps) {
+  const queryClient = useQueryClient()
 
   // Stable UUID for synthetic trigger node (when no trigger step exists in DB)
   const syntheticTriggerIdRef = useRef(crypto.randomUUID())
@@ -331,17 +331,19 @@ export function WorkflowEditor({ workflowId }: WorkflowEditorProps) {
               {messages.workflows.testMode.toggle}
             </Button>
           </div>
-          <WorkflowCanvas
-            ref={canvasRef}
-            workflowId={workflow.id}
-            initialNodes={initialNodes}
-            initialEdges={initialEdges}
-            onDirtyChange={handleDirtyChange}
-            onNodeSelect={handleNodeSelect}
-            hasTriggerNode={hasTriggerNode}
-            triggerType={workflow.trigger_type}
-            getLabel={getLabel}
-          />
+          <Suspense fallback={<div className="flex-1 flex items-center justify-center text-muted-foreground">{messages.workflows.editor.canvasLoading}</div>}>
+            <WorkflowCanvas
+              ref={canvasRef}
+              workflowId={workflow.id}
+              initialNodes={initialNodes}
+              initialEdges={initialEdges}
+              onDirtyChange={handleDirtyChange}
+              onNodeSelect={handleNodeSelect}
+              hasTriggerNode={hasTriggerNode}
+              triggerType={workflow.trigger_type}
+              getLabel={getLabel}
+            />
+          </Suspense>
         </div>
         {isTestMode ? (
           <TestModePanel

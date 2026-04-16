@@ -40,7 +40,7 @@ const dbError = (e: unknown) => (e instanceof Error ? e.message : messages.commo
  * - null: items without a folder (unsorted/root)
  * - string: items in a specific folder
  */
-export const getMediaItemsFn = createServerFn()
+export const getMediaItemsFn = createServerFn({ method: 'POST' })
   .inputValidator(
     (input: { type?: MediaType; search?: string; folder_id?: string | null }) => input
   )
@@ -75,7 +75,7 @@ export const getMediaItemsFn = createServerFn()
     return (data ?? []).map(toMediaItemListItem)
   })
 
-export const getMediaItemFn = createServerFn()
+export const getMediaItemFn = createServerFn({ method: 'POST' })
   .inputValidator((input: { id: string }) => input)
   .handler(async ({ data }): Promise<MediaItem | null> => {
     const supabase = createStartClient()
@@ -111,7 +111,7 @@ const ALLOWED_UPLOAD_MIME_TYPES = [
 // Hardcoded upload prefix — never derived from client input to prevent path traversal.
 const UPLOAD_FOLDER_PREFIX = 'haloefekt/media'
 
-export const generatePresignedUrlFn = createServerFn()
+export const generatePresignedUrlFn = createServerFn({ method: 'POST' })
   .inputValidator(
     (input: { fileName: string; contentType: string }) => input
   )
@@ -152,7 +152,7 @@ export const generatePresignedUrlFn = createServerFn()
 // Server Functions — Media Item Mutations
 // ---------------------------------------------------------------------------
 
-export const createMediaItemFn = createServerFn()
+export const createMediaItemFn = createServerFn({ method: 'POST' })
   .inputValidator((input: CreateMediaItemFormData) => input)
   .handler(async ({ data }): Promise<{ success: boolean; data?: MediaItem; error?: string }> => {
     const parsed = createMediaItemSchema.safeParse(data)
@@ -170,7 +170,7 @@ export const createMediaItemFn = createServerFn()
     )
   })
 
-export const updateMediaItemFn = createServerFn()
+export const updateMediaItemFn = createServerFn({ method: 'POST' })
   .inputValidator((input: { id: string; data: UpdateMediaItemFormData }) => input)
   .handler(async ({ data: input }): Promise<{ success: boolean; error?: string }> => {
     const parsed = updateMediaItemSchema.safeParse(input.data)
@@ -188,7 +188,7 @@ export const updateMediaItemFn = createServerFn()
     )
   })
 
-export const deleteMediaItemFn = createServerFn()
+export const deleteMediaItemFn = createServerFn({ method: 'POST' })
   .inputValidator((input: { id: string }) => input)
   .handler(async ({ data }): Promise<{ success: boolean; error?: string }> => {
     const result = await requireAuthContext().andThen((auth) =>
@@ -205,7 +205,7 @@ export const deleteMediaItemFn = createServerFn()
 // Server Functions — Folder Mutations
 // ---------------------------------------------------------------------------
 
-export const createFolderFn = createServerFn()
+export const createFolderFn = createServerFn({ method: 'POST' })
   .inputValidator((input: CreateFolderFormData) => input)
   .handler(async ({ data }): Promise<{ success: boolean; data?: MediaFolder; error?: string }> => {
     const parsed = createFolderSchema.safeParse(data)
@@ -223,7 +223,7 @@ export const createFolderFn = createServerFn()
     )
   })
 
-export const renameFolderFn = createServerFn()
+export const renameFolderFn = createServerFn({ method: 'POST' })
   .inputValidator((input: { id: string; data: RenameFolderFormData }) => input)
   .handler(async ({ data: input }): Promise<{ success: boolean; error?: string }> => {
     const parsed = renameFolderSchema.safeParse(input.data)
@@ -241,7 +241,7 @@ export const renameFolderFn = createServerFn()
     )
   })
 
-export const deleteFolderFn = createServerFn()
+export const deleteFolderFn = createServerFn({ method: 'POST' })
   .inputValidator((input: { id: string }) => input)
   .handler(async ({ data }): Promise<{ success: boolean; error?: string }> => {
     // Items in this folder get folder_id=NULL via ON DELETE SET NULL
@@ -255,7 +255,7 @@ export const deleteFolderFn = createServerFn()
     )
   })
 
-export const moveMediaItemFn = createServerFn()
+export const moveMediaItemFn = createServerFn({ method: 'POST' })
   .inputValidator((input: { itemId: string; folderId: string | null }) => input)
   .handler(async ({ data }): Promise<{ success: boolean; error?: string }> => {
     const result = await requireAuthContext().andThen((auth) =>

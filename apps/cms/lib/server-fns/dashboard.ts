@@ -17,7 +17,7 @@ export type DashboardStats = {
  * SRP: separate file because dashboard data is scoped to one route,
  * not shared with other parts of the admin layout.
  */
-export const getDashboardStatsFn = createServerFn().handler(
+export const getDashboardStatsFn = createServerFn({ method: 'POST' }).handler(
   async (): Promise<DashboardStats> => {
     const auth = await getAuthContextFn()
     if (!auth) return { surveys: 0, responses: 0, appointments: 0, tenants: null }
