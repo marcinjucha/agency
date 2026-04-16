@@ -2,32 +2,23 @@ import { createFileRoute } from '@tanstack/react-router'
 import {
   DEFAULT_BLOCKS,
   type SeoMetadata,
-  type NavbarBlock,
   type HeroBlock,
   type IdentificationBlock,
   type ProblemsBlock,
   type ProcessBlock,
   type ResultsBlock,
   type CtaBlock,
-  type FooterBlock,
 } from '@agency/database'
 import { getPublicLandingPageFn } from '@/features/marketing/server'
 import { getSiteSettingsFn } from '@/features/site-settings/server'
 import { findBlock, hasNewBlockTypes } from '@/features/marketing/utils'
 import { buildWebsiteHead } from '@/lib/head'
-// NOTE: The following marketing components use next/link and next/navigation.
-// They compile and render in TanStack Start because Vite processes them as
-// regular React components. However, next/link will perform full page navigations
-// instead of client-side routing. Iteration 3 will replace next/link with
-// @tanstack/react-router's Link in all feature components.
-import { Navbar } from '@/features/marketing/components/Navbar'
 import { Hero } from '@/features/marketing/components/Hero'
 import { Identification } from '@/features/marketing/components/Identification'
 import { Problems } from '@/features/marketing/components/Problems'
 import { Process } from '@/features/marketing/components/Process'
 import { Results } from '@/features/marketing/components/Results'
 import { FinalCTA } from '@/features/marketing/components/FinalCTA'
-import { Footer } from '@/features/marketing/components/Footer'
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -85,8 +76,6 @@ function HomePage() {
   const rawBlocks = page?.blocks?.length ? page.blocks : DEFAULT_BLOCKS
   const blocks = hasNewBlockTypes(rawBlocks) ? rawBlocks : DEFAULT_BLOCKS
 
-  const navbar = findBlock<NavbarBlock>(blocks, 'navbar') ??
-    (DEFAULT_BLOCKS.find((b) => b.type === 'navbar') as NavbarBlock)
   const hero = findBlock<HeroBlock>(blocks, 'hero') ??
     (DEFAULT_BLOCKS.find((b) => b.type === 'hero') as HeroBlock)
   const identification = findBlock<IdentificationBlock>(blocks, 'identification') ??
@@ -99,21 +88,15 @@ function HomePage() {
     (DEFAULT_BLOCKS.find((b) => b.type === 'results') as ResultsBlock)
   const cta = findBlock<CtaBlock>(blocks, 'cta') ??
     (DEFAULT_BLOCKS.find((b) => b.type === 'cta') as CtaBlock)
-  const footer = findBlock<FooterBlock>(blocks, 'footer') ??
-    (DEFAULT_BLOCKS.find((b) => b.type === 'footer') as FooterBlock)
 
   return (
-    <>
-      <Navbar {...navbar} />
-      <main className="w-full">
-        <Hero {...hero} />
-        <Identification {...identification} />
-        <Problems {...problems} />
-        <Process {...process} />
-        <Results {...results} />
-        <FinalCTA {...cta} />
-      </main>
-      <Footer {...footer} />
-    </>
+    <main className="w-full">
+      <Hero {...hero} />
+      <Identification {...identification} />
+      <Problems {...problems} />
+      <Process {...process} />
+      <Results {...results} />
+      <FinalCTA {...cta} />
+    </main>
   )
 }
