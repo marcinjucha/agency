@@ -67,7 +67,7 @@ export const getBlogPostFn = createServerFn()
       .maybeSingle()
 
     if (error) throw new Error(messages.blog.loadFailed)
-    if (!row) return null
+    if (!row) throw new Error(messages.blog.loadFailed)
     return toBlogPost(row)
   })
 

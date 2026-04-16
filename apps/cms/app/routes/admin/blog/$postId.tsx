@@ -2,8 +2,6 @@ import { createFileRoute } from '@tanstack/react-router'
 import { buildCmsHead } from '@/lib/head'
 import { messages } from '@/lib/messages'
 import {
-  getBlogPostFn,
-  getCategoriesFn,
   createBlogPostFn,
   updateBlogPostFn,
   deleteBlogPostFn,
@@ -13,18 +11,19 @@ import { BlogPostEditor } from '@/features/blog/components/BlogPostEditor'
 import type { BlogPostPayload, SaveBlogPostResult } from '@/features/blog/components/BlogPostEditor'
 import type { BlogPost } from '@/features/blog/types'
 import { useQuery } from '@tanstack/react-query'
-import { getBlogPost } from '@/features/blog/queries'
+import { getBlogPost, getBlogCategories } from '@/features/blog/queries'
 
 export const Route = createFileRoute('/admin/blog/$postId')({
   head: () => buildCmsHead(messages.blog.editPost),
   loader: ({ params, context: { queryClient } }) => {
+    // Use browser client queries — server fns cause undefined cache poisoning on warmup
     queryClient.prefetchQuery({
       queryKey: queryKeys.blog.detail(params.postId),
-      queryFn: () => getBlogPostFn({ data: { id: params.postId } }),
+      queryFn: () => getBlogPost(params.postId),
     })
     queryClient.prefetchQuery({
       queryKey: queryKeys.blog.categories,
-      queryFn: () => getCategoriesFn(),
+      queryFn: getBlogCategories,
     })
   },
   component: BlogPostEditorPage,
