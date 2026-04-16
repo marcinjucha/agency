@@ -1,10 +1,8 @@
-'use client'
 
-import Link from 'next/link'
+
+import { Link, useRouter } from '@tanstack/react-router'
 import { Card, CardContent } from '@agency/ui'
-import { useRouter } from 'next/navigation'
 import { Mail, ChevronRight } from 'lucide-react'
-import { routes } from '@/lib/routes'
 import { messages } from '@/lib/messages'
 import { TEMPLATE_TYPE_LABELS, type EmailTemplateType, type EmailTemplate } from '@/features/email/types'
 import { useViewMode } from '@/hooks/use-view-mode'
@@ -17,6 +15,8 @@ interface EmailTemplateListClientProps {
 export function EmailTemplateListClient({ templates }: EmailTemplateListClientProps) {
   const [viewMode, setViewMode] = useViewMode('email-templates-view-mode', 'grid')
   const router = useRouter()
+  const navigate = (type: string) =>
+    router.navigate({ to: '/admin/email-templates/$type', params: { type } })
 
   const allTypes = Object.entries(TEMPLATE_TYPE_LABELS) as [EmailTemplateType, string][]
 
@@ -38,11 +38,11 @@ export function EmailTemplateListClient({ templates }: EmailTemplateListClientPr
                 role="button"
                 tabIndex={0}
                 className="group cursor-pointer"
-                onClick={() => router.push(routes.admin.emailTemplate(type))}
+                onClick={() => navigate(type)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault()
-                    router.push(routes.admin.emailTemplate(type))
+                    navigate(type)
                   }
                 }}
               >
@@ -83,7 +83,7 @@ export function EmailTemplateListClient({ templates }: EmailTemplateListClientPr
           {allTypes.map(([type, label]) => {
             const template = templates.find((t) => t.type === type)
             return (
-              <Link key={type} href={routes.admin.emailTemplate(type)}>
+              <Link key={type} to="/admin/email-templates/$type" params={{ type }}>
                 <Card className="flex items-center justify-between p-5 hover:bg-accent transition-colors cursor-pointer">
                   <div className="flex items-center gap-4">
                     <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">

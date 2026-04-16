@@ -1,4 +1,4 @@
-'use client'
+
 
 import { useRef, useState, useCallback, useId } from 'react'
 import { Progress } from '@agency/ui'

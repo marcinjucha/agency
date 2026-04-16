@@ -1,4 +1,4 @@
-'use client'
+
 
 import { useEditor, EditorContent } from '@tiptap/react'
 import type { Extensions } from '@tiptap/core'

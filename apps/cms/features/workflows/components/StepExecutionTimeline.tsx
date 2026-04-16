@@ -1,4 +1,4 @@
-'use client'
+
 
 import { useState } from 'react'
 import { Clock, ChevronDown, ChevronUp } from 'lucide-react'

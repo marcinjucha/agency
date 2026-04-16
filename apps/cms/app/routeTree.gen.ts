@@ -13,12 +13,25 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
+import { Route as AdminWorkflowsIndexRouteImport } from './routes/admin/workflows/index'
+import { Route as AdminUsersIndexRouteImport } from './routes/admin/users/index'
+import { Route as AdminTenantsIndexRouteImport } from './routes/admin/tenants/index'
 import { Route as AdminSurveysIndexRouteImport } from './routes/admin/surveys/index'
+import { Route as AdminSettingsIndexRouteImport } from './routes/admin/settings/index'
+import { Route as AdminRolesIndexRouteImport } from './routes/admin/roles/index'
 import { Route as AdminResponsesIndexRouteImport } from './routes/admin/responses/index'
 import { Route as AdminIntakeIndexRouteImport } from './routes/admin/intake/index'
+import { Route as AdminEmailTemplatesIndexRouteImport } from './routes/admin/email-templates/index'
+import { Route as ApiCalendarCallbackRouteImport } from './routes/api/calendar/callback'
+import { Route as AdminWorkflowsWorkflowIdRouteImport } from './routes/admin/workflows/$workflowId'
+import { Route as AdminTenantsNewRouteImport } from './routes/admin/tenants/new'
+import { Route as AdminTenantsTenantIdRouteImport } from './routes/admin/tenants/$tenantId'
 import { Route as AdminSurveysNewRouteImport } from './routes/admin/surveys/new'
 import { Route as AdminSurveysSurveyIdRouteImport } from './routes/admin/surveys/$surveyId'
 import { Route as AdminResponsesResponseIdRouteImport } from './routes/admin/responses/$responseId'
+import { Route as AdminEmailTemplatesTypeRouteImport } from './routes/admin/email-templates/$type'
+import { Route as AdminWorkflowsWorkflowIdExecutionsRouteImport } from './routes/admin/workflows/$workflowId/executions'
+import { Route as AdminWorkflowsWorkflowIdExecutionsExecutionIdRouteImport } from './routes/admin/workflows/$workflowId/executions/$executionId'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -40,9 +53,34 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminWorkflowsIndexRoute = AdminWorkflowsIndexRouteImport.update({
+  id: '/workflows/',
+  path: '/workflows/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminUsersIndexRoute = AdminUsersIndexRouteImport.update({
+  id: '/users/',
+  path: '/users/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminTenantsIndexRoute = AdminTenantsIndexRouteImport.update({
+  id: '/tenants/',
+  path: '/tenants/',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminSurveysIndexRoute = AdminSurveysIndexRouteImport.update({
   id: '/surveys/',
   path: '/surveys/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminSettingsIndexRoute = AdminSettingsIndexRouteImport.update({
+  id: '/settings/',
+  path: '/settings/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminRolesIndexRoute = AdminRolesIndexRouteImport.update({
+  id: '/roles/',
+  path: '/roles/',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminResponsesIndexRoute = AdminResponsesIndexRouteImport.update({
@@ -53,6 +91,33 @@ const AdminResponsesIndexRoute = AdminResponsesIndexRouteImport.update({
 const AdminIntakeIndexRoute = AdminIntakeIndexRouteImport.update({
   id: '/intake/',
   path: '/intake/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminEmailTemplatesIndexRoute =
+  AdminEmailTemplatesIndexRouteImport.update({
+    id: '/email-templates/',
+    path: '/email-templates/',
+    getParentRoute: () => AdminRoute,
+  } as any)
+const ApiCalendarCallbackRoute = ApiCalendarCallbackRouteImport.update({
+  id: '/api/calendar/callback',
+  path: '/api/calendar/callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminWorkflowsWorkflowIdRoute =
+  AdminWorkflowsWorkflowIdRouteImport.update({
+    id: '/workflows/$workflowId',
+    path: '/workflows/$workflowId',
+    getParentRoute: () => AdminRoute,
+  } as any)
+const AdminTenantsNewRoute = AdminTenantsNewRouteImport.update({
+  id: '/tenants/new',
+  path: '/tenants/new',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminTenantsTenantIdRoute = AdminTenantsTenantIdRouteImport.update({
+  id: '/tenants/$tenantId',
+  path: '/tenants/$tenantId',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminSurveysNewRoute = AdminSurveysNewRouteImport.update({
@@ -71,29 +136,72 @@ const AdminResponsesResponseIdRoute =
     path: '/responses/$responseId',
     getParentRoute: () => AdminRoute,
   } as any)
+const AdminEmailTemplatesTypeRoute = AdminEmailTemplatesTypeRouteImport.update({
+  id: '/email-templates/$type',
+  path: '/email-templates/$type',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminWorkflowsWorkflowIdExecutionsRoute =
+  AdminWorkflowsWorkflowIdExecutionsRouteImport.update({
+    id: '/executions',
+    path: '/executions',
+    getParentRoute: () => AdminWorkflowsWorkflowIdRoute,
+  } as any)
+const AdminWorkflowsWorkflowIdExecutionsExecutionIdRoute =
+  AdminWorkflowsWorkflowIdExecutionsExecutionIdRouteImport.update({
+    id: '/$executionId',
+    path: '/$executionId',
+    getParentRoute: () => AdminWorkflowsWorkflowIdExecutionsRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/login': typeof LoginRoute
   '/admin/': typeof AdminIndexRoute
+  '/admin/email-templates/$type': typeof AdminEmailTemplatesTypeRoute
   '/admin/responses/$responseId': typeof AdminResponsesResponseIdRoute
   '/admin/surveys/$surveyId': typeof AdminSurveysSurveyIdRoute
   '/admin/surveys/new': typeof AdminSurveysNewRoute
+  '/admin/tenants/$tenantId': typeof AdminTenantsTenantIdRoute
+  '/admin/tenants/new': typeof AdminTenantsNewRoute
+  '/admin/workflows/$workflowId': typeof AdminWorkflowsWorkflowIdRouteWithChildren
+  '/api/calendar/callback': typeof ApiCalendarCallbackRoute
+  '/admin/email-templates/': typeof AdminEmailTemplatesIndexRoute
   '/admin/intake/': typeof AdminIntakeIndexRoute
   '/admin/responses/': typeof AdminResponsesIndexRoute
+  '/admin/roles/': typeof AdminRolesIndexRoute
+  '/admin/settings/': typeof AdminSettingsIndexRoute
   '/admin/surveys/': typeof AdminSurveysIndexRoute
+  '/admin/tenants/': typeof AdminTenantsIndexRoute
+  '/admin/users/': typeof AdminUsersIndexRoute
+  '/admin/workflows/': typeof AdminWorkflowsIndexRoute
+  '/admin/workflows/$workflowId/executions': typeof AdminWorkflowsWorkflowIdExecutionsRouteWithChildren
+  '/admin/workflows/$workflowId/executions/$executionId': typeof AdminWorkflowsWorkflowIdExecutionsExecutionIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/admin': typeof AdminIndexRoute
+  '/admin/email-templates/$type': typeof AdminEmailTemplatesTypeRoute
   '/admin/responses/$responseId': typeof AdminResponsesResponseIdRoute
   '/admin/surveys/$surveyId': typeof AdminSurveysSurveyIdRoute
   '/admin/surveys/new': typeof AdminSurveysNewRoute
+  '/admin/tenants/$tenantId': typeof AdminTenantsTenantIdRoute
+  '/admin/tenants/new': typeof AdminTenantsNewRoute
+  '/admin/workflows/$workflowId': typeof AdminWorkflowsWorkflowIdRouteWithChildren
+  '/api/calendar/callback': typeof ApiCalendarCallbackRoute
+  '/admin/email-templates': typeof AdminEmailTemplatesIndexRoute
   '/admin/intake': typeof AdminIntakeIndexRoute
   '/admin/responses': typeof AdminResponsesIndexRoute
+  '/admin/roles': typeof AdminRolesIndexRoute
+  '/admin/settings': typeof AdminSettingsIndexRoute
   '/admin/surveys': typeof AdminSurveysIndexRoute
+  '/admin/tenants': typeof AdminTenantsIndexRoute
+  '/admin/users': typeof AdminUsersIndexRoute
+  '/admin/workflows': typeof AdminWorkflowsIndexRoute
+  '/admin/workflows/$workflowId/executions': typeof AdminWorkflowsWorkflowIdExecutionsRouteWithChildren
+  '/admin/workflows/$workflowId/executions/$executionId': typeof AdminWorkflowsWorkflowIdExecutionsExecutionIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -101,12 +209,25 @@ export interface FileRoutesById {
   '/admin': typeof AdminRouteWithChildren
   '/login': typeof LoginRoute
   '/admin/': typeof AdminIndexRoute
+  '/admin/email-templates/$type': typeof AdminEmailTemplatesTypeRoute
   '/admin/responses/$responseId': typeof AdminResponsesResponseIdRoute
   '/admin/surveys/$surveyId': typeof AdminSurveysSurveyIdRoute
   '/admin/surveys/new': typeof AdminSurveysNewRoute
+  '/admin/tenants/$tenantId': typeof AdminTenantsTenantIdRoute
+  '/admin/tenants/new': typeof AdminTenantsNewRoute
+  '/admin/workflows/$workflowId': typeof AdminWorkflowsWorkflowIdRouteWithChildren
+  '/api/calendar/callback': typeof ApiCalendarCallbackRoute
+  '/admin/email-templates/': typeof AdminEmailTemplatesIndexRoute
   '/admin/intake/': typeof AdminIntakeIndexRoute
   '/admin/responses/': typeof AdminResponsesIndexRoute
+  '/admin/roles/': typeof AdminRolesIndexRoute
+  '/admin/settings/': typeof AdminSettingsIndexRoute
   '/admin/surveys/': typeof AdminSurveysIndexRoute
+  '/admin/tenants/': typeof AdminTenantsIndexRoute
+  '/admin/users/': typeof AdminUsersIndexRoute
+  '/admin/workflows/': typeof AdminWorkflowsIndexRoute
+  '/admin/workflows/$workflowId/executions': typeof AdminWorkflowsWorkflowIdExecutionsRouteWithChildren
+  '/admin/workflows/$workflowId/executions/$executionId': typeof AdminWorkflowsWorkflowIdExecutionsExecutionIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -115,41 +236,81 @@ export interface FileRouteTypes {
     | '/admin'
     | '/login'
     | '/admin/'
+    | '/admin/email-templates/$type'
     | '/admin/responses/$responseId'
     | '/admin/surveys/$surveyId'
     | '/admin/surveys/new'
+    | '/admin/tenants/$tenantId'
+    | '/admin/tenants/new'
+    | '/admin/workflows/$workflowId'
+    | '/api/calendar/callback'
+    | '/admin/email-templates/'
     | '/admin/intake/'
     | '/admin/responses/'
+    | '/admin/roles/'
+    | '/admin/settings/'
     | '/admin/surveys/'
+    | '/admin/tenants/'
+    | '/admin/users/'
+    | '/admin/workflows/'
+    | '/admin/workflows/$workflowId/executions'
+    | '/admin/workflows/$workflowId/executions/$executionId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/login'
     | '/admin'
+    | '/admin/email-templates/$type'
     | '/admin/responses/$responseId'
     | '/admin/surveys/$surveyId'
     | '/admin/surveys/new'
+    | '/admin/tenants/$tenantId'
+    | '/admin/tenants/new'
+    | '/admin/workflows/$workflowId'
+    | '/api/calendar/callback'
+    | '/admin/email-templates'
     | '/admin/intake'
     | '/admin/responses'
+    | '/admin/roles'
+    | '/admin/settings'
     | '/admin/surveys'
+    | '/admin/tenants'
+    | '/admin/users'
+    | '/admin/workflows'
+    | '/admin/workflows/$workflowId/executions'
+    | '/admin/workflows/$workflowId/executions/$executionId'
   id:
     | '__root__'
     | '/'
     | '/admin'
     | '/login'
     | '/admin/'
+    | '/admin/email-templates/$type'
     | '/admin/responses/$responseId'
     | '/admin/surveys/$surveyId'
     | '/admin/surveys/new'
+    | '/admin/tenants/$tenantId'
+    | '/admin/tenants/new'
+    | '/admin/workflows/$workflowId'
+    | '/api/calendar/callback'
+    | '/admin/email-templates/'
     | '/admin/intake/'
     | '/admin/responses/'
+    | '/admin/roles/'
+    | '/admin/settings/'
     | '/admin/surveys/'
+    | '/admin/tenants/'
+    | '/admin/users/'
+    | '/admin/workflows/'
+    | '/admin/workflows/$workflowId/executions'
+    | '/admin/workflows/$workflowId/executions/$executionId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRouteWithChildren
   LoginRoute: typeof LoginRoute
+  ApiCalendarCallbackRoute: typeof ApiCalendarCallbackRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -182,11 +343,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminIndexRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/workflows/': {
+      id: '/admin/workflows/'
+      path: '/workflows'
+      fullPath: '/admin/workflows/'
+      preLoaderRoute: typeof AdminWorkflowsIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/users/': {
+      id: '/admin/users/'
+      path: '/users'
+      fullPath: '/admin/users/'
+      preLoaderRoute: typeof AdminUsersIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/tenants/': {
+      id: '/admin/tenants/'
+      path: '/tenants'
+      fullPath: '/admin/tenants/'
+      preLoaderRoute: typeof AdminTenantsIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/surveys/': {
       id: '/admin/surveys/'
       path: '/surveys'
       fullPath: '/admin/surveys/'
       preLoaderRoute: typeof AdminSurveysIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/settings/': {
+      id: '/admin/settings/'
+      path: '/settings'
+      fullPath: '/admin/settings/'
+      preLoaderRoute: typeof AdminSettingsIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/roles/': {
+      id: '/admin/roles/'
+      path: '/roles'
+      fullPath: '/admin/roles/'
+      preLoaderRoute: typeof AdminRolesIndexRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/responses/': {
@@ -201,6 +397,41 @@ declare module '@tanstack/react-router' {
       path: '/intake'
       fullPath: '/admin/intake/'
       preLoaderRoute: typeof AdminIntakeIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/email-templates/': {
+      id: '/admin/email-templates/'
+      path: '/email-templates'
+      fullPath: '/admin/email-templates/'
+      preLoaderRoute: typeof AdminEmailTemplatesIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/api/calendar/callback': {
+      id: '/api/calendar/callback'
+      path: '/api/calendar/callback'
+      fullPath: '/api/calendar/callback'
+      preLoaderRoute: typeof ApiCalendarCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/workflows/$workflowId': {
+      id: '/admin/workflows/$workflowId'
+      path: '/workflows/$workflowId'
+      fullPath: '/admin/workflows/$workflowId'
+      preLoaderRoute: typeof AdminWorkflowsWorkflowIdRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/tenants/new': {
+      id: '/admin/tenants/new'
+      path: '/tenants/new'
+      fullPath: '/admin/tenants/new'
+      preLoaderRoute: typeof AdminTenantsNewRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/tenants/$tenantId': {
+      id: '/admin/tenants/$tenantId'
+      path: '/tenants/$tenantId'
+      fullPath: '/admin/tenants/$tenantId'
+      preLoaderRoute: typeof AdminTenantsTenantIdRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/surveys/new': {
@@ -224,27 +455,98 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminResponsesResponseIdRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/email-templates/$type': {
+      id: '/admin/email-templates/$type'
+      path: '/email-templates/$type'
+      fullPath: '/admin/email-templates/$type'
+      preLoaderRoute: typeof AdminEmailTemplatesTypeRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/workflows/$workflowId/executions': {
+      id: '/admin/workflows/$workflowId/executions'
+      path: '/executions'
+      fullPath: '/admin/workflows/$workflowId/executions'
+      preLoaderRoute: typeof AdminWorkflowsWorkflowIdExecutionsRouteImport
+      parentRoute: typeof AdminWorkflowsWorkflowIdRoute
+    }
+    '/admin/workflows/$workflowId/executions/$executionId': {
+      id: '/admin/workflows/$workflowId/executions/$executionId'
+      path: '/$executionId'
+      fullPath: '/admin/workflows/$workflowId/executions/$executionId'
+      preLoaderRoute: typeof AdminWorkflowsWorkflowIdExecutionsExecutionIdRouteImport
+      parentRoute: typeof AdminWorkflowsWorkflowIdExecutionsRoute
+    }
   }
 }
 
+interface AdminWorkflowsWorkflowIdExecutionsRouteChildren {
+  AdminWorkflowsWorkflowIdExecutionsExecutionIdRoute: typeof AdminWorkflowsWorkflowIdExecutionsExecutionIdRoute
+}
+
+const AdminWorkflowsWorkflowIdExecutionsRouteChildren: AdminWorkflowsWorkflowIdExecutionsRouteChildren =
+  {
+    AdminWorkflowsWorkflowIdExecutionsExecutionIdRoute:
+      AdminWorkflowsWorkflowIdExecutionsExecutionIdRoute,
+  }
+
+const AdminWorkflowsWorkflowIdExecutionsRouteWithChildren =
+  AdminWorkflowsWorkflowIdExecutionsRoute._addFileChildren(
+    AdminWorkflowsWorkflowIdExecutionsRouteChildren,
+  )
+
+interface AdminWorkflowsWorkflowIdRouteChildren {
+  AdminWorkflowsWorkflowIdExecutionsRoute: typeof AdminWorkflowsWorkflowIdExecutionsRouteWithChildren
+}
+
+const AdminWorkflowsWorkflowIdRouteChildren: AdminWorkflowsWorkflowIdRouteChildren =
+  {
+    AdminWorkflowsWorkflowIdExecutionsRoute:
+      AdminWorkflowsWorkflowIdExecutionsRouteWithChildren,
+  }
+
+const AdminWorkflowsWorkflowIdRouteWithChildren =
+  AdminWorkflowsWorkflowIdRoute._addFileChildren(
+    AdminWorkflowsWorkflowIdRouteChildren,
+  )
+
 interface AdminRouteChildren {
   AdminIndexRoute: typeof AdminIndexRoute
+  AdminEmailTemplatesTypeRoute: typeof AdminEmailTemplatesTypeRoute
   AdminResponsesResponseIdRoute: typeof AdminResponsesResponseIdRoute
   AdminSurveysSurveyIdRoute: typeof AdminSurveysSurveyIdRoute
   AdminSurveysNewRoute: typeof AdminSurveysNewRoute
+  AdminTenantsTenantIdRoute: typeof AdminTenantsTenantIdRoute
+  AdminTenantsNewRoute: typeof AdminTenantsNewRoute
+  AdminWorkflowsWorkflowIdRoute: typeof AdminWorkflowsWorkflowIdRouteWithChildren
+  AdminEmailTemplatesIndexRoute: typeof AdminEmailTemplatesIndexRoute
   AdminIntakeIndexRoute: typeof AdminIntakeIndexRoute
   AdminResponsesIndexRoute: typeof AdminResponsesIndexRoute
+  AdminRolesIndexRoute: typeof AdminRolesIndexRoute
+  AdminSettingsIndexRoute: typeof AdminSettingsIndexRoute
   AdminSurveysIndexRoute: typeof AdminSurveysIndexRoute
+  AdminTenantsIndexRoute: typeof AdminTenantsIndexRoute
+  AdminUsersIndexRoute: typeof AdminUsersIndexRoute
+  AdminWorkflowsIndexRoute: typeof AdminWorkflowsIndexRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
   AdminIndexRoute: AdminIndexRoute,
+  AdminEmailTemplatesTypeRoute: AdminEmailTemplatesTypeRoute,
   AdminResponsesResponseIdRoute: AdminResponsesResponseIdRoute,
   AdminSurveysSurveyIdRoute: AdminSurveysSurveyIdRoute,
   AdminSurveysNewRoute: AdminSurveysNewRoute,
+  AdminTenantsTenantIdRoute: AdminTenantsTenantIdRoute,
+  AdminTenantsNewRoute: AdminTenantsNewRoute,
+  AdminWorkflowsWorkflowIdRoute: AdminWorkflowsWorkflowIdRouteWithChildren,
+  AdminEmailTemplatesIndexRoute: AdminEmailTemplatesIndexRoute,
   AdminIntakeIndexRoute: AdminIntakeIndexRoute,
   AdminResponsesIndexRoute: AdminResponsesIndexRoute,
+  AdminRolesIndexRoute: AdminRolesIndexRoute,
+  AdminSettingsIndexRoute: AdminSettingsIndexRoute,
   AdminSurveysIndexRoute: AdminSurveysIndexRoute,
+  AdminTenantsIndexRoute: AdminTenantsIndexRoute,
+  AdminUsersIndexRoute: AdminUsersIndexRoute,
+  AdminWorkflowsIndexRoute: AdminWorkflowsIndexRoute,
 }
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
@@ -253,6 +555,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRouteWithChildren,
   LoginRoute: LoginRoute,
+  ApiCalendarCallbackRoute: ApiCalendarCallbackRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

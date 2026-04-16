@@ -1,9 +1,9 @@
-'use client'
+
 
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useRouter } from 'next/navigation'
+import { useNavigate } from '@tanstack/react-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Card,
@@ -66,7 +66,7 @@ function extractText(node: TiptapContent | TiptapContent['content'][number]): st
 // --- Component ---
 
 export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
-  const router = useRouter()
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const isEditing = !!blogPost
 
@@ -189,7 +189,7 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
       onSuccess?.()
 
       if (!isEditing && result.data) {
-        router.push(routes.admin.blogPost(result.data.id))
+        navigate({ to: routes.admin.blogPost(result.data.id) })
       }
     } else {
       setSaveState('error')
@@ -255,7 +255,7 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
     const result = await deleteBlogPost(blogPost.id)
     if (result.success) {
       queryClient.invalidateQueries({ queryKey: blogKeys.all })
-      router.push(routes.admin.blog)
+      navigate({ to: routes.admin.blog })
     } else {
       setDeleteState('idle')
       setErrorMessage(result.error ?? messages.blog.deleteFailed)

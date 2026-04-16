@@ -1,4 +1,4 @@
-'use client'
+
 
 import { useState, useMemo, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@agency/ui'
-import Link from 'next/link'
+import { Link } from '@tanstack/react-router'
 import { FileText, Plus } from 'lucide-react'
 import { startOfDay, isSameDay } from 'date-fns'
 import { getPostStatus } from '../types'
@@ -131,7 +131,7 @@ export function BlogPostList() {
         description={messages.blog.noPostsDescription}
         variant="card"
         action={
-          <Link href={routes.admin.blogNew}>
+          <Link to={routes.admin.blogNew}>
             <Button>
               <Plus className="mr-2 h-4 w-4" />
               {messages.blog.writeFirstPost}
@@ -148,7 +148,7 @@ export function BlogPostList() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold text-foreground">{messages.blog.blog}</h1>
         <div className="flex items-center gap-3">
-          <Link href={routes.admin.blogNew}>
+          <Link to={routes.admin.blogNew}>
             <Button>
               <Plus className="mr-2 h-4 w-4" />
               {messages.blog.newPostButton}

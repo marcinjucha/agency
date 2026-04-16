@@ -1,11 +1,11 @@
 import { renderHook, act } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { useSearchParams, usePathname, useRouter } from 'next/navigation'
+import { useNavigate, useSearch, useLocation } from '@tanstack/react-router'
 
 import { usePermissions } from '@/contexts/permissions-context'
 import { useTenantScope } from '../use-tenant-scope'
 
-const mockRouter = { push: vi.fn(), replace: vi.fn(), back: vi.fn(), forward: vi.fn(), refresh: vi.fn(), prefetch: vi.fn() }
+const mockNavigate = vi.fn()
 const OWN_TENANT = 'aaaa-1111'
 const OTHER_TENANT = 'bbbb-2222'
 
@@ -28,13 +28,13 @@ function mockPermissions(overrides: Record<string, unknown> = {}) {
 }
 
 function mockNavigation(params: Record<string, string> = {}, pathname = '/admin/users') {
-  vi.mocked(useSearchParams).mockReturnValue(new URLSearchParams(params) as any)
-  vi.mocked(usePathname).mockReturnValue(pathname)
-  vi.mocked(useRouter).mockReturnValue(mockRouter as any)
+  vi.mocked(useNavigate).mockReturnValue(mockNavigate)
+  vi.mocked(useSearch).mockReturnValue(params as any)
+  vi.mocked(useLocation).mockReturnValue({ pathname, search: '', hash: '', href: pathname, searchStr: '', state: {} } as any)
 }
 
 beforeEach(() => {
-  mockRouter.push.mockReset()
+  mockNavigate.mockReset()
 })
 
 // --- selectedTenantId ---
@@ -103,7 +103,10 @@ describe('setTenantScope', () => {
     const { result } = renderHook(() => useTenantScope())
     act(() => result.current.setTenantScope(OTHER_TENANT))
 
-    expect(mockRouter.push).toHaveBeenCalledWith(`/admin/users?tenant=${OTHER_TENANT}`)
+    expect(mockNavigate).toHaveBeenCalledWith({
+      to: '/admin/users',
+      search: { tenant: OTHER_TENANT },
+    })
   })
 
   it('removes param when selecting own tenant', () => {
@@ -113,7 +116,10 @@ describe('setTenantScope', () => {
     const { result } = renderHook(() => useTenantScope())
     act(() => result.current.setTenantScope(OWN_TENANT))
 
-    expect(mockRouter.push).toHaveBeenCalledWith('/admin/users')
+    expect(mockNavigate).toHaveBeenCalledWith({
+      to: '/admin/users',
+      search: {},
+    })
   })
 })
 
@@ -127,7 +133,10 @@ describe('resetToOwn', () => {
     const { result } = renderHook(() => useTenantScope())
     act(() => result.current.resetToOwn())
 
-    expect(mockRouter.push).toHaveBeenCalledWith('/admin/users')
+    expect(mockNavigate).toHaveBeenCalledWith({
+      to: '/admin/users',
+      search: {},
+    })
   })
 
   it('preserves other query params when removing tenant', () => {
@@ -137,6 +146,9 @@ describe('resetToOwn', () => {
     const { result } = renderHook(() => useTenantScope())
     act(() => result.current.resetToOwn())
 
-    expect(mockRouter.push).toHaveBeenCalledWith('/admin/users?tab=roles')
+    expect(mockNavigate).toHaveBeenCalledWith({
+      to: '/admin/users',
+      search: { tab: 'roles' },
+    })
   })
 })

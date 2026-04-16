@@ -1,17 +1,14 @@
-'use client'
-
 import { useEffect } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '@tanstack/react-router'
 import { queryKeys } from '@/lib/query-keys'
 import { routes } from '@/lib/routes'
 import { messages } from '@/lib/messages'
 import { tenantSchema, type TenantFormValues } from '../validation'
 import { SUBSCRIPTION_STATUSES, type TenantFormData } from '../types'
-import { getTenant } from '../queries'
-import { createTenant, updateTenant } from '../actions'
+import { getTenantFn, createTenantFn, updateTenantFn } from '../server'
 import type { PermissionKey } from '@/lib/permissions'
 import { FeatureFlagSelector } from './FeatureFlagSelector'
 import {
@@ -31,7 +28,7 @@ import {
   ErrorState,
 } from '@agency/ui'
 import { ArrowLeft } from 'lucide-react'
-import Link from 'next/link'
+import { Link } from '@tanstack/react-router'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -58,7 +55,7 @@ export function TenantForm({ tenantId }: TenantFormProps) {
     refetch,
   } = useQuery({
     queryKey: queryKeys.tenants.detail(tenantId!),
-    queryFn: () => getTenant(tenantId!),
+    queryFn: () => getTenantFn({ data: { id: tenantId! } }),
     enabled: isEditing,
   })
 
@@ -103,15 +100,15 @@ export function TenantForm({ tenantId }: TenantFormProps) {
         enabled_features: data.enabled_features as PermissionKey[],
       }
       const result = isEditing
-        ? await updateTenant(tenantId!, payload)
-        : await createTenant(payload)
+        ? await updateTenantFn({ data: { id: tenantId!, data: payload } })
+        : await createTenantFn({ data: payload })
       if (!result.success) throw new Error(result.error)
       return result
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.tenants.all })
       queryClient.invalidateQueries({ queryKey: queryKeys.roles.all })
-      router.push(routes.admin.tenants)
+      router.navigate({ to: routes.admin.tenants })
     },
   })
 
@@ -135,7 +132,7 @@ export function TenantForm({ tenantId }: TenantFormProps) {
       {/* Back navigation + title */}
       <div>
         <Link
-          href={routes.admin.tenants}
+          to={routes.admin.tenants}
           className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -276,7 +273,7 @@ export function TenantForm({ tenantId }: TenantFormProps) {
             {mutation.isPending ? messages.common.saving : messages.common.save}
           </Button>
           <Button type="button" variant="outline" asChild>
-            <Link href={routes.admin.tenants}>{messages.common.cancel}</Link>
+            <Link to={routes.admin.tenants}>{messages.common.cancel}</Link>
           </Button>
         </div>
       </form>

@@ -1,10 +1,9 @@
-'use client'
+
 
 import { useMemo, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '@/lib/query-keys'
-import { getRoles } from '../queries'
-import { deleteRole } from '../actions'
+import { getRolesFn, deleteRoleFn } from '../server'
 import type { TenantRoleWithPermissions } from '../types'
 import { messages } from '@/lib/messages'
 import {
@@ -69,7 +68,7 @@ export function RoleList() {
     refetch,
   } = useQuery({
     queryKey: queryKeys.roles.list(queryTenantId),
-    queryFn: () => getRoles(queryTenantId ?? undefined),
+    queryFn: () => getRolesFn({ data: { tenantId: queryTenantId ?? undefined } }),
   })
 
   const [deleteError, setDeleteError] = useState<string | null>(null)
@@ -77,7 +76,7 @@ export function RoleList() {
   const deleteMutation = useMutation({
     mutationFn: async (roleId: string) => {
       setDeletingRoleId(roleId)
-      const result = await deleteRole(roleId)
+      const result = await deleteRoleFn({ data: { roleId } })
       if (!result.success) throw new Error(result.error)
       return result
     },

@@ -1,4 +1,4 @@
-'use client'
+
 
 import { Button } from '@agency/ui'
 import { Card } from '@agency/ui'

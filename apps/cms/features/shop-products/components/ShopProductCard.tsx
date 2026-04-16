@@ -1,4 +1,4 @@
-'use client'
+
 
 import {
   Card,
@@ -14,7 +14,7 @@ import {
   AlertDialogAction,
   AlertDialogCancel,
 } from '@agency/ui'
-import { useRouter } from 'next/navigation'
+import { useNavigate } from '@tanstack/react-router'
 import { Trash2 } from 'lucide-react'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
@@ -34,18 +34,18 @@ interface ShopProductCardProps {
 }
 
 export function ShopProductCard({ product, categoryName, onDelete, isDeleting, marketplaceListings, connectedMarketplaces }: ShopProductCardProps) {
-  const router = useRouter()
+  const navigate = useNavigate()
 
   return (
     <Card
       className="group cursor-pointer overflow-hidden transition-transform hover:-translate-y-0.5 focus-within:ring-2 focus-within:ring-ring"
       role="button"
       tabIndex={0}
-      onClick={() => router.push(routes.admin.shopProduct(product.id))}
+      onClick={() => navigate({ to: routes.admin.shopProduct(product.id) })}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault()
-          router.push(routes.admin.shopProduct(product.id))
+          navigate({ to: routes.admin.shopProduct(product.id) })
         }
       }}
     >

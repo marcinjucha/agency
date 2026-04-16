@@ -1,12 +1,12 @@
-'use client'
+
 
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { useRouter } from 'next/navigation'
+import { useNavigate } from '@tanstack/react-router'
 import { queryKeys } from '@/lib/query-keys'
 import { createWorkflowSchema, type CreateWorkflowFormData } from '../validation'
-import { createWorkflow } from '../actions'
+import { createWorkflowFn } from '../server'
 import {
   Button,
   Input,
@@ -28,7 +28,7 @@ interface CreateWorkflowDialogProps {
 }
 
 export function CreateWorkflowDialog({ open, onOpenChange }: CreateWorkflowDialogProps) {
-  const router = useRouter()
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
 
   const {
@@ -46,7 +46,7 @@ export function CreateWorkflowDialog({ open, onOpenChange }: CreateWorkflowDialo
 
   const mutation = useMutation({
     mutationFn: async (data: CreateWorkflowFormData) => {
-      const result = await createWorkflow(data)
+      const result = await createWorkflowFn({ data })
       if (!result.success) throw new Error(result.error)
       return result
     },
@@ -55,7 +55,7 @@ export function CreateWorkflowDialog({ open, onOpenChange }: CreateWorkflowDialo
       reset()
       onOpenChange(false)
       if (result.data?.id) {
-        router.push(routes.admin.workflowEditor(result.data.id))
+        navigate({ to: routes.admin.workflowEditor(result.data.id) })
       }
     },
   })

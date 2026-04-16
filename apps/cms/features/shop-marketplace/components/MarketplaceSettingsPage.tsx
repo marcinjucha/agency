@@ -1,7 +1,7 @@
-'use client'
+
 
 import { useEffect, useState } from 'react'
-import { useSearchParams, usePathname, useRouter } from 'next/navigation'
+import { useNavigate, useSearch, useLocation } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { ErrorState, LoadingState } from '@agency/ui'
 import { queryKeys } from '@/lib/query-keys'
@@ -12,9 +12,9 @@ import type { MarketplaceConnection } from '../types'
 import { MarketplaceConnectionCard } from './MarketplaceConnectionCard'
 
 export function MarketplaceSettingsPage() {
-  const searchParams = useSearchParams()
-  const pathname = usePathname()
-  const router = useRouter()
+  const navigate = useNavigate()
+  const search = useSearch({ strict: false }) as Record<string, string | undefined>
+  const { pathname } = useLocation()
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
 
   const {
@@ -29,21 +29,21 @@ export function MarketplaceSettingsPage() {
 
   // Handle OAuth callback URL params (?connected= or ?error=)
   useEffect(() => {
-    const connected = searchParams.get('connected')
-    const oauthError = searchParams.get('error')
+    const connected = search.connected
+    const oauthError = search.error
 
     if (connected) {
       setFeedback({ type: 'success', message: messages.marketplace.connected })
-      router.replace(pathname)
+      navigate({ to: pathname, replace: true })
     } else if (oauthError) {
       const errorMessage =
         oauthError === 'denied'
           ? messages.marketplace.oauthDenied
           : messages.marketplace.oauthFailed
       setFeedback({ type: 'error', message: errorMessage })
-      router.replace(pathname)
+      navigate({ to: pathname, replace: true })
     }
-  }, [searchParams, pathname, router])
+  }, [search, pathname, navigate])
 
   function findConnection(marketplace: string): MarketplaceConnection | null {
     return connections?.find((c) => c.marketplace === marketplace) ?? null

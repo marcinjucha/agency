@@ -1,8 +1,8 @@
-'use client'
+
 
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import Link from 'next/link'
+import { Link } from '@tanstack/react-router'
 import { ExternalLink, ArrowLeft, ChevronDown, ChevronUp, History } from 'lucide-react'
 import {
   Button,
@@ -219,7 +219,7 @@ export function ExecutionDetail({ executionId, initialData }: ExecutionDetailPro
         description={messages.workflows.backToExecutions}
         action={
           <Button asChild variant="outline" size="sm">
-            <Link href={routes.admin.executionsList}>
+            <Link to={routes.admin.executionsList}>
               <ArrowLeft className="mr-2 h-4 w-4" aria-hidden="true" />
               {messages.workflows.backToExecutions}
             </Link>
@@ -234,7 +234,7 @@ export function ExecutionDetail({ executionId, initialData }: ExecutionDetailPro
       {/* Back navigation + open in editor */}
       <div className="flex items-center justify-between">
         <Link
-          href={routes.admin.executionsList}
+          to={routes.admin.executionsList}
           className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
           aria-label={messages.workflows.backToExecutions}
         >
@@ -243,7 +243,7 @@ export function ExecutionDetail({ executionId, initialData }: ExecutionDetailPro
         </Link>
 
         <Button asChild variant="outline" size="sm">
-          <Link href={routes.admin.workflowEditor(execution.workflow_id)}>
+          <Link to={routes.admin.workflowEditor(execution.workflow_id)}>
             <ExternalLink className="mr-2 h-4 w-4" aria-hidden="true" />
             {messages.workflows.openInEditor}
           </Link>

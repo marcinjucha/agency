@@ -11,48 +11,33 @@ import {
 import type { UpdateSurveyLinkFormData } from '@/features/surveys/validation'
 import { messages } from '@/lib/messages'
 import { createStartClient } from '@/lib/supabase/server-start'
+import { type AuthContext, requireAuthContext, getAuth } from '@/lib/server-auth'
 
 // ---------------------------------------------------------------------------
-// Auth helper — TanStack Start equivalent of requireAuthResult
+// Server Functions (public API)
 // ---------------------------------------------------------------------------
 
-type StartClient = ReturnType<typeof createStartClient>
-
-type AuthContext = {
-  supabase: StartClient
-  userId: string
-  tenantId: string
-}
-
-async function getAuth(): Promise<AuthContext | null> {
+/**
+ * Fetch all surveys for current tenant (with embedded survey_links).
+ * Used by route loader ensureQueryData + SurveyList useQuery.
+ */
+export const getSurveysFn = createServerFn().handler(async () => {
   const supabase = createStartClient()
 
   const {
     data: { user },
   } = await supabase.auth.getUser()
-  if (!user) return null
+  if (!user) return []
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: userData } = await (supabase as any)
-    .from('users')
-    .select('tenant_id')
-    .eq('id', user.id)
-    .single()
+  const { data, error } = await (supabase as any)
+    .from('surveys')
+    .select('*, survey_links(id, is_active, expires_at, max_submissions, submission_count)')
+    .order('created_at', { ascending: false })
 
-  if (!userData?.tenant_id) return null
-
-  return { supabase, userId: user.id, tenantId: userData.tenant_id as string }
-}
-
-function requireAuthContext(): ResultAsync<AuthContext, string> {
-  return ResultAsync.fromPromise(getAuth(), String).andThen((auth) =>
-    auth ? ok(auth) : err('Not authenticated')
-  )
-}
-
-// ---------------------------------------------------------------------------
-// Server Functions (public API)
-// ---------------------------------------------------------------------------
+  if (error) throw error
+  return data || []
+})
 
 /**
  * Create a new survey.

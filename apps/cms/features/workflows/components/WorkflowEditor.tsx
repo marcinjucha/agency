@@ -1,10 +1,10 @@
-'use client'
+
 
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import dynamic from 'next/dynamic'
 import { messages } from '@/lib/messages'
-import { saveWorkflowCanvas, toggleWorkflowActive } from '../actions'
+import { getWorkflowFn, saveWorkflowCanvasFn, toggleWorkflowActiveFn } from '../server'
 import { queryKeys } from '@/lib/query-keys'
 import type { SaveCanvasFormData } from '../validation'
 import { WorkflowEditorHeader } from './WorkflowEditorHeader'
@@ -16,7 +16,7 @@ import {
   type StepType,
 } from '../types'
 import { LayoutGrid, FlaskConical } from 'lucide-react'
-import { Button } from '@agency/ui'
+import { Button, ErrorState } from '@agency/ui'
 import { ConfigPanelWrapper, getPanelComponent } from './panels'
 import type { ConfigPanelProps } from './panels'
 import { StepLibraryPanel } from './StepLibraryPanel'
@@ -58,11 +58,33 @@ function getLabel(stepType: string): string {
 }
 
 interface WorkflowEditorProps {
-  workflow: WorkflowWithSteps
+  /** Route param — editor fetches workflow data via useQuery (cache pre-populated by loader) */
+  workflowId: string
 }
 
-export function WorkflowEditor({ workflow }: WorkflowEditorProps) {
+export function WorkflowEditor({ workflowId }: WorkflowEditorProps) {
   const queryClient = useQueryClient()
+
+  // Cache pre-populated by the route loader's ensureQueryData — renders instantly.
+  const { data: workflow, error: workflowError } = useQuery({
+    queryKey: queryKeys.workflows.detail(workflowId),
+    queryFn: async () => {
+      const data = await getWorkflowFn({ data: { id: workflowId } })
+      return data
+    },
+  })
+
+  if (workflowError) {
+    return (
+      <ErrorState
+        title={messages.workflows.loadFailed}
+        message={workflowError instanceof Error ? workflowError.message : messages.common.errorOccurred}
+        variant="card"
+      />
+    )
+  }
+
+  if (!workflow) return null
 
   // Stable UUID for synthetic trigger node (when no trigger step exists in DB)
   const syntheticTriggerIdRef = useRef(crypto.randomUUID())
@@ -209,7 +231,7 @@ export function WorkflowEditor({ workflow }: WorkflowEditorProps) {
         })),
       }
 
-      const result = await saveWorkflowCanvas(workflow.id, payload)
+      const result = await saveWorkflowCanvasFn({ data: { workflowId: workflow.id, data: payload } })
 
       if (result.success) {
         canvasRef.current?.resetDirty()
@@ -227,7 +249,7 @@ export function WorkflowEditor({ workflow }: WorkflowEditorProps) {
   const handleToggleActive = useCallback(
     async (active: boolean) => {
       setIsActive(active)
-      const result = await toggleWorkflowActive(workflow.id, active)
+      const result = await toggleWorkflowActiveFn({ data: { id: workflow.id, isActive: active } })
       if (!result.success) {
         setIsActive(!active)
         console.error('Toggle failed:', result.error)

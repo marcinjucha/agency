@@ -1,4 +1,4 @@
-'use client'
+
 
 import { PermissionPicker } from '@/features/roles/components/PermissionPicker'
 import type { PermissionKey } from '@/lib/permissions'

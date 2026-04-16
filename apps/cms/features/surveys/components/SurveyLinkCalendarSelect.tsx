@@ -10,7 +10,7 @@ import {
 import { Globe, Mail } from 'lucide-react'
 import { queryKeys } from '@/lib/query-keys'
 import { messages } from '@/lib/messages'
-import { getCalendarConnectionsFn, updateSurveyLinkCalendarFn } from '@/features/calendar/server-fns'
+import { getCalendarConnectionsFn, updateSurveyLinkCalendarFn } from '@/features/calendar/server'
 import type { CalendarConnection } from '@/features/calendar/types'
 
 /**

@@ -1,4 +1,4 @@
-'use client'
+
 
 import { useState, useRef } from 'react'
 import { Button } from '@agency/ui'
@@ -9,7 +9,7 @@ import { EmailPreview } from './EmailPreview'
 import { VariableInserter } from './VariableInserter'
 import { DEFAULT_BLOCKS } from '../types'
 import type { Block, EmailTemplate } from '../types'
-import { updateEmailTemplate } from '../actions'
+import { updateEmailTemplateFn } from '../server'
 import { messages } from '@/lib/messages'
 import { getTriggerVariables } from '@/lib/trigger-schemas'
 
@@ -35,7 +35,7 @@ export function EmailTemplateEditor({ templateType, initialTemplate }: EmailTemp
     setSaveState('saving')
     setErrorMessage(null)
     try {
-      const result = await updateEmailTemplate(templateType, { subject, blocks })
+      const result = await updateEmailTemplateFn({ data: { type: templateType, data: { subject, blocks } } })
       setSaveState(result.success ? 'saved' : 'error')
       if (!result.success) setErrorMessage(result.error ?? null)
     } catch (err) {

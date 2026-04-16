@@ -1,6 +1,6 @@
-'use client'
 
-import { useRouter } from 'next/navigation'
+
+import { useNavigate } from '@tanstack/react-router'
 import {
   Card,
   Button,
@@ -51,7 +51,7 @@ interface BlogPostGridViewProps {
 }
 
 export function BlogPostGridView({ posts, onDelete, isDeleting }: BlogPostGridViewProps) {
-  const router = useRouter()
+  const navigate = useNavigate()
 
   if (posts.length === 0) {
     return (
@@ -71,11 +71,11 @@ export function BlogPostGridView({ posts, onDelete, isDeleting }: BlogPostGridVi
             className="group cursor-pointer bg-card border border-border rounded-lg overflow-hidden transition-colors hover:border-primary/50 focus-within:ring-2 focus-within:ring-ring"
             role="button"
             tabIndex={0}
-            onClick={() => router.push(routes.admin.blogPost(post.id))}
+            onClick={() => navigate({ to: routes.admin.blogPost(post.id) })}
             onKeyDown={(e) => {
               if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault()
-                router.push(routes.admin.blogPost(post.id))
+                navigate({ to: routes.admin.blogPost(post.id) })
               }
             }}
           >

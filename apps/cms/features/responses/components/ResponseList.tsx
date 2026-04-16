@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getResponses } from '../queries'
-import { deleteResponseFn } from '../server-fns'
+import { deleteResponseFn } from '../server'
 import {
   Card, LoadingState, ErrorState, EmptyState,
   AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader,

@@ -1,4 +1,4 @@
-'use client'
+
 
 import { List, LayoutGrid } from 'lucide-react'
 import { messages } from '@/lib/messages'

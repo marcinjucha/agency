@@ -1,4 +1,4 @@
-'use client'
+
 
 import { usePermissions } from '@/contexts/permissions-context'
 import { messages } from '@/lib/messages'

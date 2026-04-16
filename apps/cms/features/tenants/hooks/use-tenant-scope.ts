@@ -1,7 +1,4 @@
-'use client'
-
-import { useSearchParams, usePathname, useRouter } from 'next/navigation'
-import { useCallback, useMemo } from 'react'
+import { useNavigate, useSearch, useLocation } from '@tanstack/react-router'
 import { usePermissions } from '@/contexts/permissions-context'
 
 /**
@@ -16,47 +13,35 @@ import { usePermissions } from '@/contexts/permissions-context'
  */
 export function useTenantScope() {
   const { isSuperAdmin, tenantId: ownTenantId, tenants } = usePermissions()
-  const searchParams = useSearchParams()
-  const pathname = usePathname()
-  const router = useRouter()
+  const navigate = useNavigate()
+  const search = useSearch({ strict: false }) as Record<string, string | undefined>
+  const { pathname } = useLocation()
 
-  const urlTenantId = searchParams.get('tenant')
+  const urlTenantId = search.tenant ?? null
 
-  const selectedTenantId = useMemo(() => {
-    if (!isSuperAdmin) return ownTenantId
-    return urlTenantId ?? ownTenantId
-  }, [isSuperAdmin, urlTenantId, ownTenantId])
+  const selectedTenantId = isSuperAdmin ? (urlTenantId ?? ownTenantId) : ownTenantId
 
-  const isOtherTenant = useMemo(
-    () => isSuperAdmin && !!selectedTenantId && selectedTenantId !== ownTenantId,
-    [isSuperAdmin, selectedTenantId, ownTenantId],
-  )
+  const isOtherTenant = isSuperAdmin && !!selectedTenantId && selectedTenantId !== ownTenantId
 
-  const selectedTenantName = useMemo(() => {
-    if (!selectedTenantId) return null
-    return tenants.find((t) => t.id === selectedTenantId)?.name ?? null
-  }, [tenants, selectedTenantId])
+  const selectedTenantName = selectedTenantId
+    ? (tenants.find((t) => t.id === selectedTenantId)?.name ?? null)
+    : null
 
-  const setTenantScope = useCallback(
-    (tenantId: string) => {
-      const params = new URLSearchParams(searchParams.toString())
-      if (tenantId === ownTenantId) {
-        params.delete('tenant')
-      } else {
-        params.set('tenant', tenantId)
-      }
-      const qs = params.toString()
-      router.push(qs ? `${pathname}?${qs}` : pathname)
-    },
-    [searchParams, pathname, router, ownTenantId],
-  )
+  const setTenantScope = (tenantId: string) => {
+    const newSearch = { ...search }
+    if (tenantId === ownTenantId) {
+      delete newSearch.tenant
+    } else {
+      newSearch.tenant = tenantId
+    }
+    navigate({ to: pathname, search: newSearch })
+  }
 
-  const resetToOwn = useCallback(() => {
-    const params = new URLSearchParams(searchParams.toString())
-    params.delete('tenant')
-    const qs = params.toString()
-    router.push(qs ? `${pathname}?${qs}` : pathname)
-  }, [searchParams, pathname, router])
+  const resetToOwn = () => {
+    const newSearch = { ...search }
+    delete newSearch.tenant
+    navigate({ to: pathname, search: newSearch })
+  }
 
   return {
     /** The tenant ID currently in scope (URL param or own). */

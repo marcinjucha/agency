@@ -1,4 +1,4 @@
-'use client'
+
 
 import { messages } from '@/lib/messages'
 import {

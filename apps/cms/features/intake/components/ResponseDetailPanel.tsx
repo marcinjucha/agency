@@ -20,8 +20,8 @@ import {
   AlertDialogTitle,
 } from '@agency/ui'
 import { X, ExternalLink, Calendar, CheckCircle2, Loader2, Trash2, Mail, Building2, Phone } from 'lucide-react'
-import { updateResponseStatusFn, updateInternalNotesFn } from '../server-fns'
-import { deleteResponseFn } from '../../responses/server-fns'
+import { updateResponseStatusFn, updateInternalNotesFn } from '../server'
+import { deleteResponseFn } from '../../responses/server'
 import { getResponseStatusColor } from '@/lib/utils/status'
 import { queryKeys } from '@/lib/query-keys'
 import { messages } from '@/lib/messages'

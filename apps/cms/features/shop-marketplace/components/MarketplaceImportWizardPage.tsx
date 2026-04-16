@@ -1,6 +1,6 @@
-'use client'
 
-import Link from 'next/link'
+
+import { Link } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { ErrorState, LoadingState } from '@agency/ui'
 import { ChevronLeft } from 'lucide-react'
@@ -25,7 +25,7 @@ export function MarketplaceImportWizardPage() {
     <div className="space-y-6">
       {/* Back navigation */}
       <Link
-        href={routes.admin.shopMarketplace}
+        to={routes.admin.shopMarketplace}
         className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
         aria-label={messages.marketplace.importBackToMarketplace}
       >

@@ -12,7 +12,7 @@ import {
 import { Link } from '@tanstack/react-router'
 import { ArrowLeft, FileX, Loader2, AlertTriangle, Trash2, Bot } from 'lucide-react'
 import { getResponseStatusColor } from '@/lib/utils/status'
-import { triggerAiAnalysisFn, deleteResponseFn } from '../server-fns'
+import { triggerAiAnalysisFn, deleteResponseFn } from '../server'
 import { queryKeys } from '@/lib/query-keys'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'

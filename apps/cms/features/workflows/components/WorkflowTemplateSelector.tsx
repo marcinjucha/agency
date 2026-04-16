@@ -1,13 +1,13 @@
-'use client'
+
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useNavigate } from '@tanstack/react-router'
 import { useMutation } from '@tanstack/react-query'
 import { ChevronDown, ChevronUp, Loader2 } from 'lucide-react'
 import { Button, Badge } from '@agency/ui'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
-import { createWorkflowFromTemplate } from '../actions'
+import { createWorkflowFromTemplateFn } from '../server'
 import { WORKFLOW_TEMPLATES } from '../templates/workflow-templates'
 import { getTriggerTypeLabel } from '../utils'
 import type { TriggerType } from '../types'
@@ -19,7 +19,7 @@ interface WorkflowTemplateSelectorProps {
 }
 
 export function WorkflowTemplateSelector({ workflowCount }: WorkflowTemplateSelectorProps) {
-  const router = useRouter()
+  const navigate = useNavigate()
   const [isVisible, setIsVisible] = useState(true)
   const [activeTemplateId, setActiveTemplateId] = useState<string | null>(null)
   const [errorTemplateId, setErrorTemplateId] = useState<string | null>(null)
@@ -44,14 +44,14 @@ export function WorkflowTemplateSelector({ workflowCount }: WorkflowTemplateSele
     mutationFn: async (templateId: string) => {
       setActiveTemplateId(templateId)
       setErrorTemplateId(null)
-      const result = await createWorkflowFromTemplate(templateId)
+      const result = await createWorkflowFromTemplateFn({ data: { templateId } })
       if (!result.success) throw new Error(result.error)
       return result
     },
     onSuccess: (result) => {
       setActiveTemplateId(null)
       if (result.data?.id) {
-        router.push(routes.admin.workflowEditor(result.data.id))
+        navigate({ to: routes.admin.workflowEditor(result.data.id) })
       }
     },
     onError: (_err, templateId) => {
