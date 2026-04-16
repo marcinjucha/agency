@@ -8,7 +8,7 @@ export type { LandingPage }
 // Each createServerFn handler creates createServiceClient() inside the handler
 // to avoid module-level initialization (required by TanStack Start convention).
 
-export const getPublicLandingPageFn = createServerFn().handler(
+export const getPublicLandingPageFn = createServerFn({ method: 'POST' }).handler(
   async (): Promise<LandingPage | null> => {
     const supabase = createServiceClient()
     const { data, error } = await supabase

@@ -11,7 +11,7 @@ import type { SurveyAnswers } from './types'
 // Returns LinkValidation (isValid: true | false).
 // ---------------------------------------------------------------------------
 
-export const getSurveyByTokenFn = createServerFn()
+export const getSurveyByTokenFn = createServerFn({ method: 'POST' })
   .inputValidator((input: { token: string }) => input)
   .handler(async ({ data }): Promise<LinkValidation> => {
     const supabase = createServiceClient()
@@ -214,7 +214,7 @@ export const submitResponseFn = createServerFn({ method: 'POST' })
 // Returns true if calendar_connection_id is set on the link.
 // ---------------------------------------------------------------------------
 
-export const getSurveyLinkCalendarStatusFn = createServerFn()
+export const getSurveyLinkCalendarStatusFn = createServerFn({ method: 'POST' })
   .inputValidator((input: { linkId: string }) => input)
   .handler(async ({ data }): Promise<boolean> => {
     try {

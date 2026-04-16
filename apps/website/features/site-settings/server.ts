@@ -4,7 +4,7 @@ import type { Tables } from '@agency/database'
 
 export type SiteSettings = Tables<'site_settings'>
 
-export const getSiteSettingsFn = createServerFn().handler(
+export const getSiteSettingsFn = createServerFn({ method: 'POST' }).handler(
   async (): Promise<SiteSettings | null> => {
     const supabase = createServiceClient()
     const { data, error } = await supabase

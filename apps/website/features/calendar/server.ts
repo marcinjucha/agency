@@ -35,7 +35,7 @@ import type { AvailableSlotsResponse, BookingResult, BookingError } from './type
 // getAvailableSlotsFn — replaces GET /api/calendar/slots
 // ---------------------------------------------------------------------------
 
-export const getAvailableSlotsFn = createServerFn()
+export const getAvailableSlotsFn = createServerFn({ method: 'POST' })
   .inputValidator(
     (input: { surveyLinkId: string; date: string }) => input
   )

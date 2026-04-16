@@ -35,7 +35,7 @@ function toBlogPost(raw: Record<string, unknown>): WebsiteBlogPost {
 // Server functions (public API)
 // ---------------------------------------------------------------------------
 
-export const getPublishedBlogPostsFn = createServerFn().handler(
+export const getPublishedBlogPostsFn = createServerFn({ method: 'POST' }).handler(
   async (): Promise<WebsiteBlogListItem[]> => {
     const supabase = createServiceClient()
     const { data, error } = await supabase
@@ -50,7 +50,7 @@ export const getPublishedBlogPostsFn = createServerFn().handler(
   }
 )
 
-export const getPublishedBlogPostFn = createServerFn()
+export const getPublishedBlogPostFn = createServerFn({ method: 'POST' })
   .inputValidator((input: { slug: string }) => input)
   .handler(async ({ data }): Promise<WebsiteBlogPost | null> => {
     const supabase = createServiceClient()
@@ -67,7 +67,7 @@ export const getPublishedBlogPostFn = createServerFn()
     return toBlogPost(row as unknown as Record<string, unknown>)
   })
 
-export const getBlogPostByPreviewTokenFn = createServerFn()
+export const getBlogPostByPreviewTokenFn = createServerFn({ method: 'POST' })
   .inputValidator((input: { token: string }) => input)
   .handler(async ({ data }): Promise<WebsiteBlogPost | null> => {
     const supabase = createServiceClient()
@@ -82,7 +82,7 @@ export const getBlogPostByPreviewTokenFn = createServerFn()
     return toBlogPost(row as unknown as Record<string, unknown>)
   })
 
-export const getPublishedBlogSlugsFn = createServerFn().handler(
+export const getPublishedBlogSlugsFn = createServerFn({ method: 'POST' }).handler(
   async (): Promise<string[]> => {
     const supabase = createServiceClient()
     const { data, error } = await supabase
@@ -96,7 +96,7 @@ export const getPublishedBlogSlugsFn = createServerFn().handler(
   }
 )
 
-export const getPublishedBlogSlugsForSitemapFn = createServerFn().handler(
+export const getPublishedBlogSlugsForSitemapFn = createServerFn({ method: 'POST' }).handler(
   async (): Promise<BlogSitemapEntry[]> => {
     const supabase = createServiceClient()
     const { data, error } = await supabase
