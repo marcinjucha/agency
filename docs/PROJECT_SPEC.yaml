@@ -19,7 +19,7 @@ project:
   name: "Halo Efekt"
   type: monorepo
   notion_project: "AAA-P-4"
-  tech_stack: "Turborepo, Next.js 16 (App Router), React 19, Tailwind CSS 4, shadcn/ui, Supabase (PostgreSQL 17 + RLS), TanStack Query 5, React Hook Form 7, Zod 3, n8n (self-hosted), Resend, AWS S3, Google Calendar API"
+  tech_stack: "Turborepo, CMS: TanStack Start v1.167 + Vite 8 (port 3004, migrating) + Next.js 16 App Router (port 3001, legacy coexisting during migration), Website: Next.js 16, React 19, Tailwind CSS 4, shadcn/ui, Supabase (PostgreSQL 17 + RLS), TanStack Query 5, React Hook Form 7, Zod 3, neverthrow + remeda (functional patterns), n8n (self-hosted), Resend, AWS S3, Google Calendar API"
 
 architecture:
   key_decisions:
@@ -235,6 +235,20 @@ features:
     description: "Workflow Builder, Calendar, Settings, Users, Roles, Tenants, and Email Templates migrated to TanStack Start with prefetchQuery loaders"
     why: "Unblocks Next.js removal from CMS"
     depends_on: ["TanStack Start Migration — Surveys & Intake"]
+
+  - name: "TanStack Start Migration — Content"
+    status: not_started
+    task_id: "AAA-T-195"
+    description: "Blog, Email, and Media Library features migrated to TanStack Start"
+    why: "Unblocks Next.js removal from CMS"
+    depends_on: ["TanStack Start Migration — CMS Core"]
+
+  - name: "TanStack Start Migration — Shop & Marketplace"
+    status: not_started
+    task_id: "AAA-T-196"
+    description: "Shop products, categories, and marketplace integrations migrated to TanStack Start"
+    why: "Unblocks Next.js removal from CMS"
+    depends_on: ["TanStack Start Migration — CMS Core"]
 
   # Backlog
   - name: "Multi-language Support (PL/EN)"
