@@ -60,7 +60,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 function RootLayout() {
   const { queryClient } = Route.useRouteContext()
   const { data } = useQuery({
-    queryKey: landingQueryKey,
+    queryKey: queryKeys.landing.all,
     queryFn: fetchLandingBlocks,
   })
   const navbar = data?.navbar ?? defaultNavbar
