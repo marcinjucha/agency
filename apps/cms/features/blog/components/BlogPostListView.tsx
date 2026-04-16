@@ -1,6 +1,7 @@
 
 
 import { useMemo } from 'react'
+import { Image } from '@unpic/react'
 import {
   Button,
   Badge,
@@ -164,9 +165,10 @@ function BlogPostRow({
       {/* Thumbnail */}
       <div className="hidden sm:block h-10 w-10 flex-shrink-0 overflow-hidden rounded bg-muted">
         {post.cover_image_url ? (
-          <img
+          <Image
             src={post.cover_image_url}
             alt=""
+            layout="fullWidth"
             className="h-full w-full object-cover"
           />
         ) : (

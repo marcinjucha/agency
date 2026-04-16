@@ -1,6 +1,7 @@
 
 
 import { useState, useMemo } from 'react'
+import { Image } from '@unpic/react'
 import {
   Button,
   Select,
@@ -230,9 +231,10 @@ function ProductRow({
       {/* Thumbnail */}
       <div className="hidden sm:block h-10 w-10 flex-shrink-0 overflow-hidden rounded bg-muted">
         {product.cover_image_url ? (
-          <img
+          <Image
             src={product.cover_image_url}
             alt=""
+            layout="fullWidth"
             className="h-full w-full object-cover"
           />
         ) : (

@@ -1,6 +1,7 @@
 
 
 import { useNavigate } from '@tanstack/react-router'
+import { Image } from '@unpic/react'
 import {
   Card,
   Button,
@@ -82,9 +83,10 @@ export function BlogPostGridView({ posts, onDelete, isDeleting }: BlogPostGridVi
             {/* Cover image — aspect-[16/7], full card width */}
             <div className="relative aspect-[16/7] w-full overflow-hidden bg-muted">
               {post.cover_image_url ? (
-                <img
+                <Image
                   src={post.cover_image_url}
                   alt=""
+                  layout="fullWidth"
                   className="h-full w-full object-cover transition-transform group-hover:scale-105"
                 />
               ) : (

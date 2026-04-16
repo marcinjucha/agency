@@ -21,9 +21,8 @@ import {
 } from '@agency/ui'
 import type { LandingBlock, SeoMetadata } from '@agency/database'
 import { DEFAULT_BLOCKS, BLOCK_TYPE_LABELS } from '@agency/database'
-import { getLandingPage } from '../queries'
 import { BlockFieldEditor } from './BlockFieldEditor'
-import { updateLandingPage } from '../actions'
+import { getLandingPageFn, updateLandingPageFn } from '../server'
 import { KeywordSelect } from '@/features/site-settings/components/KeywordSelect'
 import { getKeywordPool } from '@/features/site-settings/queries'
 import { siteSettingsKeys } from '@/features/site-settings/types'
@@ -40,7 +39,7 @@ export function LandingPageEditor() {
     error,
   } = useQuery({
     queryKey: queryKeys.landing.all,
-    queryFn: getLandingPage,
+    queryFn: () => getLandingPageFn(),
   })
 
   const { data: keywordPool = [], isLoading: isPoolLoading } = useQuery({
@@ -85,11 +84,11 @@ export function LandingPageEditor() {
     if (!page) return
     setSaveState('saving')
     try {
-      const result = await updateLandingPage(page.id, {
+      const result = await updateLandingPageFn({ data: { id: page.id, data: {
         blocks: activeBlocks,
         seo_metadata: activeSeo,
         is_published: activePublished,
-      })
+      } } })
       if (result.success) {
         setSaveState('saved')
         queryClient.invalidateQueries({ queryKey: queryKeys.landing.all })

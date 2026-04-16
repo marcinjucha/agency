@@ -217,6 +217,9 @@ export const messages = {
     loadFailed: 'Nie udało się załadować artykułów',
     allCategories: 'Wszystkie',
     categoryPlaceholder: 'Kategoria',
+    categorySelectPlaceholder: 'Wybierz kategorię...',
+    categorySearchPlaceholder: 'Szukaj lub dodaj...',
+    noCategories: 'Brak kategorii',
     postsCount: (filtered: number, total: number, label: string) =>
       `${filtered} z ${total} ${label}`,
     postsLabel: (count: number) => (count === 1 ? 'artykuł' : 'artykułów'),
@@ -302,6 +305,7 @@ export const messages = {
     noMediaInLibrary: 'Brak mediów w bibliotece.',
     uploadToAdd: 'Przeciągnij pliki powyżej, aby dodać nowe media.',
     dragOrClickUpload: 'Przeciągnij lub kliknij aby przesłać',
+    uploadDone: 'Gotowe',
     // Folders
     folders: 'Foldery',
     createFolder: 'Nowy folder',
@@ -1650,12 +1654,14 @@ export const messages = {
     invalidDateFormat: 'Nieprawidłowy format daty',
     submissionsMustBeInteger: 'Liczba wypełnień musi być liczbą całkowitą',
     submissionsMustBePositive: 'Liczba wypełnień musi być większa od zera',
+    seoTitleMax: 'Tytuł SEO może mieć maksymalnie 70 znaków',
     seoDescriptionMax: 'Opis SEO może mieć maksymalnie 160 znaków',
     invalidOgImageUrl: 'Nieprawidłowy URL obrazka OG',
     excerptMax: 'Zajawka może mieć maksymalnie 300 znaków',
     readingTimeMustBeInteger: 'Czas czytania musi być liczbą całkowitą',
     readingTimeMustBePositive: 'Czas czytania musi być większy od zera',
     invalidImageUrl: 'Nieprawidłowy URL obrazka',
+    imageMustBeHttps: 'URL obrazka musi używać HTTPS',
     endHourAfterStart: 'Godzina zakończenia musi być późniejsza niż godzina rozpoczęcia',
     ctaTextRequired: 'Tekst CTA jest wymagany',
     ctaLinkRequired: 'Link CTA jest wymagany',
@@ -1694,9 +1700,14 @@ export const messages = {
 } as const
 
 export const templates = {
+  blog: {
+    addCategory: (name: string) => `Dodaj: ${name}`,
+  },
   media: {
     fileTooLarge: (limitMB: number) => `Plik za duży. Max: ${limitMB}MB.`,
     fileTypeNotAllowed: (types: string) => `Niedozwolony typ pliku. Dozwolone: ${types}`,
+    insertItemAriaLabel: (name: string) => `Wstaw: ${name}`,
+    uploadingProgress: (fileName: string, progress: number) => `Przesyłanie ${fileName}: ${progress}%`,
   },
   marketplace: {
     removeListingTitle: (label: string) => `Usuń ogłoszenie z ${label}?`,

@@ -20,8 +20,11 @@ import { Route as AdminSurveysIndexRouteImport } from './routes/admin/surveys/in
 import { Route as AdminSettingsIndexRouteImport } from './routes/admin/settings/index'
 import { Route as AdminRolesIndexRouteImport } from './routes/admin/roles/index'
 import { Route as AdminResponsesIndexRouteImport } from './routes/admin/responses/index'
+import { Route as AdminMediaIndexRouteImport } from './routes/admin/media/index'
+import { Route as AdminLandingPageIndexRouteImport } from './routes/admin/landing-page/index'
 import { Route as AdminIntakeIndexRouteImport } from './routes/admin/intake/index'
 import { Route as AdminEmailTemplatesIndexRouteImport } from './routes/admin/email-templates/index'
+import { Route as AdminBlogIndexRouteImport } from './routes/admin/blog/index'
 import { Route as ApiCalendarCallbackRouteImport } from './routes/api/calendar/callback'
 import { Route as AdminWorkflowsWorkflowIdRouteImport } from './routes/admin/workflows/$workflowId'
 import { Route as AdminTenantsNewRouteImport } from './routes/admin/tenants/new'
@@ -30,6 +33,8 @@ import { Route as AdminSurveysNewRouteImport } from './routes/admin/surveys/new'
 import { Route as AdminSurveysSurveyIdRouteImport } from './routes/admin/surveys/$surveyId'
 import { Route as AdminResponsesResponseIdRouteImport } from './routes/admin/responses/$responseId'
 import { Route as AdminEmailTemplatesTypeRouteImport } from './routes/admin/email-templates/$type'
+import { Route as AdminBlogNewRouteImport } from './routes/admin/blog/new'
+import { Route as AdminBlogPostIdRouteImport } from './routes/admin/blog/$postId'
 import { Route as AdminWorkflowsWorkflowIdExecutionsRouteImport } from './routes/admin/workflows/$workflowId/executions'
 import { Route as AdminWorkflowsWorkflowIdExecutionsExecutionIdRouteImport } from './routes/admin/workflows/$workflowId/executions/$executionId'
 
@@ -88,6 +93,16 @@ const AdminResponsesIndexRoute = AdminResponsesIndexRouteImport.update({
   path: '/responses/',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminMediaIndexRoute = AdminMediaIndexRouteImport.update({
+  id: '/media/',
+  path: '/media/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminLandingPageIndexRoute = AdminLandingPageIndexRouteImport.update({
+  id: '/landing-page/',
+  path: '/landing-page/',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminIntakeIndexRoute = AdminIntakeIndexRouteImport.update({
   id: '/intake/',
   path: '/intake/',
@@ -99,6 +114,11 @@ const AdminEmailTemplatesIndexRoute =
     path: '/email-templates/',
     getParentRoute: () => AdminRoute,
   } as any)
+const AdminBlogIndexRoute = AdminBlogIndexRouteImport.update({
+  id: '/blog/',
+  path: '/blog/',
+  getParentRoute: () => AdminRoute,
+} as any)
 const ApiCalendarCallbackRoute = ApiCalendarCallbackRouteImport.update({
   id: '/api/calendar/callback',
   path: '/api/calendar/callback',
@@ -141,6 +161,16 @@ const AdminEmailTemplatesTypeRoute = AdminEmailTemplatesTypeRouteImport.update({
   path: '/email-templates/$type',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminBlogNewRoute = AdminBlogNewRouteImport.update({
+  id: '/blog/new',
+  path: '/blog/new',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminBlogPostIdRoute = AdminBlogPostIdRouteImport.update({
+  id: '/blog/$postId',
+  path: '/blog/$postId',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminWorkflowsWorkflowIdExecutionsRoute =
   AdminWorkflowsWorkflowIdExecutionsRouteImport.update({
     id: '/executions',
@@ -159,6 +189,8 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRouteWithChildren
   '/login': typeof LoginRoute
   '/admin/': typeof AdminIndexRoute
+  '/admin/blog/$postId': typeof AdminBlogPostIdRoute
+  '/admin/blog/new': typeof AdminBlogNewRoute
   '/admin/email-templates/$type': typeof AdminEmailTemplatesTypeRoute
   '/admin/responses/$responseId': typeof AdminResponsesResponseIdRoute
   '/admin/surveys/$surveyId': typeof AdminSurveysSurveyIdRoute
@@ -167,8 +199,11 @@ export interface FileRoutesByFullPath {
   '/admin/tenants/new': typeof AdminTenantsNewRoute
   '/admin/workflows/$workflowId': typeof AdminWorkflowsWorkflowIdRouteWithChildren
   '/api/calendar/callback': typeof ApiCalendarCallbackRoute
+  '/admin/blog/': typeof AdminBlogIndexRoute
   '/admin/email-templates/': typeof AdminEmailTemplatesIndexRoute
   '/admin/intake/': typeof AdminIntakeIndexRoute
+  '/admin/landing-page/': typeof AdminLandingPageIndexRoute
+  '/admin/media/': typeof AdminMediaIndexRoute
   '/admin/responses/': typeof AdminResponsesIndexRoute
   '/admin/roles/': typeof AdminRolesIndexRoute
   '/admin/settings/': typeof AdminSettingsIndexRoute
@@ -183,6 +218,8 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/admin': typeof AdminIndexRoute
+  '/admin/blog/$postId': typeof AdminBlogPostIdRoute
+  '/admin/blog/new': typeof AdminBlogNewRoute
   '/admin/email-templates/$type': typeof AdminEmailTemplatesTypeRoute
   '/admin/responses/$responseId': typeof AdminResponsesResponseIdRoute
   '/admin/surveys/$surveyId': typeof AdminSurveysSurveyIdRoute
@@ -191,8 +228,11 @@ export interface FileRoutesByTo {
   '/admin/tenants/new': typeof AdminTenantsNewRoute
   '/admin/workflows/$workflowId': typeof AdminWorkflowsWorkflowIdRouteWithChildren
   '/api/calendar/callback': typeof ApiCalendarCallbackRoute
+  '/admin/blog': typeof AdminBlogIndexRoute
   '/admin/email-templates': typeof AdminEmailTemplatesIndexRoute
   '/admin/intake': typeof AdminIntakeIndexRoute
+  '/admin/landing-page': typeof AdminLandingPageIndexRoute
+  '/admin/media': typeof AdminMediaIndexRoute
   '/admin/responses': typeof AdminResponsesIndexRoute
   '/admin/roles': typeof AdminRolesIndexRoute
   '/admin/settings': typeof AdminSettingsIndexRoute
@@ -209,6 +249,8 @@ export interface FileRoutesById {
   '/admin': typeof AdminRouteWithChildren
   '/login': typeof LoginRoute
   '/admin/': typeof AdminIndexRoute
+  '/admin/blog/$postId': typeof AdminBlogPostIdRoute
+  '/admin/blog/new': typeof AdminBlogNewRoute
   '/admin/email-templates/$type': typeof AdminEmailTemplatesTypeRoute
   '/admin/responses/$responseId': typeof AdminResponsesResponseIdRoute
   '/admin/surveys/$surveyId': typeof AdminSurveysSurveyIdRoute
@@ -217,8 +259,11 @@ export interface FileRoutesById {
   '/admin/tenants/new': typeof AdminTenantsNewRoute
   '/admin/workflows/$workflowId': typeof AdminWorkflowsWorkflowIdRouteWithChildren
   '/api/calendar/callback': typeof ApiCalendarCallbackRoute
+  '/admin/blog/': typeof AdminBlogIndexRoute
   '/admin/email-templates/': typeof AdminEmailTemplatesIndexRoute
   '/admin/intake/': typeof AdminIntakeIndexRoute
+  '/admin/landing-page/': typeof AdminLandingPageIndexRoute
+  '/admin/media/': typeof AdminMediaIndexRoute
   '/admin/responses/': typeof AdminResponsesIndexRoute
   '/admin/roles/': typeof AdminRolesIndexRoute
   '/admin/settings/': typeof AdminSettingsIndexRoute
@@ -236,6 +281,8 @@ export interface FileRouteTypes {
     | '/admin'
     | '/login'
     | '/admin/'
+    | '/admin/blog/$postId'
+    | '/admin/blog/new'
     | '/admin/email-templates/$type'
     | '/admin/responses/$responseId'
     | '/admin/surveys/$surveyId'
@@ -244,8 +291,11 @@ export interface FileRouteTypes {
     | '/admin/tenants/new'
     | '/admin/workflows/$workflowId'
     | '/api/calendar/callback'
+    | '/admin/blog/'
     | '/admin/email-templates/'
     | '/admin/intake/'
+    | '/admin/landing-page/'
+    | '/admin/media/'
     | '/admin/responses/'
     | '/admin/roles/'
     | '/admin/settings/'
@@ -260,6 +310,8 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/admin'
+    | '/admin/blog/$postId'
+    | '/admin/blog/new'
     | '/admin/email-templates/$type'
     | '/admin/responses/$responseId'
     | '/admin/surveys/$surveyId'
@@ -268,8 +320,11 @@ export interface FileRouteTypes {
     | '/admin/tenants/new'
     | '/admin/workflows/$workflowId'
     | '/api/calendar/callback'
+    | '/admin/blog'
     | '/admin/email-templates'
     | '/admin/intake'
+    | '/admin/landing-page'
+    | '/admin/media'
     | '/admin/responses'
     | '/admin/roles'
     | '/admin/settings'
@@ -285,6 +340,8 @@ export interface FileRouteTypes {
     | '/admin'
     | '/login'
     | '/admin/'
+    | '/admin/blog/$postId'
+    | '/admin/blog/new'
     | '/admin/email-templates/$type'
     | '/admin/responses/$responseId'
     | '/admin/surveys/$surveyId'
@@ -293,8 +350,11 @@ export interface FileRouteTypes {
     | '/admin/tenants/new'
     | '/admin/workflows/$workflowId'
     | '/api/calendar/callback'
+    | '/admin/blog/'
     | '/admin/email-templates/'
     | '/admin/intake/'
+    | '/admin/landing-page/'
+    | '/admin/media/'
     | '/admin/responses/'
     | '/admin/roles/'
     | '/admin/settings/'
@@ -392,6 +452,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminResponsesIndexRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/media/': {
+      id: '/admin/media/'
+      path: '/media'
+      fullPath: '/admin/media/'
+      preLoaderRoute: typeof AdminMediaIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/landing-page/': {
+      id: '/admin/landing-page/'
+      path: '/landing-page'
+      fullPath: '/admin/landing-page/'
+      preLoaderRoute: typeof AdminLandingPageIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/intake/': {
       id: '/admin/intake/'
       path: '/intake'
@@ -404,6 +478,13 @@ declare module '@tanstack/react-router' {
       path: '/email-templates'
       fullPath: '/admin/email-templates/'
       preLoaderRoute: typeof AdminEmailTemplatesIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/blog/': {
+      id: '/admin/blog/'
+      path: '/blog'
+      fullPath: '/admin/blog/'
+      preLoaderRoute: typeof AdminBlogIndexRouteImport
       parentRoute: typeof AdminRoute
     }
     '/api/calendar/callback': {
@@ -462,6 +543,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminEmailTemplatesTypeRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/blog/new': {
+      id: '/admin/blog/new'
+      path: '/blog/new'
+      fullPath: '/admin/blog/new'
+      preLoaderRoute: typeof AdminBlogNewRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/blog/$postId': {
+      id: '/admin/blog/$postId'
+      path: '/blog/$postId'
+      fullPath: '/admin/blog/$postId'
+      preLoaderRoute: typeof AdminBlogPostIdRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/workflows/$workflowId/executions': {
       id: '/admin/workflows/$workflowId/executions'
       path: '/executions'
@@ -511,6 +606,8 @@ const AdminWorkflowsWorkflowIdRouteWithChildren =
 
 interface AdminRouteChildren {
   AdminIndexRoute: typeof AdminIndexRoute
+  AdminBlogPostIdRoute: typeof AdminBlogPostIdRoute
+  AdminBlogNewRoute: typeof AdminBlogNewRoute
   AdminEmailTemplatesTypeRoute: typeof AdminEmailTemplatesTypeRoute
   AdminResponsesResponseIdRoute: typeof AdminResponsesResponseIdRoute
   AdminSurveysSurveyIdRoute: typeof AdminSurveysSurveyIdRoute
@@ -518,8 +615,11 @@ interface AdminRouteChildren {
   AdminTenantsTenantIdRoute: typeof AdminTenantsTenantIdRoute
   AdminTenantsNewRoute: typeof AdminTenantsNewRoute
   AdminWorkflowsWorkflowIdRoute: typeof AdminWorkflowsWorkflowIdRouteWithChildren
+  AdminBlogIndexRoute: typeof AdminBlogIndexRoute
   AdminEmailTemplatesIndexRoute: typeof AdminEmailTemplatesIndexRoute
   AdminIntakeIndexRoute: typeof AdminIntakeIndexRoute
+  AdminLandingPageIndexRoute: typeof AdminLandingPageIndexRoute
+  AdminMediaIndexRoute: typeof AdminMediaIndexRoute
   AdminResponsesIndexRoute: typeof AdminResponsesIndexRoute
   AdminRolesIndexRoute: typeof AdminRolesIndexRoute
   AdminSettingsIndexRoute: typeof AdminSettingsIndexRoute
@@ -531,6 +631,8 @@ interface AdminRouteChildren {
 
 const AdminRouteChildren: AdminRouteChildren = {
   AdminIndexRoute: AdminIndexRoute,
+  AdminBlogPostIdRoute: AdminBlogPostIdRoute,
+  AdminBlogNewRoute: AdminBlogNewRoute,
   AdminEmailTemplatesTypeRoute: AdminEmailTemplatesTypeRoute,
   AdminResponsesResponseIdRoute: AdminResponsesResponseIdRoute,
   AdminSurveysSurveyIdRoute: AdminSurveysSurveyIdRoute,
@@ -538,8 +640,11 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminTenantsTenantIdRoute: AdminTenantsTenantIdRoute,
   AdminTenantsNewRoute: AdminTenantsNewRoute,
   AdminWorkflowsWorkflowIdRoute: AdminWorkflowsWorkflowIdRouteWithChildren,
+  AdminBlogIndexRoute: AdminBlogIndexRoute,
   AdminEmailTemplatesIndexRoute: AdminEmailTemplatesIndexRoute,
   AdminIntakeIndexRoute: AdminIntakeIndexRoute,
+  AdminLandingPageIndexRoute: AdminLandingPageIndexRoute,
+  AdminMediaIndexRoute: AdminMediaIndexRoute,
   AdminResponsesIndexRoute: AdminResponsesIndexRoute,
   AdminRolesIndexRoute: AdminRolesIndexRoute,
   AdminSettingsIndexRoute: AdminSettingsIndexRoute,

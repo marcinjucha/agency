@@ -6,9 +6,27 @@ import { renderEmailBlocks, DEFAULT_BLOCKS } from '@agency/email'
 import type { Block } from '@agency/email'
 import type { Tables } from '@agency/database'
 import { messages } from '@/lib/messages'
-import type { EmailTemplate } from './types'
+import { z } from 'zod'
+import { TEMPLATE_TYPE_LABELS, type EmailTemplate, type EmailTemplateType } from './types'
 import { createStartClient } from '@/lib/supabase/server-start'
 import { type AuthContext, requireAuthContext } from '@/lib/server-auth'
+
+// ---------------------------------------------------------------------------
+// Validation schemas
+// ---------------------------------------------------------------------------
+
+const emailTemplateTypeSchema = z.enum(
+  Object.keys(TEMPLATE_TYPE_LABELS) as [keyof typeof TEMPLATE_TYPE_LABELS, ...Array<keyof typeof TEMPLATE_TYPE_LABELS>]
+)
+
+const getEmailTemplateInputSchema = z.object({ type: emailTemplateTypeSchema })
+
+const updateEmailTemplateInputSchema = z.object({
+  type: emailTemplateTypeSchema,
+  data: updateEmailTemplateSchema,
+})
+
+const resetEmailTemplateInputSchema = z.object({ type: emailTemplateTypeSchema })
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -77,7 +95,7 @@ export const getEmailTemplatesFn = createServerFn().handler(
 )
 
 export const getEmailTemplateFn = createServerFn()
-  .inputValidator((input: { type: string }) => input)
+  .inputValidator((input: unknown) => getEmailTemplateInputSchema.parse(input))
   .handler(async ({ data }): Promise<EmailTemplate | null> => {
     const supabase = createStartClient()
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -97,18 +115,10 @@ export const getEmailTemplateFn = createServerFn()
 // ---------------------------------------------------------------------------
 
 export const updateEmailTemplateFn = createServerFn()
-  .inputValidator((input: { type: string; data: { subject: string; blocks: Block[] } }) => input)
+  .inputValidator((input: unknown) => updateEmailTemplateInputSchema.parse(input))
   .handler(async ({ data: input }): Promise<{ success: boolean; error?: string }> => {
-    const parsed = updateEmailTemplateSchema.safeParse(input.data)
-    if (!parsed.success) {
-      return {
-        success: false,
-        error: parsed.error.errors[0]?.message ?? messages.common.invalidData,
-      }
-    }
-
     const result = await requireAuthContext().andThen((auth) =>
-      saveTemplate(auth, input.type, parsed.data.subject, parsed.data.blocks)
+      saveTemplate(auth, input.type, input.data.subject, input.data.blocks)
     )
 
     return result.match(
@@ -118,7 +128,7 @@ export const updateEmailTemplateFn = createServerFn()
   })
 
 export const resetEmailTemplateToDefaultFn = createServerFn()
-  .inputValidator((input: { type: string }) => input)
+  .inputValidator((input: unknown) => resetEmailTemplateInputSchema.parse(input))
   .handler(async ({ data }): Promise<{ success: boolean; error?: string }> => {
     const defaultSubject = 'Dziękujemy za wypełnienie formularza - {{surveyTitle}}'
     const result = await requireAuthContext().andThen((auth) =>
@@ -137,7 +147,7 @@ export const resetEmailTemplateToDefaultFn = createServerFn()
 
 function saveTemplate(
   auth: AuthContext,
-  type: string,
+  type: EmailTemplateType,
   subject: string,
   blocks: Block[]
 ): ResultAsync<undefined, string> {

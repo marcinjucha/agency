@@ -94,4 +94,10 @@ export const queryKeys = {
     templates: ['email-templates', 'list'] as const,
     template: (type: string) => ['email-templates', 'detail', type] as const,
   },
+  blog: {
+    all: ['blog-posts'] as const,
+    list: ['blog-posts', 'list'] as const,
+    detail: (id: string) => ['blog-posts', 'detail', id] as const,
+    categories: ['blog-posts', 'categories'] as const,
+  },
 } as const

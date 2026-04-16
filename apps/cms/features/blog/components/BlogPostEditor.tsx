@@ -1,6 +1,6 @@
 
 
-import { useState, useRef, useCallback, useEffect } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useNavigate } from '@tanstack/react-router'
@@ -19,13 +19,13 @@ import { format } from 'date-fns'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
 import { blogPostSchema, type BlogPostFormData } from '../validation'
-import { createBlogPost, updateBlogPost, deleteBlogPost } from '../actions'
+import { createBlogPostFn, updateBlogPostFn, deleteBlogPostFn } from '../server'
 import {
   generateHtmlFromContent,
   calculateReadingTime,
   generateSlug,
 } from '../utils'
-import { blogKeys } from '../queries'
+import { queryKeys } from '@/lib/query-keys'
 import { getPostStatus, type BlogPostStatus, type SaveState } from '../types'
 import type { BlogPost, TiptapContent } from '../types'
 import { TiptapEditor } from './TiptapEditor'
@@ -148,16 +148,13 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
     setValue('slug', generated)
   }, [watchTitle, setValue])
 
-  const handleSlugChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const val = e.target.value
-      if (val !== lastAutoSlug.current) {
-        slugManuallyEdited.current = true
-      }
-      setValue('slug', val)
-    },
-    [setValue]
-  )
+  function handleSlugChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const val = e.target.value
+    if (val !== lastAutoSlug.current) {
+      slugManuallyEdited.current = true
+    }
+    setValue('slug', val)
+  }
 
   const readingTime = estimateReadingTime(watchContent as TiptapContent)
 
@@ -178,13 +175,13 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
     }
 
     const result = isEditing
-      ? await updateBlogPost(blogPost.id, payload)
-      : await createBlogPost(payload)
+      ? await updateBlogPostFn({ data: { id: blogPost.id, data: payload } })
+      : await createBlogPostFn({ data: payload })
 
     if (result.success) {
       setSaveState('saved')
       if (publishOverride !== undefined) setValue('is_published', publishOverride)
-      queryClient.invalidateQueries({ queryKey: blogKeys.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.blog.all })
       setTimeout(() => setSaveState('idle'), 2500)
       onSuccess?.()
 
@@ -252,9 +249,9 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
   async function handleDelete() {
     if (!blogPost) return
     setDeleteState('deleting')
-    const result = await deleteBlogPost(blogPost.id)
+    const result = await deleteBlogPostFn({ data: { id: blogPost.id } })
     if (result.success) {
-      queryClient.invalidateQueries({ queryKey: blogKeys.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.blog.all })
       navigate({ to: routes.admin.blog })
     } else {
       setDeleteState('idle')

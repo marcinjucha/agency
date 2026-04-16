@@ -1,6 +1,6 @@
 
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Button } from '@agency/ui'
 import { Input } from '@agency/ui'
 import { Label } from '@agency/ui'
@@ -9,7 +9,7 @@ import { EmailPreview } from './EmailPreview'
 import { VariableInserter } from './VariableInserter'
 import { DEFAULT_BLOCKS } from '../types'
 import type { Block, EmailTemplate } from '../types'
-import { updateEmailTemplateFn } from '../server'
+import { updateEmailTemplateFn, resetEmailTemplateToDefaultFn } from '../server'
 import { messages } from '@/lib/messages'
 import { getTriggerVariables } from '@/lib/trigger-schemas'
 
@@ -24,11 +24,36 @@ export function EmailTemplateEditor({ templateType, initialTemplate }: EmailTemp
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
+  // Sync state when initialTemplate loads asynchronously (prefetchQuery is non-blocking)
+  useEffect(() => {
+    if (initialTemplate) {
+      setSubject(initialTemplate.subject ?? '')
+      setBlocks(initialTemplate.blocks ?? DEFAULT_BLOCKS)
+    }
+  }, [initialTemplate])
+
   const variables = getTriggerVariables(templateType)
   const subjectRef = useRef<HTMLInputElement>(null)
 
-  function resetToDefaults() {
-    setBlocks(DEFAULT_BLOCKS)
+  async function resetToDefaults() {
+    setSaveState('saving')
+    setErrorMessage(null)
+    try {
+      const result = await resetEmailTemplateToDefaultFn({ data: { type: templateType } })
+      if (result.success) {
+        setBlocks(DEFAULT_BLOCKS)
+        setSubject('Dziękujemy za wypełnienie formularza - {{surveyTitle}}')
+        setSaveState('saved')
+      } else {
+        setSaveState('error')
+        setErrorMessage(result.error ?? null)
+      }
+    } catch (err) {
+      setSaveState('error')
+      setErrorMessage(err instanceof Error ? err.message : messages.common.unknownError)
+    } finally {
+      setTimeout(() => setSaveState('idle'), 2500)
+    }
   }
 
   async function handleSave() {

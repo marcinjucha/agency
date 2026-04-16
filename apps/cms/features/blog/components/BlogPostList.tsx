@@ -1,9 +1,10 @@
 
 
-import { useState, useMemo, useCallback } from 'react'
+import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getBlogPosts, blogKeys } from '../queries'
-import { deleteBlogPost } from '../actions'
+import { deleteBlogPostFn } from '../server'
+import { getBlogPosts } from '../queries'
+import { queryKeys } from '@/lib/query-keys'
 import {
   Button,
   Skeleton,
@@ -51,64 +52,60 @@ export function BlogPostList() {
     error,
     refetch,
   } = useQuery({
-    queryKey: blogKeys.list,
+    queryKey: queryKeys.blog.list,
     queryFn: getBlogPosts,
   })
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const result = await deleteBlogPost(id)
+      const result = await deleteBlogPostFn({ data: { id } })
       if (!result.success) throw new Error(result.error)
       return result
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: blogKeys.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.blog.all })
     },
   })
 
   /** Toggle date selection — clicking the same date deselects it. */
-  const handleSelectDate = useCallback(
-    (date: Date | undefined) => {
-      if (date && selectedDate && isSameDay(date, selectedDate)) {
-        setSelectedDate(undefined)
-      } else {
-        setSelectedDate(date)
-      }
-    },
-    [selectedDate]
-  )
+  function handleSelectDate(date: Date | undefined) {
+    if (date && selectedDate && isSameDay(date, selectedDate)) {
+      setSelectedDate(undefined)
+    } else {
+      setSelectedDate(date)
+    }
+  }
 
   /** Filter posts by selected date and status, then sort. */
-  const filteredPosts = useMemo(() => {
-    if (!posts) return []
-    const dateFiltered = selectedDate
+  const dateFiltered = posts
+    ? selectedDate
       ? posts.filter((post) => isSameDay(getCalendarDate(post), selectedDate))
       : posts
+    : []
 
-    const statusFiltered =
-      statusFilter === 'all'
-        ? dateFiltered
-        : dateFiltered.filter(
-            (post) => getPostStatus(post.is_published, post.published_at) === statusFilter
-          )
+  const statusFiltered =
+    statusFilter === 'all'
+      ? dateFiltered
+      : dateFiltered.filter(
+          (post) => getPostStatus(post.is_published, post.published_at) === statusFilter
+        )
 
-    return [...statusFiltered].sort((a, b) => {
-      switch (sortMode) {
-        case 'newest':
-          return new Date(b.published_at ?? b.created_at).getTime()
-            - new Date(a.published_at ?? a.created_at).getTime()
-        case 'oldest':
-          return new Date(a.published_at ?? a.created_at).getTime()
-            - new Date(b.published_at ?? b.created_at).getTime()
-        case 'title-az':
-          return (a.title ?? '').localeCompare(b.title ?? '', 'pl')
-        case 'title-za':
-          return (b.title ?? '').localeCompare(a.title ?? '', 'pl')
-        default:
-          return 0
-      }
-    })
-  }, [posts, selectedDate, sortMode, statusFilter])
+  const filteredPosts = [...statusFiltered].sort((a, b) => {
+    switch (sortMode) {
+      case 'newest':
+        return new Date(b.published_at ?? b.created_at).getTime()
+          - new Date(a.published_at ?? a.created_at).getTime()
+      case 'oldest':
+        return new Date(a.published_at ?? a.created_at).getTime()
+          - new Date(b.published_at ?? b.created_at).getTime()
+      case 'title-az':
+        return (a.title ?? '').localeCompare(b.title ?? '', 'pl')
+      case 'title-za':
+        return (b.title ?? '').localeCompare(a.title ?? '', 'pl')
+      default:
+        return 0
+    }
+  })
 
   if (isLoading) return <BlogPostListSkeleton />
 

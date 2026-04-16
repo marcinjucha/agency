@@ -1,6 +1,7 @@
 
 
 import { useState, useRef, useEffect } from 'react'
+import { Image } from '@unpic/react'
 import {
   Badge,
   Card,
@@ -52,9 +53,10 @@ function CardThumbnail({
   if (item.type === 'image') {
     return (
       <button type="button" className={base} onClick={onClick} aria-label={`Podgląd: ${item.name}`}>
-        <img
+        <Image
           src={item.url}
           alt={item.name}
+          layout="fullWidth"
           className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
         />
       </button>
@@ -64,9 +66,10 @@ function CardThumbnail({
   if (item.type === 'youtube' && item.thumbnail_url) {
     return (
       <button type="button" className={base} onClick={onClick} aria-label={`Podgląd: ${item.name}`}>
-        <img
+        <Image
           src={item.thumbnail_url}
           alt={item.name}
+          layout="fullWidth"
           className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
         />
         <div className="absolute inset-0 flex items-center justify-center bg-black/20">

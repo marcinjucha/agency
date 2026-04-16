@@ -4,7 +4,7 @@ import { messages } from '@/lib/messages'
 // --- SEO metadata schema ---
 
 export const seoMetadataSchema = z.object({
-  title: z.string().optional(),
+  title: z.string().max(70, messages.validation.seoTitleMax).optional(),
   description: z
     .string()
     .max(160, messages.validation.seoDescriptionMax)
@@ -28,11 +28,14 @@ export const blogPostSchema = z.object({
     .string()
     .max(300, messages.validation.excerptMax)
     .optional(),
-  content: z.any(),
+  // Accepted risk: html_body is generated server-side from Tiptap JSON, not user-supplied HTML.
+  // Structural validation blocks arbitrary JSON — must be Tiptap doc format.
+  content: z.object({ type: z.literal('doc'), content: z.array(z.any()) }).optional(),
   html_body: z.string().optional(),
   cover_image_url: z
     .string()
     .url(messages.validation.invalidImageUrl)
+    .refine((url) => url.startsWith('https://'), messages.validation.imageMustBeHttps)
     .optional()
     .or(z.literal('')),
   category: z.string().optional(),

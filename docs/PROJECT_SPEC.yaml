@@ -237,9 +237,9 @@ features:
     depends_on: ["TanStack Start Migration — Surveys & Intake"]
 
   - name: "TanStack Start Migration — Content"
-    status: not_started
+    status: done
     task_id: "AAA-T-195"
-    description: "Blog, Email, and Media Library features migrated to TanStack Start"
+    description: "Blog (list/editor/new), Landing Page, Email Templates, and Media Library migrated to TanStack Start. S3 presigned URLs via createServerFn with auth, @unpic/react image rendering, as const domain unions for MediaType/BlogPostStatus/EmailTemplateType"
     why: "Unblocks Next.js removal from CMS"
     depends_on: ["TanStack Start Migration — CMS Core"]
 

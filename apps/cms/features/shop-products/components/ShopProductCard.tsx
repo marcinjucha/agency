@@ -1,5 +1,6 @@
 
 
+import { Image } from '@unpic/react'
 import {
   Card,
   CardContent,
@@ -52,9 +53,10 @@ export function ShopProductCard({ product, categoryName, onDelete, isDeleting, m
       {/* Cover image */}
       <div className="relative aspect-[16/7] w-full overflow-hidden bg-muted">
         {product.cover_image_url ? (
-          <img
+          <Image
             src={product.cover_image_url}
             alt=""
+            layout="fullWidth"
             className="h-full w-full object-cover transition-transform group-hover:scale-105"
           />
         ) : (

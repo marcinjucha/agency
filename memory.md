@@ -4,7 +4,7 @@
 
 **Shop Platform (AAA-P-9):** Iter 1-8 done + kolega done. Remaining: iter 9 (feature flags) + iter 10 (polish/deploy). Both shops migrated to TanStack Start v1.167.
 **Marketplace Integration (AAA-P-9):** Iter 1-10 done. Manual testing remaining. 4 standalone n8n workflows.
-**CMS TanStack Start migration (AAA-T-192):** Core Setup + Auth + Layout DONE (2026-04-15). Next: per-feature tasks (surveys, shop, users, etc.).
+**CMS TanStack Start migration (AAA-T-192):** Core Setup + Auth + Layout DONE (2026-04-15). AAA-T-195 Content migration (blog, landing pages, media) DONE (2026-04-16). Next: remaining per-feature tasks.
 
 ## Completed Features (compressed)
 
@@ -44,6 +44,9 @@
 - **Supabase mock arrays: count ALL `.from()` calls in pipeline** — Each call consumes one mock array entry. Short array = silent failure on second call.
 - **`messages.nav.xxx` not `messages.navigation.xxx`** — Agent hallucinated key name. Always grep messages.ts. CMS uses `messages.nav` section.
 - **`import.meta.env.VITE_*` not `process.env.NEXT_PUBLIC_*` in TanStack Start** — Vite SSR context (createServerFn, server-start.ts, client.ts) uses `import.meta.env.VITE_*` for .env.local vars. `process.env` is undefined in Vite bundles.
+- **createServerFn as queryFn breaks during Next.js coexistence** — Using `createServerFn` directly as TanStack Query `queryFn` works in pure TanStack Start, but during migration (Next.js still in deps) the dual-context bundler resolves server functions incorrectly → runtime errors. Fix: wrap in arrow function `queryFn: () => myServerFn()` or use plain fetch wrapper until Next.js fully removed.
+- **useState with async prefetchQuery = empty on first render** — `prefetchQuery` in loader is non-blocking, so component renders before data arrives. If a `useState` initializer reads query cache synchronously (e.g., `useState(queryClient.getQueryData(key))`), it gets `undefined`. Fix: use `useSuspenseQuery` or `useQuery` directly — never initialize useState from cache after prefetchQuery.
+- **generatePresignedUrlFn had no auth check** — Server function for S3 presigned URLs was callable without authentication. Any unauthenticated request could generate upload URLs. Fix: add `getUser()` check at top of every createServerFn that accesses storage/DB.
 
 ## Domain Concepts
 
@@ -57,6 +60,7 @@
 - **Condition evaluator operators** — >=, <=, !=, ==, >, <, contains, in. NO single `=`. No `{{ }}` wrappers on field names.
 - **Baikal CalDAV has 2 calendars** — tsdav auto-discovers "Appointments" + "Default calendar". Must filter.
 - **Nil UUID fallback for Supabase filters** — `?? '00000000-...'` prevents PostgreSQL UUID parse errors on null values.
+- **@unpic/react used in CMS for optimized images** — Added during AAA-T-195 content migration. Replaces native `<img>` with `<Image>` component (lazy loading, responsive srcset). Same package already used in shop apps.
 
 ## Architecture Decisions
 
