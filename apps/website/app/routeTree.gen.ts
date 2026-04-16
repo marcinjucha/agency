@@ -18,6 +18,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as BlogIndexRouteImport } from './routes/blog/index'
 import { Route as SurveyTokenRouteImport } from './routes/survey.$token'
 import { Route as BlogSlugRouteImport } from './routes/blog/$slug'
+import { Route as SurveyTokenIndexRouteImport } from './routes/survey.$token.index'
 import { Route as SurveyTokenSuccessRouteImport } from './routes/survey.$token.success'
 import { Route as BlogPreviewTokenRouteImport } from './routes/blog/preview.$token'
 
@@ -66,6 +67,11 @@ const BlogSlugRoute = BlogSlugRouteImport.update({
   path: '/$slug',
   getParentRoute: () => BlogRoute,
 } as any)
+const SurveyTokenIndexRoute = SurveyTokenIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => SurveyTokenRoute,
+} as any)
 const SurveyTokenSuccessRoute = SurveyTokenSuccessRouteImport.update({
   id: '/success',
   path: '/success',
@@ -89,6 +95,7 @@ export interface FileRoutesByFullPath {
   '/blog/': typeof BlogIndexRoute
   '/blog/preview/$token': typeof BlogPreviewTokenRoute
   '/survey/$token/success': typeof SurveyTokenSuccessRoute
+  '/survey/$token/': typeof SurveyTokenIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -97,10 +104,10 @@ export interface FileRoutesByTo {
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/blog/$slug': typeof BlogSlugRoute
-  '/survey/$token': typeof SurveyTokenRouteWithChildren
   '/blog': typeof BlogIndexRoute
   '/blog/preview/$token': typeof BlogPreviewTokenRoute
   '/survey/$token/success': typeof SurveyTokenSuccessRoute
+  '/survey/$token': typeof SurveyTokenIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -115,6 +122,7 @@ export interface FileRoutesById {
   '/blog/': typeof BlogIndexRoute
   '/blog/preview/$token': typeof BlogPreviewTokenRoute
   '/survey/$token/success': typeof SurveyTokenSuccessRoute
+  '/survey/$token/': typeof SurveyTokenIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -130,6 +138,7 @@ export interface FileRouteTypes {
     | '/blog/'
     | '/blog/preview/$token'
     | '/survey/$token/success'
+    | '/survey/$token/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -138,10 +147,10 @@ export interface FileRouteTypes {
     | '/robots.txt'
     | '/sitemap.xml'
     | '/blog/$slug'
-    | '/survey/$token'
     | '/blog'
     | '/blog/preview/$token'
     | '/survey/$token/success'
+    | '/survey/$token'
   id:
     | '__root__'
     | '/'
@@ -155,6 +164,7 @@ export interface FileRouteTypes {
     | '/blog/'
     | '/blog/preview/$token'
     | '/survey/$token/success'
+    | '/survey/$token/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -232,6 +242,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BlogSlugRouteImport
       parentRoute: typeof BlogRoute
     }
+    '/survey/$token/': {
+      id: '/survey/$token/'
+      path: '/'
+      fullPath: '/survey/$token/'
+      preLoaderRoute: typeof SurveyTokenIndexRouteImport
+      parentRoute: typeof SurveyTokenRoute
+    }
     '/survey/$token/success': {
       id: '/survey/$token/success'
       path: '/success'
@@ -265,10 +282,12 @@ const BlogRouteWithChildren = BlogRoute._addFileChildren(BlogRouteChildren)
 
 interface SurveyTokenRouteChildren {
   SurveyTokenSuccessRoute: typeof SurveyTokenSuccessRoute
+  SurveyTokenIndexRoute: typeof SurveyTokenIndexRoute
 }
 
 const SurveyTokenRouteChildren: SurveyTokenRouteChildren = {
   SurveyTokenSuccessRoute: SurveyTokenSuccessRoute,
+  SurveyTokenIndexRoute: SurveyTokenIndexRoute,
 }
 
 const SurveyTokenRouteWithChildren = SurveyTokenRoute._addFileChildren(
