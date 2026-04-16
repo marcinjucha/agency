@@ -4,7 +4,7 @@
 
 **Shop Platform (AAA-P-9):** Iter 1-8 done + kolega done. Remaining: iter 9 (feature flags) + iter 10 (polish/deploy). Both shops migrated to TanStack Start v1.167.
 **Marketplace Integration (AAA-P-9):** Iter 1-10 done. Manual testing remaining. 4 standalone n8n workflows.
-**CMS TanStack Start migration (AAA-T-192):** Core Setup + Auth + Layout DONE (2026-04-15). AAA-T-195 Content migration (blog, landing pages, media) DONE (2026-04-16). Next: remaining per-feature tasks.
+**CMS TanStack Start migration (AAA-T-192):** Core Setup + Auth + Layout DONE (2026-04-15). AAA-T-195 Content migration (blog, landing pages, media) DONE (2026-04-16). Blog confirmed working. Next: remaining per-feature tasks.
 
 ## Completed Features (compressed)
 
@@ -44,9 +44,13 @@
 - **Supabase mock arrays: count ALL `.from()` calls in pipeline** — Each call consumes one mock array entry. Short array = silent failure on second call.
 - **`messages.nav.xxx` not `messages.navigation.xxx`** — Agent hallucinated key name. Always grep messages.ts. CMS uses `messages.nav` section.
 - **`import.meta.env.VITE_*` not `process.env.NEXT_PUBLIC_*` in TanStack Start** — Vite SSR context (createServerFn, server-start.ts, client.ts) uses `import.meta.env.VITE_*` for .env.local vars. `process.env` is undefined in Vite bundles.
+- **Dual-context browser client pattern during migration** — Shared components (used by both frameworks) must use browser client (queries.ts) for useQuery queryFn, NOT server fns (createServerFn). Server fns only in route loaders for prefetch. Mixing causes cache poisoning with `undefined` when server fn 500s during dev warmup.
 - **createServerFn as queryFn breaks during Next.js coexistence** — Using `createServerFn` directly as TanStack Query `queryFn` works in pure TanStack Start, but during migration (Next.js still in deps) the dual-context bundler resolves server functions incorrectly → runtime errors. Fix: wrap in arrow function `queryFn: () => myServerFn()` or use plain fetch wrapper until Next.js fully removed.
 - **useState with async prefetchQuery = empty on first render** — `prefetchQuery` in loader is non-blocking, so component renders before data arrives. If a `useState` initializer reads query cache synchronously (e.g., `useState(queryClient.getQueryData(key))`), it gets `undefined`. Fix: use `useSuspenseQuery` or `useQuery` directly — never initialize useState from cache after prefetchQuery.
 - **generatePresignedUrlFn had no auth check** — Server function for S3 presigned URLs was callable without authentication. Any unauthenticated request could generate upload URLs. Fix: add `getUser()` check at top of every createServerFn that accesses storage/DB.
+- **Tiptap useEditor ignores content prop changes** — useEditor() only reads `content` on creation. When RHF reset() updates content prop after async data load, Tiptap doesn't re-render. Fix: useEffect with `editor.commands.setContent()`.
+- **Server fn returning null via RPC → undefined in TanStack Query** — createServerFn returning null serializes as undefined through TanStack Start RPC, triggering "Query data cannot be undefined". Fix: return empty object or wrap in Result.
+- **Large payloads in createServerFn need `{ method: 'POST' }`** — Landing page blocks too large for GET URL params → 431 Request Header Fields Too Large. Default is GET; override with `{ method: 'POST' }` for data-heavy server fns.
 
 ## Domain Concepts
 
@@ -60,7 +64,8 @@
 - **Condition evaluator operators** — >=, <=, !=, ==, >, <, contains, in. NO single `=`. No `{{ }}` wrappers on field names.
 - **Baikal CalDAV has 2 calendars** — tsdav auto-discovers "Appointments" + "Default calendar". Must filter.
 - **Nil UUID fallback for Supabase filters** — `?? '00000000-...'` prevents PostgreSQL UUID parse errors on null values.
-- **@unpic/react used in CMS for optimized images** — Added during AAA-T-195 content migration. Replaces native `<img>` with `<Image>` component (lazy loading, responsive srcset). Same package already used in shop apps.
+- **@unpic/react used in CMS for optimized images** — Added during AAA-T-195 content migration. Replaces native `<img>` with `<Image>` component (lazy loading, responsive srcset). Same package already used in shop apps. User explicitly requested this for all blog/media/shop-products components.
+- **Dependency injection for shared components across frameworks** — Components used by both Next.js and TanStack Start must NOT import from server.ts or actions.ts directly. Pass mutation functions as props from route files (which are framework-specific). WHY: server.ts imports are framework-bound; props decouple the component.
 
 ## Architecture Decisions
 
@@ -90,6 +95,7 @@
 - **Always use `vitest watch` during TDD** — Not `vitest run`. Watch mode for development, run for CI.
 - **Collapsible panels: close button inside panel** — Not only external toggle.
 - **Shorter skill names preferred** — Drop framework prefix when context is clear (e.g., "tanstack-setup" not "tanstack-start-setup").
+- **User wants port 3001 to work** — CMS testing happens on port 3001, not 3004. Ensure dev server config uses 3001.
 
 ## Migration Coexistence Rules
 
