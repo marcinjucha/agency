@@ -1,0 +1,1 @@
+/Users/marcinjucha/Prywatne/projects/legal-mind/worktree-tata/apps/website/vite.config.ts

@@ -48,7 +48,7 @@ export const getLandingPageFn = createServerFn().handler(
 // Server Functions — Mutations
 // ---------------------------------------------------------------------------
 
-export const updateLandingPageFn = createServerFn()
+export const updateLandingPageFn = createServerFn({ method: 'POST' })
   .inputValidator((input: unknown) => updateLandingPageInputSchema.parse(input))
   .handler(async ({ data: input }): Promise<{ success: boolean; error?: string }> => {
     const result = await requireAuthContext().andThen((auth) =>
