@@ -28,7 +28,7 @@ export const Route = createFileRoute('/blog/')({
       queryFn: () => getPublishedBlogPostsFn(),
     }),
   head: () => ({
-    ...buildWebsiteHead(BLOG_TITLE, BLOG_DESCRIPTION),
+    ...buildWebsiteHead(BLOG_TITLE, BLOG_DESCRIPTION, undefined, undefined, '/blog'),
     meta: [
       ...buildWebsiteHead(BLOG_TITLE, BLOG_DESCRIPTION).meta,
       { property: 'og:type', content: 'website' },

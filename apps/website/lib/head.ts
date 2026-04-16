@@ -11,7 +11,7 @@
 
 export const BASE_URL = import.meta.env.VITE_HOST_URL ?? 'https://haloefekt.pl'
 
-export function buildWebsiteHead(title: string, description?: string, ogImage?: string, keywords?: string[]) {
+export function buildWebsiteHead(title: string, description?: string, ogImage?: string, keywords?: string[], canonicalPath?: string) {
   const metaTags: Array<Record<string, string>> = [
     { charSet: 'utf-8' },
     { name: 'viewport', content: 'width=device-width, initial-scale=1' },
@@ -39,5 +39,8 @@ export function buildWebsiteHead(title: string, description?: string, ogImage?: 
 
   return {
     meta: metaTags,
+    ...(canonicalPath !== undefined && {
+      links: [{ rel: 'canonical', href: `${BASE_URL}${canonicalPath}` }],
+    }),
   }
 }

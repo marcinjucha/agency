@@ -2,7 +2,7 @@
 
 ## Active Work
 
-**Shop Platform (AAA-P-9):** Iter 1-8 done + kolega done. Remaining: iter 9 (feature flags) + iter 10 (polish/deploy). Both shops migrated to TanStack Start v1.167.
+**Shop Platform (AAA-P-9):** Iter 1-8 done + oleg done (renamed from kolega 2026-04-17). Remaining: iter 9 (feature flags) + iter 10 (polish/deploy). Both shops migrated to TanStack Start v1.167.
 **Marketplace Integration (AAA-P-9):** Iter 1-10 done. Manual testing remaining. 4 standalone n8n workflows.
 **CMS TanStack Start migration:** Full migration DONE (AAA-T-192..198, 2026-04-16). Next.js fully removed from CMS. All features migrated to createServerFn Pattern A. See `docs/TANSTACK_START_PATTERNS.md`.
 
@@ -18,6 +18,7 @@
 
 - **supabase gen types prepends "Initialising login role..."** — Corrupts types.ts. Workaround: `grep -v "^Initialising"`. `db:types` uses --local, need --linked when local not running.
 - **`inputValidator(zodSchema)` direct form silently fails in TanStack Start** — Must use function wrapper: `.inputValidator((input) => schema.parse(input))`. WHY: RPC layer doesn't invoke `.parse()` on raw schema objects. Recurs across features.
+- **Vercel "no output files found" warning with Turborepo + TanStack Start** — Fix: set `"outputs": []` in turbo.json build task. WHY: TanStack Start writes to `/vercel/output` (outside workspace), not `.output/` in workspace — Turbo's default output capture finds nothing and warns. Empty array disables capture.
 
 ## Domain Concepts
 
@@ -34,6 +35,7 @@
 - **Cross-project update rule** — AAA-P-9 tasks affecting shared tables/packages require updating BOTH PROJECT_SPECs.
 - **app_config table for encryption key** — Supabase Cloud blocks ALTER DATABASE SET for custom GUCs. `app_config` table + `get_encryption_key()` SECURITY DEFINER.
 - **n8n Orchestrator owns ALL execution** — CMS trigger route = ~70 LOC fire-and-forget. WHY: Vercel serverless timeout can't handle multi-hour workflow delays.
+- **pnpm v10 migration essentials** — (1) `onlyBuiltDependencies: ["esbuild"]` in root package.json — pnpm v10 blocks postinstall scripts by default, esbuild needs it to download its binary. (2) Move top-level `overrides` → `pnpm.overrides` (npm key rejected). (3) `@agency/*` workspace deps: `"*"` → `"workspace:*"`. (4) Root `.npmrc` with `shamefully-hoist=true` for Next.js/TanStack compatibility. (5) Delete `package-lock.json` before `pnpm install`.
 
 ## Preferences
 

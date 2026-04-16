@@ -59,7 +59,7 @@ export const Route = createFileRoute('/')({
     const keywords = mergedKeywords.length ? mergedKeywords : undefined
 
     const absoluteOgImage = ogImage.startsWith('/') ? `${BASE_URL}${ogImage}` : ogImage
-    const base = buildWebsiteHead(title, description, ogImage, keywords)
+    const base = buildWebsiteHead(title, description, ogImage, keywords, '')
 
     return {
       ...base,
