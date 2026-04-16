@@ -238,10 +238,18 @@ features:
   - name: "TanStack Start Migration — Surveys & Intake"
     status: done
     task_id: "AAA-T-193"
-    description: "Migration of Surveys, Intake, and Responses feature areas from Next.js Server Actions to TanStack Start createServerFn. Includes surveys CRUD, survey links, intake hub (response status/notes), response management, and calendar connection server functions. Key fix: googleapis (CJS) leak from SurveyLinkCalendarSelect resolved by extracting calendar calls to features/calendar/server-fns.ts."
+    description: "Migration of Surveys, Intake, and Responses feature areas from Next.js Server Actions to TanStack Start createServerFn. Includes surveys CRUD, survey links, intake hub (response status/notes), response management, and calendar connection server functions. Key fix: googleapis (CJS) leak from SurveyLinkCalendarSelect resolved by extracting calendar calls to features/calendar/server.ts."
     why: "Surveys & Intake are the heaviest CMS features. Migrating them unblocks removal of Next.js from the CMS app and enables self-hosted VPS deployment without Vercel."
     depends_on: ["TanStack Start Migration — CMS Core"]
-    completion_notes: "All route files migrated: admin/surveys/*, admin/intake/*, admin/responses/*. Server fns created for surveys, intake, responses, and calendar features. Fixed googleapis browser bundle leak via createServerFn isolation. Fixed raw Zod JSON error display in SurveyLinks.tsx. Known bug: apps/website dev server broken (Turbopack + @tailwindcss/node 4.2.2 enhanced-resolve issue) — tracked in memory.md."
+    completion_notes: "All route files migrated: admin/surveys/*, admin/intake/*, admin/responses/*. Server fns created for surveys, intake, responses, and calendar features. Fixed googleapis browser bundle leak via createServerFn isolation. Fixed raw Zod JSON error display in SurveyLinks.tsx."
+
+  - name: "TanStack Start Migration — Workflow & Calendar"
+    status: done
+    task_id: "AAA-T-194"
+    description: "Migration of Workflow Builder, Calendar, Settings, Users, Roles, Tenants, and Email Templates from Next.js to TanStack Start createServerFn + prefetchQuery loaders. 7 feature areas: 10 server.ts files created, 20 route files created, lib/server-auth.ts extracted (shared getAuth/requireAuthContext), router.tsx extended with queryClient context. 107 components: 'use client' removed, next/navigation → @tanstack/react-router. Loader pattern: prefetchQuery (non-blocking) for fast TTFB."
+    why: "Unblocks removal of Next.js from CMS and enables self-hosted VPS deployment. Workflow Builder (ReactFlow) and Calendar OAuth are the most complex migrations."
+    depends_on: ["TanStack Start Migration — Surveys & Intake"]
+    completion_notes: "All 8 iterations complete. Key patterns: features/*/server.ts naming, prefetchQuery (not ensureQueryData) for non-blocking loaders, lib/server-auth.ts shared auth helper, OAuth callback as TanStack server route. ReactFlow canvas unchanged (framework-agnostic). Execution logs keep useQuery with refetchInterval (polling). Remaining: Content (AAA-T-195), Shop (AAA-T-196)."
 
   # Backlog
   - name: "Multi-language Support (PL/EN)"

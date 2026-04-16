@@ -16,6 +16,7 @@
 
 ## Feedback & Corrections
 
+- **Feature server functions file = `server.ts`, NOT `server-fns.ts`** — User corrected naming convention (2026-04-15). File in `features/{name}/server.ts`. WHY: shorter, matches TanStack Start conventions.
 - **"dawaj auto"/"auto" = switch to auto mode** — All phases without confirmation. Always stop at Phase 5 (manual testing).
 - **No backward compatibility (pre-launch only)** — No clients yet. Once clients onboard, backward compat required.
 - **Validate after EACH iteration, not batched** — Run Phase 3+3b after every iteration completion.
@@ -66,10 +67,13 @@
 - **n8n Orchestrator owns ALL execution** — CMS trigger route = ~70 LOC fire-and-forget. WHY: Vercel serverless timeout can't handle multi-hour workflow delays.
 - **TanStack Start auth: beforeLoad mandatory, requestMiddleware optional** — beforeLoad (isomorphic) handles SSR + client navigation. requestMiddleware = server-only, misses client nav. See tanstack-server skill.
 - **`admin.tsx` not `_admin.tsx` for /admin/* routes** — Pathless layout (underscore) adds no URL segment. `_admin/index.tsx` → URL `/`. See tanstack-setup skill.
-- **Feature server-fns in `features/{name}/server-fns.ts`, NOT `lib/server-fns/`** — User corrected agent placing server functions in lib/. Each feature owns its server functions colocated with its other files. WHY: matches ADR-005 feature isolation pattern.
+- **Feature server functions in `features/{name}/server.ts`, NOT `lib/server-fns/`** — User corrected both location (lib/ → features/) and filename (server-fns.ts → server.ts). Each feature owns its server functions colocated. WHY: ADR-005 feature isolation + shorter naming convention.
 - **CMS migration uses parent branch strategy** — Dedicated `feature/cms-tanstack-migration` parent branch; child branches per feature merge back to parent; parent merges to main when ALL features done. WHY: allows deleting Next.js code immediately instead of maintaining coexistence.
 - **`next` package stays in deps until ALL features migrated** — Even after removing Next.js infrastructure, unmigrated features still import next/cache, next/headers, next/link, next/navigation. Removing early breaks imports.
 - **RSC prop patterns don't apply in TanStack Start** — Components that received full objects from RSC (e.g., SurveyBuilder receiving survey) should take ID + internal useQuery instead. WHY: TanStack Start has no RSC; passing serialized objects from loader is fragile vs letting component own its data fetching.
+- **CMS loaders use `prefetchQuery` (non-blocking), NOT `ensureQueryData` (blocking)** — `ensureQueryData` blocks route transition until data loads (hurts TTFB). `prefetchQuery` starts fetch but renders immediately with loading state. CMS admin panel has no SEO needs, so blocking SSR is pure waste. Pattern evolved 3x in one session: loader→useLoaderData → ensureQueryData+useQuery → prefetchQuery+useQuery. Start with prefetchQuery directly for all CMS routes.
+- **No `'use client'` in TanStack Start** — Directive is meaningless (no RSC boundary). User flagged for removal during migration. Agent was copying Next.js patterns. WHY: TanStack Start is fully client-rendered with SSR hydration, not RSC.
+- **Router `queryClient` context via `routerOptions.context`** — Pass queryClient to router via `createRouter({ context: { queryClient } })`, access in loaders via `context.queryClient.ensureQueryData()`. Declared in `routeTree.gen.ts` via `RootRoute['types']['routerContext']`. WHY: enables type-safe queryClient access in all route loaders without imports.
 
 ## Preferences
 
@@ -82,3 +86,7 @@
 - **Always use `vitest watch` during TDD** — Not `vitest run`. Watch mode for development, run for CI.
 - **Collapsible panels: close button inside panel** — Not only external toggle.
 - **Shorter skill names preferred** — Drop framework prefix when context is clear (e.g., "tanstack-setup" not "tanstack-start-setup").
+
+## Migration Coexistence Rules
+
+- **Legacy Next.js files coexist with TanStack routes during migration** — `oauth-callback.ts` (Next.js API route) stays even after `callback.ts` (TanStack route) exists. Validator incorrectly flagged legacy file as dead code. Both are needed until full migration completes and Next.js infrastructure is removed. Don't delete legacy files just because a TanStack equivalent exists.
