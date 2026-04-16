@@ -7,7 +7,7 @@ import {
 } from '@tanstack/react-router'
 import appCss from '../globals.css?url'
 import { buildWebsiteHead } from '@/lib/head'
-import { CookieBanner } from '@/features/legal/components/CookieBanner'
+import { CookieBanner } from '@/features/legal/components/ConsentBanner'
 
 export const Route = createRootRoute({
   head: () => ({
