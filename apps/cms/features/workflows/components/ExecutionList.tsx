@@ -1,9 +1,9 @@
-'use client'
+
 
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { useRouter } from 'next/navigation'
-import Link from 'next/link'
+import { useNavigate } from '@tanstack/react-router'
+import { Link } from '@tanstack/react-router'
 import { History } from 'lucide-react'
 import { Skeleton, ErrorState, EmptyState } from '@agency/ui'
 import { queryKeys } from '@/lib/query-keys'
@@ -26,7 +26,7 @@ interface ExecutionListProps {
 // --- Main component ---
 
 export function ExecutionList({ workflowId: propWorkflowId }: ExecutionListProps) {
-  const router = useRouter()
+  const navigate = useNavigate()
   const isGlobalView = propWorkflowId === undefined
 
   const [filterWorkflowId, setFilterWorkflowId] = useState<string | undefined>(
@@ -145,7 +145,7 @@ export function ExecutionList({ workflowId: propWorkflowId }: ExecutionListProps
                   key={execution.id}
                   execution={execution}
                   showWorkflowCol={isGlobalView}
-                  onClick={() => router.push(routes.admin.execution(execution.id))}
+                  onClick={() => navigate({ to: routes.admin.execution(execution.id) })}
                 />
               ))}
             </tbody>
@@ -181,7 +181,7 @@ function ExecutionRow({ execution, showWorkflowCol, onClick }: ExecutionRowProps
       {showWorkflowCol && (
         <td className="px-4 py-3">
           <Link
-            href={routes.admin.workflowEditor(execution.workflow_id)}
+            to={routes.admin.workflowEditor(execution.workflow_id)}
             onClick={(e) => e.stopPropagation()}
             className="font-medium text-foreground hover:underline"
           >

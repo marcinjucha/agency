@@ -4,49 +4,51 @@ Admin panel for service providers. Authenticated application managing surveys, i
 
 ## Tech Stack
 
-- **Framework:** Next.js 16 (App Router, port 3001) + TanStack Start (Vite, port 3004) — dual framework during migration
+- **Framework:** TanStack Start v1.167 + Vite 8 (port 3001)
 - **State Management:** TanStack Query (server state)
 - **Forms:** React Hook Form + Zod
 - **UI:** shadcn/ui from @agency/ui
-- **Auth:** Supabase Auth + Middleware
-- **Database:** Supabase (RLS-protected queries)
+- **Auth:** Supabase Auth + `beforeLoad` route guards
+- **Database:** Supabase (RLS-protected queries via `createServerFn`)
 
 ## Folder Structure
 
 ```
 apps/cms/
-├── app/                      # Next.js App Router (ROUTING ONLY)
-│   ├── layout.tsx           # Root layout with TanStack Query
-│   ├── providers.tsx        # QueryClientProvider
+├── app/                      # TanStack Start entry points + routes
+│   ├── client.tsx           # Client entry (createStartHandler)
+│   ├── router.tsx           # Router factory + RouterContext type
+│   ├── ssr.tsx              # SSR entry (createStartHandler)
+│   ├── routeTree.gen.ts     # Auto-generated route tree (do not edit)
 │   ├── globals.css          # Tailwind + shadcn/ui theme
 │   │
-│   ├── login/               # Authentication
-│   │   └── page.tsx         # Login form (public)
-│   │
-│   ├── admin/               # Protected routes (requires auth)
-│   │   ├── layout.tsx       # Admin layout with Sidebar
-│   │   ├── page.tsx         # Dashboard
-│   │   ├── appointments/    # Appointment management
-│   │   ├── blog/            # Blog posts
-│   │   ├── email-templates/ # Email template editor
-│   │   ├── intake/          # Unified intake hub
-│   │   ├── landing-page/    # Landing page editor
-│   │   ├── legal-pages/     # Legal pages editor
-│   │   ├── media/           # Media library
-│   │   ├── responses/       # Response list + detail
-│   │   ├── settings/        # Settings
-│   │   ├── shop/            # Shop (products + categories)
-│   │   └── surveys/         # Survey management
-│   │
-│   └── api/                 # API Routes
-│       ├── auth/            # Auth callbacks
-│       ├── calendar/        # Google Calendar
-│       ├── email-templates/ # Email template rendering
-│       ├── marketplace/     # OAuth callbacks (OLX, Allegro)
-│       ├── responses/       # Response API
-│       ├── surveys/         # Survey CRUD
-│       ├── upload/          # S3 file upload
-│       └── workflows/       # Workflow trigger (POST to n8n Orchestrator)
+│   └── routes/              # File-based routing
+│       ├── __root.tsx       # Root layout (html/body, auth beforeLoad, Sentry)
+│       ├── index.tsx        # Redirect to /admin
+│       ├── login.tsx        # Login page (public)
+│       ├── admin.tsx        # Admin layout (auth guard, Sidebar, QueryClientProvider)
+│       ├── admin/           # Protected routes
+│       │   ├── index.tsx    # Dashboard
+│       │   ├── blog/        # Blog posts (index, new, $postId)
+│       │   ├── email-templates/ # Email template editor
+│       │   ├── intake/      # Unified intake hub
+│       │   ├── landing-page/# Landing page editor
+│       │   ├── legal-pages/ # Legal pages editor
+│       │   ├── media/       # Media library
+│       │   ├── responses/   # Response list + detail
+│       │   ├── settings/    # Site settings
+│       │   ├── shop/        # Shop (products + categories + marketplace)
+│       │   ├── surveys/     # Survey management
+│       │   ├── workflows/   # Workflow builder
+│       │   ├── roles/       # Role management
+│       │   ├── users/       # User management
+│       │   ├── tenants/     # Tenant management
+│       │   └── docforge/    # DocForge license management
+│       │
+│       └── api/             # Server routes (external webhooks only)
+│           ├── auth/        # OAuth callbacks
+│           ├── marketplace/ # OAuth callbacks (OLX, Allegro)
+│           └── workflows/   # Workflow trigger (POST to n8n Orchestrator)
 │
 ├── features/                # BUSINESS LOGIC (ADR-005 pattern)
 │   ├── appointments/        # Appointment management (Google Calendar sync)
@@ -56,7 +58,7 @@ apps/cms/
 │   ├── email/               # Email template editor + live preview
 │   ├── intake/              # Unified intake hub — @dnd-kit kanban, split view
 │   ├── landing/             # Landing page block editor + live preview
-│   ├── legal-pages/         # Legal pages (regulamin, polityka prywatności) with shared Tiptap
+│   ├── legal-pages/         # Legal pages (regulamin, polityka prywatnosci) with shared Tiptap
 │   ├── media/               # Media library — S3 upload, 6 types, folder tree, DnD, InsertMediaModal
 │   ├── responses/           # Response list + detail view
 │   ├── shop-categories/     # Shop category CRUD (inline editing, combobox with create)
@@ -69,74 +71,101 @@ apps/cms/
 │
 ├── components/              # SHARED UI COMPONENTS
 │   ├── admin/
-│   │   └── Sidebar.tsx      # Sidebar navigation
+│   │   └── SidebarV2.tsx    # Sidebar navigation
 │   ├── shared/              # Reusable components
-│   └── providers/           # React Context (future)
+│   └── providers/           # React Context
+│
+├── contexts/                # React Context providers (permissions, etc.)
 │
 ├── lib/                     # UTILITIES
-│   ├── auth.ts              # getUserWithTenant() — shared auth helper
+│   ├── auth.ts              # getUserWithTenant() — shared auth helper (legacy, still used by some features)
+│   ├── head.ts              # buildCmsHead() — shared <head> builder for routes
 │   ├── messages.ts          # ~700+ Polish strings, nested by feature
 │   ├── query-keys.ts        # Centralized TanStack Query key factories
 │   ├── routes.ts            # All admin routes as constants
 │   ├── s3.ts                # S3 presigned URL generation
+│   ├── server-auth.ts       # requireAuthContext() + requireAuthContextFull() — neverthrow ResultAsync
 │   ├── video-utils.ts       # Video embed URL parsing (YouTube, Vimeo, etc.)
+│   ├── server-fns/          # Shared server functions (auth, admin-layout)
 │   ├── supabase/
-│   │   ├── client.ts        # Browser Supabase client (TanStack Query)
-│   │   └── server.ts        # Server Supabase client (Server Components, Actions)
+│   │   ├── client.ts        # Browser Supabase client (TanStack Query queryFn fallback)
+│   │   ├── server-start.ts  # Server Supabase client (cookies from request — used in all server fns)
+│   │   └── service.ts       # Service role client (bypass RLS)
 │   ├── n8n/                 # n8n webhook helpers
 │   └── utils/
 │       ├── slug.ts          # Polish slug generation (shared by blog + shop)
 │       ├── status.ts        # Status helper utilities
 │       └── media-proxy.ts   # createMediaProxyEditor for InsertMediaModal integration
 │
-├── hooks/                   # Custom React hooks (future)
+├── hooks/                   # Custom React hooks
 │
-├── middleware.ts            # Route protection (redirects to /login)
-├── next.config.ts           # Next.js configuration
+├── vite.config.ts           # Vite 8 + TanStack Start config (includes nitro() for Vercel)
 ├── vitest.config.ts         # Vitest test configuration
-├── vitest.setup.ts          # Test setup (mocks: Supabase, next/navigation, next/headers)
-├── tailwind.config.ts       # Tailwind CSS config
+├── vitest.setup.ts          # Test setup (mocks: Supabase, @tanstack/react-router)
 ├── tsconfig.json            # TypeScript config
 └── package.json             # Dependencies (@agency/cms)
 ```
 
 ## Folder Patterns (ADR-005)
 
-### app/ - Routing Only
+### app/routes/ - Routing Only
 ```typescript
-// Minimal logic, imports from features/
-import { SurveyList } from '@/features/surveys/components/SurveyList'
+// app/routes/admin/blog/index.tsx — minimal route
+import { createFileRoute } from '@tanstack/react-router'
+import { buildCmsHead } from '@/lib/head'
+import { messages } from '@/lib/messages'
+import { BlogPostList } from '@/features/blog/components/BlogPostList'
 
-export default function SurveysPage() {
-  return <SurveyList />
-}
+export const Route = createFileRoute('/admin/blog/')({
+  head: () => buildCmsHead(messages.nav.blog),
+  component: BlogListPage,
+})
+function BlogListPage() { return <BlogPostList /> }
 ```
 
 ### features/ - Business Logic
 ```typescript
 // features/surveys/components/SurveyList.tsx
-'use client'
 import { useQuery } from '@tanstack/react-query'
-import { getSurveys } from '../queries'
+import { getSurveysFn } from '../server'
 
 export function SurveyList() {
   const { data } = useQuery({
-    queryKey: ['surveys'],
-    queryFn: getSurveys
+    queryKey: surveyKeys.list(),
+    queryFn: () => getSurveysFn()
   })
   // ... component logic
 }
+```
+
+### features/{name}/server.ts - Server Functions
+```typescript
+// features/surveys/server.ts
+import { createServerFn } from '@tanstack/start'
+import { requireAuthContext } from '@/lib/server-auth'
+
+export const getSurveysFn = createServerFn({ method: 'POST' })
+  .handler(async () => {
+    return requireAuthContext()
+      .andThen(({ supabase, tenantId }) =>
+        // ... query logic
+      )
+      .match(data => data, error => { throw new Error(error) })
+  })
 ```
 
 ### components/ - Shared UI
 Only components used across multiple features (e.g., Sidebar, Header).
 Feature-specific components go in `features/{feature}/components/`.
 
-## State Management
+## State Management — Pattern A
 
-**Server State (TanStack Query):**
-- Use for: API calls, database queries, cached data
-- Example: Survey list, dashboard stats, responses
+**CMS uses Pattern A:** `createServerFn` directly as `queryFn` in `useQuery`. No browser client needed for data fetching.
+
+**Server State (TanStack Query + server fns):**
+- Components own their data fetching via `useQuery` with server fn as queryFn
+- No loader prefetch needed (auth-required app, no SEO)
+- Server fns handle auth via request cookies automatically
 
 **Client State (useState/Zustand):**
 - Use for: UI state, form state, local preferences
@@ -144,47 +173,70 @@ Feature-specific components go in `features/{feature}/components/`.
 
 **Forms (React Hook Form):**
 - Use for: All forms with validation
-- Example: Login, create survey, edit survey
+
+**Why Pattern A:** CMS is fully auth-gated with no public/SEO pages. Components calling `useQuery({ queryFn: () => myServerFn() })` is simpler than loader-based prefetch. Server fns have auth context from request cookies.
 
 ## Authentication
 
-**Middleware:** Protects all `/admin` routes
-- Unauthenticated users → redirect to `/login`
-- Authenticated users → can access `/admin/*`
+**Route guards via `beforeLoad`:**
+- `__root.tsx`: Calls `getAuthContextFn()` — sets `context.auth` for all routes
+- `admin.tsx`: Checks `context.auth` — redirects to `/login` if unauthenticated
+
+**`lib/server-auth.ts`:** neverthrow-based auth context for server fns:
+- `requireAuthContext()` — returns `ResultAsync<AuthContext, string>` (userId, tenantId, supabase client)
+- `requireAuthContextFull()` — returns `ResultAsync<AuthContextFull, string>` (adds isSuperAdmin, roleName, permissions)
+- Usage in server fns: `requireAuthContext().andThen(({ supabase, tenantId }) => ...)`
 
 **Session:** Stored in HTTP-only cookies via Supabase Auth
 
-**Logout:** Sidebar → Logout button → `supabase.auth.signOut()`
-
-## TanStack Start Migration
-
-Both Next.js 16 (port 3001, existing features) and TanStack Start (port 3004, new routes) coexist in `apps/cms/` until full migration. TanStack Start dev: `npm run dev:vite` (port 3004). See `docs/TANSTACK_CMS_MIGRATION.md` for per-iteration progress.
-
-- **`messages.nav.xxx` is the correct key (NOT `messages.navigation.xxx`)** — Agent hallucinated `messages.navigation` as the section key during migration, causing silent runtime TypeError. The actual section in `messages.ts` is `messages.nav`. Always grep `messages.ts` before referencing any key. **WHY:** CMS-specific key structure; no way to infer from convention.
-
-- **`admin.tsx` (no underscore) for `/admin/*` routes** — Underscore prefix (`_admin.tsx`) creates a pathless layout (no URL segment added). `_admin/index.tsx` maps to URL `/` not `/admin/`. Use `admin.tsx` which adds `/admin/` segment, matching existing Next.js `app/admin/` structure. **WHY:** TanStack routing convention is in `tanstack-routing` skill, but the CMS decision to use segment-based `admin.tsx` is project-specific.
-
-- **Supabase mock arrays: count ALL `.from()` calls in neverthrow pipeline** — `verifyWorkflowAccess` + `patchSurveyLink` = 2 calls. Test with only 1 mock returns `{data: null}` for the first call, so `verifyWorkflowAccess` returns `err('notFound')` and the test silently passes for the wrong reason. Count every `.from()` invocation in the pipeline. **WHY:** Vitest Supabase mocks are consumed sequentially; mismatch between mock count and actual call count causes silent false-positive tests.
-
-- **`lib/supabase/server-start.ts` for TanStack Start (not `server.ts`)** — `server.ts` uses `cookies()` from `next/headers` which fails in TanStack Start. New `server-start.ts` uses `getCookies()`/`setCookie()` from `@tanstack/start-server-core`. Both files coexist during migration. Use `createStartClient()` in new TanStack routes. **WHY:** Importing `server.ts` in a TanStack route pulls in `next/headers` and crashes at runtime with no clear error message.
-
-- **Cross-reference to skills for TanStack patterns** — Don't duplicate generic TanStack patterns here. Use: `tanstack-setup` (vite config, `optimizeDeps.exclude`), `tanstack-routing` (pathless layout vs segment route), `tanstack-server` (createServerFn, auth middleware). **WHY:** Avoids drift between skill and CLAUDE.md; skills are the source of truth for framework patterns.
+**Logout:** Sidebar → Logout button → `logoutFn()` server fn → `queryClient.clear()` → redirect to `/login`
 
 ## Database Access
 
-**Always use RLS-protected queries:**
+**All data fetching through `createServerFn`** — server fns use `createServerClient()` from `lib/supabase/server-start.ts` which reads cookies from the request (RLS-aware).
+
+**Auth pipeline in server fns:**
 ```typescript
-const supabase = createClient() // Uses anon key (respects RLS)
-const { data } = await supabase.from('surveys').select('*')
-// Automatically filtered by user's tenant_id
+requireAuthContext().andThen(({ supabase, tenantId }) =>
+  ResultAsync.fromPromise(
+    supabase.from('table').select('*').eq('tenant_id', tenantId),
+    () => 'queryFailed'
+  )
+)
 ```
 
-**getUserWithTenant() helper** — All CMS actions needing tenant_id import `getUserWithTenant` from `@/lib/auth.ts`. Returns `{ supabase, userId, tenantId }` or `{ error }` with `isAuthError()` type guard. **Why:** Eliminates duplicated tenant_id fetch across 4+ feature actions files.
-
-**API routes must check auth** — All CMS API routes (except OAuth callbacks) must call `supabase.auth.getUser()` and return 401 if unauthenticated. Pattern: same as `app/api/upload/route.ts`. **Why:** API routes bypass middleware auth — unauthenticated requests silently succeed without explicit check.
-
 **Service Role (use sparingly):**
-Only for admin operations that bypass RLS.
+Only for admin operations that bypass RLS. Use `createServiceClient()` from `lib/supabase/service.ts`.
+
+## Gotchas
+
+- **`messages.nav.xxx` is the correct key (NOT `messages.navigation.xxx`)** — Agent hallucinated `messages.navigation` as the section key. Always grep `messages.ts` before referencing any key. **WHY:** CMS-specific key structure; no way to infer from convention.
+
+- **`admin.tsx` (no underscore) for `/admin/*` routes** — Underscore prefix (`_admin.tsx`) creates a pathless layout (no URL segment). Use `admin.tsx` which adds `/admin/` segment. **WHY:** TanStack routing convention; CMS decision to use segment-based layout is project-specific.
+
+- **Supabase mock arrays: count ALL `.from()` calls in neverthrow pipeline** — Each `.from()` invocation consumes one mock array entry. Mismatch between mock count and actual call count causes silent false-positive tests.
+
+- **Cross-reference to skills for TanStack patterns** — Don't duplicate generic TanStack patterns here. Use: `tanstack-setup` (vite config), `tanstack-routing` (route conventions), `tanstack-server` (createServerFn, middleware). **WHY:** Skills are the source of truth for framework patterns.
+
+- **All `createServerFn` must use `{ method: 'POST' }`** — Default GET serializes data in URL params causing 431 on large payloads. Apply to ALL server fns. **WHY:** Prevents subtle size-dependent failures.
+
+- **`@tiptap/html` requires `happy-dom` for Vite SSR** — Without it, any route importing `generateHTML` crashes with 500 on SSR. Root cause invisible — error happens before handler.
+
+- **Server fn returning null → undefined in TanStack Query** — null serializes as undefined through TanStack Start RPC, triggering "Query data cannot be undefined". Fix: return empty object or wrap in Result.
+
+- **`createServerFn` returns undefined on 500, doesn't throw** — TanStack Start RPC doesn't propagate server errors. Always null-check server fn results before accessing properties.
+
+- **`useState` with async `prefetchQuery` = empty on first render** — `prefetchQuery` is non-blocking. `useState` initializer reads cache synchronously and gets `undefined`. Fix: use `useSuspenseQuery` or `useQuery` directly.
+
+- **generatePresignedUrlFn had no auth check** — Server functions for S3 presigned URLs must include `requireAuthContext()` check. **WHY:** Without it, unauthenticated requests can generate upload URLs.
+
+- **Tiptap `useEditor` ignores content prop changes** — Only reads `content` on creation. Fix: `useEffect` with `editor.commands.setContent()` when RHF `reset()` updates content.
+
+- **JSON.stringify(content) before server fn breaks Zod validation** — If component stringifies Tiptap JSON before passing to server fn, but Zod expects object, validation fails silently. Pass objects as-is.
+
+- **TanStack Router flat file dots = parent-child nesting** — `survey.$token.success.tsx` is a CHILD of `survey.$token.tsx`. Child renders inside parent's `<Outlet />`. Fix: split into layout + index.
+
+- **`npm install` after removing deps can downgrade unrelated packages** — Removing `next` and running `npm install` changed lockfile and downgraded TanStack Start. Fix: `rm -rf node_modules` + `npm ci` with lockfile from git.
 
 ## Routes
 
@@ -221,19 +273,38 @@ Only for admin operations that bypass RLS.
 1. **Create feature folder:**
    ```bash
    mkdir -p features/new-feature/{components,__tests__}
-   touch features/new-feature/{actions,queries,types}.ts
+   touch features/new-feature/{server,queries,types}.ts
    ```
 
 2. **Add route:**
    ```bash
-   mkdir -p app/admin/new-feature
-   touch app/admin/new-feature/page.tsx
+   mkdir -p app/routes/admin/new-feature
+   touch app/routes/admin/new-feature/index.tsx
    ```
 
-3. **Import in route:**
+3. **Create server function** in `features/new-feature/server.ts`:
    ```typescript
-   import { NewFeatureList } from '@/features/new-feature/components/NewFeatureList'
+   import { createServerFn } from '@tanstack/start'
+   import { requireAuthContext } from '@/lib/server-auth'
+
+   export const getItemsFn = createServerFn({ method: 'POST' })
+     .handler(async () => {
+       return requireAuthContext()
+         .andThen(({ supabase, tenantId }) => /* query */)
+         .match(data => data, error => { throw new Error(error) })
+     })
    ```
+
+4. **Create route** in `app/routes/admin/new-feature/index.tsx`:
+   ```typescript
+   import { createFileRoute } from '@tanstack/react-router'
+   import { NewFeatureList } from '@/features/new-feature/components/NewFeatureList'
+   export const Route = createFileRoute('/admin/new-feature/')({
+     component: NewFeatureList,
+   })
+   ```
+
+**All server logic uses `createServerFn({ method: 'POST' })`** in `features/{name}/server.ts`. API routes (`app/routes/api/`) only for external webhooks (OAuth callbacks, n8n triggers).
 
 ## UI Design Patterns
 
@@ -260,12 +331,12 @@ Only for admin operations that bypass RLS.
 ## Development
 
 ```bash
-# Start CMS only
-npm run dev:cms
+# Start CMS
+npm run dev          # Vite dev server on port 3001
 # Visit: http://localhost:3001
 
-# Build CMS only
-npm run build:cms
+# Build CMS
+npm run build        # Vite build (outputs .output/ via nitro)
 
 # Run tests
 npm run test --workspace=apps/cms        # Single run
@@ -279,39 +350,43 @@ npm run test:watch --workspace=apps/cms  # Watch mode (TDD)
 
 ### React Compiler
 
-React Compiler enabled via `reactCompiler: true` in cms and website `next.config.ts`. Shop apps (jacek, kolega) migrated to TanStack Start + Vite 8 (2026-04-15). Next.js 16.2.3 + React 19.2.5.
+React Compiler enabled via `babel-plugin-react-compiler` in `vite.config.ts`.
 
 **Impact:** Auto-memoizes — remove manual `useCallback`/`useMemo` when touching files (Boy Scout Rule). Don't wrap new handlers in `useCallback` by default. Only add manual memoization if profiling shows need.
 
 ## Testing (TDD)
 
-**Testable files** (TDD Red-Green-Refactor): `actions.ts`, `queries.ts`, `queries.server.ts`, `hooks/*.ts`, `utils/*.ts`
+**Testable files** (TDD Red-Green-Refactor): `server.ts`, `queries.ts`, `hooks/*.ts`, `utils/*.ts`
 **Not tested**: `components/`, `validation.ts` (Zod declarative), `types.ts`
 **Test location**: `features/{name}/__tests__/{file}.test.ts`
-**Style**: Integration — mock Supabase client, test action/query behavior. See `ag-dev-workflow` skill for full TDD patterns.
+**Style**: Integration — mock Supabase client, test server fn / query behavior.
+
+**vitest.setup.ts mocks:** `@tanstack/react-router` (useNavigate, useSearch, useLocation, Link) + Supabase browser client. No Next.js mocks needed.
 
 ## Deployment
 
 Auto-deploys to Vercel on push to `main`:
 - URL: https://agency-cms.vercel.app
 - Build Command: `npx turbo run build --filter=@agency/cms`
-- Output: `apps/cms/.next`
+- Output: `.output/` (Vercel serverless via `nitro()` vite plugin)
+- `nitro()` in vite.config.ts is **required** for Vercel deployment — without it, Vercel can't generate serverless functions and all SSR routes 404.
 
 ## Environment Variables
 
 Required in Vercel Dashboard:
-- `NEXT_PUBLIC_SUPABASE_URL` (browser + server)
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY` (browser + server)
-- `SUPABASE_SERVICE_ROLE_KEY` (server only, secret!)
+- `VITE_SUPABASE_URL` (client-side, exposed to browser via `import.meta.env`)
+- `VITE_SUPABASE_ANON_KEY` (client-side, exposed to browser)
+- `SUPABASE_SERVICE_ROLE_KEY` (server only — `process.env.*` inside createServerFn)
 - `N8N_WEBHOOK_URL` (server only — survey analysis webhook)
-- `N8N_WORKFLOW_ORCHESTRATOR_URL` (server only — n8n Orchestrator webhook for workflow execution)
-- `ORCHESTRATOR_WEBHOOK_SECRET` (server only — Bearer token for CMS → n8n auth)
+- `N8N_WORKFLOW_ORCHESTRATOR_URL` (server only — n8n Orchestrator webhook)
+- `ORCHESTRATOR_WEBHOOK_SECRET` (server only — Bearer token for CMS -> n8n auth)
 - `HOST_URL` (server only)
 
 See `.env.local.example` for full list.
 
 ## Related Files
 
-- `middleware.ts` - Route protection logic
-- `app/providers.tsx` - TanStack Query setup
+- `app/routes/__root.tsx` - Root layout + auth beforeLoad
+- `app/routes/admin.tsx` - Admin layout with QueryClientProvider + auth guard
 - `app/globals.css` - shadcn/ui theme with CSS variables
+- `vite.config.ts` - Vite 8 + TanStack Start + nitro config

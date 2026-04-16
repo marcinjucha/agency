@@ -1,10 +1,9 @@
-'use client'
+
 
 import { useState, useRef, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '@/lib/query-keys'
-import { getShopCategories } from '../queries'
-import { createShopCategory, updateShopCategory, deleteShopCategory } from '../actions'
+import { createShopCategoryFn, updateShopCategoryFn, deleteShopCategoryFn, getShopCategoriesFn } from '../server'
 import type { CreateShopCategoryFormData } from '../validation'
 import type { ShopCategory } from '../types'
 import {
@@ -62,12 +61,13 @@ export function CategoryManager() {
     refetch,
   } = useQuery({
     queryKey: queryKeys.shopCategories.list,
-    queryFn: getShopCategories,
+    queryFn: () => getShopCategoriesFn(),
   })
 
   const createMutation = useMutation({
     mutationFn: async (data: CreateShopCategoryFormData) => {
-      const result = await createShopCategory(data)
+      const result = await createShopCategoryFn({ data })
+      if (!result) throw new Error('Server error')
       if (!result.success) throw new Error(result.error)
       return result
     },
@@ -75,11 +75,13 @@ export function CategoryManager() {
       queryClient.invalidateQueries({ queryKey: queryKeys.shopCategories.all })
       cancelEditing()
     },
+    onError: (error) => console.error('[CategoryManager] create:', error),
   })
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<CreateShopCategoryFormData> }) => {
-      const result = await updateShopCategory(id, data)
+      const result = await updateShopCategoryFn({ data: { id, data } })
+      if (!result) throw new Error('Server error')
       if (!result.success) throw new Error(result.error)
       return result
     },
@@ -87,17 +89,20 @@ export function CategoryManager() {
       queryClient.invalidateQueries({ queryKey: queryKeys.shopCategories.all })
       cancelEditing()
     },
+    onError: (error) => console.error('[CategoryManager] update:', error),
   })
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const result = await deleteShopCategory(id)
+      const result = await deleteShopCategoryFn({ data: { id } })
+      if (!result) throw new Error('Server error')
       if (!result.success) throw new Error(result.error)
       return result
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.shopCategories.all })
     },
+    onError: (error) => console.error('[CategoryManager] delete:', error),
   })
 
   // Focus name input when starting to edit

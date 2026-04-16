@@ -14,7 +14,7 @@ import { WebhookConfigPanel } from './WebhookConfigPanel'
 import { AiActionConfigPanel } from './AiActionConfigPanel'
 import { ConfigPanelWrapper } from './ConfigPanelWrapper'
 import type { StepType } from '../../step-registry'
-import type { TriggerType } from '../../types'
+import type { TriggerType, SurveyOption, EmailTemplateOption } from '../../types'
 import type { VariableItem } from '@agency/ui'
 
 /** Props shared by all config panel components */
@@ -28,6 +28,10 @@ export interface ConfigPanelProps {
   triggerType?: string
   /** Graph-aware grouped variables from upstream steps + trigger */
   availableVariables?: VariableItem[]
+  /** Pre-loaded survey list from route loader — eliminates per-panel useQuery call */
+  surveys?: SurveyOption[]
+  /** Pre-loaded email template list from route loader — eliminates per-panel useQuery call */
+  emailTemplates?: EmailTemplateOption[]
 }
 
 const TRIGGER_TYPES = new Set<string>([

@@ -5,10 +5,6 @@ import { makeLicense } from './fixtures'
 
 // --- Mocks ---
 
-vi.mock('next/cache', () => ({
-  revalidatePath: vi.fn(),
-}))
-
 vi.mock('@/lib/result-helpers', () => ({
   requireAuthResult: vi.fn(),
   zodParse: vi.fn(),
@@ -23,7 +19,6 @@ vi.mock('@/lib/supabase/service', () => ({
 }))
 
 import { requireAuthResult, zodParse, fromSupabase, fromSupabaseVoid } from '@/lib/result-helpers'
-import { revalidatePath } from 'next/cache'
 import {
   createLicense,
   updateLicense,
@@ -106,7 +101,6 @@ describe('createLicense', () => {
     if (result.success) {
       expect(result.data).toEqual(licenseRow)
     }
-    expect(revalidatePath).toHaveBeenCalled()
   })
 
   it('rejects non-super-admin', async () => {
@@ -154,7 +148,6 @@ describe('updateLicense', () => {
     if (result.success) {
       expect(result.data.client_name).toBe('Updated Name')
     }
-    expect(revalidatePath).toHaveBeenCalled()
   })
 
   it('rejects non-super-admin', async () => {
@@ -184,7 +177,6 @@ describe('deleteLicense', () => {
     const result = await deleteLicense('lic-001')
 
     expect(result.success).toBe(true)
-    expect(revalidatePath).toHaveBeenCalled()
   })
 
   it('rejects non-super-admin', async () => {
@@ -217,7 +209,6 @@ describe('toggleLicenseActive', () => {
     if (result.success) {
       expect(result.data.is_active).toBe(false)
     }
-    expect(revalidatePath).toHaveBeenCalled()
   })
 
   it('toggles is_active to true', async () => {
@@ -250,7 +241,6 @@ describe('deactivateActivation', () => {
     const result = await deactivateActivation('act-001')
 
     expect(result.success).toBe(true)
-    expect(revalidatePath).toHaveBeenCalled()
   })
 
   it('rejects non-super-admin', async () => {

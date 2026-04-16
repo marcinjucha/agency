@@ -1,8 +1,8 @@
-'use client'
+
 
 import { useEffect, useState, useRef } from 'react'
 import type { Block } from '../types'
-import { routes } from '@/lib/routes'
+import { renderEmailPreviewFn } from '../server'
 
 interface EmailPreviewProps {
   blocks: Block[]
@@ -13,7 +13,6 @@ export function EmailPreview({ blocks, className }: EmailPreviewProps) {
   const [html, setHtml] = useState<string>('')
   const [loading, setLoading] = useState(false)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const abortRef = useRef<AbortController | null>(null)
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
@@ -24,35 +23,25 @@ export function EmailPreview({ blocks, className }: EmailPreviewProps) {
         return
       }
 
-      // Cancel previous in-flight request before starting new one
-      abortRef.current?.abort()
-      abortRef.current = new AbortController()
-
+      let cancelled = false
       setLoading(true)
+
       try {
-        const res = await fetch(routes.api.emailTemplatesRender, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ blocks }),
-          signal: abortRef.current.signal,
-        })
-        if (res.ok) {
-          const { html: rendered } = await res.json()
-          setHtml(rendered)
-        }
-      } catch (err) {
-        // AbortError is expected when a newer request supersedes this one
-        if (err instanceof Error && err.name !== 'AbortError') {
-          // Preview errors are non-critical, fail silently
-        }
+        const { html: rendered } = await renderEmailPreviewFn({ data: { blocks } })
+        if (!cancelled) setHtml(rendered)
+      } catch {
+        // Preview errors are non-critical, fail silently
       } finally {
-        setLoading(false)
+        if (!cancelled) setLoading(false)
+      }
+
+      return () => {
+        cancelled = true
       }
     }, 600)
 
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current)
-      abortRef.current?.abort()
     }
   }, [blocks])
 

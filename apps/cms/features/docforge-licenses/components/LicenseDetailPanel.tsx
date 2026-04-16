@@ -1,4 +1,4 @@
-'use client'
+
 
 import { useState, useCallback, useEffect } from 'react'
 import { useForm, Controller } from 'react-hook-form'
@@ -25,7 +25,7 @@ import { ArrowLeft, Check, Clipboard, Trash2 } from 'lucide-react'
 import { messages } from '@/lib/messages'
 import { queryKeys } from '@/lib/query-keys'
 import { useLicense, useLicenseActivations } from '../queries'
-import { updateLicense, deleteLicense, deactivateActivation, toggleLicenseActive } from '../actions'
+import { updateLicenseFn, deleteLicenseFn, deactivateActivationFn } from '../server'
 import { computeLicenseStatus } from '../utils'
 import { updateLicenseSchema, type UpdateLicenseValues } from '../validation'
 import { StatusBadge } from './LicenseCard'
@@ -152,7 +152,7 @@ export function LicenseDetailPanel({ licenseId, onClose }: LicenseDetailPanelPro
 
   const updateMutation = useMutation({
     mutationFn: async (data: UpdateLicenseValues) => {
-      const result = await updateLicense(licenseId, data)
+      const result = await updateLicenseFn({ data: { id: licenseId, data } })
       if (!result.success) throw new Error(result.error)
       return result
     },
@@ -163,7 +163,7 @@ export function LicenseDetailPanel({ licenseId, onClose }: LicenseDetailPanelPro
 
   const deleteMutation = useMutation({
     mutationFn: async () => {
-      const result = await deleteLicense(licenseId)
+      const result = await deleteLicenseFn({ data: { id: licenseId } })
       if (!result.success) throw new Error(result.error)
       return result
     },
@@ -176,7 +176,7 @@ export function LicenseDetailPanel({ licenseId, onClose }: LicenseDetailPanelPro
 
   const deactivateMutation = useMutation({
     mutationFn: async (activationId: string) => {
-      const result = await deactivateActivation(activationId)
+      const result = await deactivateActivationFn({ data: { activationId } })
       if (!result.success) throw new Error(result.error)
       return result
     },

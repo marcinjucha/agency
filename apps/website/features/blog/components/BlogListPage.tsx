@@ -1,9 +1,7 @@
-'use client'
-
 import { useState } from 'react'
-import Image from 'next/image'
-import Link from 'next/link'
+import { Link } from '@tanstack/react-router'
 import { ArrowRight, Clock, BookOpen } from 'lucide-react'
+import { Image } from '@unpic/react'
 import type { WebsiteBlogListItem } from '../types'
 import { formatPolishDate } from '../utils'
 import { routes } from '@/lib/routes'
@@ -96,7 +94,7 @@ function CategoryPill({
 
 function FeaturedPostCard({ post }: { post: WebsiteBlogListItem }) {
   return (
-    <Link href={routes.blogPost(post.slug)} className="group block">
+    <Link to={routes.blogPost(post.slug)} className="group block">
       <article className="relative overflow-hidden rounded-2xl bg-muted/40 transition-all duration-300 hover:bg-muted/60">
         <div className="grid md:grid-cols-[1.2fr_1fr]">
           {/* Image */}
@@ -141,7 +139,7 @@ function FeaturedPostCard({ post }: { post: WebsiteBlogListItem }) {
 
 function PostCard({ post }: { post: WebsiteBlogListItem }) {
   return (
-    <Link href={routes.blogPost(post.slug)} className="group block h-full">
+    <Link to={routes.blogPost(post.slug)} className="group block h-full">
       <article className="flex h-full flex-col overflow-hidden rounded-xl bg-muted/30 transition-all duration-300 hover:bg-muted/50">
         {/* Image */}
         <div className="relative aspect-[16/9] overflow-hidden">

@@ -1,4 +1,4 @@
-'use client'
+
 
 import { Input, Label } from '@agency/ui'
 import { messages } from '@/lib/messages'

@@ -1,6 +1,5 @@
 'use server'
 
-import { revalidatePath } from 'next/cache'
 import { errAsync, ResultAsync } from 'neverthrow'
 import { zodParse, fromSupabase, fromSupabaseVoid, requireAuthResult } from '@/lib/result-helpers'
 import { createLicenseSchema, updateLicenseSchema } from './validation'
@@ -27,10 +26,7 @@ export async function createLicense(data: LicenseFormData) {
     })
 
   return result.match(
-    (created) => {
-      revalidatePath(routes.admin.docforgeLicenses)
-      return { success: true as const, data: created }
-    },
+    (created) => ({ success: true as const, data: created }),
     (error) => ({ success: false as const, error }),
   )
 }
@@ -50,10 +46,7 @@ export async function updateLicense(id: string, data: Partial<LicenseFormData>) 
     })
 
   return result.match(
-    (updated) => {
-      revalidatePath(routes.admin.docforgeLicenses)
-      return { success: true as const, data: updated }
-    },
+    (updated) => ({ success: true as const, data: updated }),
     (error) => ({ success: false as const, error }),
   )
 }
@@ -72,10 +65,7 @@ export async function deleteLicense(id: string) {
     })
 
   return result.match(
-    () => {
-      revalidatePath(routes.admin.docforgeLicenses)
-      return { success: true as const }
-    },
+    () => ({ success: true as const }),
     (error) => ({ success: false as const, error }),
   )
 }
@@ -93,10 +83,7 @@ export async function toggleLicenseActive(id: string, isActive: boolean) {
     })
 
   return result.match(
-    (updated) => {
-      revalidatePath(routes.admin.docforgeLicenses)
-      return { success: true as const, data: updated }
-    },
+    (updated) => ({ success: true as const, data: updated }),
     (error) => ({ success: false as const, error }),
   )
 }
@@ -114,10 +101,7 @@ export async function deactivateActivation(activationId: string) {
     })
 
   return result.match(
-    () => {
-      revalidatePath(routes.admin.docforgeLicenses)
-      return { success: true as const }
-    },
+    () => ({ success: true as const }),
     (error) => ({ success: false as const, error }),
   )
 }

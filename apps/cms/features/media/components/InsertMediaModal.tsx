@@ -1,6 +1,6 @@
-'use client'
 
-import { useRef, useState, useCallback } from 'react'
+import { useRef, useState } from 'react'
+import { Image } from '@unpic/react'
 import {
   Dialog,
   DialogContent,
@@ -18,10 +18,10 @@ import {
 import { Folder } from 'lucide-react'
 import { Link2, Loader2, UploadCloud } from 'lucide-react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { getMediaItems, mediaKeys } from '@/features/media/queries'
-import { getMediaFolders, folderKeys } from '@/features/media/folder-queries'
+import { mediaKeys } from '@/features/media/queries'
+import { folderKeys } from '@/features/media/folder-queries'
 import { buildFolderTree } from '@/features/media/folder-types'
-import { createMediaItem } from '@/features/media/actions'
+import { createMediaItemFn, getMediaItemsFn, getMediaFoldersFn } from '@/features/media/server'
 import {
   uploadMediaToS3,
   ALLOWED_MIME_TYPES,
@@ -32,6 +32,7 @@ import { extractVideoId, generateThumbnailUrl, buildEmbedUrl, fetchVimeoThumbnai
 import { MediaTypeFilter } from '@/features/media/components/MediaTypeFilter'
 import type { MediaType, MediaItemListItem } from '@/features/media/types'
 import type { Editor } from '@tiptap/react'
+import { messages, templates } from '@/lib/messages'
 
 // --- Types ---
 
@@ -41,32 +42,35 @@ type InsertMediaModalProps = {
   onClose: () => void
 }
 
+// --- Registries ---
+
+// Single source of truth for fallback abbreviation text shown when a media
+// item has no thumbnail (embed types without a thumbnail URL).
+const MEDIA_TYPE_ABBREVIATIONS: Record<MediaType, string> = {
+  image: 'IMG',
+  video: 'VID',
+  youtube: 'YT',
+  vimeo: 'VM',
+  instagram: 'IG',
+  tiktok: 'TT',
+}
+
+const MEDIA_INSERT_HANDLERS: Record<MediaType, (editor: Editor, url: string) => void> = {
+  image: (editor, url) => editor.chain().focus().setImage({ src: url }).run(),
+  video: (editor, url) => editor.chain().focus().setVideo({ src: url }).run(),
+  youtube: (editor, url) => editor.chain().focus().setYouTube({ src: url }).run(),
+  vimeo: (editor, url) => editor.chain().focus().setVimeo({ src: url }).run(),
+  instagram: (editor, url) => editor.chain().focus().setInstagram({ src: url }).run(),
+  tiktok: (editor, url) => editor.chain().focus().setTikTok({ src: url }).run(),
+}
+
 // --- Helpers ---
 
 function insertMediaIntoEditor(
   editor: Editor,
   item: { type: MediaType; url: string }
 ) {
-  switch (item.type) {
-    case 'image':
-      editor.chain().focus().setImage({ src: item.url }).run()
-      break
-    case 'video':
-      editor.chain().focus().setVideo({ src: item.url }).run()
-      break
-    case 'youtube':
-      editor.chain().focus().setYouTube({ src: item.url }).run()
-      break
-    case 'vimeo':
-      editor.chain().focus().setVimeo({ src: item.url }).run()
-      break
-    case 'instagram':
-      editor.chain().focus().setInstagram({ src: item.url }).run()
-      break
-    case 'tiktok':
-      editor.chain().focus().setTikTok({ src: item.url }).run()
-      break
-  }
+  MEDIA_INSERT_HANDLERS[item.type](editor, item.url)
 }
 
 // --- Embed Tab (YouTube/Vimeo URL only) ---
@@ -89,7 +93,7 @@ function EmbedTab({
 
     const parsed = extractVideoId(videoUrl.trim())
     if (!parsed) {
-      setVideoUrlError('Nieprawidłowy link YouTube, Vimeo, Instagram lub TikTok.')
+      setVideoUrlError(messages.media.invalidEmbedLink)
       return
     }
 
@@ -104,18 +108,20 @@ function EmbedTab({
 
       const embedUrl = buildEmbedUrl(parsed.platform, parsed.id)
 
-      const result = await createMediaItem({
-        name: `${parsed.platform}-${parsed.id}`,
-        type: parsed.platform,
-        url: embedUrl,
-        s3_key: null,
-        mime_type: null,
-        size_bytes: null,
-        thumbnail_url: thumbnailUrl,
+      const result = await createMediaItemFn({
+        data: {
+          name: `${parsed.platform}-${parsed.id}`,
+          type: parsed.platform,
+          url: embedUrl,
+          s3_key: null,
+          mime_type: null,
+          size_bytes: null,
+          thumbnail_url: thumbnailUrl,
+        },
       })
 
       if (!result.success)
-        throw new Error(result.error ?? 'Błąd zapisu do bazy')
+        throw new Error(result.error ?? messages.media.dbSaveFailed)
 
       queryClient.invalidateQueries({ queryKey: mediaKeys.all })
 
@@ -124,7 +130,7 @@ function EmbedTab({
         onInserted()
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Nieznany błąd'
+      const message = err instanceof Error ? err.message : messages.media.unknownError
       setVideoUrlError(message)
     } finally {
       setIsInsertingUrl(false)
@@ -134,7 +140,7 @@ function EmbedTab({
   return (
     <div className="space-y-3">
       <p className="text-sm text-muted-foreground">
-        Wklej link do YouTube, Vimeo, Instagram lub TikTok, aby wstawić embed do edytora.
+        {messages.media.embedDescription}
       </p>
       <div className="flex gap-2">
         <div className="relative flex-1">
@@ -168,10 +174,10 @@ function EmbedTab({
           {isInsertingUrl ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Wstawianie...
+              {messages.media.inserting}
             </>
           ) : (
-            'Wstaw'
+            messages.common.insert
           )}
         </Button>
       </div>
@@ -209,12 +215,12 @@ function LibraryTab({
 
   const { data: items, isLoading } = useQuery({
     queryKey: mediaKeys.list({ type: typeFilter, folder_id: folderFilter }),
-    queryFn: () => getMediaItems({ type: typeFilter, folder_id: folderFilter }),
+    queryFn: () => getMediaItemsFn({ data: { type: typeFilter, folder_id: folderFilter } }),
   })
 
   const { data: folders } = useQuery({
     queryKey: folderKeys.list,
-    queryFn: getMediaFolders,
+    queryFn: () => getMediaFoldersFn(),
   })
 
   const folderTree = folders ? buildFolderTree(folders) : []
@@ -223,12 +229,12 @@ function LibraryTab({
     setUploadError(null)
 
     if (!ALLOWED_MIME_TYPES.includes(file.type)) {
-      setUploadError('Niedozwolony typ pliku.')
+      setUploadError(messages.media.fileTypeNotAllowed)
       return
     }
     const maxSize = file.type.startsWith('video/') ? VIDEO_MAX_SIZE : IMAGE_MAX_SIZE
     if (file.size > maxSize) {
-      setUploadError(`Plik za duży. Max: ${maxSize / (1024 * 1024)}MB.`)
+      setUploadError(templates.media.fileTooLarge(maxSize / (1024 * 1024)))
       return
     }
 
@@ -237,21 +243,23 @@ function LibraryTab({
       const { fileUrl, s3Key } = await uploadMediaToS3(file)
       setUploadProgress(80)
 
-      const result = await createMediaItem({
-        name: file.name.replace(/\.[^.]+$/, ''),
-        type: file.type.startsWith('video/') ? 'video' : 'image',
-        url: fileUrl,
-        s3_key: s3Key,
-        mime_type: file.type,
-        size_bytes: file.size,
+      const result = await createMediaItemFn({
+        data: {
+          name: file.name.replace(/\.[^.]+$/, ''),
+          type: file.type.startsWith('video/') ? 'video' : 'image',
+          url: fileUrl,
+          s3_key: s3Key,
+          mime_type: file.type,
+          size_bytes: file.size,
+        },
       })
-      if (!result.success) throw new Error(result.error ?? 'Błąd zapisu')
+      if (!result.success) throw new Error(result.error ?? messages.media.saveFailed)
 
       setUploadProgress(100)
       queryClient.invalidateQueries({ queryKey: mediaKeys.all })
       setTimeout(() => setUploadProgress(null), 800)
     } catch (err) {
-      setUploadError(err instanceof Error ? err.message : 'Nieznany błąd')
+      setUploadError(err instanceof Error ? err.message : messages.media.unknownError)
       setUploadProgress(null)
     }
   }
@@ -275,7 +283,7 @@ function LibraryTab({
       <div
         role="button"
         tabIndex={0}
-        aria-label="Przeciągnij pliki lub kliknij aby przesłać"
+        aria-label={messages.media.dropOrClickAria}
         onDrop={(e) => { e.preventDefault(); setIsDragOver(false); handleFiles(e.dataTransfer.files) }}
         onDragOver={(e) => { e.preventDefault(); setIsDragOver(true) }}
         onDragLeave={(e) => { e.preventDefault(); setIsDragOver(false) }}
@@ -289,8 +297,8 @@ function LibraryTab({
       >
         <UploadCloud className={`h-5 w-5 shrink-0 ${isDragOver ? 'text-primary' : 'text-muted-foreground'}`} />
         <div className="flex-1 min-w-0">
-          <p className="text-sm text-foreground">Przeciągnij lub kliknij aby przesłać</p>
-          <p className="text-xs text-muted-foreground">Obrazy (max 5MB), Wideo (max 50MB)</p>
+          <p className="text-sm text-foreground">{messages.media.dragOrClickUpload}</p>
+          <p className="text-xs text-muted-foreground">{messages.media.fileLimits}</p>
         </div>
       </div>
       <input
@@ -317,8 +325,8 @@ function LibraryTab({
               <SelectValue placeholder="Wszystkie media" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Wszystkie media</SelectItem>
-              <SelectItem value="root">Główne</SelectItem>
+              <SelectItem value="all">{messages.media.allMedia}</SelectItem>
+              <SelectItem value="root">{messages.media.unsorted}</SelectItem>
               {folderTree.map((folder) => (
                 <SelectItem key={folder.id} value={folder.id}>
                   {folder.name}
@@ -339,10 +347,10 @@ function LibraryTab({
       {!isLoading && (!items || items.length === 0) && (
         <div className="flex flex-col items-center justify-center py-12 text-center">
           <p className="text-sm text-muted-foreground">
-            Brak mediów w bibliotece.
+            {messages.media.noMediaInLibrary}
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
-            Przeciągnij pliki powyżej, aby dodać nowe media.
+            {messages.media.uploadToAdd}
           </p>
         </div>
       )}
@@ -355,41 +363,35 @@ function LibraryTab({
               type="button"
               onClick={() => handleSelect(item)}
               className="group overflow-hidden rounded-lg border border-border bg-card text-left transition-colors duration-150 hover:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-              aria-label={`Wstaw: ${item.name}`}
+              aria-label={templates.media.insertItemAriaLabel(item.name)}
             >
               {/* Thumbnail */}
               <div className="relative aspect-square w-full overflow-hidden bg-muted">
                 {item.type === 'image' ? (
-                  <img
+                  <Image
                     src={item.url}
                     alt={item.name}
+                    layout="fullWidth"
                     className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
                   />
                 ) : item.thumbnail_url ? (
-                  <img
+                  <Image
                     src={item.thumbnail_url}
                     alt={item.name}
+                    layout="fullWidth"
                     className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
                   />
                 ) : (
                   <div className="flex h-full w-full items-center justify-center">
                     <span className="text-2xl text-muted-foreground/50">
-                      {item.type === 'youtube'
-                        ? 'YT'
-                        : item.type === 'vimeo'
-                          ? 'VM'
-                          : item.type === 'instagram'
-                            ? 'IG'
-                            : item.type === 'tiktok'
-                              ? 'TT'
-                              : 'VID'}
+                      {MEDIA_TYPE_ABBREVIATIONS[item.type as MediaType] ?? 'VID'}
                     </span>
                   </div>
                 )}
                 {/* Hover overlay */}
                 <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors duration-200 group-hover:bg-black/30">
                   <span className="text-sm font-medium text-white opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-                    Wstaw
+                    {messages.common.insert}
                   </span>
                 </div>
               </div>
@@ -414,15 +416,15 @@ export function InsertMediaModal({
   open,
   onClose,
 }: InsertMediaModalProps) {
-  const handleInserted = useCallback(() => {
+  function handleInserted() {
     onClose()
-  }, [onClose])
+  }
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>Wstaw media</DialogTitle>
+          <DialogTitle>{messages.media.insertMedia}</DialogTitle>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto pr-1 pb-2">

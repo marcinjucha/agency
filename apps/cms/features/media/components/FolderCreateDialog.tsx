@@ -1,4 +1,4 @@
-'use client'
+
 
 import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
@@ -17,7 +17,7 @@ import {
 } from '@agency/ui'
 import { createFolderSchema, renameFolderSchema } from '../folder-validation'
 import type { CreateFolderFormData, RenameFolderFormData } from '../folder-validation'
-import { createFolder, renameFolder } from '../folder-actions'
+import { createFolderFn, renameFolderFn } from '../server'
 import { folderKeys } from '../folder-queries'
 import type { MediaFolder } from '../folder-types'
 import { messages } from '@/lib/messages'
@@ -59,7 +59,7 @@ export function FolderCreateDialog({
 
   const createMutation = useMutation({
     mutationFn: async (data: CreateFolderFormData) => {
-      const result = await createFolder({ ...data, parent_id: parentId ?? null })
+      const result = await createFolderFn({ data: { ...data, parent_id: parentId ?? null } })
       if (!result.success) throw new Error(result.error ?? messages.media.createFolderFailed)
       return result
     },
@@ -72,7 +72,7 @@ export function FolderCreateDialog({
   const renameMutation = useMutation({
     mutationFn: async (data: RenameFolderFormData) => {
       if (!existingFolder) return
-      const result = await renameFolder(existingFolder.id, data)
+      const result = await renameFolderFn({ data: { id: existingFolder.id, data } })
       if (!result.success) throw new Error(result.error ?? messages.media.renameFolderFailed)
       return result
     },

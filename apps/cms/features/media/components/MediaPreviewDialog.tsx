@@ -1,5 +1,6 @@
-'use client'
 
+
+import { Image } from '@unpic/react'
 import {
   Dialog,
   DialogContent,
@@ -32,9 +33,10 @@ function formatDate(dateString: string | null): string | null {
 function PreviewContent({ item }: { item: MediaItem }) {
   if (item.type === 'image') {
     return (
-      <img
+      <Image
         src={item.url}
         alt={item.name}
+        layout="constrained"
         className="max-h-[60vh] max-w-full rounded object-contain"
       />
     )

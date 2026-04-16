@@ -1,12 +1,12 @@
-'use client'
 
-import Image from 'next/image'
+
+import { Image } from '@unpic/react'
 import { Badge, Checkbox } from '@agency/ui'
 import { LoadingState, ErrorState, EmptyState } from '@agency/ui'
 import { ShoppingBag, AlertCircle } from 'lucide-react'
 import { messages } from '@/lib/messages'
 import { LISTING_STATUS_LABELS } from '../types'
-import type { ImportPreviewListing } from '../actions.import'
+import type { ImportPreviewListing } from '../server'
 
 type ImportPreviewTableProps = {
   listings: ImportPreviewListing[]
@@ -32,14 +32,13 @@ function ThumbnailCell({ images, title }: { images: string[]; title: string }) {
     )
   }
   return (
-    <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-md border border-border">
+    <div className="h-12 w-12 shrink-0 overflow-hidden rounded-md border border-border">
       <Image
         src={src}
         alt={title}
-        fill
-        className="object-cover"
-        sizes="48px"
-        unoptimized
+        width={48}
+        height={48}
+        className="h-full w-full object-cover"
       />
     </div>
   )

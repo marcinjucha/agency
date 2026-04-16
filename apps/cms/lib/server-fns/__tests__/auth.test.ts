@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-// Mock @tanstack/start-server-core before importing auth (createStartClient depends on it)
+// Mock @tanstack/start-server-core before importing auth (createServerClient depends on it)
 vi.mock('@tanstack/start-server-core', () => ({
   getCookies: vi.fn(() => ({})),
   setCookie: vi.fn(),
@@ -17,14 +17,14 @@ vi.mock('@tanstack/react-start', () => ({
   }),
 }))
 
-// Mock createStartClient — controlled Supabase mock
+// Mock createServerClient — controlled Supabase mock
 const mockSignInWithPassword = vi.fn()
 const mockSignOut = vi.fn()
 const mockGetUser = vi.fn()
 const mockUsersSelect = vi.fn()
 
 vi.mock('@/lib/supabase/server-start', () => ({
-  createStartClient: vi.fn(() => ({
+  createServerClient: vi.fn(() => ({
     auth: {
       getUser: mockGetUser,
       signInWithPassword: mockSignInWithPassword,

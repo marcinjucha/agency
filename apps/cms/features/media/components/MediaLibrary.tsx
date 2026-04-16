@@ -1,6 +1,6 @@
-'use client'
 
-import { useState, useCallback } from 'react'
+
+import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   DndContext,
@@ -28,9 +28,15 @@ import {
   AlertDialogAction,
 } from '@agency/ui'
 import { Image as ImageIcon, Link2, Loader2 } from 'lucide-react'
-import { mediaKeys, getMediaItems } from '../queries'
-import { deleteMediaItem, createMediaItem, updateMediaItem } from '../actions'
-import { moveMediaToFolder } from '../folder-actions'
+import { mediaKeys } from '../queries'
+import {
+  deleteMediaItemFn,
+  createMediaItemFn,
+  updateMediaItemFn,
+  moveMediaItemFn,
+  getMediaItemsFn,
+  getMediaFoldersFn,
+} from '../server'
 import { extractVideoId, generateThumbnailUrl, buildEmbedUrl, fetchVimeoThumbnail } from '@/lib/video-utils'
 import { MediaUploadZone } from './MediaUploadZone'
 import { MediaTypeFilter } from './MediaTypeFilter'
@@ -39,8 +45,8 @@ import { MediaPreviewDialog } from './MediaPreviewDialog'
 import { MediaCardInner } from './MediaCard'
 import { FolderTree } from './FolderTree'
 import { FolderCreateDialog } from './FolderCreateDialog'
-import { getMediaFolders, folderKeys } from '../folder-queries'
-import { deleteFolder } from '../folder-actions'
+import { folderKeys } from '../folder-queries'
+import { deleteFolderFn } from '../server'
 import { buildFolderTree } from '../folder-types'
 import { formatBytes } from '../utils'
 import type { FolderTreeNode } from '../folder-types'
@@ -98,7 +104,7 @@ export function MediaLibrary() {
   // Folder data
   const { data: folders } = useQuery({
     queryKey: folderKeys.list,
-    queryFn: getMediaFolders,
+    queryFn: () => getMediaFoldersFn(),
   })
 
   const folderTree = folders ? buildFolderTree(folders) : []
@@ -111,24 +117,24 @@ export function MediaLibrary() {
     refetch,
   } = useQuery({
     queryKey: mediaKeys.list({ type: typeFilter, folder_id: selectedFolderId }),
-    queryFn: () => getMediaItems({ type: typeFilter, folder_id: selectedFolderId }),
+    queryFn: () => getMediaItemsFn({ data: { type: typeFilter, folder_id: selectedFolderId } }),
   })
 
   // All items query (for total count in sidebar)
   const { data: allItems } = useQuery({
     queryKey: mediaKeys.list({ type: typeFilter }),
-    queryFn: () => getMediaItems({ type: typeFilter }),
+    queryFn: () => getMediaItemsFn({ data: { type: typeFilter } }),
   })
 
   // Unsorted items query (for unsorted count in sidebar)
   const { data: unsortedItems } = useQuery({
     queryKey: mediaKeys.list({ type: typeFilter, folder_id: null }),
-    queryFn: () => getMediaItems({ type: typeFilter, folder_id: null }),
+    queryFn: () => getMediaItemsFn({ data: { type: typeFilter, folder_id: null } }),
   })
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const result = await deleteMediaItem(id)
+      const result = await deleteMediaItemFn({ data: { id } })
       if (!result.success) throw new Error(result.error ?? messages.media.deleteFailed)
       return result
     },
@@ -143,7 +149,7 @@ export function MediaLibrary() {
 
   const deleteFolderMutation = useMutation({
     mutationFn: async (id: string) => {
-      const result = await deleteFolder(id)
+      const result = await deleteFolderFn({ data: { id } })
       if (!result.success) throw new Error(result.error ?? messages.media.deleteFolderFailed)
       return result
     },
@@ -158,7 +164,7 @@ export function MediaLibrary() {
 
   const renameMutation = useMutation({
     mutationFn: async ({ id, name }: { id: string; name: string }) => {
-      const result = await updateMediaItem(id, { name })
+      const result = await updateMediaItemFn({ data: { id, data: { name } } })
       if (!result.success) throw new Error(result.error ?? messages.media.renameFailed)
       return result
     },
@@ -185,27 +191,27 @@ export function MediaLibrary() {
   }
 
   // Folder handlers
-  const handleCreateFolder = useCallback((parentId?: string) => {
+  function handleCreateFolder(parentId?: string) {
     setFolderToRename(undefined)
     setFolderDialogParentId(parentId)
     setFolderDialogOpen(true)
-  }, [])
+  }
 
-  const handleRenameFolder = useCallback((folder: FolderTreeNode) => {
+  function handleRenameFolder(folder: FolderTreeNode) {
     setFolderDialogParentId(undefined)
     setFolderToRename(folder)
     setFolderDialogOpen(true)
-  }, [])
+  }
 
-  const handleDeleteFolder = useCallback((folder: FolderTreeNode) => {
+  function handleDeleteFolder(folder: FolderTreeNode) {
     setFolderToDelete(folder)
-  }, [])
+  }
 
-  const handleCloseFolderDialog = useCallback(() => {
+  function handleCloseFolderDialog() {
     setFolderDialogOpen(false)
     setFolderToRename(undefined)
     setFolderDialogParentId(undefined)
-  }, [])
+  }
 
   // --- Drag-and-drop ---
   const [draggedItem, setDraggedItem] = useState<MediaItemListItem | null>(null)
@@ -218,7 +224,7 @@ export function MediaLibrary() {
 
   const moveMutation = useMutation({
     mutationFn: async ({ itemId, folderId }: { itemId: string; folderId: string | null }) => {
-      const result = await moveMediaToFolder(itemId, folderId)
+      const result = await moveMediaItemFn({ data: { itemId, folderId } })
       if (!result.success) throw new Error(result.error ?? messages.media.moveFailed)
       return result
     },
@@ -278,15 +284,17 @@ export function MediaLibrary() {
       }
 
       const embedUrl = buildEmbedUrl(parsed.platform, parsed.id)
-      const result = await createMediaItem({
-        name: `${parsed.platform}-${parsed.id}`,
-        type: parsed.platform,
-        url: embedUrl,
-        s3_key: null,
-        mime_type: null,
-        size_bytes: null,
-        thumbnail_url: thumbnailUrl,
-        folder_id: typeof selectedFolderId === 'string' ? selectedFolderId : null,
+      const result = await createMediaItemFn({
+        data: {
+          name: `${parsed.platform}-${parsed.id}`,
+          type: parsed.platform,
+          url: embedUrl,
+          s3_key: null,
+          mime_type: null,
+          size_bytes: null,
+          thumbnail_url: thumbnailUrl,
+          folder_id: typeof selectedFolderId === 'string' ? selectedFolderId : null,
+        },
       })
 
       if (!result.success) throw new Error(result.error ?? messages.media.saveFailed)

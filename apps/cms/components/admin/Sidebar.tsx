@@ -1,7 +1,5 @@
-'use client'
 
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { Link, useNavigate, useRouterState } from '@tanstack/react-router'
 import {
   LayoutDashboard,
   FileText,
@@ -26,7 +24,6 @@ import {
 } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
-import { useRouter } from 'next/navigation'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
 import { usePermissions } from '@/contexts/permissions-context'
@@ -99,8 +96,8 @@ const menuGroups: MenuGroup[] = [
 ]
 
 export function Sidebar() {
-  const pathname = usePathname()
-  const router = useRouter()
+  const pathname = useRouterState({ select: (s) => s.location.pathname })
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const supabase = createClient()
   const { hasPermission, isSuperAdmin, enabledFeatures } = usePermissions()
@@ -108,8 +105,7 @@ export function Sidebar() {
   const handleLogout = async () => {
     await supabase.auth.signOut()
     queryClient.clear()
-    router.push(routes.login)
-    router.refresh()
+    navigate({ to: routes.login })
   }
 
   /**
@@ -167,7 +163,7 @@ export function Sidebar() {
                 return (
                   <Link
                     key={item.href}
-                    href={item.href}
+                    to={item.href}
                     className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                       isActive
                         ? 'bg-primary text-primary-foreground'

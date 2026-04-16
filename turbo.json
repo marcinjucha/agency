@@ -4,6 +4,9 @@
   "globalEnv": [
     "NEXT_PUBLIC_SUPABASE_URL",
     "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
+    "VITE_SUPABASE_URL",
+    "VITE_SUPABASE_PUBLISHABLE_KEY",
+    "VITE_WEBSITE_URL",
     "NEXT_PUBLIC_WEBSITE_URL",
     "SUPABASE_SERVICE_ROLE_KEY",
     "SUPABASE_ANON_KEY",
@@ -17,13 +20,18 @@
     "N8N_WORKFLOW_ORCHESTRATOR_URL",
     "SUPABASE_URL",
     "BUCKET_ACCESS_KEY",
-    "BUCKET_SECRET_KEY"
+    "BUCKET_SECRET_KEY",
+    "N8N_WEBHOOK_SURVEY_ANALYSIS_URL",
+    "N8N_WEBHOOK_FORM_CONFIRM_EMAIL_URL",
+    "CMS_BASE_URL",
+    "VITE_HOST_URL"
   ],
   "tasks": {
     "dev": {
       "cache": false,
       "persistent": true
     },
+
     "build": {
       "dependsOn": ["^build"],
       "outputs": [".next/**", "!.next/cache/**", "dist/**", ".output/**", ".vinxi/**"]

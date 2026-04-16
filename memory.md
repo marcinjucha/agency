@@ -4,40 +4,20 @@
 
 **Shop Platform (AAA-P-9):** Iter 1-8 done + kolega done. Remaining: iter 9 (feature flags) + iter 10 (polish/deploy). Both shops migrated to TanStack Start v1.167.
 **Marketplace Integration (AAA-P-9):** Iter 1-10 done. Manual testing remaining. 4 standalone n8n workflows.
-**CMS TanStack Start migration (AAA-T-192):** Core Setup + Auth + Layout DONE (2026-04-15). Next: per-feature tasks (surveys, shop, users, etc.).
-
-## Completed Features (compressed)
-
-- Email Notifications, Media Library, CTA→Survey Flow, Intake Hub, Survey Improvements, SEO Foundations, Architecture Audit — Done (2026-03-13 to 2026-03-29)
-- RBAC System (AAA-T-61+76), Tenant Management (AAA-T-170), DocForge Licenses (AAA-T-171) — Done (2026-04-06)
-- Workflow Engine + n8n Orchestrator (AAA-T-143, AAA-T-177, AAA-T-179, AAA-T-182, AAA-T-183) — Done (2026-04-10/11). n8n owns all execution.
-- Survey→Workflow Binding + AI Results (AAA-T-186, AAA-T-189) — Done (2026-04-14)
-- Plugin Architecture (AAA-T-190), CMS TanStack Start scaffold (AAA-T-192) — Done (2026-04-15)
+**CMS TanStack Start migration:** Full migration DONE (AAA-T-192..198, 2026-04-16). Next.js fully removed from CMS. All features migrated to createServerFn Pattern A. See `docs/TANSTACK_START_PATTERNS.md`.
 
 ## Feedback & Corrections
 
 - **"dawaj auto"/"auto" = switch to auto mode** — All phases without confirmation. Always stop at Phase 5 (manual testing).
 - **No backward compatibility (pre-launch only)** — No clients yet. Once clients onboard, backward compat required.
-- **Validate after EACH iteration, not batched** — Run Phase 3+3b after every iteration completion.
-- **Aggressive Boy Scout Rule for remeda/neverthrow** — Every file you touch must be converted to neverthrow + remeda. Not optional.
-- **Always fix ALL found bugs immediately** — Never note-and-defer pre-existing bugs. Fix when you have context.
-- **n8n Trigger Handler: Switch per trigger type, not if/else** — Each trigger type in dedicated Code node.
 - **"do all now" = don't defer P2 items** — When design agent recommends deferring, user overrides.
 - **Commit per change, test later** — Individual commits, deferred manual testing.
-- **CMS migration per-feature tasks** — When migrating large apps, break into separate tasks per feature area.
+- **Don't commit fixes without testing them first (2026-04-16)** — Verify the fix actually works before creating a commit.
 
 ## Bugs Found
 
 - **supabase gen types prepends "Initialising login role..."** — Corrupts types.ts. Workaround: `grep -v "^Initialising"`. `db:types` uses --local, need --linked when local not running.
-- **Supabase JS v2.95.2 `as any` needed** — `.from('table')` resolves to `never` in complex chains.
-- **DatePicker toISOString() timezone bug** — `.split('T')[0]` shifts date -1 day in CEST. Fix: `getFullYear()/getMonth()/getDate()`. Affects any date stored as YYYY-MM-DD.
-- **TanStack Query queryFn receives QueryFunctionContext as first arg** — Direct fn reference `queryFn: fn` injects Context object. Fix: wrap `queryFn: () => fn()` + explicit generic `useQuery<T>`.
-- **Supabase `.select('id')` returns ONLY requested columns** — Test mocks returning full objects mask this. Always match mock shape to select list.
-- **`step_type` on `workflow_steps`, NOT `workflow_step_executions`** — Must JOIN steps when querying step_type.
-- **NULL `survey_link.workflow_id` = no workflow fires** — After per-link binding, links without workflow_id skip triggering. Backfill existing links.
-- **Trigger route missing tenant_id verification** — Security: add tenant_id filter when looking up workflow by workflow_id.
-- **Supabase mock arrays: count ALL `.from()` calls in pipeline** — Each call consumes one mock array entry. Short array = silent failure on second call.
-- **`messages.nav.xxx` not `messages.navigation.xxx`** — Agent hallucinated key name. Always grep messages.ts. CMS uses `messages.nav` section.
+- **`inputValidator(zodSchema)` direct form silently fails in TanStack Start** — Must use function wrapper: `.inputValidator((input) => schema.parse(input))`. WHY: RPC layer doesn't invoke `.parse()` on raw schema objects. Recurs across features.
 
 ## Domain Concepts
 
@@ -45,7 +25,6 @@
 - **email_configs table empty in production** — N8n uses hardcoded Resend fallback (`noreply@haloefekt.pl`).
 - **notification_email per survey_link, not per tenant** — Each link has own notification address.
 - **surveys.status DB column is vestigial** — Status computed from survey_links. Manual enum management is wrong model.
-- **responses.answers + surveys.questions are JSONB, no separate tables** — Trigger Handler reads both from parent tables.
 - **Condition evaluator operators** — >=, <=, !=, ==, >, <, contains, in. NO single `=`. No `{{ }}` wrappers on field names.
 - **Baikal CalDAV has 2 calendars** — tsdav auto-discovers "Appointments" + "Default calendar". Must filter.
 - **Nil UUID fallback for Supabase filters** — `?? '00000000-...'` prevents PostgreSQL UUID parse errors on null values.
@@ -54,11 +33,7 @@
 
 - **Cross-project update rule** — AAA-P-9 tasks affecting shared tables/packages require updating BOTH PROJECT_SPECs.
 - **app_config table for encryption key** — Supabase Cloud blocks ALTER DATABASE SET for custom GUCs. `app_config` table + `get_encryption_key()` SECURITY DEFINER.
-- **SurveyLinkCalendarSelect dual mode** — Discriminated union props: `{ mode: 'standalone' }` vs `{ mode: 'controlled' }`. Pattern for any component appearing both standalone and in forms.
-- **Extract pure logic from .tsx to utils/ for TDD** — `.tsx` = rendering + hooks, `utils/*.ts` = pure testable functions.
 - **n8n Orchestrator owns ALL execution** — CMS trigger route = ~70 LOC fire-and-forget. WHY: Vercel serverless timeout can't handle multi-hour workflow delays.
-- **TanStack Start auth: beforeLoad mandatory, requestMiddleware optional** — beforeLoad (isomorphic) handles SSR + client navigation. requestMiddleware = server-only, misses client nav. See tanstack-server skill.
-- **`admin.tsx` not `_admin.tsx` for /admin/* routes** — Pathless layout (underscore) adds no URL segment. `_admin/index.tsx` → URL `/`. See tanstack-setup skill.
 
 ## Preferences
 
@@ -68,6 +43,4 @@
 - **Native input type="date" rejected** — Always use shadcn/ui DatePicker (Popover + Calendar).
 - **Always test with local database** — Never point dev to production Supabase.
 - **Always design bidirectional state transitions** — If deactivate exists, activate must too.
-- **Always use `vitest watch` during TDD** — Not `vitest run`. Watch mode for development, run for CI.
 - **Collapsible panels: close button inside panel** — Not only external toggle.
-- **Shorter skill names preferred** — Drop framework prefix when context is clear (e.g., "tanstack-setup" not "tanstack-start-setup").

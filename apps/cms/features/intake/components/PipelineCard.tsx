@@ -1,5 +1,3 @@
-'use client'
-
 import { forwardRef } from 'react'
 import { useDraggable } from '@dnd-kit/core'
 import { Badge } from '@agency/ui'

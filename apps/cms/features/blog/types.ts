@@ -4,7 +4,13 @@ import type { TiptapContent } from '../editor/types'
 
 // --- Blog post status ---
 
-export type BlogPostStatus = 'draft' | 'scheduled' | 'published'
+export const BLOG_POST_STATUSES = {
+  draft: 'draft',
+  scheduled: 'scheduled',
+  published: 'published',
+} as const
+
+export type BlogPostStatus = (typeof BLOG_POST_STATUSES)[keyof typeof BLOG_POST_STATUSES]
 
 // --- Editor save state ---
 

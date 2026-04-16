@@ -1,9 +1,10 @@
-'use client'
+
 
 import { useQuery } from '@tanstack/react-query'
-import { getLegalPages, legalPageKeys } from '../queries'
+import { legalPageKeys } from '../queries'
+import { getLegalPagesFn } from '../server'
 import { Badge, Card, CardContent, LoadingState, ErrorState, EmptyState } from '@agency/ui'
-import Link from 'next/link'
+import { Link } from '@tanstack/react-router'
 import { Scale, Pencil } from 'lucide-react'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
@@ -20,7 +21,7 @@ export function LegalPageList() {
     refetch,
   } = useQuery({
     queryKey: legalPageKeys.all,
-    queryFn: getLegalPages,
+    queryFn: () => getLegalPagesFn(),
   })
 
   if (isLoading) return <LoadingState variant="skeleton-table" rows={3} />
@@ -38,7 +39,7 @@ export function LegalPageList() {
         /* Gallery view */
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
           {pages.map((page) => (
-            <Link key={page.id} href={routes.admin.legalPage(page.id)}>
+            <Link key={page.id} to={routes.admin.legalPage(page.id)}>
               <Card className="overflow-hidden transition-transform hover:-translate-y-0.5 focus-within:ring-2 focus-within:ring-ring h-full">
                 <CardContent className="p-3 space-y-2">
                   <div className="flex items-start gap-2">
@@ -64,7 +65,7 @@ export function LegalPageList() {
           {pages.map((page, index) => (
             <Link
               key={page.id}
-              href={routes.admin.legalPage(page.id)}
+              to={routes.admin.legalPage(page.id)}
               className={`flex items-center justify-between px-4 py-2.5 bg-card hover:bg-muted/60 transition-colors ${
                 index < pages.length - 1 ? 'border-b border-border' : ''
               }`}

@@ -1,6 +1,7 @@
-'use client'
+
 
 import { useEditor, EditorContent } from '@tiptap/react'
+import { useEffect } from 'react'
 import type { Extensions } from '@tiptap/core'
 import { BubbleMenu } from '@tiptap/react/menus'
 import Placeholder from '@tiptap/extension-placeholder'
@@ -89,6 +90,18 @@ export function TiptapEditor({
         : {}),
     },
   })
+
+  // Sync Tiptap content when the content prop changes after initial mount.
+  // useEditor() only uses `content` on creation — external updates (e.g. RHF reset()
+  // after async data load) are ignored without this effect.
+  useEffect(() => {
+    if (!editor || editor.isDestroyed) return
+    const incoming = JSON.stringify(content)
+    const current = JSON.stringify(editor.getJSON())
+    if (incoming !== current) {
+      editor.commands.setContent(content, false)
+    }
+  }, [editor, content])
 
   return (
     <div className="tiptap-editor overflow-clip rounded-lg border border-border bg-background shadow-sm transition-shadow focus-within:shadow-md focus-within:ring-1 focus-within:ring-ring">

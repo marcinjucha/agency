@@ -1,5 +1,5 @@
 import { createServerFn } from '@tanstack/react-start'
-import { createStartClient } from '@/lib/supabase/server-start'
+import { createServerClient } from '@/lib/supabase/server-start'
 import { ALL_PERMISSION_KEYS, validatePermissionKeys, type PermissionKey } from '@/lib/permissions'
 import type { Tenant } from '@/features/tenants/types'
 
@@ -23,9 +23,9 @@ export type AdminLayoutData = {
  * SRP: separate from auth.ts because this is layout-scoped data,
  * not the narrow auth context needed by getAuthContextFn.
  */
-export const getAdminLayoutDataFn = createServerFn().handler(
+export const getAdminLayoutDataFn = createServerFn({ method: 'POST' }).handler(
   async (): Promise<AdminLayoutData | null> => {
-    const supabase = createStartClient()
+    const supabase = createServerClient()
 
     const {
       data: { user },
@@ -86,7 +86,7 @@ export const getAdminLayoutDataFn = createServerFn().handler(
 // Private helpers — each accepts a supabase client (DI pattern)
 // ---------------------------------------------------------------------------
 
-type SupabaseClient = ReturnType<typeof createStartClient>
+type SupabaseClient = ReturnType<typeof createServerClient>
 
 async function fetchTenantName(
   tenantId: string,
@@ -155,7 +155,7 @@ async function fetchAllTenants(supabase: SupabaseClient): Promise<Tenant[]> {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data } = await (supabase as any)
       .from('tenants')
-      .select('id, name, is_active')
+      .select('id, name')
       .order('name')
     return (data ?? []) as Tenant[]
   } catch {

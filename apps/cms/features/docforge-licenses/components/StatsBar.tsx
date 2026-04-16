@@ -1,4 +1,4 @@
-'use client'
+
 
 import { Card, CardContent } from '@agency/ui'
 import { messages } from '@/lib/messages'

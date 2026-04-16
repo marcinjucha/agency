@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createServerClient } from '@/lib/supabase/server-start'
 import type { Tables } from '@agency/database'
 import type { EmailTemplate } from './types'
 
@@ -9,7 +9,7 @@ function toEmailTemplate(raw: unknown): EmailTemplate {
 }
 
 export async function getEmailTemplate(type: string): Promise<EmailTemplate | null> {
-  const supabase = await createClient()
+  const supabase = createServerClient()
   const { data, error } = await supabase
     .from('email_templates')
     .select('*')
@@ -22,7 +22,7 @@ export async function getEmailTemplate(type: string): Promise<EmailTemplate | nu
 }
 
 export async function getEmailTemplates(): Promise<EmailTemplate[]> {
-  const supabase = await createClient()
+  const supabase = createServerClient()
   const { data, error } = await supabase
     .from('email_templates')
     .select('*')

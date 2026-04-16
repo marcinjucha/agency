@@ -5,12 +5,13 @@
  * double-booking conflict detection, appointment creation, and
  * calendar event creation via multi-provider system with graceful degradation.
  *
- * Uses service role client — this runs in a public API route with no auth context.
+ * All functions accept a supabase client as the first parameter so they can
+ * be called from createServerFn handlers without module-level client initialization.
  *
  * @module apps/website/features/calendar/booking
  */
 
-import { createClient } from '@supabase/supabase-js'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import {
   getConnectionForSurveyLink,
   createCalendarProvider,
@@ -21,36 +22,20 @@ import type { BookingRequest, BookingResult, BookingError } from './types'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-
-if (!supabaseUrl) {
-  console.error('Missing environment variable: NEXT_PUBLIC_SUPABASE_URL')
-  throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL')
-}
-
-if (!supabaseKey) {
-  console.error('Missing environment variable: SUPABASE_SERVICE_ROLE_KEY')
-  throw new Error('Missing SUPABASE_SERVICE_ROLE_KEY')
-}
-
-const supabase = createClient(supabaseUrl, supabaseKey)
-
 // ---------------------------------------------------------------------------
-// Token refresh callback — persists new Google credentials via RPC
+// Token refresh callback factory — persists new Google credentials via RPC
 // ---------------------------------------------------------------------------
 
-async function persistTokenRefresh(
-  connectionId: string,
-  newCredentials: GoogleCredentials
-): Promise<void> {
-  const { error } = await supabase.rpc('update_calendar_credentials', {
-    p_connection_id: connectionId,
-    p_credentials_json: JSON.stringify(newCredentials),
-  })
+function makePersistTokenRefresh(supabase: SupabaseClient) {
+  return async (connectionId: string, newCredentials: GoogleCredentials): Promise<void> => {
+    const { error } = await supabase.rpc('update_calendar_credentials', {
+      p_connection_id: connectionId,
+      p_credentials_json: JSON.stringify(newCredentials),
+    })
 
-  if (error) {
-    console.error('[BOOKING] Failed to persist refreshed credentials:', error)
+    if (error) {
+      console.error('[BOOKING] Failed to persist refreshed credentials:', error)
+    }
   }
 }
 
@@ -65,6 +50,7 @@ interface CalendarEventResult {
 }
 
 async function createCalendarEvent(
+  supabase: SupabaseClient,
   surveyLinkId: string,
   data: BookingRequest
 ): Promise<CalendarEventResult> {
@@ -89,7 +75,7 @@ async function createCalendarEvent(
   }
 
   const provider = createCalendarProvider(connection, {
-    onTokenRefresh: persistTokenRefresh,
+    onTokenRefresh: makePersistTokenRefresh(supabase),
   })
 
   const eventInput: ProviderCalendarEventInput = {
@@ -122,6 +108,9 @@ async function createCalendarEvent(
 /**
  * Book an appointment for a client.
  *
+ * Accepts a supabase client injected from the createServerFn handler —
+ * no module-level client initialization.
+ *
  * Steps:
  * 1. Validate survey exists and get lawyer info
  * 2. Validate response exists and belongs to survey
@@ -131,6 +120,7 @@ async function createCalendarEvent(
  * 6. Return booking result
  */
 export async function bookAppointment(
+  supabase: SupabaseClient,
   data: BookingRequest
 ): Promise<{ success: true; data: BookingResult } | { success: false; error: BookingError }> {
   // Step 1: Validate survey exists and get lawyer info
@@ -266,7 +256,7 @@ export async function bookAppointment(
 
   // Step 5: Create calendar event via multi-provider system (graceful degradation)
   try {
-    const calendarResult = await createCalendarEvent(data.surveyId, data)
+    const calendarResult = await createCalendarEvent(supabase, data.surveyId, data)
 
     if (calendarResult.eventId) {
       const { error: updateError } = await supabase

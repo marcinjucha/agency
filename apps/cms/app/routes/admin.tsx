@@ -1,6 +1,5 @@
 import { createFileRoute, redirect, Outlet, useNavigate } from '@tanstack/react-router'
-import { useState } from 'react'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { PermissionsProvider } from '@/contexts/permissions-context'
 import { SidebarV2 } from '@/components/admin/SidebarV2'
@@ -25,7 +24,9 @@ export const Route = createFileRoute('/admin')({
 function AdminLayout() {
   const layoutData = Route.useLoaderData()
   const navigate = useNavigate()
-  const [queryClient] = useState(() => buildQueryClient())
+  // queryClient is created in getRouter() and passed via RouterContext.
+  // Using the same instance as loaders ensures ensureQueryData cache is shared.
+  const { queryClient } = Route.useRouteContext()
 
   const handleLogout = async () => {
     await logoutFn()
@@ -77,19 +78,3 @@ function AdminShell({ onLogout }: { onLogout: () => Promise<void> }) {
   )
 }
 
-// ---------------------------------------------------------------------------
-// QueryClient factory — single source of truth for CMS query config
-// ---------------------------------------------------------------------------
-
-function buildQueryClient(): QueryClient {
-  return new QueryClient({
-    defaultOptions: {
-      queries: {
-        staleTime: 1000 * 60 * 5,   // 5 minutes
-        gcTime: 1000 * 60 * 10,     // 10 minutes
-        retry: 1,
-        refetchOnWindowFocus: false,
-      },
-    },
-  })
-}

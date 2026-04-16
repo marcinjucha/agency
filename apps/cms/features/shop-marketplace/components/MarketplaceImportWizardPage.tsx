@@ -1,13 +1,13 @@
-'use client'
 
-import Link from 'next/link'
+
+import { Link } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { ErrorState, LoadingState } from '@agency/ui'
 import { ChevronLeft } from 'lucide-react'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
 import { queryKeys } from '@/lib/query-keys'
-import { getMarketplaceConnections } from '../queries'
+import { getMarketplaceConnectionsFn } from '../server'
 import { MarketplaceImportWizard } from './MarketplaceImportWizard'
 
 export function MarketplaceImportWizardPage() {
@@ -18,14 +18,15 @@ export function MarketplaceImportWizardPage() {
     refetch,
   } = useQuery({
     queryKey: queryKeys.marketplace.connections,
-    queryFn: getMarketplaceConnections,
+    queryFn: () => getMarketplaceConnectionsFn(),
+    enabled: typeof window !== 'undefined',
   })
 
   return (
     <div className="space-y-6">
       {/* Back navigation */}
       <Link
-        href={routes.admin.shopMarketplace}
+        to={routes.admin.shopMarketplace}
         className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
         aria-label={messages.marketplace.importBackToMarketplace}
       >

@@ -1,12 +1,9 @@
-'use client'
-
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '@/lib/query-keys'
 import { routes } from '@/lib/routes'
 import { messages } from '@/lib/messages'
-import { getTenants } from '../queries'
-import { deactivateTenant, deleteTenant } from '../actions'
+import { getTenantsFn, deactivateTenantFn, deleteTenantFn } from '../server'
 import type { TenantListItem, SubscriptionStatus } from '../types'
 import {
   Button,
@@ -31,7 +28,7 @@ import {
   TableRow,
 } from '@agency/ui'
 import { Building2, Plus, Pencil, XCircle, Trash2 } from 'lucide-react'
-import Link from 'next/link'
+import { Link } from '@tanstack/react-router'
 
 // ---------------------------------------------------------------------------
 // Status badge styles (follows design system Status Badge Colors)
@@ -61,13 +58,13 @@ export function TenantList() {
     refetch,
   } = useQuery({
     queryKey: queryKeys.tenants.all,
-    queryFn: getTenants,
+    queryFn: () => getTenantsFn(),
   })
 
   const deactivateMutation = useMutation({
     mutationFn: async (id: string) => {
       setDeactivatingId(id)
-      const result = await deactivateTenant(id)
+      const result = await deactivateTenantFn({ data: { id } })
       if (!result.success) throw new Error(result.error)
       return result
     },
@@ -86,7 +83,7 @@ export function TenantList() {
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       setDeletingId(id)
-      const result = await deleteTenant(id)
+      const result = await deleteTenantFn({ data: { id } })
       if (!result.success) throw new Error(result.error)
       return result
     },
@@ -128,7 +125,7 @@ export function TenantList() {
           <p className="text-sm text-muted-foreground mt-1">{messages.tenants.subtitle}</p>
         </div>
         <Button asChild>
-          <Link href={routes.admin.tenantNew}>
+          <Link to={routes.admin.tenantNew}>
             <Plus className="mr-2 h-4 w-4" />
             {messages.tenants.createButton}
           </Link>
@@ -144,7 +141,7 @@ export function TenantList() {
           variant="card"
           action={
             <Button asChild>
-              <Link href={routes.admin.tenantNew}>
+              <Link to={routes.admin.tenantNew}>
                 <Plus className="mr-2 h-4 w-4" />
                 {messages.tenants.createButton}
               </Link>
@@ -264,7 +261,7 @@ function TenantRow({
             asChild
             aria-label={messages.tenants.editButton}
           >
-            <Link href={routes.admin.tenant(tenant.id)}>
+            <Link to={routes.admin.tenant(tenant.id)}>
               <Pencil className="h-4 w-4" />
             </Link>
           </Button>

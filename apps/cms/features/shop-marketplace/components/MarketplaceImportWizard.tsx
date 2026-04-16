@@ -1,7 +1,7 @@
-'use client'
+
 
 import { useState, useCallback, useEffect, useRef } from 'react'
-import { useRouter } from 'next/navigation'
+import { useNavigate } from '@tanstack/react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Card, CardContent, Badge, Button, Progress, LoadingState } from '@agency/ui'
 import { Store, CheckCircle2, AlertTriangle, ChevronRight, ChevronLeft, Loader2 } from 'lucide-react'
@@ -9,13 +9,11 @@ import { messages, templates } from '@/lib/messages'
 import { differenceInMinutes } from 'date-fns'
 import { routes } from '@/lib/routes'
 import { queryKeys } from '@/lib/query-keys'
-import { startMarketplaceImport } from '../actions'
-import { getImportPreviewListings } from '../actions.import'
-import { getImportProgress } from '../queries'
+import { startMarketplaceImportFn, getImportPreviewListingsFn, getImportProgressFn } from '../server'
 import { MARKETPLACE_LABELS } from '../types'
 import { ImportPreviewTable } from './ImportPreviewTable'
 import type { MarketplaceConnection } from '../types'
-import type { ImportPreviewListing } from '../actions.import'
+import type { ImportPreviewListing } from '../server'
 
 // --- Step indicator ---
 
@@ -247,7 +245,7 @@ function Step2ListingPreview({ connectionId, onBack, onImport, isImporting }: St
     setIsLoading(true)
     setLoadError(null)
     try {
-      const result = await getImportPreviewListings(connectionId)
+      const result = await getImportPreviewListingsFn({ data: { connectionId } })
       if (!result.success || !result.data) {
         setLoadError(result.error ?? messages.common.unknownError)
         return
@@ -344,7 +342,7 @@ type Step3Props = {
 }
 
 function Step3Progress({ importId }: Step3Props) {
-  const router = useRouter()
+  const navigate = useNavigate()
   const headingRef = useRef<HTMLHeadingElement>(null)
 
   useEffect(() => {
@@ -353,7 +351,7 @@ function Step3Progress({ importId }: Step3Props) {
 
   const { data: importRecord } = useQuery({
     queryKey: queryKeys.marketplace.importProgress(importId),
-    queryFn: () => getImportProgress(importId),
+    queryFn: () => getImportProgressFn({ data: { importId } }),
     refetchInterval: (query) => {
       const status = query.state.data?.status
       if (status === 'completed' || status === 'failed') return false
@@ -489,7 +487,7 @@ function Step3Progress({ importId }: Step3Props) {
       {isDone && (
         <div className="flex justify-end">
           <Button
-            onClick={() => router.push(routes.admin.shopMarketplace)}
+            onClick={() => navigate({ to: routes.admin.shopMarketplace })}
             variant={status === 'failed' ? 'outline' : 'default'}
           >
             {messages.marketplace.importFinished}
@@ -522,10 +520,9 @@ export function MarketplaceImportWizard({ connections }: MarketplaceImportWizard
 
   const startImport = useMutation({
     mutationFn: async ({ connectionId, listingIds }: { connectionId: string; listingIds: string[] }) => {
-      const result = await startMarketplaceImport(
-        { connectionId },
-        listingIds
-      )
+      const result = await startMarketplaceImportFn({
+        data: { connectionId, selectedListingIds: listingIds },
+      })
       if (!result.success) throw new Error(result.error)
       return result
     },

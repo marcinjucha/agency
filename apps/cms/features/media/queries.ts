@@ -27,7 +27,7 @@ export async function getMediaItems(filters?: {
   let query = supabase
     .from('media_items')
     .select(
-      'id, name, type, url, mime_type, size_bytes, thumbnail_url, created_at'
+      'id, name, type, url, mime_type, size_bytes, thumbnail_url, created_at, folder_id'
     )
     .order('created_at', { ascending: false })
 

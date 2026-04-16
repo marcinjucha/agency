@@ -1,9 +1,8 @@
-'use client'
-
 import { useState, useMemo, useCallback, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { useQueryClient } from '@tanstack/react-query'
-import { updateSurvey, deleteSurvey } from '../actions'
+import { useNavigate, Link } from '@tanstack/react-router'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { updateSurveyFn, deleteSurveyFn } from '../server'
+import { getSurvey } from '../queries'
 import {
   Button, Input, Label, Card, CardHeader, CardContent, Badge, CollapsibleCard,
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Textarea, Checkbox,
@@ -16,7 +15,6 @@ import {
   ArrowLeft, Plus, Trash2, Save, HelpCircle, UserPlus,
   GripVertical, Copy, Type, AlignLeft, Mail, Phone, ChevronDown, Circle, CheckSquare, Calendar, ShieldCheck,
 } from 'lucide-react'
-import Link from 'next/link'
 import { queryKeys } from '@/lib/query-keys'
 import type { Tables, Json } from '@agency/database'
 import { SurveyLinks } from './SurveyLinks'
@@ -44,7 +42,7 @@ import { restrictToVerticalAxis } from '@dnd-kit/modifiers'
 import type { SemanticRole, Question } from '@agency/validators'
 
 type SurveyBuilderProps = {
-  survey: Tables<'surveys'>
+  surveyId: string
 }
 
 const QUESTION_TYPE_ICONS: Record<Question['type'], typeof Type> = {
@@ -297,25 +295,42 @@ function SortableQuestionCard({ question, index, onUpdate, onDelete, onDuplicate
 
 // --- Main SurveyBuilder ---
 
-export function SurveyBuilder({ survey }: SurveyBuilderProps) {
+export function SurveyBuilder({ surveyId }: SurveyBuilderProps) {
   const queryClient = useQueryClient()
-  const router = useRouter()
+  const navigate = useNavigate()
 
-  const initialQuestions = useMemo(() => parseQuestions(survey), [survey])
-  const [title, setTitle] = useState(survey.title)
-  const [description, setDescription] = useState(survey.description || '')
-  const [questions, setQuestions] = useState<Question[]>(initialQuestions)
+  const { data: survey, isLoading: surveyLoading, error: surveyError } = useQuery({
+    queryKey: ['survey', surveyId],
+    queryFn: () => getSurvey(surveyId),
+  })
+
+  const initialQuestions = useMemo(() => (survey ? parseQuestions(survey) : []), [survey])
+  const [title, setTitle] = useState('')
+  const [description, setDescription] = useState('')
+  const [questions, setQuestions] = useState<Question[]>([])
   const [loading, setLoading] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [initialized, setInitialized] = useState(false)
+
+  // Initialize form state once survey loads
+  useEffect(() => {
+    if (survey && !initialized) {
+      setTitle(survey.title)
+      setDescription(survey.description || '')
+      setQuestions(parseQuestions(survey))
+      setInitialized(true)
+    }
+  }, [survey, initialized])
 
   // Dirty state tracking
   const isDirty = useMemo(() => {
+    if (!survey) return false
     if (title !== survey.title) return true
     if (description !== (survey.description || '')) return true
     if (JSON.stringify(questions) !== JSON.stringify(initialQuestions)) return true
     return false
-  }, [title, description, questions, survey.title, survey.description, initialQuestions])
+  }, [title, description, questions, survey, initialQuestions])
 
   // Warn on navigation with unsaved changes
   useEffect(() => {
@@ -410,18 +425,24 @@ export function SurveyBuilder({ survey }: SurveyBuilderProps) {
   }, [])
 
   const handleSave = async () => {
+    if (!survey) return
     setLoading(true)
     setError(null)
 
-    const result = await updateSurvey(survey.id, {
-      title,
-      description: description || null,
-      questions: questions as unknown as Json,
+    const result = await updateSurveyFn({
+      data: {
+        id: survey.id,
+        data: {
+          title,
+          description: description || null,
+          questions: questions as unknown as Json,
+        },
+      },
     })
 
     if (result.success) {
       queryClient.invalidateQueries({ queryKey: queryKeys.surveys.all })
-      router.push(routes.admin.surveys)
+      navigate({ to: routes.admin.surveys })
     } else {
       setError(result.error || messages.surveys.saveFailed)
       setLoading(false)
@@ -430,11 +451,27 @@ export function SurveyBuilder({ survey }: SurveyBuilderProps) {
 
   const questionIds = useMemo(() => questions.map((q) => q.id), [questions])
 
+  if (surveyLoading) {
+    return (
+      <div className="flex items-center justify-center py-12 text-muted-foreground text-sm">
+        {messages.surveys.loadingSurveys}
+      </div>
+    )
+  }
+
+  if (surveyError || !survey) {
+    return (
+      <div className="flex items-center justify-center py-12 text-destructive text-sm">
+        {messages.surveys.notFound}
+      </div>
+    )
+  }
+
   return (
     <div>
       <div className="mb-6">
         <Link
-          href={routes.admin.surveys}
+          to={routes.admin.surveys}
           className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-4"
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
@@ -462,18 +499,19 @@ export function SurveyBuilder({ survey }: SurveyBuilderProps) {
               <AlertDialogContent>
                 <AlertDialogHeader>
                   <AlertDialogTitle>{messages.surveys.deleteSurveyConfirmTitle}</AlertDialogTitle>
-                  <AlertDialogDescription>{messages.surveys.deleteSurveyConfirmDescription(survey.title)}</AlertDialogDescription>
+                  <AlertDialogDescription>{messages.surveys.deleteSurveyConfirmDescription(survey?.title ?? '')}</AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel>{messages.common.cancel}</AlertDialogCancel>
                   <AlertDialogAction
                     onClick={async () => {
+                      if (!survey) return
                       setDeleting(true)
-                      const result = await deleteSurvey(survey.id)
+                      const result = await deleteSurveyFn({ data: { id: survey.id } })
                       if (result.success) {
                         queryClient.invalidateQueries({ queryKey: queryKeys.surveys.all })
                         queryClient.invalidateQueries({ queryKey: queryKeys.intake.all })
-                        router.push(routes.admin.surveys)
+                        navigate({ to: routes.admin.surveys })
                       } else {
                         setError(result.error || messages.surveys.deleteFailed)
                         setDeleting(false)
@@ -587,7 +625,7 @@ export function SurveyBuilder({ survey }: SurveyBuilderProps) {
           </CollapsibleCard>
 
           {/* Survey Links Section */}
-          <SurveyLinks surveyId={survey.id} />
+          <SurveyLinks surveyId={surveyId} />
         </div>
       </div>
       </div>

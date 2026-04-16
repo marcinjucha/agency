@@ -4,12 +4,12 @@ This directory contains business logic separated from routing (ADR-005 pattern).
 
 ## Purpose
 
-Keep `app/` clean (routing only) and put all business logic here:
+Keep `app/routes/` clean (routing only) and put all business logic here:
 
-- Data fetching
+- Data fetching (server functions)
 - State management
 - Component logic
-- Server Actions
+- Mutations (server functions)
 - Validation
 
 ## Structure
@@ -42,177 +42,117 @@ Each feature follows this structure:
 features/{feature}/
 ├── components/      # Feature-specific React components
 ├── utils/           # Pure logic extracted from components (TDD candidates)
-├── actions.ts       # Server Actions (mutations)
-├── queries.ts       # Data fetching functions
+├── server.ts        # createServerFn — all data fetching + mutations
 ├── validations.ts   # Zod schemas
 ├── types.ts         # TypeScript interfaces
 └── __tests__/       # Tests
 ```
 
-**queries.ts vs queries.server.ts** — `queries.ts` = browser client (TanStack Query in client components). `queries.server.ts` = server client (Server Components/SSR). Wrong naming causes silent bugs: browser client in Server Component works at runtime but fails at build time (no cookies context). **Why:** Multiple features had wrong client usage discovered during architecture audit.
+**Why `server.ts` (not `actions.ts` or `queries.ts`):** CMS fully migrated from Next.js to TanStack Start (2026-04-16). All server logic uses `createServerFn({ method: 'POST' })`. No more Server Actions (`'use server'`), no more separate query files. Single file owns all server-side data access per feature.
 
 ## Example: Surveys Feature
+
+### server.ts
+
+```typescript
+import { createServerFn } from '@tanstack/start'
+import { createServerClient } from '@/lib/supabase/server-start'
+import type { Tables } from '@agency/database'
+
+export const getSurveysFn = createServerFn({ method: 'POST' })
+  .handler(async () => {
+    const supabase = createServerClient()
+    const { data, error } = await supabase
+      .from('surveys')
+      .select('*')
+      .order('created_at', { ascending: false })
+
+    if (error) throw error
+    return data ?? []
+  })
+
+export const createSurveyFn = createServerFn({ method: 'POST' })
+  .validator((input: { title: string }) => createSurveySchema.parse(input))
+  .handler(async ({ input }) => {
+    const supabase = createServerClient()
+    const { data, error } = await supabase
+      .from('surveys')
+      .insert(input)
+      .select()
+      .single()
+
+    if (error) return err(error.message)
+    return ok(data)
+  })
+```
 
 ### components/SurveyList.tsx
 
 ```typescript
-'use client'
 import { useQuery } from '@tanstack/react-query'
-import { getSurveys } from '../queries'
+import { getSurveysFn } from '../server'
+import { queryKeys } from '@/lib/query-keys'
 
 export function SurveyList() {
   const { data: surveys } = useQuery({
-    queryKey: ['surveys'],
-    queryFn: getSurveys,
+    queryKey: queryKeys.surveys.all,
+    queryFn: getSurveysFn,
   })
   // Component logic here
 }
 ```
 
-### queries.ts
-
-```typescript
-import { createClient } from '@/lib/supabase/client'
-import type { Tables } from '@agency/database'
-
-export async function getSurveys(): Promise<Tables<'surveys'>[]> {
-  const supabase = createClient()
-  const { data, error } = await supabase
-    .from('surveys')
-    .select('*')
-    .order('created_at', { ascending: false })
-
-  if (error) throw error
-  return data || []
-}
-```
-
-### actions.ts
-
-```typescript
-'use server'
-import { createClient } from '@/lib/supabase/server'
-import { revalidatePath } from 'next/cache'
-
-export async function createSurvey(data: { title: string }) {
-  const supabase = await createClient()
-
-  const { data: survey, error } = await supabase.from('surveys').insert(data).select().single()
-
-  if (error) return { success: false, error: error.message }
-
-  revalidatePath('/admin/surveys')
-  return { success: true, surveyId: survey.id }
-}
-```
-
 ## Usage in Routes
 
-**app/admin/surveys/page.tsx:**
+**app/routes/admin/surveys/index.tsx:**
 
 ```typescript
+import { createFileRoute } from '@tanstack/react-router'
 import { SurveyList } from '@/features/surveys/components/SurveyList'
+import { buildCmsHead } from '@/lib/head'
+import { messages } from '@/lib/messages'
 
-export default function SurveysPage() {
-  return (
-    <div>
-      <h1>Surveys</h1>
-      <SurveyList />
-    </div>
-  )
-}
+export const Route = createFileRoute('/admin/surveys/')({
+  head: () => buildCmsHead(messages.nav.surveys),
+  component: () => <SurveyList />,
+})
 ```
 
 **Minimal routing logic** - all complex logic in features/.
 
-## Why This Pattern?
+## Server Logic
 
-**Benefits:**
+All server logic uses `createServerFn({ method: 'POST' })` in `features/{name}/server.ts`. API routes only for external webhooks (OAuth callbacks).
 
-- ✅ **Testable:** Business logic isolated from Next.js
-- ✅ **Reusable:** Features can be extracted to packages
-- ✅ **Discoverable:** Find all survey code in one place
-- ✅ **Maintainable:** Clear separation of concerns
-- ✅ **Scalable:** Easy to add new features
+**Why POST for everything:** Default GET serializes data in URL params, causing 431 on large payloads (blog content, landing page blocks). User confirmed: always POST for all server fns.
 
-**Pattern Result:**
+## TanStack Query Integration (Pattern A)
 
-- app/admin/surveys/page.tsx: 10 lines (just imports and layout)
-- features/surveys/components/SurveyList.tsx: 80 lines (component logic)
-- features/surveys/queries.ts: 40 lines (data fetching)
-- features/surveys/actions.ts: 70 lines (mutations)
-
-## File Naming
-
-- Components: PascalCase (`SurveyList.tsx`)
-- Actions/Queries: camelCase functions (`getSurveys()`, `createSurvey()`)
-- Types: PascalCase (`Survey`, `Question`)
-- Files: lowercase with dash (`survey-utils.ts`)
-
-## Adding a New Feature
-
-```bash
-# 1. Create feature folder
-mkdir -p features/new-feature/components
-
-# 2. Create files
-touch features/new-feature/components/NewFeatureList.tsx
-touch features/new-feature/actions.ts
-touch features/new-feature/queries.ts
-
-# 3. Create route
-mkdir -p app/admin/new-feature
-touch app/admin/new-feature/page.tsx
-
-# 4. Import in route
-# app/admin/new-feature/page.tsx
-import { NewFeatureList } from '@/features/new-feature/components/NewFeatureList'
-```
-
-## Server Actions vs API Routes
-
-**Use Server Actions (preferred):**
+Server functions used directly as `queryFn` — no browser client needed. CMS is auth-required with no SEO needs; components own data via `useQuery` with server fn queryFn.
 
 ```typescript
-'use server'
-export async function createSurvey(data: FormData) {
-  // Direct database access
-  // Automatic serialization
-  // Built-in with Next.js
-}
-```
+// features/surveys/server.ts — server function
+export const getSurveysFn = createServerFn({ method: 'POST' })
+  .handler(async () => { /* ... */ })
 
-**Use API Routes only for:**
-
-- External webhooks (n8n)
-- Third-party integrations
-- Public endpoints
-
-## TanStack Query Integration
-
-**queries.ts exports functions** that TanStack Query calls:
-
-```typescript
-// features/surveys/queries.ts
-export async function getSurveys() {
-  // Fetch logic
-}
-
-// features/surveys/components/SurveyList.tsx
+// features/surveys/components/SurveyList.tsx — server fn as queryFn
 const { data } = useQuery({
-  queryKey: ['surveys'],
-  queryFn: getSurveys, // ← References query function
+  queryKey: queryKeys.surveys.all,
+  queryFn: getSurveysFn,
 })
 ```
+
+**Why no browser client:** Browser client was only needed during Next.js coexistence. Server fns have auth via request cookies. Pattern evolved 4x total (2026-04-16).
 
 ## Type Safety
 
 Always use explicit return types:
 
 ```typescript
-export async function getSurveys(): Promise<Tables<'surveys'>[]> {
-  // TanStack Query requires explicit return types for type inference
-}
+export const getSurveysFn = createServerFn({ method: 'POST' })
+  .handler(async (): Promise<Tables<'surveys'>[]> => {
+    // TanStack Query requires explicit return types for type inference
+  })
 ```
 
 **Derive typed unions from `as const` objects in `types.ts`** — When a feature has enum-like domain values (status, type, kind), define them as `as const` objects and derive the union type. Never hand-maintain string unions that duplicate a const object. DB stores TEXT — validate at query boundary.
@@ -228,6 +168,38 @@ type StepType = 'condition' | 'delay' | 'webhook'
 
 **Why:** RBAC (`PermissionKey`) proved this pattern catches typos at compile time and provides full autocomplete. Applies to any feature with domain constants: workflow step/trigger types, blog statuses, marketplace adapter keys, listing types.
 
+## File Naming
+
+- Components: PascalCase (`SurveyList.tsx`)
+- Server functions: camelCase with `Fn` suffix (`getSurveysFn`, `createSurveyFn`)
+- Types: PascalCase (`Survey`, `Question`)
+- Files: lowercase with dash (`survey-utils.ts`)
+
+## Adding a New Feature
+
+```bash
+# 1. Create feature folder
+mkdir -p features/new-feature/components
+
+# 2. Create files
+touch features/new-feature/components/NewFeatureList.tsx
+touch features/new-feature/server.ts
+touch features/new-feature/types.ts
+touch features/new-feature/validations.ts
+
+# 3. Create route
+touch app/routes/admin/new-feature/index.tsx
+
+# 4. Route file
+# app/routes/admin/new-feature/index.tsx
+import { createFileRoute } from '@tanstack/react-router'
+import { NewFeatureList } from '@/features/new-feature/components/NewFeatureList'
+
+export const Route = createFileRoute('/admin/new-feature/')({
+  component: () => <NewFeatureList />,
+})
+```
+
 ## Gotchas
 
 **Recurring patterns (see skills for details):**
@@ -238,10 +210,6 @@ type StepType = 'condition' | 'delay' | 'webhook'
 ### Common Bugs & Gotchas
 
 **Zod `.nullable().optional()` for DB nullable** — `z.string().optional()` accepts undefined but NOT null. DB stores null. Fix: `.nullable().optional()`. **WHY:** Supabase returns null for optional columns, Zod rejects it silently. Recurring across features.
-
-**useMutation + Server Action = silent failure** — TanStack Query treats non-thrown results as success. Fix: throw on `!result.success` inside mutationFn. **WHY:** If you return `{ success: false }` without throwing, onSuccess fires instead of onError. Recurring pattern.
-
-**revalidatePath does NOT invalidate TanStack Query cache** — Need BOTH `revalidatePath` (Next.js RSC cache) AND `queryClient.invalidateQueries()` (TanStack cache) after mutations. **WHY:** Two separate cache layers; revalidatePath only clears RSC cache, not client query cache.
 
 **`import { cn } from '@agency/ui'` NOT `'@agency/ui/lib/utils'`** — Deep path import fails. Always use the package root export. **WHY:** Recurring across new components — the deep path is not exposed.
 
@@ -259,7 +227,7 @@ type StepType = 'condition' | 'delay' | 'webhook'
 
 **`aria-label` on generic `<div>` ignored by screen readers — add `role="group"` or use semantic element** — For status indicators conveyed by color alone, add `sr-only` text spans. **WHY:** MarketplaceStatusDots had no screen reader alternative for color-coded status (AAA-T-157).
 
-**Extract pure functions from `.tsx` to `utils/`** -- If a function inside a component file doesn't touch JSX (no hooks, no rendering), extract it to `features/{name}/utils/{descriptive-name}.ts`. These become TDD candidates alongside `actions.ts` and `queries.ts`. **WHY:** `generateMockData()` and `formatExecutionStatus()` were buried in `TestModePanel.tsx` during AAA-T-177 -- untestable without mounting the component. After extraction to `utils/`, they got unit tests in minutes. Rule of thumb: pure logic in `.tsx` = extraction candidate.
+**Extract pure functions from `.tsx` to `utils/`** -- If a function inside a component file doesn't touch JSX (no hooks, no rendering), extract it to `features/{name}/utils/{descriptive-name}.ts`. These become TDD candidates alongside `server.ts`. **WHY:** `generateMockData()` and `formatExecutionStatus()` were buried in `TestModePanel.tsx` during AAA-T-177 -- untestable without mounting the component. After extraction to `utils/`, they got unit tests in minutes. Rule of thumb: pure logic in `.tsx` = extraction candidate.
 
 **Trigger payload schemas as cross-feature contract** — Each workflow trigger type (survey_submitted, booking_created, lead_scored) declares a payload schema in `lib/trigger-schemas.ts`. This schema defines what `{{variables}}` are available in email templates. Adding a new trigger = adding one payload schema → variables auto-appear in email template editor. **WHY:** Decouples triggers from email templates — no hardcoded variable lists per template type. Features communicate through schema contracts, not direct imports.
 

@@ -1,7 +1,5 @@
-'use client'
-
 import { useMemo, useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useNavigate, useSearch } from '@tanstack/react-router'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Card,
@@ -25,7 +23,7 @@ import { ArrowRight, FileText, Trash2 } from 'lucide-react'
 import { getResponseStatusColor } from '@/lib/utils/status'
 import { messages } from '@/lib/messages'
 import { RESPONSE_STATUSES } from '../validation'
-import { deleteResponse } from '../../responses/actions'
+import { deleteResponseFn } from '../../responses/server'
 import { queryKeys } from '@/lib/query-keys'
 import { STATUS_LABELS, getAiScoreTextColor } from '../types'
 import type { PipelineResponse } from '../types'
@@ -52,14 +50,14 @@ function formatDate(dateString: string): string {
 }
 
 export function ResponsesTable({ responses, onSelectResponse }: ResponsesTableProps) {
-  const router = useRouter()
-  const searchParams = useSearchParams()
+  const navigate = useNavigate()
+  const search = useSearch({ strict: false })
   const queryClient = useQueryClient()
   const [deleteTarget, setDeleteTarget] = useState<PipelineResponse | null>(null)
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const result = await deleteResponse(id)
+      const result = await deleteResponseFn({ data: { id } })
       if (!result.success) throw new Error(result.error)
       return result
     },
@@ -69,8 +67,8 @@ export function ResponsesTable({ responses, onSelectResponse }: ResponsesTablePr
     },
   })
 
-  const statusFilter = searchParams.get('status') ?? ''
-  const surveyFilter = searchParams.get('survey') ?? ''
+  const statusFilter = ((search as Record<string, unknown>).status as string) ?? ''
+  const surveyFilter = ((search as Record<string, unknown>).survey as string) ?? ''
 
   /** Unique survey titles derived from data */
   const uniqueSurveys = useMemo(() => {
@@ -90,15 +88,16 @@ export function ResponsesTable({ responses, onSelectResponse }: ResponsesTablePr
     })
   }, [responses, statusFilter, surveyFilter])
 
-  /** Update URL searchParams without full page reload */
+  /** Update URL search params without full page reload */
   function setFilter(key: string, value: string) {
-    const params = new URLSearchParams(searchParams.toString())
-    if (value) {
-      params.set(key, value)
-    } else {
-      params.delete(key)
-    }
-    router.replace(`?${params.toString()}`, { scroll: false })
+    navigate({
+      to: '/admin/intake',
+      search: (prev) => ({
+        ...prev,
+        [key]: value || undefined,
+      }),
+      replace: true,
+    })
   }
 
   return (

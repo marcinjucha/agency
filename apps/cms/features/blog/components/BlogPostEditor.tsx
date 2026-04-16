@@ -1,9 +1,9 @@
-'use client'
 
-import { useState, useRef, useCallback, useEffect } from 'react'
+
+import { useState, useRef, useEffect } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useRouter } from 'next/navigation'
+import { useNavigate } from '@tanstack/react-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Card,
@@ -19,18 +19,17 @@ import { format } from 'date-fns'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
 import { blogPostSchema, type BlogPostFormData } from '../validation'
-import { createBlogPost, updateBlogPost, deleteBlogPost } from '../actions'
 import {
   generateHtmlFromContent,
   calculateReadingTime,
   generateSlug,
 } from '../utils'
-import { blogKeys } from '../queries'
+import { queryKeys } from '@/lib/query-keys'
 import { getPostStatus, type BlogPostStatus, type SaveState } from '../types'
 import type { BlogPost, TiptapContent } from '../types'
 import { TiptapEditor } from './TiptapEditor'
 import { CategoryCombobox } from './CategoryCombobox'
-import { getKeywordPool } from '@/features/site-settings/queries'
+import { getKeywordPoolFn } from '@/features/site-settings/server'
 import { siteSettingsKeys } from '@/features/site-settings/types'
 import { BlogEditorTopBar } from './BlogEditorTopBar'
 import { CoverImageUpload } from './CoverImageUpload'
@@ -40,8 +39,24 @@ import { DeletePostDialog } from './DeletePostDialog'
 
 // --- Types ---
 
+// --- Result type shared between create and update ---
+
+export interface SaveBlogPostResult {
+  success: boolean
+  error?: string
+  data?: BlogPost
+}
+
+export type BlogPostPayload = BlogPostFormData & {
+  html_body?: string
+  estimated_reading_time?: number
+}
+
 interface BlogPostEditorProps {
   blogPost?: BlogPost
+  createFn: (data: BlogPostPayload) => Promise<SaveBlogPostResult>
+  updateFn: (id: string, data: BlogPostPayload) => Promise<SaveBlogPostResult>
+  deleteFn: (id: string) => Promise<{ success: boolean; error?: string }>
   onSuccess?: () => void
 }
 
@@ -65,14 +80,17 @@ function extractText(node: TiptapContent | TiptapContent['content'][number]): st
 
 // --- Component ---
 
-export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
-  const router = useRouter()
+export function BlogPostEditor({ blogPost, createFn, updateFn, deleteFn, onSuccess }: BlogPostEditorProps) {
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const isEditing = !!blogPost
 
   const { data: keywordPool = [], isLoading: isPoolLoading } = useQuery({
     queryKey: siteSettingsKeys.keywordPool,
-    queryFn: getKeywordPool,
+    queryFn: async () => {
+      const res = await getKeywordPoolFn()
+      return res.success ? res.data : []
+    },
   })
 
   const [saveState, setSaveState] = useState<SaveState>('idle')
@@ -95,6 +113,7 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
     control,
     setValue,
     watch,
+    reset,
     formState: { errors },
   } = useForm<BlogPostFormData>({
     resolver: zodResolver(blogPostSchema),
@@ -142,22 +161,41 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
   })
 
   useEffect(() => {
+    if (!blogPost) return
+    reset({
+      title: blogPost.title,
+      slug: blogPost.slug,
+      excerpt: blogPost.excerpt ?? '',
+      content: blogPost.content ?? EMPTY_CONTENT,
+      cover_image_url: blogPost.cover_image_url ?? '',
+      category: blogPost.category ?? '',
+      author_name: blogPost.author_name ?? '',
+      seo_metadata: {
+        title: blogPost.seo_metadata?.title ?? '',
+        description: blogPost.seo_metadata?.description ?? '',
+        ogImage: blogPost.seo_metadata?.ogImage ?? '',
+        keywords: blogPost.seo_metadata?.keywords ?? [],
+      },
+      is_published: blogPost.is_published ?? false,
+      published_at: blogPost.published_at ?? null,
+    })
+    setCoverPreview(blogPost.cover_image_url ?? null)
+  }, [blogPost?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
     if (slugManuallyEdited.current) return
     const generated = generateSlug(watchTitle)
     lastAutoSlug.current = generated
     setValue('slug', generated)
   }, [watchTitle, setValue])
 
-  const handleSlugChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const val = e.target.value
-      if (val !== lastAutoSlug.current) {
-        slugManuallyEdited.current = true
-      }
-      setValue('slug', val)
-    },
-    [setValue]
-  )
+  function handleSlugChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const val = e.target.value
+    if (val !== lastAutoSlug.current) {
+      slugManuallyEdited.current = true
+    }
+    setValue('slug', val)
+  }
 
   const readingTime = estimateReadingTime(watchContent as TiptapContent)
 
@@ -172,28 +210,39 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
 
     const payload = {
       ...(publishOverride !== undefined ? { ...data, is_published: publishOverride } : data),
-      content: JSON.stringify(data.content),
+      content: data.content,
       html_body,
       estimated_reading_time,
     }
 
-    const result = isEditing
-      ? await updateBlogPost(blogPost.id, payload)
-      : await createBlogPost(payload)
+    try {
+      const result = isEditing
+        ? await updateFn(blogPost.id, payload)
+        : await createFn(payload)
 
-    if (result.success) {
-      setSaveState('saved')
-      if (publishOverride !== undefined) setValue('is_published', publishOverride)
-      queryClient.invalidateQueries({ queryKey: blogKeys.all })
-      setTimeout(() => setSaveState('idle'), 2500)
-      onSuccess?.()
-
-      if (!isEditing && result.data) {
-        router.push(routes.admin.blogPost(result.data.id))
+      if (!result) {
+        throw new Error('Server returned empty response')
       }
-    } else {
+
+      if (result.success) {
+        setSaveState('saved')
+        if (publishOverride !== undefined) setValue('is_published', publishOverride)
+        queryClient.invalidateQueries({ queryKey: queryKeys.blog.all })
+        setTimeout(() => setSaveState('idle'), 2500)
+        onSuccess?.()
+
+        if (!isEditing && result.data) {
+          navigate({ to: routes.admin.blogPost(result.data.id) })
+        }
+      } else {
+        setSaveState('error')
+        setErrorMessage(result.error ?? messages.blog.saveFailed)
+        setTimeout(() => setSaveState('idle'), 4000)
+      }
+    } catch (err) {
+      console.error('Blog save failed:', err)
       setSaveState('error')
-      setErrorMessage(result.error ?? messages.blog.saveFailed)
+      setErrorMessage(messages.blog.saveFailed)
       setTimeout(() => setSaveState('idle'), 4000)
     }
   }
@@ -252,10 +301,10 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
   async function handleDelete() {
     if (!blogPost) return
     setDeleteState('deleting')
-    const result = await deleteBlogPost(blogPost.id)
+    const result = await deleteFn(blogPost.id)
     if (result.success) {
-      queryClient.invalidateQueries({ queryKey: blogKeys.all })
-      router.push(routes.admin.blog)
+      queryClient.invalidateQueries({ queryKey: queryKeys.blog.all })
+      navigate({ to: routes.admin.blog })
     } else {
       setDeleteState('idle')
       setErrorMessage(result.error ?? messages.blog.deleteFailed)
@@ -424,7 +473,7 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
                 onTimeChange={handleTimeChange}
                 onClearSchedule={clearSchedule}
                 onCopyPreviewLink={() => {
-                  const url = `${process.env.NEXT_PUBLIC_WEBSITE_URL || ''}/blog/preview/${blogPost?.preview_token}`
+                  const url = `${import.meta.env.VITE_WEBSITE_URL || ''}/blog/preview/${blogPost?.preview_token}`
                   navigator.clipboard.writeText(url)
                 }}
               />

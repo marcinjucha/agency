@@ -7,7 +7,7 @@
  * @module apps/website/features/calendar/settings-cache
  */
 
-import { createClient } from '@supabase/supabase-js'
+import { createServiceClient } from '@/lib/supabase/service'
 
 // Defaults when no DB row exists for the user
 const DEFAULT_WORK_START_HOUR = 9
@@ -29,17 +29,6 @@ const calendarSettingsCache = new Map<string, {
 }>()
 const CACHE_TTL_MS = 5 * 60 * 1000 // 5 minutes
 
-function getServiceClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-
-  if (!supabaseUrl || !supabaseKey) {
-    throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY')
-  }
-
-  return createClient(supabaseUrl, supabaseKey)
-}
-
 /**
  * Get calendar settings for a user, with 5-minute in-memory cache.
  * Falls back to defaults if no DB row exists.
@@ -50,7 +39,7 @@ export async function getCalendarSettingsForUser(userId: string): Promise<Calend
     return cached.settings
   }
 
-  const supabase = getServiceClient()
+  const supabase = createServiceClient()
 
   const { data } = await supabase
     .from('calendar_settings')

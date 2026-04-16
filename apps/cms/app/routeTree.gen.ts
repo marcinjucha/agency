@@ -13,6 +13,42 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
+import { Route as AdminWorkflowsIndexRouteImport } from './routes/admin/workflows/index'
+import { Route as AdminUsersIndexRouteImport } from './routes/admin/users/index'
+import { Route as AdminTenantsIndexRouteImport } from './routes/admin/tenants/index'
+import { Route as AdminSurveysIndexRouteImport } from './routes/admin/surveys/index'
+import { Route as AdminSettingsIndexRouteImport } from './routes/admin/settings/index'
+import { Route as AdminRolesIndexRouteImport } from './routes/admin/roles/index'
+import { Route as AdminResponsesIndexRouteImport } from './routes/admin/responses/index'
+import { Route as AdminMediaIndexRouteImport } from './routes/admin/media/index'
+import { Route as AdminLegalPagesIndexRouteImport } from './routes/admin/legal-pages/index'
+import { Route as AdminLandingPageIndexRouteImport } from './routes/admin/landing-page/index'
+import { Route as AdminIntakeIndexRouteImport } from './routes/admin/intake/index'
+import { Route as AdminEmailTemplatesIndexRouteImport } from './routes/admin/email-templates/index'
+import { Route as AdminBlogIndexRouteImport } from './routes/admin/blog/index'
+import { Route as ApiCalendarCallbackRouteImport } from './routes/api/calendar/callback'
+import { Route as AdminWorkflowsWorkflowIdRouteImport } from './routes/admin/workflows/$workflowId'
+import { Route as AdminTenantsNewRouteImport } from './routes/admin/tenants/new'
+import { Route as AdminTenantsTenantIdRouteImport } from './routes/admin/tenants/$tenantId'
+import { Route as AdminSurveysNewRouteImport } from './routes/admin/surveys/new'
+import { Route as AdminSurveysSurveyIdRouteImport } from './routes/admin/surveys/$surveyId'
+import { Route as AdminShopCategoriesRouteImport } from './routes/admin/shop/categories'
+import { Route as AdminResponsesResponseIdRouteImport } from './routes/admin/responses/$responseId'
+import { Route as AdminLegalPagesPageIdRouteImport } from './routes/admin/legal-pages/$pageId'
+import { Route as AdminEmailTemplatesTypeRouteImport } from './routes/admin/email-templates/$type'
+import { Route as AdminDocforgeLicensesRouteImport } from './routes/admin/docforge/licenses'
+import { Route as AdminBlogNewRouteImport } from './routes/admin/blog/new'
+import { Route as AdminBlogPostIdRouteImport } from './routes/admin/blog/$postId'
+import { Route as AdminWorkflowsExecutionsIndexRouteImport } from './routes/admin/workflows/executions/index'
+import { Route as AdminShopProductsIndexRouteImport } from './routes/admin/shop/products/index'
+import { Route as AdminShopMarketplaceIndexRouteImport } from './routes/admin/shop/marketplace/index'
+import { Route as ApiMarketplaceMarketplaceCallbackRouteImport } from './routes/api/marketplace/$marketplace/callback'
+import { Route as AdminWorkflowsExecutionsExecutionIdRouteImport } from './routes/admin/workflows/executions/$executionId'
+import { Route as AdminWorkflowsWorkflowIdExecutionsRouteImport } from './routes/admin/workflows/$workflowId/executions'
+import { Route as AdminShopProductsNewRouteImport } from './routes/admin/shop/products/new'
+import { Route as AdminShopProductsProductIdRouteImport } from './routes/admin/shop/products/$productId'
+import { Route as AdminShopMarketplaceImportRouteImport } from './routes/admin/shop/marketplace/import'
+import { Route as AdminWorkflowsWorkflowIdExecutionsExecutionIdRouteImport } from './routes/admin/workflows/$workflowId/executions/$executionId'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -34,17 +70,280 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminWorkflowsIndexRoute = AdminWorkflowsIndexRouteImport.update({
+  id: '/workflows/',
+  path: '/workflows/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminUsersIndexRoute = AdminUsersIndexRouteImport.update({
+  id: '/users/',
+  path: '/users/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminTenantsIndexRoute = AdminTenantsIndexRouteImport.update({
+  id: '/tenants/',
+  path: '/tenants/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminSurveysIndexRoute = AdminSurveysIndexRouteImport.update({
+  id: '/surveys/',
+  path: '/surveys/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminSettingsIndexRoute = AdminSettingsIndexRouteImport.update({
+  id: '/settings/',
+  path: '/settings/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminRolesIndexRoute = AdminRolesIndexRouteImport.update({
+  id: '/roles/',
+  path: '/roles/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminResponsesIndexRoute = AdminResponsesIndexRouteImport.update({
+  id: '/responses/',
+  path: '/responses/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminMediaIndexRoute = AdminMediaIndexRouteImport.update({
+  id: '/media/',
+  path: '/media/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminLegalPagesIndexRoute = AdminLegalPagesIndexRouteImport.update({
+  id: '/legal-pages/',
+  path: '/legal-pages/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminLandingPageIndexRoute = AdminLandingPageIndexRouteImport.update({
+  id: '/landing-page/',
+  path: '/landing-page/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminIntakeIndexRoute = AdminIntakeIndexRouteImport.update({
+  id: '/intake/',
+  path: '/intake/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminEmailTemplatesIndexRoute =
+  AdminEmailTemplatesIndexRouteImport.update({
+    id: '/email-templates/',
+    path: '/email-templates/',
+    getParentRoute: () => AdminRoute,
+  } as any)
+const AdminBlogIndexRoute = AdminBlogIndexRouteImport.update({
+  id: '/blog/',
+  path: '/blog/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const ApiCalendarCallbackRoute = ApiCalendarCallbackRouteImport.update({
+  id: '/api/calendar/callback',
+  path: '/api/calendar/callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminWorkflowsWorkflowIdRoute =
+  AdminWorkflowsWorkflowIdRouteImport.update({
+    id: '/workflows/$workflowId',
+    path: '/workflows/$workflowId',
+    getParentRoute: () => AdminRoute,
+  } as any)
+const AdminTenantsNewRoute = AdminTenantsNewRouteImport.update({
+  id: '/tenants/new',
+  path: '/tenants/new',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminTenantsTenantIdRoute = AdminTenantsTenantIdRouteImport.update({
+  id: '/tenants/$tenantId',
+  path: '/tenants/$tenantId',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminSurveysNewRoute = AdminSurveysNewRouteImport.update({
+  id: '/surveys/new',
+  path: '/surveys/new',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminSurveysSurveyIdRoute = AdminSurveysSurveyIdRouteImport.update({
+  id: '/surveys/$surveyId',
+  path: '/surveys/$surveyId',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminShopCategoriesRoute = AdminShopCategoriesRouteImport.update({
+  id: '/shop/categories',
+  path: '/shop/categories',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminResponsesResponseIdRoute =
+  AdminResponsesResponseIdRouteImport.update({
+    id: '/responses/$responseId',
+    path: '/responses/$responseId',
+    getParentRoute: () => AdminRoute,
+  } as any)
+const AdminLegalPagesPageIdRoute = AdminLegalPagesPageIdRouteImport.update({
+  id: '/legal-pages/$pageId',
+  path: '/legal-pages/$pageId',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminEmailTemplatesTypeRoute = AdminEmailTemplatesTypeRouteImport.update({
+  id: '/email-templates/$type',
+  path: '/email-templates/$type',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminDocforgeLicensesRoute = AdminDocforgeLicensesRouteImport.update({
+  id: '/docforge/licenses',
+  path: '/docforge/licenses',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminBlogNewRoute = AdminBlogNewRouteImport.update({
+  id: '/blog/new',
+  path: '/blog/new',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminBlogPostIdRoute = AdminBlogPostIdRouteImport.update({
+  id: '/blog/$postId',
+  path: '/blog/$postId',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminWorkflowsExecutionsIndexRoute =
+  AdminWorkflowsExecutionsIndexRouteImport.update({
+    id: '/workflows/executions/',
+    path: '/workflows/executions/',
+    getParentRoute: () => AdminRoute,
+  } as any)
+const AdminShopProductsIndexRoute = AdminShopProductsIndexRouteImport.update({
+  id: '/shop/products/',
+  path: '/shop/products/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminShopMarketplaceIndexRoute =
+  AdminShopMarketplaceIndexRouteImport.update({
+    id: '/shop/marketplace/',
+    path: '/shop/marketplace/',
+    getParentRoute: () => AdminRoute,
+  } as any)
+const ApiMarketplaceMarketplaceCallbackRoute =
+  ApiMarketplaceMarketplaceCallbackRouteImport.update({
+    id: '/api/marketplace/$marketplace/callback',
+    path: '/api/marketplace/$marketplace/callback',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const AdminWorkflowsExecutionsExecutionIdRoute =
+  AdminWorkflowsExecutionsExecutionIdRouteImport.update({
+    id: '/workflows/executions/$executionId',
+    path: '/workflows/executions/$executionId',
+    getParentRoute: () => AdminRoute,
+  } as any)
+const AdminWorkflowsWorkflowIdExecutionsRoute =
+  AdminWorkflowsWorkflowIdExecutionsRouteImport.update({
+    id: '/executions',
+    path: '/executions',
+    getParentRoute: () => AdminWorkflowsWorkflowIdRoute,
+  } as any)
+const AdminShopProductsNewRoute = AdminShopProductsNewRouteImport.update({
+  id: '/shop/products/new',
+  path: '/shop/products/new',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminShopProductsProductIdRoute =
+  AdminShopProductsProductIdRouteImport.update({
+    id: '/shop/products/$productId',
+    path: '/shop/products/$productId',
+    getParentRoute: () => AdminRoute,
+  } as any)
+const AdminShopMarketplaceImportRoute =
+  AdminShopMarketplaceImportRouteImport.update({
+    id: '/shop/marketplace/import',
+    path: '/shop/marketplace/import',
+    getParentRoute: () => AdminRoute,
+  } as any)
+const AdminWorkflowsWorkflowIdExecutionsExecutionIdRoute =
+  AdminWorkflowsWorkflowIdExecutionsExecutionIdRouteImport.update({
+    id: '/$executionId',
+    path: '/$executionId',
+    getParentRoute: () => AdminWorkflowsWorkflowIdExecutionsRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/login': typeof LoginRoute
   '/admin/': typeof AdminIndexRoute
+  '/admin/blog/$postId': typeof AdminBlogPostIdRoute
+  '/admin/blog/new': typeof AdminBlogNewRoute
+  '/admin/docforge/licenses': typeof AdminDocforgeLicensesRoute
+  '/admin/email-templates/$type': typeof AdminEmailTemplatesTypeRoute
+  '/admin/legal-pages/$pageId': typeof AdminLegalPagesPageIdRoute
+  '/admin/responses/$responseId': typeof AdminResponsesResponseIdRoute
+  '/admin/shop/categories': typeof AdminShopCategoriesRoute
+  '/admin/surveys/$surveyId': typeof AdminSurveysSurveyIdRoute
+  '/admin/surveys/new': typeof AdminSurveysNewRoute
+  '/admin/tenants/$tenantId': typeof AdminTenantsTenantIdRoute
+  '/admin/tenants/new': typeof AdminTenantsNewRoute
+  '/admin/workflows/$workflowId': typeof AdminWorkflowsWorkflowIdRouteWithChildren
+  '/api/calendar/callback': typeof ApiCalendarCallbackRoute
+  '/admin/blog/': typeof AdminBlogIndexRoute
+  '/admin/email-templates/': typeof AdminEmailTemplatesIndexRoute
+  '/admin/intake/': typeof AdminIntakeIndexRoute
+  '/admin/landing-page/': typeof AdminLandingPageIndexRoute
+  '/admin/legal-pages/': typeof AdminLegalPagesIndexRoute
+  '/admin/media/': typeof AdminMediaIndexRoute
+  '/admin/responses/': typeof AdminResponsesIndexRoute
+  '/admin/roles/': typeof AdminRolesIndexRoute
+  '/admin/settings/': typeof AdminSettingsIndexRoute
+  '/admin/surveys/': typeof AdminSurveysIndexRoute
+  '/admin/tenants/': typeof AdminTenantsIndexRoute
+  '/admin/users/': typeof AdminUsersIndexRoute
+  '/admin/workflows/': typeof AdminWorkflowsIndexRoute
+  '/admin/shop/marketplace/import': typeof AdminShopMarketplaceImportRoute
+  '/admin/shop/products/$productId': typeof AdminShopProductsProductIdRoute
+  '/admin/shop/products/new': typeof AdminShopProductsNewRoute
+  '/admin/workflows/$workflowId/executions': typeof AdminWorkflowsWorkflowIdExecutionsRouteWithChildren
+  '/admin/workflows/executions/$executionId': typeof AdminWorkflowsExecutionsExecutionIdRoute
+  '/api/marketplace/$marketplace/callback': typeof ApiMarketplaceMarketplaceCallbackRoute
+  '/admin/shop/marketplace/': typeof AdminShopMarketplaceIndexRoute
+  '/admin/shop/products/': typeof AdminShopProductsIndexRoute
+  '/admin/workflows/executions/': typeof AdminWorkflowsExecutionsIndexRoute
+  '/admin/workflows/$workflowId/executions/$executionId': typeof AdminWorkflowsWorkflowIdExecutionsExecutionIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/admin': typeof AdminIndexRoute
+  '/admin/blog/$postId': typeof AdminBlogPostIdRoute
+  '/admin/blog/new': typeof AdminBlogNewRoute
+  '/admin/docforge/licenses': typeof AdminDocforgeLicensesRoute
+  '/admin/email-templates/$type': typeof AdminEmailTemplatesTypeRoute
+  '/admin/legal-pages/$pageId': typeof AdminLegalPagesPageIdRoute
+  '/admin/responses/$responseId': typeof AdminResponsesResponseIdRoute
+  '/admin/shop/categories': typeof AdminShopCategoriesRoute
+  '/admin/surveys/$surveyId': typeof AdminSurveysSurveyIdRoute
+  '/admin/surveys/new': typeof AdminSurveysNewRoute
+  '/admin/tenants/$tenantId': typeof AdminTenantsTenantIdRoute
+  '/admin/tenants/new': typeof AdminTenantsNewRoute
+  '/admin/workflows/$workflowId': typeof AdminWorkflowsWorkflowIdRouteWithChildren
+  '/api/calendar/callback': typeof ApiCalendarCallbackRoute
+  '/admin/blog': typeof AdminBlogIndexRoute
+  '/admin/email-templates': typeof AdminEmailTemplatesIndexRoute
+  '/admin/intake': typeof AdminIntakeIndexRoute
+  '/admin/landing-page': typeof AdminLandingPageIndexRoute
+  '/admin/legal-pages': typeof AdminLegalPagesIndexRoute
+  '/admin/media': typeof AdminMediaIndexRoute
+  '/admin/responses': typeof AdminResponsesIndexRoute
+  '/admin/roles': typeof AdminRolesIndexRoute
+  '/admin/settings': typeof AdminSettingsIndexRoute
+  '/admin/surveys': typeof AdminSurveysIndexRoute
+  '/admin/tenants': typeof AdminTenantsIndexRoute
+  '/admin/users': typeof AdminUsersIndexRoute
+  '/admin/workflows': typeof AdminWorkflowsIndexRoute
+  '/admin/shop/marketplace/import': typeof AdminShopMarketplaceImportRoute
+  '/admin/shop/products/$productId': typeof AdminShopProductsProductIdRoute
+  '/admin/shop/products/new': typeof AdminShopProductsNewRoute
+  '/admin/workflows/$workflowId/executions': typeof AdminWorkflowsWorkflowIdExecutionsRouteWithChildren
+  '/admin/workflows/executions/$executionId': typeof AdminWorkflowsExecutionsExecutionIdRoute
+  '/api/marketplace/$marketplace/callback': typeof ApiMarketplaceMarketplaceCallbackRoute
+  '/admin/shop/marketplace': typeof AdminShopMarketplaceIndexRoute
+  '/admin/shop/products': typeof AdminShopProductsIndexRoute
+  '/admin/workflows/executions': typeof AdminWorkflowsExecutionsIndexRoute
+  '/admin/workflows/$workflowId/executions/$executionId': typeof AdminWorkflowsWorkflowIdExecutionsExecutionIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -52,19 +351,177 @@ export interface FileRoutesById {
   '/admin': typeof AdminRouteWithChildren
   '/login': typeof LoginRoute
   '/admin/': typeof AdminIndexRoute
+  '/admin/blog/$postId': typeof AdminBlogPostIdRoute
+  '/admin/blog/new': typeof AdminBlogNewRoute
+  '/admin/docforge/licenses': typeof AdminDocforgeLicensesRoute
+  '/admin/email-templates/$type': typeof AdminEmailTemplatesTypeRoute
+  '/admin/legal-pages/$pageId': typeof AdminLegalPagesPageIdRoute
+  '/admin/responses/$responseId': typeof AdminResponsesResponseIdRoute
+  '/admin/shop/categories': typeof AdminShopCategoriesRoute
+  '/admin/surveys/$surveyId': typeof AdminSurveysSurveyIdRoute
+  '/admin/surveys/new': typeof AdminSurveysNewRoute
+  '/admin/tenants/$tenantId': typeof AdminTenantsTenantIdRoute
+  '/admin/tenants/new': typeof AdminTenantsNewRoute
+  '/admin/workflows/$workflowId': typeof AdminWorkflowsWorkflowIdRouteWithChildren
+  '/api/calendar/callback': typeof ApiCalendarCallbackRoute
+  '/admin/blog/': typeof AdminBlogIndexRoute
+  '/admin/email-templates/': typeof AdminEmailTemplatesIndexRoute
+  '/admin/intake/': typeof AdminIntakeIndexRoute
+  '/admin/landing-page/': typeof AdminLandingPageIndexRoute
+  '/admin/legal-pages/': typeof AdminLegalPagesIndexRoute
+  '/admin/media/': typeof AdminMediaIndexRoute
+  '/admin/responses/': typeof AdminResponsesIndexRoute
+  '/admin/roles/': typeof AdminRolesIndexRoute
+  '/admin/settings/': typeof AdminSettingsIndexRoute
+  '/admin/surveys/': typeof AdminSurveysIndexRoute
+  '/admin/tenants/': typeof AdminTenantsIndexRoute
+  '/admin/users/': typeof AdminUsersIndexRoute
+  '/admin/workflows/': typeof AdminWorkflowsIndexRoute
+  '/admin/shop/marketplace/import': typeof AdminShopMarketplaceImportRoute
+  '/admin/shop/products/$productId': typeof AdminShopProductsProductIdRoute
+  '/admin/shop/products/new': typeof AdminShopProductsNewRoute
+  '/admin/workflows/$workflowId/executions': typeof AdminWorkflowsWorkflowIdExecutionsRouteWithChildren
+  '/admin/workflows/executions/$executionId': typeof AdminWorkflowsExecutionsExecutionIdRoute
+  '/api/marketplace/$marketplace/callback': typeof ApiMarketplaceMarketplaceCallbackRoute
+  '/admin/shop/marketplace/': typeof AdminShopMarketplaceIndexRoute
+  '/admin/shop/products/': typeof AdminShopProductsIndexRoute
+  '/admin/workflows/executions/': typeof AdminWorkflowsExecutionsIndexRoute
+  '/admin/workflows/$workflowId/executions/$executionId': typeof AdminWorkflowsWorkflowIdExecutionsExecutionIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/admin' | '/login' | '/admin/'
+  fullPaths:
+    | '/'
+    | '/admin'
+    | '/login'
+    | '/admin/'
+    | '/admin/blog/$postId'
+    | '/admin/blog/new'
+    | '/admin/docforge/licenses'
+    | '/admin/email-templates/$type'
+    | '/admin/legal-pages/$pageId'
+    | '/admin/responses/$responseId'
+    | '/admin/shop/categories'
+    | '/admin/surveys/$surveyId'
+    | '/admin/surveys/new'
+    | '/admin/tenants/$tenantId'
+    | '/admin/tenants/new'
+    | '/admin/workflows/$workflowId'
+    | '/api/calendar/callback'
+    | '/admin/blog/'
+    | '/admin/email-templates/'
+    | '/admin/intake/'
+    | '/admin/landing-page/'
+    | '/admin/legal-pages/'
+    | '/admin/media/'
+    | '/admin/responses/'
+    | '/admin/roles/'
+    | '/admin/settings/'
+    | '/admin/surveys/'
+    | '/admin/tenants/'
+    | '/admin/users/'
+    | '/admin/workflows/'
+    | '/admin/shop/marketplace/import'
+    | '/admin/shop/products/$productId'
+    | '/admin/shop/products/new'
+    | '/admin/workflows/$workflowId/executions'
+    | '/admin/workflows/executions/$executionId'
+    | '/api/marketplace/$marketplace/callback'
+    | '/admin/shop/marketplace/'
+    | '/admin/shop/products/'
+    | '/admin/workflows/executions/'
+    | '/admin/workflows/$workflowId/executions/$executionId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/admin'
-  id: '__root__' | '/' | '/admin' | '/login' | '/admin/'
+  to:
+    | '/'
+    | '/login'
+    | '/admin'
+    | '/admin/blog/$postId'
+    | '/admin/blog/new'
+    | '/admin/docforge/licenses'
+    | '/admin/email-templates/$type'
+    | '/admin/legal-pages/$pageId'
+    | '/admin/responses/$responseId'
+    | '/admin/shop/categories'
+    | '/admin/surveys/$surveyId'
+    | '/admin/surveys/new'
+    | '/admin/tenants/$tenantId'
+    | '/admin/tenants/new'
+    | '/admin/workflows/$workflowId'
+    | '/api/calendar/callback'
+    | '/admin/blog'
+    | '/admin/email-templates'
+    | '/admin/intake'
+    | '/admin/landing-page'
+    | '/admin/legal-pages'
+    | '/admin/media'
+    | '/admin/responses'
+    | '/admin/roles'
+    | '/admin/settings'
+    | '/admin/surveys'
+    | '/admin/tenants'
+    | '/admin/users'
+    | '/admin/workflows'
+    | '/admin/shop/marketplace/import'
+    | '/admin/shop/products/$productId'
+    | '/admin/shop/products/new'
+    | '/admin/workflows/$workflowId/executions'
+    | '/admin/workflows/executions/$executionId'
+    | '/api/marketplace/$marketplace/callback'
+    | '/admin/shop/marketplace'
+    | '/admin/shop/products'
+    | '/admin/workflows/executions'
+    | '/admin/workflows/$workflowId/executions/$executionId'
+  id:
+    | '__root__'
+    | '/'
+    | '/admin'
+    | '/login'
+    | '/admin/'
+    | '/admin/blog/$postId'
+    | '/admin/blog/new'
+    | '/admin/docforge/licenses'
+    | '/admin/email-templates/$type'
+    | '/admin/legal-pages/$pageId'
+    | '/admin/responses/$responseId'
+    | '/admin/shop/categories'
+    | '/admin/surveys/$surveyId'
+    | '/admin/surveys/new'
+    | '/admin/tenants/$tenantId'
+    | '/admin/tenants/new'
+    | '/admin/workflows/$workflowId'
+    | '/api/calendar/callback'
+    | '/admin/blog/'
+    | '/admin/email-templates/'
+    | '/admin/intake/'
+    | '/admin/landing-page/'
+    | '/admin/legal-pages/'
+    | '/admin/media/'
+    | '/admin/responses/'
+    | '/admin/roles/'
+    | '/admin/settings/'
+    | '/admin/surveys/'
+    | '/admin/tenants/'
+    | '/admin/users/'
+    | '/admin/workflows/'
+    | '/admin/shop/marketplace/import'
+    | '/admin/shop/products/$productId'
+    | '/admin/shop/products/new'
+    | '/admin/workflows/$workflowId/executions'
+    | '/admin/workflows/executions/$executionId'
+    | '/api/marketplace/$marketplace/callback'
+    | '/admin/shop/marketplace/'
+    | '/admin/shop/products/'
+    | '/admin/workflows/executions/'
+    | '/admin/workflows/$workflowId/executions/$executionId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRouteWithChildren
   LoginRoute: typeof LoginRoute
+  ApiCalendarCallbackRoute: typeof ApiCalendarCallbackRoute
+  ApiMarketplaceMarketplaceCallbackRoute: typeof ApiMarketplaceMarketplaceCallbackRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -97,15 +554,362 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminIndexRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/workflows/': {
+      id: '/admin/workflows/'
+      path: '/workflows'
+      fullPath: '/admin/workflows/'
+      preLoaderRoute: typeof AdminWorkflowsIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/users/': {
+      id: '/admin/users/'
+      path: '/users'
+      fullPath: '/admin/users/'
+      preLoaderRoute: typeof AdminUsersIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/tenants/': {
+      id: '/admin/tenants/'
+      path: '/tenants'
+      fullPath: '/admin/tenants/'
+      preLoaderRoute: typeof AdminTenantsIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/surveys/': {
+      id: '/admin/surveys/'
+      path: '/surveys'
+      fullPath: '/admin/surveys/'
+      preLoaderRoute: typeof AdminSurveysIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/settings/': {
+      id: '/admin/settings/'
+      path: '/settings'
+      fullPath: '/admin/settings/'
+      preLoaderRoute: typeof AdminSettingsIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/roles/': {
+      id: '/admin/roles/'
+      path: '/roles'
+      fullPath: '/admin/roles/'
+      preLoaderRoute: typeof AdminRolesIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/responses/': {
+      id: '/admin/responses/'
+      path: '/responses'
+      fullPath: '/admin/responses/'
+      preLoaderRoute: typeof AdminResponsesIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/media/': {
+      id: '/admin/media/'
+      path: '/media'
+      fullPath: '/admin/media/'
+      preLoaderRoute: typeof AdminMediaIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/legal-pages/': {
+      id: '/admin/legal-pages/'
+      path: '/legal-pages'
+      fullPath: '/admin/legal-pages/'
+      preLoaderRoute: typeof AdminLegalPagesIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/landing-page/': {
+      id: '/admin/landing-page/'
+      path: '/landing-page'
+      fullPath: '/admin/landing-page/'
+      preLoaderRoute: typeof AdminLandingPageIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/intake/': {
+      id: '/admin/intake/'
+      path: '/intake'
+      fullPath: '/admin/intake/'
+      preLoaderRoute: typeof AdminIntakeIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/email-templates/': {
+      id: '/admin/email-templates/'
+      path: '/email-templates'
+      fullPath: '/admin/email-templates/'
+      preLoaderRoute: typeof AdminEmailTemplatesIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/blog/': {
+      id: '/admin/blog/'
+      path: '/blog'
+      fullPath: '/admin/blog/'
+      preLoaderRoute: typeof AdminBlogIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/api/calendar/callback': {
+      id: '/api/calendar/callback'
+      path: '/api/calendar/callback'
+      fullPath: '/api/calendar/callback'
+      preLoaderRoute: typeof ApiCalendarCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/workflows/$workflowId': {
+      id: '/admin/workflows/$workflowId'
+      path: '/workflows/$workflowId'
+      fullPath: '/admin/workflows/$workflowId'
+      preLoaderRoute: typeof AdminWorkflowsWorkflowIdRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/tenants/new': {
+      id: '/admin/tenants/new'
+      path: '/tenants/new'
+      fullPath: '/admin/tenants/new'
+      preLoaderRoute: typeof AdminTenantsNewRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/tenants/$tenantId': {
+      id: '/admin/tenants/$tenantId'
+      path: '/tenants/$tenantId'
+      fullPath: '/admin/tenants/$tenantId'
+      preLoaderRoute: typeof AdminTenantsTenantIdRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/surveys/new': {
+      id: '/admin/surveys/new'
+      path: '/surveys/new'
+      fullPath: '/admin/surveys/new'
+      preLoaderRoute: typeof AdminSurveysNewRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/surveys/$surveyId': {
+      id: '/admin/surveys/$surveyId'
+      path: '/surveys/$surveyId'
+      fullPath: '/admin/surveys/$surveyId'
+      preLoaderRoute: typeof AdminSurveysSurveyIdRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/shop/categories': {
+      id: '/admin/shop/categories'
+      path: '/shop/categories'
+      fullPath: '/admin/shop/categories'
+      preLoaderRoute: typeof AdminShopCategoriesRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/responses/$responseId': {
+      id: '/admin/responses/$responseId'
+      path: '/responses/$responseId'
+      fullPath: '/admin/responses/$responseId'
+      preLoaderRoute: typeof AdminResponsesResponseIdRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/legal-pages/$pageId': {
+      id: '/admin/legal-pages/$pageId'
+      path: '/legal-pages/$pageId'
+      fullPath: '/admin/legal-pages/$pageId'
+      preLoaderRoute: typeof AdminLegalPagesPageIdRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/email-templates/$type': {
+      id: '/admin/email-templates/$type'
+      path: '/email-templates/$type'
+      fullPath: '/admin/email-templates/$type'
+      preLoaderRoute: typeof AdminEmailTemplatesTypeRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/docforge/licenses': {
+      id: '/admin/docforge/licenses'
+      path: '/docforge/licenses'
+      fullPath: '/admin/docforge/licenses'
+      preLoaderRoute: typeof AdminDocforgeLicensesRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/blog/new': {
+      id: '/admin/blog/new'
+      path: '/blog/new'
+      fullPath: '/admin/blog/new'
+      preLoaderRoute: typeof AdminBlogNewRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/blog/$postId': {
+      id: '/admin/blog/$postId'
+      path: '/blog/$postId'
+      fullPath: '/admin/blog/$postId'
+      preLoaderRoute: typeof AdminBlogPostIdRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/workflows/executions/': {
+      id: '/admin/workflows/executions/'
+      path: '/workflows/executions'
+      fullPath: '/admin/workflows/executions/'
+      preLoaderRoute: typeof AdminWorkflowsExecutionsIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/shop/products/': {
+      id: '/admin/shop/products/'
+      path: '/shop/products'
+      fullPath: '/admin/shop/products/'
+      preLoaderRoute: typeof AdminShopProductsIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/shop/marketplace/': {
+      id: '/admin/shop/marketplace/'
+      path: '/shop/marketplace'
+      fullPath: '/admin/shop/marketplace/'
+      preLoaderRoute: typeof AdminShopMarketplaceIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/api/marketplace/$marketplace/callback': {
+      id: '/api/marketplace/$marketplace/callback'
+      path: '/api/marketplace/$marketplace/callback'
+      fullPath: '/api/marketplace/$marketplace/callback'
+      preLoaderRoute: typeof ApiMarketplaceMarketplaceCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/workflows/executions/$executionId': {
+      id: '/admin/workflows/executions/$executionId'
+      path: '/workflows/executions/$executionId'
+      fullPath: '/admin/workflows/executions/$executionId'
+      preLoaderRoute: typeof AdminWorkflowsExecutionsExecutionIdRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/workflows/$workflowId/executions': {
+      id: '/admin/workflows/$workflowId/executions'
+      path: '/executions'
+      fullPath: '/admin/workflows/$workflowId/executions'
+      preLoaderRoute: typeof AdminWorkflowsWorkflowIdExecutionsRouteImport
+      parentRoute: typeof AdminWorkflowsWorkflowIdRoute
+    }
+    '/admin/shop/products/new': {
+      id: '/admin/shop/products/new'
+      path: '/shop/products/new'
+      fullPath: '/admin/shop/products/new'
+      preLoaderRoute: typeof AdminShopProductsNewRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/shop/products/$productId': {
+      id: '/admin/shop/products/$productId'
+      path: '/shop/products/$productId'
+      fullPath: '/admin/shop/products/$productId'
+      preLoaderRoute: typeof AdminShopProductsProductIdRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/shop/marketplace/import': {
+      id: '/admin/shop/marketplace/import'
+      path: '/shop/marketplace/import'
+      fullPath: '/admin/shop/marketplace/import'
+      preLoaderRoute: typeof AdminShopMarketplaceImportRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/workflows/$workflowId/executions/$executionId': {
+      id: '/admin/workflows/$workflowId/executions/$executionId'
+      path: '/$executionId'
+      fullPath: '/admin/workflows/$workflowId/executions/$executionId'
+      preLoaderRoute: typeof AdminWorkflowsWorkflowIdExecutionsExecutionIdRouteImport
+      parentRoute: typeof AdminWorkflowsWorkflowIdExecutionsRoute
+    }
   }
 }
 
+interface AdminWorkflowsWorkflowIdExecutionsRouteChildren {
+  AdminWorkflowsWorkflowIdExecutionsExecutionIdRoute: typeof AdminWorkflowsWorkflowIdExecutionsExecutionIdRoute
+}
+
+const AdminWorkflowsWorkflowIdExecutionsRouteChildren: AdminWorkflowsWorkflowIdExecutionsRouteChildren =
+  {
+    AdminWorkflowsWorkflowIdExecutionsExecutionIdRoute:
+      AdminWorkflowsWorkflowIdExecutionsExecutionIdRoute,
+  }
+
+const AdminWorkflowsWorkflowIdExecutionsRouteWithChildren =
+  AdminWorkflowsWorkflowIdExecutionsRoute._addFileChildren(
+    AdminWorkflowsWorkflowIdExecutionsRouteChildren,
+  )
+
+interface AdminWorkflowsWorkflowIdRouteChildren {
+  AdminWorkflowsWorkflowIdExecutionsRoute: typeof AdminWorkflowsWorkflowIdExecutionsRouteWithChildren
+}
+
+const AdminWorkflowsWorkflowIdRouteChildren: AdminWorkflowsWorkflowIdRouteChildren =
+  {
+    AdminWorkflowsWorkflowIdExecutionsRoute:
+      AdminWorkflowsWorkflowIdExecutionsRouteWithChildren,
+  }
+
+const AdminWorkflowsWorkflowIdRouteWithChildren =
+  AdminWorkflowsWorkflowIdRoute._addFileChildren(
+    AdminWorkflowsWorkflowIdRouteChildren,
+  )
+
 interface AdminRouteChildren {
   AdminIndexRoute: typeof AdminIndexRoute
+  AdminBlogPostIdRoute: typeof AdminBlogPostIdRoute
+  AdminBlogNewRoute: typeof AdminBlogNewRoute
+  AdminDocforgeLicensesRoute: typeof AdminDocforgeLicensesRoute
+  AdminEmailTemplatesTypeRoute: typeof AdminEmailTemplatesTypeRoute
+  AdminLegalPagesPageIdRoute: typeof AdminLegalPagesPageIdRoute
+  AdminResponsesResponseIdRoute: typeof AdminResponsesResponseIdRoute
+  AdminShopCategoriesRoute: typeof AdminShopCategoriesRoute
+  AdminSurveysSurveyIdRoute: typeof AdminSurveysSurveyIdRoute
+  AdminSurveysNewRoute: typeof AdminSurveysNewRoute
+  AdminTenantsTenantIdRoute: typeof AdminTenantsTenantIdRoute
+  AdminTenantsNewRoute: typeof AdminTenantsNewRoute
+  AdminWorkflowsWorkflowIdRoute: typeof AdminWorkflowsWorkflowIdRouteWithChildren
+  AdminBlogIndexRoute: typeof AdminBlogIndexRoute
+  AdminEmailTemplatesIndexRoute: typeof AdminEmailTemplatesIndexRoute
+  AdminIntakeIndexRoute: typeof AdminIntakeIndexRoute
+  AdminLandingPageIndexRoute: typeof AdminLandingPageIndexRoute
+  AdminLegalPagesIndexRoute: typeof AdminLegalPagesIndexRoute
+  AdminMediaIndexRoute: typeof AdminMediaIndexRoute
+  AdminResponsesIndexRoute: typeof AdminResponsesIndexRoute
+  AdminRolesIndexRoute: typeof AdminRolesIndexRoute
+  AdminSettingsIndexRoute: typeof AdminSettingsIndexRoute
+  AdminSurveysIndexRoute: typeof AdminSurveysIndexRoute
+  AdminTenantsIndexRoute: typeof AdminTenantsIndexRoute
+  AdminUsersIndexRoute: typeof AdminUsersIndexRoute
+  AdminWorkflowsIndexRoute: typeof AdminWorkflowsIndexRoute
+  AdminShopMarketplaceImportRoute: typeof AdminShopMarketplaceImportRoute
+  AdminShopProductsProductIdRoute: typeof AdminShopProductsProductIdRoute
+  AdminShopProductsNewRoute: typeof AdminShopProductsNewRoute
+  AdminWorkflowsExecutionsExecutionIdRoute: typeof AdminWorkflowsExecutionsExecutionIdRoute
+  AdminShopMarketplaceIndexRoute: typeof AdminShopMarketplaceIndexRoute
+  AdminShopProductsIndexRoute: typeof AdminShopProductsIndexRoute
+  AdminWorkflowsExecutionsIndexRoute: typeof AdminWorkflowsExecutionsIndexRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
   AdminIndexRoute: AdminIndexRoute,
+  AdminBlogPostIdRoute: AdminBlogPostIdRoute,
+  AdminBlogNewRoute: AdminBlogNewRoute,
+  AdminDocforgeLicensesRoute: AdminDocforgeLicensesRoute,
+  AdminEmailTemplatesTypeRoute: AdminEmailTemplatesTypeRoute,
+  AdminLegalPagesPageIdRoute: AdminLegalPagesPageIdRoute,
+  AdminResponsesResponseIdRoute: AdminResponsesResponseIdRoute,
+  AdminShopCategoriesRoute: AdminShopCategoriesRoute,
+  AdminSurveysSurveyIdRoute: AdminSurveysSurveyIdRoute,
+  AdminSurveysNewRoute: AdminSurveysNewRoute,
+  AdminTenantsTenantIdRoute: AdminTenantsTenantIdRoute,
+  AdminTenantsNewRoute: AdminTenantsNewRoute,
+  AdminWorkflowsWorkflowIdRoute: AdminWorkflowsWorkflowIdRouteWithChildren,
+  AdminBlogIndexRoute: AdminBlogIndexRoute,
+  AdminEmailTemplatesIndexRoute: AdminEmailTemplatesIndexRoute,
+  AdminIntakeIndexRoute: AdminIntakeIndexRoute,
+  AdminLandingPageIndexRoute: AdminLandingPageIndexRoute,
+  AdminLegalPagesIndexRoute: AdminLegalPagesIndexRoute,
+  AdminMediaIndexRoute: AdminMediaIndexRoute,
+  AdminResponsesIndexRoute: AdminResponsesIndexRoute,
+  AdminRolesIndexRoute: AdminRolesIndexRoute,
+  AdminSettingsIndexRoute: AdminSettingsIndexRoute,
+  AdminSurveysIndexRoute: AdminSurveysIndexRoute,
+  AdminTenantsIndexRoute: AdminTenantsIndexRoute,
+  AdminUsersIndexRoute: AdminUsersIndexRoute,
+  AdminWorkflowsIndexRoute: AdminWorkflowsIndexRoute,
+  AdminShopMarketplaceImportRoute: AdminShopMarketplaceImportRoute,
+  AdminShopProductsProductIdRoute: AdminShopProductsProductIdRoute,
+  AdminShopProductsNewRoute: AdminShopProductsNewRoute,
+  AdminWorkflowsExecutionsExecutionIdRoute:
+    AdminWorkflowsExecutionsExecutionIdRoute,
+  AdminShopMarketplaceIndexRoute: AdminShopMarketplaceIndexRoute,
+  AdminShopProductsIndexRoute: AdminShopProductsIndexRoute,
+  AdminWorkflowsExecutionsIndexRoute: AdminWorkflowsExecutionsIndexRoute,
 }
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
@@ -114,6 +918,9 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRouteWithChildren,
   LoginRoute: LoginRoute,
+  ApiCalendarCallbackRoute: ApiCalendarCallbackRoute,
+  ApiMarketplaceMarketplaceCallbackRoute:
+    ApiMarketplaceMarketplaceCallbackRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

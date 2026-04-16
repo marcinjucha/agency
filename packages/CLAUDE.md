@@ -198,13 +198,7 @@ All packages extend root `tsconfig.json`:
 
 Packages are **NOT pre-built**. They're consumed directly by each app's bundler:
 
-**Next.js apps (cms, website)** — transpiled via `transpilePackages` in `next.config.ts`:
-```typescript
-// next.config.ts
-transpilePackages: ['@agency/ui', '@agency/database', '@agency/validators', '@agency/calendar', '@agency/email']
-```
-
-**TanStack Start apps (shop/jacek, shop/kolega)** — Vite handles raw TypeScript natively. No `transpilePackages` config needed. `vite-tsconfig-paths` plugin resolves `@agency/*` through workspace symlinks.
+**All apps (cms, website, shop/jacek, shop/kolega)** use TanStack Start + Vite 8. Vite handles raw TypeScript natively. No `transpilePackages` config needed. `vite-tsconfig-paths` plugin resolves `@agency/*` through workspace symlinks.
 
 This means:
 - ✅ No build step needed for packages

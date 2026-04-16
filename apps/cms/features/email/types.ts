@@ -14,10 +14,10 @@ export type EmailTemplate = Omit<Tables<'email_templates'>, 'blocks'> & {
   blocks: Block[]
 }
 
-// Template type enum
-export type EmailTemplateType = 'form_confirmation' | 'workflow_custom'
-
-export const TEMPLATE_TYPE_LABELS: Record<EmailTemplateType, string> = {
+export const TEMPLATE_TYPE_LABELS = {
   form_confirmation: 'Potwierdzenie formularza',
   workflow_custom: 'Szablon workflow',
-}
+} as const
+
+// Derived from TEMPLATE_TYPE_LABELS — single source of truth
+export type EmailTemplateType = keyof typeof TEMPLATE_TYPE_LABELS

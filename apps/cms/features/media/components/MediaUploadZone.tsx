@@ -1,12 +1,12 @@
-'use client'
+
 
 import { useRef, useState, useCallback, useId } from 'react'
 import { Progress } from '@agency/ui'
 import { UploadCloud, CheckCircle2, XCircle } from 'lucide-react'
-import { createMediaItem } from '../actions'
+import { createMediaItemFn, generatePresignedUrlFn } from '../server'
 import type { MediaType } from '../types'
 import { ALLOWED_MIME_TYPES, IMAGE_MAX_SIZE, VIDEO_MAX_SIZE } from '../utils'
-import { routes } from '@/lib/routes'
+import { messages, templates } from '@/lib/messages'
 
 type UploadState = 'idle' | 'uploading' | 'done' | 'error'
 
@@ -68,7 +68,7 @@ export function MediaUploadZone({ onUploadComplete }: MediaUploadZoneProps) {
     if (!ALLOWED_MIME_TYPES.includes(file.type)) {
       setJobField(index, {
         state: 'error',
-        error: 'Niedozwolony typ pliku.',
+        error: messages.media.fileTypeNotAllowed,
         progress: 0,
       })
       return
@@ -80,7 +80,7 @@ export function MediaUploadZone({ onUploadComplete }: MediaUploadZoneProps) {
       const limitMB = maxSize / (1024 * 1024)
       setJobField(index, {
         state: 'error',
-        error: `Plik za duży. Max: ${limitMB}MB.`,
+        error: templates.media.fileTooLarge(limitMB),
         progress: 0,
       })
       return
@@ -97,23 +97,10 @@ export function MediaUploadZone({ onUploadComplete }: MediaUploadZoneProps) {
         abortCtrl.signal
       )
 
-      // 1. Get presigned URL
-      const res = await fetch(routes.api.upload, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fileName: file.name,
-          contentType: file.type,
-          folder: 'haloefekt/media',
-        }),
+      // 1. Get presigned URL via server fn (replaces fetch to /api/upload)
+      const { uploadUrl, fileUrl, s3Key } = await generatePresignedUrlFn({
+        data: { fileName: file.name, contentType: file.type },
       })
-
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}))
-        throw new Error(body.error ?? 'Błąd generowania URL uploadu')
-      }
-
-      const { uploadUrl, fileUrl, s3Key } = await res.json()
 
       // 2. PUT to S3
       const putRes = await fetch(uploadUrl, {
@@ -122,7 +109,7 @@ export function MediaUploadZone({ onUploadComplete }: MediaUploadZoneProps) {
         body: file,
       })
 
-      if (!putRes.ok) throw new Error('Upload do S3 nie powiódł się')
+      if (!putRes.ok) throw new Error(messages.media.s3UploadFailed)
 
       // Abort fake progress, jump to 100
       abortCtrl.abort()
@@ -131,22 +118,24 @@ export function MediaUploadZone({ onUploadComplete }: MediaUploadZoneProps) {
       setJobField(index, { progress: 100 })
 
       // 3. Create DB record
-      const result = await createMediaItem({
-        name: file.name.replace(/\.[^.]+$/, ''),
-        type: detectMediaType(file.type),
-        url: fileUrl,
-        s3_key: s3Key,
-        mime_type: file.type,
-        size_bytes: file.size,
+      const result = await createMediaItemFn({
+        data: {
+          name: file.name.replace(/\.[^.]+$/, ''),
+          type: detectMediaType(file.type),
+          url: fileUrl,
+          s3_key: s3Key,
+          mime_type: file.type,
+          size_bytes: file.size,
+        },
       })
 
-      if (!result.success) throw new Error(result.error ?? 'Błąd zapisu do bazy')
+      if (!result.success) throw new Error(result.error ?? messages.media.dbSaveFailed)
 
       setJobField(index, { state: 'done', progress: 100 })
       onUploadComplete()
     } catch (err) {
       abortCtrl.abort()
-      const message = err instanceof Error ? err.message : 'Nieznany błąd'
+      const message = err instanceof Error ? err.message : messages.media.unknownError
       setJobField(index, { state: 'error', error: message, progress: 0 })
     }
   }
@@ -200,7 +189,7 @@ export function MediaUploadZone({ onUploadComplete }: MediaUploadZoneProps) {
       <div
         role="button"
         tabIndex={0}
-        aria-label="Strefa przesyłania plików. Przeciągnij pliki lub naciśnij Enter aby wybrać."
+        aria-label={messages.media.dropOrClickAria}
         onDrop={handleDrop}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
@@ -227,10 +216,10 @@ export function MediaUploadZone({ onUploadComplete }: MediaUploadZoneProps) {
         />
         <div>
           <p className="text-sm font-medium text-foreground">
-            Przeciągnij pliki lub kliknij aby wybrać
+            {messages.media.dropOrClick}
           </p>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            Obrazy (max 5MB), Wideo (max 50MB)
+            {messages.media.fileLimits}
           </p>
         </div>
       </div>
@@ -248,7 +237,7 @@ export function MediaUploadZone({ onUploadComplete }: MediaUploadZoneProps) {
 
       {/* Per-file progress list */}
       {jobs.length > 0 && (
-        <ul className="space-y-2" aria-label="Postęp przesyłania">
+        <ul className="space-y-2" aria-label={messages.media.uploadProgress}>
           {jobs.map((job, i) => (
             <li
               key={i}
@@ -271,7 +260,7 @@ export function MediaUploadZone({ onUploadComplete }: MediaUploadZoneProps) {
                   {job.fileName}
                 </p>
                 {job.state === 'done' && (
-                  <span className="shrink-0 text-xs text-success">Gotowe</span>
+                  <span className="shrink-0 text-xs text-success">{messages.media.uploadDone}</span>
                 )}
               </div>
 
@@ -279,7 +268,7 @@ export function MediaUploadZone({ onUploadComplete }: MediaUploadZoneProps) {
                 <Progress
                   value={job.progress}
                   className="h-1.5"
-                  aria-label={`Przesyłanie ${job.fileName}: ${job.progress}%`}
+                  aria-label={templates.media.uploadingProgress(job.fileName, job.progress)}
                 />
               )}
 

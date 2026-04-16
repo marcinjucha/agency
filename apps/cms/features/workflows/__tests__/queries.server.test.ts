@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { createClient } from '@/lib/supabase/server'
+import { createServerClient } from '@/lib/supabase/server-start'
 import {
   getWorkflowsServer,
   getWorkflowServer,

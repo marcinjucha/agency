@@ -1,9 +1,7 @@
-'use client'
-
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useRouter } from 'next/navigation'
-import { getResponse, getResponseAiActionResults } from '../queries'
+import { useNavigate } from '@tanstack/react-router'
+import { getResponseFn, getResponseAiActionResultsFn } from '../server'
 import type { ResponseWithRelations, QuestionAnswerPair, AiActionResult } from '../types'
 import {
   Button, Card, Badge, LoadingState, ErrorState, EmptyState,
@@ -11,10 +9,10 @@ import {
   AlertDialogFooter, AlertDialogTitle, AlertDialogDescription,
   AlertDialogAction, AlertDialogCancel,
 } from '@agency/ui'
-import Link from 'next/link'
+import { Link } from '@tanstack/react-router'
 import { ArrowLeft, FileX, Loader2, AlertTriangle, Trash2, Bot } from 'lucide-react'
 import { getResponseStatusColor } from '@/lib/utils/status'
-import { triggerAiAnalysis, deleteResponse } from '../actions'
+import { triggerAiAnalysisFn, deleteResponseFn } from '../server'
 import { queryKeys } from '@/lib/query-keys'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
@@ -44,14 +42,14 @@ const MAX_RETRIES = 3
 const POLLS_PER_ATTEMPT = 3
 
 export function ResponseDetail({ responseId }: ResponseDetailProps) {
-  const router = useRouter()
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [retryAttempt, setRetryAttempt] = useState(0)
   const [aiPhase, setAiPhase] = useState<'polling' | 'failed'>('polling')
   const [deleting, setDeleting] = useState(false)
   const { data: response, isLoading, error } = useQuery({
     queryKey: queryKeys.responses.detail(responseId),
-    queryFn: () => getResponse(responseId),
+    queryFn: () => getResponseFn({ data: { id: responseId } }),
     enabled: !!responseId,
     refetchInterval: (query) => {
       if (query.state.data?.ai_qualification) return false
@@ -65,7 +63,7 @@ export function ResponseDetail({ responseId }: ResponseDetailProps) {
     isLoading: isLoadingAiActionResults,
   } = useQuery({
     queryKey: queryKeys.responses.aiActionResults(responseId),
-    queryFn: () => getResponseAiActionResults(responseId),
+    queryFn: () => getResponseAiActionResultsFn({ data: { responseId } }),
     enabled: !!responseId,
   })
 
@@ -78,7 +76,7 @@ export function ResponseDetail({ responseId }: ResponseDetailProps) {
           setAiPhase('failed')
           return prev
         }
-        triggerAiAnalysis(responseId)
+        triggerAiAnalysisFn({ data: { responseId } })
         return prev + 1
       })
     }, POLLS_PER_ATTEMPT * 10000)
@@ -89,7 +87,7 @@ export function ResponseDetail({ responseId }: ResponseDetailProps) {
   const handleManualRetry = async () => {
     setRetryAttempt(0)
     setAiPhase('polling')
-    await triggerAiAnalysis(responseId)
+    await triggerAiAnalysisFn({ data: { responseId } })
   }
 
   // Loading state
@@ -117,7 +115,7 @@ export function ResponseDetail({ responseId }: ResponseDetailProps) {
         description={messages.responses.notFoundDescription}
         variant="card"
         action={
-          <Link href={routes.admin.responses}>
+          <Link to={routes.admin.responses}>
             <Button variant="outline">
               <ArrowLeft className="mr-2 h-4 w-4" />
               {messages.responses.backToResponses}
@@ -410,11 +408,11 @@ export function ResponseDetail({ responseId }: ResponseDetailProps) {
                 <AlertDialogAction
                   onClick={async () => {
                     setDeleting(true)
-                    const result = await deleteResponse(responseId)
+                    const result = await deleteResponseFn({ data: { id: responseId } })
                     if (result.success) {
                       queryClient.invalidateQueries({ queryKey: queryKeys.responses.all })
                       if (result.hadAppointment) queryClient.invalidateQueries({ queryKey: queryKeys.appointments.all })
-                      router.push(routes.admin.responses)
+                      navigate({ to: routes.admin.responses })
                     } else {
                       setDeleting(false)
                     }

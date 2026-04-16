@@ -1,15 +1,12 @@
-'use client'
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getSurveys } from '../queries'
-import { deleteSurvey } from '../actions'
+import { deleteSurveyFn, getSurveysFn } from '../server'
 import {
   Button, Card, LoadingState, ErrorState, EmptyState,
   AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader,
   AlertDialogFooter, AlertDialogTitle, AlertDialogDescription,
   AlertDialogAction, AlertDialogCancel,
 } from '@agency/ui'
-import Link from 'next/link'
+import { Link } from '@tanstack/react-router'
 import { FileText, Plus, Trash2 } from 'lucide-react'
 import { hasActiveLink } from '../utils'
 import { queryKeys } from '@/lib/query-keys'
@@ -25,12 +22,12 @@ export function SurveyList() {
 
   const { data: surveys, isLoading, error } = useQuery({
     queryKey: queryKeys.surveys.all,
-    queryFn: getSurveys,
+    queryFn: () => getSurveysFn(),
   })
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const result = await deleteSurvey(id)
+      const result = await deleteSurveyFn({ data: { id } })
       if (!result.success) throw new Error(result.error)
       return result
     },
@@ -41,7 +38,7 @@ export function SurveyList() {
   })
 
   if (isLoading) {
-    return <LoadingState variant="spinner" message={messages.surveys.loadingSurveys} />
+    return <LoadingState variant="skeleton-grid" rows={8} />
   }
 
   if (error) {
@@ -55,7 +52,7 @@ export function SurveyList() {
         title={messages.surveys.noSurveys}
         description={messages.surveys.noSurveysDescription}
         action={
-          <Link href={routes.admin.surveyNew}>
+          <Link to={routes.admin.surveyNew}>
             <Button>
               <Plus className="mr-2 h-4 w-4" />
               {messages.surveys.createSurvey}
@@ -91,7 +88,7 @@ export function SurveyList() {
           {surveys.map((survey) => (
             <Card key={survey.id} className="p-6 hover:shadow-md transition-shadow">
               <div className="flex items-start justify-between">
-                <Link href={routes.admin.survey(survey.id)} className="flex-1 min-w-0">
+                <Link to={routes.admin.survey(survey.id)} className="flex-1 min-w-0">
                   <h3 className="text-base font-semibold text-foreground truncate">{survey.title}</h3>
                   {survey.description && (
                     <p className="text-sm text-muted-foreground mt-1 truncate">{survey.description}</p>

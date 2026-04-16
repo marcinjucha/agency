@@ -1,9 +1,7 @@
-'use client'
-
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getSurveyLinks } from '../queries'
-import { generateSurveyLink, deleteSurveyLink, updateSurveyLink } from '../actions'
+import { generateSurveyLinkFn, deleteSurveyLinkFn, updateSurveyLinkFn } from '../server'
 import type { UpdateSurveyLinkFormData } from '../validation'
 import {
   Button, Card, Input, Label, Switch,
@@ -146,13 +144,16 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
   // Mutation for generating link — wraps to throw on failure (known project pattern)
   const generateMutation = useMutation({
     mutationFn: async () => {
-      const result = await generateSurveyLink(surveyId, {
-        notificationEmail: formData.notificationEmail,
-        expiresAt: formData.expiresAt || undefined,
-        maxSubmissions: formData.maxSubmissions ? parseInt(formData.maxSubmissions) : null,
-        isActive: formData.isActive,
-        calendarConnectionId: formData.calendarConnectionId,
-        workflowId: formData.workflowId,
+      const result = await generateSurveyLinkFn({
+        data: {
+          surveyId,
+          notificationEmail: formData.notificationEmail,
+          expiresAt: formData.expiresAt || undefined,
+          maxSubmissions: formData.maxSubmissions ? parseInt(formData.maxSubmissions) : null,
+          isActive: formData.isActive,
+          calendarConnectionId: formData.calendarConnectionId,
+          workflowId: formData.workflowId,
+        },
       })
       if (!result.success) throw new Error(result.error || messages.surveys.generateFailed)
       return result
@@ -165,6 +166,16 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
       setError(null)
     },
     onError: (err: Error) => {
+      // inputValidator throws Zod errors as JSON — extract first human-readable message
+      try {
+        const zodErrors = JSON.parse(err.message)
+        if (Array.isArray(zodErrors) && zodErrors[0]?.message) {
+          setError(zodErrors[0].message)
+          return
+        }
+      } catch {
+        // Not JSON — fall through to raw message
+      }
       setError(err.message)
     },
   })
@@ -172,7 +183,7 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
   // Mutation for deleting link — wraps to throw on failure
   const deleteMutation = useMutation({
     mutationFn: async (linkId: string) => {
-      const result = await deleteSurveyLink(linkId, surveyId)
+      const result = await deleteSurveyLinkFn({ data: { linkId, surveyId } })
       if (!result.success) throw new Error(result.error || messages.surveys.deleteLinkFailed2)
       return result
     },
@@ -195,7 +206,7 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
         maxSubmissions: link.max_submissions ?? null,
         isActive,
       }
-      const result = await updateSurveyLink(linkId, surveyId, data)
+      const result = await updateSurveyLinkFn({ data: { linkId, surveyId, data } })
       if (!result.success) throw new Error(result.error || messages.surveys.updateLinkFailed)
       return result
     },
@@ -220,7 +231,7 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
         calendarConnectionId: editFormData.calendarConnectionId,
         workflowId: editFormData.workflowId,
       }
-      const result = await updateSurveyLink(linkId, surveyId, data)
+      const result = await updateSurveyLinkFn({ data: { linkId, surveyId, data } })
       if (!result.success) throw new Error(result.error || messages.surveys.updateLinkFailed)
       return result
     },
@@ -237,7 +248,7 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
 
   // Copy to clipboard
   async function copyToClipboard(token: string, linkId: string) {
-    const websiteUrl = process.env.NEXT_PUBLIC_WEBSITE_URL || 'http://localhost:3000'
+    const websiteUrl = import.meta.env.VITE_WEBSITE_URL || 'http://localhost:3000'
     const fullUrl = `${websiteUrl}/survey/${token}`
 
     try {

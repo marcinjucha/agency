@@ -14,21 +14,13 @@
     "jsx": "react-jsx",
     "incremental": true,
     "moduleDetection": "force",
-    "plugins": [
-      {
-        "name": "next"
-      }
-    ],
     "paths": {
       "@/*": ["./*"]
     }
   },
   "include": [
-    "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",
-    ".next/types/**/*.ts",
-    ".next/dev/types/**/*.ts",
     "**/*.mts",
     "app/routeTree.gen.ts"
   ],

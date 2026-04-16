@@ -1,6 +1,7 @@
-'use client'
+
 
 import { useState, useCallback } from 'react'
+import { Image } from '@unpic/react'
 import { X, Plus, Star } from 'lucide-react'
 import {
   Button,
@@ -69,10 +70,10 @@ export function ProductImageManager({
                     key={`${url}-${index}`}
                     className="group relative aspect-square overflow-hidden rounded-lg border border-border bg-muted"
                   >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
+                    <Image
                       src={url}
                       alt={`Zdjęcie produktu ${index + 1}`}
+                      layout="constrained"
                       className="h-full w-full object-cover"
                     />
 

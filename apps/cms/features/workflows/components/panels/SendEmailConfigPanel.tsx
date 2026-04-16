@@ -1,9 +1,9 @@
-'use client'
+
 
 import { useEffect, useRef } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useQuery } from '@tanstack/react-query'
 import {
   Label,
   Input,
@@ -15,8 +15,8 @@ import {
 } from '@agency/ui'
 import { messages } from '@/lib/messages'
 import { queryKeys } from '@/lib/query-keys'
+import { getEmailTemplatesForWorkflowFn } from '../../server'
 import { VariableInserter } from '@/features/email/components/VariableInserter'
-import { getEmailTemplatesForWorkflow } from '../../queries'
 import { sendEmailConfigSchema } from '../../validation'
 import type { StepConfigSendEmail } from '../../types'
 import type { ConfigPanelProps } from './index'
@@ -31,7 +31,6 @@ export function SendEmailConfigPanel({ stepConfig, onChange, availableVariables 
   const toExpressionRef = useRef<HTMLInputElement>(null)
 
   const {
-    register,
     watch,
     setValue,
     control,
@@ -45,9 +44,13 @@ export function SendEmailConfigPanel({ stepConfig, onChange, availableVariables 
     },
   })
 
-  const { data: templates, isLoading: isLoadingTemplates, isError: isErrorTemplates } = useQuery({
+  // Cache pre-populated by the route loader's ensureQueryData — renders instantly.
+  const { data: emailTemplates = [] } = useQuery({
     queryKey: queryKeys.workflows.emailTemplates,
-    queryFn: getEmailTemplatesForWorkflow,
+    queryFn: async () => {
+      const data = await getEmailTemplatesForWorkflowFn()
+      return data
+    },
   })
 
   // Watch all fields and propagate changes (skip initial mount to avoid false dirty state)
@@ -61,6 +64,7 @@ export function SendEmailConfigPanel({ stepConfig, onChange, availableVariables 
   }, [JSON.stringify(formValues)])
 
   const variables = availableVariables ?? []
+  const templates = emailTemplates
 
   return (
     <div className="space-y-6">
@@ -72,24 +76,18 @@ export function SendEmailConfigPanel({ stepConfig, onChange, availableVariables 
         <Select
           value={formValues.template_id ?? ''}
           onValueChange={(value) => setValue('template_id', value || undefined, { shouldDirty: true })}
-          disabled={isLoadingTemplates}
         >
           <SelectTrigger id="template-id">
-            <SelectValue placeholder={isLoadingTemplates ? messages.common.loading : messages.workflows.editor.templateIdPlaceholder} />
+            <SelectValue placeholder={messages.workflows.editor.templateIdPlaceholder} />
           </SelectTrigger>
           <SelectContent>
-            {templates?.map((tpl) => (
+            {templates.map((tpl) => (
               <SelectItem key={tpl.id} value={tpl.id}>
                 {tpl.subject} ({tpl.type})
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
-        {isErrorTemplates && (
-          <p role="alert" className="text-xs text-destructive">
-            {messages.workflows.editor.templateLoadError}
-          </p>
-        )}
         {errors.template_id && (
           <p role="alert" className="text-xs text-destructive">
             {errors.template_id.message}

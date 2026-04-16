@@ -1,4 +1,4 @@
-'use client'
+
 
 import { useCallback, useMemo, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
@@ -9,7 +9,7 @@ import { queryKeys } from '@/lib/query-keys'
 import { useViewMode } from '@/hooks/use-view-mode'
 import { ViewModeToggle } from '@/components/shared/ViewModeToggle'
 import { useLicenses } from '../queries'
-import { toggleLicenseActive } from '../actions'
+import { toggleLicenseActiveFn } from '../server'
 import { computeLicenseStatus } from '../utils'
 import type { License } from '../types'
 import { StatsBar } from './StatsBar'
@@ -95,7 +95,7 @@ export function LicenseList() {
 
   const toggleMutation = useMutation({
     mutationFn: async ({ id, isActive }: { id: string; isActive: boolean }) => {
-      const result = await toggleLicenseActive(id, isActive)
+      const result = await toggleLicenseActiveFn({ data: { id, isActive } })
       if (!result.success) throw new Error(result.error)
       return result
     },

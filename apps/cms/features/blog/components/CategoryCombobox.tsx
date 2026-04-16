@@ -1,4 +1,4 @@
-'use client'
+
 
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
@@ -16,7 +16,9 @@ import {
   Button,
   cn,
 } from '@agency/ui'
-import { getBlogCategories, blogKeys } from '../queries'
+import { getCategoriesFn } from '../server'
+import { queryKeys } from '@/lib/query-keys'
+import { messages, templates } from '@/lib/messages'
 
 interface CategoryComboboxProps {
   id?: string
@@ -29,8 +31,8 @@ export function CategoryCombobox({ id, value, onChange }: CategoryComboboxProps)
   const [search, setSearch] = useState('')
 
   const { data: categories = [] } = useQuery({
-    queryKey: blogKeys.categories,
-    queryFn: getBlogCategories,
+    queryKey: queryKeys.blog.categories,
+    queryFn: () => getCategoriesFn(),
   })
 
   const searchNormalized = search.trim().toLowerCase()
@@ -62,7 +64,7 @@ export function CategoryCombobox({ id, value, onChange }: CategoryComboboxProps)
           className="h-8 w-full justify-between text-sm font-normal"
         >
           <span className={cn(!value && 'text-muted-foreground')}>
-            {value || 'Wybierz kategorię...'}
+            {value || messages.blog.categorySelectPlaceholder}
           </span>
           <ChevronsUpDown className="ml-2 h-3.5 w-3.5 shrink-0 opacity-50" />
         </Button>
@@ -70,13 +72,13 @@ export function CategoryCombobox({ id, value, onChange }: CategoryComboboxProps)
       <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
         <Command shouldFilter={false}>
           <CommandInput
-            placeholder="Szukaj lub dodaj..."
+            placeholder={messages.blog.categorySearchPlaceholder}
             value={search}
             onValueChange={setSearch}
           />
           <CommandList>
             <CommandEmpty className="py-3 text-center text-xs text-muted-foreground">
-              Brak kategorii
+              {messages.blog.noCategories}
             </CommandEmpty>
             <CommandGroup>
               {categories
@@ -101,7 +103,7 @@ export function CategoryCombobox({ id, value, onChange }: CategoryComboboxProps)
               {showCreateOption && (
                 <CommandItem onSelect={handleCreate}>
                   <Plus className="mr-2 h-3.5 w-3.5" />
-                  Dodaj: {search.trim()}
+                  {templates.blog.addCategory(search.trim())}
                 </CommandItem>
               )}
             </CommandGroup>

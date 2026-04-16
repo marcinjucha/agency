@@ -1,4 +1,4 @@
-'use client'
+
 
 import { useState } from 'react'
 import { Button, Popover, PopoverTrigger, PopoverContent } from '@agency/ui'

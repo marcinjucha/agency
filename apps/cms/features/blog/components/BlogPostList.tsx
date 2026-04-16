@@ -1,9 +1,9 @@
-'use client'
 
-import { useState, useMemo, useCallback } from 'react'
+
+import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getBlogPosts, blogKeys } from '../queries'
-import { deleteBlogPost } from '../actions'
+import { deleteBlogPostFn, getBlogPostsFn } from '../server'
+import { queryKeys } from '@/lib/query-keys'
 import {
   Button,
   Skeleton,
@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@agency/ui'
-import Link from 'next/link'
+import { Link } from '@tanstack/react-router'
 import { FileText, Plus } from 'lucide-react'
 import { startOfDay, isSameDay } from 'date-fns'
 import { getPostStatus } from '../types'
@@ -51,66 +51,62 @@ export function BlogPostList() {
     error,
     refetch,
   } = useQuery({
-    queryKey: blogKeys.list,
-    queryFn: getBlogPosts,
+    queryKey: queryKeys.blog.list,
+    queryFn: () => getBlogPostsFn(),
   })
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const result = await deleteBlogPost(id)
+      const result = await deleteBlogPostFn({ data: { id } })
       if (!result.success) throw new Error(result.error)
       return result
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: blogKeys.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.blog.all })
     },
   })
 
   /** Toggle date selection — clicking the same date deselects it. */
-  const handleSelectDate = useCallback(
-    (date: Date | undefined) => {
-      if (date && selectedDate && isSameDay(date, selectedDate)) {
-        setSelectedDate(undefined)
-      } else {
-        setSelectedDate(date)
-      }
-    },
-    [selectedDate]
-  )
+  function handleSelectDate(date: Date | undefined) {
+    if (date && selectedDate && isSameDay(date, selectedDate)) {
+      setSelectedDate(undefined)
+    } else {
+      setSelectedDate(date)
+    }
+  }
 
   /** Filter posts by selected date and status, then sort. */
-  const filteredPosts = useMemo(() => {
-    if (!posts) return []
-    const dateFiltered = selectedDate
+  const dateFiltered = posts
+    ? selectedDate
       ? posts.filter((post) => isSameDay(getCalendarDate(post), selectedDate))
       : posts
+    : []
 
-    const statusFiltered =
-      statusFilter === 'all'
-        ? dateFiltered
-        : dateFiltered.filter(
-            (post) => getPostStatus(post.is_published, post.published_at) === statusFilter
-          )
+  const statusFiltered =
+    statusFilter === 'all'
+      ? dateFiltered
+      : dateFiltered.filter(
+          (post) => getPostStatus(post.is_published, post.published_at) === statusFilter
+        )
 
-    return [...statusFiltered].sort((a, b) => {
-      switch (sortMode) {
-        case 'newest':
-          return new Date(b.published_at ?? b.created_at).getTime()
-            - new Date(a.published_at ?? a.created_at).getTime()
-        case 'oldest':
-          return new Date(a.published_at ?? a.created_at).getTime()
-            - new Date(b.published_at ?? b.created_at).getTime()
-        case 'title-az':
-          return (a.title ?? '').localeCompare(b.title ?? '', 'pl')
-        case 'title-za':
-          return (b.title ?? '').localeCompare(a.title ?? '', 'pl')
-        default:
-          return 0
-      }
-    })
-  }, [posts, selectedDate, sortMode, statusFilter])
+  const filteredPosts = [...statusFiltered].sort((a, b) => {
+    switch (sortMode) {
+      case 'newest':
+        return new Date(b.published_at ?? b.created_at).getTime()
+          - new Date(a.published_at ?? a.created_at).getTime()
+      case 'oldest':
+        return new Date(a.published_at ?? a.created_at).getTime()
+          - new Date(b.published_at ?? b.created_at).getTime()
+      case 'title-az':
+        return (a.title ?? '').localeCompare(b.title ?? '', 'pl')
+      case 'title-za':
+        return (b.title ?? '').localeCompare(a.title ?? '', 'pl')
+      default:
+        return 0
+    }
+  })
 
-  if (isLoading) return <BlogPostListSkeleton />
+  if (isLoading) return <BlogPostListSkeleton viewMode={viewMode} />
 
   if (error) {
     return (
@@ -131,7 +127,7 @@ export function BlogPostList() {
         description={messages.blog.noPostsDescription}
         variant="card"
         action={
-          <Link href={routes.admin.blogNew}>
+          <Link to={routes.admin.blogNew}>
             <Button>
               <Plus className="mr-2 h-4 w-4" />
               {messages.blog.writeFirstPost}
@@ -148,7 +144,7 @@ export function BlogPostList() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold text-foreground">{messages.blog.blog}</h1>
         <div className="flex items-center gap-3">
-          <Link href={routes.admin.blogNew}>
+          <Link to={routes.admin.blogNew}>
             <Button>
               <Plus className="mr-2 h-4 w-4" />
               {messages.blog.newPostButton}
@@ -221,7 +217,7 @@ export function BlogPostList() {
 
 // --- Skeleton ---
 
-function BlogPostListSkeleton() {
+function BlogPostListSkeleton({ viewMode }: { viewMode: 'grid' | 'list' }) {
   return (
     <div className="space-y-6">
       {/* Header skeleton */}
@@ -233,21 +229,40 @@ function BlogPostListSkeleton() {
         </div>
       </div>
 
-      {/* Row skeletons */}
-      <div className="divide-y divide-border rounded-lg border border-border">
-        {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="flex items-center gap-4 px-4 py-3">
-            <Skeleton className="hidden sm:block h-10 w-10 rounded" />
-            <div className="flex-1 space-y-1.5">
-              <Skeleton className="h-4 w-3/4" />
-              <Skeleton className="h-3 w-1/2" />
+      {viewMode === 'grid' ? (
+        /* Grid skeleton — matches BlogPostGridView card layout */
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="rounded-xl border border-border bg-muted overflow-hidden">
+              <Skeleton className="h-40 w-full" />
+              <div className="p-4 space-y-2">
+                <Skeleton className="h-5 w-3/4" />
+                <Skeleton className="h-3 w-full" />
+                <div className="flex items-center gap-2 pt-1">
+                  <Skeleton className="h-5 w-16 rounded-full" />
+                  <Skeleton className="h-3 w-20" />
+                </div>
+              </div>
             </div>
-            <Skeleton className="hidden md:block h-5 w-20 rounded-full" />
-            <Skeleton className="hidden sm:block h-3 w-24" />
-            <Skeleton className="h-8 w-8" />
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      ) : (
+        /* List skeleton */
+        <div className="divide-y divide-border rounded-lg border border-border">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-4 px-4 py-3">
+              <Skeleton className="hidden sm:block h-10 w-10 rounded" />
+              <div className="flex-1 space-y-1.5">
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-3 w-1/2" />
+              </div>
+              <Skeleton className="hidden md:block h-5 w-20 rounded-full" />
+              <Skeleton className="hidden sm:block h-3 w-24" />
+              <Skeleton className="h-8 w-8" />
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

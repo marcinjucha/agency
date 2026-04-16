@@ -1,8 +1,6 @@
-'use client'
-
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import Link from 'next/link'
+import { Link } from '@tanstack/react-router'
 import {
   Badge,
   Button,
@@ -22,8 +20,8 @@ import {
   AlertDialogTitle,
 } from '@agency/ui'
 import { X, ExternalLink, Calendar, CheckCircle2, Loader2, Trash2, Mail, Building2, Phone } from 'lucide-react'
-import { updateResponseStatus, updateInternalNotes } from '../actions'
-import { deleteResponse } from '../../responses/actions'
+import { updateResponseStatusFn, updateInternalNotesFn } from '../server'
+import { deleteResponseFn } from '../../responses/server'
 import { getResponseStatusColor } from '@/lib/utils/status'
 import { queryKeys } from '@/lib/query-keys'
 import { messages } from '@/lib/messages'
@@ -89,7 +87,7 @@ export function ResponseDetailPanel({ response, onClose }: ResponseDetailPanelPr
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const result = await deleteResponse(id)
+      const result = await deleteResponseFn({ data: { id } })
       if (!result.success) throw new Error(result.error)
       return result
     },
@@ -110,7 +108,7 @@ export function ResponseDetailPanel({ response, onClose }: ResponseDetailPanelPr
 
   const notesMutation = useMutation({
     mutationFn: async ({ responseId, notes }: { responseId: string; notes: string }) => {
-      const result = await updateInternalNotes(responseId, notes)
+      const result = await updateInternalNotesFn({ data: { responseId, notes } })
       if (!result.success) throw new Error(result.error)
       return result
     },
@@ -146,7 +144,7 @@ export function ResponseDetailPanel({ response, onClose }: ResponseDetailPanelPr
 
   const statusMutation = useMutation({
     mutationFn: async ({ responseId, newStatus }: { responseId: string; newStatus: string }) => {
-      const result = await updateResponseStatus(responseId, newStatus)
+      const result = await updateResponseStatusFn({ data: { responseId, status: newStatus } })
       if (!result.success) throw new Error(result.error)
       return result
     },
@@ -172,7 +170,7 @@ export function ResponseDetailPanel({ response, onClose }: ResponseDetailPanelPr
           </div>
           <div className="flex items-center gap-1 flex-shrink-0">
             <Link
-              href={routes.admin.response(response.id)}
+              to={routes.admin.response(response.id)}
               className="p-1.5 text-muted-foreground hover:text-foreground transition-colors rounded-md hover:bg-muted"
               aria-label={messages.intake.sheetOpenFullPage}
             >

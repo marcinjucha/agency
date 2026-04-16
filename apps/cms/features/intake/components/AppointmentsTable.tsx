@@ -1,8 +1,6 @@
-'use client'
-
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useNavigate, useSearch } from '@tanstack/react-router'
 import { CalendarCheck, ExternalLink, Trash2 } from 'lucide-react'
 import { format } from 'date-fns'
 import { pl } from 'date-fns/locale/pl'
@@ -26,8 +24,7 @@ import {
   AlertDialogTitle,
 } from '@agency/ui'
 import { APPOINTMENT_STATUS_LABELS } from '../types'
-import { getAppointments } from '../../appointments/queries'
-import { deleteAppointment } from '../../appointments/actions'
+import { getAppointmentsFn, deleteAppointmentFn } from '../../appointments/server'
 import type { AppointmentListItem, AppointmentStatus } from '../../appointments/types'
 import { getAppointmentStatusColor } from '@/lib/utils/status'
 import { queryKeys } from '@/lib/query-keys'
@@ -57,15 +54,15 @@ function formatDateTime(startTime: string, endTime: string): string {
 }
 
 export function AppointmentsTable() {
-  const router = useRouter()
-  const searchParams = useSearchParams()
+  const navigate = useNavigate()
+  const search = useSearch({ strict: false })
   const queryClient = useQueryClient()
-  const statusFilter = searchParams.get('appointmentStatus') as AppointmentStatus | null
+  const statusFilter = ((search as Record<string, unknown>).appointmentStatus as AppointmentStatus) ?? null
   const [deleteTarget, setDeleteTarget] = useState<AppointmentListItem | null>(null)
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const result = await deleteAppointment(id)
+      const result = await deleteAppointmentFn({ data: { id } })
       if (!result.success) throw new Error(result.error)
       return result
     },
@@ -82,23 +79,24 @@ export function AppointmentsTable() {
     refetch,
   } = useQuery({
     queryKey: queryKeys.intake.appointments,
-    queryFn: getAppointments,
+    queryFn: () => getAppointmentsFn(),
     refetchInterval: REFETCH_INTERVAL,
   })
 
   const handleStatusFilterChange = (value: string) => {
-    const params = new URLSearchParams(searchParams.toString())
-    if (value === 'all') {
-      params.delete('appointmentStatus')
-    } else {
-      params.set('appointmentStatus', value)
-    }
-    router.replace(`?${params.toString()}`, { scroll: false })
+    navigate({
+      to: '/admin/intake',
+      search: (prev) => ({
+        ...prev,
+        appointmentStatus: value === 'all' ? undefined : value,
+      }),
+      replace: true,
+    })
   }
 
   const handleRowClick = (appointment: AppointmentListItem) => {
     if (appointment.response?.id) {
-      router.push(routes.admin.response(appointment.response.id))
+      navigate({ to: routes.admin.response(appointment.response.id) })
     }
   }
 

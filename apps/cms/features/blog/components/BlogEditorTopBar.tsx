@@ -1,7 +1,7 @@
-'use client'
+
 
 import { Button } from '@agency/ui'
-import { useRouter } from 'next/navigation'
+import { useNavigate } from '@tanstack/react-router'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
 import type { BlogPostStatus, SaveState } from '../types'
@@ -29,7 +29,7 @@ export function BlogEditorTopBar({
   onSchedulePublish,
   onPublishNow,
 }: BlogEditorTopBarProps) {
-  const router = useRouter()
+  const navigate = useNavigate()
 
   const saveLabel: Record<SaveState, string> = {
     idle: isEditing ? messages.common.save : messages.blog.saveDraft,
@@ -45,7 +45,7 @@ export function BlogEditorTopBar({
           <div className="flex flex-col gap-1">
             <button
               type="button"
-              onClick={() => router.push(routes.admin.blog)}
+              onClick={() => navigate({ to: routes.admin.blog })}
               className="text-sm text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-1 w-fit"
             >
               <span aria-hidden="true">&larr;</span>

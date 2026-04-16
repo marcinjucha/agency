@@ -1,18 +1,14 @@
-'use client'
-
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Button, Card } from '@agency/ui'
 import { messages } from '@/lib/messages'
-import { usePlausible } from 'next-plausible'
-import type { PlausibleEvents } from '@/lib/plausible'
-import { routes } from '@/lib/routes'
 import { bookingFormSchema, type BookingFormData } from '../validation'
 import type { CalendarSlot } from '../types'
 import { BookingSuccess } from './BookingSuccess'
 import { BookingForm } from './BookingForm'
 import { DateSlotPicker } from './DateSlotPicker'
+import { bookAppointmentFn } from '@/features/calendar/server'
 
 interface CalendarBookingProps {
   surveyId: string
@@ -20,7 +16,6 @@ interface CalendarBookingProps {
 }
 
 export function CalendarBooking({ surveyId, responseId }: CalendarBookingProps) {
-  const plausible = usePlausible<PlausibleEvents>()
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [selectedSlot, setSelectedSlot] = useState<CalendarSlot | null>(null)
   const [bookingSuccess, setBookingSuccess] = useState(false)
@@ -46,10 +41,8 @@ export function CalendarBooking({ surveyId, responseId }: CalendarBookingProps) 
     setSubmitError(null)
 
     try {
-      const response = await fetch(routes.api.calendarBook, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const result = await bookAppointmentFn({
+        data: {
           surveyId,
           responseId,
           startTime: selectedSlot.start,
@@ -57,16 +50,13 @@ export function CalendarBooking({ surveyId, responseId }: CalendarBookingProps) 
           clientName: data.clientName,
           clientEmail: data.clientEmail,
           notes: data.notes || '',
-        }),
+        },
       })
 
-      const result = await response.json()
-
       if (result.success) {
-        plausible('Booking Completed')
         setBookingSuccess(true)
       } else {
-        setSubmitError(result.error || messages.calendar.bookingFailed)
+        setSubmitError(result.error.error || messages.calendar.bookingFailed)
       }
     } catch (error) {
       console.error('Booking submission error:', error)
