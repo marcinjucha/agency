@@ -13,6 +13,7 @@ import {
 } from '@agency/database'
 import appCss from '../globals.css?url'
 import { buildWebsiteHead } from '@/lib/head'
+import { getPublicLandingPageFn } from '@/features/marketing/server'
 import { CookieBanner } from '@/features/legal/components/ConsentBanner'
 import { Navbar } from '@/features/marketing/components/Navbar'
 import { Footer } from '@/features/marketing/components/Footer'
@@ -21,6 +22,13 @@ const defaultNavbar = DEFAULT_BLOCKS.find((b) => b.type === 'navbar') as NavbarB
 const defaultFooter = DEFAULT_BLOCKS.find((b) => b.type === 'footer') as FooterBlock
 
 export const Route = createRootRoute({
+  loader: async () => {
+    const page = await getPublicLandingPageFn()
+    const blocks = page?.blocks?.length ? page.blocks : DEFAULT_BLOCKS
+    const navbar = (blocks.find((b: { type: string }) => b.type === 'navbar') as NavbarBlock) ?? defaultNavbar
+    const footer = (blocks.find((b: { type: string }) => b.type === 'footer') as FooterBlock) ?? defaultFooter
+    return { navbar, footer }
+  },
   head: () => ({
     ...buildWebsiteHead('Halo Efekt — Automatyzacja procesów biznesowych'),
     links: [
@@ -39,6 +47,7 @@ export const Route = createRootRoute({
 })
 
 function RootLayout() {
+  const { navbar, footer } = Route.useLoaderData()
   const pathname = useRouterState({ select: (s) => s.location.pathname })
   const isSurvey = pathname.startsWith('/survey')
 
@@ -48,9 +57,9 @@ function RootLayout() {
         <HeadContent />
       </head>
       <body className="antialiased bg-background text-foreground overflow-x-hidden">
-        {!isSurvey && <Navbar {...defaultNavbar} />}
+        {!isSurvey && <Navbar {...navbar} />}
         <Outlet />
-        {!isSurvey && <Footer {...defaultFooter} />}
+        {!isSurvey && <Footer {...footer} />}
         <CookieBanner />
         <Scripts />
       </body>
