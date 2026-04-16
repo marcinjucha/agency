@@ -1,11 +1,11 @@
-import { createClient } from '@/lib/supabase/server'
+import { createServerClient } from '@/lib/supabase/server-start'
 import type { WorkflowListItem, WorkflowWithSteps, ExecutionWithSteps, StepExecutionWithMeta } from './types'
 import { toWorkflow, toWorkflowListItem, toWorkflowStep, toWorkflowEdge, toExecutionWithWorkflow, toStepExecutionWithMeta } from './types'
 
 const LIST_FIELDS = 'id, name, description, trigger_type, is_active, created_at, updated_at' as const
 
 export async function getWorkflowsServer(): Promise<WorkflowListItem[]> {
-  const supabase = await createClient()
+  const supabase = createServerClient()
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- workflows type resolves to never (Supabase JS v2.95.2 incompatibility)
   const { data, error } = await (supabase as any)
@@ -18,7 +18,7 @@ export async function getWorkflowsServer(): Promise<WorkflowListItem[]> {
 }
 
 export async function getWorkflowServer(id: string): Promise<WorkflowWithSteps> {
-  const supabase = await createClient()
+  const supabase = createServerClient()
 
   // Fetch workflow
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JS v2.95.2 incompatibility
@@ -64,7 +64,7 @@ export async function getWorkflowServer(id: string): Promise<WorkflowWithSteps> 
  * Joins: workflow_executions → workflows (name), workflow_step_executions → workflow_steps (step_type).
  */
 export async function getExecutionWithStepsServer(executionId: string): Promise<ExecutionWithSteps | null> {
-  const supabase = await createClient()
+  const supabase = createServerClient()
 
   // Fetch execution with workflow name
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JS v2.95.2 incompatibility

@@ -23,7 +23,7 @@ import {
 import { createServiceClient } from '@/lib/supabase/service'
 import { messages } from '@/lib/messages'
 import { WORKFLOW_TEMPLATES } from './templates/workflow-templates'
-import { createStartClient } from '@/lib/supabase/server-start'
+import { createServerClient } from '@/lib/supabase/server-start'
 import { type AuthContext, type StartClient, requireAuthContext } from '@/lib/server-auth'
 
 // ---------------------------------------------------------------------------
@@ -243,7 +243,7 @@ const LIST_FIELDS = 'id, name, description, trigger_type, is_active, created_at,
  * error returns, to trigger its error handling + retry behaviour.
  */
 export const getWorkflowsFn = createServerFn({ method: 'POST' }).handler(async (): Promise<WorkflowListItem[]> => {
-  const supabase = createStartClient()
+  const supabase = createServerClient()
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JS v2.95.2 incompatibility
   const { data, error } = await (supabase as any)
@@ -262,7 +262,7 @@ export const getWorkflowsFn = createServerFn({ method: 'POST' }).handler(async (
 export const getWorkflowFn = createServerFn({ method: 'POST' })
   .inputValidator((input: { id: string }) => input)
   .handler(async ({ data }): Promise<WorkflowWithSteps> => {
-    const supabase = createStartClient()
+    const supabase = createServerClient()
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JS v2.95.2 incompatibility
     const { data: workflowData, error: workflowError } = await (supabase as any)
@@ -307,7 +307,7 @@ export const getWorkflowFn = createServerFn({ method: 'POST' })
  */
 export const getSurveysForWorkflowFn = createServerFn({ method: 'POST' }).handler(
   async (): Promise<SurveyOption[]> => {
-    const supabase = createStartClient()
+    const supabase = createServerClient()
 
     const { data, error } = await supabase.from('surveys').select('id, title').order('title')
 
@@ -323,7 +323,7 @@ export const getSurveysForWorkflowFn = createServerFn({ method: 'POST' }).handle
  */
 export const getEmailTemplatesForWorkflowFn = createServerFn({ method: 'POST' }).handler(
   async (): Promise<EmailTemplateOption[]> => {
-    const supabase = createStartClient()
+    const supabase = createServerClient()
 
     const { data, error } = await supabase
       .from('email_templates')

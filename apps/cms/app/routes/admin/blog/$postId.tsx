@@ -12,6 +12,7 @@ import type { BlogPostPayload, SaveBlogPostResult } from '@/features/blog/compon
 import type { BlogPost } from '@/features/blog/types'
 import { useQuery } from '@tanstack/react-query'
 import { getBlogPost, getBlogCategories } from '@/features/blog/queries'
+import { LoadingState } from '@agency/ui'
 
 export const Route = createFileRoute('/admin/blog/$postId')({
   head: () => buildCmsHead(messages.blog.editPost),
@@ -31,10 +32,12 @@ export const Route = createFileRoute('/admin/blog/$postId')({
 
 function BlogPostEditorPage() {
   const { postId } = Route.useParams()
-  const { data: blogPost } = useQuery<BlogPost>({
+  const { data: blogPost, isLoading } = useQuery<BlogPost>({
     queryKey: queryKeys.blog.detail(postId),
     queryFn: () => getBlogPost(postId),
   })
+
+  if (isLoading) return <LoadingState variant="skeleton-card" rows={4} />
 
   return (
     <BlogPostEditor

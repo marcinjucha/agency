@@ -10,7 +10,7 @@ import {
 } from '@/features/surveys/validation'
 import type { UpdateSurveyLinkFormData } from '@/features/surveys/validation'
 import { messages } from '@/lib/messages'
-import { createStartClient } from '@/lib/supabase/server-start'
+import { createServerClient } from '@/lib/supabase/server-start'
 import { type AuthContext, requireAuthContext, getAuth } from '@/lib/server-auth'
 
 // ---------------------------------------------------------------------------
@@ -22,7 +22,7 @@ import { type AuthContext, requireAuthContext, getAuth } from '@/lib/server-auth
  * Used by route loader ensureQueryData + SurveyList useQuery.
  */
 export const getSurveysFn = createServerFn({ method: 'POST' }).handler(async () => {
-  const supabase = createStartClient()
+  const supabase = createServerClient()
 
   const {
     data: { user },

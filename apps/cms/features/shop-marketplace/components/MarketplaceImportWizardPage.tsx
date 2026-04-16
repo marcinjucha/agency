@@ -18,7 +18,8 @@ export function MarketplaceImportWizardPage() {
     refetch,
   } = useQuery({
     queryKey: queryKeys.marketplace.connections,
-    queryFn: getMarketplaceConnections,
+    queryFn: () => getMarketplaceConnections(),
+    enabled: typeof window !== 'undefined',
   })
 
   return (

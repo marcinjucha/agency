@@ -31,7 +31,7 @@ import { differenceInDays, addDays } from 'date-fns'
 import { queryKeys } from '@/lib/query-keys'
 import { messages, templates } from '@/lib/messages'
 import { getMarketplaceConnections, getMarketplaceListings } from '../queries'
-import { publishToMarketplace, updateMarketplaceListing, removeMarketplaceListing } from '../actions'
+import { publishToMarketplaceFn, updateMarketplaceListingFn, removeMarketplaceListingFn } from '../server'
 import { MARKETPLACE_LABELS } from '../types'
 import type { MarketplaceConnection, MarketplaceListing, MarketplaceId } from '../types'
 import { ListingStatusBadge } from './ListingStatusBadge'
@@ -425,12 +425,14 @@ export function MarketplacePublishPanel({ productId }: MarketplacePublishPanelPr
     setPublishingConnectionId(connectionId)
 
     try {
-      const result = await publishToMarketplace({
-        productId,
-        connectionId,
-        marketplaceCategoryId: form.categoryId || undefined,
-        marketplaceLocation: form.city ? { city: form.city } : undefined,
-        marketplaceParams: undefined,
+      const result = await publishToMarketplaceFn({
+        data: {
+          productId,
+          connectionId,
+          marketplaceCategoryId: form.categoryId || undefined,
+          marketplaceLocation: form.city ? { city: form.city } : undefined,
+          marketplaceParams: undefined,
+        },
       })
 
       if (!result.success) {
@@ -450,10 +452,13 @@ export function MarketplacePublishPanel({ productId }: MarketplacePublishPanelPr
     setUpdatingListingId(listingId)
 
     try {
-      const result = await updateMarketplaceListing(listingId, {
-        marketplaceCategoryId: form.categoryId || undefined,
-        marketplaceLocation: form.city ? { city: form.city } : undefined,
-        marketplaceParams: undefined,
+      const result = await updateMarketplaceListingFn({
+        data: {
+          listingId,
+          marketplaceCategoryId: form.categoryId || undefined,
+          marketplaceLocation: form.city ? { city: form.city } : undefined,
+          marketplaceParams: undefined,
+        },
       })
 
       if (!result.success) {
@@ -473,7 +478,7 @@ export function MarketplacePublishPanel({ productId }: MarketplacePublishPanelPr
     setRemovingListingId(listingId)
 
     try {
-      const result = await removeMarketplaceListing(listingId)
+      const result = await removeMarketplaceListingFn({ data: { listingId } })
 
       if (!result.success) {
         setMutationError(result.error ?? messages.marketplace.removeFailed)

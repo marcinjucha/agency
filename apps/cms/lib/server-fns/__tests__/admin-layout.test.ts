@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-// Mock @tanstack/start-server-core before importing (createStartClient depends on it)
+// Mock @tanstack/start-server-core before importing (createServerClient depends on it)
 vi.mock('@tanstack/start-server-core', () => ({
   getCookies: vi.fn(() => ({})),
   setCookie: vi.fn(),
@@ -23,7 +23,7 @@ const mockTenantsSelect = vi.fn()
 const mockUserRolesSelect = vi.fn()
 
 vi.mock('@/lib/supabase/server-start', () => ({
-  createStartClient: vi.fn(() => ({
+  createServerClient: vi.fn(() => ({
     auth: {
       getUser: mockGetUser,
     },
@@ -156,9 +156,9 @@ describe('getAdminLayoutDataFn', () => {
       ],
     })
     // Override the from mock for this test to handle fetchAllTenants
-    const { createStartClient } = await import('@/lib/supabase/server-start')
-    vi.mocked(createStartClient).mockReturnValueOnce({
-      auth: { getUser: mockGetUser } as ReturnType<typeof createStartClient>['auth'],
+    const { createServerClient } = await import('@/lib/supabase/server-start')
+    vi.mocked(createServerClient).mockReturnValueOnce({
+      auth: { getUser: mockGetUser } as ReturnType<typeof createServerClient>['auth'],
       from: vi.fn((table: string) => {
         if (table === 'users') {
           return { select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis(), single: mockUsersSelect }
@@ -175,7 +175,7 @@ describe('getAdminLayoutDataFn', () => {
         }
         return { select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis(), single: vi.fn() }
       }),
-    } as unknown as ReturnType<typeof createStartClient>)
+    } as unknown as ReturnType<typeof createServerClient>)
 
     const result = await getAdminLayoutData()
 

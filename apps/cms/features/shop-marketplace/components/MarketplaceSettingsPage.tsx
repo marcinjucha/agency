@@ -24,7 +24,8 @@ export function MarketplaceSettingsPage() {
     refetch,
   } = useQuery({
     queryKey: queryKeys.marketplace.connections,
-    queryFn: getMarketplaceConnections,
+    queryFn: () => getMarketplaceConnections(),
+    enabled: typeof window !== 'undefined',
   })
 
   // Handle OAuth callback URL params (?connected= or ?error=)

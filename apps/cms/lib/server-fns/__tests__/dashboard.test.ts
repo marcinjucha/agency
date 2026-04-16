@@ -29,7 +29,7 @@ const mockAppointmentsCount = vi.fn()
 const mockTenantsCount = vi.fn()
 
 vi.mock('@/lib/supabase/server-start', () => ({
-  createStartClient: vi.fn(() => ({
+  createServerClient: vi.fn(() => ({
     from: vi.fn((table: string) => {
       const resolveCount = () => {
         if (table === 'surveys') return mockSurveysCount()

@@ -2,9 +2,9 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '@/lib/query-keys'
+import { deleteShopProductFn } from '../server'
 import { getShopProducts } from '../queries'
 import { getShopCategories } from '@/features/shop-categories/queries'
-import { deleteShopProduct } from '../actions'
 import { getMarketplaceConnections, getMarketplaceListingsForProducts } from '@/features/shop-marketplace/queries'
 import {
   Button,
@@ -32,20 +32,21 @@ export function ShopProductList() {
     refetch,
   } = useQuery({
     queryKey: queryKeys.shopProducts.list,
-    queryFn: getShopProducts,
+    queryFn: () => getShopProducts(),
   })
 
   const {
     data: categories,
   } = useQuery({
     queryKey: queryKeys.shopCategories.list,
-    queryFn: getShopCategories,
+    queryFn: () => getShopCategories(),
   })
 
   // Batch-fetch marketplace connections (to know which marketplaces are connected)
   const { data: connections } = useQuery({
     queryKey: queryKeys.marketplace.connections,
-    queryFn: getMarketplaceConnections,
+    queryFn: () => getMarketplaceConnections(),
+    enabled: typeof window !== 'undefined',
   })
 
   // Batch-fetch all listings for current page products (1 query, not N)
@@ -53,7 +54,7 @@ export function ShopProductList() {
   const { data: listingsBatch } = useQuery({
     queryKey: queryKeys.marketplace.listingsByProducts(productIds),
     queryFn: () => getMarketplaceListingsForProducts(productIds),
-    enabled: productIds.length > 0,
+    enabled: productIds.length > 0 && typeof window !== 'undefined',
   })
 
   const connectedMarketplaces: MarketplaceId[] = (connections ?? [])
@@ -62,7 +63,7 @@ export function ShopProductList() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const result = await deleteShopProduct(id)
+      const result = await deleteShopProductFn({ data: { id } })
       if (!result.success) throw new Error(result.error)
       return result
     },

@@ -1,6 +1,6 @@
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
-import { createStartClient } from '@/lib/supabase/server-start'
+import { createServerClient } from '@/lib/supabase/server-start'
 import { messages } from '@/lib/messages'
 
 export type AuthContext = {
@@ -15,7 +15,7 @@ const loginSchema = z.object({
 })
 
 export const getAuthContextFn = createServerFn({ method: 'POST' }).handler(async (): Promise<AuthContext | null> => {
-  const supabase = createStartClient()
+  const supabase = createServerClient()
 
   const {
     data: { user },
@@ -45,7 +45,7 @@ export const loginFn = createServerFn({ method: 'POST' })
     async ({
       data,
     }): Promise<{ success: true } | { success: false; error: string }> => {
-      const supabase = createStartClient()
+      const supabase = createServerClient()
 
       const { error } = await supabase.auth.signInWithPassword({
         email: data.email,
@@ -63,7 +63,7 @@ export const loginFn = createServerFn({ method: 'POST' })
 
 export const logoutFn = createServerFn({ method: 'POST' }).handler(
   async (): Promise<{ success: true }> => {
-    const supabase = createStartClient()
+    const supabase = createServerClient()
     await supabase.auth.signOut()
     return { success: true as const }
   }

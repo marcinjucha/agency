@@ -4,7 +4,7 @@ import { getRequest } from '@tanstack/start-server-core'
 import { handleCallback, revokeAccess } from '@/features/calendar/oauth'
 import { routes } from '@/lib/routes'
 import { messages } from '@/lib/messages'
-import { createStartClient } from '@/lib/supabase/server-start'
+import { createServerClient } from '@/lib/supabase/server-start'
 
 // ---------------------------------------------------------------------------
 // Server function: processes the OAuth callback and returns a redirect path
@@ -44,7 +44,7 @@ const processCalendarCallback = createServerFn({ method: 'GET' }).handler(
     }
 
     // Step 4: Get authenticated user + tenant
-    const supabase = createStartClient()
+    const supabase = createServerClient()
     const {
       data: { user },
     } = await supabase.auth.getUser()

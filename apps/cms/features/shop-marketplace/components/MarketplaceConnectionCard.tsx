@@ -20,7 +20,7 @@ import {
 import { Store, AlertTriangle } from 'lucide-react'
 import { queryKeys } from '@/lib/query-keys'
 import { messages, templates } from '@/lib/messages'
-import { disconnectMarketplace } from '../actions'
+import { disconnectMarketplaceFn } from '../server'
 import { MARKETPLACE_LABELS } from '../types'
 import type { MarketplaceId, MarketplaceConnection } from '../types'
 import { ConnectMarketplaceButton } from './ConnectMarketplaceButton'
@@ -53,7 +53,7 @@ export function MarketplaceConnectionCard({
 
   const disconnect = useMutation({
     mutationFn: async (connectionId: string) => {
-      const result = await disconnectMarketplace(connectionId)
+      const result = await disconnectMarketplaceFn({ data: { connectionId } })
       if (!result.success) throw new Error(result.error ?? messages.common.unknownError)
       return result
     },

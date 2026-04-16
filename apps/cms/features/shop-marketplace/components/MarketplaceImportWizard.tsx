@@ -9,13 +9,12 @@ import { messages, templates } from '@/lib/messages'
 import { differenceInMinutes } from 'date-fns'
 import { routes } from '@/lib/routes'
 import { queryKeys } from '@/lib/query-keys'
-import { startMarketplaceImport } from '../actions'
-import { getImportPreviewListings } from '../actions.import'
+import { startMarketplaceImportFn, getImportPreviewListingsFn } from '../server'
 import { getImportProgress } from '../queries'
 import { MARKETPLACE_LABELS } from '../types'
 import { ImportPreviewTable } from './ImportPreviewTable'
 import type { MarketplaceConnection } from '../types'
-import type { ImportPreviewListing } from '../actions.import'
+import type { ImportPreviewListing } from '../server'
 
 // --- Step indicator ---
 
@@ -247,7 +246,7 @@ function Step2ListingPreview({ connectionId, onBack, onImport, isImporting }: St
     setIsLoading(true)
     setLoadError(null)
     try {
-      const result = await getImportPreviewListings(connectionId)
+      const result = await getImportPreviewListingsFn({ data: { connectionId } })
       if (!result.success || !result.data) {
         setLoadError(result.error ?? messages.common.unknownError)
         return
@@ -522,10 +521,9 @@ export function MarketplaceImportWizard({ connections }: MarketplaceImportWizard
 
   const startImport = useMutation({
     mutationFn: async ({ connectionId, listingIds }: { connectionId: string; listingIds: string[] }) => {
-      const result = await startMarketplaceImport(
-        { connectionId },
-        listingIds
-      )
+      const result = await startMarketplaceImportFn({
+        data: { connectionId, selectedListingIds: listingIds },
+      })
       if (!result.success) throw new Error(result.error)
       return result
     },

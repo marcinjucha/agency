@@ -4,7 +4,7 @@ import { useMutation } from '@tanstack/react-query'
 import { Button } from '@agency/ui'
 import { Loader2 } from 'lucide-react'
 import { messages } from '@/lib/messages'
-import { connectMarketplace } from '../actions'
+import { connectMarketplaceFn } from '../server'
 import type { MarketplaceId } from '../types'
 
 type ConnectMarketplaceButtonProps = {
@@ -14,7 +14,7 @@ type ConnectMarketplaceButtonProps = {
 export function ConnectMarketplaceButton({ marketplace }: ConnectMarketplaceButtonProps) {
   const connect = useMutation({
     mutationFn: async () => {
-      const result = await connectMarketplace({ marketplace })
+      const result = await connectMarketplaceFn({ data: { marketplace } })
       if (!result.success) throw new Error(result.error ?? messages.common.unknownError)
       return result
     },

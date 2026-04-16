@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createServerClient } from '@/lib/supabase/server-start'
 import { messages } from '@/lib/messages'
 import {
   ALL_PERMISSION_KEYS,
@@ -7,7 +7,7 @@ import {
   type PermissionKey,
 } from '@/lib/permissions'
 
-type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>
+type SupabaseServerClient = ReturnType<typeof createServerClient>
 
 export type AuthSuccess = {
   supabase: SupabaseServerClient
@@ -40,7 +40,7 @@ const FULL_ACCESS_ROLES = new Set(['owner', 'admin'])
  * 4. No role assigned → empty permissions (only alwaysGranted keys like dashboard work)
  */
 export async function getUserWithTenant(): Promise<AuthResult> {
-  const supabase = await createClient()
+  const supabase = createServerClient()
 
   const {
     data: { user },
