@@ -125,7 +125,7 @@ function BlogListSkeleton() {
 
 function BlogPage() {
   const { data: posts = [] } = useQuery({
-    queryKey: blogPostsQueryKey,
+    queryKey: queryKeys.blog.all,
     queryFn: () => getPublishedBlogPostsFn(),
   })
 

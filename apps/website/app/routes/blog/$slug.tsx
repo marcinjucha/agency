@@ -115,7 +115,7 @@ function BlogArticleSkeleton() {
 function BlogPostPage() {
   const { slug } = useParams({ from: '/blog/$slug' })
   const { data: post } = useQuery({
-    queryKey: blogPostQueryKey(slug),
+    queryKey: queryKeys.blog.detail(slug),
     queryFn: () => getPublishedBlogPostFn({ data: { slug } }),
   })
 
