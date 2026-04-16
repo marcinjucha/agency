@@ -19,7 +19,6 @@ import { format } from 'date-fns'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
 import { blogPostSchema, type BlogPostFormData } from '../validation'
-import { createBlogPostFn, updateBlogPostFn, deleteBlogPostFn } from '../server'
 import {
   generateHtmlFromContent,
   calculateReadingTime,
@@ -40,8 +39,26 @@ import { DeletePostDialog } from './DeletePostDialog'
 
 // --- Types ---
 
+// --- Result type shared between create and update ---
+
+export interface SaveBlogPostResult {
+  success: boolean
+  error?: string
+  data?: BlogPost
+}
+
+// Payload passed to createFn/updateFn — content is pre-serialized to JSON string
+export type BlogPostPayload = Omit<BlogPostFormData, 'content'> & {
+  content: string
+  html_body?: string
+  estimated_reading_time?: number
+}
+
 interface BlogPostEditorProps {
   blogPost?: BlogPost
+  createFn: (data: BlogPostPayload) => Promise<SaveBlogPostResult>
+  updateFn: (id: string, data: BlogPostPayload) => Promise<SaveBlogPostResult>
+  deleteFn: (id: string) => Promise<{ success: boolean; error?: string }>
   onSuccess?: () => void
 }
 
@@ -65,7 +82,7 @@ function extractText(node: TiptapContent | TiptapContent['content'][number]): st
 
 // --- Component ---
 
-export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
+export function BlogPostEditor({ blogPost, createFn, updateFn, deleteFn, onSuccess }: BlogPostEditorProps) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const isEditing = !!blogPost
@@ -198,8 +215,8 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
     }
 
     const result = isEditing
-      ? await updateBlogPostFn({ data: { id: blogPost.id, data: payload } })
-      : await createBlogPostFn({ data: payload })
+      ? await updateFn(blogPost.id, payload)
+      : await createFn(payload)
 
     if (result.success) {
       setSaveState('saved')
@@ -272,7 +289,7 @@ export function BlogPostEditor({ blogPost, onSuccess }: BlogPostEditorProps) {
   async function handleDelete() {
     if (!blogPost) return
     setDeleteState('deleting')
-    const result = await deleteBlogPostFn({ data: { id: blogPost.id } })
+    const result = await deleteFn(blogPost.id)
     if (result.success) {
       queryClient.invalidateQueries({ queryKey: queryKeys.blog.all })
       navigate({ to: routes.admin.blog })

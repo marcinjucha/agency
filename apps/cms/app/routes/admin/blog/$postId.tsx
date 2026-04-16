@@ -1,9 +1,17 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { buildCmsHead } from '@/lib/head'
 import { messages } from '@/lib/messages'
-import { getBlogPostFn, getCategoriesFn } from '@/features/blog/server'
+import {
+  getBlogPostFn,
+  getCategoriesFn,
+  createBlogPostFn,
+  updateBlogPostFn,
+  deleteBlogPostFn,
+} from '@/features/blog/server'
 import { queryKeys } from '@/lib/query-keys'
 import { BlogPostEditor } from '@/features/blog/components/BlogPostEditor'
+import type { BlogPostPayload, SaveBlogPostResult } from '@/features/blog/components/BlogPostEditor'
+import type { BlogPost } from '@/features/blog/types'
 import { useQuery } from '@tanstack/react-query'
 
 export const Route = createFileRoute('/admin/blog/$postId')({
@@ -23,10 +31,23 @@ export const Route = createFileRoute('/admin/blog/$postId')({
 
 function BlogPostEditorPage() {
   const { postId } = Route.useParams()
-  const { data: blogPost } = useQuery({
+  const { data: blogPost } = useQuery<BlogPost | null>({
     queryKey: queryKeys.blog.detail(postId),
-    queryFn: () => getBlogPostFn({ data: { id: postId } }),
+    queryFn: () => getBlogPostFn({ data: { id: postId } }) as Promise<BlogPost | null>,
   })
 
-  return <BlogPostEditor blogPost={blogPost ?? undefined} />
+  return (
+    <BlogPostEditor
+      blogPost={blogPost ?? undefined}
+      createFn={(data: BlogPostPayload) =>
+        createBlogPostFn({ data }) as Promise<SaveBlogPostResult>
+      }
+      updateFn={(id: string, data: BlogPostPayload) =>
+        updateBlogPostFn({ data: { id, data } }) as Promise<SaveBlogPostResult>
+      }
+      deleteFn={(id: string) =>
+        deleteBlogPostFn({ data: { id } }) as Promise<{ success: boolean; error?: string }>
+      }
+    />
+  )
 }

@@ -1,7 +1,7 @@
 
 
 import { useState, useEffect } from 'react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { HelpCircle } from 'lucide-react'
 import {
   Button,
@@ -22,26 +22,25 @@ import {
 import type { LandingBlock, SeoMetadata } from '@agency/database'
 import { DEFAULT_BLOCKS, BLOCK_TYPE_LABELS } from '@agency/database'
 import { BlockFieldEditor } from './BlockFieldEditor'
-import { getLandingPageFn, updateLandingPageFn } from '../server'
+import type { LandingPage } from '../types'
 import { KeywordSelect } from '@/features/site-settings/components/KeywordSelect'
 import { getKeywordPool } from '@/features/site-settings/queries'
 import { siteSettingsKeys } from '@/features/site-settings/types'
-import { queryKeys } from '@/lib/query-keys'
 import { messages } from '@/lib/messages'
 
 type SaveState = 'idle' | 'saving' | 'saved' | 'error'
 
-export function LandingPageEditor() {
-  const queryClient = useQueryClient()
-  const {
-    data: page,
-    isLoading,
-    error,
-  } = useQuery({
-    queryKey: queryKeys.landing.all,
-    queryFn: () => getLandingPageFn(),
-  })
+interface LandingPageEditorProps {
+  page: LandingPage | null | undefined
+  isLoading: boolean
+  error: Error | null
+  saveFn: (
+    id: string,
+    data: { blocks?: LandingBlock[]; seo_metadata?: SeoMetadata; is_published?: boolean }
+  ) => Promise<{ success: boolean; error?: string }>
+}
 
+export function LandingPageEditor({ page, isLoading, error, saveFn }: LandingPageEditorProps) {
   const { data: keywordPool = [], isLoading: isPoolLoading } = useQuery({
     queryKey: siteSettingsKeys.keywordPool,
     queryFn: getKeywordPool,
@@ -84,17 +83,12 @@ export function LandingPageEditor() {
     if (!page) return
     setSaveState('saving')
     try {
-      const result = await updateLandingPageFn({ data: { id: page.id, data: {
+      const result = await saveFn(page.id, {
         blocks: activeBlocks,
         seo_metadata: activeSeo,
         is_published: activePublished,
-      } } })
-      if (result.success) {
-        setSaveState('saved')
-        queryClient.invalidateQueries({ queryKey: queryKeys.landing.all })
-      } else {
-        setSaveState('error')
-      }
+      })
+      setSaveState(result.success ? 'saved' : 'error')
     } catch (err) {
       console.error('[LandingPage] Save failed:', err)
       setSaveState('error')
