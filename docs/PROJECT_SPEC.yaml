@@ -19,6 +19,8 @@ architecture:
     - "enabled_features JSONB on tenants table — stores PermissionKey[] for features enabled per tenant; checked in requireAuth() and sidebar rendering"
     - "getUserWithTenant() shared auth — extracted from 4x duplication, returns { supabase, userId, tenantId }"
     - "createAnonClient() replaced by createServiceClient() in website server.ts files — Next.js anon client pattern obsolete after TanStack Start migration; server functions run server-only, no ISR/build-time constraint"
+    - "CMS loader Pattern A — no loaders in routes, components own data via useQuery (browser queries for reads, server fns for mutations only). Browser client returns empty on SSR server → no hydration mismatch. Simpler than prefetchQuery pattern used in website."
+    - "createServerClient (in lib/supabase/server-start.ts) reads cookies from request context via getCookies() from @tanstack/start-server-core — use inside createServerFn for all server-side Supabase access. Browser client (createClient) used for component useQuery reads in CMS."
     - "ensureQueryData pattern for TanStack Query on website — loaders prefetch data server-side, client hydrates from cache; per-query staleTime controls revalidation frequency (landing=1h, blog=5min)"
     - "nitro() plugin build-only in all TanStack Start apps — nitro() crashes Vite dev server if not guarded; wrap in NODE_ENV check or separate vite.config build variant. Affects cms, website, jacek, kolega"
     - "ConsentBanner.tsx not CookieBanner.tsx — ad blockers match 'cookie' substring in filenames, blocking the file entirely; naming with 'consent' avoids the false-positive block"
@@ -253,6 +255,14 @@ features:
     why: "Surveys & Intake are the heaviest CMS features. Migrating them unblocks removal of Next.js from the CMS app and enables self-hosted VPS deployment without Vercel."
     depends_on: ["TanStack Start Migration — CMS Core"]
     completion_notes: "All route files migrated: admin/surveys/*, admin/intake/*, admin/responses/*. Server fns created for surveys, intake, responses, and calendar features. Fixed googleapis browser bundle leak via createServerFn isolation. Fixed raw Zod JSON error display in SurveyLinks.tsx. Known bug: apps/website dev server broken (Turbopack + @tailwindcss/node 4.2.2 enhanced-resolve issue) — tracked in memory.md."
+
+  - name: "TanStack Start Migration — Shop & Marketplace"
+    status: done
+    task_id: "AAA-T-196"
+    description: "Final CMS migration phase completing full Next.js removal. server.ts created for shop-products, shop-categories, and shop-marketplace features (all createServerFn with POST method). TanStack routes for /admin/shop/products/*, /admin/shop/categories, /admin/shop/marketplace/*, and /api/marketplace/$marketplace/callback. All Next.js actions.ts files removed from ALL CMS features (not just shop). next package removed from apps/cms/package.json — CMS is fully TanStack Start. createStartClient renamed to createServerClient across codebase. All queries.server.ts migrated to use createServerClient. CMS loader Pattern A established: no loaders in routes, components own data via useQuery (browser queries for reads, server fns for mutations only)."
+    why: "Completing the CMS migration eliminates Next.js from the CMS entirely, enabling self-hosted VPS deployment without Vercel dependency. Shop and marketplace were the final feature areas still using Next.js Server Actions."
+    depends_on: ["TanStack Start Migration — Surveys & Intake", "TanStack Start Migration — Content"]
+    completion_notes: "CMS is fully TanStack Start. Zero Next.js dependencies in apps/cms. All shop/marketplace routes and server functions migrated. createServerClient pattern unified across all server-only Supabase access. Feature branch: feature/cms-tanstack-migration."
 
   # Backlog
   - name: "Multi-language Support (PL/EN)"

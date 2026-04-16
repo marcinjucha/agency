@@ -6,27 +6,16 @@ import {
   updateBlogPostFn,
   deleteBlogPostFn,
 } from '@/features/blog/server'
-import { queryKeys } from '@/lib/query-keys'
 import { BlogPostEditor } from '@/features/blog/components/BlogPostEditor'
 import type { BlogPostPayload, SaveBlogPostResult } from '@/features/blog/components/BlogPostEditor'
 import type { BlogPost } from '@/features/blog/types'
 import { useQuery } from '@tanstack/react-query'
 import { getBlogPost, getBlogCategories } from '@/features/blog/queries'
 import { LoadingState } from '@agency/ui'
+import { queryKeys } from '@/lib/query-keys'
 
 export const Route = createFileRoute('/admin/blog/$postId')({
   head: () => buildCmsHead(messages.blog.editPost),
-  loader: ({ params, context: { queryClient } }) => {
-    // Use browser client queries — server fns cause undefined cache poisoning on warmup
-    queryClient.prefetchQuery({
-      queryKey: queryKeys.blog.detail(params.postId),
-      queryFn: () => getBlogPost(params.postId),
-    })
-    queryClient.prefetchQuery({
-      queryKey: queryKeys.blog.categories,
-      queryFn: getBlogCategories,
-    })
-  },
   component: BlogPostEditorPage,
 })
 

@@ -107,6 +107,7 @@
 - **Collapsible panels: close button inside panel** — Not only external toggle.
 - **Shorter skill names preferred** — Drop framework prefix when context is clear (e.g., "tanstack-setup" not "tanstack-start-setup").
 - **User wants port 3001 to work** — CMS testing happens on port 3001, not 3004. Ensure dev server config uses 3001.
+- **Clean git history before merge** — Before merging any feature branch, squash/reorganize commits into logical groups using `git reset --soft <base>` + re-commit. Avoids "śmietnik" (garbage) of WIP/fix commits in main history. WHY: user explicitly confirmed this pattern after AAA-T-196 where 16 commits were squashed to 2 before merge.
 
 ## Migration Coexistence Rules
 
