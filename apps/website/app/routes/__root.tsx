@@ -39,7 +39,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
     queryClient.ensureQueryData({
       queryKey: queryKeys.landing.all,
       queryFn: fetchLandingBlocks,
-      staleTime: Infinity, // Navbar/Footer blocks change very rarely — no refetch on navigation
+      staleTime: 1000 * 60 * 60, // 1h — aligned with CACHE_STATIC s-maxage=3600
     }),
   head: () => ({
     ...buildWebsiteHead('Halo Efekt — Automatyzacja procesów biznesowych'),
