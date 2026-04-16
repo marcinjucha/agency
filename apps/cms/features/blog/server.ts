@@ -56,14 +56,14 @@ export const getBlogPostsFn = createServerFn().handler(
 )
 
 export const getBlogPostFn = createServerFn()
-  .inputValidator((input: unknown) => blogPostIdSchema.parse(input))
-  .handler(async ({ data }): Promise<BlogPost | null> => {
+  .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
+  .handler(async ({ data: { id } }): Promise<BlogPost | null> => {
     const supabase = createStartClient()
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: row, error } = await (supabase as any)
       .from('blog_posts')
       .select('*')
-      .eq('id', data.id)
+      .eq('id', id)
       .maybeSingle()
 
     if (error) throw new Error(messages.blog.loadFailed)
