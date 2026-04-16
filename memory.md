@@ -5,6 +5,7 @@
 **Shop Platform (AAA-P-9):** Iter 1-8 done + kolega done. Remaining: iter 9 (feature flags) + iter 10 (polish/deploy). Both shops migrated to TanStack Start v1.167.
 **Marketplace Integration (AAA-P-9):** Iter 1-10 done. Manual testing remaining. 4 standalone n8n workflows.
 **CMS TanStack Start migration (AAA-T-192):** Core Setup + Auth + Layout DONE (2026-04-15). Next: per-feature tasks (surveys, shop, users, etc.).
+**Website TanStack Start migration (AAA-T-191):** DONE (2026-04-15). 5 iterations. All Next.js code removed.
 
 ## Completed Features (compressed)
 
@@ -13,6 +14,7 @@
 - Workflow Engine + n8n Orchestrator (AAA-T-143, AAA-T-177, AAA-T-179, AAA-T-182, AAA-T-183) — Done (2026-04-10/11). n8n owns all execution.
 - Survey→Workflow Binding + AI Results (AAA-T-186, AAA-T-189) — Done (2026-04-14)
 - Plugin Architecture (AAA-T-190), CMS TanStack Start scaffold (AAA-T-192) — Done (2026-04-15)
+- Website TanStack Start migration (AAA-T-191) — Done (2026-04-15). 5 iterations, all Next.js removed.
 
 ## Feedback & Corrections
 
@@ -29,6 +31,9 @@
 ## Bugs Found
 
 - **TanStack Start Vercel deployment requires `nitro()` vite plugin** — Without `import { nitro } from 'nitro/vite'` + `nitro()` in plugins, Vercel can't generate serverless functions → 404 on all SSR routes. Works locally without it. Vercel Framework Preset = "TanStack Start" (built-in). Add `nitro` to deps. See tanstack-setup skill.
+- **nitro() plugin crashes Vite dev server (ERR_LOAD_URL)** — `nitro()` from `nitro/vite` only needed for Vercel build, not dev. Fix: `...(command === 'build' ? [nitro()] : [])` in vite.config.ts. Applied to all 4 TanStack Start apps.
+- **Ad blockers block files with "cookie" in URL path** — uBlock/AdGuard block HTTP requests containing "cookie". In Vite dev mode each .tsx is a separate request, so `CookieBanner.tsx` was blocked → `virtual:tanstack-start-client-entry` failed → zero hydration → static HTML with no JS. Fix: rename to `ConsentBanner.tsx`. Does NOT happen in Next.js (bundled chunks). WHY critical: symptoms look like SSR bug, not ad blocker.
+- **ScrollReveal singleton breaks with Vite HMR** — Module-level `sharedObserver` + `callbacks` Map reset on HMR re-evaluation, but mounted components' `useEffect(fn, [])` don't re-run → IntersectionObserver callbacks lost. Fix: per-component `new IntersectionObserver()` inside useEffect.
 
 - **`apps/website` dev server broken after TanStack CMS migration (2026-04-15)** — Turbopack (Next.js 16 default) throws "Cannot find module 'enhanced-resolve'" from `@tailwindcss/node` 4.2.2. Root cause likely: npm install during CMS TanStack setup upgraded `@tailwindcss/node` to v4.2.2 which added `enhanced-resolve` as new dep — Turbopack's PostCSS resolution can't find it. Workaround tried: added `enhanced-resolve` to website devDependencies — did not fix. Next steps: (1) check if `@tailwindcss/postcss` version lock would help, (2) disable Turbopack for website via `next.config.ts` as fallback.
 
@@ -70,6 +75,8 @@
 - **CMS migration uses parent branch strategy** — Dedicated `feature/cms-tanstack-migration` parent branch; child branches per feature merge back to parent; parent merges to main when ALL features done. WHY: allows deleting Next.js code immediately instead of maintaining coexistence.
 - **`next` package stays in deps until ALL features migrated** — Even after removing Next.js infrastructure, unmigrated features still import next/cache, next/headers, next/link, next/navigation. Removing early breaks imports.
 - **RSC prop patterns don't apply in TanStack Start** — Components that received full objects from RSC (e.g., SurveyBuilder receiving survey) should take ID + internal useQuery instead. WHY: TanStack Start has no RSC; passing serialized objects from loader is fragile vs letting component own its data fetching.
+- **Website uses NO TanStack Query** — Unlike CMS (ensureQueryData in loader + useQuery in component), website uses simple `loader → Route.useLoaderData()`. No QueryClient in router context. WHY: website is public/cacheable (ISR via Cache-Control), no client-side mutations.
+- **createServiceClient() replaces createAnonClient() in website** — Old `createAnonClient()` misleadingly created a service-role client. New pattern: `createServiceClient()` in `lib/supabase/service.ts` using `import.meta.env.VITE_SUPABASE_URL` + `process.env.SUPABASE_SERVICE_ROLE_KEY`. Must be called INSIDE createServerFn, never at module level.
 
 ## Preferences
 
