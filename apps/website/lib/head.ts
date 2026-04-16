@@ -5,7 +5,14 @@
  * Title pattern: "{page} | Halo Efekt" or the full title for root.
  * Plausible analytics is added via script tag in root layout (iteration 2).
  */
-export function buildWebsiteHead(title: string, description?: string, ogImage?: string) {
+interface HeadOptions {
+  title: string
+  description?: string
+  ogImage?: string
+  keywords?: string[]
+}
+
+export function buildWebsiteHead(title: string, description?: string, ogImage?: string, keywords?: string[]) {
   const metaTags: Array<Record<string, string>> = [
     { charSet: 'utf-8' },
     { name: 'viewport', content: 'width=device-width, initial-scale=1' },
@@ -15,6 +22,10 @@ export function buildWebsiteHead(title: string, description?: string, ogImage?: 
   if (description) {
     metaTags.push({ name: 'description', content: description })
     metaTags.push({ property: 'og:description', content: description })
+  }
+
+  if (keywords?.length) {
+    metaTags.push({ name: 'keywords', content: keywords.join(', ') })
   }
 
   metaTags.push({ property: 'og:title', content: title })

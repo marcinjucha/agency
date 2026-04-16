@@ -25,11 +25,12 @@ export const Route = createFileRoute('/blog/$slug')({
     const title = seo?.title || post.title
     const description = seo?.description || post.excerpt || undefined
     const ogImage = seo?.ogImage || post.cover_image_url || undefined
+    const keywords = seo?.keywords?.length ? seo.keywords : undefined
 
     return {
-      ...buildWebsiteHead(title, description, ogImage),
+      ...buildWebsiteHead(title, description, ogImage, keywords),
       meta: [
-        ...buildWebsiteHead(title, description, ogImage).meta,
+        ...buildWebsiteHead(title, description, ogImage, keywords).meta,
         { property: 'og:type', content: 'article' },
         { property: 'og:locale', content: 'pl_PL' },
         ...(post.published_at ? [{ property: 'article:published_time', content: post.published_at }] : []),

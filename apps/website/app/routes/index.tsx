@@ -47,7 +47,10 @@ export const Route = createFileRoute('/')({
     const title = seo.title || FALLBACK_TITLE
     const description = seo.description || FALLBACK_DESCRIPTION
     const ogImage = seo.ogImage || FALLBACK_OG_IMAGE
-    const base = buildWebsiteHead(title, description, ogImage)
+    const keywords = seo.keywords?.length
+      ? seo.keywords
+      : loaderData?.siteSettings?.default_keywords ?? undefined
+    const base = buildWebsiteHead(title, description, ogImage, keywords)
 
     return {
       ...base,
