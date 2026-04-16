@@ -138,10 +138,12 @@ npm run build:website
 Auto-deploys to: https://agency-website.vercel.app
 
 **Environment Variables (Vercel):**
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `SUPABASE_SERVICE_ROLE_KEY` (for createServiceClient)
-- `N8N_WEBHOOK_URL`
-- `CMS_BASE_URL` (points to CMS for workflow trigger API, e.g. https://cms.haloefekt.pl)
+- `VITE_SUPABASE_URL` (public Supabase URL, safe for client bundle)
+- `SUPABASE_SERVICE_ROLE_KEY` (server-only, for createServiceClient)
+- `N8N_WEBHOOK_SURVEY_ANALYSIS_URL` (server-only, AI analysis)
+- `N8N_WEBHOOK_FORM_CONFIRM_EMAIL_URL` (server-only, email confirmation)
+- `CMS_BASE_URL` (server-only, workflow trigger API)
+- `WORKFLOW_TRIGGER_SECRET` (server-only, workflow auth)
 
 ## Related Files
 

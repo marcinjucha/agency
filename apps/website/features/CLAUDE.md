@@ -28,7 +28,7 @@ Each feature exposes data-fetching via `createServerFn` in a `server.ts` file (N
 
 ```typescript
 // features/blog/server.ts
-export const getPublishedBlogPostsFn = createServerFn().handler(async () => {
+export const getPublishedBlogPostsFn = createServerFn({ method: 'POST' }).handler(async () => {
   const supabase = createServiceClient()
   const { data } = await supabase.from('blog_posts').select('...')
   return data

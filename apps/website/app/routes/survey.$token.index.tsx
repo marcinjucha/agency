@@ -43,6 +43,7 @@ export const Route = createFileRoute('/survey/$token/')({
 
 function SurveyPage() {
   const result = Route.useLoaderData()
+  const { token } = Route.useParams()
 
   if (!result.isValid) {
     return (
@@ -57,8 +58,6 @@ function SurveyPage() {
       <SurveyError message={messages.survey.surveyUnavailable} />
     )
   }
-
-  const { token } = Route.useParams()
 
   return (
     <SurveyForm
