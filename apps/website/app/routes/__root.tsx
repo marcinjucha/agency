@@ -14,7 +14,7 @@ import {
 } from '@agency/database'
 import type { RouterContext } from '../router'
 import appCss from '../globals.css?url'
-import { buildWebsiteHead } from '@/lib/head'
+import { buildWebsiteHead, BASE_URL } from '@/lib/head'
 import { queryKeys } from '@/lib/query-keys'
 import { getPublicLandingPageFn } from '@/features/marketing/server'
 import { getSiteSettingsFn, type SiteSettings } from '@/features/site-settings/server'
@@ -92,7 +92,7 @@ function buildOrganizationJsonLd(settings: SiteSettings | null | undefined) {
     '@context': 'https://schema.org',
     '@type': 'Organization',
     name: settings?.organization_name || 'Halo Efekt',
-    url: 'https://haloefekt.pl',
+    url: BASE_URL,
     ...(settings?.logo_url ? { logo: settings.logo_url } : {}),
     sameAs: [
       settings?.social_facebook,

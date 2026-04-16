@@ -23,7 +23,8 @@
     "BUCKET_SECRET_KEY",
     "N8N_WEBHOOK_SURVEY_ANALYSIS_URL",
     "N8N_WEBHOOK_FORM_CONFIRM_EMAIL_URL",
-    "CMS_BASE_URL"
+    "CMS_BASE_URL",
+    "VITE_HOST_URL"
   ],
   "tasks": {
     "dev": {

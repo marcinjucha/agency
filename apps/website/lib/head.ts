@@ -9,7 +9,7 @@
  * (website vs article) to avoid duplicate meta tags.
  */
 
-export const BASE_URL = 'https://haloefekt.pl'
+export const BASE_URL = import.meta.env.VITE_HOST_URL ?? 'https://haloefekt.pl'
 
 export function buildWebsiteHead(title: string, description?: string, ogImage?: string, keywords?: string[]) {
   const metaTags: Array<Record<string, string>> = [
