@@ -1,5 +1,6 @@
 import { createServerFn } from '@tanstack/react-start'
 import { createServiceClient } from '@/lib/supabase/service'
+import { getTenantId } from '@/lib/tenant'
 import type { WebsiteBlogPost, WebsiteBlogListItem, SeoMetadata, BlogSitemapEntry } from './types'
 
 // ---------------------------------------------------------------------------
@@ -41,6 +42,7 @@ export const getPublishedBlogPostsFn = createServerFn({ method: 'POST' }).handle
     const { data, error } = await supabase
       .from('blog_posts')
       .select(LIST_FIELDS)
+      .eq('tenant_id', getTenantId())
       .eq('is_published', true)
       .lte('published_at', new Date().toISOString())
       .order('published_at', { ascending: false })
@@ -57,6 +59,7 @@ export const getPublishedBlogPostFn = createServerFn({ method: 'POST' })
     const { data: row, error } = await supabase
       .from('blog_posts')
       .select(POST_FIELDS)
+      .eq('tenant_id', getTenantId())
       .eq('slug', data.slug)
       .eq('is_published', true)
       .lte('published_at', new Date().toISOString())
@@ -74,6 +77,7 @@ export const getBlogPostByPreviewTokenFn = createServerFn({ method: 'POST' })
     const { data: row, error } = await supabase
       .from('blog_posts')
       .select(POST_FIELDS)
+      .eq('tenant_id', getTenantId())
       .eq('preview_token', data.token)
       .maybeSingle()
 
@@ -88,6 +92,7 @@ export const getPublishedBlogSlugsFn = createServerFn({ method: 'POST' }).handle
     const { data, error } = await supabase
       .from('blog_posts')
       .select('slug')
+      .eq('tenant_id', getTenantId())
       .eq('is_published', true)
       .lte('published_at', new Date().toISOString())
 
@@ -102,6 +107,7 @@ export const getPublishedBlogSlugsForSitemapFn = createServerFn({ method: 'POST'
     const { data, error } = await supabase
       .from('blog_posts')
       .select('slug, updated_at, published_at')
+      .eq('tenant_id', getTenantId())
       .eq('is_published', true)
       .lte('published_at', new Date().toISOString())
 
