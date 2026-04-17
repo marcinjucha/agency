@@ -11,8 +11,8 @@
     "clean": "rm -rf .output .vinxi"
   },
   "dependencies": {
-    "@agency/database": "*",
-    "@agency/ui": "*",
+    "@agency/database": "workspace:*",
+    "@agency/ui": "workspace:*",
     "@fontsource-variable/geist": "^5.2.8",
     "@fontsource/merriweather": "^5.2.6",
     "@supabase/supabase-js": "^2.45.0",

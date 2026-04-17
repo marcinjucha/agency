@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { getProductSlugs } from '@/features/products/queries'
 
-const BASE_URL = 'https://kolega.haloefekt.pl'
+const BASE_URL = 'https://oleg.haloefekt.pl'
 
 const staticPages = [
   { url: BASE_URL, priority: '1.0', changefreq: 'weekly' },

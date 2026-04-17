@@ -10,7 +10,7 @@ apps/
 ├── cms/         # Admin panel — TanStack Start + Vite 8 (port 3001)
 └── shop/        # E-commerce frontends — TanStack Start + Vite 8 (per-client)
     ├── jacek/   # Jacek's book shop (port 3002)
-    └── kolega/  # Oleg's general merchandise shop (port 3003)
+    └── oleg/  # Oleg's general merchandise shop (port 3003)
 ```
 
 ## Applications

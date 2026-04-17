@@ -41,7 +41,7 @@ export const Route = createFileRoute('/produkty/$slug')({
 
 function ProductDetailPage() {
   const { product } = Route.useLoaderData()
-  const siteUrl = 'https://kolega.haloefekt.pl'
+  const siteUrl = 'https://oleg.haloefekt.pl'
   const jsonLd = buildProductJsonLd(product, siteUrl)
 
   return (

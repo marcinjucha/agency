@@ -38,7 +38,7 @@ export const messages = {
     title: 'Kontakt',
     description: 'Masz pytanie? Skontaktuj się z nami.',
     emailLabel: 'E-mail',
-    email: 'kontakt@kolega.haloefekt.pl',
+    email: 'kontakt@oleg.haloefekt.pl',
   },
   common: {
     backToHome: 'Wróć na stronę główną',

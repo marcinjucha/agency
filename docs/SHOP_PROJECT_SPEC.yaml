@@ -9,7 +9,7 @@ architecture:
   key_decisions:
     - "Single Supabase DB — shop_ prefixed tables in same project as Halo Efekt, shared RLS patterns"
     - "CMS extended — features/shop-products/ and features/shop-categories/ in apps/cms, NOT a separate CMS"
-    - "Separate frontends per client — apps/shop/jacek/ and apps/shop/kolega/ migrated to TanStack Start v1.167 + Vite 8 (2026-04-15). apps/shop/tata/ planned but not built."
+    - "Separate frontends per client — apps/shop/jacek/ and apps/shop/oleg/ migrated to TanStack Start v1.167 + Vite 8 (2026-04-15). apps/shop/tata/ planned but not built."
     - "Tata: hybrid — external_link (paid books via Zolix/platform) + digital_download (free materials from S3). Kolega: external_link only (OLX/Allegro)"
     - "is_featured BOOLEAN on shop_products — homepage featured products, CMS toggle with Star icon. Affects all shops (shared table), DEFAULT false."
     - "Reuse packages — @agency/ui, @agency/database, @agency/email, editor, media, SEO, legal pages"
@@ -112,14 +112,14 @@ features:
     depends_on: ["Shop App Scaffolding", "Product Catalog (Listing + Detail)"]
     completion_notes: "ProductSearch with 300ms debounce + router.replace. Sitemap force-dynamic. OG image uses theme HSL values. Sample data: 3 categories, 6 books seeded to production."
 
-  # Kolega Shop (Oleg) — no Notion task
-  - name: "Kolega Shop Frontend (Oleg)"
+  # Oleg Shop — no Notion task
+  - name: "Oleg Shop Frontend"
     task: "N/A"
-    iteration: "kolega-1"
+    iteration: "oleg-1"
     size: L
     status: done
-    description: "apps/shop/kolega/ — full e-commerce frontend for general merchandise. Light warm linen theme (hsl(40 30% 97%)), steel blue primary, Inter font. Sidebar category filters (240px, server component), featured products via is_featured flag, ProductCard (aspect-[4/5], hover shadow), responsive grid, homepage hero + featured section, sitemap, OG image, JSON-LD. Port 3003."
-    why: "Second shop client — validates multi-tenant shop architecture and different visual direction from jacek (dark amber) vs kolega (light linen)"
+    description: "apps/shop/oleg/ — full e-commerce frontend for general merchandise. Light warm linen theme (hsl(40 30% 97%)), steel blue primary, Inter font. Sidebar category filters (240px, server component), featured products via is_featured flag, ProductCard (aspect-[4/5], hover shadow), responsive grid, homepage hero + featured section, sitemap, OG image, JSON-LD. Port 3003."
+    why: "Second shop client — validates multi-tenant shop architecture and different visual direction from jacek (dark amber) vs oleg (light linen)"
     depends_on: ["DB Schema", "CMS Product Editor", "Shop App Scaffolding"]
     completion_notes: "28 new files. Migrated from Next.js 16 to TanStack Start v1.167 + Vite 8 (2026-04-15). Same patterns as jacek: createServerFn loaders, ISR headers, @fontsource-variable/inter, CategorySidebar. is_featured migration added to shared shop_products table. Port 3003."
 

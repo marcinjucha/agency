@@ -3,26 +3,26 @@
   "configurations": [
     {
       "name": "website",
-      "runtimeExecutable": "npm",
+      "runtimeExecutable": "pnpm",
       "runtimeArgs": ["run", "dev:website"],
       "port": 3000
     },
     {
       "name": "cms",
-      "runtimeExecutable": "npm",
+      "runtimeExecutable": "pnpm",
       "runtimeArgs": ["run", "dev:cms"],
       "port": 3001
     },
     {
       "name": "shop-jacek",
-      "runtimeExecutable": "npm",
+      "runtimeExecutable": "pnpm",
       "runtimeArgs": ["run", "dev:shop-jacek"],
       "port": 3002
     },
     {
-      "name": "shop-kolega",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev:shop-kolega"],
+      "name": "shop-oleg",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["run", "dev:shop-oleg"],
       "port": 3003
     }
   ]

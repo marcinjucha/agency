@@ -18,7 +18,7 @@ export default defineConfig(({ command }) => ({
     // Required: vite:import-analysis encounters `import("tanstack-start-injected-head-scripts:v")`
     // in @tanstack/start-server-core/router-manifest.js during dev transform, before tanstackStart
     // plugin registers the virtual module. Pre-enforce stub prevents the resolution failure.
-    // jacek/kolega don't need this because they don't hit this code path in their build.
+    // jacek/oleg don't need this because they don't hit this code path in their build.
     {
       name: 'tanstack-start-virtual-modules-stub',
       enforce: 'pre' as const,

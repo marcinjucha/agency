@@ -24,7 +24,7 @@ export function formatPrice(
  */
 export function buildProductJsonLd(
   product: ShopProductPublic,
-  siteUrl: string = 'https://kolega.haloefekt.pl'
+  siteUrl: string = 'https://oleg.haloefekt.pl'
 ): Record<string, unknown> {
   const jsonLd: Record<string, unknown> = {
     '@context': 'https://schema.org',
