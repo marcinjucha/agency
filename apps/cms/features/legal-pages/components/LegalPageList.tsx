@@ -1,11 +1,17 @@
-
-
 import { useQuery } from '@tanstack/react-query'
 import { legalPageKeys } from '../queries'
 import { getLegalPagesFn } from '../server'
-import { Badge, Card, CardContent, LoadingState, ErrorState, EmptyState } from '@agency/ui'
+import {
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  LoadingState,
+  ErrorState,
+  EmptyState,
+} from '@agency/ui'
 import { Link } from '@tanstack/react-router'
-import { Scale, Pencil } from 'lucide-react'
+import { Scale, Pencil, Plus } from 'lucide-react'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
 import { useViewMode } from '@/hooks/use-view-mode'
@@ -25,14 +31,44 @@ export function LegalPageList() {
   })
 
   if (isLoading) return <LoadingState variant="skeleton-table" rows={3} />
-  if (error) return <ErrorState title={messages.common.errorOccurred} message={error.message} onRetry={() => refetch()} />
-  if (!pages?.length) return <EmptyState icon={Scale} title={messages.legalPages.empty} description={messages.legalPages.emptyDescription} />
+  if (error)
+    return (
+      <ErrorState
+        title={messages.common.errorOccurred}
+        message={error.message}
+        onRetry={() => refetch()}
+      />
+    )
+
+  if (!pages?.length) {
+    return (
+      <EmptyState
+        icon={Scale}
+        title={messages.legalPages.empty}
+        description={messages.legalPages.emptyDescription}
+        action={
+          <Button asChild>
+            <Link to={routes.admin.legalPageNew}>
+              <Plus size={16} className="mr-1.5" aria-hidden="true" />
+              {messages.legalPages.createButton}
+            </Link>
+          </Button>
+        }
+      />
+    )
+  }
 
   return (
     <div className="space-y-4">
-      {/* View toggle */}
-      <div className="flex justify-end">
+      {/* Toolbar */}
+      <div className="flex items-center justify-end gap-2">
         <ViewModeToggle value={viewMode} onChange={setViewMode} />
+        <Button asChild>
+          <Link to={routes.admin.legalPageNew}>
+            <Plus size={16} className="mr-1.5" aria-hidden="true" />
+            {messages.legalPages.createButton}
+          </Link>
+        </Button>
       </div>
 
       {viewMode === 'grid' ? (
@@ -46,6 +82,7 @@ export function LegalPageList() {
                     <Scale className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" aria-hidden="true" />
                     <p className="text-sm font-semibold text-foreground leading-snug line-clamp-2">{page.title}</p>
                   </div>
+                  <p className="text-xs text-muted-foreground font-mono truncate">/{page.slug}</p>
                   <div className="flex items-center justify-between gap-2">
                     <Badge variant={page.is_published ? 'default' : 'secondary'} className="text-xs">
                       {page.is_published ? messages.legalPages.published : messages.legalPages.draft}
@@ -74,9 +111,7 @@ export function LegalPageList() {
                 <Scale size={15} className="text-muted-foreground shrink-0" />
                 <div>
                   <p className="text-sm font-medium text-foreground">{page.title}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {new Date(page.updated_at).toLocaleDateString('pl-PL')}
-                  </p>
+                  <p className="text-xs text-muted-foreground font-mono">/{page.slug}</p>
                 </div>
               </div>
 
@@ -84,6 +119,9 @@ export function LegalPageList() {
                 <Badge variant={page.is_published ? 'default' : 'secondary'}>
                   {page.is_published ? messages.legalPages.published : messages.legalPages.draft}
                 </Badge>
+                <span className="text-xs text-muted-foreground">
+                  {new Date(page.updated_at).toLocaleDateString('pl-PL')}
+                </span>
                 <Pencil size={14} className="text-muted-foreground" />
               </div>
             </Link>

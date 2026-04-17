@@ -30,6 +30,7 @@ export const routes = {
     blogPost: (id: string) => `/admin/blog/${id}`,
     media: '/admin/media',
     legalPages: '/admin/legal-pages',
+    legalPageNew: '/admin/legal-pages/new',
     legalPage: (id: string) => `/admin/legal-pages/${id}`,
 
     // Shop

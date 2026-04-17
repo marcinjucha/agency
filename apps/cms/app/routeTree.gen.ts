@@ -34,6 +34,7 @@ import { Route as AdminSurveysNewRouteImport } from './routes/admin/surveys/new'
 import { Route as AdminSurveysSurveyIdRouteImport } from './routes/admin/surveys/$surveyId'
 import { Route as AdminShopCategoriesRouteImport } from './routes/admin/shop/categories'
 import { Route as AdminResponsesResponseIdRouteImport } from './routes/admin/responses/$responseId'
+import { Route as AdminLegalPagesNewRouteImport } from './routes/admin/legal-pages/new'
 import { Route as AdminLegalPagesPageIdRouteImport } from './routes/admin/legal-pages/$pageId'
 import { Route as AdminEmailTemplatesTypeRouteImport } from './routes/admin/email-templates/$type'
 import { Route as AdminDocforgeLicensesRouteImport } from './routes/admin/docforge/licenses'
@@ -178,6 +179,11 @@ const AdminResponsesResponseIdRoute =
     path: '/responses/$responseId',
     getParentRoute: () => AdminRoute,
   } as any)
+const AdminLegalPagesNewRoute = AdminLegalPagesNewRouteImport.update({
+  id: '/legal-pages/new',
+  path: '/legal-pages/new',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminLegalPagesPageIdRoute = AdminLegalPagesPageIdRouteImport.update({
   id: '/legal-pages/$pageId',
   path: '/legal-pages/$pageId',
@@ -272,6 +278,7 @@ export interface FileRoutesByFullPath {
   '/admin/docforge/licenses': typeof AdminDocforgeLicensesRoute
   '/admin/email-templates/$type': typeof AdminEmailTemplatesTypeRoute
   '/admin/legal-pages/$pageId': typeof AdminLegalPagesPageIdRoute
+  '/admin/legal-pages/new': typeof AdminLegalPagesNewRoute
   '/admin/responses/$responseId': typeof AdminResponsesResponseIdRoute
   '/admin/shop/categories': typeof AdminShopCategoriesRoute
   '/admin/surveys/$surveyId': typeof AdminSurveysSurveyIdRoute
@@ -313,6 +320,7 @@ export interface FileRoutesByTo {
   '/admin/docforge/licenses': typeof AdminDocforgeLicensesRoute
   '/admin/email-templates/$type': typeof AdminEmailTemplatesTypeRoute
   '/admin/legal-pages/$pageId': typeof AdminLegalPagesPageIdRoute
+  '/admin/legal-pages/new': typeof AdminLegalPagesNewRoute
   '/admin/responses/$responseId': typeof AdminResponsesResponseIdRoute
   '/admin/shop/categories': typeof AdminShopCategoriesRoute
   '/admin/surveys/$surveyId': typeof AdminSurveysSurveyIdRoute
@@ -356,6 +364,7 @@ export interface FileRoutesById {
   '/admin/docforge/licenses': typeof AdminDocforgeLicensesRoute
   '/admin/email-templates/$type': typeof AdminEmailTemplatesTypeRoute
   '/admin/legal-pages/$pageId': typeof AdminLegalPagesPageIdRoute
+  '/admin/legal-pages/new': typeof AdminLegalPagesNewRoute
   '/admin/responses/$responseId': typeof AdminResponsesResponseIdRoute
   '/admin/shop/categories': typeof AdminShopCategoriesRoute
   '/admin/surveys/$surveyId': typeof AdminSurveysSurveyIdRoute
@@ -400,6 +409,7 @@ export interface FileRouteTypes {
     | '/admin/docforge/licenses'
     | '/admin/email-templates/$type'
     | '/admin/legal-pages/$pageId'
+    | '/admin/legal-pages/new'
     | '/admin/responses/$responseId'
     | '/admin/shop/categories'
     | '/admin/surveys/$surveyId'
@@ -441,6 +451,7 @@ export interface FileRouteTypes {
     | '/admin/docforge/licenses'
     | '/admin/email-templates/$type'
     | '/admin/legal-pages/$pageId'
+    | '/admin/legal-pages/new'
     | '/admin/responses/$responseId'
     | '/admin/shop/categories'
     | '/admin/surveys/$surveyId'
@@ -483,6 +494,7 @@ export interface FileRouteTypes {
     | '/admin/docforge/licenses'
     | '/admin/email-templates/$type'
     | '/admin/legal-pages/$pageId'
+    | '/admin/legal-pages/new'
     | '/admin/responses/$responseId'
     | '/admin/shop/categories'
     | '/admin/surveys/$surveyId'
@@ -701,6 +713,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminResponsesResponseIdRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/legal-pages/new': {
+      id: '/admin/legal-pages/new'
+      path: '/legal-pages/new'
+      fullPath: '/admin/legal-pages/new'
+      preLoaderRoute: typeof AdminLegalPagesNewRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/legal-pages/$pageId': {
       id: '/admin/legal-pages/$pageId'
       path: '/legal-pages/$pageId'
@@ -846,6 +865,7 @@ interface AdminRouteChildren {
   AdminDocforgeLicensesRoute: typeof AdminDocforgeLicensesRoute
   AdminEmailTemplatesTypeRoute: typeof AdminEmailTemplatesTypeRoute
   AdminLegalPagesPageIdRoute: typeof AdminLegalPagesPageIdRoute
+  AdminLegalPagesNewRoute: typeof AdminLegalPagesNewRoute
   AdminResponsesResponseIdRoute: typeof AdminResponsesResponseIdRoute
   AdminShopCategoriesRoute: typeof AdminShopCategoriesRoute
   AdminSurveysSurveyIdRoute: typeof AdminSurveysSurveyIdRoute
@@ -882,6 +902,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminDocforgeLicensesRoute: AdminDocforgeLicensesRoute,
   AdminEmailTemplatesTypeRoute: AdminEmailTemplatesTypeRoute,
   AdminLegalPagesPageIdRoute: AdminLegalPagesPageIdRoute,
+  AdminLegalPagesNewRoute: AdminLegalPagesNewRoute,
   AdminResponsesResponseIdRoute: AdminResponsesResponseIdRoute,
   AdminShopCategoriesRoute: AdminShopCategoriesRoute,
   AdminSurveysSurveyIdRoute: AdminSurveysSurveyIdRoute,
