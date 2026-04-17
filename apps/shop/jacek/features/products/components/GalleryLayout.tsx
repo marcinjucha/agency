@@ -19,6 +19,7 @@ export function GalleryLayout({ product }: GalleryLayoutProps) {
   const price = formatPrice(product.price, product.currency ?? 'PLN')
 
   return (
+    <div className="space-y-12">
     <div className="grid gap-8 lg:grid-cols-2 lg:gap-16">
       <div className="space-y-4">
         {activeImage && (
@@ -139,6 +140,21 @@ export function GalleryLayout({ product }: GalleryLayoutProps) {
           </div>
         )}
       </div>
+    </div>
+
+    {product.html_body && (
+      <>
+        <div
+          className="h-px"
+          style={{ backgroundColor: 'var(--color-border)' }}
+          aria-hidden="true"
+        />
+        <div
+          className="product-prose max-w-none"
+          dangerouslySetInnerHTML={{ __html: product.html_body }}
+        />
+      </>
+    )}
     </div>
   )
 }
