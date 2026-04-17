@@ -24,7 +24,6 @@ import { messages } from '@/lib/messages'
 import { createMediaProxyEditor } from '@/lib/utils/media-proxy'
 import { InsertMediaModal } from '@/features/media/components/InsertMediaModal'
 import type { CreateShopProductFormData } from '../validation'
-import { LayoutSelector } from './LayoutSelector'
 import { ShopCategorySelect } from './ShopCategorySelect'
 
 interface ProductSettingsSidebarProps {
@@ -188,18 +187,6 @@ export function ProductSettingsSidebar({
             </div>
           </div>
         )}
-
-        {/* Display Layout */}
-        <div className="space-y-1.5">
-          <Label className="text-sm font-medium">{messages.shop.displayLayoutLabel}</Label>
-          <Controller
-            name="display_layout"
-            control={control}
-            render={({ field }) => (
-              <LayoutSelector value={field.value} onChange={field.onChange} />
-            )}
-          />
-        </div>
 
         {/* Category */}
         <div className="space-y-1.5">

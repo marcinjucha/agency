@@ -3,7 +3,6 @@ import { createServerFn } from '@tanstack/react-start'
 import { getProductBySlug } from '@/features/products/queries'
 import { buildProductJsonLd } from '@/features/products/utils'
 import { GalleryLayout } from '@/features/products/components/GalleryLayout'
-import { EditorialLayout } from '@/features/products/components/EditorialLayout'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
 
@@ -55,11 +54,7 @@ function ProductDetailPage() {
         </Link>
       </div>
 
-      {product.display_layout === 'editorial' ? (
-        <EditorialLayout product={product} />
-      ) : (
-        <GalleryLayout product={product} />
-      )}
+      <GalleryLayout product={product} />
 
       <script
         type="application/ld+json"
