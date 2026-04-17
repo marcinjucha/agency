@@ -11,27 +11,27 @@
 @theme {
   /* Deep charcoal backgrounds — darker than main website */
   --color-background: hsl(20 10% 6%);
-  --color-foreground: hsl(30 15% 88%);
+  --color-foreground: hsl(30 15% 92%);
   --color-card: hsl(20 10% 8%);
-  --color-card-foreground: hsl(30 15% 88%);
+  --color-card-foreground: hsl(30 15% 92%);
   --color-popover: hsl(20 10% 8%);
-  --color-popover-foreground: hsl(30 15% 88%);
+  --color-popover-foreground: hsl(30 15% 92%);
 
   /* Warm amber primary — book/library feel */
   --color-primary: hsl(36 90% 50%);
   --color-primary-foreground: hsl(20 10% 6%);
 
   --color-secondary: hsl(20 10% 12%);
-  --color-secondary-foreground: hsl(30 15% 88%);
+  --color-secondary-foreground: hsl(30 15% 92%);
 
   --color-muted: hsl(20 8% 14%);
-  --color-muted-foreground: hsl(25 10% 50%);
+  --color-muted-foreground: hsl(30 10% 80%);
 
   --color-accent: hsl(36 50% 14%);
-  --color-accent-foreground: hsl(30 15% 88%);
+  --color-accent-foreground: hsl(30 15% 92%);
 
   --color-destructive: hsl(0 63% 31%);
-  --color-destructive-foreground: hsl(30 15% 88%);
+  --color-destructive-foreground: hsl(30 15% 92%);
 
   --color-border: hsl(25 12% 18%);
   --color-input: hsl(25 12% 18%);
@@ -55,11 +55,21 @@ body {
   font-family: var(--font-body);
 }
 
+/* Amber eyebrow labels (e.g. "CENA", "O AUTORZE") — small uppercase primary text
+   needs semibold + brighter amber for perceived weight at 0.75rem. */
+.text-primary.uppercase,
+.uppercase.text-primary {
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: hsl(38 95% 58%);
+}
+
 /* Product prose styling — readable typography for product description content */
 .product-prose {
   font-size: 1.125rem;
-  line-height: 1.8;
-  color: var(--color-muted-foreground);
+  line-height: 1.75;
+  font-weight: 500;
+  color: var(--color-foreground);
 }
 
 .product-prose > * + * {
@@ -143,7 +153,7 @@ body {
   margin-top: 2em;
   margin-bottom: 2em;
   font-style: italic;
-  color: var(--color-muted-foreground);
+  color: var(--color-foreground);
   background-color: color-mix(in srgb, var(--color-primary) 5%, transparent);
   border-radius: 0 2px 2px 0;
 }
@@ -156,8 +166,9 @@ body {
 }
 
 /* Editorial layout — constrained reading column */
+/* Matches Tailwind max-w-4xl (56rem = 896px) for parity with other readers */
 .product-prose--editorial {
-  max-width: 680px;
+  max-width: 56rem;
 }
 
 /* Drop cap on first paragraph following the prose root */

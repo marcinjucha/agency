@@ -69,7 +69,7 @@ export function CalendarBooking({ surveyId, responseId }: CalendarBookingProps) 
   if (bookingSuccess) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-muted/30 to-muted py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-2xl mx-auto">
+        <div className="max-w-4xl mx-auto">
           <Card className="shadow-xl border-0">
             <div className="p-8 sm:p-12">
               <BookingSuccess date={selectedDate} slot={selectedSlot} />
@@ -82,7 +82,7 @@ export function CalendarBooking({ surveyId, responseId }: CalendarBookingProps) 
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-muted/30 to-muted py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-2xl mx-auto">
+      <div className="max-w-4xl mx-auto">
         <Card className="shadow-xl border-0">
           <div className="p-8 sm:p-12">
             {/* Header */}

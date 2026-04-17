@@ -47,7 +47,7 @@ export function EditorialLayout({ product }: EditorialLayoutProps) {
               {product.title}
             </h1>
             {product.short_description && (
-              <p className="text-lg text-muted-foreground leading-relaxed">
+              <p className="text-lg text-foreground leading-relaxed">
                 {product.short_description}
               </p>
             )}

@@ -41,7 +41,7 @@ export function AuthorBio() {
             {messages.about.intro.map((paragraph) => (
               <p
                 key={paragraph}
-                className="text-base leading-relaxed text-muted-foreground sm:text-lg"
+                className="text-base leading-relaxed text-foreground sm:text-lg"
               >
                 {paragraph}
               </p>
@@ -57,7 +57,7 @@ export function AuthorBio() {
               {messages.about.books.map((book) => (
                 <li
                   key={book}
-                  className="text-sm leading-relaxed text-muted-foreground sm:text-base"
+                  className="text-sm leading-relaxed text-foreground sm:text-base"
                 >
                   <span aria-hidden className="mr-2 text-primary">
                     •
@@ -73,7 +73,7 @@ export function AuthorBio() {
             {messages.about.closing.map((paragraph) => (
               <p
                 key={paragraph}
-                className="text-base leading-relaxed text-muted-foreground sm:text-lg"
+                className="text-base leading-relaxed text-foreground sm:text-lg"
               >
                 {paragraph}
               </p>

@@ -12,7 +12,7 @@ export function LegalPageContent({ page }: Props) {
           </h1>
         </header>
         {page.html_body && (
-          <div className="mx-auto mt-12 max-w-[700px] px-4 sm:px-6">
+          <div className="mx-auto mt-12 max-w-4xl px-4 sm:px-6">
             <div
               className="product-prose"
               dangerouslySetInnerHTML={{ __html: page.html_body }}

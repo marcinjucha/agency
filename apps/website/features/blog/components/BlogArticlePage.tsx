@@ -79,7 +79,7 @@ export function BlogArticlePage({ post, isPreview = false }: BlogArticlePageProp
 
         {/* Article content */}
         {post.html_body && (
-          <div className="mx-auto mt-12 max-w-[700px] px-4 sm:px-6 lg:px-8">
+          <div className="mx-auto mt-12 max-w-4xl px-4 sm:px-6 lg:px-8">
             <div
               className="blog-prose"
               dangerouslySetInnerHTML={{ __html: post.html_body }}
@@ -88,7 +88,7 @@ export function BlogArticlePage({ post, isPreview = false }: BlogArticlePageProp
         )}
 
         {/* Article footer */}
-        <div className="mx-auto mt-16 max-w-[700px] px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto mt-16 max-w-4xl px-4 sm:px-6 lg:px-8">
           <hr className="border-border" />
 
           <div className="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-between">
