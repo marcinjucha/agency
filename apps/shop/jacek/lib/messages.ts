@@ -63,7 +63,8 @@ export const messages = {
     description: 'Strona, której szukasz, nie istnieje lub została przeniesiona.',
   },
   footer: {
-    copyright: '© {year} Jacek. Wszelkie prawa zastrzeżone.',
+    copyright: '© {year} Jacek Jucha. Wszelkie prawa zastrzeżone.',
     rights: 'Wszelkie prawa zastrzeżone.',
+    privacyPolicy: 'Polityka prywatności',
   },
 } as const
