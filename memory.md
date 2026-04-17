@@ -2,7 +2,7 @@
 
 ## Active Work
 
-**Shop Platform (AAA-P-9):** Iter 1-8 done + kolega done. Remaining: iter 9 (feature flags) + iter 10 (polish/deploy). Both shops migrated to TanStack Start v1.167.
+**Shop Platform (AAA-P-9):** Iter 1-8 done + oleg done. Remaining: iter 9 (feature flags) + iter 10 (polish/deploy). Both shops migrated to TanStack Start v1.167.
 **Marketplace Integration (AAA-P-9):** Iter 1-10 done. Manual testing remaining. 4 standalone n8n workflows.
 **CMS TanStack Start migration:** Full migration DONE (AAA-T-192..198, 2026-04-16). Next.js fully removed from CMS. All features migrated to createServerFn Pattern A. See `docs/TANSTACK_START_PATTERNS.md`.
 

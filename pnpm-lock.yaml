@@ -288,7 +288,7 @@ importers:
         specifier: ^6.1.1
         version: 6.1.1(typescript@5.9.3)(vite@8.0.8(@types/node@20.19.39)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0))
 
-  apps/shop/kolega:
+  apps/shop/oleg:
     dependencies:
       '@agency/database':
         specifier: workspace:*

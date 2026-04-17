@@ -29,7 +29,7 @@ export const Route = createRootRoute({
       {
         src: 'https://analytics.trustcode.pl/js/script.outbound-links.file-downloads.js',
         defer: true,
-        'data-domain': 'kolega.haloefekt.pl',
+        'data-domain': 'oleg.haloefekt.pl',
         'data-api': 'https://analytics.trustcode.pl/api/event',
       },
     ],

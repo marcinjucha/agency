@@ -3,7 +3,7 @@ import { createFileRoute } from '@tanstack/react-router'
 const ROBOTS_CONTENT = `User-agent: *
 Allow: /
 
-Sitemap: https://kolega.haloefekt.pl/sitemap.xml`
+Sitemap: https://oleg.haloefekt.pl/sitemap.xml`
 
 export const Route = createFileRoute('/robots.txt')({
   component: () => null,

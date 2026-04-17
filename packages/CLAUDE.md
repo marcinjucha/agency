@@ -198,7 +198,7 @@ All packages extend root `tsconfig.json`:
 
 Packages are **NOT pre-built**. They're consumed directly by each app's bundler:
 
-**All apps (cms, website, shop/jacek, shop/kolega)** use TanStack Start + Vite 8. Vite handles raw TypeScript natively. No `transpilePackages` config needed. `vite-tsconfig-paths` plugin resolves `@agency/*` through workspace symlinks.
+**All apps (cms, website, shop/jacek, shop/oleg)** use TanStack Start + Vite 8. Vite handles raw TypeScript natively. No `transpilePackages` config needed. `vite-tsconfig-paths` plugin resolves `@agency/*` through workspace symlinks.
 
 This means:
 - ✅ No build step needed for packages

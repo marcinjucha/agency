@@ -63,7 +63,7 @@ agency/
     └── SHOP_PROJECT_SPEC.yaml  # Platforma Sklepowa (AAA-P-9)
 ```
 
-Note: `apps/shop/jacek/` and `apps/shop/kolega/` migrated from Next.js 16 to TanStack Start v1.167 + Vite 8 (2026-04-15). `apps/shop/tata/` planned but not yet created. Shop CMS features exist in `apps/cms/features/shop-*/`.
+Note: `apps/shop/jacek/` and `apps/shop/oleg/` migrated from Next.js 16 to TanStack Start v1.167 + Vite 8 (2026-04-15). `apps/shop/tata/` planned but not yet created. Shop CMS features exist in `apps/cms/features/shop-*/`.
 
 ---
 
@@ -200,7 +200,7 @@ This monorepo contains two Notion projects with separate PROJECT_SPEC files:
 - **Always use feature branches** — Never commit directly to main. Create `feature/aaa-t-{id}-{slug}` branch, implement, test, then merge with `--no-ff`.
 - **All docs commits before merge** — memory.md, PROJECT_SPEC.yaml updates go on the feature branch BEFORE merging to main.
 - **Commit before side-quests** — When user requests work outside current task scope (skill updates, visual audit), commit current progress first.
-- **Worktree needs .env.local** — Git worktrees don't include .env.local (gitignored). Symlink from main (stays in sync): `ln -s $(pwd)/apps/cms/.env.local ./worktree-pnpm/apps/cms/.env.local` (repeat for website, shop/jacek, shop/kolega). Copy (`cp`) also works for one-off setups.
+- **Worktree needs .env.local** — Git worktrees don't include .env.local (gitignored). Symlink from main (stays in sync): `ln -s $(pwd)/apps/cms/.env.local ./worktree-pnpm/apps/cms/.env.local` (repeat for website, shop/jacek, shop/oleg). Copy (`cp`) also works for one-off setups.
 - **Stage agent-created files explicitly** — The Write tool creates files on disk but does NOT `git add` them. After any file creation step, verify the file appears in `git status` and stage it before committing. WHY: docs/polityka-prywatnosci.md was created during AAA-T-162 but never staged — untracked files are lost on branch switch.
 - **`chore/` branch prefix for tech-debt without a Notion task** — Use `chore/{slug}` branch naming (no `AAA-T-xxx` prefix) for internal cleanup/refactoring work that doesn't correspond to a tracked Notion task. Mirrors npm semver convention. Example: `chore/plugin-arch-cleanup`.
 - **Clean git history before merge** — Before merging any feature branch, squash/reorganize commits into logical groups using `git reset --soft <base>` + re-commit. WHY: user explicitly confirmed this pattern (AAA-T-196) — prevents WIP/fix commit noise in main history.
@@ -212,7 +212,7 @@ This monorepo contains two Notion projects with separate PROJECT_SPEC files:
 - **~~Turbopack barrel re-export bug~~** — Historical (Next.js era, no longer relevant). Removed with TanStack Start migration.
 - **Functional patterns: `remeda` + `neverthrow`** — Project adopts `remeda` for `pipe()`/functional composition and `neverthrow` for typed `Result<T, E>` error handling. **New server functions** use `ok().andThen().asyncAndThen().match()` instead of `try/catch`. Key patterns: `pipe()` for data transformations, `Result`/`ResultAsync` for error handling, `andThen` chaining with final `.match()`, `fromThrowable`/`ResultAsync.fromPromise` for wrapping unsafe code. **Not Effect.js** — lightweight (~5KB neverthrow + tree-shakeable remeda).
 - **Boy Scout Rule** — Always leave code better than you found it. When touching a file: migrate try/catch → Result types, imperative loops → `pipe()`, fix naming, add missing types. Only in files you're already changing — don't refactor untouched code proactively.
-- **React Compiler enabled (cms, website)** — `reactCompiler: true` in cms and website `next.config.ts`. Shop apps (jacek, kolega) use TanStack Start + Vite 8 with `babel-plugin-react-compiler` in `vite.config.ts`. Auto-memoizes — don't add `useCallback`/`useMemo` to new code. Boy Scout Rule: remove manual memoization when touching files.
+- **React Compiler enabled (cms, website)** — `reactCompiler: true` in cms and website `next.config.ts`. Shop apps (jacek, oleg) use TanStack Start + Vite 8 with `babel-plugin-react-compiler` in `vite.config.ts`. Auto-memoizes — don't add `useCallback`/`useMemo` to new code. Boy Scout Rule: remove manual memoization when touching files.
 - **Type-safe domain modeling** — Never pass plain `string` where a domain type exists. Derive typed unions from `as const` objects (single source of truth), validate at DB boundary with a validator function. Applied in RBAC (`PermissionKey`), should extend to all enum-like domain values (workflow step types, blog statuses, etc.). See `ag-coding-practices` skill for full pattern.
 
 ---
