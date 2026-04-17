@@ -11,8 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.xml]'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.txt]'
-import { Route as OAutorzeRouteImport } from './routes/o-autorze'
-import { Route as KontaktRouteImport } from './routes/kontakt'
+import { Route as PolitykaPrywatnosciRouteImport } from './routes/polityka-prywatnosci'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProduktyIndexRouteImport } from './routes/produkty.index'
 import { Route as ProduktySlugRouteImport } from './routes/produkty.$slug'
@@ -27,14 +26,9 @@ const RobotsDottxtRoute = RobotsDottxtRouteImport.update({
   path: '/robots.txt',
   getParentRoute: () => rootRouteImport,
 } as any)
-const OAutorzeRoute = OAutorzeRouteImport.update({
-  id: '/o-autorze',
-  path: '/o-autorze',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const KontaktRoute = KontaktRouteImport.update({
-  id: '/kontakt',
-  path: '/kontakt',
+const PolitykaPrywatnosciRoute = PolitykaPrywatnosciRouteImport.update({
+  id: '/polityka-prywatnosci',
+  path: '/polityka-prywatnosci',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -55,8 +49,7 @@ const ProduktySlugRoute = ProduktySlugRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/kontakt': typeof KontaktRoute
-  '/o-autorze': typeof OAutorzeRoute
+  '/polityka-prywatnosci': typeof PolitykaPrywatnosciRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/produkty/$slug': typeof ProduktySlugRoute
@@ -64,8 +57,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/kontakt': typeof KontaktRoute
-  '/o-autorze': typeof OAutorzeRoute
+  '/polityka-prywatnosci': typeof PolitykaPrywatnosciRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/produkty/$slug': typeof ProduktySlugRoute
@@ -74,8 +66,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/kontakt': typeof KontaktRoute
-  '/o-autorze': typeof OAutorzeRoute
+  '/polityka-prywatnosci': typeof PolitykaPrywatnosciRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/produkty/$slug': typeof ProduktySlugRoute
@@ -85,8 +76,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/kontakt'
-    | '/o-autorze'
+    | '/polityka-prywatnosci'
     | '/robots.txt'
     | '/sitemap.xml'
     | '/produkty/$slug'
@@ -94,8 +84,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/kontakt'
-    | '/o-autorze'
+    | '/polityka-prywatnosci'
     | '/robots.txt'
     | '/sitemap.xml'
     | '/produkty/$slug'
@@ -103,8 +92,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
-    | '/kontakt'
-    | '/o-autorze'
+    | '/polityka-prywatnosci'
     | '/robots.txt'
     | '/sitemap.xml'
     | '/produkty/$slug'
@@ -113,8 +101,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  KontaktRoute: typeof KontaktRoute
-  OAutorzeRoute: typeof OAutorzeRoute
+  PolitykaPrywatnosciRoute: typeof PolitykaPrywatnosciRoute
   RobotsDottxtRoute: typeof RobotsDottxtRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   ProduktySlugRoute: typeof ProduktySlugRoute
@@ -137,18 +124,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RobotsDottxtRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/o-autorze': {
-      id: '/o-autorze'
-      path: '/o-autorze'
-      fullPath: '/o-autorze'
-      preLoaderRoute: typeof OAutorzeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/kontakt': {
-      id: '/kontakt'
-      path: '/kontakt'
-      fullPath: '/kontakt'
-      preLoaderRoute: typeof KontaktRouteImport
+    '/polityka-prywatnosci': {
+      id: '/polityka-prywatnosci'
+      path: '/polityka-prywatnosci'
+      fullPath: '/polityka-prywatnosci'
+      preLoaderRoute: typeof PolitykaPrywatnosciRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -177,8 +157,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  KontaktRoute: KontaktRoute,
-  OAutorzeRoute: OAutorzeRoute,
+  PolitykaPrywatnosciRoute: PolitykaPrywatnosciRoute,
   RobotsDottxtRoute: RobotsDottxtRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   ProduktySlugRoute: ProduktySlugRoute,

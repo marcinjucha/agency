@@ -3,11 +3,19 @@ import { createRootRoute, HeadContent, Outlet, Scripts, ScrollRestoration } from
 import appCss from '../globals.css?url'
 import { Navbar } from '@/features/layout/components/Navbar'
 import { Footer } from '@/features/layout/components/Footer'
+import { CookieBanner } from '@/features/legal/components/CookieBanner'
+import { getNavProductsFn } from '@/features/layout/server'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
-import type { ReactNode } from 'react'
 
 export const Route = createRootRoute({
+  loader: async () => {
+    const navProducts = await getNavProductsFn()
+    return { navProducts }
+  },
+  headers: () => ({
+    'Cache-Control': 'public, max-age=3600, stale-while-revalidate=86400',
+  }),
   head: () => ({
     meta: [
       { charSet: 'utf-8' },
@@ -51,6 +59,7 @@ function RootLayout() {
           <Outlet />
         </div>
         <Footer />
+        <CookieBanner />
         <ScrollRestoration />
         <Scripts />
       </body>

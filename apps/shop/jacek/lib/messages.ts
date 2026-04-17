@@ -6,16 +6,6 @@ export const messages = {
     notFound: 'Nie znaleziono',
     backToHome: 'Wróć na stronę główną',
   },
-  nav: {
-    home: 'Strona główna',
-    books: 'Książki',
-    about: 'O Autorze',
-    contact: 'Kontakt',
-  },
-  hero: {
-    title: 'Książki, które uczą myśleć',
-    subtitle: 'Autorskie publikacje i materiały edukacyjne — od praktyki do teorii.',
-  },
   products: {
     title: 'Książki',
     featured: 'Najnowsze publikacje',
@@ -42,18 +32,31 @@ export const messages = {
     all: 'Wszystkie',
   },
   about: {
-    title: 'O Autorze',
-    description:
-      'Pisarz, edukator i pasjonat literatury. Od lat dzieli się swoimi przemyśleniami na temat świata, natury i ludzkiej kondycji — zarówno w formie powieści, jak i materiałów edukacyjnych. Każda książka to zaproszenie do wspólnej podróży przez wyobraźnię i refleksję.',
-    paragraph1:
-      'Wierzę, że dobra literatura nie musi być trudna — wystarczy, że jest szczera. Moje książki powstają z codziennych obserwacji, rozmów i\u00a0ciszy, która pozwala usłyszeć to, co naprawdę ważne.',
-    paragraph2:
-      'Materiały edukacyjne, które tworzę, są dostępne bezpłatnie — bo wiedza powinna być dostępna dla każdego.',
+    label: 'O Autorze',
+    name: 'Jacek Jucha',
+    photoAlt: 'Jacek Jucha',
+    intro: [
+      'Nazywam się Jacek Jucha i chciałbym zachęcić Cię do lektury moich książek wydawanych przez ostatnie dwie dekady.',
+      'Napisałem je z myślą o\u00a0„ocaleniu od zapomnienia” – jak to ładnie nazwała moja Koleżanka Magdalena Kątnik-Kowalska – ludzi i\u00a0zdarzeń, które odbyły się w\u00a0minionym XX wieku.',
+    ],
+    booksIntro: 'Chronologicznie wygląda to następująco:',
+    books: [
+      'jako autor: Sport szkolny w\u00a0mieście i\u00a0gminie Leżajsk (1998r.), Sąd w\u00a0Leżajsku (2021r.)',
+      'i\u00a0współautor: 100 lat sportu w\u00a0Leżajsku (2002), Dzieje sportu w\u00a0Leżajsku (2009r.), LKS Błękit Żołynia na tle rozwoju sportu w\u00a0gminie (2011r.)',
+    ],
+    closing: [
+      'Z\u00a0wykształcenia nauczyciel dyplomowany, z\u00a0zamiłowania regionalista, amator – historyk i\u00a0ornitolog.',
+      'Moja praca ornitologa\u00a0– amatora została nagrodzona odznaką „Pomurnik” Małopolskiego Towarzystwa Ornitologicznego w\u00a0Krakowie.',
+    ],
+    mottoLabel: 'Motto mojej codzienności:',
+    mottoQuote: '„Panie pomóż mi być takim człowiekiem, za jakiego bierze mnie mój pies”',
+    mottoSource: '(słowa pochodzą z\u00a0książki „S@motność w\u00a0Sieci” – J.\u00a0L.\u00a0Wiśniewskiego)',
   },
-  contact: {
-    title: 'Kontakt',
-    description: 'Masz pytanie dotyczące publikacji lub chcesz nawiązać współpracę? Napisz do mnie.',
-    email: 'kontakt@haloefekt.pl',
+  cookie: {
+    message: 'Ta strona używa plików cookies w celach analitycznych.',
+    accept: 'Rozumiem',
+    moreInfo: 'Więcej informacji',
+    privacyLink: 'Polityce prywatności',
   },
   notFound: {
     title: 'Nie znaleziono strony',
