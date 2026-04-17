@@ -1,6 +1,6 @@
 import { createServerFn } from '@tanstack/react-start'
 import { err, ResultAsync } from 'neverthrow'
-import { fromSupabaseVoid } from '@/lib/result-helpers'
+import { fromSupabase, fromSupabaseVoid } from '@/lib/result-helpers'
 import { legalPageSchema } from './validation'
 import { parseContent, generateHtmlFromContent } from '../editor/utils'
 import { messages } from '@/lib/messages'
@@ -20,6 +20,15 @@ const pagesTable = (supabase: AuthContextFull['supabase']) => (supabase as any).
 
 const dbError = (e: unknown) => (e instanceof Error ? e.message : messages.common.unknownError)
 
+/**
+ * Map raw DB error to friendly slug-conflict message when the unique index
+ * on (tenant_id, slug) fires. Otherwise return the original message.
+ */
+const mapSlugConflict = (raw: string): string =>
+  /23505|duplicate key|unique/i.test(raw) && /slug/i.test(raw)
+    ? messages.legalPages.slugConflict
+    : raw
+
 // ---------------------------------------------------------------------------
 // Input schemas
 // ---------------------------------------------------------------------------
@@ -27,6 +36,10 @@ const dbError = (e: unknown) => (e instanceof Error ? e.message : messages.commo
 const updateLegalPageInputSchema = z.object({
   id: z.string().uuid(),
   data: legalPageSchema,
+})
+
+const deleteLegalPageInputSchema = z.object({
+  id: z.string().uuid(),
 })
 
 // ---------------------------------------------------------------------------
@@ -50,34 +63,102 @@ export const getLegalPagesFn = createServerFn({ method: 'POST' }).handler(async 
   return (data || []).map(toLegalPageListItem)
 })
 
+export const createLegalPageFn = createServerFn({ method: 'POST' })
+  .inputValidator((input: z.infer<typeof legalPageSchema>) => legalPageSchema.parse(input))
+  .handler(
+    async ({ data: input }): Promise<{ success: boolean; id?: string; error?: string }> => {
+      const result = await requireAuthContextFull().andThen((auth) => {
+        if (!hasPermission('content.legal_pages', auth.permissions)) {
+          return err(messages.common.noPermission)
+        }
+
+        const content = parseContent(input.content) as TiptapContent
+        const htmlBody = generateHtmlFromContent(content)
+
+        const payload = {
+          tenant_id: auth.tenantId,
+          slug: input.slug,
+          title: input.title,
+          page_type: 'legal',
+          blocks: content,
+          html_body: htmlBody,
+          is_published: input.is_published,
+        }
+
+        return ResultAsync.fromPromise(
+          pagesTable(auth.supabase).insert(payload).select('id').single(),
+          dbError,
+        )
+          .andThen(fromSupabase<{ id: string }>())
+          .mapErr(mapSlugConflict)
+      })
+
+      return result.match(
+        (row) => ({ success: true, id: row.id }),
+        (error) => ({ success: false, error }),
+      )
+    },
+  )
+
 export const updateLegalPageFn = createServerFn({ method: 'POST' })
-  .inputValidator((input: z.infer<typeof updateLegalPageInputSchema>) => updateLegalPageInputSchema.parse(input))
+  .inputValidator((input: z.infer<typeof updateLegalPageInputSchema>) =>
+    updateLegalPageInputSchema.parse(input),
+  )
   .handler(
     async ({ data: input }): Promise<{ success: boolean; error?: string }> => {
-      const result = await requireAuthContextFull()
-        .andThen((auth) => {
-          if (!hasPermission('content.legal_pages', auth.permissions)) {
-            return err(messages.common.noPermission)
-          }
+      const result = await requireAuthContextFull().andThen((auth) => {
+        if (!hasPermission('content.legal_pages', auth.permissions)) {
+          return err(messages.common.noPermission)
+        }
 
-          const content = parseContent(input.data.content) as TiptapContent
-          const htmlBody = generateHtmlFromContent(content)
+        const content = parseContent(input.data.content) as TiptapContent
+        const htmlBody = generateHtmlFromContent(content)
 
-          const payload = {
-            title: input.data.title,
-            blocks: content,
-            html_body: htmlBody,
-            is_published: input.data.is_published,
-          }
+        const payload = {
+          slug: input.data.slug,
+          title: input.data.title,
+          blocks: content,
+          html_body: htmlBody,
+          is_published: input.data.is_published,
+        }
 
-          return ResultAsync.fromPromise(
-            pagesTable(auth.supabase)
-              .update(payload)
-              .eq('id', input.id)
-              .eq('page_type', 'legal'),
-            dbError,
-          ).andThen(fromSupabaseVoid())
-        })
+        return ResultAsync.fromPromise(
+          pagesTable(auth.supabase)
+            .update(payload)
+            .eq('id', input.id)
+            .eq('page_type', 'legal'),
+          dbError,
+        )
+          .andThen(fromSupabaseVoid())
+          .mapErr(mapSlugConflict)
+      })
+
+      return result.match(
+        () => ({ success: true }),
+        (error) => ({ success: false, error }),
+      )
+    },
+  )
+
+export const deleteLegalPageFn = createServerFn({ method: 'POST' })
+  .inputValidator((input: z.infer<typeof deleteLegalPageInputSchema>) =>
+    deleteLegalPageInputSchema.parse(input),
+  )
+  .handler(
+    async ({ data: input }): Promise<{ success: boolean; error?: string }> => {
+      const result = await requireAuthContextFull().andThen((auth) => {
+        if (!hasPermission('content.legal_pages', auth.permissions)) {
+          return err(messages.common.noPermission)
+        }
+
+        return ResultAsync.fromPromise(
+          pagesTable(auth.supabase)
+            .delete()
+            .eq('id', input.id)
+            .eq('page_type', 'legal'),
+          dbError,
+        ).andThen(fromSupabaseVoid())
+      })
 
       return result.match(
         () => ({ success: true }),
