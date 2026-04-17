@@ -13,6 +13,7 @@
 - **"do all now" = don't defer P2 items** — When design agent recommends deferring, user overrides.
 - **Commit per change, test later** — Individual commits, deferred manual testing.
 - **Don't commit fixes without testing them first (2026-04-16)** — Verify the fix actually works before creating a commit.
+- **Worktree folder names include descriptive slug, not just task ID (2026-04-17)** — Mirror branch naming: `worktree-aaa-t-205-oleg-cookie-privacy` over `worktree-aaa-t-205`. WHY: multiple worktrees in flight → can't tell which is which at a glance; the ID alone is meaningless without looking up Notion.
 
 ## Bugs Found
 
@@ -29,6 +30,10 @@
 - **Tiptap v3.22 `setContent` API change** — `setContent(content, false)` deprecated → `setContent(content, { emitUpdate: false })` (options-object form). Old form silently no-ops on `emitUpdate`.
 - **Adding newer @tiptap/* subpackage upgrades ALL @tiptap peers** — Installing `@tiptap/extension-highlight@3.22.3` alongside existing `^3.20.4` resolves the whole family to 3.22.3, exposing latent type errors in previously-working files. Pin all @tiptap/* to same version explicitly when bumping.
 - **pnpm worktree + main share node_modules** — Lockfile install in either checkout affects both. Git worktree's `preview_start` from main's `.claude/launch.json` always spawns vite from main checkout path, not worktree. Start vite manually from worktree directory for worktree-local dev server.
+- **Bash `cd` persists pwd across subsequent tool calls (2026-04-17)** — `cd` in one Bash call changes working directory for ALL subsequent Bash calls in the session. Caused accidental commit to `main` instead of the worktree (had to `git reset --soft HEAD^`). WHY: most tools (Read, Edit, Write) are absolute-path so pwd doesn't matter — only Bash carries state. Fix: use absolute paths in every `git`/`pnpm`/etc. invocation (`git -C /path/to/worktree ...`), never rely on an earlier `cd`.
+- **`git worktree remove --force` kills live dev servers with SIGABRT/exit 134 (2026-04-17)** — Vite segfaults when its working directory vanishes underneath it. Correct order: kill dev servers first, THEN remove the worktree.
+- **`git clean -fd` silently deletes untracked directories with no dry-run prompt (2026-04-17)** — Wiped `apps/shop/jacek/src/` (untracked, never in git history) with zero recovery path. Always run `git clean -fdn` (dry-run) first and read the output.
+- **Double-wrapped `inputValidator` schemas create confusing call sites (2026-04-17)** — `z.object({ data: X })` as the inputValidator schema makes the call site read `fn({ data: { data: values } })`, which looks like a triple-wrap bug. Use flat `inputValidator((v: z.infer<X>) => X.parse(v))` + `fn({ data: values })` — eliminates the entire class of confusion.
 
 ## Domain Concepts
 
@@ -42,6 +47,8 @@
 
 ## Architecture Decisions
 
+- **Three-layer persistence for conventions (2026-04-17)** — memory.md alone doesn't enforce behavior. Durable conventions require (1) `memory.md` for interactive context, (2) the specific slash-command markdown (e.g. `ag-develop.md` worktree phase) for that flow, AND (3) the relevant skill SKILL.md for all agents loading it. Duplication across layers is a feature — each catches a different invocation path (human chat vs `/command` vs subagent loading a skill).
+- **Shop feature porting jacek↔oleg follows a 3-commit shape (2026-04-17)** — AAA-T-205 (oleg legal/cookie) mirrored AAA-T-203 (jacek) as: commit 1 = pre-existing feat carried over, commit 2 = feat(footer privacy link + /produkty redirect), commit 3 = fix(tenant_id filter on legal server fn). Same structure both shops. Rule-of-three trigger: if `apps/shop/tata/` lands with the same port, extract `packages/shop-legal/` with shared CookieBanner + LegalPageContent + getTenantId helper rather than copy-paste a third time.
 - **Cross-project update rule** — AAA-P-9 tasks affecting shared tables/packages require updating BOTH PROJECT_SPECs.
 - **app_config table for encryption key** — Supabase Cloud blocks ALTER DATABASE SET for custom GUCs. `app_config` table + `get_encryption_key()` SECURITY DEFINER.
 - **n8n Orchestrator owns ALL execution** — CMS trigger route = ~70 LOC fire-and-forget. WHY: Vercel serverless timeout can't handle multi-hour workflow delays.
