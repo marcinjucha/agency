@@ -9,7 +9,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@agency/database": "*",
+    "@agency/database": "workspace:*",
     "@supabase/supabase-js": "^2.49.4",
     "googleapis": "^168.0.0",
     "neverthrow": "^8.2.0",

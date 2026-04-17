@@ -2,11 +2,6 @@
   "name": "agency",
   "version": "1.0.0",
   "private": true,
-  "workspaces": [
-    "apps/*",
-    "apps/shop/*",
-    "packages/*"
-  ],
   "scripts": {
     "dev": "turbo run dev",
     "build": "turbo run build",
@@ -32,7 +27,7 @@
     "prettier": "^3.0.0",
     "turbo": "^2.8.16"
   },
-  "packageManager": "npm@10.0.0",
+  "packageManager": "pnpm@10.33.0",
   "engines": {
     "node": ">=18.0.0"
   },
@@ -40,7 +35,10 @@
     "neverthrow": "^8.2.0",
     "remeda": "^2.33.7"
   },
-  "overrides": {
-    "vite": "^8.0.0"
+  "pnpm": {
+    "overrides": {
+      "vite": "^8.0.0"
+    },
+    "onlyBuiltDependencies": ["esbuild"]
   }
 }

@@ -13,10 +13,10 @@
     "clean": "rm -rf .output .vinxi"
   },
   "dependencies": {
-    "@agency/calendar": "*",
-    "@agency/database": "*",
-    "@agency/ui": "*",
-    "@agency/validators": "*",
+    "@agency/calendar": "workspace:*",
+    "@agency/database": "workspace:*",
+    "@agency/ui": "workspace:*",
+    "@agency/validators": "workspace:*",
     "@fontsource-variable/geist": "^5.1.0",
     "@unpic/react": "^0.0.40",
     "@hookform/resolvers": "^3.9.0",
