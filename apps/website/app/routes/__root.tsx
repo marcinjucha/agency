@@ -56,7 +56,9 @@ export const Route = createRootRouteWithContext<RouterContext>()({
       ROOT_DESCRIPTION,
     )
 
-    const extraMeta: Array<Record<string, string>> = []
+    const extraMeta: Array<Record<string, string>> = [
+      { name: 'msvalidate.01', content: 'EC263CD6C3BC6E61C7BDE404F1BBC8AB' },
+    ]
 
     if (siteSettings?.google_site_verification) {
       extraMeta.push({
