@@ -5,6 +5,5 @@ export const routes = {
   product: (slug: string) => `/produkty/${slug}` as const,
   categories: '/kategorie',
   category: (slug: string) => `/kategorie/${slug}` as const,
-  about: '/o-autorze',
-  contact: '/kontakt',
+  politykaPrywatnosci: '/polityka-prywatnosci',
 } as const

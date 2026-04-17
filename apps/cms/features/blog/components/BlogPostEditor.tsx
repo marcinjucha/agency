@@ -334,7 +334,7 @@ export function BlogPostEditor({ blogPost, createFn, updateFn, deleteFn, onSucce
         <div className="mx-auto max-w-[1400px]">
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_420px]">
             {/* LEFT COLUMN — Title + Slug + Editor */}
-            <div className="flex flex-col gap-6 max-w-[700px]">
+            <div className="flex flex-col gap-6 max-w-4xl">
               {/* Title */}
               <div>
                 <Input

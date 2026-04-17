@@ -57,7 +57,7 @@ export function EditorialLayout({ product }: EditorialLayoutProps) {
         {/* Rich text content */}
         {product.html_body && (
           <div
-            className="product-prose max-w-none"
+            className="product-prose mx-auto max-w-4xl"
             dangerouslySetInnerHTML={{ __html: product.html_body }}
           />
         )}

@@ -121,7 +121,7 @@ export function SurveyForm({ survey, linkId, token }: SurveyFormProps) {
 
   return (
     <div className="min-h-screen bg-muted py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-3xl mx-auto">
+      <div className="max-w-4xl mx-auto">
         <Card className="border-border">
           <div className="p-8 sm:p-12">
             {/* Survey Header */}

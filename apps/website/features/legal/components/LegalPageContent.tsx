@@ -15,7 +15,7 @@ export function LegalPageContent({ page }: LegalPageContentProps) {
         </header>
 
         {page.html_body && (
-          <div className="mx-auto mt-12 max-w-[700px] px-4 sm:px-6 lg:px-8">
+          <div className="mx-auto mt-12 max-w-4xl px-4 sm:px-6 lg:px-8">
             <div
               className="blog-prose"
               dangerouslySetInnerHTML={{ __html: page.html_body }}

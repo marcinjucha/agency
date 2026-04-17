@@ -74,7 +74,7 @@ function BlogArticleSkeleton() {
         </div>
 
         {/* Content skeleton — paragraph lines */}
-        <div className="mx-auto mt-12 max-w-[700px] px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto mt-12 max-w-4xl px-4 sm:px-6 lg:px-8">
           <div className="space-y-8">
             {/* Paragraph 1 */}
             <div className="space-y-2">

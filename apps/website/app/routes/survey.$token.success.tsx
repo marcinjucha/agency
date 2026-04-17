@@ -92,7 +92,7 @@ function SuccessWithBooking({
   return (
     <>
       <div className="px-4 pt-12 pb-6 sm:px-6 lg:px-8">
-        <div className="max-w-2xl mx-auto flex items-center gap-4">
+        <div className="max-w-4xl mx-auto flex items-center gap-4">
           <div
             className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-success/10"
             aria-hidden="true"
@@ -118,7 +118,7 @@ function SuccessWithBooking({
 function SuccessWithoutBooking() {
   return (
     <div className="px-4 py-12 sm:px-6 lg:px-8">
-      <div className="max-w-3xl mx-auto">
+      <div className="max-w-4xl mx-auto">
         <Card className="border-border">
           <div className="p-8 sm:p-12">
             <div className="mb-8 pb-6 border-b border-border text-center">

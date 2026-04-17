@@ -314,7 +314,7 @@ Only for admin operations that bypass RLS. Use `createServiceClient()` from `lib
 
 **Rich interactive UIs preferred:** When feature complexity warrants it, use professional interactive libraries (reactflow for workflow builder, @dnd-kit for Kanban) over simple form-based config. User values perceived professionalism of UI.
 
-**Editor layout:** All editors (blog, shop, landing, survey, email) use `max-w-[1400px] mx-auto` centered grid. Blog prose additionally capped at `max-w-[700px]` (matches public website rendering). Sidebar 420px.
+**Editor layout:** All editors (blog, shop, landing, survey, email) use `max-w-[1400px] mx-auto` centered grid. Prose-heavy editors (blog, shop product, legal pages) cap the editor column at `max-w-4xl` (896px) so authors see the same line breaks that render publicly. Sidebar 420px.
 
 **CollapsibleCard:** Sidebar cards use `CollapsibleCard` from `@agency/ui`. SEO defaults closed, Settings/Images default open. Independent collapsible (multiple open simultaneously), NOT accordion.
 

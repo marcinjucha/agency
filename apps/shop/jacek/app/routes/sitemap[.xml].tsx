@@ -6,8 +6,7 @@ const BASE_URL = 'https://jacek.haloefekt.pl'
 const staticPages = [
   { url: BASE_URL, priority: '1.0', changefreq: 'weekly' },
   { url: `${BASE_URL}/produkty`, priority: '0.9', changefreq: 'weekly' },
-  { url: `${BASE_URL}/o-autorze`, priority: '0.5', changefreq: 'monthly' },
-  { url: `${BASE_URL}/kontakt`, priority: '0.5', changefreq: 'monthly' },
+  { url: `${BASE_URL}/polityka-prywatnosci`, priority: '0.3', changefreq: 'yearly' },
 ]
 
 function buildSitemapXml(productSlugs: string[]): string {
