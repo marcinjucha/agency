@@ -1,13 +1,17 @@
 
 
 import { useCallback, useState } from 'react'
+import { HexAlphaColorPicker } from 'react-colorful'
+import { useEditorState } from '@tiptap/react'
 import type { Editor } from '@tiptap/react'
-import { Button, Input } from '@agency/ui'
+import { Button, Input, Popover, PopoverContent, PopoverTrigger } from '@agency/ui'
 import {
   Bold,
   Italic,
   Underline,
   Strikethrough,
+  Highlighter,
+  Baseline,
   Heading1,
   Heading2,
   Heading3,
@@ -90,6 +94,8 @@ export function EditorToolbar({ editor, onOpenMediaModal }: EditorToolbarProps) 
           >
             <Strikethrough className="h-4 w-4" />
           </ToolbarButton>
+          <HighlightPicker editor={editor} />
+          <TextColorPicker editor={editor} />
         </ToolbarGroup>
 
         <ToolbarSeparator />
@@ -320,5 +326,297 @@ function ToolbarButton({ onClick, active, disabled, title, children }: ToolbarBu
     >
       {children}
     </Button>
+  )
+}
+
+// --- Highlight color picker ---
+
+// Highlight presets reference theme tokens via CSS custom properties so each
+// site (CMS / website / shops) resolves its own brand colors from globals.css.
+// `color` is written into the <mark> inline style — browser resolves var() at render.
+// `previewColor` is higher-opacity for the swatch UI so users can distinguish colors.
+const HIGHLIGHT_PRESETS = [
+  {
+    name: 'Primary',
+    color: 'color-mix(in srgb, var(--color-primary) 45%, transparent)',
+    previewColor: 'color-mix(in srgb, var(--color-primary) 85%, transparent)',
+  },
+  {
+    name: 'Secondary',
+    color: 'color-mix(in srgb, var(--color-secondary) 45%, transparent)',
+    previewColor: 'color-mix(in srgb, var(--color-secondary) 85%, transparent)',
+  },
+  {
+    name: 'Accent',
+    color: 'color-mix(in srgb, var(--color-accent) 45%, transparent)',
+    previewColor: 'color-mix(in srgb, var(--color-accent) 85%, transparent)',
+  },
+  {
+    name: 'Destructive',
+    color: 'color-mix(in srgb, var(--color-destructive) 45%, transparent)',
+    previewColor: 'color-mix(in srgb, var(--color-destructive) 85%, transparent)',
+  },
+] as const
+
+// Text color presets — same design tokens as highlight, applied at full opacity
+// since they color the glyphs directly (vs background tint for highlight).
+const TEXT_COLOR_PRESETS = [
+  { name: 'Primary', color: 'var(--color-primary)' },
+  { name: 'Secondary', color: 'var(--color-secondary)' },
+  { name: 'Accent', color: 'var(--color-accent)' },
+  { name: 'Destructive', color: 'var(--color-destructive)' },
+] as const
+
+const DEFAULT_CUSTOM_COLOR = '#f97316cc' // orange-500 at 80% alpha
+
+function HighlightPicker({ editor }: { editor: Editor }) {
+  const [open, setOpen] = useState(false)
+  const [customOpen, setCustomOpen] = useState(false)
+  const [customColor, setCustomColor] = useState(DEFAULT_CUSTOM_COLOR)
+
+  // Subscribe to editor transactions so isActive stays in sync after
+  // setHighlight/unsetHighlight (plain .isActive on the editor prop does not
+  // trigger re-renders on its own).
+  const isActive = useEditorState({
+    editor,
+    selector: ({ editor }) => editor.isActive('highlight'),
+  })
+
+  function applyPreset(color: string) {
+    editor.chain().focus().setHighlight({ color }).run()
+    setOpen(false)
+  }
+
+  function removeHighlight() {
+    editor.chain().focus().unsetHighlight().run()
+    setOpen(false)
+  }
+
+  function handleCustomChange(next: string) {
+    setCustomColor(next)
+    // Skip .focus() — each mousemove on the picker would steal focus from the
+    // Popover and trigger onInteractOutside, closing the picker mid-drag.
+    // Tiptap preserves the selection even when editor lacks DOM focus, so
+    // the mark applies to the original selection range.
+    editor.chain().setHighlight({ color: next }).run()
+  }
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className={`h-8 w-8 rounded-md transition-colors ${
+            isActive
+              ? 'bg-accent text-accent-foreground'
+              : 'text-muted-foreground hover:text-foreground'
+          }`}
+          title="Wyróżnienie"
+          aria-label="Wyróżnienie"
+        >
+          <Highlighter className="h-4 w-4" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent
+        className="w-auto p-2"
+        align="start"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
+        <div className="flex flex-col gap-1.5">
+          <p className="px-1 text-xs font-medium text-muted-foreground">Kolor wyróżnienia</p>
+          <div className="flex items-center gap-2 px-1">
+            {HIGHLIGHT_PRESETS.map((preset) => {
+              const isCurrentColor =
+                editor.isActive('highlight', { color: preset.color })
+              return (
+                <button
+                  key={preset.name}
+                  type="button"
+                  onClick={() => applyPreset(preset.color)}
+                  title={preset.name}
+                  aria-label={`Wyróżnienie: ${preset.name}`}
+                  className="relative flex h-[22px] w-[22px] shrink-0 cursor-pointer items-center justify-center rounded-full transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  style={{
+                    background: preset.previewColor,
+                    border: isCurrentColor
+                      ? '2px solid white'
+                      : '2px solid transparent',
+                    outline: isCurrentColor
+                      ? '2px solid hsl(var(--ring, 222.2 80% 62%))'
+                      : 'none',
+                    outlineOffset: '1px',
+                  }}
+                />
+              )
+            })}
+            {/* Custom color toggle — reveals inline react-colorful picker below */}
+            <button
+              type="button"
+              onClick={() => setCustomOpen((v) => !v)}
+              title="Własny kolor"
+              aria-label="Własny kolor wyróżnienia"
+              aria-expanded={customOpen}
+              className={`flex h-[22px] w-[22px] shrink-0 cursor-pointer items-center justify-center rounded-full transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                customOpen ? 'border-2 border-white outline-1 outline-offset-1' : 'border-2 border-transparent'
+              }`}
+              style={{
+                background:
+                  'conic-gradient(red, yellow, lime, aqua, blue, magenta, red)',
+              }}
+            />
+          </div>
+          {customOpen && (
+            <div className="mt-1 px-1">
+              <HexAlphaColorPicker
+                color={customColor}
+                onChange={handleCustomChange}
+                style={{ width: 180, height: 140 }}
+              />
+              <p className="mt-1 text-center font-mono text-[10px] uppercase text-muted-foreground">
+                {customColor}
+              </p>
+            </div>
+          )}
+          {isActive && (
+            <button
+              type="button"
+              onClick={removeHighlight}
+              className="mt-0.5 px-1 text-left text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              aria-label="Usuń wyróżnienie"
+            >
+              Usuń wyróżnienie
+            </button>
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
+  )
+}
+
+// --- Text color picker ---
+
+const DEFAULT_TEXT_CUSTOM_COLOR = '#f97316'
+
+function TextColorPicker({ editor }: { editor: Editor }) {
+  const [open, setOpen] = useState(false)
+  const [customOpen, setCustomOpen] = useState(false)
+  const [customColor, setCustomColor] = useState(DEFAULT_TEXT_CUSTOM_COLOR)
+
+  const isActive = useEditorState({
+    editor,
+    selector: ({ editor }) => editor.isActive('textStyle'),
+  })
+  const currentColor = useEditorState({
+    editor,
+    selector: ({ editor }) => editor.getAttributes('textStyle').color ?? null,
+  })
+
+  function applyPreset(color: string) {
+    editor.chain().focus().setColor(color).run()
+    setOpen(false)
+  }
+
+  function removeColor() {
+    editor.chain().focus().unsetColor().run()
+    setOpen(false)
+  }
+
+  function handleCustomChange(next: string) {
+    setCustomColor(next)
+    // Skip .focus() so drag inside picker does not steal focus and close Popover.
+    editor.chain().setColor(next).run()
+  }
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className={`h-8 w-8 rounded-md transition-colors ${
+            isActive
+              ? 'bg-accent text-accent-foreground'
+              : 'text-muted-foreground hover:text-foreground'
+          }`}
+          title="Kolor tekstu"
+          aria-label="Kolor tekstu"
+        >
+          <Baseline className="h-4 w-4" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent
+        className="w-auto p-2"
+        align="start"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
+        <div className="flex flex-col gap-1.5">
+          <p className="px-1 text-xs font-medium text-muted-foreground">Kolor tekstu</p>
+          <div className="flex items-center gap-2 px-1">
+            {TEXT_COLOR_PRESETS.map((preset) => {
+              const isCurrentColor = currentColor === preset.color
+              return (
+                <button
+                  key={preset.name}
+                  type="button"
+                  onClick={() => applyPreset(preset.color)}
+                  title={preset.name}
+                  aria-label={`Kolor tekstu: ${preset.name}`}
+                  className="relative flex h-[22px] w-[22px] shrink-0 cursor-pointer items-center justify-center rounded-full transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  style={{
+                    background: preset.color,
+                    border: isCurrentColor
+                      ? '2px solid white'
+                      : '2px solid transparent',
+                    outline: isCurrentColor
+                      ? '2px solid hsl(var(--ring, 222.2 80% 62%))'
+                      : 'none',
+                    outlineOffset: '1px',
+                  }}
+                />
+              )
+            })}
+            <button
+              type="button"
+              onClick={() => setCustomOpen((v) => !v)}
+              title="Własny kolor"
+              aria-label="Własny kolor tekstu"
+              aria-expanded={customOpen}
+              className={`flex h-[22px] w-[22px] shrink-0 cursor-pointer items-center justify-center rounded-full transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                customOpen ? 'border-2 border-white outline-1 outline-offset-1' : 'border-2 border-transparent'
+              }`}
+              style={{
+                background:
+                  'conic-gradient(red, yellow, lime, aqua, blue, magenta, red)',
+              }}
+            />
+          </div>
+          {customOpen && (
+            <div className="mt-1 px-1">
+              <HexAlphaColorPicker
+                color={customColor}
+                onChange={handleCustomChange}
+                style={{ width: 180, height: 140 }}
+              />
+              <p className="mt-1 text-center font-mono text-[10px] uppercase text-muted-foreground">
+                {customColor}
+              </p>
+            </div>
+          )}
+          {isActive && (
+            <button
+              type="button"
+              onClick={removeColor}
+              className="mt-0.5 px-1 text-left text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              aria-label="Usuń kolor tekstu"
+            >
+              Usuń kolor tekstu
+            </button>
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
   )
 }

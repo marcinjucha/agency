@@ -5,7 +5,7 @@ import { useEffect } from 'react'
 import type { Extensions } from '@tiptap/core'
 import { BubbleMenu } from '@tiptap/react/menus'
 import Placeholder from '@tiptap/extension-placeholder'
-import { Bold, Italic, Underline, Strikethrough, Heading2, Link } from 'lucide-react'
+import { Bold, Italic, Underline, Strikethrough, Highlighter, Baseline, Heading2, Link } from 'lucide-react'
 import { Button } from '@agency/ui'
 import type { TiptapContent } from '../types'
 import { EditorToolbar } from './EditorToolbar'
@@ -99,7 +99,7 @@ export function TiptapEditor({
     const incoming = JSON.stringify(content)
     const current = JSON.stringify(editor.getJSON())
     if (incoming !== current) {
-      editor.commands.setContent(content, false)
+      editor.commands.setContent(content, { emitUpdate: false })
     }
   }, [editor, content])
 
@@ -114,6 +114,7 @@ export function TiptapEditor({
       {editor && (
         <BubbleMenu
           editor={editor}
+          options={{ placement: 'top' }}
           className="flex items-center gap-0.5 rounded-lg border border-border bg-background p-1 shadow-lg"
         >
           <BubbleButton
@@ -143,6 +144,32 @@ export function TiptapEditor({
             title="Przekreslenie"
           >
             <Strikethrough className="h-3.5 w-3.5" />
+          </BubbleButton>
+          <BubbleButton
+            onClick={() => {
+              if (editor.isActive('highlight')) {
+                editor.chain().focus().unsetHighlight().run()
+              } else {
+                editor.chain().focus().setHighlight({ color: 'color-mix(in srgb, var(--color-primary) 45%, transparent)' }).run()
+              }
+            }}
+            active={editor.isActive('highlight')}
+            title="Wyróżnienie"
+          >
+            <Highlighter className="h-3.5 w-3.5" />
+          </BubbleButton>
+          <BubbleButton
+            onClick={() => {
+              if (editor.isActive('textStyle')) {
+                editor.chain().focus().unsetColor().run()
+              } else {
+                editor.chain().focus().setColor('var(--color-primary)').run()
+              }
+            }}
+            active={editor.isActive('textStyle')}
+            title="Kolor tekstu"
+          >
+            <Baseline className="h-3.5 w-3.5" />
           </BubbleButton>
           <div className="mx-0.5 h-5 w-px bg-border" />
           <BubbleButton
@@ -345,6 +372,21 @@ export function TiptapEditor({
         .tiptap-editor-content s {
           text-decoration: line-through;
           opacity: 0.7;
+        }
+
+        /* Brand highlight mark — background-color comes from inline style (multicolor).
+           The inline style uses CSS variable refs (var(--color-primary), etc.) so each
+           site resolves its own theme tokens from globals.css.
+           box-decoration-break: clone gives each line fragment its own rounded bg
+           when a highlight wraps — prevents ugly half-rendered pills across breaks. */
+        .tiptap-editor-content mark {
+          color: inherit;
+          padding: 0.15em 0.5em;
+          margin: 0 0.3em;
+          border-radius: 0.375rem;
+          font-weight: 500;
+          box-decoration-break: clone;
+          -webkit-box-decoration-break: clone;
         }
 
         .tiptap-editor-content video {
