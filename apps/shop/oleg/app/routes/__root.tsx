@@ -3,6 +3,7 @@ import { createRootRoute, HeadContent, Outlet, Scripts, ScrollRestoration } from
 import appCss from '../globals.css?url'
 import { Navbar } from '@/features/layout/components/Navbar'
 import { Footer } from '@/features/layout/components/Footer'
+import { CookieBanner } from '@/features/legal/components/CookieBanner'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
 
@@ -50,6 +51,7 @@ function RootLayout() {
           <Outlet />
         </div>
         <Footer />
+        <CookieBanner />
         <ScrollRestoration />
         <Scripts />
       </body>

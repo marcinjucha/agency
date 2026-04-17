@@ -3,4 +3,5 @@ export const routes = {
   products: '/produkty',
   product: (slug: string) => `/produkty/${slug}`,
   contact: '/kontakt',
+  politykaPrywatnosci: '/polityka-prywatnosci',
 } as const

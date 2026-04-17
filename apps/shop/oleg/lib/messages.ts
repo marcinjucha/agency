@@ -54,4 +54,10 @@ export const messages = {
     copyright: 'Sklep Olega',
     rights: 'Wszelkie prawa zastrzeżone.',
   },
+  cookie: {
+    message: 'Ta strona używa plików cookies w celach analitycznych.',
+    accept: 'Rozumiem',
+    moreInfo: 'Więcej informacji',
+    privacyLink: 'Polityce prywatności',
+  },
 } as const
