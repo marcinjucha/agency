@@ -18,7 +18,7 @@
     "@agency/ui": "workspace:*",
     "@agency/validators": "workspace:*",
     "@fontsource-variable/geist": "^5.1.0",
-    "@unpic/react": "^0.0.40",
+    "@unpic/react": "^1.0.2",
     "@hookform/resolvers": "^3.9.0",
     "@supabase/ssr": "^0.5.0",
     "@supabase/supabase-js": "^2.45.0",
