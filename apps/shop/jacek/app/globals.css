@@ -171,3 +171,16 @@ body {
   margin-top: 0.05em;
   color: var(--color-foreground);
 }
+
+/* Brand highlight mark — matches CMS editor (see apps/cms/features/editor).
+   Inline style on <mark> carries background-color via var(--color-primary) etc.,
+   so this theme's tokens resolve automatically. */
+.product-prose mark {
+  color: inherit;
+  padding: 0.15em 0.5em;
+  margin: 0 0.3em;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}

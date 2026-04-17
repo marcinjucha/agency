@@ -134,6 +134,20 @@
   border-radius: 0.25rem;
 }
 
+/* Brand highlight mark — background-color from inline style (multicolor Tiptap).
+   Inline style uses CSS variable refs (var(--color-primary), etc.) so the browser
+   resolves them against this site's @theme tokens. box-decoration-break: clone
+   keeps each line fragment rounded when highlights wrap. */
+.blog-prose mark {
+  color: inherit;
+  padding: 0.15em 0.5em;
+  margin: 0 0.3em;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
 .blog-prose pre {
   background-color: hsl(223 47% 11%);
   color: hsl(213 31% 91%);
