@@ -1,5 +1,3 @@
-
-
 import { useNavigate } from '@tanstack/react-router'
 import { Image } from '@unpic/react'
 import {
@@ -100,7 +98,9 @@ export function BlogPostGridView({ posts, onDelete, isDeleting }: BlogPostGridVi
 
             {/* Text below image */}
             <div className="p-2.5">
-              <p className="line-clamp-2 text-sm font-semibold leading-snug text-foreground">{post.title}</p>
+              <p className="line-clamp-2 text-sm font-semibold leading-snug text-foreground">
+                {post.title}
+              </p>
               <div className="mt-1.5 flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <BlogStatusBadge status={status} />
@@ -114,36 +114,36 @@ export function BlogPostGridView({ posts, onDelete, isDeleting }: BlogPostGridVi
                   className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
                   onClick={(e) => e.stopPropagation()}
                 >
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
-                      disabled={isDeleting}
-                      aria-label={messages.blog.deletePost}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent onClick={(e) => e.stopPropagation()}>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>{messages.blog.deletePostConfirmTitle}</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        {messages.blog.deletePostConfirmDescription(post.title)}
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>{messages.common.cancel}</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={() => onDelete(post.id)}
-                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                        disabled={isDeleting}
+                        aria-label={messages.blog.deletePost}
                       >
-                        {messages.common.delete}
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>{messages.blog.deletePostConfirmTitle}</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          {messages.blog.deletePostConfirmDescription(post.title)}
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>{messages.common.cancel}</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => onDelete(post.id)}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          {messages.common.delete}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </div>
               </div>
             </div>

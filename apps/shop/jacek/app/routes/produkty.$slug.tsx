@@ -19,13 +19,23 @@ export const Route = createFileRoute('/produkty/$slug')({
   head: ({ loaderData }) => {
     if (!loaderData) return {}
     const { product } = loaderData
-    const seo = product.seo_metadata as { title?: string; description?: string; og_image_url?: string } | null
+    const seo = product.seo_metadata as {
+      title?: string
+      description?: string
+      og_image_url?: string
+    } | null
     return {
       meta: [
         { title: (seo?.title ?? product.title) + ' | Książki Jacka' },
-        { name: 'description', content: seo?.description ?? product.short_description ?? undefined },
+        {
+          name: 'description',
+          content: seo?.description ?? product.short_description ?? undefined,
+        },
         { property: 'og:title', content: seo?.title ?? product.title },
-        { property: 'og:description', content: seo?.description ?? product.short_description ?? undefined },
+        {
+          property: 'og:description',
+          content: seo?.description ?? product.short_description ?? undefined,
+        },
         ...(seo?.og_image_url || product.cover_image_url
           ? [{ property: 'og:image', content: seo?.og_image_url ?? product.cover_image_url ?? '' }]
           : []),
@@ -45,15 +55,6 @@ function ProductDetailPage() {
 
   return (
     <main className="mx-auto max-w-5xl px-6 py-12">
-      <div className="mb-8">
-        <Link
-          to={routes.products}
-          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
-          &larr; {messages.products.backToList}
-        </Link>
-      </div>
-
       <GalleryLayout product={product} />
 
       <script
