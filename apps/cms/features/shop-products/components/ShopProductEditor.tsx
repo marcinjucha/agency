@@ -178,8 +178,7 @@ export function ShopProductEditor({ product, createFn, updateFn, deleteFn }: Sho
 
     const payload = {
       ...(publishOverride !== undefined ? { ...data, is_published: publishOverride } : data),
-      // Stringify content to preserve attrs (React Server Action serialization strips them)
-      description: data.description ? JSON.stringify(data.description) : null,
+      description: data.description ?? null,
       html_body,
     }
 

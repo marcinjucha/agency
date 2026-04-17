@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(supabase status *)",
+      "mcp__notion__notion-fetch",
+      "mcp__notion__notion-search",
+      "mcp__atlassian__getJiraIssue",
+      "mcp__atlassian__searchJiraIssuesUsingJql",
+      "mcp__Claude_Preview__preview_logs",
+      "mcp__Claude_Preview__preview_start",
+      "mcp__Claude_Preview__preview_screenshot",
+      "mcp__Claude_Preview__preview_snapshot",
+      "mcp__Claude_Preview__preview_console_logs",
+      "mcp__Claude_Preview__preview_list"
+    ],
+    "deny": []
+  }
+}

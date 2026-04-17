@@ -228,7 +228,36 @@ export function CategoryManager() {
       ) : viewMode === 'grid' ? (
         /* Gallery view */
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
-          {categories?.map((cat) => (
+          {editing.type === 'new' && (
+            <CardEditForm
+              formData={formData}
+              onNameChange={handleNameChange}
+              onSlugChange={handleSlugChange}
+              onDescriptionChange={(v) => setFormData((prev) => ({ ...prev, description: v }))}
+              onSortOrderChange={(v) => setFormData((prev) => ({ ...prev, sort_order: v }))}
+              onKeyDown={handleKeyDown}
+              onSave={handleSave}
+              onCancel={cancelEditing}
+              isPending={isPending}
+              nameInputRef={nameInputRef}
+            />
+          )}
+          {categories?.map((cat) =>
+            editing.type === 'edit' && editing.id === cat.id ? (
+              <CardEditForm
+                key={cat.id}
+                formData={formData}
+                onNameChange={handleNameChange}
+                onSlugChange={handleSlugChange}
+                onDescriptionChange={(v) => setFormData((prev) => ({ ...prev, description: v }))}
+                onSortOrderChange={(v) => setFormData((prev) => ({ ...prev, sort_order: v }))}
+                onKeyDown={handleKeyDown}
+                onSave={handleSave}
+                onCancel={cancelEditing}
+                isPending={isPending}
+                nameInputRef={nameInputRef}
+              />
+            ) : (
             <Card key={cat.id} className="overflow-hidden transition-transform hover:-translate-y-0.5">
               <CardContent className="p-3 space-y-1.5">
                 <div className="flex items-start justify-between gap-2">
@@ -285,7 +314,8 @@ export function CategoryManager() {
                 </div>
               </CardContent>
             </Card>
-          ))}
+            )
+          )}
         </div>
       ) : (
         /* List view */
@@ -532,6 +562,100 @@ function ReadonlyRow({
         </AlertDialog>
       </div>
     </div>
+  )
+}
+
+// --- Card edit form (grid view) ---
+
+function CardEditForm({
+  formData,
+  onNameChange,
+  onSlugChange,
+  onDescriptionChange,
+  onSortOrderChange,
+  onKeyDown,
+  onSave,
+  onCancel,
+  isPending,
+  nameInputRef,
+}: {
+  formData: RowFormData
+  onNameChange: (value: string) => void
+  onSlugChange: (value: string) => void
+  onDescriptionChange: (value: string) => void
+  onSortOrderChange: (value: number) => void
+  onKeyDown: (e: React.KeyboardEvent) => void
+  onSave: () => void
+  onCancel: () => void
+  isPending: boolean
+  nameInputRef: React.RefObject<HTMLInputElement | null>
+}) {
+  return (
+    <Card className="overflow-hidden border-primary/50 bg-muted/30">
+      <CardContent className="p-3 space-y-2">
+        <Input
+          ref={nameInputRef}
+          value={formData.name}
+          onChange={(e) => onNameChange(e.target.value)}
+          onKeyDown={onKeyDown}
+          placeholder={messages.shop.nameLabel}
+          className="h-8 text-sm font-semibold"
+          disabled={isPending}
+          aria-label={messages.shop.nameLabel}
+        />
+        <Input
+          value={formData.slug}
+          onChange={(e) => onSlugChange(e.target.value)}
+          onKeyDown={onKeyDown}
+          placeholder={messages.shop.slugLabel}
+          className="h-8 text-xs font-mono"
+          disabled={isPending}
+          aria-label={messages.shop.slugLabel}
+        />
+        <Textarea
+          value={formData.description}
+          onChange={(e) => onDescriptionChange(e.target.value)}
+          onKeyDown={onKeyDown}
+          placeholder={messages.shop.descriptionFieldLabel}
+          rows={2}
+          className="min-h-0 resize-none text-xs"
+          disabled={isPending}
+          aria-label={messages.shop.descriptionFieldLabel}
+        />
+        <div className="flex items-center gap-2">
+          <Input
+            type="number"
+            value={formData.sort_order}
+            onChange={(e) => onSortOrderChange(parseInt(e.target.value) || 0)}
+            onKeyDown={onKeyDown}
+            className="h-8 w-20 text-sm text-right"
+            disabled={isPending}
+            aria-label={messages.shop.sortOrderLabel}
+          />
+          <div className="flex-1" />
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0 text-emerald-400 hover:text-emerald-300"
+            onClick={onSave}
+            disabled={isPending || !formData.name.trim()}
+            aria-label={messages.common.save}
+          >
+            <Check className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+            onClick={onCancel}
+            disabled={isPending}
+            aria-label={messages.common.cancel}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   )
 }
 
