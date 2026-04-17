@@ -1,5 +1,6 @@
 import { createServerFn } from '@tanstack/react-start'
 import { createServiceClient } from '@/lib/supabase/service'
+import { getTenantId } from '@/lib/tenant'
 import type { WebsiteLegalPage } from './types'
 
 const PAGE_FIELDS = 'id, slug, title, html_body, updated_at' as const
@@ -11,6 +12,7 @@ export const getPublishedLegalPageFn = createServerFn({ method: 'POST' })
     const { data: row, error } = await supabase
       .from('pages')
       .select(PAGE_FIELDS)
+      .eq('tenant_id', getTenantId())
       .eq('slug', data.slug)
       .eq('page_type', 'legal')
       .eq('is_published', true)
@@ -26,6 +28,7 @@ export const getPublishedLegalSlugsFn = createServerFn({ method: 'POST' }).handl
     const { data, error } = await supabase
       .from('pages')
       .select('slug')
+      .eq('tenant_id', getTenantId())
       .eq('page_type', 'legal')
       .eq('is_published', true)
 
