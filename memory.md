@@ -19,6 +19,9 @@
 - **supabase gen types prepends "Initialising login role..."** — Corrupts types.ts. Workaround: `grep -v "^Initialising"`. `db:types` uses --local, need --linked when local not running.
 - **`inputValidator(zodSchema)` direct form silently fails in TanStack Start** — Must use function wrapper: `.inputValidator((input) => schema.parse(input))`. WHY: RPC layer doesn't invoke `.parse()` on raw schema objects. Recurs across features.
 - **Vercel "no output files found" warning with Turborepo + TanStack Start** — Fix: set `"outputs": []` in turbo.json build task. WHY: TanStack Start writes to `/vercel/output` (outside workspace), not `.output/` in workspace — Turbo's default output capture finds nothing and warns. Empty array disables capture.
+- **`JSON.stringify(data.description)` migration residue from Next.js Server Actions** — Silently double-encodes Tiptap JSON in TanStack Start, storing a string in JSONB instead of an object. `typeof === 'object'` guard in `toShopProduct` then returns null silently on reload. WHY: Server Actions serialized payloads; createServerFn does not — stringify is now redundant and corrupts data. Audit all server-fn mutations post-migration for leftover stringify calls on JSONB fields.
+- **TanStack Start `tsr-split` virtual chunk does NOT invalidate on HMR** — When imports are removed from a route file, the split component chunk is not regenerated until full dev server restart. Symptom: removed component still renders. WHY: component split is a build-time virtual module; HMR only tracks the route file, not the derived chunk.
+- **CategoryManager grid view missing CardEditForm render path** — Editing state existed but grid branch had no render for it (only list view had InlineEditRow). WHY: when adding inline edit to one view branch, always verify the other view branch renders edit state too. Pattern: if `editingId === item.id` branches exist in one view mode, they must exist in all view modes.
 
 ## Domain Concepts
 
@@ -46,3 +49,4 @@
 - **Always test with local database** — Never point dev to production Supabase.
 - **Always design bidirectional state transitions** — If deactivate exists, activate must too.
 - **Collapsible panels: close button inside panel** — Not only external toggle.
+- **Don't speculate future product layout needs** — Merged `gallery` + `editorial` product layouts into one (gallery). `display_layout` field kept in DB but LayoutSelector removed from CMS. WHY: second layout was speculative — add layout variants only when a concrete use case arrives, not to "leave room".
