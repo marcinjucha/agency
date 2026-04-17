@@ -138,17 +138,36 @@ body {
 }
 
 .product-prose blockquote {
-  border-left: 3px solid var(--color-primary);
-  padding-left: 1em;
-  margin-top: 1.5em;
-  margin-bottom: 1.5em;
+  border-left: 2px solid var(--color-primary);
+  padding: 0.75em 1.25em;
+  margin-top: 2em;
+  margin-bottom: 2em;
   font-style: italic;
   color: var(--color-muted-foreground);
+  background-color: color-mix(in srgb, var(--color-primary) 5%, transparent);
+  border-radius: 0 2px 2px 0;
 }
 
 .product-prose hr {
   border: none;
   border-top: 1px solid var(--color-border);
-  margin-top: 2em;
-  margin-bottom: 2em;
+  margin-top: 2.5em;
+  margin-bottom: 2.5em;
+}
+
+/* Editorial layout — constrained reading column */
+.product-prose--editorial {
+  max-width: 680px;
+}
+
+/* Drop cap on first paragraph following the prose root */
+.product-prose--editorial > p:first-of-type::first-letter {
+  font-family: var(--font-heading);
+  font-size: 3.5em;
+  font-weight: 700;
+  line-height: 0.8;
+  float: left;
+  margin-right: 0.1em;
+  margin-top: 0.05em;
+  color: var(--color-foreground);
 }
