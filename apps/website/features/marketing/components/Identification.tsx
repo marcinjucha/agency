@@ -18,7 +18,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
 
 export function Identification({ eyebrow, items, transition }: IdentificationBlock) {
   return (
-    <section className="relative py-16 md:py-24 bg-muted/30 overflow-hidden">
+    <section className="relative py-16 md:py-24 bg-accent overflow-hidden">
       {/* Gradient divider */}
       <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-border/50 to-transparent" />
 
@@ -35,7 +35,7 @@ export function Identification({ eyebrow, items, transition }: IdentificationBlo
             const Icon = ICON_MAP[item.icon] ?? HelpCircle
             return (
               <ScrollReveal key={i} delay={i * 100}>
-                <div className="flex items-start gap-4 p-5 rounded-xl border-l-2 border-primary/40 bg-background/60 hover:bg-background/80 transition-colors duration-300">
+                <div className="flex items-start gap-4 p-5 rounded-xl border-l-2 border-primary/40 bg-background hover:bg-background transition-colors duration-300 shadow-sm">
                   <div className="flex-shrink-0 w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
                     <Icon className="w-4 h-4 text-primary" />
                   </div>

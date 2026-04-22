@@ -31,35 +31,37 @@ export function BlogArticlePage({ post, isPreview = false }: BlogArticlePageProp
         </div>
       )}
 
-      <article className="pb-16 pt-24 md:pt-32">
-        {/* Article header */}
-        <header className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
-          {post.category && (
-            <Badge className="mb-6 bg-primary/10 text-primary hover:bg-primary/10">
-              {post.category}
-            </Badge>
-          )}
-
-          <h1 className="text-3xl font-bold leading-tight tracking-tight text-foreground sm:text-4xl md:text-5xl">
-            {post.title}
-          </h1>
-
-          <div className="mt-6 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
-            {post.author_name && <span className="font-medium">{post.author_name}</span>}
-            {post.author_name && post.published_at && (
-              <span className="text-border" aria-hidden="true">&middot;</span>
+      <article className="pb-16">
+        {/* Article header — cream hero, matches blog listing */}
+        <div className="bg-accent pt-24 md:pt-32 pb-10">
+          <header className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
+            {post.category && (
+              <Badge className="mb-6 bg-primary/10 text-primary hover:bg-primary/10">
+                {post.category}
+              </Badge>
             )}
-            {post.published_at && (
-              <time dateTime={post.published_at}>{formatPolishDate(post.published_at)}</time>
-            )}
-            {post.estimated_reading_time && (
-              <>
+
+            <h1 className="text-3xl font-bold leading-tight tracking-tight text-foreground sm:text-4xl md:text-5xl">
+              {post.title}
+            </h1>
+
+            <div className="mt-6 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+              {post.author_name && <span className="font-medium">{post.author_name}</span>}
+              {post.author_name && post.published_at && (
                 <span className="text-border" aria-hidden="true">&middot;</span>
-                <span>{post.estimated_reading_time} min czytania</span>
-              </>
-            )}
-          </div>
-        </header>
+              )}
+              {post.published_at && (
+                <time dateTime={post.published_at}>{formatPolishDate(post.published_at)}</time>
+              )}
+              {post.estimated_reading_time && (
+                <>
+                  <span className="text-border" aria-hidden="true">&middot;</span>
+                  <span>{post.estimated_reading_time} min czytania</span>
+                </>
+              )}
+            </div>
+          </header>
+        </div>
 
         {/* Cover image */}
         {post.cover_image_url && (

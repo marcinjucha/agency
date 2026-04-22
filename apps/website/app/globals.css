@@ -1,5 +1,5 @@
 @import 'tailwindcss';
-@import '@fontsource-variable/fraunces';
+@import '@fontsource-variable/lora';
 @import '@fontsource/jetbrains-mono';
 
 /* Scan UI package for Tailwind classes used in shadcn/ui components */
@@ -55,10 +55,9 @@
   --danger: #9f1239;
 }
 
-/* Fraunces serif for headings — applied sitewide */
+/* Lora serif for headings — applied sitewide */
 h1, h2 {
-  font-family: 'Fraunces Variable', 'Fraunces', Georgia, serif;
-  font-feature-settings: 'ss01';
+  font-family: 'Lora Variable', 'Lora', Georgia, serif;
 }
 
 /* Blog prose styling — readable typography for article content */
@@ -404,8 +403,7 @@ h1, h2 {
 
 /* Agency design system utility classes */
 .serif {
-  font-family: 'Fraunces Variable', 'Fraunces', Georgia, serif;
-  font-feature-settings: 'ss01';
+  font-family: 'Lora Variable', 'Lora', Georgia, serif;
 }
 .mono {
   font-family: 'JetBrains Mono', ui-monospace, monospace;

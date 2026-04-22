@@ -95,12 +95,11 @@ function CategoryPill({
 function FeaturedPostCard({ post }: { post: WebsiteBlogListItem }) {
   return (
     <Link to={routes.blogPost(post.slug)} className="group block">
-      <article className="relative overflow-hidden rounded-2xl bg-muted/40 transition-all duration-300 hover:bg-muted/60">
+      <article className="relative overflow-hidden rounded-2xl bg-background border border-border transition-all duration-300 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5 card-lift">
         <div className="grid md:grid-cols-[1.2fr_1fr]">
           {/* Image */}
           <div className="relative aspect-[16/9] overflow-hidden md:aspect-[4/3]">
             <CoverImage src={post.cover_image_url} alt={post.title} priority />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
             {post.category && (
               <div className="absolute left-4 top-4">
                 <CategoryPill category={post.category} />
@@ -110,24 +109,25 @@ function FeaturedPostCard({ post }: { post: WebsiteBlogListItem }) {
 
           {/* Content */}
           <div className="flex flex-col justify-center gap-4 p-6 md:p-10">
+            <PostMeta post={post} size="base" />
             {post.author_name && (
-              <p className="text-sm font-medium text-foreground">
+              <p className="text-xs font-semibold text-primary uppercase tracking-[0.12em]">
                 {post.author_name}
               </p>
             )}
-            <h2 className="text-2xl font-bold leading-tight tracking-tight text-foreground md:text-3xl lg:text-[2rem]">
+            {/* Lora via global h2 selector */}
+            <h2 className="text-2xl font-bold leading-tight tracking-tight text-foreground md:text-3xl">
               {post.title}
             </h2>
             {post.excerpt && (
-              <p className="text-base leading-relaxed text-foreground line-clamp-3">
+              <p className="text-base leading-relaxed text-foreground/80 line-clamp-3">
                 {post.excerpt}
               </p>
             )}
-            <div className="flex items-center justify-between pt-2">
-              <PostMeta post={post} size="base" />
-              <span className="inline-flex items-center gap-1.5 text-sm font-medium text-primary opacity-0 transition-all duration-300 group-hover:opacity-100 group-hover:translate-x-0 -translate-x-2">
-                Czytaj
-                <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            <div className="pt-2">
+              <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary">
+                Czytaj artykuł
+                <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" aria-hidden="true" />
               </span>
             </div>
           </div>
@@ -140,11 +140,10 @@ function FeaturedPostCard({ post }: { post: WebsiteBlogListItem }) {
 function PostCard({ post }: { post: WebsiteBlogListItem }) {
   return (
     <Link to={routes.blogPost(post.slug)} className="group block h-full">
-      <article className="flex h-full flex-col overflow-hidden rounded-xl bg-muted/30 transition-all duration-300 hover:bg-muted/50">
+      <article className="flex h-full flex-col overflow-hidden rounded-xl bg-background border border-border transition-all duration-300 hover:border-primary/30 hover:shadow-md hover:shadow-primary/5 card-lift">
         {/* Image */}
         <div className="relative aspect-[16/9] overflow-hidden">
           <CoverImage src={post.cover_image_url} alt={post.title} />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
           {post.category && (
             <div className="absolute left-3 top-3">
               <CategoryPill category={post.category} />
@@ -153,21 +152,20 @@ function PostCard({ post }: { post: WebsiteBlogListItem }) {
         </div>
 
         {/* Content */}
-        <div className="flex flex-1 flex-col p-5 sm:p-6">
-          <div className="mb-3">
-            <PostMeta post={post} />
-          </div>
-          <h2 className="mb-2 text-lg font-semibold leading-snug tracking-tight text-foreground line-clamp-2">
+        <div className="flex flex-1 flex-col p-5">
+          <PostMeta post={post} />
+          {/* font-sans overrides global h1,h2 Lora selector — card titles stay clean */}
+          <h2 className="mt-3 mb-2 font-sans text-base font-semibold leading-snug tracking-tight text-foreground line-clamp-2">
             {post.title}
           </h2>
           {post.excerpt && (
-            <p className="mb-4 flex-1 text-sm leading-relaxed text-foreground line-clamp-3">
+            <p className="mb-4 flex-1 text-sm leading-relaxed text-foreground/75 line-clamp-3">
               {post.excerpt}
             </p>
           )}
-          <div className="mt-auto flex items-center gap-1.5 text-sm font-medium text-primary opacity-0 transition-all duration-300 group-hover:opacity-100 group-hover:translate-x-0 -translate-x-2">
+          <div className="mt-auto flex items-center gap-1 text-xs font-semibold text-primary">
             Czytaj dalej
-            <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+            <ArrowRight className="h-3 w-3 transition-transform duration-300 group-hover:translate-x-0.5" aria-hidden="true" />
           </div>
         </div>
       </article>
@@ -193,37 +191,31 @@ export function BlogListPage({ posts }: BlogListPageProps) {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Hero */}
-      <section className="relative overflow-hidden pb-16 pt-28 md:pb-20 md:pt-36">
-        {/* Background decoration */}
-        <div
-          className="pointer-events-none absolute -top-32 right-0 h-[500px] w-[500px] rounded-full bg-primary/5 blur-3xl"
-          aria-hidden="true"
-        />
-        <div
-          className="pointer-events-none absolute -bottom-20 left-0 h-[300px] w-[300px] rounded-full bg-primary/3 blur-3xl"
-          aria-hidden="true"
-        />
+      {/* Blog hero — cream background for warm landing */}
+      <section className="relative overflow-hidden bg-accent pb-16 pt-28 md:pb-20 md:pt-36">
+        {/* Gradient divider bottom */}
+        <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-border/50 to-transparent" />
 
         <div className="relative mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
-          <p className="mb-4 text-sm font-medium uppercase tracking-wider text-primary">
+          <p className="mb-4 text-sm font-semibold uppercase tracking-widest text-primary">
             Blog
           </p>
+          {/* h1 keeps Lora via global selector — it's the hero-level heading */}
           <h1 className="max-w-3xl text-4xl font-bold tracking-tight text-foreground md:text-5xl lg:text-6xl">
             {`Wiedza, kt\u00f3ra nap\u0119dza Tw\u00f3j biznes`}
           </h1>
-          <p className="mt-6 max-w-2xl text-lg leading-relaxed text-foreground md:text-xl">
+          <p className="mt-6 max-w-2xl text-lg leading-relaxed text-foreground/80 md:text-xl">
             {`Artyku\u0142y o AI, automatyzacji i optymalizacji proces\u00f3w biznesowych. Praktyczne wskaz\u00f3wki, kt\u00f3re mo\u017cesz wdro\u017cy\u0107 od razu.`}
           </p>
         </div>
       </section>
 
       {/* Content */}
-      <div className="mx-auto max-w-5xl px-4 pb-24 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-5xl px-4 pb-24 sm:px-6 lg:px-8 pt-12">
         {/* Category filters */}
         {categories.length > 0 && (
           <nav
-            className="mb-12 flex flex-wrap gap-2"
+            className="mb-10 flex flex-wrap gap-2"
             role="tablist"
             aria-label={`Filtruj artyku\u0142y po kategorii`}
           >
@@ -233,8 +225,8 @@ export function BlogListPage({ posts }: BlogListPageProps) {
               onClick={() => setActiveCategory(null)}
               className={`rounded-full px-4 py-2 text-sm font-medium transition-all duration-200 ${
                 activeCategory === null
-                  ? 'bg-foreground text-background shadow-sm'
-                  : 'bg-transparent text-muted-foreground hover:bg-muted hover:text-foreground'
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'bg-transparent text-muted-foreground hover:bg-accent hover:text-foreground'
               }`}
             >
               Wszystkie
@@ -247,8 +239,8 @@ export function BlogListPage({ posts }: BlogListPageProps) {
                 onClick={() => setActiveCategory(category)}
                 className={`rounded-full px-4 py-2 text-sm font-medium transition-all duration-200 ${
                   activeCategory === category
-                    ? 'bg-foreground text-background shadow-sm'
-                    : 'bg-transparent text-muted-foreground hover:bg-muted hover:text-foreground'
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'bg-transparent text-muted-foreground hover:bg-accent hover:text-foreground'
                 }`}
               >
                 {category}
@@ -260,13 +252,13 @@ export function BlogListPage({ posts }: BlogListPageProps) {
         {/* Posts */}
         {filteredPosts.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-32 text-center">
-            <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-muted/60">
+            <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-accent border border-border">
               <BookOpen
                 className="h-8 w-8 text-muted-foreground/50"
                 aria-hidden="true"
               />
             </div>
-            <p className="text-lg font-medium text-foreground">
+            <p className="text-lg font-semibold text-foreground">
               {`Wkr\u00f3tce pojawi\u0105 si\u0119 tutaj artyku\u0142y`}
             </p>
             <p className="mt-2 max-w-sm text-sm text-muted-foreground">
@@ -278,18 +270,22 @@ export function BlogListPage({ posts }: BlogListPageProps) {
             {/* Featured post */}
             {featured && <FeaturedPostCard post={featured} />}
 
-            {/* Divider between featured and grid */}
-            {rest.length > 0 && (
-              <div className="border-t border-border" aria-hidden="true" />
-            )}
-
             {/* Grid */}
             {rest.length > 0 && (
-              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 sm:gap-8">
-                {rest.map((post) => (
-                  <PostCard key={post.slug} post={post} />
-                ))}
-              </div>
+              <>
+                <div className="flex items-center gap-4" aria-hidden="true">
+                  <div className="h-px flex-1 bg-border/60" />
+                  <span className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">
+                    Więcej artykułów
+                  </span>
+                  <div className="h-px flex-1 bg-border/60" />
+                </div>
+                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                  {rest.map((post) => (
+                    <PostCard key={post.slug} post={post} />
+                  ))}
+                </div>
+              </>
             )}
           </div>
         )}
