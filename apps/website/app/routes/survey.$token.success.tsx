@@ -103,7 +103,7 @@ function SuccessWithBooking({
             <h1 className="text-2xl font-bold text-foreground">
               {messages.success.thankYou}
             </h1>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="mt-1 text-sm text-foreground">
               {messages.success.surveySubmittedWithBooking}
             </p>
           </div>
@@ -131,7 +131,7 @@ function SuccessWithoutBooking() {
               <h1 className="text-3xl font-bold text-foreground sm:text-4xl">
                 {messages.success.thankYou}
               </h1>
-              <p className="mt-4 text-lg text-muted-foreground max-w-lg mx-auto">
+              <p className="mt-4 text-lg text-foreground max-w-lg mx-auto">
                 {messages.success.surveySubmitted}
               </p>
             </div>
@@ -156,7 +156,7 @@ function SuccessWithoutBooking() {
                       <p className="text-sm font-semibold text-foreground">
                         {step.title}
                       </p>
-                      <p className="mt-1 text-sm text-muted-foreground">
+                      <p className="mt-1 text-sm text-foreground">
                         {step.description}
                       </p>
                     </div>
@@ -166,7 +166,7 @@ function SuccessWithoutBooking() {
             </ol>
 
             <div className="mt-2 pt-6 border-t border-border">
-              <p className="text-sm text-muted-foreground text-center">
+              <p className="text-sm text-foreground text-center">
                 {messages.success.noCalendarReassurance}
               </p>
             </div>

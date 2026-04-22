@@ -28,7 +28,7 @@ export function SurveyError({ title = messages.survey.surveyUnavailable, message
         <h1 className="text-3xl font-bold text-foreground mb-3">
           {title}
         </h1>
-        <p className="text-lg text-muted-foreground">{message}</p>
+        <p className="text-lg text-foreground">{message}</p>
       </Card>
     </div>
   )

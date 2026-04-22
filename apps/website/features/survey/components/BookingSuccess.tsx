@@ -30,7 +30,7 @@ export function BookingSuccess({ date, slot }: BookingSuccessProps) {
       <h2 className="text-3xl font-bold text-foreground mb-3">
         {messages.calendar.appointmentConfirmed}
       </h2>
-      <p className="text-muted-foreground mb-8">
+      <p className="text-foreground mb-8">
         {messages.calendar.appointmentBookedSuccess}
       </p>
 

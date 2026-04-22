@@ -111,7 +111,7 @@ function FeaturedPostCard({ post }: { post: WebsiteBlogListItem }) {
           {/* Content */}
           <div className="flex flex-col justify-center gap-4 p-6 md:p-10">
             {post.author_name && (
-              <p className="text-sm font-medium text-muted-foreground">
+              <p className="text-sm font-medium text-foreground">
                 {post.author_name}
               </p>
             )}
@@ -119,7 +119,7 @@ function FeaturedPostCard({ post }: { post: WebsiteBlogListItem }) {
               {post.title}
             </h2>
             {post.excerpt && (
-              <p className="text-base leading-relaxed text-muted-foreground line-clamp-3">
+              <p className="text-base leading-relaxed text-foreground line-clamp-3">
                 {post.excerpt}
               </p>
             )}
@@ -161,7 +161,7 @@ function PostCard({ post }: { post: WebsiteBlogListItem }) {
             {post.title}
           </h2>
           {post.excerpt && (
-            <p className="mb-4 flex-1 text-sm leading-relaxed text-muted-foreground line-clamp-3">
+            <p className="mb-4 flex-1 text-sm leading-relaxed text-foreground line-clamp-3">
               {post.excerpt}
             </p>
           )}
@@ -212,7 +212,7 @@ export function BlogListPage({ posts }: BlogListPageProps) {
           <h1 className="max-w-3xl text-4xl font-bold tracking-tight text-foreground md:text-5xl lg:text-6xl">
             {`Wiedza, kt\u00f3ra nap\u0119dza Tw\u00f3j biznes`}
           </h1>
-          <p className="mt-6 max-w-2xl text-lg leading-relaxed text-muted-foreground md:text-xl">
+          <p className="mt-6 max-w-2xl text-lg leading-relaxed text-foreground md:text-xl">
             {`Artyku\u0142y o AI, automatyzacji i optymalizacji proces\u00f3w biznesowych. Praktyczne wskaz\u00f3wki, kt\u00f3re mo\u017cesz wdro\u017cy\u0107 od razu.`}
           </p>
         </div>
