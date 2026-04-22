@@ -87,7 +87,7 @@ export function Process({
 
         {/* Zero-risk box — high-prominence accent panel */}
         <ScrollReveal delay={600}>
-          <div className="rounded-xl border border-primary/40 bg-primary/8 p-6 md:p-8 mb-6">
+          <div className="rounded-xl border border-primary/30 bg-accent p-6 md:p-8 mb-6">
             <div className="flex items-start gap-5">
               <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-primary/15 border border-primary/30 flex items-center justify-center">
                 <Shield className="w-6 h-6 text-primary" />

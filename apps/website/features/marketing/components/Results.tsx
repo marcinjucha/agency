@@ -45,7 +45,7 @@ export function Results({
                 <h3 className="text-base font-semibold text-foreground mb-2">
                   {outcome.title}
                 </h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">
+                <p className="text-sm text-foreground/75 leading-relaxed">
                   {outcome.detail}
                 </p>
               </div>

@@ -16,7 +16,7 @@ export function Problems({ title, stat, items }: ProblemsBlock) {
             <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4 tracking-tight">
               {title}
             </h2>
-            <p className="text-lg text-muted-foreground leading-relaxed mb-12">
+            <p className="text-lg text-foreground/80 leading-relaxed mb-12">
               {stat}
             </p>
           </div>

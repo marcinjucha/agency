@@ -49,7 +49,7 @@ export function Identification({ eyebrow, items, transition }: IdentificationBlo
         </div>
 
         <ScrollReveal delay={400}>
-          <p className="text-base md:text-lg text-muted-foreground leading-relaxed max-w-3xl">
+          <p className="text-base md:text-lg text-foreground/80 leading-relaxed max-w-3xl">
             {transition}
           </p>
         </ScrollReveal>
