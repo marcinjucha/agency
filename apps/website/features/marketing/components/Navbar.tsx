@@ -50,7 +50,7 @@ export function Navbar({ ctaText, ctaHref }: NavbarBlock) {
       <header
         className={`fixed top-0 left-0 right-0 z-40 transition-all duration-500 ease-out ${
           isScrolled
-            ? 'bg-background/80 backdrop-blur-2xl border-b border-border/50 shadow-lg shadow-black/25'
+            ? 'bg-background/80 backdrop-blur-2xl border-b border-border/50 shadow-sm shadow-black/8'
             : 'bg-transparent backdrop-blur-none border-b border-transparent'
         }`}
       >
@@ -58,7 +58,7 @@ export function Navbar({ ctaText, ctaHref }: NavbarBlock) {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-8">
               <Link to={routes.home} className="group flex items-center gap-2">
-                <span className="text-lg font-bold tracking-tight bg-linear-to-r from-foreground via-foreground to-primary bg-clip-text text-gradient transition-all duration-300 group-hover:from-primary group-hover:to-primary/70">
+                <span className="text-lg font-bold tracking-tight bg-linear-to-r from-orange-700 via-primary to-amber-500 bg-clip-text text-gradient transition-all duration-300 group-hover:from-primary group-hover:via-primary group-hover:to-amber-400">
                   Halo Efekt
                 </span>
               </Link>

@@ -130,7 +130,7 @@ export function SurveyForm({ survey, linkId, token }: SurveyFormProps) {
                 {survey.title}
               </h1>
               {survey.description && (
-                <p className="text-lg text-muted-foreground">
+                <p className="text-lg text-foreground">
                   {survey.description}
                 </p>
               )}

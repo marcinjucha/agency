@@ -90,7 +90,7 @@ export function CalendarBooking({ surveyId, responseId }: CalendarBookingProps) 
               <h1 className="text-4xl font-bold text-foreground mb-3">
                 {messages.calendar.bookAppointment}
               </h1>
-              <p className="text-lg text-muted-foreground">
+              <p className="text-lg text-foreground">
                 {messages.calendar.selectConvenientTime}
               </p>
             </div>

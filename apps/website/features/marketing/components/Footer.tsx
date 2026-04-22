@@ -15,7 +15,7 @@ export function Footer({ description, privacy, terms, copyright }: FooterBlock) 
             <Link to={routes.home} className="text-lg font-bold text-foreground hover:text-primary transition-colors duration-300">
               Halo Efekt
             </Link>
-            <p className="text-sm text-muted-foreground mt-3 leading-relaxed">
+            <p className="text-sm text-foreground/70 mt-3 leading-relaxed">
               {description}
             </p>
           </div>

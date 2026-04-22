@@ -16,7 +16,7 @@ export function Problems({ title, stat, items }: ProblemsBlock) {
             <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4 tracking-tight">
               {title}
             </h2>
-            <p className="text-lg text-muted-foreground leading-relaxed mb-12">
+            <p className="text-lg text-foreground/80 leading-relaxed mb-12">
               {stat}
             </p>
           </div>
@@ -28,9 +28,9 @@ export function Problems({ title, stat, items }: ProblemsBlock) {
             const Icon = PROBLEM_ICONS[i % PROBLEM_ICONS.length]
             return (
               <ScrollReveal key={i} delay={i * 100}>
-                <div className="group flex items-center gap-4 p-5 rounded-xl border border-border/50 bg-muted/20 hover:bg-muted/40 hover:border-destructive/30 transition-all duration-300">
-                  <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-destructive/10 flex items-center justify-center group-hover:bg-destructive/15 transition-colors duration-300">
-                    <Icon className="w-4.5 h-4.5 text-destructive/80" />
+                <div className="group flex items-center gap-4 p-5 rounded-xl border border-border/50 bg-accent/60 hover:bg-accent hover:border-primary/30 transition-all duration-300">
+                  <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-primary/8 flex items-center justify-center group-hover:bg-primary/12 transition-colors duration-300">
+                    <Icon className="w-4.5 h-4.5 text-primary/70" />
                   </div>
                   <p className="text-sm md:text-base text-foreground/90 leading-relaxed">{text}</p>
                 </div>

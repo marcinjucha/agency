@@ -10,7 +10,7 @@ export function Results({
   qualificationItems,
 }: ResultsBlock) {
   return (
-    <section className="relative py-16 md:py-24 bg-background overflow-hidden">
+    <section className="relative py-16 md:py-24 bg-accent overflow-hidden">
       {/* Gradient divider */}
       <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-border/50 to-transparent" />
 
@@ -24,8 +24,8 @@ export function Results({
         {/* Metric strip */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-16">
           {metrics.map((metric, i) => (
-            <ScrollReveal key={i} delay={i * 100}>
-              <div className="p-6 rounded-xl border border-border/50 bg-muted/20 text-center">
+            <ScrollReveal key={i} delay={i * 100} className="h-full">
+              <div className="p-6 rounded-xl border border-border bg-background text-center shadow-sm h-full flex flex-col items-center justify-center">
                 <p className="text-3xl md:text-4xl font-bold text-primary tracking-tight mb-2">
                   {metric.value}
                 </p>
@@ -41,11 +41,11 @@ export function Results({
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-16">
           {outcomes.map((outcome, i) => (
             <ScrollReveal key={i} delay={300 + i * 100}>
-              <div className="p-6 rounded-xl border border-border/50 bg-muted/20 hover:bg-muted/40 hover:border-primary/30 transition-all duration-300 h-full">
+              <div className="p-6 rounded-xl border border-border bg-background hover:border-primary/30 transition-all duration-300 h-full shadow-sm">
                 <h3 className="text-base font-semibold text-foreground mb-2">
                   {outcome.title}
                 </h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">
+                <p className="text-sm text-foreground/75 leading-relaxed">
                   {outcome.detail}
                 </p>
               </div>

@@ -265,6 +265,14 @@ features:
     depends_on: ["TanStack Start Migration — Surveys & Intake", "TanStack Start Migration — Content"]
     completion_notes: "CMS is fully TanStack Start. Zero Next.js dependencies in apps/cms. All shop/marketplace routes and server functions migrated. createServerClient pattern unified across all server-only Supabase access. Feature branch: feature/cms-tanstack-migration."
 
+  - name: "Website Light Theme Redesign"
+    status: done
+    task_id: "AAA-T-207"
+    description: "Full visual redesign of apps/website/ from dark navy to a warm light palette. CSS @theme tokens rewritten (ink/muted/hair/bg/bg-alt/bg-tint/accent/accent-soft). Font switched from Fraunces to Lora Variable sitewide (@fontsource-variable/lora added, fraunces removed). Landing page sections use alternating cream background rhythm (Identification, Problems, Process, Results). Blog listing redesigned with cream hero and refreshed cards. Blog article redesigned with cream header and Lora serif h1. Survey form body copy muted-foreground violations fixed. Navbar logo uses orange gradient. Results cards set to equal height. Footer and FinalCTA description text corrected to foreground color."
+    why: "Warm light aesthetic better suits professional services ICP (law firms, coaching, medical) and improves perceived quality of the intake funnel. Dark navy read as too tech-startup for target market."
+    depends_on: ["TanStack Start Migration — Website"]
+    completion_notes: "Visitors experience a warm, light website across all pages — landing page, blog listing, blog articles, and survey flow. All text-muted-foreground violations on body copy resolved. Lora Variable applied consistently to all headings sitewide."
+
   # Backlog
   - name: "Multi-language Support (PL/EN)"
     status: not_started
