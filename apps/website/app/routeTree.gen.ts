@@ -16,10 +16,10 @@ import { Route as PolitykaPrywatnosciRouteImport } from './routes/polityka-prywa
 import { Route as BlogRouteImport } from './routes/blog'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as BlogIndexRouteImport } from './routes/blog/index'
-import { Route as SurveyTokenRouteImport } from './routes/survey.$token'
+import { Route as SurveyTokenRouteImport } from './routes/survey/$token'
 import { Route as BlogSlugRouteImport } from './routes/blog/$slug'
-import { Route as SurveyTokenIndexRouteImport } from './routes/survey.$token.index'
-import { Route as SurveyTokenSuccessRouteImport } from './routes/survey.$token.success'
+import { Route as SurveyTokenIndexRouteImport } from './routes/survey/$token.index'
+import { Route as SurveyTokenSuccessRouteImport } from './routes/survey/$token.success'
 import { Route as BlogPreviewTokenRouteImport } from './routes/blog/preview.$token'
 
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
