@@ -1658,6 +1658,7 @@ export type Database = {
           id: string
           position_x: number
           position_y: number
+          slug: string
           step_config: Json
           step_type: string
           updated_at: string
@@ -1668,6 +1669,7 @@ export type Database = {
           id?: string
           position_x?: number
           position_y?: number
+          slug: string
           step_config?: Json
           step_type: string
           updated_at?: string
@@ -1678,6 +1680,7 @@ export type Database = {
           id?: string
           position_x?: number
           position_y?: number
+          slug?: string
           step_config?: Json
           step_type?: string
           updated_at?: string
