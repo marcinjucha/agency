@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import {
   Badge,
@@ -19,42 +19,23 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@agency/ui'
-import { X, ExternalLink, Calendar, CheckCircle2, Loader2, Trash2, Mail, Building2, Phone } from 'lucide-react'
+import { X, ExternalLink, Calendar, CheckCircle2, Loader2, Trash2, Mail, Building2, Phone, Bot, ChevronDown, ChevronRight } from 'lucide-react'
 import { updateResponseStatusFn, updateInternalNotesFn } from '../server'
-import { deleteResponseFn } from '../../responses/server'
+import { deleteResponseFn, getResponseAiActionResultsFn } from '../../responses/server'
+import { resolveOutputValue } from '../../responses/utils/resolveOutputValue'
 import { getResponseStatusColor } from '@/lib/utils/status'
 import { queryKeys } from '@/lib/query-keys'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
 import { RESPONSE_STATUSES } from '../validation'
-import { STATUS_LABELS, getAiScoreTextColor, APPOINTMENT_STATUS_LABELS } from '../types'
+import { STATUS_LABELS, APPOINTMENT_STATUS_LABELS } from '../types'
 import type { PipelineResponse, ResponseStatus } from '../types'
+import type { AiActionResult } from '../../responses/types'
 import type { Question, SurveyAnswers } from '../../responses/types'
 
 interface ResponseDetailPanelProps {
   response: PipelineResponse
   onClose: () => void
-}
-
-/** AI recommendation badge styling */
-function getRecommendationStyle(rec: string): string {
-  switch (rec) {
-    case 'QUALIFIED':
-      return 'bg-emerald-500/15 text-emerald-400'
-    case 'DISQUALIFIED':
-      return 'bg-red-500/15 text-red-400'
-    case 'NEEDS_MORE_INFO':
-      return 'bg-amber-500/15 text-amber-400'
-    default:
-      return 'bg-muted text-muted-foreground'
-  }
-}
-
-/** Human-readable AI recommendation labels */
-const RECOMMENDATION_LABELS: Record<string, string> = {
-  QUALIFIED: messages.intake.aiRecommendationQualified,
-  DISQUALIFIED: messages.intake.aiRecommendationDisqualified,
-  NEEDS_MORE_INFO: messages.intake.aiRecommendationNeedsMoreInfo,
 }
 
 /** Build Q&A pairs from questions and answers */
@@ -66,6 +47,14 @@ function buildQuestionAnswerPairs(
     question: q,
     answer: answers[q.id],
   }))
+}
+
+/** Convert camelCase key to readable label — e.g. "overallScore" → "Overall Score" */
+function camelToLabel(key: string): string {
+  return key
+    .replace(/([A-Z])/g, ' $1')
+    .replace(/^./, (c) => c.toUpperCase())
+    .trim()
 }
 
 /** Format date in Polish locale */
@@ -84,6 +73,7 @@ export function ResponseDetailPanel({ response, onClose }: ResponseDetailPanelPr
   const [notesValue, setNotesValue] = useState('')
   const [notesSaveState, setNotesSaveState] = useState<'idle' | 'saved' | 'error'>('idle')
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [aiSectionCollapsed, setAiSectionCollapsed] = useState(false)
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -151,6 +141,11 @@ export function ResponseDetailPanel({ response, onClose }: ResponseDetailPanelPr
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.intake.pipeline })
     },
+  })
+
+  const { data: aiActionResults, isLoading: isLoadingAi } = useQuery({
+    queryKey: queryKeys.responses.aiActionResults(response.id),
+    queryFn: () => getResponseAiActionResultsFn({ data: { responseId: response.id } }),
   })
 
   const qaPairs = buildQuestionAnswerPairs(response.surveyQuestions, response.answers)
@@ -284,36 +279,91 @@ export function ResponseDetailPanel({ response, onClose }: ResponseDetailPanelPr
 
         <div className="border-t border-border" />
 
-        {/* AI Qualification */}
+        {/* AI Workflow Results */}
         <section>
-          <h3 className="text-sm font-semibold text-foreground mb-3">
-            {messages.intake.sheetAiAnalysis}
-          </h3>
-          {response.aiScore !== null ? (
-            <div className="space-y-2">
-              <div className="flex items-center gap-3">
-                {response.aiRecommendation && (
-                  <Badge
-                    className={`${getRecommendationStyle(response.aiRecommendation)} px-2.5 py-0.5 rounded-full text-xs font-medium`}
-                  >
-                    {RECOMMENDATION_LABELS[response.aiRecommendation] ?? response.aiRecommendation}
-                  </Badge>
-                )}
-                <span className="text-sm text-muted-foreground">
-                  {messages.responses.overall}:{' '}
-                  <strong className={getAiScoreTextColor(response.aiScore)}>
-                    {response.aiScore}/10
-                  </strong>
-                </span>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {messages.intake.sheetOpenFullPage} — {messages.responses.aiAnalysis}
-              </p>
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground italic">
-              {messages.responses.analysisUnavailable}
-            </p>
+          <button
+            type="button"
+            onClick={() => setAiSectionCollapsed((prev) => !prev)}
+            className="flex items-center gap-2 w-full text-left mb-3 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
+            aria-expanded={!aiSectionCollapsed}
+          >
+            <Bot className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+            <h3 className="text-sm font-semibold text-foreground flex-1">
+              {messages.responses.aiWorkflowTitle}
+            </h3>
+            {aiSectionCollapsed ? (
+              <ChevronRight className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+            ) : (
+              <ChevronDown className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+            )}
+          </button>
+
+          {!aiSectionCollapsed && (
+            <>
+              {isLoadingAi ? (
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  <p className="text-sm">{messages.responses.aiWorkflowLoading}</p>
+                </div>
+              ) : !aiActionResults || aiActionResults.length === 0 ? (
+                <p className="text-sm text-muted-foreground italic">{messages.responses.aiWorkflowEmpty}</p>
+              ) : (
+                <div className="space-y-4">
+                  {aiActionResults.map((result: AiActionResult, index: number) => (
+                    <div key={index} className={index > 0 ? 'pt-4 border-t border-border' : ''}>
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
+                        {result.workflowName}
+                      </p>
+                      <div className="space-y-3">
+                        {Object.entries(result.outputPayload)
+                          .filter(([key]) => key !== 'aiOutputJson')
+                          .map(([key, value]) => {
+                            const schemaLabel = result.outputSchema.find((f) => f.key === key)?.label
+                            const resolved = resolveOutputValue(value)
+
+                            if (resolved.kind === 'object') {
+                              return (
+                                <div key={key} className="space-y-2">
+                                  {schemaLabel && (
+                                    <p className="text-xs text-muted-foreground">{schemaLabel}</p>
+                                  )}
+                                  <div className="rounded-md border border-border divide-y divide-border">
+                                    {Object.entries(resolved.data).map(([subKey, subValue]) => (
+                                      <div key={subKey} className="px-3 py-2">
+                                        <p className="text-xs text-muted-foreground mb-0.5">
+                                          {camelToLabel(subKey)}
+                                        </p>
+                                        <p className="text-sm text-foreground break-words whitespace-pre-wrap">
+                                          {typeof subValue === 'object' && subValue !== null
+                                            ? JSON.stringify(subValue, null, 2)
+                                            : String(subValue)}
+                                        </p>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )
+                            }
+
+                            return (
+                              <div key={key}>
+                                <p className="text-xs text-muted-foreground mb-1">
+                                  {schemaLabel ?? camelToLabel(key)}
+                                </p>
+                                <div className="bg-muted rounded-md px-3 py-2">
+                                  <p className="text-sm text-foreground break-words whitespace-pre-wrap">
+                                    {resolved.text}
+                                  </p>
+                                </div>
+                              </div>
+                            )
+                          })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </section>
 
