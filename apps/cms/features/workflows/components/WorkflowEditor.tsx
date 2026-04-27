@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect, useRef, useMemo, lazy, Suspense } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { messages } from '@/lib/messages'
-import { getWorkflowFn, saveWorkflowCanvasFn, toggleWorkflowActiveFn } from '../server'
+import { getWorkflowFn, saveWorkflowCanvasFn, toggleWorkflowActiveFn, updateStepSlugFn } from '../server'
 import { queryKeys } from '@/lib/query-keys'
 import type { SaveCanvasFormData } from '../validation'
 import { WorkflowEditorHeader } from './WorkflowEditorHeader'
@@ -101,6 +101,7 @@ function WorkflowEditorContent({ workflow, workflowId }: WorkflowEditorContentPr
           label: getLabel(step.step_type),
           stepType: step.step_type,
           stepConfig: step.step_config,
+          slug: step.slug,
         },
       }
     })
@@ -118,6 +119,7 @@ function WorkflowEditorContent({ workflow, workflowId }: WorkflowEditorContentPr
           label: getLabel(workflow.trigger_type),
           stepType: workflow.trigger_type,
           stepConfig: workflow.trigger_config,
+          slug: 'trigger',
         },
       })
     }
@@ -165,6 +167,7 @@ function WorkflowEditorContent({ workflow, workflowId }: WorkflowEditorContentPr
     id: string
     stepType: string
     stepConfig: Record<string, unknown>
+    slug?: string
   } | null>(null)
 
   const handleNodeSelect = useCallback(
@@ -174,9 +177,41 @@ function WorkflowEditorContent({ workflow, workflowId }: WorkflowEditorContentPr
         setSelectedNode(null)
         return
       }
-      setSelectedNode({ id: nodeId, stepType, stepConfig })
+      // Pull slug from the canvas node data — onNodeSelect doesn't ship it directly.
+      const node = canvasRef.current?.getNodes().find((n) => n.id === nodeId)
+      const slug = node ? ((node.data as { slug?: string }).slug ?? undefined) : undefined
+      setSelectedNode({ id: nodeId, stepType, stepConfig, slug })
     },
     [isTestMode]
+  )
+
+  const handleSlugCommit = useCallback(
+    async (newSlug: string): Promise<{ ok: true } | { ok: false; error: string }> => {
+      if (!selectedNode) return { ok: false, error: messages.common.errorOccurred }
+
+      // New (unsaved) steps have no row in DB yet — rename locally only.
+      const isPersisted = workflow.steps.some((s) => s.id === selectedNode.id)
+      if (!isPersisted) {
+        canvasRef.current?.updateNodeData(selectedNode.id, { slug: newSlug })
+        setSelectedNode((prev) => (prev ? { ...prev, slug: newSlug } : prev))
+        return { ok: true }
+      }
+
+      const result = await updateStepSlugFn({
+        data: { stepId: selectedNode.id, newSlug },
+      })
+
+      if (!result.success) {
+        return { ok: false, error: result.error ?? messages.common.errorOccurred }
+      }
+
+      const persistedSlug = result.data?.slug ?? newSlug
+      canvasRef.current?.updateNodeData(selectedNode.id, { slug: persistedSlug })
+      setSelectedNode((prev) => (prev ? { ...prev, slug: persistedSlug } : prev))
+      queryClient.invalidateQueries({ queryKey: queryKeys.workflows.detail(workflow.id) })
+      return { ok: true }
+    },
+    [selectedNode, workflow.id, workflow.steps, queryClient]
   )
 
   const handleConfigChange = useCallback(
@@ -220,6 +255,7 @@ function WorkflowEditorContent({ workflow, workflowId }: WorkflowEditorContentPr
           id: node.id,
           step_type: (node.data as { stepType: string }).stepType as SaveCanvasFormData['steps'][number]['step_type'],
           step_config: (node.data as { stepConfig: Record<string, unknown> }).stepConfig ?? {},
+          slug: (node.data as { slug?: string }).slug,
           position_x: node.position.x,
           position_y: node.position.y,
         })),
@@ -276,6 +312,7 @@ function WorkflowEditorContent({ workflow, workflowId }: WorkflowEditorContentPr
 
     const steps = nodes.map((n) => ({
       id: n.id,
+      slug: ((n.data as { slug?: string }).slug ?? n.id),
       step_type: (n.data as { stepType: string }).stepType,
       step_config: ((n.data as { stepConfig?: Record<string, unknown> }).stepConfig ?? {}) as Record<string, unknown>,
     }))
@@ -356,6 +393,8 @@ function WorkflowEditorContent({ workflow, workflowId }: WorkflowEditorContentPr
             <ConfigPanelWrapper
               nodeId={selectedNode.id}
               stepType={selectedNode.stepType}
+              slug={isTriggerType(selectedNode.stepType) ? undefined : selectedNode.slug}
+              onSlugCommit={isTriggerType(selectedNode.stepType) ? undefined : handleSlugCommit}
               onClose={handlePanelClose}
             >
               <PanelComponent
