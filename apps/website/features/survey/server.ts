@@ -162,39 +162,28 @@ export const submitResponseFn = createServerFn({ method: 'POST' })
 
     const responseId = (response as { id: string }).id
 
-    // Fire-and-forget: n8n AI analysis
-    if (process.env.N8N_WEBHOOK_SURVEY_ANALYSIS_URL) {
-      fetch(process.env.N8N_WEBHOOK_SURVEY_ANALYSIS_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ responseId }),
-      }).catch(err => console.error('[N8N] AI analysis webhook failed:', err))
-    }
-
-    // Fire-and-forget: n8n form confirmation email
-    if (process.env.N8N_WEBHOOK_FORM_CONFIRM_EMAIL_URL) {
-      fetch(process.env.N8N_WEBHOOK_FORM_CONFIRM_EMAIL_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ responseId }),
-      }).catch(err => console.error('[N8N] Email confirmation webhook failed:', err))
-    }
-
-    // Fire-and-forget: CMS workflow engine (only if link has bound workflow)
+    // Fire-and-forget: CMS workflow engine (only if link has bound workflow).
+    // Note: AI analysis and confirmation email are now part of the workflow itself
+    // (ai_action + send_email steps). The standalone webhook calls were removed 2026-04-27.
+    // Delayed 500ms to ensure the just-committed response row is visible through PgBouncer
+    // before the Trigger Handler / get_response Handler queries Supabase REST.
     if (workflowId && process.env.CMS_BASE_URL && process.env.WORKFLOW_TRIGGER_SECRET) {
-      fetch(`${process.env.CMS_BASE_URL}/api/workflows/trigger`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${process.env.WORKFLOW_TRIGGER_SECRET}`,
-        },
-        body: JSON.stringify({
-          trigger_type: 'survey_submitted',
-          tenant_id: tenantId,
-          payload: { responseId, surveyLinkId: data.linkId },
-          workflow_id: workflowId,
-        }),
-      }).catch(err => console.error('[Workflow] Trigger failed:', err))
+      const workflowTriggerBody = JSON.stringify({
+        trigger_type: 'survey_submitted',
+        tenant_id: tenantId,
+        payload: { responseId, surveyLinkId: data.linkId },
+        workflow_id: workflowId,
+      })
+      setTimeout(() => {
+        fetch(`${process.env.CMS_BASE_URL}/api/workflows/trigger`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${process.env.WORKFLOW_TRIGGER_SECRET}`,
+          },
+          body: workflowTriggerBody,
+        }).catch(err => console.error('[Workflow] Trigger failed:', err))
+      }, 500)
     }
 
     // Increment submission count (non-critical)
