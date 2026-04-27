@@ -1,0 +1,60 @@
+{
+  "name": "Step - Get Response Handler",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "a1b2c3d4-1111-4abc-8def-000000000001",
+      "name": "Start",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// =============================================================\n// Get Response Handler — fetch full survey response data\n// =============================================================\n// Reads variableContext.responseId, fetches response + survey_link\n// + survey + tenant from Supabase, builds Q&A pairs and qaContext.\n// Returns all 10 fields of the get_response output schema.\n// tenant_id filter on responses fetch for security.\n// =============================================================\n\nconst https = require('https');\n\nconst SUPABASE_URL = $env.SUPABASE_URL;\nif (!SUPABASE_URL) throw new Error('SUPABASE_URL not configured');\nconst SUPABASE_KEY = $env.SUPABASE_SERVICE_ROLE_KEY;\n\nasync function supabaseRequest(path) {\n  const url = `${SUPABASE_URL}/rest/v1/${path}`;\n  return new Promise((resolve, reject) => {\n    const match = url.match(/^https?:\\/\\/([^/]+)(\\/.*)$/);\n    if (!match) { reject(new Error('Invalid SUPABASE_URL')); return; }\n    const options = {\n      hostname: match[1], path: match[2], method: 'GET',\n      headers: {\n        'apikey': SUPABASE_KEY,\n        'Authorization': `Bearer ${SUPABASE_KEY}`,\n        'Content-Type': 'application/json',\n      },\n    };\n    const req = https.request(options, (res) => {\n      let data = '';\n      res.on('data', (chunk) => data += chunk);\n      res.on('end', () => {\n        try {\n          const parsed = JSON.parse(data);\n          if (res.statusCode >= 400) reject(new Error(`Supabase ${path}: ${res.statusCode} ${data}`));\n          else resolve(parsed);\n        } catch (e) { reject(new Error(`Parse error for ${path}: ${data}`)); }\n      });\n    });\n    req.on('error', reject);\n    req.end();\n  });\n}\n\ntry {\n  const item = $input.first().json;\n  const { variableContext, tenantId } = item;\n\n  // Resolve responseId: use resolvedConfig.responseIdExpression (pre-resolved by Orchestrator)\n  // or fall back to variableContext.responseId for backward compat\n  const responseId = item.resolvedConfig?.responseIdExpression ?? variableContext.responseId;\n  if (!responseId) throw new Error('get_response: responseIdExpression did not resolve to a valid ID');\n\n  const safeTenantId = tenantId ?? '00000000-0000-0000-0000-000000000000';\n\n  // Phase 1: fetch response row with tenant_id filter (security)\n  const responses = await supabaseRequest(\n    `responses?id=eq.${responseId}&tenant_id=eq.${encodeURIComponent(safeTenantId)}&limit=1`\n  );\n  if (!responses.length) throw new Error(`Response ${responseId} not found for tenant ${safeTenantId}`);\n  const response = responses[0];\n\n  // Parse answers JSONB: { questionId: answerValue, ... }\n  let answersMap = {};\n  if (typeof response.answers === 'string') {\n    try { answersMap = JSON.parse(response.answers); } catch {}\n  } else if (response.answers && typeof response.answers === 'object') {\n    answersMap = response.answers;\n  }\n\n  // Phase 2: fetch survey link\n  const surveyLinks = await supabaseRequest(\n    `survey_links?id=eq.${response.survey_link_id}&limit=1`\n  );\n  const surveyLink = surveyLinks.length ? surveyLinks[0] : {};\n\n  // Phase 3: fetch survey (questions JSONB)\n  const surveyId = surveyLink.survey_id || null;\n  let survey = { title: 'Unknown Survey', questions: [] };\n  if (surveyId) {\n    const surveys = await supabaseRequest(`surveys?id=eq.${surveyId}&limit=1`);\n    if (surveys.length) survey = surveys[0];\n  }\n\n  // Phase 4: fetch tenant name for companyName variable\n  const tenants = await supabaseRequest(\n    `tenants?id=eq.${encodeURIComponent(safeTenantId)}&select=name&limit=1`\n  );\n  const companyName = tenants.length > 0 ? (tenants[0].name ?? '') : '';\n\n  // Parse questions from surveys.questions JSONB\n  let questions = [];\n  if (typeof survey.questions === 'string') {\n    try { questions = JSON.parse(survey.questions); } catch {}\n  } else if (Array.isArray(survey.questions)) {\n    questions = survey.questions;\n  }\n\n  // Build Q&A pairs from answers map + questions\n  const qaPairs = Object.entries(answersMap).map(([questionId, answer]) => {\n    const q = questions.find(q => q.id === questionId);\n    return {\n      questionText: q ? q.question : questionId,\n      answer: String(answer),\n      questionType: q ? q.type : 'text',\n    };\n  });\n\n  const qaContext = qaPairs\n    .map(qa => `Q: ${qa.questionText}\\nA: ${qa.answer}`)\n    .join('\\n\\n');\n\n  // Extract email + name from form answers (preferred over survey_link defaults).\n  // Falls back to survey_link.notification_email / client_email when answer not present.\n  const answerEmail = qaPairs.find(qa => qa.questionType === 'email' && qa.answer)?.answer || null;\n\n  return {\n    json: {\n      ...item,\n      stepResult: {\n        success: true,\n        outputPayload: {\n          responseId: response.id,\n          status: response.status || null,\n          respondentName: response.respondent_name || null,\n          createdAt: response.created_at,\n          surveyTitle: survey.title,\n          clientEmail: answerEmail || surveyLink.notification_email || surveyLink.client_email || null,\n          answers: qaPairs,\n          qaContext,\n          companyName,\n          aiQualification: response.ai_qualification || null,\n          responseUrl: `${$env.HOST_URL || ''}/admin/responses/${response.id}`,\n        },\n      },\n    }\n  };\n} catch (err) {\n  const item = $input.first().json;\n  return { json: { ...item, stepResult: { success: false, error: err.message } } };\n}\n"
+      },
+      "id": "a1b2c3d4-1111-4abc-8def-000000000002",
+      "name": "Fetch Response Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        0
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Start": {
+      "main": [
+        [
+          {
+            "node": "Fetch Response Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "pEvMbZGHKOsqaHmK",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "00000000-0000-4000-8000-000000000001",
+  "meta": {
+    "instanceId": "b46d0b13d69880a2fec430102877b55af4e44991549a68a3e78cd50a4dc1a09e"
+  },
+  "id": "GetResponseHandler01",
+  "tags": []
+}

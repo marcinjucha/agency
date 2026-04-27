@@ -1,0 +1,60 @@
+{
+  "name": "Step - Update Response Handler",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "b2c3d4e5-2222-4abc-8def-000000000001",
+      "name": "Start",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// =============================================================\n// Update Response Handler — PATCH responses row with field_mapping\n// =============================================================\n// Reads variableContext.responseId and currentStep.step_config.field_mapping.\n// Resolves source_expression against variableContext (simple {{stepId.fieldKey}} pattern).\n// PATCHes responses table via Supabase REST.\n// JSONB columns (ai_qualification): pass object directly — NEVER JSON.stringify (double-encode bug).\n// tenant_id filter on all Supabase queries for security.\n// =============================================================\n\nconst https = require('https');\n\nconst SUPABASE_URL = $env.SUPABASE_URL;\nif (!SUPABASE_URL) throw new Error('SUPABASE_URL not configured');\nconst SUPABASE_KEY = $env.SUPABASE_SERVICE_ROLE_KEY;\n\n// Simple {{key}} and {{nested.key}} variable resolver against variableContext\nfunction resolveExpression(expression, context) {\n  if (typeof expression !== 'string') return expression;\n  // Handle {{variable}} pattern\n  const match = expression.match(/^\\{\\{\\s*([\\w.]+)\\s*\\}\\}$/);\n  if (match) {\n    const key = match[1].trim();\n    // Support nested paths like stepId.fieldKey\n    const parts = key.split('.');\n    let value = context;\n    for (const part of parts) {\n      if (value === null || value === undefined || typeof value !== 'object') return expression;\n      value = value[part];\n    }\n    return value !== undefined ? value : expression;\n  }\n  // Plain string (no template) — return as-is\n  return expression;\n}\n\nasync function supabasePatch(path, body) {\n  const url = `${SUPABASE_URL}/rest/v1/${path}`;\n  return new Promise((resolve, reject) => {\n    const match = url.match(/^https?:\\/\\/([^/]+)(\\/.*)$/);\n    if (!match) { reject(new Error('Invalid SUPABASE_URL')); return; }\n    const bodyStr = JSON.stringify(body);\n    const options = {\n      hostname: match[1],\n      path: match[2],\n      method: 'PATCH',\n      headers: {\n        'apikey': SUPABASE_KEY,\n        'Authorization': `Bearer ${SUPABASE_KEY}`,\n        'Content-Type': 'application/json',\n        'Content-Length': Buffer.byteLength(bodyStr),\n        'Prefer': 'return=minimal',\n      },\n    };\n    const req = https.request(options, (res) => {\n      let data = '';\n      res.on('data', (chunk) => data += chunk);\n      res.on('end', () => {\n        if (res.statusCode >= 400) {\n          reject(new Error(`Supabase PATCH ${path}: ${res.statusCode} ${data}`));\n        } else {\n          resolve(true);\n        }\n      });\n    });\n    req.on('error', reject);\n    req.write(bodyStr);\n    req.end();\n  });\n}\n\ntry {\n  const item = $input.first().json;\n  const { variableContext, currentStep, tenantId } = item;\n\n  // Validate required input\n  const responseId = variableContext.responseId;\n  if (!responseId) throw new Error('update_response requires variableContext.responseId');\n\n  const fieldMapping = (currentStep && currentStep.step_config && currentStep.step_config.field_mapping) || [];\n  if (!Array.isArray(fieldMapping) || fieldMapping.length === 0) {\n    // No mappings configured — succeed with no-op\n    return {\n      json: {\n        ...item,\n        stepResult: {\n          success: true,\n          outputPayload: { updated: true, updatedAt: new Date().toISOString() },\n        },\n      }\n    };\n  }\n\n  const safeTenantId = tenantId ?? '00000000-0000-0000-0000-000000000000';\n\n  // Build PATCH body from resolved field_mapping\n  const patchBody = {};\n  for (const mapping of fieldMapping) {\n    const { target_column, source_expression } = mapping;\n    if (!target_column) continue;\n    const resolved = resolveExpression(source_expression, variableContext);\n    // JSONB columns: pass object directly — never JSON.stringify (double-encode bug)\n    patchBody[target_column] = resolved;\n  }\n\n  // PATCH responses with tenant_id filter for security\n  await supabasePatch(\n    `responses?id=eq.${responseId}&tenant_id=eq.${encodeURIComponent(safeTenantId)}`,\n    patchBody\n  );\n\n  return {\n    json: {\n      ...item,\n      stepResult: {\n        success: true,\n        outputPayload: { updated: true, updatedAt: new Date().toISOString() },\n      },\n    }\n  };\n} catch (err) {\n  const item = $input.first().json;\n  return { json: { ...item, stepResult: { success: false, error: err.message } } };\n}\n"
+      },
+      "id": "b2c3d4e5-2222-4abc-8def-000000000002",
+      "name": "Resolve and Patch Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        0
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Start": {
+      "main": [
+        [
+          {
+            "node": "Resolve and Patch Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "pEvMbZGHKOsqaHmK",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "00000000-0000-4000-8000-000000000002",
+  "meta": {
+    "instanceId": "b46d0b13d69880a2fec430102877b55af4e44991549a68a3e78cd50a4dc1a09e"
+  },
+  "id": "UpdateResponseHandler1",
+  "tags": []
+}

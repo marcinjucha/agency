@@ -2,6 +2,58 @@
 
 > **Always load @memory.md at the start of every session.** It contains project-specific feedback, domain concepts, and preferences extracted from previous conversations that are essential for correct behavior.
 
+> **Check for `SESSION.md` at the worktree root at session start.** If it exists, load it — it's the ephemeral working memory of the in-flight feature in this worktree. If absent and real work begins this session, create it. See "Session Working Memory" below.
+
+> **CRITICAL: Update `SESSION.md` after every commit and every significant decision.** Not at the end of the session — continuously, as work happens. The user will explicitly call this out if you skip it. A commit without a SESSION.md update is an incomplete step.
+
+## Session Working Memory (`SESSION.md`)
+
+Ephemeral, worktree-scoped notes — the conversation's scratch pad. Distinct from `memory.md` (durable cross-session learnings) and `CLAUDE.md` (project rules).
+
+**Why this exists:** Long sessions hit context limits and need to be split. Without a handoff file, the new conversation starts blind. `SESSION.md` is the bridge — paste it (or its path) into a fresh thread and the new conversation picks up exactly where the old one left off. Also a sanity check inside one session: "what did we decide an hour ago?"
+
+**Lifecycle:**
+- **Location:** `SESSION.md` at the worktree root (same level as `CLAUDE.md`, `memory.md`). One per worktree — matches the one-feature-per-worktree convention.
+- **Gitignored** — never committed. The file is ephemeral by design; if a learning matures into a durable convention, promote it to `memory.md` or a skill via `/ai-extract-memory`.
+- **Create** when real work starts (first non-trivial decision or implementation). Skip for pure Q&A or one-shot answers.
+- **Update continuously** — after EVERY commit, EVERY architectural decision, EVERY bug found. Not at the end of the session. If you just made a commit and SESSION.md doesn't reflect it, you are behind. Update it now.
+- **Reference at session start** — load it if present, so the conversation already has full context.
+- **Delete on merge** — when the feature merges to `main` and the worktree is torn down, `SESSION.md` goes with it. The lasting parts should already have been promoted to `memory.md` / skills / `PROJECT_SPEC.yaml`.
+
+**What to record (loose structure — it's working memory, not a report):**
+- **Done so far** — implementations completed, decisions made (with WHY)
+- **Files touched** — short list of paths modified (helps a fresh conversation jump in)
+- **Open questions** — anything unresolved or needing user input
+- **Next steps** — the immediate next action when work resumes
+- **Bridge context** — anything a new conversation must know that isn't already in `memory.md` / `CLAUDE.md` / `PROJECT_SPEC.yaml`
+
+**Suggested skeleton (keep it short — bullets, not prose):**
+
+```markdown
+# Session: [task ID + slug, e.g. AAA-T-206 workflow retry response mapping]
+
+## Done
+- [decision/implementation 1] — WHY: [...]
+- [decision/implementation 2] — WHY: [...]
+
+## Files touched
+- apps/cms/features/.../foo.ts
+- supabase/migrations/2026..._bar.sql
+
+## Open questions
+- [unresolved item]
+
+## Next
+- [immediate next action]
+```
+
+**Don't:**
+- Don't duplicate `memory.md` content here — link/reference it instead.
+- Don't write end-of-session prose summaries. Bullets only. The point is fast handoff, not narrative.
+- Don't commit it. Verify `SESSION.md` is in `.gitignore` before working in a new worktree.
+
+---
+
 ## n8n Infrastructure
 
 ### n8n-vps (Infrastructure)

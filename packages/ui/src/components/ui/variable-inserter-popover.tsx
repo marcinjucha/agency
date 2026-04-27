@@ -71,12 +71,12 @@ export function VariableInserterPopover({
                     onSelect={() => handleSelect(item.key)}
                     className="flex flex-col items-start gap-0.5"
                   >
-                    <span className="font-mono text-xs">
-                      {`{{${item.key}}}`}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
+                    <span className="text-xs text-foreground">
                       {item.label}
                       {item.description ? ` — ${item.description}` : ''}
+                    </span>
+                    <span className="font-mono text-xs text-muted-foreground">
+                      {`{{${item.key}}}`}
                     </span>
                   </CommandItem>
                 ))}

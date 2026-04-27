@@ -55,6 +55,12 @@ export type StepConfigSendEmail = {
   type: 'send_email'
   template_id?: string
   to_expression?: string
+  variable_bindings?: Record<string, string>
+}
+
+/** Email template with html_body and subject for variable extraction in SendEmailConfigPanel. */
+export type EmailTemplateWithBody = EmailTemplateOption & {
+  html_body: string
 }
 
 export type StepConfigDelay = {
@@ -83,12 +89,33 @@ export type StepConfigAiAction = {
   output_schema?: OutputSchemaField[]
 }
 
+export type StepConfigGetResponse = {
+  type: 'get_response'
+  responseIdExpression?: string
+}
+
+export type StepConfigUpdateResponse = {
+  type: 'update_response'
+  field_mapping: Array<{
+    target_column: 'ai_qualification' | 'status' | 'notes' | 'respondent_name'
+    source_expression: string
+  }>
+}
+
+export type StepConfigGetSurveyLink = {
+  type: 'get_survey_link'
+  surveyLinkIdExpression?: string
+}
+
 export type StepConfig =
   | StepConfigSendEmail
   | StepConfigDelay
   | StepConfigCondition
   | StepConfigWebhook
   | StepConfigAiAction
+  | StepConfigGetResponse
+  | StepConfigUpdateResponse
+  | StepConfigGetSurveyLink
 
 // --- Domain types with typed JSONB fields ---
 

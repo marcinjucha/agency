@@ -195,40 +195,6 @@ export const deleteResponseFn = createServerFn({ method: 'POST' })
     },
   )
 
-/**
- * Trigger AI analysis for a response via n8n webhook.
- * TanStack Start port of features/responses/actions.ts#triggerAiAnalysis.
- * process.env is safe here — createServerFn is server-only.
- */
-export const triggerAiAnalysisFn = createServerFn({ method: 'POST' })
-  .inputValidator((input: { responseId: string }) => input)
-  .handler(async ({ data }): Promise<{ success: boolean; error?: string }> => {
-    const auth = await getAuth()
-    if (!auth) return { success: false, error: 'Not authenticated' }
-
-    const webhookUrl = process.env.N8N_WEBHOOK_SURVEY_ANALYSIS_URL
-    if (!webhookUrl) {
-      return { success: false, error: 'N8N_WEBHOOK_SURVEY_ANALYSIS_URL not configured' }
-    }
-
-    const result = await ResultAsync.fromPromise(
-      fetch(webhookUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ responseId: data.responseId }),
-      }).then((res) => {
-        if (!res.ok) throw new Error(`Webhook returned ${res.status}`)
-        return res
-      }),
-      dbError,
-    )
-
-    return result.match(
-      () => ({ success: true }),
-      (error) => ({ success: false, error }),
-    )
-  })
-
 // ---------------------------------------------------------------------------
 // DB helpers
 // ---------------------------------------------------------------------------

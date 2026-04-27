@@ -94,6 +94,7 @@ const AI_ACTION_STEP = defineStep({
     { key: 'aiResponse', labelKey: 'aiResponse', type: 'string' },
     { key: 'overallScore', labelKey: 'overallScore', type: 'number' },
     { key: 'recommendation', labelKey: 'recommendation', type: 'string' },
+    { key: 'aiOutputJson', labelKey: 'aiOutputJson', type: 'object' },
   ],
   defaultConfig: { type: 'ai_action', prompt: '', model: null, output_schema: null },
 })
@@ -133,6 +134,55 @@ const WEBHOOK_STEP = defineStep({
   defaultConfig: { type: 'webhook', url: '', method: 'POST' },
 })
 
+const GET_RESPONSE_STEP = defineStep({
+  id: 'get_response' as const,
+  labelKey: 'stepGetResponse',
+  descriptionKey: 'descGetResponse',
+  borderColor: 'border-l-4 border-l-emerald-400',
+  category: 'actions',
+  outputSchema: [
+    { key: 'responseId',      labelKey: 'responseId',       type: 'string' },
+    { key: 'status',          labelKey: 'responseStatus',    type: 'string' },
+    { key: 'respondentName',  labelKey: 'respondentName',    type: 'string' },
+    { key: 'createdAt',       labelKey: 'submittedAt',       type: 'string' },
+    { key: 'surveyTitle',     labelKey: 'surveyTitle',       type: 'string' },
+    { key: 'clientEmail',     labelKey: 'clientEmail',       type: 'string' },
+    { key: 'answers',         labelKey: 'answers',           type: 'object' },
+    { key: 'qaContext',       labelKey: 'qaContext',         type: 'string' },
+    { key: 'companyName',     labelKey: 'companyName',       type: 'string' },
+    { key: 'aiQualification', labelKey: 'aiQualification',  type: 'object' },
+    { key: 'responseUrl',     labelKey: 'responseUrl',       type: 'string' },
+  ],
+  defaultConfig: { type: 'get_response', responseIdExpression: '{{responseId}}' },
+})
+
+const UPDATE_RESPONSE_STEP = defineStep({
+  id: 'update_response' as const,
+  labelKey: 'stepUpdateResponse',
+  descriptionKey: 'descUpdateResponse',
+  borderColor: 'border-l-4 border-l-emerald-400',
+  category: 'actions',
+  outputSchema: [
+    { key: 'updated',   labelKey: 'updateSuccess', type: 'boolean' },
+    { key: 'updatedAt', labelKey: 'updatedAt',     type: 'string' },
+  ],
+  defaultConfig: { type: 'update_response', field_mapping: [] },
+})
+
+const GET_SURVEY_LINK_STEP = defineStep({
+  id: 'get_survey_link' as const,
+  labelKey: 'stepGetSurveyLink',
+  descriptionKey: 'descGetSurveyLink',
+  borderColor: 'border-l-4 border-l-emerald-400',
+  category: 'actions',
+  outputSchema: [
+    { key: 'notificationEmail', labelKey: 'outputNotificationEmail', type: 'string' },
+    { key: 'token',             labelKey: 'outputSurveyLinkToken',   type: 'string' },
+    { key: 'surveyTitle',       labelKey: 'outputSurveyTitle',       type: 'string' },
+  ],
+  defaultConfig: { type: 'get_survey_link', surveyLinkIdExpression: '{{surveyLinkId}}' },
+})
+
 // --- Registry ---
 
 export const STEP_REGISTRY = [
@@ -141,6 +191,9 @@ export const STEP_REGISTRY = [
   CONDITION_STEP,
   DELAY_STEP,
   WEBHOOK_STEP,
+  GET_RESPONSE_STEP,
+  UPDATE_RESPONSE_STEP,
+  GET_SURVEY_LINK_STEP,
 ] as const
 
 // --- Derived Types ---
@@ -178,3 +231,43 @@ export const STEP_TYPE_DESCRIPTION_KEYS: Record<StepType, string> = Object.fromE
 export const STEP_OUTPUT_SCHEMAS: Record<StepType, OutputSchemaDefinition[]> = Object.fromEntries(
   STEP_REGISTRY.map((s) => [s.id, s.outputSchema])
 ) as Record<StepType, OutputSchemaDefinition[]>
+
+// --- Output Schema Presets ---
+
+/**
+ * Pre-configured OutputSchemaField presets for step types that have common output shapes.
+ * Uses OutputSchemaField (label: string) because preset fields are user-facing resolved strings.
+ * WHY: ai_action prompts for AI qualification follow a known schema — presets let users pick instead of typing manually.
+ */
+export type OutputSchemaPreset = {
+  id: string
+  labelKey: string
+  fields: OutputSchemaField[]
+}
+
+export const STEP_OUTPUT_SCHEMA_PRESETS: Partial<Record<StepType, OutputSchemaPreset[]>> = {
+  ai_action: [
+    {
+      id: 'qualification_analysis',
+      labelKey: 'presetQualificationAnalysis',
+      fields: [
+        { key: 'overallScore',       label: 'Overall Score',       type: 'number' },
+        { key: 'urgencyScore',       label: 'Urgency Score',       type: 'number' },
+        { key: 'complexityScore',    label: 'Complexity Score',    type: 'number' },
+        { key: 'valueScore',         label: 'Value Score',         type: 'number' },
+        { key: 'successProbability', label: 'Success Probability', type: 'number' },
+        { key: 'summary',            label: 'Summary',             type: 'string' },
+        { key: 'recommendation',     label: 'Recommendation',      type: 'string' },
+        { key: 'aiResponse',         label: 'AI Response',         type: 'string' },
+        { key: 'aiOutputJson',       label: 'Wynik AI (pełny JSON)', type: 'object' },
+      ],
+    },
+  ],
+  update_response: [
+    {
+      id: 'save_to_ai_qualification',
+      labelKey: 'presetSaveAiQualification',
+      fields: [],
+    },
+  ],
+}

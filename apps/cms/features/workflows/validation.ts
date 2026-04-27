@@ -62,6 +62,7 @@ export const sendEmailConfigSchema = z.object({
   type: z.literal('send_email'),
   template_id: z.string().uuid().nullable().optional(),
   to_expression: z.string().nullable().optional(),
+  variable_bindings: z.record(z.string()).optional(),
 })
 
 export const conditionConfigSchema = z.object({
@@ -108,6 +109,26 @@ export const aiActionConfigSchema = z.object({
   output_schema: z.array(outputSchemaFieldSchema).nullable().optional(),
 })
 
+export const getResponseConfigSchema = z.object({
+  type: z.literal('get_response'),
+  responseIdExpression: z.string().optional(),
+})
+
+export const updateResponseConfigSchema = z.object({
+  type: z.literal('update_response'),
+  field_mapping: z.array(
+    z.object({
+      target_column: z.enum(['ai_qualification', 'status', 'notes', 'respondent_name']),
+      source_expression: z.string().min(1),
+    })
+  ),
+})
+
+export const getSurveyLinkConfigSchema = z.object({
+  type: z.literal('get_survey_link'),
+  surveyLinkIdExpression: z.string().optional(),
+})
+
 /**
  * Registry mapping step types to their config Zod schemas.
  * Adding a new step type = add schema above + entry here.
@@ -120,6 +141,9 @@ export const stepConfigSchemaMap: Record<StepType, ZodSchema> = {
   delay: delayConfigSchema,
   webhook: webhookConfigSchema,
   ai_action: aiActionConfigSchema,
+  get_response: getResponseConfigSchema,
+  update_response: updateResponseConfigSchema,
+  get_survey_link: getSurveyLinkConfigSchema,
 }
 
 export const triggerConfigSchemaMap: Record<TriggerType, ZodSchema> = {
@@ -181,6 +205,7 @@ export const saveCanvasSchema = z.object({
       id: z.string().uuid().optional(),
       step_type: z.enum(CANVAS_STEP_TYPE_ENUM),
       step_config: z.record(z.unknown()).optional().default({}),
+      slug: z.string().optional(),
       position_x: z
         .number()
         .default(0)

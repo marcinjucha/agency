@@ -365,7 +365,8 @@ describe('collectAvailableVariables', () => {
     // Without resolveStepLabel, category uses labelKey (machine string e.g. 'stepSendEmail')
     const step1Vars = result.filter((v) => v.category?.includes('stepSendEmail'))
     expect(step1Vars.length).toBeGreaterThan(0)
-    expect(step1Vars.some((v) => v.key === 'emailSent')).toBe(true)
+    // Keys are now slug-based — fixture defaults slug to id, so step ID 'step1' is the slug
+    expect(step1Vars.some((v) => v.key === 'step1.emailSent')).toBe(true)
   })
 
   it('branching: both branches see trigger + condition output', () => {
@@ -388,9 +389,9 @@ describe('collectAvailableVariables', () => {
     expect(resultA.filter((v) => v.category === 'Trigger')).toHaveLength(2)
     expect(resultB.filter((v) => v.category === 'Trigger')).toHaveLength(2)
 
-    // Both should see condition output
-    expect(resultA.some((v) => v.key === 'branch')).toBe(true)
-    expect(resultB.some((v) => v.key === 'branch')).toBe(true)
+    // Both should see condition output — keys are slug-based (slug = step ID 'cond')
+    expect(resultA.some((v) => v.key === 'cond.branch')).toBe(true)
+    expect(resultB.some((v) => v.key === 'cond.branch')).toBe(true)
   })
 
   it('diamond convergence: C sees trigger + A output + B output', () => {
@@ -411,10 +412,9 @@ describe('collectAvailableVariables', () => {
 
     // Trigger vars
     expect(result.filter((v) => v.category === 'Trigger')).toHaveLength(2)
-    // A (send_email) output
-    expect(result.some((v) => v.key === 'emailSent')).toBe(true)
-    // B (webhook) output
-    expect(result.some((v) => v.key === 'statusCode')).toBe(true)
+    // Keys are slug-based — A (send_email) and B (webhook) use their step IDs as slugs
+    expect(result.some((v) => v.key === 'A.emailSent')).toBe(true)
+    expect(result.some((v) => v.key === 'B.statusCode')).toBe(true)
   })
 
   it('ai_action with custom output_schema uses custom fields', () => {
@@ -434,11 +434,11 @@ describe('collectAvailableVariables', () => {
 
     const result = collectAvailableVariables('next', steps, edges, 'survey_submitted')
 
-    // Should have custom AI fields, not default
-    expect(result.some((v) => v.key === 'sentiment')).toBe(true)
-    expect(result.some((v) => v.key === 'confidence')).toBe(true)
-    // Should NOT have default ai_action fields
-    expect(result.some((v) => v.key === 'aiResponse')).toBe(false)
+    // Keys are slug-based — slug = step ID 'ai'
+    expect(result.some((v) => v.key === 'ai.sentiment')).toBe(true)
+    expect(result.some((v) => v.key === 'ai.confidence')).toBe(true)
+    // Should NOT have default ai_action fields (not in custom schema)
+    expect(result.some((v) => v.key === 'ai.aiResponse')).toBe(false)
   })
 
   it('step with no ancestors (only trigger) sees only trigger variables', () => {

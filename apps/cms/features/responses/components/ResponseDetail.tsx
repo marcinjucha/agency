@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { getResponseFn, getResponseAiActionResultsFn } from '../server'
@@ -10,12 +10,13 @@ import {
   AlertDialogAction, AlertDialogCancel,
 } from '@agency/ui'
 import { Link } from '@tanstack/react-router'
-import { ArrowLeft, FileX, Loader2, AlertTriangle, Trash2, Bot } from 'lucide-react'
+import { ArrowLeft, FileX, Loader2, Trash2, Bot } from 'lucide-react'
 import { getResponseStatusColor } from '@/lib/utils/status'
-import { triggerAiAnalysisFn, deleteResponseFn } from '../server'
+import { deleteResponseFn } from '../server'
 import { queryKeys } from '@/lib/query-keys'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
+import { resolveOutputValue } from '../utils/resolveOutputValue'
 
 type ResponseDetailProps = {
   responseId: string
@@ -38,24 +39,14 @@ type ResponseDetailProps = {
  * @example
  * <ResponseDetail responseId="r-123" />
  */
-const MAX_RETRIES = 3
-const POLLS_PER_ATTEMPT = 3
-
 export function ResponseDetail({ responseId }: ResponseDetailProps) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const [retryAttempt, setRetryAttempt] = useState(0)
-  const [aiPhase, setAiPhase] = useState<'polling' | 'failed'>('polling')
   const [deleting, setDeleting] = useState(false)
   const { data: response, isLoading, error } = useQuery({
     queryKey: queryKeys.responses.detail(responseId),
     queryFn: () => getResponseFn({ data: { id: responseId } }),
     enabled: !!responseId,
-    refetchInterval: (query) => {
-      if (query.state.data?.ai_qualification) return false
-      if (aiPhase === 'failed') return false
-      return 10000
-    },
   })
 
   const {
@@ -66,29 +57,6 @@ export function ResponseDetail({ responseId }: ResponseDetailProps) {
     queryFn: () => getResponseAiActionResultsFn({ data: { responseId } }),
     enabled: !!responseId,
   })
-
-  useEffect(() => {
-    if (response?.ai_qualification || aiPhase === 'failed') return
-
-    const interval = setInterval(() => {
-      setRetryAttempt((prev) => {
-        if (prev >= MAX_RETRIES) {
-          setAiPhase('failed')
-          return prev
-        }
-        triggerAiAnalysisFn({ data: { responseId } })
-        return prev + 1
-      })
-    }, POLLS_PER_ATTEMPT * 10000)
-
-    return () => clearInterval(interval)
-  }, [retryAttempt, aiPhase, response?.ai_qualification, responseId])
-
-  const handleManualRetry = async () => {
-    setRetryAttempt(0)
-    setAiPhase('polling')
-    await triggerAiAnalysisFn({ data: { responseId } })
-  }
 
   // Loading state
   if (isLoading) {
@@ -173,7 +141,7 @@ export function ResponseDetail({ responseId }: ResponseDetailProps) {
           <div>
             <p className="text-xs font-semibold text-muted-foreground uppercase">{messages.responses.surveyLink}</p>
             <p className="text-sm text-foreground font-mono mt-1">
-              {response.survey_links?.token ? response.survey_links.token.slice(0, 8) + '...' : messages.responses.unknown}
+              {response.survey_links?.id ?? messages.responses.unknown}
             </p>
           </div>
           <div>
@@ -241,85 +209,6 @@ export function ResponseDetail({ responseId }: ResponseDetailProps) {
         </Card>
       )}
 
-      {/* AI Qualification Section */}
-      <Card className="p-6">
-        <h2 className="text-lg font-semibold text-foreground mb-4">{messages.responses.aiAnalysis}</h2>
-        {!response.ai_qualification ? (
-          aiPhase === 'failed' ? (
-            <div className="flex flex-col gap-3 py-4">
-              <div className="flex items-center gap-2 text-status-warning-foreground">
-                <AlertTriangle className="h-4 w-4" />
-                <p className="text-sm">{messages.responses.analysisUnavailable}</p>
-              </div>
-              <Button
-                variant="outline"
-                onClick={handleManualRetry}
-                disabled={aiPhase !== 'failed'}
-                className="w-fit"
-              >
-                {messages.common.retryAnalysis}
-              </Button>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2 text-muted-foreground py-4">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              <p className="text-sm">
-                {retryAttempt === 0
-                  ? messages.responses.analyzingResponse
-                  : messages.responses.retryingAnalysis(retryAttempt, MAX_RETRIES)}
-              </p>
-            </div>
-          )
-        ) : (
-          <div className="space-y-6">
-            {/* Recommendation + Scores */}
-            <div className="flex flex-wrap items-center gap-4">
-              <Badge
-                className={`px-3 py-1 rounded-full text-sm font-medium ${
-                  response.ai_qualification.recommendation === 'QUALIFIED'
-                    ? 'bg-success/15 text-success'
-                    : response.ai_qualification.recommendation === 'DISQUALIFIED'
-                      ? 'bg-destructive/15 text-destructive'
-                      : 'bg-status-warning/15 text-status-warning-foreground'
-                }`}
-              >
-                {response.ai_qualification.recommendation}
-              </Badge>
-              <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-                <span>{messages.responses.overall}: <strong className="text-foreground">{response.ai_qualification.overall_score}/10</strong></span>
-                <span>{messages.responses.urgency}: <strong className="text-foreground">{response.ai_qualification.urgency_score}/10</strong></span>
-                <span>{messages.responses.value}: <strong className="text-foreground">{response.ai_qualification.value_score}/10</strong></span>
-                <span>{messages.responses.complexity}: <strong className="text-foreground">{response.ai_qualification.complexity_score}/10</strong></span>
-                <span>{messages.responses.success}: <strong className="text-foreground">{response.ai_qualification.success_probability}/10</strong></span>
-              </div>
-            </div>
-
-            {/* Summary */}
-            <div>
-              <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">{messages.responses.summary}</p>
-              <p className="text-sm text-foreground">{response.ai_qualification.summary}</p>
-            </div>
-
-            {/* Notes for lawyer */}
-            {response.ai_qualification.notes_for_lawyer.length > 0 && (
-              <div>
-                <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">{messages.responses.notesForLawyer}</p>
-                <ul className="list-disc list-inside space-y-2">
-                  {response.ai_qualification.notes_for_lawyer.map((note, i) => (
-                    <li key={i} className="text-sm text-foreground">{note}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {/* Meta */}
-            <div className="pt-4 border-t border-border text-xs text-muted-foreground">
-              Przeanalizowano {new Date(response.ai_qualification.analyzed_at).toLocaleString('pl-PL')} · {response.ai_qualification.model}
-            </div>
-          </div>
-        )}
-      </Card>
-
       {/* AI Workflow Results Section */}
       <Card className="p-6">
         <div className="flex items-center gap-2 mb-4">
@@ -355,24 +244,39 @@ export function ResponseDetail({ responseId }: ResponseDetailProps) {
 
                 {/* Output payload: key-value pairs with human-readable labels from output_schema */}
                 <div className="space-y-3">
-                  {Object.entries(result.outputPayload).map(([key, value]) => {
+                  {Object.entries(result.outputPayload).filter(([key]) => key !== 'aiOutputJson').map(([key, value]) => {
                     const label = result.outputSchema.find((f) => f.key === key)?.label ?? key
+
+                    // Resolve the display value — may be an object, a fenced-JSON string, or a plain string
+                    const resolved = resolveOutputValue(value)
+
                     return (
-                    <div key={key}>
-                      <p className="text-xs font-semibold text-muted-foreground uppercase mb-1">{label}</p>
-                      <div className="bg-muted rounded-lg p-3 border border-border">
-                        {typeof value === 'object' && value !== null ? (
-                          <pre className="text-xs text-foreground whitespace-pre-wrap break-words font-mono">
-                            {JSON.stringify(value, null, 2)}
-                          </pre>
+                      <div key={key}>
+                        <p className="text-xs font-semibold text-muted-foreground uppercase mb-1">{label}</p>
+                        {resolved.kind === 'object' ? (
+                          <dl className="space-y-2 rounded-lg border border-border bg-muted p-3">
+                            {Object.entries(resolved.data).map(([k, v]) => (
+                              <div key={k} className="flex flex-col gap-0.5">
+                                <dt className="text-xs text-muted-foreground capitalize">
+                                  {k}
+                                </dt>
+                                <dd className="text-sm text-foreground break-words">
+                                  {typeof v === 'object' && v !== null
+                                    ? JSON.stringify(v)
+                                    : String(v)}
+                                </dd>
+                              </div>
+                            ))}
+                          </dl>
                         ) : (
-                          <p className="text-sm text-foreground whitespace-pre-wrap break-words">
-                            {String(value)}
-                          </p>
+                          <div className="rounded-lg border border-border bg-muted p-3">
+                            <p className="text-sm text-foreground whitespace-pre-wrap break-words">
+                              {resolved.text}
+                            </p>
+                          </div>
                         )}
                       </div>
-                    </div>
-                  )
+                    )
                   })}
                 </div>
               </div>

@@ -18,6 +18,7 @@ import {
   type WorkflowListItem,
   type WorkflowWithSteps,
   type EmailTemplateOption,
+  type EmailTemplateWithBody,
   type SurveyOption,
 } from './types'
 import { createServiceClient } from '@/lib/supabase/service'
@@ -25,6 +26,8 @@ import { messages } from '@/lib/messages'
 import { WORKFLOW_TEMPLATES } from './templates/workflow-templates'
 import { createServerClient } from '@/lib/supabase/server-start'
 import { type AuthContext, type StartClient, requireAuthContext } from '@/lib/server-auth'
+import { generateStepSlug, isValidSlugFormat } from './utils/slug'
+import { validateSurveyLinkIdInPayload } from './trigger-payload-validators'
 
 // ---------------------------------------------------------------------------
 // DB error mapper
@@ -130,6 +133,25 @@ export const saveWorkflowCanvasFn = createServerFn({ method: 'POST' })
   })
 
 /**
+ * Rename a step's slug.
+ * Validates format (camelCase), uniqueness within the workflow, and tenant ownership.
+ */
+export const updateStepSlugFn = createServerFn({ method: 'POST' })
+  .inputValidator((input: { stepId: string; newSlug: string }) => input)
+  .handler(
+    async ({ data }): Promise<{ success: boolean; data?: { id: string; slug: string }; error?: string }> => {
+      const result = await requireAuthContext().andThen((auth) =>
+        renameStepSlug(auth, data.stepId, data.newSlug)
+      )
+
+      return result.match(
+        (row) => ({ success: true, data: row }),
+        (error) => ({ success: false, error })
+      )
+    }
+  )
+
+/**
  * Trigger a manual workflow execution via n8n Orchestrator.
  * TanStack Start port of features/workflows/actions.ts#triggerManualWorkflow.
  */
@@ -170,7 +192,17 @@ export const testWorkflowFn = createServerFn({ method: 'POST' })
 
       const result = await requireAuthContext()
         .andThen(({ supabase, tenantId }) =>
-          fetchWorkflowForTest(supabase, tenantId, data.workflowId)
+          fetchWorkflowForTest(supabase, tenantId, data.workflowId).map(
+            (meta) => ({ ...meta, supabase })
+          )
+        )
+        .andThen(({ tenantId, triggerType, supabase }) =>
+          validateSurveyLinkIdInPayload(
+            supabase,
+            triggerType,
+            data.triggerPayload,
+            tenantId
+          ).map(() => ({ tenantId, triggerType }))
         )
         .andThen(({ tenantId, triggerType }) =>
           dispatchToN8n(n8nUrl, data.workflowId, tenantId, {
@@ -317,21 +349,27 @@ export const getSurveysForWorkflowFn = createServerFn({ method: 'POST' }).handle
 )
 
 /**
- * Fetch lightweight email template list for SendEmailConfigPanel dropdown.
+ * Fetch email templates for SendEmailConfigPanel dropdown with html_body for variable extraction.
+ * html_body is needed to extract {{placeholder}} variables from the template for the binding table.
  * Called from the /admin/workflows/$workflowId loader.
  * Throws on error — ensureQueryData expects throws, not Result, to trigger TanStack Query error handling.
  */
 export const getEmailTemplatesForWorkflowFn = createServerFn({ method: 'POST' }).handler(
-  async (): Promise<EmailTemplateOption[]> => {
+  async (): Promise<EmailTemplateWithBody[]> => {
     const supabase = createServerClient()
 
     const { data, error } = await supabase
       .from('email_templates')
-      .select('id, type, subject')
+      .select('id, type, subject, html_body')
       .order('type')
 
     if (error) throw new Error(error.message)
-    return (data || []) as EmailTemplateOption[]
+    return (data || []).map((row) => ({
+      id: row.id,
+      type: row.type,
+      subject: row.subject,
+      html_body: (row.html_body as string) ?? '',
+    }))
   }
 )
 
@@ -383,6 +421,98 @@ function deleteWorkflowRow(auth: AuthContext, id: string) {
   ).andThen(fromSupabaseVoid())
 }
 
+function renameStepSlug(auth: AuthContext, stepId: string, rawSlug: string) {
+  const newSlug = rawSlug.trim()
+
+  if (newSlug.length === 0) {
+    return errAsync(messages.workflows.editor.slugEmpty)
+  }
+  if (!isValidSlugFormat(newSlug)) {
+    return errAsync(messages.workflows.editor.slugInvalidFormat)
+  }
+
+  const { supabase, tenantId } = auth
+
+  // 1. Load the step + its workflow to verify tenant ownership.
+  return ResultAsync.fromPromise(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (supabase as any)
+      .from('workflow_steps')
+      .select('id, slug, workflow_id, workflows!inner(tenant_id)')
+      .eq('id', stepId)
+      .maybeSingle(),
+    dbError
+  )
+    .andThen(
+      fromSupabase<{
+        id: string
+        slug: string
+        workflow_id: string
+        workflows: { tenant_id: string } | { tenant_id: string }[]
+      }>()
+    )
+    .andThen((row) => {
+      const tenantOnRow = Array.isArray(row.workflows)
+        ? row.workflows[0]?.tenant_id
+        : row.workflows?.tenant_id
+      if (tenantOnRow !== tenantId) {
+        return errAsync(messages.workflows.workflowNotFound)
+      }
+      if (row.slug === newSlug) {
+        // No-op rename — return current row.
+        return ResultAsync.fromSafePromise(
+          Promise.resolve({ id: row.id, slug: row.slug, workflow_id: row.workflow_id })
+        )
+      }
+      return ResultAsync.fromSafePromise(Promise.resolve(row)).andThen((r) =>
+        ensureSlugAvailable(supabase, r.workflow_id, stepId, newSlug).map(() => ({
+          id: r.id,
+          slug: r.slug,
+          workflow_id: r.workflow_id,
+        }))
+      )
+    })
+    .andThen((row) => {
+      if (row.slug === newSlug) {
+        return ResultAsync.fromSafePromise(Promise.resolve({ id: row.id, slug: newSlug }))
+      }
+      return ResultAsync.fromPromise(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (supabase as any)
+          .from('workflow_steps')
+          .update({ slug: newSlug })
+          .eq('id', stepId),
+        dbError
+      )
+        .andThen(fromSupabaseVoid())
+        .map(() => ({ id: row.id, slug: newSlug }))
+    })
+}
+
+function ensureSlugAvailable(
+  supabase: StartClient,
+  workflowId: string,
+  stepId: string,
+  newSlug: string
+) {
+  return ResultAsync.fromPromise(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (supabase as any)
+      .from('workflow_steps')
+      .select('id')
+      .eq('workflow_id', workflowId)
+      .eq('slug', newSlug)
+      .neq('id', stepId)
+      .maybeSingle(),
+    dbError
+  ).andThen((response) => {
+    const res = response as { data: { id: string } | null; error: { message: string } | null }
+    if (res.error) return err(res.error.message)
+    if (res.data) return err(messages.workflows.editor.slugAlreadyUsed)
+    return ok(undefined)
+  })
+}
+
 function setWorkflowActive(auth: AuthContext, id: string, isActive: boolean) {
   return ResultAsync.fromPromise(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JS v2.95.2 incompatibility
@@ -396,10 +526,10 @@ function bulkSaveCanvas(auth: AuthContext, workflowId: string, parsed: SaveCanva
 
   return ResultAsync.fromPromise(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (supabase as any).from('workflow_steps').select('id').eq('workflow_id', workflowId),
+    (supabase as any).from('workflow_steps').select('id, slug').eq('workflow_id', workflowId),
     dbError
   )
-    .andThen(fromSupabase<{ id: string }[]>())
+    .andThen(fromSupabase<{ id: string; slug: string }[]>())
     .andThen((existingSteps) => {
       const existingStepIds = new Set<string>(existingSteps.map((s) => s.id))
       const incomingStepIds = new Set<string>(
@@ -416,18 +546,59 @@ function bulkSaveCanvas(auth: AuthContext, workflowId: string, parsed: SaveCanva
             ).andThen(fromSupabaseVoid())
           : ResultAsync.fromSafePromise(Promise.resolve(undefined))
 
+      // Build slug map (id → slug) for steps already in DB; new steps get auto-gen.
+      const existingSlugById = new Map(existingSteps.map((s) => [s.id, s.slug]))
+      const stepsWithSlugs = ensureStepSlugs(parsed.steps, existingSlugById, stepsToDelete)
+
       return deleteStepsOp
-        .andThen(() => upsertSteps(supabase, workflowId, parsed.steps))
+        .andThen(() => upsertSteps(supabase, workflowId, stepsWithSlugs))
         .andThen(() => deleteAllEdges(supabase, workflowId))
         .andThen(() => insertEdges(supabase, workflowId, parsed.edges))
-        .andThen(() => syncTriggerType(supabase, workflowId, parsed.steps))
+        .andThen(() => syncTriggerType(supabase, workflowId, stepsWithSlugs))
     })
+}
+
+/**
+ * Resolve slugs for every step before INSERT/UPSERT.
+ * - Step with explicit `slug` (panel-renamed) → keep it.
+ * - Step with `id` already in DB → reuse persisted slug.
+ * - New step (no id-match in DB, no slug) → generate from step_type, avoiding collisions.
+ *
+ * Steps marked for deletion are excluded from the in-flight slug pool so freed slugs
+ * become reusable in the same save.
+ */
+function ensureStepSlugs(
+  steps: SaveCanvasFormData['steps'],
+  existingSlugById: Map<string, string>,
+  stepsToDelete: string[]
+): Array<SaveCanvasFormData['steps'][number] & { slug: string }> {
+  const deletedSet = new Set(stepsToDelete)
+  const usedSlugs = new Set<string>()
+
+  // Pre-collect explicit slugs from incoming payload.
+  for (const step of steps) {
+    if (step.slug) usedSlugs.add(step.slug)
+  }
+  // Add persisted slugs that survive this save.
+  for (const [id, slug] of existingSlugById) {
+    if (!deletedSet.has(id)) usedSlugs.add(slug)
+  }
+
+  return steps.map((step) => {
+    if (step.slug) return { ...step, slug: step.slug }
+    if (step.id && existingSlugById.has(step.id)) {
+      return { ...step, slug: existingSlugById.get(step.id) as string }
+    }
+    const generated = generateStepSlug(step.step_type, [...usedSlugs])
+    usedSlugs.add(generated)
+    return { ...step, slug: generated }
+  })
 }
 
 function upsertSteps(
   supabase: StartClient,
   workflowId: string,
-  steps: SaveCanvasFormData['steps']
+  steps: Array<SaveCanvasFormData['steps'][number] & { slug: string }>
 ) {
   if (steps.length === 0) return ResultAsync.fromSafePromise(Promise.resolve(undefined))
 
@@ -436,6 +607,7 @@ function upsertSteps(
     workflow_id: workflowId,
     step_type: step.step_type,
     step_config: step.step_config,
+    slug: step.slug,
     position_x: step.position_x,
     position_y: step.position_y,
   }))
@@ -516,6 +688,45 @@ function verifyManualWorkflow(supabase: StartClient, tenantId: string, workflowI
     })
 }
 
+/**
+ * Fetch workflow for the public trigger entry point.
+ * Uses service role (no user session). Verifies:
+ * - workflow exists
+ * - workflow is active
+ * - trigger_type matches the requested action
+ *
+ * Returns the workflow's tenant_id — caller-supplied tenant_id is NEVER trusted.
+ *
+ * Why service role: the public /api/workflows/trigger route authenticates via
+ * Bearer secret, not user cookies, so RLS-aware client wouldn't find the row.
+ */
+export function fetchWorkflowForPublicTrigger(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: ReturnType<typeof createServiceClient> | any,
+  workflowId: string,
+  triggerType: string,
+): ResultAsync<{ tenantId: string }, string> {
+  return ResultAsync.fromPromise(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (supabase as any)
+      .from('workflows')
+      .select('id, tenant_id, trigger_type, is_active')
+      .eq('id', workflowId)
+      .maybeSingle() as Promise<{
+      data: { id: string; tenant_id: string; trigger_type: string; is_active: boolean } | null
+      error: { message: string } | null
+    }>,
+    dbError,
+  ).andThen((res) => {
+    if (res.error) return err(res.error.message)
+    const workflow = res.data
+    if (!workflow) return err('workflow_not_found')
+    if (!workflow.is_active) return err('workflow_not_active')
+    if (workflow.trigger_type !== triggerType) return err('trigger_type_mismatch')
+    return ok({ tenantId: workflow.tenant_id })
+  })
+}
+
 function fetchWorkflowForTest(supabase: StartClient, tenantId: string, workflowId: string) {
   return ResultAsync.fromPromise(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -533,7 +744,7 @@ function fetchWorkflowForTest(supabase: StartClient, tenantId: string, workflowI
     })
 }
 
-function dispatchToN8n(
+export function dispatchToN8n(
   n8nUrl: string,
   workflowId: string,
   tenantId: string,

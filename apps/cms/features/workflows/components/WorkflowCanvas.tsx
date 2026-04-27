@@ -27,6 +27,7 @@ import '@xyflow/react/dist/style.css'
 
 import { Zap, Trash2 } from 'lucide-react'
 import { messages } from '@/lib/messages'
+import { generateStepSlug } from '../utils/slug'
 import { TriggerNode } from './nodes/TriggerNode'
 import { ActionNode } from './nodes/ActionNode'
 import { ConditionNode } from './nodes/ConditionNode'
@@ -45,6 +46,9 @@ const NODE_COMPONENTS: Record<StepType | 'trigger', React.ComponentType<any>> = 
   delay: DelayNode,
   webhook: ActionNode,
   ai_action: ActionNode,
+  get_response: ActionNode,
+  update_response: ActionNode,
+  get_survey_link: ActionNode,
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- ReactFlow NodeTypes accepts arbitrary ComponentType
@@ -186,6 +190,11 @@ function CanvasInner(
       const isTrigger = stepType === 'trigger'
       const actualType = isTrigger ? triggerType : stepType
 
+      const existingSlugs = nodes
+        .map((n) => (n.data as { slug?: string }).slug)
+        .filter((s): s is string => typeof s === 'string' && s.length > 0)
+      const slug = isTrigger ? 'trigger' : generateStepSlug(actualType, existingSlugs)
+
       const newNode: Node = {
         id,
         type: isTrigger ? 'trigger' : stepType,
@@ -195,6 +204,7 @@ function CanvasInner(
           label: getLabel(actualType),
           stepType: actualType,
           stepConfig: { type: actualType },
+          slug,
         },
       }
 
@@ -220,6 +230,11 @@ function CanvasInner(
       })
 
       const id = crypto.randomUUID()
+      const existingSlugs = nodes
+        .map((n) => (n.data as { slug?: string }).slug)
+        .filter((s): s is string => typeof s === 'string' && s.length > 0)
+      const slug = generateStepSlug(stepType, existingSlugs)
+
       const newNode: Node = {
         id,
         type: stepType,
@@ -228,12 +243,13 @@ function CanvasInner(
           label: getLabel(stepType),
           stepType,
           stepConfig: { type: stepType },
+          slug,
         },
       }
 
       setNodes((nds) => [...nds, newNode])
     },
-    [setNodes, getLabel, screenToFlowPosition]
+    [nodes, setNodes, getLabel, screenToFlowPosition]
   )
 
   // Context menu state

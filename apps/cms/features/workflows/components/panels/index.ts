@@ -12,6 +12,9 @@ import { ConditionConfigPanel } from './ConditionConfigPanel'
 import { DelayConfigPanel } from './DelayConfigPanel'
 import { WebhookConfigPanel } from './WebhookConfigPanel'
 import { AiActionConfigPanel } from './AiActionConfigPanel'
+import { GetResponseConfigPanel } from './GetResponseConfigPanel'
+import { GetSurveyLinkConfigPanel } from './GetSurveyLinkConfigPanel'
+import { UpdateResponseConfigPanel } from './UpdateResponseConfigPanel'
 import { ConfigPanelWrapper } from './ConfigPanelWrapper'
 import type { StepType } from '../../step-registry'
 import type { TriggerType, SurveyOption, EmailTemplateOption } from '../../types'
@@ -52,6 +55,9 @@ const STEP_PANEL_REGISTRY: Record<StepType, React.ComponentType<ConfigPanelProps
   delay: DelayConfigPanel,
   webhook: WebhookConfigPanel,
   ai_action: AiActionConfigPanel,
+  get_response: GetResponseConfigPanel,
+  update_response: UpdateResponseConfigPanel,
+  get_survey_link: GetSurveyLinkConfigPanel,
 }
 
 /** Get the correct panel component for a given step type */
@@ -70,6 +76,9 @@ const _ConditionConfigPanel = ConditionConfigPanel
 const _DelayConfigPanel = DelayConfigPanel
 const _WebhookConfigPanel = WebhookConfigPanel
 const _AiActionConfigPanel = AiActionConfigPanel
+const _GetResponseConfigPanel = GetResponseConfigPanel
+const _GetSurveyLinkConfigPanel = GetSurveyLinkConfigPanel
+const _UpdateResponseConfigPanel = UpdateResponseConfigPanel
 
 export {
   _ConfigPanelWrapper as ConfigPanelWrapper,
@@ -79,4 +88,7 @@ export {
   _DelayConfigPanel as DelayConfigPanel,
   _WebhookConfigPanel as WebhookConfigPanel,
   _AiActionConfigPanel as AiActionConfigPanel,
+  _GetResponseConfigPanel as GetResponseConfigPanel,
+  _GetSurveyLinkConfigPanel as GetSurveyLinkConfigPanel,
+  _UpdateResponseConfigPanel as UpdateResponseConfigPanel,
 }

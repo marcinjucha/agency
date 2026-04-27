@@ -108,7 +108,7 @@ export function topologicalSort(
  */
 export function collectAvailableVariables(
   stepId: string,
-  steps: Array<{ id: string; step_type: string; step_config: Record<string, unknown> }>,
+  steps: Array<{ id: string; slug: string; step_type: string; step_config: Record<string, unknown> }>,
   edges: Array<{ source_step_id: string; target_step_id: string }>,
   triggerType: string,
   resolveStepLabel?: (stepType: string) => string,
@@ -143,38 +143,39 @@ export function collectAvailableVariables(
     category: 'Trigger',
   }))
 
-  // 4. Order ancestors topologically (closest first) using existing topologicalSort
-  const stepMap = new Map(steps.map((s) => [s.id, s]))
-  const ancestorSteps = steps.filter((s) => ancestors.has(s.id) && !isTriggerType(s.step_type))
-
-  // Use topologicalSort for ordering — need WorkflowStep-shaped objects
-  const relevantEdges = edges.filter(
-    (e) => ancestors.has(e.source_step_id) && ancestors.has(e.target_step_id)
-  )
-  const sorted = topologicalSort(
-    ancestorSteps as WorkflowStep[],
-    relevantEdges as WorkflowEdge[]
-  )
-
-  // 5. Map each ancestor step's output schema to VariableItem[]
+  // 4. Map each ANCESTOR step's output schema to VariableItem[], keyed by the step's slug.
+  // The key MUST exactly match `currentStep.slug` used by n8n's Workflow Process Step
+  // when storing per-step output in `variableContext[slug]`. Templates resolve as
+  // `{{slug.fieldName}}` (e.g. `{{getResponse.respondentName}}`, `{{aiAction.score}}`).
+  // We iterate `steps` in input order so the visible category list ("Krok 1/2/3") reflects
+  // the builder's authoring order — keys are slug-based, only the visible ordering uses position.
   const stepVars: VariableItem[] = []
-  for (let i = 0; i < sorted.length; i++) {
-    const step = sorted[i]
+  let visiblePosition = 0
+  for (const step of steps) {
+    if (isTriggerType(step.step_type)) continue
+    if (!ancestors.has(step.id)) continue
+    visiblePosition += 1
     const stepType = step.step_type as StepType
-    const stepNum = i + 1
     const labelKey = STEP_TYPE_LABEL_KEYS[stepType] ?? stepType
     const resolvedLabel = resolveStepLabel ? resolveStepLabel(stepType) : labelKey
-    const category = `Krok ${stepNum}: ${resolvedLabel}`
+    const category = `Krok ${visiblePosition}: ${resolvedLabel}`
 
-    // For ai_action: check custom output_schema in config first (uses OutputSchemaField with label: string)
-    // For all other types: use registry definitions (OutputSchemaDefinition with labelKey: string)
     const config = step.step_config as Record<string, unknown>
+    const stepKey = step.slug
     if (stepType === 'ai_action' && Array.isArray(config.output_schema)) {
       const fields = config.output_schema as OutputSchemaField[]
       for (const field of fields) {
         stepVars.push({
-          key: field.key,
+          key: `${stepKey}.${field.key}`,
           label: field.label,
+          category,
+        })
+      }
+      // aiOutputJson jest zawsze emitowany przez handler AI Action niezależnie od output_schema.
+      if (!fields.some((f) => f.key === 'aiOutputJson')) {
+        stepVars.push({
+          key: `${stepKey}.aiOutputJson`,
+          label: resolveOutputLabel ? resolveOutputLabel('aiOutputJson') : 'Wynik AI (pełny JSON)',
           category,
         })
       }
@@ -182,9 +183,7 @@ export function collectAvailableVariables(
       const definitions: OutputSchemaDefinition[] = STEP_OUTPUT_SCHEMAS[stepType] ?? []
       for (const def of definitions) {
         stepVars.push({
-          key: def.key,
-          // labelKey used as label fallback — UI callers pass resolveOutputLabel for Polish strings.
-          // engine/utils.ts stays zero-dep (no messages import) for vitest compatibility.
+          key: `${stepKey}.${def.key}`,
           label: resolveOutputLabel ? resolveOutputLabel(def.labelKey) : def.labelKey,
           category,
         })

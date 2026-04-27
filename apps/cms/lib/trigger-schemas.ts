@@ -47,42 +47,14 @@ export const TRIGGER_VARIABLE_SCHEMAS: Record<string, TriggerVariable[]> = {
     },
   ],
 
+  /**
+   * survey_submitted trigger exposes only IDs.
+   * WHY: All hydrated survey data (answers, surveyTitle, clientEmail, etc.) is now fetched
+   * by the get_response step, not the trigger. This decouples trigger from data fetching
+   * and avoids connection-pool timing issues (trigger fires 500ms after DB insert).
+   * Workflow authors must add a get_response step to access survey data.
+   */
   survey_submitted: [
-    {
-      key: 'respondentName',
-      label: 'Imię respondenta',
-      description: 'Imię podane w ankiecie (jeśli dostępne)',
-      category: 'Klient',
-      example: 'Jan Kowalski',
-    },
-    {
-      key: 'clientEmail',
-      label: 'Email klienta',
-      description: 'Email z linku ankiety (notification_email lub client_email)',
-      category: 'Klient',
-      example: 'jan@firma.pl',
-    },
-    {
-      key: 'surveyTitle',
-      label: 'Tytuł ankiety',
-      description: 'Nazwa ankiety z CMS',
-      category: 'Ankieta',
-      example: 'Formularz kontaktowy',
-    },
-    {
-      key: 'qaContext',
-      label: 'Treść ankiety (Q&A)',
-      description: 'Pełna treść pytań i odpowiedzi — idealne do promptów AI',
-      category: 'Ankieta',
-      example: 'Q: Jaka jest Twoja branża?\nA: IT\n\nQ: Ile osób zatrudniasz?\nA: 50',
-    },
-    {
-      key: 'submittedAt',
-      label: 'Data wypełnienia',
-      description: 'Kiedy ankieta została wypełniona',
-      category: 'Ankieta',
-      example: '2026-04-12T10:30:00Z',
-    },
     {
       key: 'responseId',
       label: 'ID odpowiedzi',
@@ -96,20 +68,6 @@ export const TRIGGER_VARIABLE_SCHEMAS: Record<string, TriggerVariable[]> = {
       description: 'UUID linku ankiety',
       category: 'System',
       example: '01c54fc5-f6b0-422e-abb2-72d85b145f5e',
-    },
-    {
-      key: 'companyName',
-      label: 'Nazwa firmy',
-      description: 'Z profilu organizacji',
-      category: 'Firma',
-      example: 'Halo Efekt',
-    },
-    {
-      key: 'answers',
-      label: 'Odpowiedzi na pytania (JSON)',
-      description: 'Tablica odpowiedzi: [{questionText, answer, questionType}]',
-      category: 'Ankieta',
-      example: '[{"questionText": "Imię", "answer": "Jan Kowalski", "questionType": "text"}]',
     },
   ],
 

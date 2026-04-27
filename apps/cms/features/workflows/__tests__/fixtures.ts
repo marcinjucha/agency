@@ -12,6 +12,7 @@ export function makeStep(
 ): WorkflowStep {
   return {
     id,
+    slug: id,
     workflow_id: 'wf-1',
     step_type: type,
     step_config: { type, ...config },

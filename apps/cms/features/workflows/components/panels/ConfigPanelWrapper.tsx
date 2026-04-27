@@ -1,14 +1,25 @@
 
 
-import { useEffect, useRef } from 'react'
-import { Button } from '@agency/ui'
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
+import { Button, Input, Label } from '@agency/ui'
 import { X } from 'lucide-react'
 import { messages } from '@/lib/messages'
+import { isValidSlugFormat } from '../../utils/slug'
 import { NODE_TYPE_CONFIGS, lookupNodeConfig } from '../nodes/node-registry'
 
 interface ConfigPanelWrapperProps {
   nodeId: string
   stepType: string
+  /** Current slug shown in the rename input. Undefined for trigger node. */
+  slug?: string
+  /**
+   * Commit a slug rename. Returns Promise resolving to:
+   * - { ok: true } on success
+   * - { ok: false, error } on validation/server failure (input reverts, error shown inline)
+   *
+   * If undefined, slug input is hidden (e.g. for trigger node).
+   */
+  onSlugCommit?: (newSlug: string) => Promise<{ ok: true } | { ok: false; error: string }>
   onClose: () => void
   children: React.ReactNode
 }
@@ -18,8 +29,10 @@ function getNodeConfig(stepType: string) {
 }
 
 export function ConfigPanelWrapper({
-  nodeId,
+  nodeId: _nodeId,
   stepType,
+  slug,
+  onSlugCommit,
   onClose,
   children,
 }: ConfigPanelWrapperProps) {
@@ -35,8 +48,8 @@ export function ConfigPanelWrapper({
         onClose()
       }
     }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
+    window.addEventListener('keydown', handleKeyDown as unknown as EventListener)
+    return () => window.removeEventListener('keydown', handleKeyDown as unknown as EventListener)
   }, [onClose])
 
   return (
@@ -72,12 +85,105 @@ export function ConfigPanelWrapper({
             <X className="h-4 w-4" />
           </Button>
         </div>
+
+        {onSlugCommit && (
+          <SlugRenameField slug={slug ?? ''} onCommit={onSlugCommit} />
+        )}
       </div>
 
       {/* Scrollable body */}
       <div className="flex-1 overflow-y-auto px-6 py-6">
         {children}
       </div>
+    </div>
+  )
+}
+
+interface SlugRenameFieldProps {
+  slug: string
+  onCommit: (newSlug: string) => Promise<{ ok: true } | { ok: false; error: string }>
+}
+
+/**
+ * Inline slug rename input.
+ * Commits on blur or Enter. Shows server-returned error inline; reverts to last
+ * persisted value on cancel (Escape) or after a failed commit.
+ */
+function SlugRenameField({ slug, onCommit }: SlugRenameFieldProps) {
+  const [value, setValue] = useState(slug)
+  const [error, setError] = useState<string | null>(null)
+  const [isSaving, setIsSaving] = useState(false)
+
+  // Sync external slug changes (e.g. server-side normalization, parent-driven updates).
+  useEffect(() => {
+    setValue(slug)
+    setError(null)
+  }, [slug])
+
+  async function commit() {
+    const trimmed = value.trim()
+    if (trimmed === slug) {
+      setError(null)
+      return
+    }
+    if (trimmed.length === 0) {
+      setError(messages.workflows.editor.slugEmpty)
+      setValue(slug)
+      return
+    }
+    if (!isValidSlugFormat(trimmed)) {
+      setError(messages.workflows.editor.slugInvalidFormat)
+      return
+    }
+    setIsSaving(true)
+    setError(null)
+    const result = await onCommit(trimmed)
+    setIsSaving(false)
+    if (!result.ok) {
+      setError(result.error)
+      setValue(slug)
+    }
+  }
+
+  function handleKeyDown(e: KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      ;(e.currentTarget as HTMLInputElement).blur()
+    } else if (e.key === 'Escape') {
+      e.preventDefault()
+      setValue(slug)
+      setError(null)
+      ;(e.currentTarget as HTMLInputElement).blur()
+    }
+  }
+
+  const inputId = 'config-panel-slug-input'
+
+  return (
+    <div className="mt-3">
+      <Label htmlFor={inputId} className="text-xs text-muted-foreground">
+        {messages.workflows.editor.slugLabel}
+      </Label>
+      <Input
+        id={inputId}
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onBlur={() => void commit()}
+        onKeyDown={handleKeyDown}
+        disabled={isSaving}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={error ? `${inputId}-error` : `${inputId}-hint`}
+        className="mt-1 h-8 font-mono text-sm"
+      />
+      {error ? (
+        <p id={`${inputId}-error`} role="alert" className="mt-1 text-xs text-destructive">
+          {error}
+        </p>
+      ) : (
+        <p id={`${inputId}-hint`} className="mt-1 text-xs text-muted-foreground">
+          {messages.workflows.editor.slugHint}
+        </p>
+      )}
     </div>
   )
 }
