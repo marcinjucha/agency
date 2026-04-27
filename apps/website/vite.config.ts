@@ -18,8 +18,10 @@ export default defineConfig(({ command }) => ({
   plugins: [
     tsConfigPaths(),
     tailwindcss(),
-    // nitro() required for Vercel serverless functions — dev mode fails with ERR_LOAD_URL
-    ...(command === 'build' ? [nitro()] : []),
+    // nitro() required for Vercel serverless functions — dev mode fails with ERR_LOAD_URL.
+    // preset: 'vercel' — writes Build Output API v3 to .vercel/output/ (not .output/).
+    // Without this, Vercel deploys fail with "No Output Directory named 'dist' found".
+    ...(command === 'build' ? [nitro({ preset: 'vercel' })] : []),
     tanstackStart({
       srcDirectory: 'app',
       router: {
