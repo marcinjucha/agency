@@ -5,6 +5,9 @@ import {
   Clock,
   Globe,
   Sparkles,
+  Database,
+  PenLine,
+  Link,
   type LucideIcon,
 } from 'lucide-react'
 import { messages } from '@/lib/messages'
@@ -43,6 +46,9 @@ const STEP_ICON_MAP: Record<StepType, LucideIcon> = {
   delay: Clock,
   webhook: Globe,
   ai_action: Sparkles,
+  get_response: Database,
+  update_response: PenLine,
+  get_survey_link: Link,
 }
 
 export const NODE_TYPE_CONFIGS: Record<StepType | 'trigger', NodeTypeConfig> = {

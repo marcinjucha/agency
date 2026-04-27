@@ -5,25 +5,29 @@ import {
   STEP_TYPE_LABEL_KEYS,
   STEP_TYPE_DESCRIPTION_KEYS,
   STEP_OUTPUT_SCHEMAS,
+  STEP_OUTPUT_SCHEMA_PRESETS,
   type StepType,
   type OutputSchemaDefinition,
+  type OutputSchemaPreset,
 } from '../step-registry'
 
 // Registry is pure data — no messages.ts, no React, no Zod.
 // No mocks required.
 
 describe('STEP_REGISTRY', () => {
-  it('zawiera dokładnie 5 step types', () => {
-    expect(STEP_REGISTRY).toHaveLength(5)
+  it('zawiera dokładnie 7 step types', () => {
+    expect(STEP_REGISTRY).toHaveLength(7)
   })
 
-  it('zawiera wymagane 5 step type IDs', () => {
+  it('zawiera wymagane 7 step type IDs', () => {
     const ids = STEP_REGISTRY.map((s) => s.id)
     expect(ids).toContain('send_email')
     expect(ids).toContain('ai_action')
     expect(ids).toContain('condition')
     expect(ids).toContain('delay')
     expect(ids).toContain('webhook')
+    expect(ids).toContain('get_response')
+    expect(ids).toContain('update_response')
   })
 
   it('każdy id jest unikalny', () => {
@@ -127,6 +131,8 @@ describe('STEP_TYPE_LABEL_KEYS (derived z registry)', () => {
       condition: 'stepCondition',
       delay: 'stepDelay',
       webhook: 'stepWebhook',
+      get_response: 'stepGetResponse',
+      update_response: 'stepUpdateResponse',
     }
     for (const [stepType, expectedKey] of Object.entries(expectedKeys)) {
       expect(STEP_TYPE_LABEL_KEYS[stepType as StepType]).toBe(expectedKey)
@@ -156,10 +162,64 @@ describe('STEP_TYPE_DESCRIPTION_KEYS (derived z registry)', () => {
       condition: 'descCondition',
       delay: 'descDelay',
       webhook: 'descWebhook',
+      get_response: 'descGetResponse',
+      update_response: 'descUpdateResponse',
     }
     for (const [stepType, expectedKey] of Object.entries(expectedKeys)) {
       expect(STEP_TYPE_DESCRIPTION_KEYS[stepType as StepType]).toBe(expectedKey)
     }
+  })
+})
+
+describe('STEP_OUTPUT_SCHEMA_PRESETS', () => {
+  it('ai_action preset qualification_analysis istnieje i ma 9 pól (w tym aiOutputJson)', () => {
+    const aiPresets = STEP_OUTPUT_SCHEMA_PRESETS['ai_action']
+    expect(Array.isArray(aiPresets)).toBe(true)
+    const qualPreset = aiPresets!.find(p => p.id === 'qualification_analysis')
+    expect(qualPreset).toBeDefined()
+    expect(qualPreset!.fields).toHaveLength(9)
+    expect(qualPreset!.labelKey).toBe('presetQualificationAnalysis')
+  })
+
+  it('ai_action qualification_analysis preset zawiera oczekiwane klucze pól', () => {
+    const preset = STEP_OUTPUT_SCHEMA_PRESETS['ai_action']!.find(p => p.id === 'qualification_analysis')!
+    const keys = preset.fields.map(f => f.key)
+    expect(keys).toContain('overallScore')
+    expect(keys).toContain('urgencyScore')
+    expect(keys).toContain('complexityScore')
+    expect(keys).toContain('valueScore')
+    expect(keys).toContain('successProbability')
+    expect(keys).toContain('summary')
+    expect(keys).toContain('recommendation')
+    expect(keys).toContain('aiResponse')
+  })
+
+  it('update_response preset save_to_ai_qualification istnieje', () => {
+    const updatePresets = STEP_OUTPUT_SCHEMA_PRESETS['update_response']
+    expect(Array.isArray(updatePresets)).toBe(true)
+    const savePreset = updatePresets!.find(p => p.id === 'save_to_ai_qualification')
+    expect(savePreset).toBeDefined()
+    expect(savePreset!.labelKey).toBe('presetSaveAiQualification')
+    expect(savePreset!.fields).toHaveLength(0)
+  })
+
+  it('preset fields używają label (string) nie labelKey — są user-facing resolved strings', () => {
+    const aiPresets = STEP_OUTPUT_SCHEMA_PRESETS['ai_action']!
+    for (const preset of aiPresets) {
+      for (const field of preset.fields) {
+        expect(field).toHaveProperty('label')
+        expect(typeof field.label).toBe('string')
+        expect(field.label.length).toBeGreaterThan(0)
+      }
+    }
+  })
+
+  it('step types bez presetów nie są w STEP_OUTPUT_SCHEMA_PRESETS', () => {
+    expect(STEP_OUTPUT_SCHEMA_PRESETS['send_email']).toBeUndefined()
+    expect(STEP_OUTPUT_SCHEMA_PRESETS['condition']).toBeUndefined()
+    expect(STEP_OUTPUT_SCHEMA_PRESETS['delay']).toBeUndefined()
+    expect(STEP_OUTPUT_SCHEMA_PRESETS['webhook']).toBeUndefined()
+    expect(STEP_OUTPUT_SCHEMA_PRESETS['get_response']).toBeUndefined()
   })
 })
 

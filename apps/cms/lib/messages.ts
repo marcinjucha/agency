@@ -34,7 +34,6 @@ export const messages = {
     done: 'Gotowe',
     loading: 'Ładowanie…',
     errorOccurred: 'Wystąpił błąd',
-    retryAnalysis: 'Ponów analizę',
     close: 'Zamknij',
     viewGrid: 'Widok siatki',
     viewList: 'Widok listy',
@@ -538,11 +537,7 @@ export const messages = {
     typeLabel: (type: string) => `Typ: ${type}`,
     optionsCount: (count: number) => `${count} opcji`,
     noQuestionsInSurvey: 'Brak pytań w tej ankiecie',
-    aiAnalysis: 'Analiza AI',
-    analysisUnavailable: 'Analiza niedostępna',
     analyzingResponse: 'Analizowanie odpowiedzi…',
-    retryingAnalysis: (attempt: number, max: number) =>
-      `Ponawianie analizy… (${attempt}/${max})`,
     overall: 'Ogólny',
     urgency: 'Pilność',
     value: 'Wartość',
@@ -971,6 +966,9 @@ export const messages = {
     stepCondition: 'Warunek',
     stepWebhook: 'Webhook',
     stepAiAction: 'Akcja AI',
+    stepGetResponse: 'Pobierz odpowiedź',
+    stepUpdateResponse: 'Zaktualizuj odpowiedź',
+    stepGetSurveyLink: 'Pobierz link ankiety',
     // Execution statuses
     executionPending: 'Oczekuje',
     executionRunning: 'W toku',
@@ -1019,6 +1017,12 @@ export const messages = {
       configPanelClose: 'Zamknij panel',
       configPanelApply: 'Zastosuj',
       noConfig: 'Brak konfiguracji dla tego typu kroku.',
+      // Step slug (identifier used in {{slug.field}} expressions)
+      slugLabel: 'Identyfikator kroku',
+      slugHint: 'Używany w wyrażeniach jako {{slug.pole}}',
+      slugInvalidFormat: 'Identyfikator musi zaczynać się małą literą i zawierać tylko litery i cyfry',
+      slugAlreadyUsed: 'Ten identyfikator jest już użyty w tym workflow',
+      slugEmpty: 'Identyfikator nie może być pusty',
       // Trigger config
       triggerTypeLabel: 'Typ wyzwalacza',
       triggerNoExtraConfig: 'Brak dodatkowej konfiguracji dla tego typu wyzwalacza.',
@@ -1034,6 +1038,11 @@ export const messages = {
       toExpressionLabel: 'Adresat (wyrażenie)',
       toExpressionPlaceholder: 'np. {{contact.email}}',
       toExpressionHint: 'Użyj zmiennych z wyzwalacza, np. {{contact.email}}',
+      // SendEmail variable bindings
+      variableBindingsLabel: 'Mapowanie zmiennych',
+      variableBindingsEmpty: 'Szablon nie zawiera zmiennych do podstawienia',
+      variableBindingsHint: 'Wybierz skąd pochodzi każda zmienna szablonu',
+      variableBindingInputAriaLabel: (key: string) => `Wartość dla zmiennej ${key}`,
       // Condition config
       expressionLabel: 'Wyrażenie warunku',
       expressionPlaceholder: 'np. overallScore >= 7',
@@ -1074,6 +1083,38 @@ export const messages = {
       removeOutputField: 'Usuń pole',
       defaultOutputFieldsHint: 'Domyślne pola: aiResponse, overallScore, recommendation',
       defaultFieldsOverrideHint: 'Domyślne pola zostaną zastąpione polami niestandardowymi.',
+      // GetResponse config panel
+      getResponseDescription: 'Ten krok pobiera dane odpowiedzi i udostępnia je jako zmienne dla kolejnych kroków.',
+      getResponseIdExpressionLabel: 'Źródło ID odpowiedzi',
+      getResponseIdExpressionHint: 'Wyrażenie wskazujące skąd pobrać ID odpowiedzi. Domyślnie pochodzi z wyzwalacza.',
+      getResponseIdExpressionPlaceholder: 'np. {{responseId}}',
+      getSurveyLinkIdExpressionLabel: 'Źródło ID linku ankiety',
+      getSurveyLinkIdExpressionHint: 'Wyrażenie wskazujące skąd pobrać ID linku ankiety. Domyślnie pochodzi z wyzwalacza.',
+      getResponseAvailableVars: 'Dostępne zmienne',
+      getResponseVarHintBefore: 'Użyj tych zmiennych w kolejnych krokach wpisując',
+      getResponseVarHintAfter: 'lub korzystając z wstawiacza zmiennych.',
+      // UpdateResponse config panel — preset selector
+      updateResponsePresetLabel: 'Schemat predefiniowany',
+      updateResponsePresetHint: 'Wybierz preset, aby szybko skonfigurować mapowanie, lub zdefiniuj własne pola.',
+      updateResponsePresetAriaLabel: 'Wybierz schemat predefiniowany',
+      updateResponsePresetPlaceholder: 'Wybierz preset...',
+      updateResponsePresetCustom: 'Własny',
+      updateResponsePresetSaveAiQual: 'Zapisz do Analiza AI',
+      // UpdateResponse config panel — field mapping
+      updateResponseFieldMappingLabel: 'Mapowanie pól',
+      updateResponseNoMappings: 'Brak mapowań. Dodaj przynajmniej jedno mapowanie lub wybierz preset.',
+      updateResponseMappingGroup: (n: number) => `Mapowanie ${n}`,
+      updateResponseTargetColAriaLabel: (n: number) => `Kolumna docelowa ${n}`,
+      updateResponseTargetColPlaceholder: 'Kolumna...',
+      updateResponseSourceExprPlaceholder: 'np. {{stepId.overallScore}}',
+      updateResponseSourceExprAriaLabel: (n: number) => `Wyrażenie źródłowe ${n}`,
+      updateResponseDeleteMappingAriaLabel: (n: number) => `Usuń mapowanie ${n}`,
+      updateResponseAddMapping: 'Dodaj mapowanie',
+      // UpdateResponse config panel — target column labels
+      updateResponseColAiQualification: 'Analiza AI',
+      updateResponseColStatus: 'Status',
+      updateResponseColNotes: 'Notatki',
+      updateResponseColRespondentName: 'Imię i nazwisko',
     },
     stepLibrary: {
       categoryTriggers: 'Wyzwalacze',
@@ -1086,6 +1127,9 @@ export const messages = {
       descCondition: 'Rozgałęzienie na podstawie warunku',
       descDelay: 'Poczekaj określony czas',
       descAiAction: 'Przetwórz dane za pomocą AI',
+      descGetResponse: 'Pobierz dane odpowiedzi z ankiety',
+      descUpdateResponse: 'Zaktualizuj pola odpowiedzi w bazie danych',
+      descGetSurveyLink: 'Pobiera dane linku ankiety do kontekstu workflow',
     },
     /**
      * Output schema field labels — keyed by OutputSchemaDefinition.labelKey.
@@ -1100,12 +1144,35 @@ export const messages = {
       aiResponse: 'Odpowiedź AI',
       overallScore: 'Wynik ogólny',
       recommendation: 'Rekomendacja',
+      aiOutputJson: 'Wynik AI (pełny JSON)',
       // condition outputs
       conditionBranch: 'Wynik warunku',
       // webhook outputs
       httpStatusCode: 'Kod statusu HTTP',
       webhookResponseBody: 'Odpowiedź webhook',
+      // get_response outputs
+      responseId: 'ID odpowiedzi',
+      responseStatus: 'Status odpowiedzi',
+      respondentName: 'Imię respondenta',
+      submittedAt: 'Data wypełnienia',
+      surveyTitle: 'Tytuł ankiety',
+      clientEmail: 'Email klienta (z odpowiedzi formularza)',
+      answers: 'Odpowiedzi (JSON)',
+      qaContext: 'Treść ankiety (Q&A)',
+      companyName: 'Nazwa firmy',
+      aiQualification: 'Kwalifikacja AI',
+      responseUrl: 'Link do odpowiedzi (CMS)',
+      // update_response outputs
+      updateSuccess: 'Zaktualizowano',
+      updatedAt: 'Data aktualizacji',
+      // get_survey_link outputs
+      outputNotificationEmail: 'Email powiadomień',
+      outputSurveyLinkToken: 'Token linku',
+      outputSurveyTitle: 'Tytuł ankiety (link)',
     },
+    // Output schema preset labels
+    presetQualificationAnalysis: 'Analiza kwalifikacji AI',
+    presetSaveAiQualification: 'Zapisz kwalifikację AI',
     // Labels
     nameLabel: 'Nazwa',
     descriptionLabel: 'Opis',

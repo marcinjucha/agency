@@ -4,11 +4,14 @@ import { useEffect, useRef } from 'react'
 import { useForm, Controller, useFieldArray } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Plus, X } from 'lucide-react'
-import { Button, Label, Input, Textarea } from '@agency/ui'
+import {
+  Button, Label, Input, Textarea,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@agency/ui'
 import { messages } from '@/lib/messages'
 import { VariableInserter } from '@/features/email/components/VariableInserter'
 import { aiActionConfigSchema } from '../../validation'
-import { STEP_OUTPUT_SCHEMAS } from '../../types'
+import { STEP_OUTPUT_SCHEMAS, STEP_OUTPUT_SCHEMA_PRESETS } from '../../step-registry'
 import type { StepConfigAiAction } from '../../types'
 import type { ConfigPanelProps } from './index'
 
@@ -38,10 +41,20 @@ export function AiActionConfigPanel({ stepConfig, onChange, availableVariables }
     },
   })
 
-  const { fields, append, remove } = useFieldArray({
+  const { fields, append, remove, replace } = useFieldArray({
     control,
     name: 'output_schema',
   })
+
+  const aiPresets = STEP_OUTPUT_SCHEMA_PRESETS.ai_action ?? []
+  const CUSTOM_PRESET_VALUE = 'custom'
+
+  function handleAiPresetSelect(presetId: string) {
+    if (presetId === CUSTOM_PRESET_VALUE) return
+    const preset = aiPresets.find((p) => p.id === presetId)
+    if (!preset) return
+    replace(preset.fields)
+  }
 
   // Watch all fields and propagate changes (skip initial mount to avoid false dirty state)
   const formValues = watch()
@@ -116,6 +129,32 @@ export function AiActionConfigPanel({ stepConfig, onChange, availableVariables }
         <Label className="text-sm font-medium">
           {messages.workflows.editor.outputFields}
         </Label>
+
+        {/* Preset selector */}
+        {aiPresets.length > 0 && (
+          <div className="space-y-1">
+            <Label htmlFor="ai-action-preset" className="text-xs text-muted-foreground">
+              Schemat predefiniowany — wybierz preset lub zdefiniuj własny schemat
+            </Label>
+            <Select onValueChange={handleAiPresetSelect} defaultValue={CUSTOM_PRESET_VALUE}>
+              <SelectTrigger
+                id="ai-action-preset"
+                className="h-8 text-xs"
+                aria-label="Wybierz predefiniowany schemat wyjściowy"
+              >
+                <SelectValue placeholder="Wybierz preset..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={CUSTOM_PRESET_VALUE}>Własny</SelectItem>
+                {aiPresets.map((preset) => (
+                  <SelectItem key={preset.id} value={preset.id}>
+                    {preset.id === 'qualification_analysis' ? 'Analiza kwalifikacyjna' : preset.id}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
         {fields.map((field, index) => (
           <div key={field.id} className="flex items-start gap-2" role="group" aria-label={`${messages.workflows.editor.outputFields} ${index + 1}`}>
