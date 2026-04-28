@@ -14,6 +14,7 @@
 - **Commit per change, test later** — Individual commits, deferred manual testing.
 - **Don't commit fixes without testing them first (2026-04-16)** — Verify the fix actually works before creating a commit.
 - **Worktree folder names include descriptive slug, not just task ID (2026-04-17)** — Mirror branch naming: `worktree-aaa-t-205-oleg-cookie-privacy` over `worktree-aaa-t-205`. WHY: multiple worktrees in flight → can't tell which is which at a glance; the ID alone is meaningless without looking up Notion.
+- **Squash WIP commits before merge — not after (2026-04-28)** — User caught that AAA-T-211 was merged with 21 raw WIP/fix commits instead of logical groups. Phase 5 of /develop must include `git reset --soft $(git merge-base HEAD main)` + re-commit in 3-7 logical groups BEFORE the `--no-ff` merge. ag-develop.md updated to enforce this. WHY: main history should tell a feature story per merge bubble, not expose implementation noise.
 
 ## Bugs Found
 
