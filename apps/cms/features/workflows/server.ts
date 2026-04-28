@@ -848,20 +848,26 @@ function insertWorkflowFromTemplate(
         idMap.set(step.tempId, crypto.randomUUID())
       }
 
+      const usedSlugs: string[] = []
+      const stepsWithSlugs = template.steps.map((step) => {
+        const slug = generateStepSlug(String(step.step_type), usedSlugs)
+        usedSlugs.push(slug)
+        return {
+          id: idMap.get(step.tempId)!,
+          workflow_id: workflowId,
+          step_type: step.step_type,
+          step_config: step.step_config,
+          position_x: step.position_x,
+          position_y: step.position_y,
+          slug,
+        }
+      })
+
       const insertStepsOp =
         template.steps.length > 0
           ? ResultAsync.fromPromise(
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              (supabase as any).from('workflow_steps').insert(
-                template.steps.map((step) => ({
-                  id: idMap.get(step.tempId)!,
-                  workflow_id: workflowId,
-                  step_type: step.step_type,
-                  step_config: step.step_config,
-                  position_x: step.position_x,
-                  position_y: step.position_y,
-                }))
-              ),
+              (supabase as any).from('workflow_steps').insert(stepsWithSlugs),
               dbError
             ).andThen(fromSupabaseVoid())
           : ResultAsync.fromSafePromise(Promise.resolve(undefined))
