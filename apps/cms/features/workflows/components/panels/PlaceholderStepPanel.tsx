@@ -9,11 +9,12 @@ import {
   SelectItem,
 } from '@agency/ui'
 import { PLACEHOLDER_STEP_MAP } from '../../step-registry'
+import type { PlaceholderStepType } from '../../step-registry'
 import { messages } from '@/lib/messages'
 import type { ConfigPanelProps } from './index'
 
 export function PlaceholderStepPanel({ stepType }: ConfigPanelProps) {
-  const definition = PLACEHOLDER_STEP_MAP[stepType]
+  const definition = PLACEHOLDER_STEP_MAP[stepType as PlaceholderStepType]
   if (!definition) return null
 
   return (

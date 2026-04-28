@@ -18,7 +18,7 @@ import { UpdateResponseConfigPanel } from './UpdateResponseConfigPanel'
 import { PlaceholderStepPanel } from './PlaceholderStepPanel'
 import { ConfigPanelWrapper } from './ConfigPanelWrapper'
 import { PLACEHOLDER_STEP_MAP } from '../../step-registry'
-import type { StepType } from '../../step-registry'
+import type { StepType, PlaceholderStepType } from '../../step-registry'
 import type { TriggerType, SurveyOption, EmailTemplateOption } from '../../types'
 import type { VariableItem } from '@agency/ui'
 
@@ -67,7 +67,7 @@ export function getPanelComponent(stepType: string): React.ComponentType<ConfigP
   if (TRIGGER_TYPES.has(stepType)) {
     return TriggerConfigPanel
   }
-  if (PLACEHOLDER_STEP_MAP[stepType]) {
+  if ((PLACEHOLDER_STEP_MAP as Record<string, unknown>)[stepType]) {
     return PlaceholderStepPanel
   }
   return (STEP_PANEL_REGISTRY as Record<string, React.ComponentType<ConfigPanelProps>>)[stepType] ?? null
