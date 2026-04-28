@@ -8,10 +8,23 @@ import {
   Database,
   PenLine,
   Link,
+  MessageCircle,
+  Phone,
+  MessageSquare,
+  Instagram,
+  Calendar,
+  RefreshCw,
+  Send,
+  Bell,
+  CalendarCheck,
+  CheckSquare,
+  Table2,
+  Linkedin,
+  ListOrdered,
   type LucideIcon,
 } from 'lucide-react'
 import { messages } from '@/lib/messages'
-import { STEP_REGISTRY } from '../../step-registry'
+import { STEP_REGISTRY, PLACEHOLDER_REGISTRY } from '../../step-registry'
 import type { StepType } from '../../step-registry'
 import type { TriggerType } from '../../types'
 import { STEP_TYPE_LABELS, getStepTypeDescription } from '../../utils/step-labels'
@@ -110,12 +123,51 @@ export const TRIGGER_SUBTYPE_CONFIGS: Record<TriggerType, NodeTypeConfig> = {
   },
 }
 
+/** Icon map for placeholder step types — maps PLACEHOLDER_REGISTRY.iconName to LucideIcon */
+const PLACEHOLDER_ICON_MAP: Record<string, LucideIcon> = {
+  MessageCircle,
+  Phone,
+  MessageSquare,
+  Instagram,
+  Calendar,
+  Clock,
+  RefreshCw,
+  Mail,
+  Send,
+  Bell,
+  Database,
+  CalendarCheck,
+  CheckSquare,
+  Table2,
+  Globe,
+  Linkedin,
+  ListOrdered,
+}
+
+/** NodeTypeConfig map for all 19 placeholder step types */
+export const PLACEHOLDER_NODE_CONFIGS: Record<string, NodeTypeConfig> = Object.fromEntries(
+  PLACEHOLDER_REGISTRY.map((s) => [
+    s.id,
+    {
+      icon: PLACEHOLDER_ICON_MAP[s.iconName] ?? Zap,
+      label: s.label,
+      borderColor: s.borderColor,
+      category: 'additional',
+      description: s.description,
+    } satisfies NodeTypeConfig,
+  ])
+)
+
 /**
- * Combined lookup map (step + trigger types) for runtime lookups by arbitrary string.
+ * Combined lookup map (step + trigger + placeholder types) for runtime lookups by arbitrary string.
  * Use this for runtime node data lookups where the type is unknown at compile time.
- * Use NODE_TYPE_CONFIGS / TRIGGER_SUBTYPE_CONFIGS directly for compile-time complete maps.
+ * Use NODE_TYPE_CONFIGS / TRIGGER_SUBTYPE_CONFIGS / PLACEHOLDER_NODE_CONFIGS directly for compile-time complete maps.
  */
-const allConfigs: Record<string, NodeTypeConfig> = { ...NODE_TYPE_CONFIGS, ...TRIGGER_SUBTYPE_CONFIGS }
+const allConfigs: Record<string, NodeTypeConfig> = {
+  ...NODE_TYPE_CONFIGS,
+  ...TRIGGER_SUBTYPE_CONFIGS,
+  ...PLACEHOLDER_NODE_CONFIGS,
+}
 
 /** Runtime lookup by arbitrary string key — returns undefined for unknown types */
 export function lookupNodeConfig(type: string): NodeTypeConfig | undefined {
