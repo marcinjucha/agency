@@ -15,7 +15,9 @@ import { AiActionConfigPanel } from './AiActionConfigPanel'
 import { GetResponseConfigPanel } from './GetResponseConfigPanel'
 import { GetSurveyLinkConfigPanel } from './GetSurveyLinkConfigPanel'
 import { UpdateResponseConfigPanel } from './UpdateResponseConfigPanel'
+import { PlaceholderStepPanel } from './PlaceholderStepPanel'
 import { ConfigPanelWrapper } from './ConfigPanelWrapper'
+import { PLACEHOLDER_STEP_MAP } from '../../step-registry'
 import type { StepType } from '../../step-registry'
 import type { TriggerType, SurveyOption, EmailTemplateOption } from '../../types'
 import type { VariableItem } from '@agency/ui'
@@ -65,6 +67,9 @@ export function getPanelComponent(stepType: string): React.ComponentType<ConfigP
   if (TRIGGER_TYPES.has(stepType)) {
     return TriggerConfigPanel
   }
+  if (PLACEHOLDER_STEP_MAP[stepType]) {
+    return PlaceholderStepPanel
+  }
   return (STEP_PANEL_REGISTRY as Record<string, React.ComponentType<ConfigPanelProps>>)[stepType] ?? null
 }
 
@@ -79,6 +84,7 @@ const _AiActionConfigPanel = AiActionConfigPanel
 const _GetResponseConfigPanel = GetResponseConfigPanel
 const _GetSurveyLinkConfigPanel = GetSurveyLinkConfigPanel
 const _UpdateResponseConfigPanel = UpdateResponseConfigPanel
+const _PlaceholderStepPanel = PlaceholderStepPanel
 
 export {
   _ConfigPanelWrapper as ConfigPanelWrapper,
@@ -91,4 +97,5 @@ export {
   _GetResponseConfigPanel as GetResponseConfigPanel,
   _GetSurveyLinkConfigPanel as GetSurveyLinkConfigPanel,
   _UpdateResponseConfigPanel as UpdateResponseConfigPanel,
+  _PlaceholderStepPanel as PlaceholderStepPanel,
 }
