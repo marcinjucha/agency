@@ -39,6 +39,9 @@ architecture:
     - "app_config table for encryption key instead of custom GUC — Supabase Cloud blocks ALTER DATABASE SET for app.* parameters (unlike self-hosted PostgreSQL). app_config stores key-value pairs; calendar_connection_rpc reads encryption key from app_config instead of current_setting('app.encryption_key')."
     - "NULL survey_link.workflow_id = no workflow fires — fixes all-workflows-fire bug (AAA-T-186); trigger route reads workflow_id from survey_links when surveyLinkId provided, fires only the bound workflow; NULL = skip engine entirely. Existing links need explicit workflow assignment after migration."
     - "Two-step JSONB query for AI results (AAA-T-189): workflow_executions filtered client-side by trigger_payload->responseId (RLS scoped), then step_executions joined for ai_action output_payload — avoids PostgREST JSONB filter limitation on nested fields."
+    - "PLACEHOLDER_REGISTRY separate from StepType union (AAA-T-211) — 19 showcase-only step types added without polluting n8n execution layer; UI-only collections kept parallel to runtime registries. Rule: if runtime doesn't need to discriminate on a variant, use parallel registry not union extension."
+    - "switch step replaces condition (pre-launch clean break, AAA-T-211) — N-way branch router with first-match-wins evaluation; condition was binary only; switch with 2 branches = same semantics. Per-action handler in n8n (Step - Switch Handler) mirrors Step - Condition Handler pattern. DB migration 20260428120000 converts existing condition rows to switch format."
+    - "_name in step_config drives canvas labels (AAA-T-211) — step_config._name ?? getLabel(step_type) pattern; editable via ConfigPanelWrapper 'Nazwa kroku' field; persisted to DB as part of step_config JSONB on Save. All 12 templates pre-fill _name with descriptive Polish labels."
 
 features:
   # Phase 1: Foundation
@@ -264,6 +267,14 @@ features:
     why: "Completing the CMS migration eliminates Next.js from the CMS entirely, enabling self-hosted VPS deployment without Vercel dependency. Shop and marketplace were the final feature areas still using Next.js Server Actions."
     depends_on: ["TanStack Start Migration — Surveys & Intake", "TanStack Start Migration — Content"]
     completion_notes: "CMS is fully TanStack Start. Zero Next.js dependencies in apps/cms. All shop/marketplace routes and server functions migrated. createServerClient pattern unified across all server-only Supabase access. Feature branch: feature/cms-tanstack-migration."
+
+  - name: "Workflow Builder — Showcase / Switch"
+    status: done
+    task_id: "AAA-T-211"
+    description: "19 placeholder step types (PLACEHOLDER_REGISTRY — separate from StepType union to keep n8n execution layer clean). PlaceholderStepPanel: editable fields pre-filled from step_config, persists onChange. StepLibraryPanel: search, w-72, ADDITIONAL section with 19 placeholder types. 12 workflow templates (3 functional + 9 showcase, 9-16 nodes each, rich branching). _name field in step_config drives canvas labels via step_config._name ?? getLabel(step_type). Editable Nazwa kroku field in ConfigPanelWrapper header works for ALL step types with real-time canvas update. switch step replaces condition entirely (pre-launch clean break): SwitchNode with N dynamic source handles (color-coded: green first, red default, amber/blue/purple middle), branch labels next to handles, height grows with branch count. SwitchConfigPanel: useFieldArray branch list, add/remove/reorder, default branch locked at bottom, VariableInserter per expression. n8n Step - Switch Handler: first-match-wins evaluation, default catch-all, skip propagation mirrors condition handler. DB migration 20260428120000 converts condition steps to switch format. ConditionNode + ConditionConfigPanel deleted."
+    why: "Social media recordings need professional-looking workflows with realistic step types (WhatsApp, CRM, Google Sheets, LinkedIn Lookup, etc.) that don't exist yet as functional integrations. switch replaces the binary condition step to enable proper N-way routing without cascading pairs."
+    depends_on: ["Workflow Engine"]
+    completion_notes: "Admins can build showcase workflows with 19 additional step types (messaging, CRM, data, calendar integrations) that look professional on screen recordings. N-way switch routing replaces the old binary condition node — workflows with 3+ branches now use a single switch step instead of cascading condition pairs. All 12 templates updated with descriptive Polish step labels."
 
   - name: "Website Light Theme Redesign"
     status: done

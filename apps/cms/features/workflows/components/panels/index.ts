@@ -8,15 +8,17 @@
 
 import { TriggerConfigPanel } from './TriggerConfigPanel'
 import { SendEmailConfigPanel } from './SendEmailConfigPanel'
-import { ConditionConfigPanel } from './ConditionConfigPanel'
+import { SwitchConfigPanel } from './SwitchConfigPanel'
 import { DelayConfigPanel } from './DelayConfigPanel'
 import { WebhookConfigPanel } from './WebhookConfigPanel'
 import { AiActionConfigPanel } from './AiActionConfigPanel'
 import { GetResponseConfigPanel } from './GetResponseConfigPanel'
 import { GetSurveyLinkConfigPanel } from './GetSurveyLinkConfigPanel'
 import { UpdateResponseConfigPanel } from './UpdateResponseConfigPanel'
+import { PlaceholderStepPanel } from './PlaceholderStepPanel'
 import { ConfigPanelWrapper } from './ConfigPanelWrapper'
-import type { StepType } from '../../step-registry'
+import { PLACEHOLDER_STEP_MAP } from '../../step-registry'
+import type { StepType, PlaceholderStepType } from '../../step-registry'
 import type { TriggerType, SurveyOption, EmailTemplateOption } from '../../types'
 import type { VariableItem } from '@agency/ui'
 
@@ -51,7 +53,7 @@ const TRIGGER_TYPES = new Set<string>([
  */
 const STEP_PANEL_REGISTRY: Record<StepType, React.ComponentType<ConfigPanelProps>> = {
   send_email: SendEmailConfigPanel,
-  condition: ConditionConfigPanel,
+  switch: SwitchConfigPanel,
   delay: DelayConfigPanel,
   webhook: WebhookConfigPanel,
   ai_action: AiActionConfigPanel,
@@ -65,6 +67,9 @@ export function getPanelComponent(stepType: string): React.ComponentType<ConfigP
   if (TRIGGER_TYPES.has(stepType)) {
     return TriggerConfigPanel
   }
+  if ((PLACEHOLDER_STEP_MAP as Record<string, unknown>)[stepType]) {
+    return PlaceholderStepPanel
+  }
   return (STEP_PANEL_REGISTRY as Record<string, React.ComponentType<ConfigPanelProps>>)[stepType] ?? null
 }
 
@@ -72,23 +77,25 @@ export function getPanelComponent(stepType: string): React.ComponentType<ConfigP
 const _ConfigPanelWrapper = ConfigPanelWrapper
 const _TriggerConfigPanel = TriggerConfigPanel
 const _SendEmailConfigPanel = SendEmailConfigPanel
-const _ConditionConfigPanel = ConditionConfigPanel
+const _SwitchConfigPanel = SwitchConfigPanel
 const _DelayConfigPanel = DelayConfigPanel
 const _WebhookConfigPanel = WebhookConfigPanel
 const _AiActionConfigPanel = AiActionConfigPanel
 const _GetResponseConfigPanel = GetResponseConfigPanel
 const _GetSurveyLinkConfigPanel = GetSurveyLinkConfigPanel
 const _UpdateResponseConfigPanel = UpdateResponseConfigPanel
+const _PlaceholderStepPanel = PlaceholderStepPanel
 
 export {
   _ConfigPanelWrapper as ConfigPanelWrapper,
   _TriggerConfigPanel as TriggerConfigPanel,
   _SendEmailConfigPanel as SendEmailConfigPanel,
-  _ConditionConfigPanel as ConditionConfigPanel,
+  _SwitchConfigPanel as SwitchConfigPanel,
   _DelayConfigPanel as DelayConfigPanel,
   _WebhookConfigPanel as WebhookConfigPanel,
   _AiActionConfigPanel as AiActionConfigPanel,
   _GetResponseConfigPanel as GetResponseConfigPanel,
   _GetSurveyLinkConfigPanel as GetSurveyLinkConfigPanel,
   _UpdateResponseConfigPanel as UpdateResponseConfigPanel,
+  _PlaceholderStepPanel as PlaceholderStepPanel,
 }

@@ -98,7 +98,7 @@ function WorkflowEditorContent({ workflow, workflowId }: WorkflowEditorContentPr
         position: { x: step.position_x, y: step.position_y },
         deletable: isTrigger ? false : undefined,
         data: {
-          label: getLabel(step.step_type),
+          label: (step.step_config as Record<string, unknown>)?._name as string ?? getLabel(step.step_type),
           stepType: step.step_type,
           stepConfig: step.step_config,
           slug: step.slug,
@@ -218,11 +218,14 @@ function WorkflowEditorContent({ workflow, workflowId }: WorkflowEditorContentPr
     (config: Record<string, unknown>, triggerType?: TriggerType) => {
       if (!selectedNode || !canvasRef.current) return
 
-      // Update node data on canvas
-      const label = triggerType ? getLabel(triggerType) : getLabel(selectedNode.stepType)
+      // Update node data on canvas — always include label so _name edits update in real-time
+      const effectiveName = config._name as string | undefined
+      const baseLabel = triggerType ? getLabel(triggerType) : getLabel(selectedNode.stepType)
+      const label = effectiveName?.trim() || baseLabel
       canvasRef.current.updateNodeData(selectedNode.id, {
         stepConfig: config,
-        ...(triggerType ? { stepType: triggerType, label } : {}),
+        label,
+        ...(triggerType ? { stepType: triggerType } : {}),
       })
 
       // Update local selected node state to keep panel in sync
@@ -395,6 +398,8 @@ function WorkflowEditorContent({ workflow, workflowId }: WorkflowEditorContentPr
               stepType={selectedNode.stepType}
               slug={isTriggerType(selectedNode.stepType) ? undefined : selectedNode.slug}
               onSlugCommit={isTriggerType(selectedNode.stepType) ? undefined : handleSlugCommit}
+              stepConfig={selectedNode.stepConfig}
+              onStepConfigChange={handleConfigChange}
               onClose={handlePanelClose}
             >
               <PanelComponent

@@ -17,7 +17,7 @@ const STEP_TYPE_TO_BASE_SLUG: Record<string, string> = {
   update_response: 'updateResponse',
   get_survey_link: 'getSurveyLink',
   send_email: 'sendEmail',
-  condition: 'condition',
+  switch: 'switch',
   delay: 'delay',
   webhook: 'webhook',
 }

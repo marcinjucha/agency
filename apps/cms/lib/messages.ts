@@ -963,7 +963,7 @@ export const messages = {
     // Step types
     stepSendEmail: 'Wyślij email',
     stepDelay: 'Opóźnienie',
-    stepCondition: 'Warunek',
+    stepSwitch: 'Przełącznik',
     stepWebhook: 'Webhook',
     stepAiAction: 'Akcja AI',
     stepGetResponse: 'Pobierz odpowiedź',
@@ -1017,6 +1017,8 @@ export const messages = {
       configPanelClose: 'Zamknij panel',
       configPanelApply: 'Zastosuj',
       noConfig: 'Brak konfiguracji dla tego typu kroku.',
+      // Step name (display label shown on canvas node)
+      stepNameLabel: 'Nazwa kroku',
       // Step slug (identifier used in {{slug.field}} expressions)
       slugLabel: 'Identyfikator kroku',
       slugHint: 'Używany w wyrażeniach jako {{slug.pole}}',
@@ -1043,10 +1045,15 @@ export const messages = {
       variableBindingsEmpty: 'Szablon nie zawiera zmiennych do podstawienia',
       variableBindingsHint: 'Wybierz skąd pochodzi każda zmienna szablonu',
       variableBindingInputAriaLabel: (key: string) => `Wartość dla zmiennej ${key}`,
-      // Condition config
-      expressionLabel: 'Wyrażenie warunku',
-      expressionPlaceholder: 'np. overallScore >= 7',
-      expressionHint: 'Użyj zmiennych z kontekstu, np. overallScore >= 7',
+      // Switch config
+      switchBranchesLabel: 'Gałęzie',
+      switchAddBranch: '+ Dodaj gałąź',
+      switchDefaultBranch: 'Pozostałe (catch-all)',
+      switchBranchId: 'ID gałęzi',
+      switchBranchLabel: 'Etykieta',
+      switchBranchExpression: 'Wyrażenie',
+      switchBranchIdHint: 'Małe litery, cyfry, _ lub -. Używany w krawędziach.',
+      switchFirstMatchWins: 'Pierwsza pasująca gałąź wygrywa. Default zawsze na końcu.',
       // Delay config
       durationMinutesLabel: 'Opóźnienie (minuty)',
       durationMinutesPlaceholder: 'np. 60',
@@ -1124,12 +1131,16 @@ export const messages = {
       descTrigger: 'Rozpocznij workflow od zdarzenia',
       descSendEmail: 'Wyślij wiadomość email',
       descWebhook: 'Wywołaj zewnętrzny endpoint',
-      descCondition: 'Rozgałęzienie na podstawie warunku',
+      descSwitch: 'Routing N-kierunkowy — wybierz jedną z wielu gałęzi (jak switch/case)',
       descDelay: 'Poczekaj określony czas',
       descAiAction: 'Przetwórz dane za pomocą AI',
       descGetResponse: 'Pobierz dane odpowiedzi z ankiety',
       descUpdateResponse: 'Zaktualizuj pola odpowiedzi w bazie danych',
       descGetSurveyLink: 'Pobiera dane linku ankiety do kontekstu workflow',
+      categoryAdditional: 'Dodatkowe integracje',
+      badgeSoon: 'Wkrótce',
+      badgeInPreparation: 'Integracja w przygotowaniu',
+      searchPlaceholder: 'Szukaj kroków...',
     },
     /**
      * Output schema field labels — keyed by OutputSchemaDefinition.labelKey.
@@ -1145,8 +1156,8 @@ export const messages = {
       overallScore: 'Wynik ogólny',
       recommendation: 'Rekomendacja',
       aiOutputJson: 'Wynik AI (pełny JSON)',
-      // condition outputs
-      conditionBranch: 'Wynik warunku',
+      // switch outputs
+      switchBranch: 'Dopasowana gałąź',
       // webhook outputs
       httpStatusCode: 'Kod statusu HTTP',
       webhookResponseBody: 'Odpowiedź webhook',
@@ -1287,6 +1298,26 @@ export const messages = {
       follow_up: {
         name: 'Follow-up po kwalifikacji',
         description: 'Czekaj 2 dni po wycenie leada i wyślij email do wysoko punktowanych.',
+      },
+      '24_7_intake': {
+        name: 'Obsługa zapytań 24/7',
+        description: 'Multi-channel intake — odbieraj zapytania z 5 kanałów, kwalifikuj AI, kieruj do gorących/ciepłych/zimnych ścieżek.',
+      },
+      follow_up_scoring: {
+        name: 'Follow-up Hot/Warm/Cold',
+        description: 'Formularz → AI scoring 0–100 → 3 ścieżki nurturingu z różnymi opóźnieniami i sekwencjami.',
+      },
+      ai_meeting_brief: {
+        name: 'Research AI przed spotkaniem',
+        description: '60 min przed spotkaniem — pobierz dane z CRM, scrape strony klienta, wyszukaj LinkedIn, AI generuje brief, email do handlowca.',
+      },
+      daily_ceo_report: {
+        name: 'Dzienny raport CEO',
+        description: '7:00 codziennie — pobierz dane z CRM, agreguj w Google Sheets, AI analizuje trendy, wyślij raport email + powiadomienie Slack.',
+      },
+      client_onboarding: {
+        name: 'Onboarding nowego klienta',
+        description: 'Deal closed w CRM → email powitalny → utworzenie zadań → SMS przypomnienie → wait 7 dni → AI check-in → email feedback.',
       },
     },
   },

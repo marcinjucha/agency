@@ -99,16 +99,22 @@ const AI_ACTION_STEP = defineStep({
   defaultConfig: { type: 'ai_action', prompt: '', model: null, output_schema: null },
 })
 
-const CONDITION_STEP = defineStep({
-  id: 'condition' as const,
-  labelKey: 'stepCondition',
-  descriptionKey: 'descCondition',
+const SWITCH_STEP = defineStep({
+  id: 'switch' as const,
+  labelKey: 'stepSwitch',
+  descriptionKey: 'descSwitch',
   borderColor: 'border-l-4 border-l-amber-400',
   category: 'logic',
   outputSchema: [
-    { key: 'branch', labelKey: 'conditionBranch', type: 'string' },
+    { key: 'branch', labelKey: 'switchBranch', type: 'string' },
   ],
-  defaultConfig: { type: 'condition', expression: '' },
+  defaultConfig: {
+    type: 'switch',
+    branches: [
+      { id: 'tak',     label: 'Tak',      expression: '' },
+      { id: 'default', label: 'Pozostałe', expression: 'default' },
+    ],
+  },
 })
 
 const DELAY_STEP = defineStep({
@@ -188,7 +194,7 @@ const GET_SURVEY_LINK_STEP = defineStep({
 export const STEP_REGISTRY = [
   SEND_EMAIL_STEP,
   AI_ACTION_STEP,
-  CONDITION_STEP,
+  SWITCH_STEP,
   DELAY_STEP,
   WEBHOOK_STEP,
   GET_RESPONSE_STEP,
@@ -205,6 +211,281 @@ export type StepType = (typeof STEP_REGISTRY)[number]['id']
 export const STEP_MAP = Object.fromEntries(
   STEP_REGISTRY.map((s) => [s.id, s])
 ) as Record<StepType, (typeof STEP_REGISTRY)[number]>
+
+// --- Placeholder Step Types (showcase-only, not executed) ---
+
+export type PlaceholderFieldDefinition = {
+  key: string
+  label: string
+  placeholder?: string
+  type: 'text' | 'select' | 'number'
+  options?: string[]
+  readOnly?: boolean
+}
+
+export type PlaceholderStepDefinition = {
+  id: string
+  label: string
+  description: string
+  /** Lucide icon name (string — keeps registry zero-dep from Lucide) */
+  iconName: string
+  borderColor: string
+  placeholderFields: PlaceholderFieldDefinition[]
+}
+
+/**
+ * Note on i18n: label/description/placeholderFields are stored as inline Polish strings
+ * (unlike STEP_REGISTRY which uses labelKey/descriptionKey bridge pattern).
+ * This is intentional: placeholder nodes are showcase-only, never executed,
+ * and translation is out of scope. The zero-dep constraint still applies —
+ * no messages.ts import — but the bridge pattern is not needed here.
+ */
+export const PLACEHOLDER_REGISTRY: PlaceholderStepDefinition[] = [
+  // Triggers
+  {
+    id: 'whatsapp_message',
+    label: 'WhatsApp wiadomość',
+    description: 'Uruchom gdy klient pisze na WhatsApp',
+    iconName: 'MessageCircle',
+    borderColor: 'border-l-4 border-l-orange-500',
+    placeholderFields: [
+      { key: 'phone', label: 'Numer WhatsApp Business', placeholder: '+48...', type: 'text' },
+      { key: 'webhook', label: 'Webhook URL', type: 'text', readOnly: true, placeholder: 'https://...' },
+    ],
+  },
+  {
+    id: 'sms_received',
+    label: 'SMS przychodzący',
+    description: 'Uruchom gdy klient wysyła SMS',
+    iconName: 'Phone',
+    borderColor: 'border-l-4 border-l-orange-500',
+    placeholderFields: [
+      { key: 'phone', label: 'Numer Twilio', placeholder: '+48...', type: 'text' },
+      { key: 'webhook', label: 'Webhook URL', type: 'text', readOnly: true, placeholder: 'https://...' },
+    ],
+  },
+  {
+    id: 'facebook_message',
+    label: 'Facebook Messenger',
+    description: 'Wiadomość na Facebooku',
+    iconName: 'MessageSquare',
+    borderColor: 'border-l-4 border-l-orange-500',
+    placeholderFields: [
+      { key: 'page', label: 'Strona Facebook', placeholder: 'Halo Efekt', type: 'text' },
+      { key: 'webhook', label: 'Webhook URL', type: 'text', readOnly: true, placeholder: 'https://...' },
+    ],
+  },
+  {
+    id: 'instagram_dm',
+    label: 'Instagram DM',
+    description: 'Wiadomość prywatna na Instagramie',
+    iconName: 'Instagram',
+    borderColor: 'border-l-4 border-l-orange-500',
+    placeholderFields: [
+      { key: 'account', label: 'Konto Instagram', placeholder: '@haloefekt', type: 'text' },
+      { key: 'webhook', label: 'Webhook URL', type: 'text', readOnly: true, placeholder: 'https://...' },
+    ],
+  },
+  {
+    id: 'calendar_event',
+    label: 'Nadchodzące spotkanie',
+    description: 'X minut przed spotkaniem w Google Calendar',
+    iconName: 'Calendar',
+    borderColor: 'border-l-4 border-l-orange-500',
+    placeholderFields: [
+      { key: 'calendar', label: 'Kalendarz Google', placeholder: 'Główny kalendarz', type: 'text' },
+      { key: 'minutesBefore', label: 'Ile minut wcześniej', placeholder: '60', type: 'number' },
+    ],
+  },
+  {
+    id: 'schedule',
+    label: 'Harmonogram',
+    description: 'Uruchamiaj codziennie / co tydzień / cron',
+    iconName: 'Clock',
+    borderColor: 'border-l-4 border-l-orange-500',
+    placeholderFields: [
+      { key: 'frequency', label: 'Częstotliwość', type: 'select', options: ['Codziennie', 'Co tydzień', 'Miesięcznie', 'Własny CRON'] },
+      { key: 'time', label: 'Godzina uruchomienia', placeholder: '07:00', type: 'text' },
+    ],
+  },
+  {
+    id: 'crm_status_change',
+    label: 'Zmiana statusu CRM',
+    description: 'Gdy lead zmienia status w CRM',
+    iconName: 'RefreshCw',
+    borderColor: 'border-l-4 border-l-orange-500',
+    placeholderFields: [
+      { key: 'crm', label: 'System CRM', type: 'select', options: ['Pipedrive', 'HubSpot', 'Salesforce'] },
+      { key: 'fromStatus', label: 'Status: z', placeholder: 'Lead', type: 'text' },
+      { key: 'toStatus', label: 'Status: na', placeholder: 'Klient', type: 'text' },
+    ],
+  },
+  {
+    id: 'email_received',
+    label: 'Odebrany email',
+    description: 'Nowy email na skrzynce firmowej',
+    iconName: 'Mail',
+    borderColor: 'border-l-4 border-l-orange-500',
+    placeholderFields: [
+      { key: 'email', label: 'Konto email', placeholder: 'biuro@firma.pl', type: 'text' },
+      { key: 'subjectFilter', label: 'Filtr tematu (opcjonalnie)', placeholder: 'Zapytanie ofertowe', type: 'text' },
+    ],
+  },
+  // Communication actions
+  {
+    id: 'send_sms',
+    label: 'Wyślij SMS',
+    description: 'Wyślij wiadomość SMS do klienta',
+    iconName: 'MessageCircle',
+    borderColor: 'border-l-4 border-l-blue-400',
+    placeholderFields: [
+      { key: 'to', label: 'Numer telefonu', placeholder: '{{clientPhone}}', type: 'text' },
+      { key: 'message', label: 'Treść wiadomości', placeholder: 'Witaj, dziękujemy za kontakt...', type: 'text' },
+    ],
+  },
+  {
+    id: 'send_whatsapp',
+    label: 'Wyślij WhatsApp',
+    description: 'Wyślij wiadomość na WhatsApp',
+    iconName: 'Send',
+    borderColor: 'border-l-4 border-l-blue-400',
+    placeholderFields: [
+      { key: 'to', label: 'Numer telefonu', placeholder: '{{clientPhone}}', type: 'text' },
+      { key: 'template', label: 'Szablon wiadomości', placeholder: 'Potwierdzenie spotkania...', type: 'text' },
+    ],
+  },
+  {
+    id: 'send_slack',
+    label: 'Powiadomienie Slack/Teams',
+    description: 'Alert dla zespołu',
+    iconName: 'Bell',
+    borderColor: 'border-l-4 border-l-blue-400',
+    placeholderFields: [
+      { key: 'platform', label: 'Platforma', type: 'select', options: ['Slack', 'Microsoft Teams'] },
+      { key: 'channel', label: 'Kanał/webhook', placeholder: '#sprzedaz', type: 'text' },
+      { key: 'message', label: 'Treść', placeholder: 'Nowy gorący lead: {{clientName}}', type: 'text' },
+    ],
+  },
+  // CRM & Calendar actions
+  {
+    id: 'update_crm',
+    label: 'Aktualizuj CRM',
+    description: 'Zapisz dane leada do systemu CRM',
+    iconName: 'Database',
+    borderColor: 'border-l-4 border-l-emerald-400',
+    placeholderFields: [
+      { key: 'crm', label: 'System CRM', type: 'select', options: ['Pipedrive', 'HubSpot', 'Salesforce'] },
+      { key: 'action', label: 'Pola do zaktualizowania', placeholder: 'status = Gorący lead', type: 'text' },
+    ],
+  },
+  {
+    id: 'book_meeting',
+    label: 'Umów spotkanie',
+    description: 'Zarezerwuj termin w kalendarzu',
+    iconName: 'CalendarCheck',
+    borderColor: 'border-l-4 border-l-emerald-400',
+    placeholderFields: [
+      { key: 'calendar', label: 'Kalendarz', placeholder: 'Główny', type: 'text' },
+      { key: 'duration', label: 'Czas trwania (min)', placeholder: '60', type: 'number' },
+      { key: 'bookingLink', label: 'Link do rezerwacji', placeholder: 'https://cal.firma.pl/...', type: 'text' },
+    ],
+  },
+  {
+    id: 'create_task',
+    label: 'Utwórz zadanie',
+    description: 'Dodaj zadanie w CRM lub project managerze',
+    iconName: 'CheckSquare',
+    borderColor: 'border-l-4 border-l-emerald-400',
+    placeholderFields: [
+      { key: 'system', label: 'System', type: 'select', options: ['CRM', 'Asana', 'Trello', 'ClickUp'] },
+      { key: 'title', label: 'Tytuł zadania', placeholder: 'Follow-up: {{clientName}}', type: 'text' },
+      { key: 'assignTo', label: 'Przypisz do', placeholder: 'Jan Kowalski', type: 'text' },
+    ],
+  },
+  // Data & Integrations actions
+  {
+    id: 'google_sheets',
+    label: 'Google Sheets',
+    description: 'Odczytaj lub zapisz dane w arkuszu',
+    iconName: 'Table2',
+    borderColor: 'border-l-4 border-l-emerald-400',
+    placeholderFields: [
+      { key: 'sheetId', label: 'ID Arkusza', placeholder: '1BxiMVs0XRA...', type: 'text' },
+      { key: 'tab', label: 'Zakładka', placeholder: 'Leady', type: 'text' },
+      { key: 'mode', label: 'Tryb', type: 'select', options: ['Odczyt', 'Zapis', 'Aktualizacja'] },
+    ],
+  },
+  {
+    id: 'web_scraper',
+    label: 'Pobierz dane ze strony',
+    description: 'Scraping strony internetowej klienta',
+    iconName: 'Globe',
+    borderColor: 'border-l-4 border-l-emerald-400',
+    placeholderFields: [
+      { key: 'url', label: 'URL strony', placeholder: '{{clientWebsite}}', type: 'text' },
+      { key: 'selector', label: 'Co pobierać', placeholder: 'Opis firmy, produkty...', type: 'text' },
+    ],
+  },
+  {
+    id: 'linkedin_lookup',
+    label: 'LinkedIn Lookup',
+    description: 'Wyszukaj profil firmy lub osoby',
+    iconName: 'Linkedin',
+    borderColor: 'border-l-4 border-l-emerald-400',
+    placeholderFields: [
+      { key: 'query', label: 'Nazwa firmy/osoby', placeholder: '{{companyName}}', type: 'text' },
+      { key: 'type', label: 'Typ', type: 'select', options: ['Firma', 'Osoba'] },
+    ],
+  },
+  {
+    id: 'get_crm_data',
+    label: 'Pobierz dane z CRM',
+    description: 'Pobierz historię klienta z CRM',
+    iconName: 'Database',
+    borderColor: 'border-l-4 border-l-emerald-400',
+    placeholderFields: [
+      { key: 'crm', label: 'System CRM', type: 'select', options: ['Pipedrive', 'HubSpot', 'Salesforce'] },
+      { key: 'query', label: 'Co pobierać', type: 'select', options: ['Lead', 'Deal', 'Kontakt', 'Historia rozmów'] },
+    ],
+  },
+  {
+    id: 'email_sequence',
+    label: 'Sekwencja emaili',
+    description: 'Automatyczna seria emaili (drip)',
+    iconName: 'ListOrdered',
+    borderColor: 'border-l-4 border-l-blue-400',
+    placeholderFields: [
+      { key: 'name', label: 'Nazwa sekwencji', placeholder: 'Nurturing Cold', type: 'text' },
+      { key: 'count', label: 'Liczba emaili', placeholder: '12', type: 'number' },
+      { key: 'interval', label: 'Interwał (dni)', placeholder: '7', type: 'number' },
+    ],
+  },
+]
+
+export type PlaceholderStepType =
+  | 'whatsapp_message'
+  | 'sms_received'
+  | 'facebook_message'
+  | 'instagram_dm'
+  | 'calendar_event'
+  | 'schedule'
+  | 'crm_status_change'
+  | 'email_received'
+  | 'send_sms'
+  | 'send_whatsapp'
+  | 'send_slack'
+  | 'update_crm'
+  | 'book_meeting'
+  | 'create_task'
+  | 'google_sheets'
+  | 'web_scraper'
+  | 'linkedin_lookup'
+  | 'get_crm_data'
+  | 'email_sequence'
+
+export const PLACEHOLDER_STEP_MAP: Record<PlaceholderStepType, PlaceholderStepDefinition> = Object.fromEntries(
+  PLACEHOLDER_REGISTRY.map((s) => [s.id, s])
+) as Record<PlaceholderStepType, PlaceholderStepDefinition>
 
 // --- Derived Records ---
 

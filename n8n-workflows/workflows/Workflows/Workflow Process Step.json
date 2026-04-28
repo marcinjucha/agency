@@ -5,26 +5,26 @@
       "parameters": {
         "inputSource": "passthrough"
       },
-      "id": "bf0dd5e1-39d9-4d41-b6ef-224dd04d6654",
+      "id": "7bfc9149-f075-4ccf-933e-23e771e457f2",
       "typeVersion": 1.1,
       "name": "Start",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "position": [
-        9888,
-        27496
+        13680,
+        30224
       ]
     },
     {
       "parameters": {
         "jsCode": "// =============================================================\n// Prepare Current Step — resolve variables in config\n// =============================================================\n// Uses execution-scoped state keyed by executionId to support\n// concurrent workflow executions. Initializes on stepIndex 0.\n// =============================================================\n\nconst Sentry = require('@sentry/node');\n\nfunction resolveVariables(template, context) {\n  if (typeof template !== 'string') return template;\n  return template.replace(/\\{\\{(\\s*[\\w.]+\\s*)\\}\\}/g, (_, rawKey) => {\n    const key = rawKey.trim();\n    const value = getNestedValue(context, key);\n    return (value !== undefined && value !== null) ? String(value) : `{{${key}}}`;\n  });\n}\n\nfunction getNestedValue(obj, path) {\n  const parts = path.split('.');\n  let current = obj;\n  for (const part of parts) {\n    if (current === null || current === undefined || typeof current !== 'object') return undefined;\n    current = current[part];\n  }\n  return current;\n}\n\nfunction resolveDeep(obj, context) {\n  if (typeof obj === 'string') return resolveVariables(obj, context);\n  if (Array.isArray(obj)) return obj.map(item => resolveDeep(item, context));\n  if (obj && typeof obj === 'object') {\n    const result = {};\n    for (const [key, value] of Object.entries(obj)) {\n      result[key] = resolveDeep(value, context);\n    }\n    return result;\n  }\n  return obj;\n}\n\ntry {\n  const item = $input.first().json;\n  const state = $getWorkflowStaticData('global');\n  const { currentStep, executionId } = item;\n\n  // Initialize execution-scoped state on first step\n  if (item.stepIndex === 0) {\n    // Clean up stale entries older than 2 hours (defensive)\n    for (const key of Object.keys(state)) {\n      const entry = state[key];\n      if (entry && entry._createdAt && (Date.now() - entry._createdAt > 7200000)) {\n        delete state[key];\n      }\n    }\n    state[executionId] = {\n      variableContext: item.initialVariableContext || {},\n      skippedStepIds: [],\n      failed: false,\n      failureError: null,\n      _createdAt: Date.now(),\n    };\n  }\n\n  const execState = state[executionId] || { variableContext: {}, skippedStepIds: [], failed: false };\n\n  if (execState.failed) {\n    return { json: { ...item, failed: true } };\n  }\n\n  if ((execState.skippedStepIds || []).includes(currentStep.id)) {\n    Sentry.addBreadcrumb({\n      message: `Step ${item.stepIndex + 1}/${item.totalSteps}: ${currentStep.step_type} (${currentStep.id}) SKIPPED by condition branch`,\n      level: 'info',\n    });\n    return {\n      json: {\n        ...item,\n        resolvedConfig: currentStep.step_config,\n        stepType: '__skipped__',\n        stepResult: { success: true, outputPayload: { skipped: true } },\n        alreadyPersisted: true,\n      }\n    };\n  }\n\n  const variableContext = execState.variableContext || {};\n  const resolvedConfig = resolveDeep(currentStep.step_config, variableContext);\n\n  Sentry.addBreadcrumb({\n    message: `Step ${item.stepIndex + 1}/${item.totalSteps}: ${currentStep.step_type} (${currentStep.name || currentStep.id})`,\n    level: 'info',\n  });\n\n  return {\n    json: {\n      ...item,\n      variableContext,\n      resolvedConfig,\n      stepType: currentStep.step_type,\n    }\n  };\n} catch (err) {\n  Sentry.captureException(err);\n  await Sentry.flush(2000);\n  throw err;\n}\n"
       },
-      "id": "48dcb252-f5f6-4bed-b5c0-01b2320ee031",
+      "id": "0e7b9b86-4b48-424b-a980-4e2b0cf05694",
       "name": "Prepare Current Step",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        10112,
-        27496
+        13904,
+        30224
       ]
     },
     {
@@ -53,13 +53,13 @@
           ]
         }
       },
-      "id": "26dcc03a-70ff-4dac-8e03-534726086d13",
+      "id": "43a5f673-3c00-4bbb-b7dc-97069778d59c",
       "name": "Mark Step Running",
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        10336,
-        27320
+        14128,
+        30048
       ],
       "credentials": {
         "supabaseApi": {
@@ -193,12 +193,12 @@
                 "conditions": [
                   {
                     "leftValue": "={{ $json.stepType }}",
-                    "rightValue": "condition",
+                    "rightValue": "switch",
                     "operator": {
                       "type": "string",
                       "operation": "equals"
                     },
-                    "id": "sw-cond-condition"
+                    "id": "sw-cond-switch"
                   }
                 ],
                 "combinator": "and"
@@ -356,13 +356,13 @@
           "fallbackOutput": "extra"
         }
       },
-      "id": "b02b4838-5415-4c65-a191-c2996bafb1ee",
+      "id": "03b0081c-eec6-4f6b-abce-0441d8be6717",
       "name": "Route by Step Type",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.2,
       "position": [
-        10336,
-        27512
+        14128,
+        30240
       ]
     },
     {
@@ -384,10 +384,10 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.3,
       "position": [
-        10560,
-        26832
+        14352,
+        29552
       ],
-      "id": "11730226-d8a5-43dd-864b-bfbe36e02452",
+      "id": "c4f5f528-767c-4604-beb4-305d3ab44086",
       "name": "Call Send Email Handler"
     },
     {
@@ -409,10 +409,10 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.3,
       "position": [
-        10560,
-        27024
+        14352,
+        29744
       ],
-      "id": "1183d906-88b8-49cd-ad53-99fa50a68e4b",
+      "id": "1c782f19-7e77-41a4-8f77-b8234648fdd4",
       "name": "Call AI Action Handler"
     },
     {
@@ -434,10 +434,10 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.3,
       "position": [
-        10560,
-        27216
+        14352,
+        29936
       ],
-      "id": "da718177-7300-48da-b957-628b7bbbcf5b",
+      "id": "40baa9dc-50ab-4f00-b543-c2f82f294898",
       "name": "Call Webhook Handler"
     },
     {
@@ -447,10 +447,13 @@
           "value": "NHDn17UtUlbQj3m5",
           "mode": "list",
           "cachedResultUrl": "/workflow/NHDn17UtUlbQj3m5",
-          "cachedResultName": "Step - Condition Handler"
+          "cachedResultName": "Step - Switch Handler"
         },
         "workflowInputs": {
           "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
           "attemptToConvertTypes": false,
           "convertFieldsToString": false
         },
@@ -459,11 +462,11 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.3,
       "position": [
-        10560,
-        27408
+        14352,
+        30128
       ],
-      "id": "2f96bb5b-d0ff-4e1b-85f6-8b496b06ecbf",
-      "name": "Call Condition Handler"
+      "id": "f8e22c3c-ac8f-47f6-8156-98efeed9b21c",
+      "name": "Call Switch Handler"
     },
     {
       "parameters": {
@@ -484,10 +487,10 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.3,
       "position": [
-        10560,
-        27600
+        14352,
+        30320
       ],
-      "id": "8dbd901d-0463-4706-843f-967abd0fe00d",
+      "id": "75cfbde7-1dd8-4994-bed3-59614e36ff1e",
       "name": "Call Delay Handler"
     },
     {
@@ -512,10 +515,10 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.3,
       "position": [
-        10560,
-        27888
+        14352,
+        30608
       ],
-      "id": "42698552-5f66-4c52-9d2f-f6b155f4f257",
+      "id": "b8180b0a-8679-4ad4-a774-ab5ee342358e",
       "name": "Call Get Response Handler"
     },
     {
@@ -540,36 +543,36 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.3,
       "position": [
-        10560,
-        28080
+        14352,
+        30800
       ],
-      "id": "2a8e63de-2109-47e3-b790-b9d9678db7eb",
+      "id": "f3fff2f1-4370-410c-b616-a9e740c8b681",
       "name": "Call Update Response Handler"
     },
     {
       "parameters": {
         "jsCode": "// Unknown step type handler\nconst item = $input.first().json;\nreturn {\n  json: {\n    ...item,\n    stepResult: {\n      success: false,\n      error: `Unknown step type: ${item.stepType}`,\n    },\n  }\n};\n"
       },
-      "id": "d9de7256-cc36-41e0-a6ff-c524c657e958",
+      "id": "22a20b97-de43-46ed-a9ab-243613b661d3",
       "name": "Unknown Type Handler",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        10560,
-        28656
+        14352,
+        31376
       ]
     },
     {
       "parameters": {
         "jsCode": "// =============================================================\n// Process Step Result — merge context, handle failure/skipping\n// =============================================================\n// Uses execution-scoped state keyed by executionId.\n// Cleans up state entry on last step.\n// =============================================================\n\nconst Sentry = require('@sentry/node');\n\ntry {\n  const item = $input.first().json;\n  const state = $getWorkflowStaticData('global');\n  const { currentStep, executionId } = item;\n  const execState = state[executionId] || { variableContext: {}, skippedStepIds: [], failed: false };\n\n  // If already in failed passthrough mode, just return\n  if (item.failed || execState.failed) {\n    if (item.stepIndex === item.totalSteps - 1) delete state[executionId];\n    return { json: item };\n  }\n\n  // Get step result from subworkflow output\n  let stepResult = item.stepResult;\n  if (!stepResult) {\n    stepResult = { success: false, error: 'No step result produced' };\n  }\n\n  // Namespace step output by step number (1-based topological order) for human-readable templates.\n  // Trigger variables stay flat. Step outputs keyed by step.slug (not positional).\n  // Slug is per-workflow unique, user-editable, persisted on workflow_steps row.\n  // Template syntax: {{slug.fieldName}} — same key on both CMS and runtime sides.\n  if (stepResult.success && stepResult.outputPayload) {\n    const stepKey = currentStep.slug;\n    if (!stepKey) {\n      throw new Error(`Step ${currentStep.id} has no slug — required for variableContext keying`);\n    }\n    execState.variableContext[stepKey] = stepResult.outputPayload;\n  }\n\n  // Accumulate skipped step IDs from condition branching\n  const newSkipped = item.skippedStepIds || [];\n  if (newSkipped.length > 0) {\n    execState.skippedStepIds = [...(execState.skippedStepIds || []), ...newSkipped];\n  }\n\n  // Write back to state\n  state[executionId] = execState;\n\n  // Prepare DB update fields\n  const now = new Date().toISOString();\n  const alreadyPersisted = item.alreadyPersisted || stepResult.alreadyPersisted || false;\n  const isLastStep = item.stepIndex === item.totalSteps - 1;\n\n  // If step failed: signal to skip remaining steps\n  if (!stepResult.success) {\n    execState.failed = true;\n    execState.failureError = stepResult.error;\n    state[executionId] = execState;\n\n    Sentry.captureException(new Error(`Step failed: ${currentStep.step_type} — ${stepResult.error}`));\n    await Sentry.flush(2000);\n\n    if (isLastStep) delete state[executionId];\n\n    return {\n      json: {\n        ...item,\n        variableContext: execState.variableContext,\n        failed: true,\n        failureError: stepResult.error,\n        dbStatus: 'failed',\n        dbCompletedAt: now,\n        dbErrorMessage: stepResult.error || 'Unknown error',\n        dbOutputPayload: null,\n        alreadyPersisted,\n        skippedStepIds: newSkipped,\n      }\n    };\n  }\n\n  if (isLastStep) delete state[executionId];\n\n  return {\n    json: {\n      ...item,\n      variableContext: execState.variableContext,\n      stepResult: null,\n      dbStatus: 'completed',\n      dbCompletedAt: now,\n      dbOutputPayload: stepResult.outputPayload || {},\n      dbErrorMessage: null,\n      alreadyPersisted,\n      skippedStepIds: newSkipped,\n    }\n  };\n\n} catch (err) {\n  Sentry.captureException(err);\n  await Sentry.flush(2000);\n  throw err;\n}\n"
       },
-      "id": "6d9ac895-6853-4e56-9ea7-e6dbe5f9e01c",
+      "id": "29b4135f-8b65-4cd7-b186-a05e645e31fc",
       "name": "Process Step Result",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        10784,
-        27848
+        14576,
+        30576
       ]
     },
     {
@@ -591,23 +594,23 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.3,
       "position": [
-        10560,
-        28464
+        14352,
+        31184
       ],
-      "id": "37888e8a-1518-420c-b9fe-24aa779f03c5",
+      "id": "c2dfc461-eb7c-463a-ba19-066a7802b3c4",
       "name": "Call Trigger Handler"
     },
     {
       "parameters": {
         "jsCode": "// Failed passthrough — just forward the item\nconst item = $input.first().json;\nreturn { json: item };\n"
       },
-      "id": "5264e307-81a5-455a-b7cd-9945e7db2fb1",
+      "id": "13c1fd15-74b6-42cd-8dc6-c2b444d10ba8",
       "name": "Skip Step",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        10560,
-        26640
+        14352,
+        29360
       ]
     },
     {
@@ -632,10 +635,10 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.3,
       "position": [
-        10560,
-        28272
+        14352,
+        30992
       ],
-      "id": "4889e408-bbe1-45ab-921f-cc43cf0388fc",
+      "id": "0336c590-5fca-437c-907d-5c9c214f223e",
       "name": "Call Get Survey Link Handler"
     }
   ],
@@ -707,7 +710,7 @@
         ],
         [
           {
-            "node": "Call Condition Handler",
+            "node": "Call Switch Handler",
             "type": "main",
             "index": 0
           }
@@ -811,7 +814,7 @@
         ]
       ]
     },
-    "Call Condition Handler": {
+    "Call Switch Handler": {
       "main": [
         [
           {
@@ -887,7 +890,7 @@
     "errorWorkflow": "pEvMbZGHKOsqaHmK",
     "callerPolicy": "workflowsFromSameOwner"
   },
-  "versionId": "8ab5da56-514e-4d36-a913-78d39b8f2472",
+  "versionId": "d9fcaf27-9b9a-4b45-b441-b962c240ecb7",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "b46d0b13d69880a2fec430102877b55af4e44991549a68a3e78cd50a4dc1a09e"

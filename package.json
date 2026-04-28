@@ -17,6 +17,7 @@
     "build:shop-jacek": "turbo run build --filter=@agency/shop-jacek",
     "dev:shop-oleg": "turbo run dev --filter=@agency/shop-oleg",
     "build:shop-oleg": "turbo run build --filter=@agency/shop-oleg",
+    "n8n:build": "node n8n-workflows/scripts/n8n-builder.mjs",
     "db:reset": "cd supabase && supabase db reset",
     "db:types": "supabase gen types typescript --local > packages/database/src/types.ts"
   },
