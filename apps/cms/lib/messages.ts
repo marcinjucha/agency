@@ -1017,6 +1017,8 @@ export const messages = {
       configPanelClose: 'Zamknij panel',
       configPanelApply: 'Zastosuj',
       noConfig: 'Brak konfiguracji dla tego typu kroku.',
+      // Step name (display label shown on canvas node)
+      stepNameLabel: 'Nazwa kroku',
       // Step slug (identifier used in {{slug.field}} expressions)
       slugLabel: 'Identyfikator kroku',
       slugHint: 'Używany w wyrażeniach jako {{slug.pole}}',

@@ -21,6 +21,10 @@ interface ConfigPanelWrapperProps {
    */
   onSlugCommit?: (newSlug: string) => Promise<{ ok: true } | { ok: false; error: string }>
   onClose: () => void
+  /** Current step config — used to read/write `_name` for the canvas display label. */
+  stepConfig: Record<string, unknown>
+  /** Called immediately on every `_name` keystroke — updates canvas label in real-time. */
+  onStepConfigChange: (config: Record<string, unknown>) => void
   children: React.ReactNode
 }
 
@@ -34,6 +38,8 @@ export function ConfigPanelWrapper({
   slug,
   onSlugCommit,
   onClose,
+  stepConfig,
+  onStepConfigChange,
   children,
 }: ConfigPanelWrapperProps) {
   const panelRef = useRef<HTMLDivElement>(null)
@@ -86,6 +92,12 @@ export function ConfigPanelWrapper({
           </Button>
         </div>
 
+        <StepNameField
+          stepType={stepType}
+          stepConfig={stepConfig}
+          onStepConfigChange={onStepConfigChange}
+        />
+
         {onSlugCommit && (
           <SlugRenameField slug={slug ?? ''} onCommit={onSlugCommit} />
         )}
@@ -95,6 +107,48 @@ export function ConfigPanelWrapper({
       <div className="flex-1 overflow-y-auto px-6 py-6">
         {children}
       </div>
+    </div>
+  )
+}
+
+interface StepNameFieldProps {
+  stepType: string
+  stepConfig: Record<string, unknown>
+  onStepConfigChange: (config: Record<string, unknown>) => void
+}
+
+/**
+ * Controlled display-name input for the canvas node label.
+ * Updates immediately on every keystroke — no commit-on-blur.
+ * Clearing the value removes `_name` from step_config so the canvas
+ * falls back to the generic type label.
+ */
+function StepNameField({ stepType, stepConfig, onStepConfigChange }: StepNameFieldProps) {
+  const config = getNodeConfig(stepType)
+  const inputId = 'config-panel-step-name-input'
+
+  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const value = e.target.value
+    if (value === '') {
+      const { _name: _removed, ...rest } = stepConfig
+      onStepConfigChange(rest)
+    } else {
+      onStepConfigChange({ ...stepConfig, _name: value })
+    }
+  }
+
+  return (
+    <div className="mt-3">
+      <Label htmlFor={inputId} className="text-xs text-muted-foreground">
+        {messages.workflows.editor.stepNameLabel}
+      </Label>
+      <Input
+        id={inputId}
+        value={(stepConfig._name as string) ?? ''}
+        onChange={handleChange}
+        placeholder={config.label}
+        className="mt-1 h-8 text-sm"
+      />
     </div>
   )
 }
