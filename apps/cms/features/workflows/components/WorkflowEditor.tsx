@@ -98,7 +98,7 @@ function WorkflowEditorContent({ workflow, workflowId }: WorkflowEditorContentPr
         position: { x: step.position_x, y: step.position_y },
         deletable: isTrigger ? false : undefined,
         data: {
-          label: getLabel(step.step_type),
+          label: (step.step_config as Record<string, unknown>)?._name as string ?? getLabel(step.step_type),
           stepType: step.step_type,
           stepConfig: step.step_config,
           slug: step.slug,
