@@ -99,16 +99,22 @@ const AI_ACTION_STEP = defineStep({
   defaultConfig: { type: 'ai_action', prompt: '', model: null, output_schema: null },
 })
 
-const CONDITION_STEP = defineStep({
-  id: 'condition' as const,
-  labelKey: 'stepCondition',
-  descriptionKey: 'descCondition',
+const SWITCH_STEP = defineStep({
+  id: 'switch' as const,
+  labelKey: 'stepSwitch',
+  descriptionKey: 'descSwitch',
   borderColor: 'border-l-4 border-l-amber-400',
   category: 'logic',
   outputSchema: [
-    { key: 'branch', labelKey: 'conditionBranch', type: 'string' },
+    { key: 'branch', labelKey: 'switchBranch', type: 'string' },
   ],
-  defaultConfig: { type: 'condition', expression: '' },
+  defaultConfig: {
+    type: 'switch',
+    branches: [
+      { id: 'tak',     label: 'Tak',      expression: '' },
+      { id: 'default', label: 'Pozostałe', expression: 'default' },
+    ],
+  },
 })
 
 const DELAY_STEP = defineStep({
@@ -188,7 +194,7 @@ const GET_SURVEY_LINK_STEP = defineStep({
 export const STEP_REGISTRY = [
   SEND_EMAIL_STEP,
   AI_ACTION_STEP,
-  CONDITION_STEP,
+  SWITCH_STEP,
   DELAY_STEP,
   WEBHOOK_STEP,
   GET_RESPONSE_STEP,

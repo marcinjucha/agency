@@ -69,9 +69,16 @@ export type StepConfigDelay = {
   unit: 'minutes' | 'hours' | 'days'
 }
 
-export type StepConfigCondition = {
-  type: 'condition'
+export type SwitchBranch = {
+  id: string
+  label: string
   expression: string
+}
+
+export type StepConfigSwitch = {
+  type: 'switch'
+  branches: SwitchBranch[]
+  // invariants: length >= 2, exactly one 'default' expression, default is last
 }
 
 export type StepConfigWebhook = {
@@ -110,7 +117,7 @@ export type StepConfigGetSurveyLink = {
 export type StepConfig =
   | StepConfigSendEmail
   | StepConfigDelay
-  | StepConfigCondition
+  | StepConfigSwitch
   | StepConfigWebhook
   | StepConfigAiAction
   | StepConfigGetResponse

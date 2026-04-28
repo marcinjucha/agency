@@ -8,6 +8,7 @@ import {
   Database,
   PenLine,
   Link,
+  Split,
   MessageCircle,
   Phone,
   MessageSquare,
@@ -55,7 +56,7 @@ export interface NodeTypeConfig {
  */
 const STEP_ICON_MAP: Record<StepType, LucideIcon> = {
   send_email: Mail,
-  condition: GitBranch,
+  switch: Split,
   delay: Clock,
   webhook: Globe,
   ai_action: Sparkles,

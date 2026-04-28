@@ -193,12 +193,12 @@
                 "conditions": [
                   {
                     "leftValue": "={{ $json.stepType }}",
-                    "rightValue": "condition",
+                    "rightValue": "switch",
                     "operator": {
                       "type": "string",
                       "operation": "equals"
                     },
-                    "id": "sw-cond-condition"
+                    "id": "sw-cond-switch"
                   }
                 ],
                 "combinator": "and"
@@ -447,7 +447,7 @@
           "value": "NHDn17UtUlbQj3m5",
           "mode": "list",
           "cachedResultUrl": "/workflow/NHDn17UtUlbQj3m5",
-          "cachedResultName": "Step - Condition Handler"
+          "cachedResultName": "Step - Switch Handler"
         },
         "workflowInputs": {
           "mappingMode": "autoMapInputData",
@@ -463,7 +463,7 @@
         27408
       ],
       "id": "2f96bb5b-d0ff-4e1b-85f6-8b496b06ecbf",
-      "name": "Call Condition Handler"
+      "name": "Call Switch Handler"
     },
     {
       "parameters": {
@@ -707,7 +707,7 @@
         ],
         [
           {
-            "node": "Call Condition Handler",
+            "node": "Call Switch Handler",
             "type": "main",
             "index": 0
           }
@@ -811,7 +811,7 @@
         ]
       ]
     },
-    "Call Condition Handler": {
+    "Call Switch Handler": {
       "main": [
         [
           {

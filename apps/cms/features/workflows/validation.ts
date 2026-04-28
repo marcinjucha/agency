@@ -65,9 +65,29 @@ export const sendEmailConfigSchema = z.object({
   variable_bindings: z.record(z.string()).optional(),
 })
 
-export const conditionConfigSchema = z.object({
-  type: z.literal('condition'),
-  expression: z.string().min(1, messages.validation.expressionRequired),
+const switchBranchSchema = z.object({
+  id: z.string().min(1).regex(/^[a-z0-9_-]+$/i),
+  label: z.string().min(1),
+  expression: z.string().min(1),
+})
+
+export const switchConfigSchema = z.object({
+  type: z.literal('switch'),
+  branches: z.array(switchBranchSchema)
+    .min(2)
+    .superRefine((branches, ctx) => {
+      const defaultCount = branches.filter(b => b.expression.trim() === 'default').length
+      if (defaultCount !== 1) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Switch wymaga dokładnie jednej gałęzi default' })
+      }
+      if (branches[branches.length - 1]?.expression.trim() !== 'default') {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Gałąź default musi być ostatnia' })
+      }
+      const ids = branches.map(b => b.id)
+      if (new Set(ids).size !== ids.length) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'ID gałęzi muszą być unikalne' })
+      }
+    }),
 })
 
 export const delayConfigSchema = z.object({
@@ -137,7 +157,7 @@ export const getSurveyLinkConfigSchema = z.object({
  */
 export const stepConfigSchemaMap: Record<StepType, ZodSchema> = {
   send_email: sendEmailConfigSchema,
-  condition: conditionConfigSchema,
+  switch: switchConfigSchema,
   delay: delayConfigSchema,
   webhook: webhookConfigSchema,
   ai_action: aiActionConfigSchema,

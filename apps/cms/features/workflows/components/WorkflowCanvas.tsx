@@ -30,8 +30,8 @@ import { messages } from '@/lib/messages'
 import { generateStepSlug } from '../utils/slug'
 import { TriggerNode } from './nodes/TriggerNode'
 import { ActionNode } from './nodes/ActionNode'
-import { ConditionNode } from './nodes/ConditionNode'
 import { DelayNode } from './nodes/DelayNode'
+import { SwitchNode } from './nodes/SwitchNode'
 import { NODE_TYPE_CONFIGS, PLACEHOLDER_NODE_CONFIGS } from './nodes/node-registry'
 import type { StepType } from '../step-registry'
 import { CanvasControls } from './CanvasControls'
@@ -42,7 +42,7 @@ import { CanvasControls } from './CanvasControls'
 const NODE_COMPONENTS: Record<StepType | 'trigger', React.ComponentType<any>> = {
   trigger: TriggerNode,
   send_email: ActionNode,
-  condition: ConditionNode,
+  switch: SwitchNode,
   delay: DelayNode,
   webhook: ActionNode,
   ai_action: ActionNode,
@@ -92,6 +92,7 @@ export interface WorkflowCanvasHandle {
   getEdges: () => CanvasEdgeData[]
   resetDirty: () => void
   updateNodeData: (nodeId: string, newData: Record<string, unknown>) => void
+  removeEdgesForHandle: (nodeId: string, handleId: string) => void
 }
 
 interface WorkflowCanvasProps {
@@ -353,8 +354,15 @@ function CanvasInner(
           })
         )
       },
+      removeEdgesForHandle: (nodeId: string, handleId: string) => {
+        setEdges((eds) =>
+          eds.filter(
+            (e) => !(e.source === nodeId && e.sourceHandle === handleId)
+          )
+        )
+      },
     }),
-    [nodes, edges, setNodes]
+    [nodes, edges, setNodes, setEdges]
   )
 
   return (

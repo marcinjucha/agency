@@ -963,7 +963,7 @@ export const messages = {
     // Step types
     stepSendEmail: 'Wyślij email',
     stepDelay: 'Opóźnienie',
-    stepCondition: 'Warunek',
+    stepSwitch: 'Przełącznik',
     stepWebhook: 'Webhook',
     stepAiAction: 'Akcja AI',
     stepGetResponse: 'Pobierz odpowiedź',
@@ -1045,10 +1045,15 @@ export const messages = {
       variableBindingsEmpty: 'Szablon nie zawiera zmiennych do podstawienia',
       variableBindingsHint: 'Wybierz skąd pochodzi każda zmienna szablonu',
       variableBindingInputAriaLabel: (key: string) => `Wartość dla zmiennej ${key}`,
-      // Condition config
-      expressionLabel: 'Wyrażenie warunku',
-      expressionPlaceholder: 'np. overallScore >= 7',
-      expressionHint: 'Użyj zmiennych z kontekstu, np. overallScore >= 7',
+      // Switch config
+      switchBranchesLabel: 'Gałęzie',
+      switchAddBranch: '+ Dodaj gałąź',
+      switchDefaultBranch: 'Pozostałe (catch-all)',
+      switchBranchId: 'ID gałęzi',
+      switchBranchLabel: 'Etykieta',
+      switchBranchExpression: 'Wyrażenie',
+      switchBranchIdHint: 'Małe litery, cyfry, _ lub -. Używany w krawędziach.',
+      switchFirstMatchWins: 'Pierwsza pasująca gałąź wygrywa. Default zawsze na końcu.',
       // Delay config
       durationMinutesLabel: 'Opóźnienie (minuty)',
       durationMinutesPlaceholder: 'np. 60',
@@ -1126,7 +1131,7 @@ export const messages = {
       descTrigger: 'Rozpocznij workflow od zdarzenia',
       descSendEmail: 'Wyślij wiadomość email',
       descWebhook: 'Wywołaj zewnętrzny endpoint',
-      descCondition: 'Rozgałęzienie na podstawie warunku',
+      descSwitch: 'Routing N-kierunkowy — wybierz jedną z wielu gałęzi (jak switch/case)',
       descDelay: 'Poczekaj określony czas',
       descAiAction: 'Przetwórz dane za pomocą AI',
       descGetResponse: 'Pobierz dane odpowiedzi z ankiety',
@@ -1151,8 +1156,8 @@ export const messages = {
       overallScore: 'Wynik ogólny',
       recommendation: 'Rekomendacja',
       aiOutputJson: 'Wynik AI (pełny JSON)',
-      // condition outputs
-      conditionBranch: 'Wynik warunku',
+      // switch outputs
+      switchBranch: 'Dopasowana gałąź',
       // webhook outputs
       httpStatusCode: 'Kod statusu HTTP',
       webhookResponseBody: 'Odpowiedź webhook',

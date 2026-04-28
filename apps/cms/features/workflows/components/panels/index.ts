@@ -8,7 +8,7 @@
 
 import { TriggerConfigPanel } from './TriggerConfigPanel'
 import { SendEmailConfigPanel } from './SendEmailConfigPanel'
-import { ConditionConfigPanel } from './ConditionConfigPanel'
+import { SwitchConfigPanel } from './SwitchConfigPanel'
 import { DelayConfigPanel } from './DelayConfigPanel'
 import { WebhookConfigPanel } from './WebhookConfigPanel'
 import { AiActionConfigPanel } from './AiActionConfigPanel'
@@ -53,7 +53,7 @@ const TRIGGER_TYPES = new Set<string>([
  */
 const STEP_PANEL_REGISTRY: Record<StepType, React.ComponentType<ConfigPanelProps>> = {
   send_email: SendEmailConfigPanel,
-  condition: ConditionConfigPanel,
+  switch: SwitchConfigPanel,
   delay: DelayConfigPanel,
   webhook: WebhookConfigPanel,
   ai_action: AiActionConfigPanel,
@@ -77,7 +77,7 @@ export function getPanelComponent(stepType: string): React.ComponentType<ConfigP
 const _ConfigPanelWrapper = ConfigPanelWrapper
 const _TriggerConfigPanel = TriggerConfigPanel
 const _SendEmailConfigPanel = SendEmailConfigPanel
-const _ConditionConfigPanel = ConditionConfigPanel
+const _SwitchConfigPanel = SwitchConfigPanel
 const _DelayConfigPanel = DelayConfigPanel
 const _WebhookConfigPanel = WebhookConfigPanel
 const _AiActionConfigPanel = AiActionConfigPanel
@@ -90,7 +90,7 @@ export {
   _ConfigPanelWrapper as ConfigPanelWrapper,
   _TriggerConfigPanel as TriggerConfigPanel,
   _SendEmailConfigPanel as SendEmailConfigPanel,
-  _ConditionConfigPanel as ConditionConfigPanel,
+  _SwitchConfigPanel as SwitchConfigPanel,
   _DelayConfigPanel as DelayConfigPanel,
   _WebhookConfigPanel as WebhookConfigPanel,
   _AiActionConfigPanel as AiActionConfigPanel,
