@@ -1,56 +1,16 @@
 
 
 import { useState } from 'react'
-import {
-  ChevronRight,
-  PanelLeftClose,
-  MessageCircle,
-  Phone,
-  MessageSquare,
-  Instagram,
-  Calendar,
-  Clock,
-  RefreshCw,
-  Mail,
-  Send,
-  Bell,
-  Database,
-  CalendarCheck,
-  CheckSquare,
-  Table2,
-  Globe,
-  Linkedin,
-  ListOrdered,
-  Zap,
-} from 'lucide-react'
+import { ChevronRight, PanelLeftClose, Zap } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { Button, Badge } from '@agency/ui'
 import { cn } from '@agency/ui'
 import { messages } from '@/lib/messages'
-import { NODE_TYPE_CONFIGS } from './nodes/node-registry'
+import { NODE_TYPE_CONFIGS, PLACEHOLDER_ICON_MAP } from './nodes/node-registry'
 import type { NodeTypeConfig } from './nodes/node-registry'
 import { PLACEHOLDER_REGISTRY } from '../step-registry'
 import type { PlaceholderStepDefinition } from '../step-registry'
 
-const PLACEHOLDER_ICON_MAP: Record<string, LucideIcon> = {
-  MessageCircle,
-  Phone,
-  MessageSquare,
-  Instagram,
-  Calendar,
-  Clock,
-  RefreshCw,
-  Mail,
-  Send,
-  Bell,
-  Database,
-  CalendarCheck,
-  CheckSquare,
-  Table2,
-  Globe,
-  Linkedin,
-  ListOrdered,
-}
 
 const STEP_CATEGORIES = [
   {

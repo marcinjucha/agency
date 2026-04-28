@@ -124,7 +124,7 @@ export const TRIGGER_SUBTYPE_CONFIGS: Record<TriggerType, NodeTypeConfig> = {
 }
 
 /** Icon map for placeholder step types — maps PLACEHOLDER_REGISTRY.iconName to LucideIcon */
-const PLACEHOLDER_ICON_MAP: Record<string, LucideIcon> = {
+export const PLACEHOLDER_ICON_MAP: Record<string, LucideIcon> = {
   MessageCircle,
   Phone,
   MessageSquare,
