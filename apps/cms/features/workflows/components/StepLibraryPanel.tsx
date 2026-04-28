@@ -1,12 +1,56 @@
 
 
 import { useState } from 'react'
-import { ChevronRight, PanelLeftClose } from 'lucide-react'
-import { Button } from '@agency/ui'
+import {
+  ChevronRight,
+  PanelLeftClose,
+  MessageCircle,
+  Phone,
+  MessageSquare,
+  Instagram,
+  Calendar,
+  Clock,
+  RefreshCw,
+  Mail,
+  Send,
+  Bell,
+  Database,
+  CalendarCheck,
+  CheckSquare,
+  Table2,
+  Globe,
+  Linkedin,
+  ListOrdered,
+  Zap,
+} from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
+import { Button, Badge } from '@agency/ui'
 import { cn } from '@agency/ui'
 import { messages } from '@/lib/messages'
 import { NODE_TYPE_CONFIGS } from './nodes/node-registry'
 import type { NodeTypeConfig } from './nodes/node-registry'
+import { PLACEHOLDER_REGISTRY } from '../step-registry'
+import type { PlaceholderStepDefinition } from '../step-registry'
+
+const PLACEHOLDER_ICON_MAP: Record<string, LucideIcon> = {
+  MessageCircle,
+  Phone,
+  MessageSquare,
+  Instagram,
+  Calendar,
+  Clock,
+  RefreshCw,
+  Mail,
+  Send,
+  Bell,
+  Database,
+  CalendarCheck,
+  CheckSquare,
+  Table2,
+  Globe,
+  Linkedin,
+  ListOrdered,
+}
 
 const STEP_CATEGORIES = [
   {
@@ -71,6 +115,71 @@ function StepLibraryItem({
           </p>
         )}
       </div>
+    </div>
+  )
+}
+
+function PlaceholderStepLibraryItem({ def }: { def: PlaceholderStepDefinition }) {
+  const Icon = PLACEHOLDER_ICON_MAP[def.iconName] ?? Zap
+
+  function handleDragStart(e: React.DragEvent) {
+    e.dataTransfer.setData('application/workflow-step', def.id)
+    e.dataTransfer.effectAllowed = 'copy'
+  }
+
+  return (
+    <div
+      draggable="true"
+      onDragStart={handleDragStart}
+      className="flex items-start gap-3 rounded-md border border-border bg-card px-3 py-2.5 cursor-grab active:cursor-grabbing hover:bg-muted/50 transition-colors"
+    >
+      <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-muted">
+        <Icon className="h-4 w-4 text-muted-foreground" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-sm font-medium leading-tight text-foreground truncate">
+            {def.label}
+          </p>
+          <Badge variant="secondary" className="text-xs shrink-0 px-1.5 py-0">
+            {messages.workflows.stepLibrary.badgeSoon}
+          </Badge>
+        </div>
+        {def.description && (
+          <p className="mt-0.5 text-xs leading-snug text-muted-foreground">
+            {def.description}
+          </p>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function AdditionalCategorySection() {
+  const [isOpen, setIsOpen] = useState(true)
+
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => setIsOpen((prev) => !prev)}
+        className="flex w-full items-center gap-1.5 py-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors"
+      >
+        <ChevronRight
+          className={cn(
+            'h-3.5 w-3.5 transition-transform',
+            isOpen && 'rotate-90'
+          )}
+        />
+        {messages.workflows.stepLibrary.categoryAdditional}
+      </button>
+      {isOpen && (
+        <div className="mt-1.5 space-y-1.5">
+          {PLACEHOLDER_REGISTRY.map((def) => (
+            <PlaceholderStepLibraryItem key={def.id} def={def} />
+          ))}
+        </div>
+      )}
     </div>
   )
 }
@@ -148,6 +257,7 @@ export function StepLibraryPanel({ isOpen, onClose }: StepLibraryPanelProps) {
             categoryKey={cat.key}
           />
         ))}
+        <AdditionalCategorySection />
       </div>
     </div>
   )
