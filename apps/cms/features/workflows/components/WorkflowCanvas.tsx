@@ -32,7 +32,7 @@ import { TriggerNode } from './nodes/TriggerNode'
 import { ActionNode } from './nodes/ActionNode'
 import { ConditionNode } from './nodes/ConditionNode'
 import { DelayNode } from './nodes/DelayNode'
-import { NODE_TYPE_CONFIGS } from './nodes/node-registry'
+import { NODE_TYPE_CONFIGS, PLACEHOLDER_NODE_CONFIGS } from './nodes/node-registry'
 import type { StepType } from '../step-registry'
 import { CanvasControls } from './CanvasControls'
 // AddNodeDropdown removed — StepLibraryPanel replaces it (AAA-T-177)
@@ -52,12 +52,19 @@ const NODE_COMPONENTS: Record<StepType | 'trigger', React.ComponentType<any>> = 
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- ReactFlow NodeTypes accepts arbitrary ComponentType
-const nodeTypes = Object.fromEntries(
-  Object.keys(NODE_TYPE_CONFIGS).map((key) => [
-    key,
-    (NODE_COMPONENTS as Record<string, React.ComponentType<any>>)[key],
-  ])
-)
+const nodeTypes = {
+  ...Object.fromEntries(
+    Object.keys(NODE_TYPE_CONFIGS).map((key) => [
+      key,
+      (NODE_COMPONENTS as Record<string, React.ComponentType<any>>)[key],
+    ])
+  ),
+  // All 19 placeholder types render via ActionNode — lookupNodeConfig(data.stepType)
+  // provides the correct icon/borderColor/label from PLACEHOLDER_NODE_CONFIGS
+  ...Object.fromEntries(
+    Object.keys(PLACEHOLDER_NODE_CONFIGS).map((key) => [key, ActionNode])
+  ),
+}
 
 const defaultEdgeOptions = {
   type: 'smoothstep',
