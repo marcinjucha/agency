@@ -72,6 +72,7 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
         step_type: 'switch',
         step_config: {
           type: 'switch',
+          _name: 'Kwalifikacja leada',
           branches: [
             { id: 'tak', label: 'Kwalifikowany', expression: 'overallScore >= 7' },
             { id: 'default', label: 'Odrzucony', expression: 'default' },
@@ -165,6 +166,7 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
         step_type: 'switch',
         step_config: {
           type: 'switch',
+          _name: 'Kwalifikacja leada',
           branches: [
             { id: 'tak', label: 'Kwalifikowany', expression: 'overallScore >= 5' },
             { id: 'default', label: 'Poniżej progu', expression: 'default' },
