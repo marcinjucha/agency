@@ -227,6 +227,13 @@ export type PlaceholderStepDefinition = {
   placeholderFields: PlaceholderFieldDefinition[]
 }
 
+/**
+ * Note on i18n: label/description/placeholderFields are stored as inline Polish strings
+ * (unlike STEP_REGISTRY which uses labelKey/descriptionKey bridge pattern).
+ * This is intentional: placeholder nodes are showcase-only, never executed,
+ * and translation is out of scope. The zero-dep constraint still applies —
+ * no messages.ts import — but the bridge pattern is not needed here.
+ */
 export const PLACEHOLDER_REGISTRY: PlaceholderStepDefinition[] = [
   // Triggers
   {
@@ -449,9 +456,30 @@ export const PLACEHOLDER_REGISTRY: PlaceholderStepDefinition[] = [
   },
 ]
 
-export const PLACEHOLDER_STEP_MAP: Record<string, PlaceholderStepDefinition> = Object.fromEntries(
+export type PlaceholderStepType =
+  | 'whatsapp_message'
+  | 'sms_received'
+  | 'facebook_message'
+  | 'instagram_dm'
+  | 'calendar_event'
+  | 'schedule'
+  | 'crm_status_change'
+  | 'email_received'
+  | 'send_sms'
+  | 'send_whatsapp'
+  | 'send_slack'
+  | 'update_crm'
+  | 'book_meeting'
+  | 'create_task'
+  | 'google_sheets'
+  | 'web_scraper'
+  | 'linkedin_lookup'
+  | 'get_crm_data'
+  | 'email_sequence'
+
+export const PLACEHOLDER_STEP_MAP: Record<PlaceholderStepType, PlaceholderStepDefinition> = Object.fromEntries(
   PLACEHOLDER_REGISTRY.map((s) => [s.id, s])
-)
+) as Record<PlaceholderStepType, PlaceholderStepDefinition>
 
 // --- Derived Records ---
 
