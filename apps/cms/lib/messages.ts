@@ -1130,6 +1130,9 @@ export const messages = {
       descGetResponse: 'Pobierz dane odpowiedzi z ankiety',
       descUpdateResponse: 'Zaktualizuj pola odpowiedzi w bazie danych',
       descGetSurveyLink: 'Pobiera dane linku ankiety do kontekstu workflow',
+      categoryAdditional: 'Dodatkowe integracje',
+      badgeSoon: 'Wkrótce',
+      badgeInPreparation: 'Integracja w przygotowaniu',
     },
     /**
      * Output schema field labels — keyed by OutputSchemaDefinition.labelKey.

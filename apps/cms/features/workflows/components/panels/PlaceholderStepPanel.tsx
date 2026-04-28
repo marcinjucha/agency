@@ -9,6 +9,7 @@ import {
   SelectItem,
 } from '@agency/ui'
 import { PLACEHOLDER_STEP_MAP } from '../../step-registry'
+import { messages } from '@/lib/messages'
 import type { ConfigPanelProps } from './index'
 
 export function PlaceholderStepPanel({ stepType }: ConfigPanelProps) {
@@ -20,7 +21,7 @@ export function PlaceholderStepPanel({ stepType }: ConfigPanelProps) {
       {/* Header */}
       <div className="space-y-3">
         <Badge variant="secondary" className="text-xs">
-          Integracja w przygotowaniu
+          {messages.workflows.stepLibrary.badgeInPreparation}
         </Badge>
         <div className="space-y-1">
           <h3 className="text-sm font-semibold text-foreground">{definition.label}</h3>
@@ -36,7 +37,7 @@ export function PlaceholderStepPanel({ stepType }: ConfigPanelProps) {
           <div key={field.key} className="space-y-1.5">
             <Label className="text-sm font-medium text-foreground">{field.label}</Label>
             {field.type === 'select' ? (
-              <Select>
+              <Select disabled>
                 <SelectTrigger aria-label={field.label}>
                   <SelectValue placeholder={field.options?.[0] ?? '—'} />
                 </SelectTrigger>
@@ -52,9 +53,8 @@ export function PlaceholderStepPanel({ stepType }: ConfigPanelProps) {
               <Input
                 type={field.type}
                 placeholder={field.placeholder}
-                readOnly={field.readOnly === true}
+                disabled
                 aria-label={field.label}
-                aria-readonly={field.readOnly === true}
               />
             )}
           </div>
