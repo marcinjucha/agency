@@ -1,9 +1,9 @@
 
 
 import { useState } from 'react'
-import { ChevronRight, PanelLeftClose, Zap } from 'lucide-react'
+import { ChevronRight, PanelLeftClose, Search, Zap } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
-import { Button, Badge } from '@agency/ui'
+import { Button, Input } from '@agency/ui'
 import { cn } from '@agency/ui'
 import { messages } from '@/lib/messages'
 import { NODE_TYPE_CONFIGS, PLACEHOLDER_ICON_MAP } from './nodes/node-registry'
@@ -96,15 +96,10 @@ function PlaceholderStepLibraryItem({ def }: { def: PlaceholderStepDefinition })
       <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-muted">
         <Icon className="h-4 w-4 text-muted-foreground" />
       </div>
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center justify-between gap-2">
-          <p className="text-sm font-medium leading-tight text-foreground truncate">
-            {def.label}
-          </p>
-          <Badge variant="secondary" className="text-xs shrink-0 px-1.5 py-0">
-            {messages.workflows.stepLibrary.badgeSoon}
-          </Badge>
-        </div>
+      <div className="min-w-0">
+        <p className="text-sm font-medium leading-tight text-foreground">
+          {def.label}
+        </p>
         {def.description && (
           <p className="mt-0.5 text-xs leading-snug text-muted-foreground">
             {def.description}
@@ -186,12 +181,51 @@ function CategorySection({
   )
 }
 
+function SearchResults({ query }: { query: string }) {
+  const q = query.toLowerCase()
+
+  const regularMatches = Object.entries(NODE_TYPE_CONFIGS).filter(
+    ([, config]) =>
+      config.label.toLowerCase().includes(q) ||
+      (config.description?.toLowerCase().includes(q) ?? false)
+  )
+
+  const placeholderMatches = PLACEHOLDER_REGISTRY.filter(
+    (def) =>
+      def.label.toLowerCase().includes(q) ||
+      (def.description?.toLowerCase().includes(q) ?? false)
+  )
+
+  const hasResults = regularMatches.length > 0 || placeholderMatches.length > 0
+
+  if (!hasResults) {
+    return (
+      <p className="text-xs text-muted-foreground py-4 text-center">
+        Brak wyników dla &quot;{query}&quot;
+      </p>
+    )
+  }
+
+  return (
+    <div className="space-y-1.5">
+      {regularMatches.map(([stepType, config]) => (
+        <StepLibraryItem key={stepType} stepType={stepType} config={config} />
+      ))}
+      {placeholderMatches.map((def) => (
+        <PlaceholderStepLibraryItem key={def.id} def={def} />
+      ))}
+    </div>
+  )
+}
+
 export function StepLibraryPanel({ isOpen, onClose }: StepLibraryPanelProps) {
+  const [search, setSearch] = useState('')
+
   return (
     <div
       className={cn(
         'h-full border-r border-border bg-background overflow-y-auto transition-[width,opacity] duration-200 ease-in-out',
-        isOpen ? 'w-60 opacity-100' : 'w-0 opacity-0 overflow-hidden'
+        isOpen ? 'w-72 opacity-100' : 'w-0 opacity-0 overflow-hidden'
       )}
     >
       <div className="p-4 space-y-4">
@@ -210,14 +244,31 @@ export function StepLibraryPanel({ isOpen, onClose }: StepLibraryPanelProps) {
             </Button>
           )}
         </div>
-        {STEP_CATEGORIES.map((cat) => (
-          <CategorySection
-            key={cat.key}
-            label={cat.label}
-            categoryKey={cat.key}
+
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={messages.workflows.stepLibrary.searchPlaceholder}
+            className="pl-8 h-8 text-sm"
           />
-        ))}
-        <AdditionalCategorySection />
+        </div>
+
+        {search.trim() !== '' ? (
+          <SearchResults query={search.trim()} />
+        ) : (
+          <>
+            {STEP_CATEGORIES.map((cat) => (
+              <CategorySection
+                key={cat.key}
+                label={cat.label}
+                categoryKey={cat.key}
+              />
+            ))}
+            <AdditionalCategorySection />
+          </>
+        )}
       </div>
     </div>
   )

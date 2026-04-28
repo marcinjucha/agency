@@ -1133,6 +1133,7 @@ export const messages = {
       categoryAdditional: 'Dodatkowe integracje',
       badgeSoon: 'Wkrótce',
       badgeInPreparation: 'Integracja w przygotowaniu',
+      searchPlaceholder: 'Szukaj kroków...',
     },
     /**
      * Output schema field labels — keyed by OutputSchemaDefinition.labelKey.
@@ -1290,6 +1291,26 @@ export const messages = {
       follow_up: {
         name: 'Follow-up po kwalifikacji',
         description: 'Czekaj 2 dni po wycenie leada i wyślij email do wysoko punktowanych.',
+      },
+      '24_7_intake': {
+        name: 'Obsługa zapytań 24/7',
+        description: 'Multi-channel intake — odbieraj zapytania z 5 kanałów, kwalifikuj AI, kieruj do gorących/ciepłych/zimnych ścieżek.',
+      },
+      follow_up_scoring: {
+        name: 'Follow-up Hot/Warm/Cold',
+        description: 'Formularz → AI scoring 0–100 → 3 ścieżki nurturingu z różnymi opóźnieniami i sekwencjami.',
+      },
+      ai_meeting_brief: {
+        name: 'Research AI przed spotkaniem',
+        description: '60 min przed spotkaniem — pobierz dane z CRM, scrape strony klienta, wyszukaj LinkedIn, AI generuje brief, email do handlowca.',
+      },
+      daily_ceo_report: {
+        name: 'Dzienny raport CEO',
+        description: '7:00 codziennie — pobierz dane z CRM, agreguj w Google Sheets, AI analizuje trendy, wyślij raport email + powiadomienie Slack.',
+      },
+      client_onboarding: {
+        name: 'Onboarding nowego klienta',
+        description: 'Deal closed w CRM → email powitalny → utworzenie zadań → SMS przypomnienie → wait 7 dni → AI check-in → email feedback.',
       },
     },
   },

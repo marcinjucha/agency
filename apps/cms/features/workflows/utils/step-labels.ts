@@ -11,7 +11,7 @@
  */
 
 import { messages } from '@/lib/messages'
-import { STEP_TYPE_LABEL_KEYS, STEP_TYPE_DESCRIPTION_KEYS, STEP_REGISTRY } from '../step-registry'
+import { STEP_TYPE_LABEL_KEYS, STEP_TYPE_DESCRIPTION_KEYS, STEP_REGISTRY, PLACEHOLDER_REGISTRY } from '../step-registry'
 import type { StepType, OutputSchemaDefinition, OutputSchemaField } from '../step-registry'
 
 type WorkflowMessages = typeof messages.workflows
@@ -29,11 +29,19 @@ export const STEP_TYPE_LABELS: Record<StepType, string> = Object.fromEntries(
 ) as Record<StepType, string>
 
 /**
+ * Resolved Polish labels for placeholder step types.
+ * Built from PLACEHOLDER_REGISTRY — covers showcase/demo steps not in StepType union.
+ */
+const PLACEHOLDER_LABELS: Record<string, string> = Object.fromEntries(
+  PLACEHOLDER_REGISTRY.map((p) => [p.id, p.label])
+)
+
+/**
  * Returns a resolved Polish label for a given StepType.
- * Falls back to raw type string for unknown/future types.
+ * Falls back to placeholder label, then raw type string for unknown/future types.
  */
 export function getStepTypeLabel(type: string): string {
-  return STEP_TYPE_LABELS[type as StepType] ?? type
+  return STEP_TYPE_LABELS[type as StepType] ?? PLACEHOLDER_LABELS[type] ?? type
 }
 
 /**
