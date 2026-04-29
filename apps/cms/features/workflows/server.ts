@@ -28,7 +28,13 @@ import { createServerClient } from '@/lib/supabase/server-start'
 import { type AuthContext, type StartClient, requireAuthContext } from '@/lib/server-auth'
 import { generateStepSlug, isValidSlugFormat } from './utils/slug'
 import { validateSurveyLinkIdInPayload } from './trigger-payload-validators'
+import { validateAllSteps } from './utils/validate-steps'
 
+/**
+ * Serializable subset of StepValidationError — the full type carries Zod's
+ * ZodIssue[] which has `unknown`-typed fields that TanStack Start RPC can't
+ * serialize. We send only the fields the client needs to surface.
+ */
 interface InvalidStepSummary {
   stepId: string
   stepType: string
@@ -135,6 +141,27 @@ export const saveWorkflowCanvasFn = createServerFn({ method: 'POST' })
       error?: string
       invalidSteps?: InvalidStepSummary[]
     }> => {
+      // Defensive re-validation: client-side gate is the primary defense, but
+      // re-validating here prevents bypass via direct API calls or stale cache.
+      const validation = validateAllSteps(
+        data.data.steps.map((s) => ({
+          id: s.id ?? crypto.randomUUID(),
+          step_type: s.step_type,
+          step_config: s.step_config,
+        }))
+      )
+      if (!validation.isValid) {
+        return {
+          success: false,
+          error: messages.workflows.editor.validationFailed,
+          invalidSteps: validation.errors.map((e) => ({
+            stepId: e.stepId,
+            stepType: e.stepType,
+            summary: e.summary,
+          })),
+        }
+      }
+
       const result = await requireAuthContext().andThen((auth) =>
         bulkSaveCanvas(auth, data.workflowId, data.data)
       )
