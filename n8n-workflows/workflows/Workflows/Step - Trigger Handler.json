@@ -5,7 +5,7 @@
       "parameters": {
         "inputSource": "passthrough"
       },
-      "id": "2a909e34-fa86-442c-95cc-57d610284008",
+      "id": "2d207993-070b-40ee-980f-0c7d150e6038",
       "name": "Start",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.1,
@@ -16,139 +16,15 @@
     },
     {
       "parameters": {
-        "rules": {
-          "values": [
-            {
-              "conditions": {
-                "options": {
-                  "caseSensitive": true,
-                  "leftValue": "",
-                  "typeValidation": "strict",
-                  "version": 2
-                },
-                "conditions": [
-                  {
-                    "leftValue": "={{ $json.currentStep.step_type }}",
-                    "rightValue": "survey_submitted",
-                    "operator": {
-                      "type": "string",
-                      "operation": "equals"
-                    },
-                    "id": "trig-survey"
-                  }
-                ],
-                "combinator": "and"
-              }
-            },
-            {
-              "conditions": {
-                "options": {
-                  "caseSensitive": true,
-                  "leftValue": "",
-                  "typeValidation": "strict",
-                  "version": 2
-                },
-                "conditions": [
-                  {
-                    "leftValue": "={{ $json.currentStep.step_type }}",
-                    "rightValue": "booking_created",
-                    "operator": {
-                      "type": "string",
-                      "operation": "equals"
-                    },
-                    "id": "trig-booking"
-                  }
-                ],
-                "combinator": "and"
-              }
-            },
-            {
-              "conditions": {
-                "options": {
-                  "caseSensitive": true,
-                  "leftValue": "",
-                  "typeValidation": "strict",
-                  "version": 2
-                },
-                "conditions": [
-                  {
-                    "leftValue": "={{ $json.currentStep.step_type }}",
-                    "rightValue": "lead_scored",
-                    "operator": {
-                      "type": "string",
-                      "operation": "equals"
-                    },
-                    "id": "trig-lead"
-                  }
-                ],
-                "combinator": "and"
-              }
-            }
-          ]
-        },
-        "options": {
-          "fallbackOutput": "extra"
-        }
+        "jsCode": "// Trigger step is a no-op for execution \u2014 initial variable context comes from\n// orchestrator's buildTriggerContext(triggerPayload). This handler exists for\n// consistency (every step type has a handler) but does no hydration.\n// Data needs (response, survey_link, appointment, tenant) come from explicit\n// get_* steps downstream \u2014 never auto-fetched here.\nconst item = $input.first().json;\nreturn {\n  json: {\n    ...item,\n    stepResult: { success: true, outputPayload: {} },\n  }\n};\n"
       },
-      "id": "1a011cc2-6b7c-47dc-9c35-afc6031b6af8",
-      "name": "Route by Trigger Type",
-      "type": "n8n-nodes-base.switch",
-      "typeVersion": 3.2,
+      "id": "d6f4d5e5-ca3e-4977-93f8-9216cf198c42",
+      "name": "Pass Through",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [
         4016,
-        832
-      ]
-    },
-    {
-      "parameters": {
-        "jsCode": "// survey_submitted trigger — minimal pass-through.\n// Hydration (survey answers, surveyTitle, clientEmail, etc.) moved to get_response step.\n// WHY: trigger fires 500ms after DB INSERT (PgBouncer visibility timing);\n// get_response step runs later and queries reliably after the row is visible.\ntry {\n  const item = $input.first().json;\n  const { variableContext } = item;\n  const responseId = variableContext.responseId;\n  if (!responseId) throw new Error('survey_submitted requires variableContext.responseId');\n\n  // Hydration moved to get_response step\n  return {\n    json: {\n      ...item,\n      stepResult: {\n        success: true,\n        outputPayload: {\n          responseId,\n          surveyLinkId: variableContext.surveyLinkId || null,\n        },\n      },\n    }\n  };\n} catch (err) {\n  const item = $input.first().json;\n  return { json: { ...item, stepResult: { success: false, error: err.message } } };\n}\n"
-      },
-      "id": "954c66e0-aa32-4067-b0a6-e122ec5f5703",
-      "name": "Fetch Survey Data",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        4240,
-        576
-      ]
-    },
-    {
-      "parameters": {
-        "jsCode": "const https = require('https');\n\nconst SUPABASE_URL = $env.SUPABASE_URL;\nif (!SUPABASE_URL) throw new Error('SUPABASE_URL not configured');\nconst SUPABASE_KEY = $env.SUPABASE_SERVICE_ROLE_KEY;\n\nasync function supabaseRequest(path) {\n  const url = `${SUPABASE_URL}/rest/v1/${path}`;\n  return new Promise((resolve, reject) => {\n    const match = url.match(/^https?:\\/\\/([^/]+)(\\/.*)$/);\n    if (!match) { reject(new Error('Invalid SUPABASE_URL')); return; }\n    const options = {\n      hostname: match[1], path: match[2], method: 'GET',\n      headers: {\n        'apikey': SUPABASE_KEY,\n        'Authorization': `Bearer ${SUPABASE_KEY}`,\n        'Content-Type': 'application/json',\n      },\n    };\n    const req = https.request(options, (res) => {\n      let data = '';\n      res.on('data', (chunk) => data += chunk);\n      res.on('end', () => {\n        try {\n          const parsed = JSON.parse(data);\n          if (res.statusCode >= 400) reject(new Error(`Supabase ${path}: ${res.statusCode}`));\n          else resolve(parsed);\n        } catch (e) { reject(new Error(`Parse error: ${data}`)); }\n      });\n    });\n    req.on('error', reject);\n    req.end();\n  });\n}\n\ntry {\n  const item = $input.first().json;\n  const { variableContext } = item;\n  const appointmentId = variableContext.appointmentId;\n  if (!appointmentId) throw new Error('booking_created requires variableContext.appointmentId');\n\n  const appointments = await supabaseRequest(\n    `appointments?id=eq.${appointmentId}&limit=1`\n  );\n  if (!appointments.length) throw new Error(`Appointment ${appointmentId} not found`);\n  const apt = appointments[0];\n\n  // Fetch tenant name for companyName variable\n  const tenantId = item.tenantId ?? '00000000-0000-0000-0000-000000000000';\n  const tenants = await supabaseRequest(\n    `tenants?id=eq.${encodeURIComponent(tenantId)}&select=name&limit=1`\n  );\n  const companyName = tenants.length > 0 ? (tenants[0].name ?? '') : '';\n\n  return {\n    json: {\n      ...item,\n      stepResult: {\n        success: true,\n        outputPayload: {\n          appointmentAt: apt.appointment_at || apt.scheduled_at,\n          clientEmail: apt.client_email,\n          clientName: apt.client_name,\n          notes: apt.notes || null,\n          companyName,\n        },\n      },\n    }\n  };\n} catch (err) {\n  const item = $input.first().json;\n  return { json: { ...item, stepResult: { success: false, error: err.message } } };\n}\n"
-      },
-      "id": "96fd9c37-d348-4db1-aa41-88d987304559",
-      "name": "Fetch Booking Data",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        4240,
-        768
-      ]
-    },
-    {
-      "parameters": {
-        "jsCode": "// Pass through lead score data from variableContext\nconst https = require('https');\n\nconst SUPABASE_URL = $env.SUPABASE_URL;\nif (!SUPABASE_URL) throw new Error('SUPABASE_URL not configured');\nconst SUPABASE_KEY = $env.SUPABASE_SERVICE_ROLE_KEY;\n\nasync function supabaseRequest(path) {\n  const url = `${SUPABASE_URL}/rest/v1/${path}`;\n  return new Promise((resolve, reject) => {\n    const match = url.match(/^https?:\\/\\/([^/]+)(\\/.*)$/);\n    if (!match) { reject(new Error('Invalid SUPABASE_URL')); return; }\n    const options = {\n      hostname: match[1], path: match[2], method: 'GET',\n      headers: {\n        'apikey': SUPABASE_KEY,\n        'Authorization': `Bearer ${SUPABASE_KEY}`,\n        'Content-Type': 'application/json',\n      },\n    };\n    const req = https.request(options, (res) => {\n      let data = '';\n      res.on('data', (chunk) => data += chunk);\n      res.on('end', () => {\n        try {\n          const parsed = JSON.parse(data);\n          if (res.statusCode >= 400) reject(new Error(`Supabase ${path}: ${res.statusCode}`));\n          else resolve(parsed);\n        } catch (e) { reject(new Error(`Parse error: ${data}`)); }\n      });\n    });\n    req.on('error', reject);\n    req.end();\n  });\n}\n\ntry {\n  const item = $input.first().json;\n  const vc = item.variableContext || {};\n\n  // Fetch tenant name for companyName variable\n  const tenantId = item.tenantId ?? '00000000-0000-0000-0000-000000000000';\n  const tenants = await supabaseRequest(\n    `tenants?id=eq.${encodeURIComponent(tenantId)}&select=name&limit=1`\n  );\n  const companyName = tenants.length > 0 ? (tenants[0].name ?? '') : '';\n\n  return {\n    json: {\n      ...item,\n      stepResult: {\n        success: true,\n        outputPayload: {\n          overallScore: vc.overallScore || null,\n          recommendation: vc.recommendation || null,\n          summary: vc.summary || null,\n          companyName,\n        },\n      },\n    }\n  };\n} catch (err) {\n  const item = $input.first().json;\n  return { json: { ...item, stepResult: { success: false, error: err.message } } };\n}\n"
-      },
-      "id": "31b3097b-71b5-4f8d-b53e-91db20bfb5dd",
-      "name": "Pass Lead Score",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        4240,
-        960
-      ]
-    },
-    {
-      "parameters": {
-        "jsCode": "// Manual/scheduled — fetch tenant name, no other data to fetch\nconst https = require('https');\n\nconst SUPABASE_URL = $env.SUPABASE_URL;\nif (!SUPABASE_URL) throw new Error('SUPABASE_URL not configured');\nconst SUPABASE_KEY = $env.SUPABASE_SERVICE_ROLE_KEY;\n\nasync function supabaseRequest(path) {\n  const url = `${SUPABASE_URL}/rest/v1/${path}`;\n  return new Promise((resolve, reject) => {\n    const match = url.match(/^https?:\\/\\/([^/]+)(\\/.*)$/);\n    if (!match) { reject(new Error('Invalid SUPABASE_URL')); return; }\n    const options = {\n      hostname: match[1], path: match[2], method: 'GET',\n      headers: {\n        'apikey': SUPABASE_KEY,\n        'Authorization': `Bearer ${SUPABASE_KEY}`,\n        'Content-Type': 'application/json',\n      },\n    };\n    const req = https.request(options, (res) => {\n      let data = '';\n      res.on('data', (chunk) => data += chunk);\n      res.on('end', () => {\n        try {\n          const parsed = JSON.parse(data);\n          if (res.statusCode >= 400) reject(new Error(`Supabase ${path}: ${res.statusCode}`));\n          else resolve(parsed);\n        } catch (e) { reject(new Error(`Parse error: ${data}`)); }\n      });\n    });\n    req.on('error', reject);\n    req.end();\n  });\n}\n\ntry {\n  const item = $input.first().json;\n\n  const tenantResult = await supabaseRequest(\n    `tenants?id=eq.${encodeURIComponent(item.tenantId ?? '00000000-0000-0000-0000-000000000000')}&select=name&limit=1`\n  );\n  const companyName = tenantResult.length > 0 ? (tenantResult[0].name ?? '') : '';\n\n  return {\n    json: {\n      ...item,\n      stepResult: {\n        success: true,\n        outputPayload: { triggered: true, companyName },\n      },\n    }\n  };\n} catch (err) {\n  const item = $input.first().json;\n  return { json: { ...item, stepResult: { success: false, error: err.message } } };\n}\n"
-      },
-      "id": "f89b666c-8c36-4a2e-958d-42422d1b50e2",
-      "name": "Pass Manual Trigger",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        4240,
-        1152
+        864
       ]
     }
   ],
@@ -158,39 +34,7 @@
       "main": [
         [
           {
-            "node": "Route by Trigger Type",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Route by Trigger Type": {
-      "main": [
-        [
-          {
-            "node": "Fetch Survey Data",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Fetch Booking Data",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Pass Lead Score",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Pass Manual Trigger",
+            "node": "Pass Through",
             "type": "main",
             "index": 0
           }
@@ -203,7 +47,7 @@
     "executionOrder": "v1",
     "binaryMode": "separate"
   },
-  "versionId": "97620708-68f5-41b6-8f42-ef5a3afdb6fc",
+  "versionId": "0996891e-2a26-4b3a-b6cd-f27c72b792e2",
   "meta": {
     "instanceId": "b46d0b13d69880a2fec430102877b55af4e44991549a68a3e78cd50a4dc1a09e"
   },

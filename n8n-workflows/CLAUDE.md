@@ -102,9 +102,9 @@ Receives `{ workflowId, tenantId, triggerPayload }` from CMS → fetches definit
 
 **State management:** `$getWorkflowStaticData('global')` in Orchestrator — initialized in Fetch and Initialize, read in Prepare Current Step. State is passed to Process Step subworkflow via item data (staticData doesn't cross workflow boundaries). Process Step Result writes back via item return, Orchestrator persists to staticData. Uses `state[executionId]` dictionary pattern for concurrent execution isolation.
 
-**Route by Step Type** (in Process Step subworkflow): 9 outputs — failed(0), __skipped__(1), send_email(2), ai_action(3), webhook(4), condition(5), delay(6), trigger_types(7, OR), fallback(8).
+**Route by Step Type** (in Process Step subworkflow): 12 outputs — failed(0), __skipped__(1), send_email(2), ai_action(3), webhook(4), switch(5), delay(6), get_response(7), update_response(8), get_survey_link(9), trigger_types(10, OR), fallback(11). (After AAA-T-211 + AAA-T-206: condition replaced by switch; per-action steps added.)
 
-**Trigger steps as real steps:** Not filtered out. Execute via Trigger Handler which fetches real data from Supabase (survey answers, appointments).
+**Trigger steps are pure pass-through (AAA-T-212):** Trigger Handler is intentionally a 2-node no-op (Start → Pass Through). It exists for handler-per-step-type consistency but does NO hydration — emits `outputPayload: {}`. Initial `variableContext` comes from the Orchestrator's `buildTriggerContext`, which is a universal pass-through of the caller payload + `trigger_type`. Workflows that need response/survey_link/appointment/tenant data must use explicit `get_response` / `get_survey_link` / `get_*` steps. Rule: handlers never auto-fetch derived data; everything flows through `variableContext` produced by explicit steps.
 
 **Data model:** `responses.answers` = JSONB (`{questionId: "answer"}`), `surveys.questions` = JSONB (array). No separate `survey_answers` or `questions` tables.
 

@@ -21,6 +21,7 @@ import { EXECUTION_STATUS_LABELS } from '../types'
 interface TestModePanelProps {
   workflowId: string
   triggerType: string
+  isActive: boolean
   onClose: () => void
 }
 
@@ -46,6 +47,7 @@ const STATUS_STYLES: Record<string, string> = {
 export function TestModePanel({
   workflowId,
   triggerType,
+  isActive,
   onClose,
 }: TestModePanelProps) {
   const queryClient = useQueryClient()
@@ -238,18 +240,25 @@ export function TestModePanel({
           </Tabs>
 
           {/* Run workflow button */}
-          <Button
-            className="w-full gap-2"
-            onClick={handleRunWorkflow}
-            disabled={isRunning || !!jsonError}
-          >
-            {isRunning ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Play className="h-4 w-4" />
+          <div className="space-y-2">
+            {!isActive && (
+              <p className="text-xs text-muted-foreground" role="status">
+                {messages.workflows.testMode.inactiveNote}
+              </p>
             )}
-            {isRunning ? messages.workflows.testMode.running : messages.workflows.testMode.runTest}
-          </Button>
+            <Button
+              className="w-full gap-2"
+              onClick={handleRunWorkflow}
+              disabled={isRunning || !!jsonError || !isActive}
+            >
+              {isRunning ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Play className="h-4 w-4" />
+              )}
+              {isRunning ? messages.workflows.testMode.running : messages.workflows.testMode.runTest}
+            </Button>
+          </div>
 
           {/* Run result */}
           {runResult && (
