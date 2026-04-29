@@ -10,6 +10,14 @@
  *
  * Note: Trigger steps ARE real workflow_steps executed by the n8n Orchestrator via
  * the Trigger Handler subworkflow. Templates include trigger steps for canvas hydration.
+ *
+ * Validation note (AAA-T-212):
+ *   `template_id: null` on send_email steps is INTENTIONAL — the user picks the
+ *   actual email template after instantiating the workflow. The Zod schema
+ *   (validation.ts#sendEmailConfigSchema) requires a UUID, so the panel will
+ *   surface a "Wybierz szablon email" error until the user fills it in.
+ *   Same pattern applies to ai_action `output_schema` (user defines fields
+ *   per use case) — templates leave it null/empty and the panel guides setup.
  */
 
 import type { StepType, PlaceholderStepType } from '../step-registry'
@@ -74,7 +82,7 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
           type: 'switch',
           _name: 'Kwalifikacja leada',
           branches: [
-            { id: 'tak', label: 'Kwalifikowany', expression: 'overallScore >= 7' },
+            { id: 'tak', label: 'Kwalifikowany', expression: '{{overallScore}} >= 7' },
             { id: 'default', label: 'Odrzucony', expression: 'default' },
           ],
         },
@@ -168,7 +176,7 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
           type: 'switch',
           _name: 'Kwalifikacja leada',
           branches: [
-            { id: 'tak', label: 'Kwalifikowany', expression: 'overallScore >= 5' },
+            { id: 'tak', label: 'Kwalifikowany', expression: '{{overallScore}} >= 5' },
             { id: 'default', label: 'Poniżej progu', expression: 'default' },
           ],
         },
@@ -279,8 +287,8 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
           type: 'switch',
           _name: 'Kwalifikacja leada (Hot/Warm/Cold)',
           branches: [
-            { id: 'hot',     label: 'Gorący',  expression: 'overallScore >= 70' },
-            { id: 'warm',    label: 'Ciepły',  expression: 'overallScore >= 40' },
+            { id: 'hot',     label: 'Gorący',  expression: '{{overallScore}} >= 70' },
+            { id: 'warm',    label: 'Ciepły',  expression: '{{overallScore}} >= 40' },
             { id: 'default', label: 'Zimny',   expression: 'default' },
           ],
         },
@@ -381,8 +389,8 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
           type: 'switch',
           _name: 'Kwalifikacja leada (Hot/Warm/Cold)',
           branches: [
-            { id: 'hot',     label: 'Gorący',  expression: 'overallScore >= 70' },
-            { id: 'warm',    label: 'Ciepły',  expression: 'overallScore >= 40' },
+            { id: 'hot',     label: 'Gorący',  expression: '{{overallScore}} >= 70' },
+            { id: 'warm',    label: 'Ciepły',  expression: '{{overallScore}} >= 40' },
             { id: 'default', label: 'Zimny',   expression: 'default' },
           ],
         },
@@ -491,7 +499,7 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
           type: 'switch',
           _name: 'Kluczowy decydent?',
           branches: [
-            { id: 'tak',     label: 'Tak',  expression: 'isDecisionMaker == true' },
+            { id: 'tak',     label: 'Tak',  expression: '{{isDecisionMaker}} == true' },
             { id: 'default', label: 'Nie',  expression: 'default' },
           ],
         },
@@ -575,7 +583,7 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
           type: 'switch',
           _name: 'Wykryto problemy?',
           branches: [
-            { id: 'tak',     label: 'Problemy!',  expression: 'hasAnomaly == true' },
+            { id: 'tak',     label: 'Problemy!',  expression: '{{hasAnomaly}} == true' },
             { id: 'default', label: 'Normalnie',  expression: 'default' },
           ],
         },
@@ -678,7 +686,7 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
           type: 'switch',
           _name: 'Klient zalogował się?',
           branches: [
-            { id: 'tak',     label: 'Tak',  expression: 'clientLoggedIn == true' },
+            { id: 'tak',     label: 'Tak',  expression: '{{clientLoggedIn}} == true' },
             { id: 'default', label: 'Nie',  expression: 'default' },
           ],
         },
@@ -772,7 +780,7 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
           type: 'switch',
           _name: 'Warto reaktywować (≥60)?',
           branches: [
-            { id: 'tak',     label: 'Tak',  expression: 'reactivationScore >= 60' },
+            { id: 'tak',     label: 'Tak',  expression: '{{reactivationScore}} >= 60' },
             { id: 'default', label: 'Nie',  expression: 'default' },
           ],
         },
@@ -855,7 +863,7 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
           type: 'switch',
           _name: 'Ocena < 3 (bardzo negatywna)?',
           branches: [
-            { id: 'tak',     label: 'Tak – alarm',    expression: 'isNegative == true' },
+            { id: 'tak',     label: 'Tak – alarm',    expression: '{{isNegative}} == true' },
             { id: 'default', label: 'Sprawdź nową',   expression: 'default' },
           ],
         },
@@ -892,7 +900,7 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
           type: 'switch',
           _name: 'Jest nowa opinia?',
           branches: [
-            { id: 'tak',     label: 'Tak',    expression: 'hasNewReview == true' },
+            { id: 'tak',     label: 'Tak',    expression: '{{hasNewReview}} == true' },
             { id: 'default', label: 'Cisza',  expression: 'default' },
           ],
         },
@@ -953,7 +961,7 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
           type: 'switch',
           _name: 'Uczestniczył w webinarze?',
           branches: [
-            { id: 'tak',     label: 'Był na webinarze',  expression: 'attended == true' },
+            { id: 'tak',     label: 'Był na webinarze',  expression: '{{attended}} == true' },
             { id: 'default', label: 'Nie był',            expression: 'default' },
           ],
         },
@@ -996,7 +1004,7 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
           type: 'switch',
           _name: 'Obejrzał replay?',
           branches: [
-            { id: 'tak',     label: 'Obejrzał',    expression: 'watchedReplay == true' },
+            { id: 'tak',     label: 'Obejrzał',    expression: '{{watchedReplay}} == true' },
             { id: 'default', label: 'Nie wrócił',  expression: 'default' },
           ],
         },
@@ -1082,7 +1090,7 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
           type: 'switch',
           _name: 'Kontrakt podpisany?',
           branches: [
-            { id: 'tak',     label: 'Podpisano!',    expression: 'contractSigned == true' },
+            { id: 'tak',     label: 'Podpisano!',    expression: '{{contractSigned}} == true' },
             { id: 'default', label: 'Brak podpisu',  expression: 'default' },
           ],
         },

@@ -36,7 +36,7 @@ function getTargetColumnOptions(m: typeof messages.workflows.editor): Array<{ va
 
 const CUSTOM_PRESET_VALUE = 'custom'
 
-export function UpdateResponseConfigPanel({ stepConfig, onChange, availableVariables }: ConfigPanelProps) {
+export function UpdateResponseConfigPanel({ stepConfig, onChange, availableVariables, isInvalid }: ConfigPanelProps) {
   const m = messages.workflows.editor
   const targetColumnOptions = getTargetColumnOptions(m)
 
@@ -56,8 +56,10 @@ export function UpdateResponseConfigPanel({ stepConfig, onChange, availableVaria
     control,
     watch,
     setValue,
+    trigger,
     formState: { errors },
   } = useForm<UpdateResponseFormData>({
+    mode: 'onChange',
     resolver: zodResolver(updateResponseConfigSchema),
     defaultValues: {
       type: 'update_response',
@@ -75,6 +77,13 @@ export function UpdateResponseConfigPanel({ stepConfig, onChange, availableVaria
     sourceExpressionRefs.current.push({ current: null })
   }
   sourceExpressionRefs.current = sourceExpressionRefs.current.slice(0, fields.length)
+
+  // Trigger validation on mount when the step is already marked invalid (amber ring on canvas)
+  // Empty deps array: fires exactly once after mount — intentional
+  useEffect(() => {
+    if (isInvalid) { void trigger() }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Autosave: watch all fields, skip first render, debounce 300ms
   const formValues = watch()
@@ -174,6 +183,7 @@ export function UpdateResponseConfigPanel({ stepConfig, onChange, availableVaria
                       <SelectTrigger
                         aria-label={m.updateResponseTargetColAriaLabel(index + 1)}
                         aria-invalid={!!rowErrors?.target_column}
+                        aria-describedby={rowErrors?.target_column ? `target-col-error-${index}` : undefined}
                         className="h-9"
                       >
                         <SelectValue placeholder={m.updateResponseTargetColPlaceholder} />
@@ -188,6 +198,15 @@ export function UpdateResponseConfigPanel({ stepConfig, onChange, availableVaria
                     </Select>
                   )}
                 />
+                {rowErrors?.target_column && (
+                  <p
+                    id={`target-col-error-${index}`}
+                    role="alert"
+                    className="text-xs text-destructive"
+                  >
+                    {rowErrors.target_column.message}
+                  </p>
+                )}
               </div>
 
               {/* Source expression */}
