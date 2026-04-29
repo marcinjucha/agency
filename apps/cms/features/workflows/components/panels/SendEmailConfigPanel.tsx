@@ -101,7 +101,7 @@ function VariableBindingTable({
             <div className="flex-1 flex items-center gap-1">
               <Input
                 ref={(el) => { ref.current = el }}
-                placeholder="{{stepId.fieldName}}"
+                placeholder={m.variableBindingPlaceholder}
                 value={currentValue}
                 onChange={(e) => onChange(key, e.target.value)}
                 className="h-9 font-mono text-xs"
@@ -165,7 +165,7 @@ function VariableBindingsSection({
 // Main panel
 // ---------------------------------------------------------------------------
 
-export function SendEmailConfigPanel({ stepConfig, onChange, availableVariables }: ConfigPanelProps) {
+export function SendEmailConfigPanel({ stepConfig, onChange, availableVariables, isInvalid }: ConfigPanelProps) {
   const isFirstRender = useRef(true)
   const onChangeRef = useRef(onChange)
   onChangeRef.current = onChange
@@ -178,8 +178,10 @@ export function SendEmailConfigPanel({ stepConfig, onChange, availableVariables 
     watch,
     setValue,
     control,
+    trigger,
     formState: { errors },
   } = useForm<SendEmailFormData>({
+    mode: 'onChange',
     resolver: zodResolver(sendEmailConfigSchema),
     defaultValues: {
       type: 'send_email',
@@ -197,6 +199,13 @@ export function SendEmailConfigPanel({ stepConfig, onChange, availableVariables 
       return data
     },
   })
+
+  // Trigger validation on mount when the step is already marked invalid (amber ring on canvas)
+  // Empty deps array: fires exactly once after mount — intentional
+  useEffect(() => {
+    if (isInvalid) { void trigger() }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Watch all fields and propagate changes (skip initial mount to avoid false dirty state)
   const formValues = watch()
@@ -230,7 +239,11 @@ export function SendEmailConfigPanel({ stepConfig, onChange, availableVariables 
           value={formValues.template_id ?? ''}
           onValueChange={(value) => setValue('template_id', value || undefined, { shouldDirty: true })}
         >
-          <SelectTrigger id="template-id">
+          <SelectTrigger
+            id="template-id"
+            aria-invalid={!!errors.template_id}
+            aria-describedby={errors.template_id ? 'template-id-error' : undefined}
+          >
             <SelectValue placeholder={messages.workflows.editor.templateIdPlaceholder} />
           </SelectTrigger>
           <SelectContent>
@@ -242,7 +255,7 @@ export function SendEmailConfigPanel({ stepConfig, onChange, availableVariables 
           </SelectContent>
         </Select>
         {errors.template_id && (
-          <p role="alert" className="text-xs text-destructive">
+          <p id="template-id-error" role="alert" className="text-xs text-destructive">
             {errors.template_id.message}
           </p>
         )}
@@ -273,7 +286,7 @@ export function SendEmailConfigPanel({ stepConfig, onChange, availableVariables 
               onChange={field.onChange}
               onBlur={field.onBlur}
               aria-invalid={!!errors.to_expression}
-              aria-describedby="to-expression-hint"
+              aria-describedby={errors.to_expression ? 'to-expression-error' : 'to-expression-hint'}
             />
           )}
         />
@@ -291,7 +304,7 @@ export function SendEmailConfigPanel({ stepConfig, onChange, availableVariables 
           )}
         </div>
         {errors.to_expression && (
-          <p role="alert" className="text-xs text-destructive">
+          <p id="to-expression-error" role="alert" className="text-xs text-destructive">
             {errors.to_expression.message}
           </p>
         )}

@@ -15,7 +15,7 @@ type GetResponseFormData = StepConfigGetResponse
 
 const outputFields = resolveOutputSchema(STEP_MAP['get_response'].outputSchema)
 
-export function GetResponseConfigPanel({ stepConfig, onChange, availableVariables }: ConfigPanelProps) {
+export function GetResponseConfigPanel({ stepConfig, onChange, availableVariables, isInvalid }: ConfigPanelProps) {
   const m = messages.workflows.editor
 
   const isFirstRender = useRef(true)
@@ -26,13 +26,27 @@ export function GetResponseConfigPanel({ stepConfig, onChange, availableVariable
   const variables = availableVariables ?? []
   const config = stepConfig as GetResponseFormData | undefined
 
-  const { control, watch, setValue } = useForm<GetResponseFormData>({
+  const {
+    control,
+    watch,
+    setValue,
+    trigger,
+    formState: { errors },
+  } = useForm<GetResponseFormData>({
+    mode: 'onChange',
     resolver: zodResolver(getResponseConfigSchema),
     defaultValues: {
       type: 'get_response',
       responseIdExpression: config?.responseIdExpression ?? '{{responseId}}',
     },
   })
+
+  // Trigger validation on mount when the step is already marked invalid (amber ring on canvas)
+  // Empty deps array: fires exactly once after mount — intentional
+  useEffect(() => {
+    if (isInvalid) { void trigger() }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const formValues = watch()
   useEffect(() => {
@@ -74,6 +88,8 @@ export function GetResponseConfigPanel({ stepConfig, onChange, availableVariable
                 onBlur={f.onBlur}
                 className="h-9 font-mono text-xs"
                 aria-label={m.getResponseIdExpressionLabel}
+                aria-invalid={!!errors.responseIdExpression}
+                aria-describedby={errors.responseIdExpression ? 'get-response-id-expr-error' : undefined}
               />
             )}
           />
@@ -88,6 +104,11 @@ export function GetResponseConfigPanel({ stepConfig, onChange, availableVariable
             />
           )}
         </div>
+        {errors.responseIdExpression && (
+          <p id="get-response-id-expr-error" role="alert" className="text-xs text-destructive">
+            {errors.responseIdExpression.message}
+          </p>
+        )}
       </div>
 
       <hr className="border-border" />

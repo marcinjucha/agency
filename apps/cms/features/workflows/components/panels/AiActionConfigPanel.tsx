@@ -17,7 +17,7 @@ import type { ConfigPanelProps } from './index'
 
 type AiActionFormData = StepConfigAiAction
 
-export function AiActionConfigPanel({ stepConfig, onChange, availableVariables }: ConfigPanelProps) {
+export function AiActionConfigPanel({ stepConfig, onChange, availableVariables, isInvalid }: ConfigPanelProps) {
   const isFirstRender = useRef(true)
   const onChangeRef = useRef(onChange)
   onChangeRef.current = onChange
@@ -30,8 +30,10 @@ export function AiActionConfigPanel({ stepConfig, onChange, availableVariables }
     control,
     watch,
     setValue,
+    trigger,
     formState: { errors },
   } = useForm<AiActionFormData>({
+    mode: 'onChange',
     resolver: zodResolver(aiActionConfigSchema),
     defaultValues: {
       type: 'ai_action',
@@ -55,6 +57,13 @@ export function AiActionConfigPanel({ stepConfig, onChange, availableVariables }
     if (!preset) return
     replace(preset.fields)
   }
+
+  // Trigger validation on mount when the step is already marked invalid (amber ring on canvas)
+  // Empty deps array: fires exactly once after mount — intentional
+  useEffect(() => {
+    if (isInvalid) { void trigger() }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Watch all fields and propagate changes (skip initial mount to avoid false dirty state)
   const formValues = watch()
@@ -91,20 +100,23 @@ export function AiActionConfigPanel({ stepConfig, onChange, availableVariables }
               onBlur={field.onBlur}
               aria-required="true"
               aria-invalid={!!errors.prompt}
-              aria-describedby={errors.prompt ? 'prompt-error' : undefined}
+              aria-describedby={errors.prompt ? 'prompt-error' : 'ai-prompt-hint'}
             />
           )}
         />
-        {variables.length > 0 && (
-          <div className="flex justify-end">
+        <div className="flex items-center justify-between">
+          <p id="ai-prompt-hint" className="text-xs text-muted-foreground">
+            {messages.workflows.editor.aiActionPromptHint}
+          </p>
+          {variables.length > 0 && (
             <VariableInserter
               variables={variables}
               inputRef={promptRef}
               onChange={(value) => setValue('prompt', value, { shouldDirty: true })}
               currentValue={formValues.prompt ?? ''}
             />
-          </div>
-        )}
+          )}
+        </div>
         {errors.prompt && (
           <p id="prompt-error" role="alert" className="text-xs text-destructive">
             {errors.prompt.message}
@@ -156,34 +168,59 @@ export function AiActionConfigPanel({ stepConfig, onChange, availableVariables }
           </div>
         )}
 
-        {fields.map((field, index) => (
-          <div key={field.id} className="flex items-start gap-2" role="group" aria-label={`${messages.workflows.editor.outputFields} ${index + 1}`}>
-            <div className="flex-1 space-y-1.5">
-              <Input
-                placeholder={messages.workflows.editor.outputFieldKey}
-                aria-label={`${messages.workflows.editor.outputFieldKey} ${index + 1}`}
-                {...register(`output_schema.${index}.key`)}
-              />
+        {fields.map((field, index) => {
+          const rowErrors = errors.output_schema?.[index]
+          return (
+            <div key={field.id} className="flex items-start gap-2" role="group" aria-label={`${messages.workflows.editor.outputFields} ${index + 1}`}>
+              <div className="flex-1 space-y-1">
+                <Input
+                  placeholder={messages.workflows.editor.outputFieldKey}
+                  aria-label={`${messages.workflows.editor.outputFieldKey} ${index + 1}`}
+                  aria-invalid={!!rowErrors?.key}
+                  aria-describedby={rowErrors?.key ? `output-schema-key-error-${index}` : undefined}
+                  {...register(`output_schema.${index}.key`)}
+                />
+                {rowErrors?.key && (
+                  <p
+                    id={`output-schema-key-error-${index}`}
+                    role="alert"
+                    className="text-xs text-destructive"
+                  >
+                    {rowErrors.key.message}
+                  </p>
+                )}
+              </div>
+              <div className="flex-1 space-y-1">
+                <Input
+                  placeholder={messages.workflows.editor.outputFieldLabel}
+                  aria-label={`${messages.workflows.editor.outputFieldLabel} ${index + 1}`}
+                  aria-invalid={!!rowErrors?.label}
+                  aria-describedby={rowErrors?.label ? `output-schema-label-error-${index}` : undefined}
+                  {...register(`output_schema.${index}.label`)}
+                />
+                {rowErrors?.label && (
+                  <p
+                    id={`output-schema-label-error-${index}`}
+                    role="alert"
+                    className="text-xs text-destructive"
+                  >
+                    {rowErrors.label.message}
+                  </p>
+                )}
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="mt-0.5 text-muted-foreground hover:text-destructive"
+                onClick={() => remove(index)}
+                aria-label={messages.workflows.editor.removeOutputField}
+              >
+                <X className="h-4 w-4" />
+              </Button>
             </div>
-            <div className="flex-1 space-y-1.5">
-              <Input
-                placeholder={messages.workflows.editor.outputFieldLabel}
-                aria-label={`${messages.workflows.editor.outputFieldLabel} ${index + 1}`}
-                {...register(`output_schema.${index}.label`)}
-              />
-            </div>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="mt-0.5 text-muted-foreground hover:text-destructive"
-              onClick={() => remove(index)}
-              aria-label={messages.workflows.editor.removeOutputField}
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-        ))}
+          )
+        })}
 
         <Button
           type="button"

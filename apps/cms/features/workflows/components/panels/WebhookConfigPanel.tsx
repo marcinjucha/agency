@@ -51,7 +51,7 @@ function arrayToHeaders(arr: { key: string; value: string }[]): Record<string, s
   return Object.fromEntries(filtered.map((h) => [h.key, h.value]))
 }
 
-export function WebhookConfigPanel({ stepConfig, onChange, availableVariables }: ConfigPanelProps) {
+export function WebhookConfigPanel({ stepConfig, onChange, availableVariables, isInvalid }: ConfigPanelProps) {
   const isFirstRender = useRef(true)
   const onChangeRef = useRef(onChange)
   onChangeRef.current = onChange
@@ -64,8 +64,10 @@ export function WebhookConfigPanel({ stepConfig, onChange, availableVariables }:
     control,
     watch,
     setValue,
+    trigger,
     formState: { errors },
   } = useForm<WebhookFormData>({
+    mode: 'onChange',
     resolver: zodResolver(webhookFormSchema),
     defaultValues: {
       type: 'webhook',
@@ -79,6 +81,13 @@ export function WebhookConfigPanel({ stepConfig, onChange, availableVariables }:
     control,
     name: 'headers',
   })
+
+  // Trigger validation on mount when the step is already marked invalid (amber ring on canvas)
+  // Empty deps array: fires exactly once after mount — intentional
+  useEffect(() => {
+    if (isInvalid) { void trigger() }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Watch all fields and propagate changes (skip initial mount to avoid false dirty state)
   const formValues = watch()
@@ -114,26 +123,29 @@ export function WebhookConfigPanel({ stepConfig, onChange, availableVariables }:
             <Input
               id="webhook-url"
               ref={urlRef}
-              placeholder={messages.workflows.editor.urlPlaceholder}
+              placeholder={messages.workflows.editor.webhookUrlPlaceholder}
               value={field.value ?? ''}
               onChange={field.onChange}
               onBlur={field.onBlur}
               aria-required="true"
               aria-invalid={!!errors.url}
-              aria-describedby={errors.url ? 'url-error' : undefined}
+              aria-describedby={errors.url ? 'url-error' : 'webhook-url-hint'}
             />
           )}
         />
-        {variables.length > 0 && (
-          <div className="flex justify-end">
+        <div className="flex items-center justify-between">
+          <p id="webhook-url-hint" className="text-xs text-muted-foreground">
+            {messages.workflows.editor.webhookUrlHint}
+          </p>
+          {variables.length > 0 && (
             <VariableInserter
               variables={variables}
               inputRef={urlRef}
               onChange={(value) => setValue('url', value, { shouldDirty: true })}
               currentValue={formValues.url ?? ''}
             />
-          </div>
-        )}
+          )}
+        </div>
         {errors.url && (
           <p id="url-error" role="alert" className="text-xs text-destructive">
             {errors.url.message}
