@@ -1,6 +1,6 @@
 import { memo } from 'react'
 import { Handle, Position, type NodeProps } from '@xyflow/react'
-import { Zap } from 'lucide-react'
+import { Zap, AlertTriangle } from 'lucide-react'
 import { messages } from '@/lib/messages'
 import { nodeBaseClasses, selectedClasses } from './node-styles'
 import { lookupNodeConfig } from './node-registry'
@@ -10,6 +10,7 @@ export type TriggerNodeData = {
   stepType: string
   stepConfig: Record<string, unknown>
   executionStatus?: 'completed' | 'failed' | 'skipped' | 'pending'
+  isInvalid?: boolean
 }
 
 const EXECUTION_RING: Record<string, string> = {
@@ -18,14 +19,24 @@ const EXECUTION_RING: Record<string, string> = {
   skipped: 'opacity-40',
 }
 
+const INVALID_RING = 'ring-2 ring-amber-500'
+
 function TriggerNodeComponent({ data, selected }: NodeProps) {
   const nodeData = data as unknown as TriggerNodeData
   const borderClass = lookupNodeConfig(nodeData.stepType)?.borderColor ?? 'border-l-4 border-l-orange-500'
-  const execRing = nodeData.executionStatus ? EXECUTION_RING[nodeData.executionStatus] ?? '' : ''
+  // Invalid takes precedence over selection so users see the validation cue while editing.
+  const ring = nodeData.isInvalid
+    ? INVALID_RING
+    : nodeData.executionStatus
+      ? EXECUTION_RING[nodeData.executionStatus] ?? ''
+      : selected
+        ? selectedClasses
+        : ''
 
   return (
     <div
-      className={`${nodeBaseClasses} ${borderClass} ${selected ? selectedClasses : ''} ${execRing}`}
+      className={`${nodeBaseClasses} ${borderClass} ${ring}`}
+      aria-invalid={nodeData.isInvalid ? 'true' : undefined}
     >
       <div className="flex items-center gap-2">
         <Zap className="h-4 w-4 text-orange-500 shrink-0" />
@@ -37,6 +48,12 @@ function TriggerNodeComponent({ data, selected }: NodeProps) {
             {nodeData.label}
           </p>
         </div>
+        {nodeData.isInvalid && (
+          <AlertTriangle
+            className="h-3.5 w-3.5 text-amber-500 shrink-0 ml-auto"
+            aria-label={messages.workflows.editor.invalidStepAriaLabel}
+          />
+        )}
       </div>
       <Handle
         type="source"
