@@ -94,7 +94,9 @@ export const triggerConfigSchema = z.discriminatedUnion('type', [
 // Step configs
 export const sendEmailConfigSchema = z.object({
   type: z.literal('send_email'),
-  template_id: z.string().uuid(messages.validation.emailTemplateRequired),
+  // null = draft/template (user hasn't picked a template yet). Panel still
+  // shows "required" error because it normalizes null→undefined at init.
+  template_id: z.string().uuid(messages.validation.emailTemplateRequired).nullable(),
   to_expression: recipientExpression,
   variable_bindings: z.record(z.string()).optional(),
 })
@@ -176,11 +178,13 @@ export const aiActionConfigSchema = z.object({
   type: z.literal('ai_action'),
   prompt: z.string().min(1, messages.validation.promptRequired),
   model: z.string().nullable().optional(),
-  // At least one output field is required so downstream steps have named
-  // variables ({{stepName.fieldKey}}) to bind against.
+  // null = draft/template (user defines output fields per use case).
+  // Null passes DB-level validation; panel normalizes null→[] which still
+  // fails min(1) — so the "required" error still shows in the config panel.
   output_schema: z
     .array(outputSchemaFieldSchema)
-    .min(1, messages.validation.outputSchemaRequired),
+    .min(1, messages.validation.outputSchemaRequired)
+    .nullable(),
 })
 
 export const getResponseConfigSchema = z.object({
