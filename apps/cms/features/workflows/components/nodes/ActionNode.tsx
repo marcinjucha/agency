@@ -1,5 +1,7 @@
 import { memo } from 'react'
 import { Handle, Position, type NodeProps } from '@xyflow/react'
+import { AlertTriangle } from 'lucide-react'
+import { messages } from '@/lib/messages'
 import { nodeBaseClasses, selectedClasses } from './node-styles'
 import { lookupNodeConfig } from './node-registry'
 
@@ -8,6 +10,7 @@ export type ActionNodeData = {
   stepType: string
   stepConfig: Record<string, unknown>
   executionStatus?: 'completed' | 'failed' | 'skipped' | 'pending'
+  isInvalid?: boolean
 }
 
 const EXECUTION_RING: Record<string, string> = {
@@ -16,16 +19,26 @@ const EXECUTION_RING: Record<string, string> = {
   skipped: 'opacity-40',
 }
 
+const INVALID_RING = 'ring-2 ring-amber-500'
+
 function ActionNodeComponent({ data, selected }: NodeProps) {
   const nodeData = data as unknown as ActionNodeData
   const config = lookupNodeConfig(nodeData.stepType)
   const Icon = config?.icon
   const borderClass = config?.borderColor ?? 'border-l-4 border-l-blue-400'
-  const execRing = nodeData.executionStatus ? EXECUTION_RING[nodeData.executionStatus] ?? '' : ''
+  // Invalid takes precedence over selection so users see the validation cue while editing.
+  const ring = nodeData.isInvalid
+    ? INVALID_RING
+    : nodeData.executionStatus
+      ? EXECUTION_RING[nodeData.executionStatus] ?? ''
+      : selected
+        ? selectedClasses
+        : ''
 
   return (
     <div
-      className={`${nodeBaseClasses} ${borderClass} ${selected ? selectedClasses : ''} ${execRing}`}
+      className={`${nodeBaseClasses} ${borderClass} ${ring}`}
+      aria-invalid={nodeData.isInvalid ? 'true' : undefined}
     >
       <Handle
         type="target"
@@ -42,6 +55,12 @@ function ActionNodeComponent({ data, selected }: NodeProps) {
             {nodeData.label}
           </p>
         </div>
+        {nodeData.isInvalid && (
+          <AlertTriangle
+            className="h-3.5 w-3.5 text-amber-500 shrink-0 ml-auto"
+            aria-label={messages.workflows.editor.invalidStepAriaLabel}
+          />
+        )}
       </div>
       <Handle
         type="source"

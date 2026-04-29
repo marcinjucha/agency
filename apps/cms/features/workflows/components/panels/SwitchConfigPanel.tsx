@@ -20,7 +20,7 @@ function isDefaultBranch(expression: string): boolean {
   return expression.trim() === 'default'
 }
 
-export function SwitchConfigPanel({ stepConfig, onChange, availableVariables }: ConfigPanelProps) {
+export function SwitchConfigPanel({ stepConfig, onChange, availableVariables, isInvalid }: ConfigPanelProps) {
   const isFirstRender = useRef(true)
   const onChangeRef = useRef(onChange)
   onChangeRef.current = onChange
@@ -40,8 +40,10 @@ export function SwitchConfigPanel({ stepConfig, onChange, availableVariables }: 
     control,
     watch,
     setValue,
+    trigger,
     formState: { errors },
   } = useForm<SwitchFormData>({
+    mode: 'onChange',
     resolver: zodResolver(switchConfigSchema),
     defaultValues: {
       type: 'switch',
@@ -55,6 +57,13 @@ export function SwitchConfigPanel({ stepConfig, onChange, availableVariables }: 
   })
 
   const formValues = watch()
+
+  // Trigger validation on mount when the step is already marked invalid (amber ring on canvas)
+  // Empty deps array: fires exactly once after mount — intentional
+  useEffect(() => {
+    if (isInvalid) { void trigger() }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Debounced propagation — skip first render to avoid false dirty state
   useEffect(() => {
@@ -153,9 +162,19 @@ export function SwitchConfigPanel({ stepConfig, onChange, availableVariables }: 
                           onBlur={labelField.onBlur}
                           aria-label={`${messages.workflows.editor.switchBranchLabel} — gałąź ${index + 1}`}
                           aria-invalid={!!branchError?.label}
+                          aria-describedby={branchError?.label ? `branch-label-error-${index}` : undefined}
                         />
                       )}
                     />
+                    {branchError?.label && (
+                      <p
+                        id={`branch-label-error-${index}`}
+                        role="alert"
+                        className="text-xs text-destructive"
+                      >
+                        {branchError.label.message}
+                      </p>
+                    )}
 
                     {/* Branch ID (readonly, shown as hint) */}
                     <p className="font-mono text-xs text-muted-foreground">
@@ -180,16 +199,20 @@ export function SwitchConfigPanel({ stepConfig, onChange, availableVariables }: 
                               id={`branch-expression-${index}`}
                               ref={(el) => { expressionRefs.current.set(index, el) }}
                               rows={2}
-                              placeholder={messages.workflows.editor.switchBranchExpression}
+                              placeholder={messages.workflows.editor.switchBranchExpressionPlaceholder}
                               className="resize-y font-mono text-sm"
                               value={exprField.value ?? ''}
                               onChange={exprField.onChange}
                               onBlur={exprField.onBlur}
                               aria-label={`${messages.workflows.editor.switchBranchExpression} — gałąź ${index + 1}`}
                               aria-invalid={!!branchError?.expression}
+                              aria-describedby={branchError?.expression ? `branch-expression-error-${index}` : `branch-expression-hint-${index}`}
                             />
                           )}
                         />
+                        <p id={`branch-expression-hint-${index}`} className="text-xs text-muted-foreground">
+                          {messages.workflows.editor.switchBranchExpressionHint}
+                        </p>
                         {variables.length > 0 && (
                           <VariableInserter
                             variables={variables}
@@ -201,7 +224,11 @@ export function SwitchConfigPanel({ stepConfig, onChange, availableVariables }: 
                           />
                         )}
                         {branchError?.expression && (
-                          <p role="alert" className="text-xs text-destructive">
+                          <p
+                            id={`branch-expression-error-${index}`}
+                            role="alert"
+                            className="text-xs text-destructive"
+                          >
                             {branchError.expression.message}
                           </p>
                         )}

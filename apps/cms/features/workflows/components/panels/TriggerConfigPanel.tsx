@@ -48,7 +48,7 @@ interface TriggerFormValues {
   min_score?: number | null
 }
 
-export function TriggerConfigPanel({ stepConfig, onChange }: ConfigPanelProps) {
+export function TriggerConfigPanel({ stepConfig, onChange, isInvalid }: ConfigPanelProps) {
   const currentType = (stepConfig?.type as TriggerType) || 'manual'
   const schema = triggerSchemaMap[currentType] ?? triggerConfigManualSchema
 
@@ -60,8 +60,10 @@ export function TriggerConfigPanel({ stepConfig, onChange }: ConfigPanelProps) {
     control,
     watch,
     reset,
+    trigger,
     formState: { errors },
   } = useForm<TriggerFormValues>({
+    mode: 'onChange',
     resolver: zodResolver(schema),
     defaultValues: {
       type: currentType,
@@ -78,6 +80,13 @@ export function TriggerConfigPanel({ stepConfig, onChange }: ConfigPanelProps) {
       return data
     },
   })
+
+  // Trigger validation on mount when the step is already marked invalid (amber ring on canvas)
+  // Empty deps array: fires exactly once after mount — intentional
+  useEffect(() => {
+    if (isInvalid) { void trigger() }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Watch all fields and propagate changes (skip initial mount to avoid false dirty state)
   const formValues = watch()

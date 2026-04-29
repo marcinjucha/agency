@@ -104,6 +104,8 @@ interface WorkflowCanvasProps {
   hasTriggerNode: boolean
   triggerType: string
   getLabel: (stepType: string) => string
+  /** Step ids that failed schema validation — nodes render an amber ring + warning icon. */
+  invalidStepIds?: Set<string>
 }
 
 function CanvasInner(
@@ -116,6 +118,7 @@ function CanvasInner(
     hasTriggerNode: initialHasTrigger,
     triggerType,
     getLabel,
+    invalidStepIds,
   }: WorkflowCanvasProps,
   ref: React.Ref<WorkflowCanvasHandle>
 ) {
@@ -173,6 +176,25 @@ function CanvasInner(
   useEffect(() => {
     onDirtyChange(isDirty)
   }, [isDirty, onDirtyChange])
+
+  /**
+   * Sync `data.isInvalid` flag from validation state.
+   * Re-renders all nodes when invalidStepIds changes — acceptable for ~10-20 step canvases.
+   */
+  useEffect(() => {
+    if (!invalidStepIds) return
+    setNodes((nds) =>
+      nds.map((n) => {
+        const isInvalid = invalidStepIds.has(n.id)
+        const data = n.data as Record<string, unknown>
+        if (data.isInvalid === isInvalid) return n
+        return {
+          ...n,
+          data: { ...data, isInvalid },
+        }
+      })
+    )
+  }, [invalidStepIds, setNodes])
 
   const hasTrigger = useMemo(
     () => nodes.some((n) => n.type === 'trigger'),

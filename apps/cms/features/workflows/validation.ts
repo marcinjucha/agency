@@ -5,6 +5,40 @@ import type { TriggerType } from './types'
 
 const STEP_TYPE_ENUM = STEP_REGISTRY.map((s) => s.id) as [StepType, ...StepType[]]
 
+// --- Variable expression helpers ---
+// Matches at least one bracketed variable like {{step.field}} or {{name}}.
+// Used by switch branch expressions, get_response, get_survey_link, and as the
+// "variable form" recognizer for to_expression (recipient address).
+const BRACKET_VARIABLE_REGEX = /\{\{[\w.]+\}\}/
+
+const containsBracketedVariable = (value: string): boolean =>
+  BRACKET_VARIABLE_REGEX.test(value)
+
+// Expression that must reference at least one variable (e.g. {{step.field}}).
+// Default branches in switch are exempt — they're recognized literally.
+const expressionWithVariable = z
+  .string()
+  .min(1, messages.validation.expressionRequired)
+  .refine(containsBracketedVariable, {
+    message: messages.validation.expressionMustReferenceVariable,
+  })
+
+// Recipient: either a literal email OR a bracketed variable expression.
+// WHY: variables resolve at runtime (e.g. {{contact.email}}); only literal
+// values can be format-checked at form time.
+const recipientExpression = z
+  .string()
+  .min(1, messages.validation.recipientRequired)
+  .superRefine((value, ctx) => {
+    if (containsBracketedVariable(value)) return
+    if (!z.string().email().safeParse(value).success) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: messages.validation.recipientInvalid,
+      })
+    }
+  })
+
 /** All canvas step types (step types + trigger types that appear as workflow_steps in the canvas) */
 const TRIGGER_TYPES_FOR_CANVAS = [
   'survey_submitted',
@@ -60,15 +94,18 @@ export const triggerConfigSchema = z.discriminatedUnion('type', [
 // Step configs
 export const sendEmailConfigSchema = z.object({
   type: z.literal('send_email'),
-  template_id: z.string().uuid().nullable().optional(),
-  to_expression: z.string().nullable().optional(),
+  template_id: z.string().uuid(messages.validation.emailTemplateRequired),
+  to_expression: recipientExpression,
   variable_bindings: z.record(z.string()).optional(),
 })
 
 const switchBranchSchema = z.object({
   id: z.string().min(1).regex(/^[a-z0-9_-]+$/i),
   label: z.string().min(1),
-  expression: z.string().min(1),
+  // Per-branch refinement: every non-default branch must reference at least
+  // one variable like {{step.field}}. The 'default' branch is the catch-all
+  // and is exempt — recognized as the literal string 'default'.
+  expression: z.string().min(1, messages.validation.expressionRequired),
 })
 
 export const switchConfigSchema = z.object({
@@ -78,15 +115,27 @@ export const switchConfigSchema = z.object({
     .superRefine((branches, ctx) => {
       const defaultCount = branches.filter(b => b.expression.trim() === 'default').length
       if (defaultCount !== 1) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Switch wymaga dokładnie jednej gałęzi default' })
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: messages.validation.switchRequiresOneDefault })
       }
       if (branches[branches.length - 1]?.expression.trim() !== 'default') {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Gałąź default musi być ostatnia' })
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: messages.validation.switchDefaultMustBeLast })
       }
       const ids = branches.map(b => b.id)
       if (new Set(ids).size !== ids.length) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'ID gałęzi muszą być unikalne' })
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: messages.validation.switchBranchIdsMustBeUnique })
       }
+      // Non-default branches must contain at least one bracketed variable.
+      branches.forEach((branch, index) => {
+        const expr = branch.expression.trim()
+        if (expr === 'default') return
+        if (!containsBracketedVariable(expr)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: messages.validation.expressionMustReferenceVariable,
+            path: [index, 'expression'],
+          })
+        }
+      })
     }),
 })
 
@@ -96,6 +145,7 @@ export const delayConfigSchema = z.object({
     .number({
       required_error: messages.validation.durationRequired,
     })
+    .int(messages.validation.durationInteger)
     .positive(messages.validation.durationPositive)
     .or(z.nan().transform(() => undefined as unknown as number)),
   unit: z.enum(['minutes', 'hours', 'days']),
@@ -117,8 +167,8 @@ export const webhookConfigSchema = z.object({
 })
 
 export const outputSchemaFieldSchema = z.object({
-  key: z.string().min(1),
-  label: z.string().min(1),
+  key: z.string().min(1, messages.validation.outputFieldKeyRequired),
+  label: z.string().min(1, messages.validation.outputFieldLabelRequired),
   type: z.enum(['string', 'number', 'boolean', 'object']).default('string'),
 })
 
@@ -126,27 +176,33 @@ export const aiActionConfigSchema = z.object({
   type: z.literal('ai_action'),
   prompt: z.string().min(1, messages.validation.promptRequired),
   model: z.string().nullable().optional(),
-  output_schema: z.array(outputSchemaFieldSchema).nullable().optional(),
+  // At least one output field is required so downstream steps have named
+  // variables ({{stepName.fieldKey}}) to bind against.
+  output_schema: z
+    .array(outputSchemaFieldSchema)
+    .min(1, messages.validation.outputSchemaRequired),
 })
 
 export const getResponseConfigSchema = z.object({
   type: z.literal('get_response'),
-  responseIdExpression: z.string().optional(),
+  responseIdExpression: expressionWithVariable,
 })
 
 export const updateResponseConfigSchema = z.object({
   type: z.literal('update_response'),
-  field_mapping: z.array(
-    z.object({
-      target_column: z.enum(['ai_qualification', 'status', 'notes', 'respondent_name']),
-      source_expression: z.string().min(1),
-    })
-  ),
+  field_mapping: z
+    .array(
+      z.object({
+        target_column: z.enum(['ai_qualification', 'status', 'notes', 'respondent_name']),
+        source_expression: z.string().min(1, messages.validation.sourceExpressionRequired),
+      })
+    )
+    .min(1, messages.validation.fieldMappingRequired),
 })
 
 export const getSurveyLinkConfigSchema = z.object({
   type: z.literal('get_survey_link'),
-  surveyLinkIdExpression: z.string().optional(),
+  surveyLinkIdExpression: expressionWithVariable,
 })
 
 /**

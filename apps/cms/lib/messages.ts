@@ -960,6 +960,7 @@ export const messages = {
     notManualTrigger: 'Ten workflow nie jest typu ręcznego',
     executionNotFound: 'Nie znaleziono wykonania',
     cancelOnlyRunning: 'Można anulować tylko trwające wykonania',
+    workflowInactiveCannotTest: 'Workflow musi być aktywny, aby uruchomić test.',
     // Step types
     stepSendEmail: 'Wyślij email',
     stepDelay: 'Opóźnienie',
@@ -1004,6 +1005,18 @@ export const messages = {
       deleteHint: 'Zaznacz węzeł i naciśnij Delete',
       saveFailed: 'Nie udało się zapisać workflow',
       saveSuccess: 'Workflow zapisany',
+      invalidStepAriaLabel: 'Krok zawiera błędy konfiguracji',
+      validationFailed: 'Walidacja kroków nie powiodła się. Popraw błędy i spróbuj ponownie.',
+      validationBannerSummary: (count: number) => {
+        if (count === 1) return '1 krok wymaga uzupełnienia.'
+        if (count >= 2 && count <= 4) return `${count} kroki wymagają uzupełnienia.`
+        return `${count} kroków wymaga uzupełnienia.`
+      },
+      validationSaveBlocked: (count: number) => {
+        if (count === 1) return 'Popraw błędy w 1 kroku przed zapisem'
+        if (count >= 2 && count <= 4) return `Popraw błędy w ${count} krokach przed zapisem`
+        return `Popraw błędy w ${count} krokach przed zapisem`
+      },
       trigger: 'Wyzwalacz',
       addTriggerHint: 'Dodaj wyzwalacz, aby rozpocząć workflow',
       deleteStep: 'Usuń krok',
@@ -1038,12 +1051,13 @@ export const messages = {
       templateIdPlaceholder: 'Wybierz szablon (opcjonalne)',
       templateLoadError: 'Nie udało się załadować szablonów email.',
       toExpressionLabel: 'Adresat (wyrażenie)',
-      toExpressionPlaceholder: 'np. {{contact.email}}',
-      toExpressionHint: 'Użyj zmiennych z wyzwalacza, np. {{contact.email}}',
+      toExpressionPlaceholder: 'np. klient@example.com lub {{getResponse.clientEmail}}',
+      toExpressionHint: 'Wpisz adres e-mail lub użyj zmiennej z wcześniejszego kroku.',
       // SendEmail variable bindings
       variableBindingsLabel: 'Mapowanie zmiennych',
       variableBindingsEmpty: 'Szablon nie zawiera zmiennych do podstawienia',
-      variableBindingsHint: 'Wybierz skąd pochodzi każda zmienna szablonu',
+      variableBindingsHint: 'Wpisz wartość ręcznie lub wstaw zmienną z wcześniejszego kroku.',
+      variableBindingPlaceholder: 'np. Jan lub {{getResponse.clientName}}',
       variableBindingInputAriaLabel: (key: string) => `Wartość dla zmiennej ${key}`,
       // Switch config
       switchBranchesLabel: 'Gałęzie',
@@ -1052,6 +1066,8 @@ export const messages = {
       switchBranchId: 'ID gałęzi',
       switchBranchLabel: 'Etykieta',
       switchBranchExpression: 'Wyrażenie',
+      switchBranchExpressionPlaceholder: '{{getResponse.contractSigned}} == true',
+      switchBranchExpressionHint: 'Użyj zmiennej z wcześniejszego kroku w nawiasach klamrowych, np. {{getResponse.score}} > 5',
       switchBranchIdHint: 'Małe litery, cyfry, _ lub -. Używany w krawędziach.',
       switchFirstMatchWins: 'Pierwsza pasująca gałąź wygrywa. Default zawsze na końcu.',
       // Delay config
@@ -1072,6 +1088,8 @@ export const messages = {
       // Webhook config
       urlLabel: 'URL',
       urlPlaceholder: 'https://example.com/webhook',
+      webhookUrlPlaceholder: 'https://example.com/hook lub {{settings.webhookUrl}}',
+      webhookUrlHint: 'Wpisz adres URL lub użyj zmiennej.',
       methodLabel: 'Metoda HTTP',
       headersLabel: 'Nagłówki',
       addHeader: '+ Dodaj nagłówek',
@@ -1081,6 +1099,7 @@ export const messages = {
       // AI Action config
       promptLabel: 'Prompt AI',
       promptPlaceholder: 'Opisz co AI ma przeanalizować i jakie dane zwrócić...',
+      aiActionPromptHint: 'Wpisz polecenie i wstawiaj zmienne z wcześniejszych kroków przy pomocy {} Zmienne.',
       modelLabel: 'Model (opcjonalny)',
       modelPlaceholder: 'np. claude-haiku-4-5',
       outputFields: 'Pola wyjściowe',
@@ -1093,10 +1112,11 @@ export const messages = {
       // GetResponse config panel
       getResponseDescription: 'Ten krok pobiera dane odpowiedzi i udostępnia je jako zmienne dla kolejnych kroków.',
       getResponseIdExpressionLabel: 'Źródło ID odpowiedzi',
-      getResponseIdExpressionHint: 'Wyrażenie wskazujące skąd pobrać ID odpowiedzi. Domyślnie pochodzi z wyzwalacza.',
-      getResponseIdExpressionPlaceholder: 'np. {{responseId}}',
+      getResponseIdExpressionHint: 'Użyj zmiennej z triggera lub wcześniejszego kroku.',
+      getResponseIdExpressionPlaceholder: '{{trigger.responseId}}',
       getSurveyLinkIdExpressionLabel: 'Źródło ID linku ankiety',
-      getSurveyLinkIdExpressionHint: 'Wyrażenie wskazujące skąd pobrać ID linku ankiety. Domyślnie pochodzi z wyzwalacza.',
+      getSurveyLinkIdExpressionHint: 'Użyj zmiennej z triggera lub wcześniejszego kroku.',
+      getSurveyLinkIdExpressionPlaceholder: '{{trigger.surveyLinkId}}',
       getResponseAvailableVars: 'Dostępne zmienne',
       getResponseVarHintBefore: 'Użyj tych zmiennych w kolejnych krokach wpisując',
       getResponseVarHintAfter: 'lub korzystając z wstawiacza zmiennych.',
@@ -1277,6 +1297,7 @@ export const messages = {
       invalidJson: 'Nieprawidłowy format JSON',
       noExecutions: 'Brak wykonań do załadowania',
       executionId: 'ID wykonania',
+      inactiveNote: 'Aby uruchomić test, najpierw aktywuj workflow przyciskiem w nagłówku.',
     },
     // Templates
     templatesSectionTitle: 'Zacznij od szablonu',
@@ -1798,12 +1819,28 @@ export const messages = {
     sourceStepRequired: 'Krok źródłowy jest wymagany',
     targetStepRequired: 'Krok docelowy jest wymagany',
     expressionRequired: 'Wyrażenie warunku jest wymagane',
+    expressionMustReferenceVariable:
+      'Wyrażenie musi zawierać zmienną w nawiasach klamrowych, np. {{step.field}}',
+    switchRequiresOneDefault: 'Switch wymaga dokładnie jednej gałęzi default',
+    switchDefaultMustBeLast: 'Gałąź default musi być ostatnia',
+    switchBranchIdsMustBeUnique: 'ID gałęzi muszą być unikalne',
+    recipientRequired: 'Adres odbiorcy jest wymagany',
+    recipientInvalid:
+      'Wpisz prawidłowy adres email lub użyj zmiennej {{step.field}}',
+    emailTemplateRequired: 'Wybierz szablon email',
     durationRequired: 'Czas opóźnienia jest wymagany',
     durationPositive: 'Czas opóźnienia musi być większy od zera',
+    durationInteger: 'Czas opóźnienia musi być liczbą całkowitą',
     webhookUrlRequired: 'URL webhooka jest wymagany',
     webhookUrlInvalid: 'Nieprawidłowy URL webhooka',
     webhookMethodRequired: 'Metoda HTTP jest wymagana',
     promptRequired: 'Prompt jest wymagany',
+    outputSchemaRequired:
+      'Dodaj co najmniej jedno pole wyjściowe (output schema)',
+    outputFieldKeyRequired: 'Klucz pola jest wymagany',
+    outputFieldLabelRequired: 'Etykieta pola jest wymagana',
+    sourceExpressionRequired: 'Wyrażenie źródłowe jest wymagane',
+    fieldMappingRequired: 'Dodaj co najmniej jedno mapowanie pól',
     // Shop — Marketplace
     marketplaceRequired: 'Wybierz marketplace',
     invalidProductId: 'Nieprawidłowy identyfikator produktu',

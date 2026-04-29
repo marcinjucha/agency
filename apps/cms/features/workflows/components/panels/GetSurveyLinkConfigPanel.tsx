@@ -15,7 +15,7 @@ type GetSurveyLinkFormData = StepConfigGetSurveyLink
 
 const outputFields = resolveOutputSchema(STEP_MAP['get_survey_link'].outputSchema)
 
-export function GetSurveyLinkConfigPanel({ stepConfig, onChange, availableVariables }: ConfigPanelProps) {
+export function GetSurveyLinkConfigPanel({ stepConfig, onChange, availableVariables, isInvalid }: ConfigPanelProps) {
   const m = messages.workflows.editor
 
   const isFirstRender = useRef(true)
@@ -26,13 +26,27 @@ export function GetSurveyLinkConfigPanel({ stepConfig, onChange, availableVariab
   const variables = availableVariables ?? []
   const config = stepConfig as GetSurveyLinkFormData | undefined
 
-  const { control, watch, setValue } = useForm<GetSurveyLinkFormData>({
+  const {
+    control,
+    watch,
+    setValue,
+    trigger,
+    formState: { errors },
+  } = useForm<GetSurveyLinkFormData>({
+    mode: 'onChange',
     resolver: zodResolver(getSurveyLinkConfigSchema),
     defaultValues: {
       type: 'get_survey_link',
       surveyLinkIdExpression: config?.surveyLinkIdExpression ?? '{{surveyLinkId}}',
     },
   })
+
+  // Trigger validation on mount when the step is already marked invalid (amber ring on canvas)
+  // Empty deps array: fires exactly once after mount — intentional
+  useEffect(() => {
+    if (isInvalid) { void trigger() }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const formValues = watch()
   useEffect(() => {
@@ -68,12 +82,14 @@ export function GetSurveyLinkConfigPanel({ stepConfig, onChange, availableVariab
                   expressionInputRef.current = el
                   f.ref(el)
                 }}
-                placeholder="{{surveyLinkId}}"
+                placeholder={m.getSurveyLinkIdExpressionPlaceholder}
                 value={f.value ?? ''}
                 onChange={f.onChange}
                 onBlur={f.onBlur}
                 className="h-9 font-mono text-xs"
                 aria-label={m.getSurveyLinkIdExpressionLabel}
+                aria-invalid={!!errors.surveyLinkIdExpression}
+                aria-describedby={errors.surveyLinkIdExpression ? 'get-survey-link-id-expr-error' : undefined}
               />
             )}
           />
@@ -88,6 +104,11 @@ export function GetSurveyLinkConfigPanel({ stepConfig, onChange, availableVariab
             />
           )}
         </div>
+        {errors.surveyLinkIdExpression && (
+          <p id="get-survey-link-id-expr-error" role="alert" className="text-xs text-destructive">
+            {errors.surveyLinkIdExpression.message}
+          </p>
+        )}
       </div>
 
       <hr className="border-border" />

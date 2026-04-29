@@ -15,6 +15,10 @@ interface WorkflowEditorHeaderProps {
   isActive: boolean
   isDirty: boolean
   isSaving: boolean
+  /** When false, save button is disabled and shows a tooltip listing how many steps need fixes. */
+  isValid?: boolean
+  /** Number of invalid steps (used for tooltip pluralization when isValid is false). */
+  validationCount?: number
   onSave: () => void
   onToggleActive: (active: boolean) => void
 }
@@ -26,6 +30,8 @@ export function WorkflowEditorHeader({
   isActive,
   isDirty,
   isSaving,
+  isValid = true,
+  validationCount = 0,
   onSave,
   onToggleActive,
 }: WorkflowEditorHeaderProps) {
@@ -66,7 +72,8 @@ export function WorkflowEditorHeader({
         <Button
           size="sm"
           onClick={onSave}
-          disabled={!isDirty || isSaving}
+          disabled={!isDirty || isSaving || !isValid}
+          title={!isValid ? messages.workflows.editor.validationSaveBlocked(validationCount) : undefined}
         >
           {isSaving ? messages.workflows.editor.saving : messages.workflows.editor.save}
         </Button>

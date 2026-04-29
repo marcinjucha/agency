@@ -14,7 +14,7 @@ import {
   type TriggerType,
   type StepType,
 } from '../types'
-import { LayoutGrid, FlaskConical } from 'lucide-react'
+import { LayoutGrid, FlaskConical, AlertTriangle } from 'lucide-react'
 import { Button, ErrorState } from '@agency/ui'
 import { ConfigPanelWrapper, getPanelComponent } from './panels'
 import type { ConfigPanelProps } from './panels'
@@ -22,6 +22,7 @@ import { StepLibraryPanel } from './StepLibraryPanel'
 import { TestModePanel } from './TestModePanel'
 import { collectAvailableVariables } from '../engine/utils'
 import { getStepTypeLabel, getOutputFieldLabel } from '../utils/step-labels'
+import { validateAllSteps, type ValidationResult } from '../utils/validate-steps'
 
 const WorkflowCanvas = lazy(() => import('./WorkflowCanvas'))
 
@@ -106,10 +107,12 @@ function WorkflowEditorContent({ workflow, workflowId }: WorkflowEditorContentPr
       }
     })
 
-    // When trigger_type is 'manual' (default from dialog), don't add a synthetic trigger node.
-    // Let the user add one from the canvas dropdown instead.
+    // Always render a synthetic trigger node when the workflow has no trigger step.
+    // 'manual' is a legitimate trigger type (not a placeholder), and AAA-T-211 removed
+    // the AddNodeDropdown — without a synthetic trigger, empty workflows have no UI to
+    // bootstrap a trigger and the canvas drag-drop also rejects trigger drops by design.
     const hasTriggerStep = stepNodes.some((n) => n.type === 'trigger')
-    if (!hasTriggerStep && workflow.trigger_type !== 'manual') {
+    if (!hasTriggerStep) {
       stepNodes.unshift({
         id: syntheticTriggerIdRef.current,
         type: 'trigger',
@@ -270,6 +273,21 @@ function WorkflowEditorContent({ workflow, workflowId }: WorkflowEditorContentPr
         })),
       }
 
+      // Defensive client-side gate — also enforced on the server.
+      // Prevents racy clicks when validation memo hasn't refreshed yet.
+      const preflightValidation = validateAllSteps(
+        payload.steps.map((s) => ({
+          id: s.id ?? crypto.randomUUID(),
+          step_type: s.step_type,
+          step_config: s.step_config,
+        }))
+      )
+      if (!preflightValidation.isValid) {
+        setSaveError(messages.workflows.editor.validationFailed)
+        setIsSaving(false)
+        return
+      }
+
       const result = await saveWorkflowCanvasFn({ data: { workflowId: workflow.id, data: payload } })
 
       if (result.success) {
@@ -327,6 +345,35 @@ function WorkflowEditorContent({ workflow, workflowId }: WorkflowEditorContentPr
     return collectAvailableVariables(selectedNode.id, steps, edgeList, workflow.trigger_type, getStepTypeLabel, getOutputFieldLabel)
   }, [selectedNode, workflow.trigger_type, isDirty])
 
+  // Live validation derived from canvas state. Re-runs when isDirty toggles
+  // (closest reactive proxy for canvas mutations) or when a node is selected
+  // (config panel edits flow through onConfigChange → updateNodeData → isDirty).
+  const validation = useMemo<ValidationResult>(() => {
+    if (!canvasRef.current) {
+      return { isValid: true, errors: [], errorsByStepId: new Map() }
+    }
+    const nodes = canvasRef.current.getNodes()
+    const steps = nodes.map((n) => {
+      const isSelected = selectedNode !== null && n.id === selectedNode.id
+      return {
+        id: n.id,
+        step_type: isSelected
+          ? selectedNode.stepType
+          : (n.data as { stepType: string }).stepType,
+        step_config: isSelected
+          ? selectedNode.stepConfig // synchronously updated via setSelectedNode in handleConfigChange
+          : ((n.data as { stepConfig?: Record<string, unknown> }).stepConfig ?? {}) as Record<string, unknown>,
+      }
+    })
+    return validateAllSteps(steps)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- selectedNode is the sync proxy for canvas state
+  }, [isDirty, selectedNode, workflow.trigger_type])
+
+  const invalidStepIds = useMemo(
+    () => new Set(validation.errorsByStepId.keys()),
+    [validation],
+  )
+
   const PanelComponent = selectedNode ? getPanelComponent(selectedNode.stepType) : null
 
   return (
@@ -338,6 +385,8 @@ function WorkflowEditorContent({ workflow, workflowId }: WorkflowEditorContentPr
         isActive={isActive}
         isDirty={isDirty}
         isSaving={isSaving}
+        isValid={validation.isValid}
+        validationCount={validation.errors.length}
         onSave={handleSave}
         onToggleActive={handleToggleActive}
       />
@@ -349,6 +398,16 @@ function WorkflowEditorContent({ workflow, workflowId }: WorkflowEditorContentPr
       <div className="flex-1 min-h-0 flex flex-row">
         <StepLibraryPanel isOpen={isLibraryOpen} onClose={() => setIsLibraryOpen(false)} />
         <div className="flex-1 min-w-0 relative">
+          {!validation.isValid && (
+            <div
+              role="status"
+              aria-live="polite"
+              className="absolute top-14 left-1/2 -translate-x-1/2 z-10 px-3 py-1.5 rounded-full text-xs font-medium text-amber-600 bg-background border border-amber-500/40 shadow-sm flex items-center gap-1.5 pointer-events-none whitespace-nowrap"
+            >
+              <AlertTriangle className="h-3 w-3 shrink-0" />
+              {messages.workflows.editor.validationBannerSummary(validation.errors.length)}
+            </div>
+          )}
           <div className="absolute top-3 left-3 z-10 flex items-center gap-2">
             <Button
               variant="outline"
@@ -382,6 +441,7 @@ function WorkflowEditorContent({ workflow, workflowId }: WorkflowEditorContentPr
               hasTriggerNode={hasTriggerNode}
               triggerType={workflow.trigger_type}
               getLabel={getLabel}
+              invalidStepIds={invalidStepIds}
             />
           </Suspense>
         </div>
@@ -389,6 +449,7 @@ function WorkflowEditorContent({ workflow, workflowId }: WorkflowEditorContentPr
           <TestModePanel
             workflowId={workflow.id}
             triggerType={workflow.trigger_type}
+            isActive={isActive}
             onClose={handleTestModeToggle}
           />
         ) : (
@@ -409,6 +470,7 @@ function WorkflowEditorContent({ workflow, workflowId }: WorkflowEditorContentPr
                 onChange={handleConfigChange}
                 triggerType={workflow.trigger_type}
                 availableVariables={availableVariables}
+                isInvalid={validation.errorsByStepId.has(selectedNode.id)}
               />
             </ConfigPanelWrapper>
           )

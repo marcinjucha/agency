@@ -1,6 +1,6 @@
 import { memo } from 'react'
 import { Handle, Position, type NodeProps } from '@xyflow/react'
-import { Clock } from 'lucide-react'
+import { Clock, AlertTriangle } from 'lucide-react'
 import { nodeBaseClasses, selectedClasses, borderColors } from './node-styles'
 import { messages } from '@/lib/messages'
 
@@ -9,6 +9,7 @@ export type DelayNodeData = {
   stepType: string
   stepConfig: Record<string, unknown>
   executionStatus?: 'completed' | 'failed' | 'skipped' | 'pending'
+  isInvalid?: boolean
 }
 
 const EXECUTION_RING: Record<string, string> = {
@@ -17,14 +18,24 @@ const EXECUTION_RING: Record<string, string> = {
   skipped: 'opacity-40',
 }
 
+const INVALID_RING = 'ring-2 ring-amber-500'
+
 function DelayNodeComponent({ data, selected }: NodeProps) {
   const nodeData = data as unknown as DelayNodeData
 
-  const execRing = nodeData.executionStatus ? EXECUTION_RING[nodeData.executionStatus] ?? '' : ''
+  // Invalid takes precedence over selection so users see the validation cue while editing.
+  const ring = nodeData.isInvalid
+    ? INVALID_RING
+    : nodeData.executionStatus
+      ? EXECUTION_RING[nodeData.executionStatus] ?? ''
+      : selected
+        ? selectedClasses
+        : ''
 
   return (
     <div
-      className={`${nodeBaseClasses} ${borderColors.delay} ${selected ? selectedClasses : ''} ${execRing}`}
+      className={`${nodeBaseClasses} ${borderColors.delay} ${ring}`}
+      aria-invalid={nodeData.isInvalid ? 'true' : undefined}
     >
       <Handle
         type="target"
@@ -41,6 +52,12 @@ function DelayNodeComponent({ data, selected }: NodeProps) {
             {nodeData.label}
           </p>
         </div>
+        {nodeData.isInvalid && (
+          <AlertTriangle
+            className="h-3.5 w-3.5 text-amber-500 shrink-0 ml-auto"
+            aria-label={messages.workflows.editor.invalidStepAriaLabel}
+          />
+        )}
       </div>
       <Handle
         type="source"

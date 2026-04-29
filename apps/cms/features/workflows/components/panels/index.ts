@@ -37,6 +37,8 @@ export interface ConfigPanelProps {
   surveys?: SurveyOption[]
   /** Pre-loaded email template list from route loader — eliminates per-panel useQuery call */
   emailTemplates?: EmailTemplateOption[]
+  /** When true, the step has validation errors — panel triggers RHF validation on mount to show field-level errors immediately */
+  isInvalid?: boolean
 }
 
 const TRIGGER_TYPES = new Set<string>([

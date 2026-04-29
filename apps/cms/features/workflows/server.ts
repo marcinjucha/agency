@@ -28,6 +28,18 @@ import { createServerClient } from '@/lib/supabase/server-start'
 import { type AuthContext, type StartClient, requireAuthContext } from '@/lib/server-auth'
 import { generateStepSlug, isValidSlugFormat } from './utils/slug'
 import { validateSurveyLinkIdInPayload } from './trigger-payload-validators'
+import { validateAllSteps } from './utils/validate-steps'
+
+/**
+ * Serializable subset of StepValidationError — the full type carries Zod's
+ * ZodIssue[] which has `unknown`-typed fields that TanStack Start RPC can't
+ * serialize. We send only the fields the client needs to surface.
+ */
+interface InvalidStepSummary {
+  stepId: string
+  stepType: string
+  summary: string
+}
 
 // ---------------------------------------------------------------------------
 // DB error mapper
@@ -121,16 +133,45 @@ export const saveWorkflowCanvasFn = createServerFn({ method: 'POST' })
     saveCanvasSchema.parse(input.data)
     return input
   })
-  .handler(async ({ data }): Promise<{ success: boolean; error?: string }> => {
-    const result = await requireAuthContext().andThen((auth) =>
-      bulkSaveCanvas(auth, data.workflowId, data.data)
-    )
+  .handler(
+    async ({
+      data,
+    }): Promise<{
+      success: boolean
+      error?: string
+      invalidSteps?: InvalidStepSummary[]
+    }> => {
+      // Defensive re-validation: client-side gate is the primary defense, but
+      // re-validating here prevents bypass via direct API calls or stale cache.
+      const validation = validateAllSteps(
+        data.data.steps.map((s) => ({
+          id: s.id ?? crypto.randomUUID(),
+          step_type: s.step_type,
+          step_config: s.step_config,
+        }))
+      )
+      if (!validation.isValid) {
+        return {
+          success: false,
+          error: messages.workflows.editor.validationFailed,
+          invalidSteps: validation.errors.map((e) => ({
+            stepId: e.stepId,
+            stepType: e.stepType,
+            summary: e.summary,
+          })),
+        }
+      }
 
-    return result.match(
-      () => ({ success: true }),
-      (error) => ({ success: false, error })
-    )
-  })
+      const result = await requireAuthContext().andThen((auth) =>
+        bulkSaveCanvas(auth, data.workflowId, data.data)
+      )
+
+      return result.match(
+        () => ({ success: true }),
+        (error) => ({ success: false, error })
+      )
+    }
+  )
 
 /**
  * Rename a step's slug.
@@ -732,14 +773,17 @@ function fetchWorkflowForTest(supabase: StartClient, tenantId: string, workflowI
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (supabase as any)
       .from('workflows')
-      .select('id, tenant_id, trigger_type')
+      .select('id, tenant_id, trigger_type, is_active')
       .eq('id', workflowId)
       .maybeSingle(),
     dbError
   )
-    .andThen(fromSupabase<{ id: string; tenant_id: string; trigger_type: string }>())
+    .andThen(fromSupabase<{ id: string; tenant_id: string; trigger_type: string; is_active: boolean }>())
     .andThen((workflow) => {
       if (workflow.tenant_id !== tenantId) return err(messages.workflows.workflowNotFound)
+      // Fast-fail when caller bypasses the disabled UI button (e.g. DevTools, direct RPC).
+      // The button itself is gated on isActive in TestModePanel; this is defense in depth.
+      if (!workflow.is_active) return err(messages.workflows.workflowInactiveCannotTest)
       return ok({ tenantId, triggerType: workflow.trigger_type })
     })
 }

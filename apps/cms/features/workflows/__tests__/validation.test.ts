@@ -6,12 +6,22 @@ vi.mock('@/lib/messages', () => ({
   messages: {
     validation: {
       expressionRequired: 'Wyrażenie jest wymagane',
+      expressionMustReferenceVariable: 'Wyrażenie musi zawierać zmienną',
+      recipientRequired: 'Adres odbiorcy jest wymagany',
+      recipientInvalid: 'Nieprawidłowy odbiorca',
+      emailTemplateRequired: 'Wybierz szablon email',
       durationRequired: 'Czas trwania jest wymagany',
       durationPositive: 'Czas trwania musi być dodatni',
+      durationInteger: 'Czas trwania musi być liczbą całkowitą',
       webhookUrlInvalid: 'Nieprawidłowy URL webhooka',
       webhookUrlRequired: 'URL webhooka jest wymagany',
       webhookMethodRequired: 'Metoda HTTP jest wymagana',
       promptRequired: 'Prompt jest wymagany',
+      outputSchemaRequired: 'Output schema jest wymagany',
+      outputFieldKeyRequired: 'Klucz pola jest wymagany',
+      outputFieldLabelRequired: 'Etykieta pola jest wymagana',
+      sourceExpressionRequired: 'Wyrażenie źródłowe jest wymagane',
+      fieldMappingRequired: 'Mapowanie pól jest wymagane',
       workflowNameRequired: 'Nazwa workflow jest wymagana',
       workflowNameMax: 'Nazwa workflow jest za długa',
       stepTypeRequired: 'Typ kroku jest wymagany',
@@ -31,22 +41,48 @@ import {
 // =============================================================
 
 describe('getResponseConfigSchema', () => {
-  it('parses valid get_response config', () => {
-    const result = getResponseConfigSchema.safeParse({ type: 'get_response' })
+  it('parses valid get_response config with bracketed variable expression', () => {
+    const result = getResponseConfigSchema.safeParse({
+      type: 'get_response',
+      responseIdExpression: '{{responseId}}',
+    })
     expect(result.success).toBe(true)
   })
 
   it('parses get_response config with extra fields (strip mode)', () => {
     // Zod strips unknown keys by default
-    const result = getResponseConfigSchema.safeParse({ type: 'get_response', extra: 'ignored' })
+    const result = getResponseConfigSchema.safeParse({
+      type: 'get_response',
+      responseIdExpression: '{{trigger.responseId}}',
+      extra: 'ignored',
+    })
     expect(result.success).toBe(true)
     if (result.success) {
-      expect(result.data).toEqual({ type: 'get_response' })
+      expect(result.data).toEqual({
+        type: 'get_response',
+        responseIdExpression: '{{trigger.responseId}}',
+      })
     }
   })
 
+  it('rejects missing responseIdExpression', () => {
+    const result = getResponseConfigSchema.safeParse({ type: 'get_response' })
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects responseIdExpression without bracketed variable', () => {
+    const result = getResponseConfigSchema.safeParse({
+      type: 'get_response',
+      responseIdExpression: 'plain-string',
+    })
+    expect(result.success).toBe(false)
+  })
+
   it('rejects wrong type literal', () => {
-    const result = getResponseConfigSchema.safeParse({ type: 'send_email' })
+    const result = getResponseConfigSchema.safeParse({
+      type: 'send_email',
+      responseIdExpression: '{{responseId}}',
+    })
     expect(result.success).toBe(false)
   })
 
@@ -97,12 +133,12 @@ describe('updateResponseConfigSchema', () => {
     }
   })
 
-  it('parses update_response config with empty field_mapping array', () => {
+  it('rejects update_response config with empty field_mapping array (min 1 required)', () => {
     const result = updateResponseConfigSchema.safeParse({
       type: 'update_response',
       field_mapping: [],
     })
-    expect(result.success).toBe(true)
+    expect(result.success).toBe(false)
   })
 
   it('all four valid target_column values parse correctly', () => {
