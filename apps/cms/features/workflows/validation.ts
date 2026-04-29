@@ -283,7 +283,10 @@ export const saveCanvasSchema = z.object({
   steps: z.array(
     z.object({
       id: z.string().uuid().optional(),
-      step_type: z.enum(CANVAS_STEP_TYPE_ENUM),
+      // z.string() instead of z.enum — placeholder step types (PLACEHOLDER_REGISTRY)
+      // are valid canvas nodes but are not in CANVAS_STEP_TYPE_ENUM. This schema
+      // is a DB-write schema; business validation is in validateAllSteps / config panels.
+      step_type: z.string().min(1),
       step_config: z.record(z.unknown()).optional().default({}),
       slug: z.string().optional(),
       position_x: z

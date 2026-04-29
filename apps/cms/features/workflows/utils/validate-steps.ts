@@ -61,9 +61,6 @@ export function validateAllSteps(steps: StepLike[]): ValidationResult {
 
   for (const step of steps) {
     if (isPlaceholderStepType(step.step_type)) continue
-    // step.step_type comes from DB as `string` — cast for lookup, the Record's
-    // typed key narrows the source-of-truth side (compile-time exhaustiveness
-    // check that stepConfigSchemaMap + triggerConfigSchemaMap cover every type).
     const schema = (SCHEMA_BY_STEP_TYPE as Record<string, ZodSchema>)[step.step_type]
     if (!schema) continue
 
