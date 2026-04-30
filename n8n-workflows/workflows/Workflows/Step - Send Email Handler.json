@@ -5,26 +5,26 @@
       "parameters": {
         "inputSource": "passthrough"
       },
-      "id": "72889075-23cd-4f1b-9e4c-4467d14d2927",
+      "id": "f698ac80-4fb4-4fb8-bfa7-19d47dea0726",
       "name": "Start",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.1,
       "position": [
-        -1136,
-        2448
+        -1040,
+        4288
       ]
     },
     {
       "parameters": {
-        "jsCode": "// =============================================================\n// Resolve and Build Email Payload\n// =============================================================\n// Single Code node implements the simpler 4-step flow:\n// Extract Input → Fetch Email Template → Resolve Variables →\n// Substitute Bindings. Uses supabaseRequest() for the template\n// lookup (template_id is the user's explicit choice). Recipient\n// must come from to_expression (literal or {{variable}}) — handlers\n// consume from variableContext, never re-fetch derived data.\n// =============================================================\n\nconst https = require('https');\n\nconst SUPABASE_URL = $env.SUPABASE_URL;\nif (!SUPABASE_URL) throw new Error('SUPABASE_URL environment variable not configured');\nconst SUPABASE_KEY = $env.SUPABASE_SERVICE_ROLE_KEY;\n\nasync function supabaseRequest(path, method, body) {\n  const url = `${SUPABASE_URL}/rest/v1/${path}`;\n  return new Promise((resolve, reject) => {\n    const match = url.match(/^https?:\\/\\/([^/]+)(\\/.*)$/);\n    if (!match) { reject(new Error('Invalid SUPABASE_URL')); return; }\n    const options = {\n      hostname: match[1],\n      path: match[2],\n      method: method || 'GET',\n      headers: {\n        'apikey': SUPABASE_KEY,\n        'Authorization': `Bearer ${SUPABASE_KEY}`,\n        'Content-Type': 'application/json',\n        'Prefer': 'return=representation',\n      },\n    };\n    const req = https.request(options, (res) => {\n      let data = '';\n      res.on('data', (chunk) => data += chunk);\n      res.on('end', () => {\n        try {\n          const parsed = JSON.parse(data);\n          if (res.statusCode >= 400) {\n            reject(new Error(`Supabase ${method} ${path} returned ${res.statusCode}: ${data}`));\n          } else {\n            resolve(parsed);\n          }\n        } catch (e) {\n          reject(new Error(`Parse error for ${path}: ${data}`));\n        }\n      });\n    });\n    req.on('error', reject);\n    if (body) req.write(JSON.stringify(body));\n    req.end();\n  });\n}\n\nfunction resolveVariables(template, context) {\n  if (typeof template !== 'string') return template;\n  return template.replace(/\\{\\{(\\s*[\\w.]+\\s*)\\}\\}/g, (_, rawKey) => {\n    const key = rawKey.trim();\n    const value = getNestedValue(context, key);\n    return (value !== undefined && value !== null) ? String(value) : `{{${key}}}`;\n  });\n}\n\nfunction getNestedValue(obj, path) {\n  const parts = path.split('.');\n  let current = obj;\n  for (const part of parts) {\n    if (current === null || current === undefined || typeof current !== 'object') return undefined;\n    current = current[part];\n  }\n  return current;\n}\n\ntry {\n  const item = $input.first().json;\n  const { resolvedConfig, variableContext, tenantId } = item;\n\n  const templateId = resolvedConfig.template_id || null;\n  const configuredTo = resolvedConfig.to_expression || null;\n  const configuredSubject = resolvedConfig.subject || 'Notification';\n  const configuredHtml = resolvedConfig.html_body || '<p>Notification</p>';\n\n  // ---- Fetch email template (template_id is the user's explicit choice) ----\n  const results = {};\n  if (templateId) {\n    results.template = await supabaseRequest(\n      `email_templates?id=eq.${templateId}&tenant_id=eq.${encodeURIComponent(tenantId ?? '00000000-0000-0000-0000-000000000000')}&limit=1`, 'GET'\n    );\n  }\n\n  // ---- Merge template data ----\n  let subject = configuredSubject;\n  let html = configuredHtml;\n\n  if (results.template && results.template.length > 0) {\n    const tpl = results.template[0];\n    if (tpl.subject) subject = tpl.subject;\n    if (tpl.html_body) html = tpl.html_body;\n  }\n\n  // ---- Resolve recipient ----\n  // Recipient comes from to_expression only. Orchestrator's Prepare Current Step\n  // already substituted any {{variables}} from variableContext. Handlers must not\n  // re-fetch derived data (e.g. survey_links.notification_email) — that's a workflow\n  // authoring concern, surfaced via {{getResponse.*}} or a literal value.\n  const to = configuredTo;\n\n  // Detect unresolved variable literals — clearer error than letting Resend reject.\n  // Example: configured to_expression=\"{{getResponse.clientEmail}}\" but clientEmail was null\n  // → resolveVariables left the literal in place. Surface this as a config issue, not a send error.\n  if (to && /\\{\\{[^}]+\\}\\}/.test(to)) {\n    throw new Error(`Recipient expression contains unresolved variable: \"${to}\". Check that the referenced variable is populated by an earlier step, or pick a different source.`);\n  }\n\n  if (!to) throw new Error('Recipient is required for send_email step. Set to_expression to a literal email address (e.g. user@example.com) or a workflow variable that resolves to an email (e.g. {{getResponse.clientEmail}}).');\n\n  // ---- Resolve variable_bindings against variableContext ----\n  // Each binding maps a template variable key to a workflow expression like {{step1.clientName}}.\n  // resolveVariables() substitutes the expression value from variableContext.\n  const bindings = resolvedConfig.variable_bindings || {};\n  const resolvedBindings = {};\n  for (const [templateVar, expression] of Object.entries(bindings)) {\n    resolvedBindings[templateVar] = resolveVariables(String(expression), variableContext);\n  }\n\n  // ---- Substitute bindings into subject and html ----\n  // Uses simple key lookup — only substitutes variables that have explicit bindings.\n  // Unbound {{var}} placeholders stay as-is (visible in email — signals misconfiguration).\n  function substituteBindings(template, bindings) {\n    return template.replace(/\\{\\{(\\s*[\\w]+\\s*)\\}\\}/g, (match, rawKey) => {\n      const key = rawKey.trim();\n      return Object.prototype.hasOwnProperty.call(bindings, key) ? bindings[key] : match;\n    });\n  }\n\n  subject = substituteBindings(subject, resolvedBindings);\n  html = substituteBindings(html, resolvedBindings);\n\n  return {\n    json: {\n      ...item,\n      emailPayload: { to, subject, html, tenant_id: tenantId },\n    }\n  };\n\n} catch (err) {\n  const item = $input.first().json;\n  return {\n    json: {\n      ...item,\n      stepResult: { success: false, error: err.message },\n    }\n  };\n}\n"
+        "jsCode": "// =============================================================\n// Resolve and Build Email Payload\n// =============================================================\n// Single Code node implements the simpler 4-step flow:\n// Extract Input → Fetch Email Template → Resolve Variables →\n// Substitute Bindings. Uses supabaseRequest() for the template\n// lookup (template_id is the user's explicit choice). Recipient\n// must come from to_expression (literal or {{variable}}) — handlers\n// consume from variableContext, never re-fetch derived data.\n// =============================================================\n\nconst https = require('https');\n\nconst SUPABASE_URL = $env.SUPABASE_URL;\nif (!SUPABASE_URL) throw new Error('SUPABASE_URL environment variable not configured');\nconst SUPABASE_KEY = $env.SUPABASE_SERVICE_ROLE_KEY;\n\n// @inline supabase-request\nasync function supabaseRequest(path, method, body) {\n  const url = `${SUPABASE_URL}/rest/v1/${path}`;\n  return new Promise((resolve, reject) => {\n    const match = url.match(/^https?:\\/\\/([^/]+)(\\/.*)$/);\n    if (!match) { reject(new Error('Invalid SUPABASE_URL')); return; }\n    const options = {\n      hostname: match[1],\n      path: match[2],\n      method: method || 'GET',\n      headers: {\n        'apikey': SUPABASE_KEY,\n        'Authorization': `Bearer ${SUPABASE_KEY}`,\n        'Content-Type': 'application/json',\n        'Prefer': 'return=representation',\n      },\n    };\n    const req = https.request(options, (res) => {\n      let data = '';\n      res.on('data', (chunk) => data += chunk);\n      res.on('end', () => {\n        if (res.statusCode >= 400) {\n          reject(new Error(`Supabase ${method || 'GET'} ${path} ${res.statusCode}: ${data}`));\n          return;\n        }\n        try {\n          resolve(data ? JSON.parse(data) : null);\n        } catch (e) {\n          reject(new Error(`Parse error for ${path}: ${data}`));\n        }\n      });\n    });\n    req.on('error', reject);\n    if (body !== undefined && body !== null) req.write(JSON.stringify(body));\n    req.end();\n  });\n}\n// @end-inline supabase-request\n\nfunction resolveVariables(template, context) {\n  if (typeof template !== 'string') return template;\n  return template.replace(/\\{\\{(\\s*[\\w.]+\\s*)\\}\\}/g, (_, rawKey) => {\n    const key = rawKey.trim();\n    const value = getNestedValue(context, key);\n    return (value !== undefined && value !== null) ? String(value) : `{{${key}}}`;\n  });\n}\n\nfunction getNestedValue(obj, path) {\n  const parts = path.split('.');\n  let current = obj;\n  for (const part of parts) {\n    if (current === null || current === undefined || typeof current !== 'object') return undefined;\n    current = current[part];\n  }\n  return current;\n}\n\ntry {\n  const item = $input.first().json;\n  const { resolvedConfig, variableContext, tenantId } = item;\n\n  const templateId = resolvedConfig.template_id || null;\n  const configuredTo = resolvedConfig.to_expression || null;\n  const configuredSubject = resolvedConfig.subject || 'Notification';\n  const configuredHtml = resolvedConfig.html_body || '<p>Notification</p>';\n\n  // ---- Fetch email template (template_id is the user's explicit choice) ----\n  const results = {};\n  if (templateId) {\n    results.template = await supabaseRequest(\n      `email_templates?id=eq.${templateId}&tenant_id=eq.${encodeURIComponent(tenantId ?? '00000000-0000-0000-0000-000000000000')}&limit=1`, 'GET'\n    );\n  }\n\n  // ---- Merge template data ----\n  let subject = configuredSubject;\n  let html = configuredHtml;\n\n  if (results.template && results.template.length > 0) {\n    const tpl = results.template[0];\n    if (tpl.subject) subject = tpl.subject;\n    if (tpl.html_body) html = tpl.html_body;\n  }\n\n  // ---- Resolve recipient ----\n  // Recipient comes from to_expression only. Orchestrator's Prepare Current Step\n  // already substituted any {{variables}} from variableContext. Handlers must not\n  // re-fetch derived data (e.g. survey_links.notification_email) — that's a workflow\n  // authoring concern, surfaced via {{getResponse.*}} or a literal value.\n  const to = configuredTo;\n\n  // Detect unresolved variable literals — clearer error than letting Resend reject.\n  // Example: configured to_expression=\"{{getResponse.clientEmail}}\" but clientEmail was null\n  // → resolveVariables left the literal in place. Surface this as a config issue, not a send error.\n  if (to && /\\{\\{[^}]+\\}\\}/.test(to)) {\n    throw new Error(`Recipient expression contains unresolved variable: \"${to}\". Check that the referenced variable is populated by an earlier step, or pick a different source.`);\n  }\n\n  if (!to) throw new Error('Recipient is required for send_email step. Set to_expression to a literal email address (e.g. user@example.com) or a workflow variable that resolves to an email (e.g. {{getResponse.clientEmail}}).');\n\n  // ---- Resolve variable_bindings against variableContext ----\n  // Each binding maps a template variable key to a workflow expression like {{step1.clientName}}.\n  // resolveVariables() substitutes the expression value from variableContext.\n  const bindings = resolvedConfig.variable_bindings || {};\n  const resolvedBindings = {};\n  for (const [templateVar, expression] of Object.entries(bindings)) {\n    resolvedBindings[templateVar] = resolveVariables(String(expression), variableContext);\n  }\n\n  // ---- Substitute bindings into subject and html ----\n  // Uses simple key lookup — only substitutes variables that have explicit bindings.\n  // Unbound {{var}} placeholders stay as-is (visible in email — signals misconfiguration).\n  function substituteBindings(template, bindings) {\n    return template.replace(/\\{\\{(\\s*[\\w]+\\s*)\\}\\}/g, (match, rawKey) => {\n      const key = rawKey.trim();\n      return Object.prototype.hasOwnProperty.call(bindings, key) ? bindings[key] : match;\n    });\n  }\n\n  subject = substituteBindings(subject, resolvedBindings);\n  html = substituteBindings(html, resolvedBindings);\n\n  return {\n    json: {\n      ...item,\n      emailPayload: { to, subject, html, tenant_id: tenantId },\n    }\n  };\n\n} catch (err) {\n  const item = $input.first().json;\n  return {\n    json: {\n      ...item,\n      stepResult: { success: false, error: err.message },\n    }\n  };\n}\n"
       },
-      "id": "8ecbfdcb-61fb-4bb9-8449-ef1915efbc4d",
+      "id": "a374bb26-d2d4-4f4a-a42c-530d2c66d31e",
       "name": "Resolve and Build Payload",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -912,
-        2448
+        -816,
+        4288
       ]
     },
     {
@@ -59,39 +59,52 @@
           "fallbackOutput": "extra"
         }
       },
-      "id": "664c6735-cb23-4df5-9ab8-c92a2c80ae72",
+      "id": "1b2e5b9f-3b96-478a-afcf-137330c8d342",
       "name": "Check Error",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.2,
       "position": [
-        -688,
-        2448
+        -592,
+        4288
       ]
     },
     {
       "parameters": {
         "jsCode": "// Pass through error result — preserve orchestrator context\nconst item = $input.first().json;\nreturn {\n  json: {\n    ...item,\n  }\n};\n"
       },
-      "id": "e6ea6270-d355-443e-8650-3a9350fb4678",
+      "id": "07513b9d-1e6c-45a9-b97d-12a4cb631478",
       "name": "Pass Error",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -464,
-        2352
+        -368,
+        4192
       ]
     },
     {
       "parameters": {
         "jsCode": "// Flatten emailPayload to top level for Send Email subworkflow\n// Send Email expects { to, subject, html, tenant_id }\nconst item = $input.first().json;\nconst { to, subject, html, tenant_id } = item.emailPayload;\nreturn { json: { to, subject, html, tenant_id } };\n"
       },
-      "id": "e5861889-cf32-4a48-95f1-649c91ff73f7",
+      "id": "49d66554-e66c-4903-a12a-fbbddec1217f",
       "name": "Flatten Email Payload",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -464,
-        2544
+        -368,
+        4384
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// =============================================================\n// Save Input Payload — audit per attempt (T-209)\n// =============================================================\n// Save rendered ready-to-execute payload BEFORE external call.\n// Each retry attempt produces a fresh render via this same path.\n// (Reuse cached input_payload on retry — planowany jako follow-up task.)\n// =============================================================\n\nconst https = require('https');\n\nconst SUPABASE_URL = $env.SUPABASE_URL;\nif (!SUPABASE_URL) throw new Error('SUPABASE_URL environment variable not configured');\nconst SUPABASE_KEY = $env.SUPABASE_SERVICE_ROLE_KEY;\n\n// @inline supabase-request\nasync function supabaseRequest(path, method, body) {\n  const url = `${SUPABASE_URL}/rest/v1/${path}`;\n  return new Promise((resolve, reject) => {\n    const match = url.match(/^https?:\\/\\/([^/]+)(\\/.*)$/);\n    if (!match) { reject(new Error('Invalid SUPABASE_URL')); return; }\n    const options = {\n      hostname: match[1],\n      path: match[2],\n      method: method || 'GET',\n      headers: {\n        'apikey': SUPABASE_KEY,\n        'Authorization': `Bearer ${SUPABASE_KEY}`,\n        'Content-Type': 'application/json',\n        'Prefer': 'return=representation',\n      },\n    };\n    const req = https.request(options, (res) => {\n      let data = '';\n      res.on('data', (chunk) => data += chunk);\n      res.on('end', () => {\n        if (res.statusCode >= 400) {\n          reject(new Error(`Supabase ${method || 'GET'} ${path} ${res.statusCode}: ${data}`));\n          return;\n        }\n        try {\n          resolve(data ? JSON.parse(data) : null);\n        } catch (e) {\n          reject(new Error(`Parse error for ${path}: ${data}`));\n        }\n      });\n    });\n    req.on('error', reject);\n    if (body !== undefined && body !== null) req.write(JSON.stringify(body));\n    req.end();\n  });\n}\n// @end-inline supabase-request\n\nconst item = $input.first().json;\n// Send Email handler: items here have flat { to, subject, html, tenant_id } shape\n// (post Flatten Email Payload). Need to reach back to upstream node for currentStepExecId.\n// NOTE: Reach back via $('Resolve and Build Payload') for currentStepExecId because\n// Flatten Email Payload (upstream) drops orchestrator context (Payload Flattening\n// anti-pattern, see ag-n8n-step-handlers skill). Other 7 handlers read from item directly.\nconst upstream = $('Resolve and Build Payload').first().json;\nconst inputPayload = {\n  to: item.to,\n  subject: item.subject,\n  html: item.html,\n  tenant_id: item.tenant_id,\n};\n\nif (upstream.currentStepExecId) {\n  await supabaseRequest(\n    `workflow_step_executions?id=eq.${upstream.currentStepExecId}`,\n    'PATCH',\n    { input_payload: inputPayload }\n  );\n}\n\nreturn { json: item };\n"
+      },
+      "id": "e2dec4ac-bb5b-40e9-a84f-28afaf0cd866",
+      "name": "Save Input Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -144,
+        4384
       ]
     },
     {
@@ -113,10 +126,10 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.3,
       "position": [
-        -240,
-        2544
+        80,
+        4384
       ],
-      "id": "cb98304c-1b89-458d-9079-990892515476",
+      "id": "e3361166-2575-43ab-906f-cf04ac99deb0",
       "name": "Call Send Email",
       "onError": "continueErrorOutput"
     },
@@ -124,26 +137,26 @@
       "parameters": {
         "jsCode": "// Handle Send Email subworkflow failure — preserve orchestrator context\nconst item = $('Resolve and Build Payload').first().json;\nconst errorData = $input.first().json;\nconst errorMsg = errorData.error?.message || errorData.message || 'Send Email subworkflow failed';\nreturn {\n  json: {\n    ...item,\n    stepResult: { success: false, error: errorMsg },\n  }\n};\n"
       },
-      "id": "f3727f60-7d89-4189-94cd-718350aa381d",
+      "id": "9fd5e6c3-3a96-426b-9aa4-aa0a483b013c",
       "name": "Handle Email Error",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -16,
-        2640
+        304,
+        4480
       ]
     },
     {
       "parameters": {
         "jsCode": "// Build success result — preserve orchestrator context\nconst item = $('Resolve and Build Payload').first().json;\nreturn {\n  json: {\n    ...item,\n    stepResult: {\n      success: true,\n      outputPayload: {\n        emailSent: true,\n        recipientEmail: item.emailPayload.to,\n      },\n    },\n  }\n};\n"
       },
-      "id": "9b68fe05-a619-493b-9c8d-30cf0e1470c7",
+      "id": "9c466be3-96f0-4b14-a770-6a330f78deb3",
       "name": "Build Success Result",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -16,
-        2448
+        304,
+        4288
       ]
     }
   ],
@@ -193,6 +206,17 @@
       "main": [
         [
           {
+            "node": "Save Input Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Input Payload": {
+      "main": [
+        [
+          {
             "node": "Call Send Email",
             "type": "main",
             "index": 0
@@ -228,7 +252,7 @@
     "callerPolicy": "workflowsFromSameOwner",
     "availableInMCP": false
   },
-  "versionId": "362987de-61eb-41eb-abad-544df1d6a9c1",
+  "versionId": "ffcf6aac-0212-47a2-8b26-c013de522f67",
   "meta": {
     "instanceId": "b46d0b13d69880a2fec430102877b55af4e44991549a68a3e78cd50a4dc1a09e"
   },

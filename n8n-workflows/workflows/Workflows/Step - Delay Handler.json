@@ -5,54 +5,66 @@
       "parameters": {
         "inputSource": "passthrough"
       },
-      "id": "d1ba973a-0387-43d5-880d-ac1796577b98",
+      "id": "863a2709-3af8-482d-a8e4-7b22f066f207",
       "name": "Start",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.1,
       "position": [
-        -464,
-        112
+        3472,
+        528
       ]
     },
     {
       "parameters": {
-        "jsCode": "// =============================================================\n// Compute Duration + Mark Paused\n// =============================================================\n// Calculates delay seconds, then marks step_execution=waiting\n// and workflow_execution=paused via Promise.all().\n// Eliminates fan-in race from 2 parallel Supabase UPDATEs.\n// =============================================================\n\nconst https = require('https');\n\nconst SUPABASE_URL = $env.SUPABASE_URL;\nif (!SUPABASE_URL) throw new Error('SUPABASE_URL environment variable not configured');\nconst SUPABASE_KEY = $env.SUPABASE_SERVICE_ROLE_KEY;\n\nasync function supabaseRequest(path, method, body) {\n  const url = `${SUPABASE_URL}/rest/v1/${path}`;\n  return new Promise((resolve, reject) => {\n    const match = url.match(/^https?:\\/\\/([^/]+)(\\/.*)$/);\n    if (!match) { reject(new Error('Invalid SUPABASE_URL')); return; }\n    const options = {\n      hostname: match[1],\n      path: match[2],\n      method: method || 'GET',\n      headers: {\n        'apikey': SUPABASE_KEY,\n        'Authorization': `Bearer ${SUPABASE_KEY}`,\n        'Content-Type': 'application/json',\n        'Prefer': 'return=representation',\n      },\n    };\n    const req = https.request(options, (res) => {\n      let data = '';\n      res.on('data', (chunk) => data += chunk);\n      res.on('end', () => {\n        try {\n          const parsed = JSON.parse(data);\n          if (res.statusCode >= 400) {\n            reject(new Error(`Supabase ${method} ${path} returned ${res.statusCode}: ${data}`));\n          } else {\n            resolve(parsed);\n          }\n        } catch (e) {\n          reject(new Error(`Parse error for ${path}: ${data}`));\n        }\n      });\n    });\n    req.on('error', reject);\n    if (body) req.write(JSON.stringify(body));\n    req.end();\n  });\n}\n\nconst item = $input.first().json;\nconst config = item.resolvedConfig || item.step.step_config;\n\nconst value = Number(config.value) || 1;\nconst unit = config.unit || 'minutes';\nconst multipliers = { minutes: 60, hours: 3600, days: 86400 };\nconst seconds = value * (multipliers[unit] || 60);\n\nconst resumeAt = new Date(Date.now() + seconds * 1000).toISOString();\n\n// Mark step waiting + execution paused in parallel\nawait Promise.all([\n  supabaseRequest(\n    `workflow_step_executions?id=eq.${item.currentStepExecId}`,\n    'PATCH',\n    { status: 'waiting', resume_at: resumeAt }\n  ),\n  supabaseRequest(\n    `workflow_executions?id=eq.${item.executionId}`,\n    'PATCH',\n    { status: 'paused' }\n  ),\n]);\n\nreturn {\n  json: {\n    ...item,\n    delaySeconds: seconds,\n  }\n};\n"
+        "jsCode": "// =============================================================\n// Compute Duration + Mark Paused\n// =============================================================\n// Calculates delay seconds, then marks step_execution=waiting\n// and workflow_execution=paused via Promise.all().\n// Eliminates fan-in race from 2 parallel Supabase UPDATEs.\n// =============================================================\n\nconst https = require('https');\n\nconst SUPABASE_URL = $env.SUPABASE_URL;\nif (!SUPABASE_URL) throw new Error('SUPABASE_URL environment variable not configured');\nconst SUPABASE_KEY = $env.SUPABASE_SERVICE_ROLE_KEY;\n\n// @inline supabase-request\nasync function supabaseRequest(path, method, body) {\n  const url = `${SUPABASE_URL}/rest/v1/${path}`;\n  return new Promise((resolve, reject) => {\n    const match = url.match(/^https?:\\/\\/([^/]+)(\\/.*)$/);\n    if (!match) { reject(new Error('Invalid SUPABASE_URL')); return; }\n    const options = {\n      hostname: match[1],\n      path: match[2],\n      method: method || 'GET',\n      headers: {\n        'apikey': SUPABASE_KEY,\n        'Authorization': `Bearer ${SUPABASE_KEY}`,\n        'Content-Type': 'application/json',\n        'Prefer': 'return=representation',\n      },\n    };\n    const req = https.request(options, (res) => {\n      let data = '';\n      res.on('data', (chunk) => data += chunk);\n      res.on('end', () => {\n        if (res.statusCode >= 400) {\n          reject(new Error(`Supabase ${method || 'GET'} ${path} ${res.statusCode}: ${data}`));\n          return;\n        }\n        try {\n          resolve(data ? JSON.parse(data) : null);\n        } catch (e) {\n          reject(new Error(`Parse error for ${path}: ${data}`));\n        }\n      });\n    });\n    req.on('error', reject);\n    if (body !== undefined && body !== null) req.write(JSON.stringify(body));\n    req.end();\n  });\n}\n// @end-inline supabase-request\n\nconst item = $input.first().json;\nconst config = item.resolvedConfig || item.step.step_config;\n\nconst value = Number(config.value) || 1;\nconst unit = config.unit || 'minutes';\nconst multipliers = { minutes: 60, hours: 3600, days: 86400 };\nconst seconds = value * (multipliers[unit] || 60);\n\nconst resumeAt = new Date(Date.now() + seconds * 1000).toISOString();\n\n// Mark step waiting + execution paused in parallel\nawait Promise.all([\n  supabaseRequest(\n    `workflow_step_executions?id=eq.${item.currentStepExecId}`,\n    'PATCH',\n    { status: 'waiting', resume_at: resumeAt }\n  ),\n  supabaseRequest(\n    `workflow_executions?id=eq.${item.executionId}`,\n    'PATCH',\n    { status: 'paused' }\n  ),\n]);\n\nreturn {\n  json: {\n    ...item,\n    delaySeconds: seconds,\n  }\n};\n"
       },
-      "id": "af1e3d85-3b2c-4aca-b514-74ab196a5597",
+      "id": "74e7dce0-965f-49c0-8c33-961241fb38b6",
       "name": "Compute Duration and Mark Paused",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -160,
-        112
+        3696,
+        528
       ]
     },
     {
       "parameters": {
-        "amount": "={{ $json.delaySeconds }}",
-        "unit": "seconds"
+        "jsCode": "// =============================================================\n// Save Input Payload — audit per attempt (T-209)\n// =============================================================\n// Save resolved delay config + computed seconds + resume_at\n// BEFORE Wait node.\n// =============================================================\n\nconst https = require('https');\n\nconst SUPABASE_URL = $env.SUPABASE_URL;\nif (!SUPABASE_URL) throw new Error('SUPABASE_URL environment variable not configured');\nconst SUPABASE_KEY = $env.SUPABASE_SERVICE_ROLE_KEY;\n\n// @inline supabase-request\nasync function supabaseRequest(path, method, body) {\n  const url = `${SUPABASE_URL}/rest/v1/${path}`;\n  return new Promise((resolve, reject) => {\n    const match = url.match(/^https?:\\/\\/([^/]+)(\\/.*)$/);\n    if (!match) { reject(new Error('Invalid SUPABASE_URL')); return; }\n    const options = {\n      hostname: match[1],\n      path: match[2],\n      method: method || 'GET',\n      headers: {\n        'apikey': SUPABASE_KEY,\n        'Authorization': `Bearer ${SUPABASE_KEY}`,\n        'Content-Type': 'application/json',\n        'Prefer': 'return=representation',\n      },\n    };\n    const req = https.request(options, (res) => {\n      let data = '';\n      res.on('data', (chunk) => data += chunk);\n      res.on('end', () => {\n        if (res.statusCode >= 400) {\n          reject(new Error(`Supabase ${method || 'GET'} ${path} ${res.statusCode}: ${data}`));\n          return;\n        }\n        try {\n          resolve(data ? JSON.parse(data) : null);\n        } catch (e) {\n          reject(new Error(`Parse error for ${path}: ${data}`));\n        }\n      });\n    });\n    req.on('error', reject);\n    if (body !== undefined && body !== null) req.write(JSON.stringify(body));\n    req.end();\n  });\n}\n// @end-inline supabase-request\n\nconst item = $input.first().json;\nconst config = item.resolvedConfig || (item.step && item.step.step_config) || {};\nconst inputPayload = {\n  value: config.value,\n  unit: config.unit,\n  delaySeconds: item.delaySeconds,\n};\n\nif (item.currentStepExecId) {\n  await supabaseRequest(\n    `workflow_step_executions?id=eq.${item.currentStepExecId}`,\n    'PATCH',\n    { input_payload: inputPayload }\n  );\n}\n\nreturn { json: item };\n"
       },
-      "id": "8f4f111f-4f2e-47f6-904a-f050531be787",
+      "id": "8873dcd4-37b9-4d97-b0ae-4bdf97f458f9",
+      "name": "Save Input Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3920,
+        528
+      ]
+    },
+    {
+      "parameters": {
+        "amount": "={{ $json.delaySeconds }}"
+      },
+      "id": "3d4dd8f4-06cb-474a-a54a-fe7f9de6a6ca",
       "name": "Wait",
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
       "position": [
-        120,
-        112
+        4144,
+        528
       ],
       "webhookId": "dly-wait-webhook-0001"
     },
     {
       "parameters": {
-        "jsCode": "// =============================================================\n// Complete and Resume\n// =============================================================\n// After Wait finishes: marks step=completed + execution=running\n// via Promise.all(), then returns result.\n// Eliminates fan-in race from 2 parallel Supabase UPDATEs.\n// =============================================================\n\nconst https = require('https');\n\nconst SUPABASE_URL = $env.SUPABASE_URL;\nif (!SUPABASE_URL) throw new Error('SUPABASE_URL environment variable not configured');\nconst SUPABASE_KEY = $env.SUPABASE_SERVICE_ROLE_KEY;\n\nasync function supabaseRequest(path, method, body) {\n  const url = `${SUPABASE_URL}/rest/v1/${path}`;\n  return new Promise((resolve, reject) => {\n    const match = url.match(/^https?:\\/\\/([^/]+)(\\/.*)$/);\n    if (!match) { reject(new Error('Invalid SUPABASE_URL')); return; }\n    const options = {\n      hostname: match[1],\n      path: match[2],\n      method: method || 'GET',\n      headers: {\n        'apikey': SUPABASE_KEY,\n        'Authorization': `Bearer ${SUPABASE_KEY}`,\n        'Content-Type': 'application/json',\n        'Prefer': 'return=representation',\n      },\n    };\n    const req = https.request(options, (res) => {\n      let data = '';\n      res.on('data', (chunk) => data += chunk);\n      res.on('end', () => {\n        try {\n          const parsed = JSON.parse(data);\n          if (res.statusCode >= 400) {\n            reject(new Error(`Supabase ${method} ${path} returned ${res.statusCode}: ${data}`));\n          } else {\n            resolve(parsed);\n          }\n        } catch (e) {\n          reject(new Error(`Parse error for ${path}: ${data}`));\n        }\n      });\n    });\n    req.on('error', reject);\n    if (body) req.write(JSON.stringify(body));\n    req.end();\n  });\n}\n\nconst prev = $('Compute Duration and Mark Paused').first().json;\n\nawait Promise.all([\n  supabaseRequest(\n    `workflow_step_executions?id=eq.${prev.currentStepExecId}`,\n    'PATCH',\n    {\n      status: 'completed',\n      completed_at: new Date().toISOString(),\n      output_payload: { delay_completed: true, duration_seconds: prev.delaySeconds },\n    }\n  ),\n  supabaseRequest(\n    `workflow_executions?id=eq.${prev.executionId}`,\n    'PATCH',\n    { status: 'running' }\n  ),\n]);\n\nreturn {\n  json: {\n    ...prev,\n    stepResult: {\n      success: true,\n      outputPayload: {\n        delay_completed: true,\n        duration_seconds: prev.delaySeconds,\n      },\n    },\n    alreadyPersisted: true,\n  }\n};\n"
+        "jsCode": "// =============================================================\n// Complete and Resume\n// =============================================================\n// After Wait finishes: marks step=completed + execution=running\n// via Promise.all(), then returns result.\n// Eliminates fan-in race from 2 parallel Supabase UPDATEs.\n// =============================================================\n\nconst https = require('https');\n\nconst SUPABASE_URL = $env.SUPABASE_URL;\nif (!SUPABASE_URL) throw new Error('SUPABASE_URL environment variable not configured');\nconst SUPABASE_KEY = $env.SUPABASE_SERVICE_ROLE_KEY;\n\n// @inline supabase-request\nasync function supabaseRequest(path, method, body) {\n  const url = `${SUPABASE_URL}/rest/v1/${path}`;\n  return new Promise((resolve, reject) => {\n    const match = url.match(/^https?:\\/\\/([^/]+)(\\/.*)$/);\n    if (!match) { reject(new Error('Invalid SUPABASE_URL')); return; }\n    const options = {\n      hostname: match[1],\n      path: match[2],\n      method: method || 'GET',\n      headers: {\n        'apikey': SUPABASE_KEY,\n        'Authorization': `Bearer ${SUPABASE_KEY}`,\n        'Content-Type': 'application/json',\n        'Prefer': 'return=representation',\n      },\n    };\n    const req = https.request(options, (res) => {\n      let data = '';\n      res.on('data', (chunk) => data += chunk);\n      res.on('end', () => {\n        if (res.statusCode >= 400) {\n          reject(new Error(`Supabase ${method || 'GET'} ${path} ${res.statusCode}: ${data}`));\n          return;\n        }\n        try {\n          resolve(data ? JSON.parse(data) : null);\n        } catch (e) {\n          reject(new Error(`Parse error for ${path}: ${data}`));\n        }\n      });\n    });\n    req.on('error', reject);\n    if (body !== undefined && body !== null) req.write(JSON.stringify(body));\n    req.end();\n  });\n}\n// @end-inline supabase-request\n\nconst prev = $('Compute Duration and Mark Paused').first().json;\n\nawait Promise.all([\n  supabaseRequest(\n    `workflow_step_executions?id=eq.${prev.currentStepExecId}`,\n    'PATCH',\n    {\n      status: 'completed',\n      completed_at: new Date().toISOString(),\n      output_payload: { delay_completed: true, duration_seconds: prev.delaySeconds },\n    }\n  ),\n  supabaseRequest(\n    `workflow_executions?id=eq.${prev.executionId}`,\n    'PATCH',\n    { status: 'running' }\n  ),\n]);\n\nreturn {\n  json: {\n    ...prev,\n    stepResult: {\n      success: true,\n      outputPayload: {\n        delay_completed: true,\n        duration_seconds: prev.delaySeconds,\n      },\n    },\n    alreadyPersisted: true,\n  }\n};\n"
       },
-      "id": "27dd37bc-ab5b-46a8-80a8-05adaeaded2f",
+      "id": "eb4068e4-ec21-4ca8-8914-513bb8acbc5e",
       "name": "Complete and Resume",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        400,
-        112
+        4368,
+        528
       ]
     }
   ],
@@ -70,6 +82,17 @@
       ]
     },
     "Compute Duration and Mark Paused": {
+      "main": [
+        [
+          {
+            "node": "Save Input Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Input Payload": {
       "main": [
         [
           {
@@ -101,7 +124,7 @@
     "callerPolicy": "workflowsFromSameOwner",
     "availableInMCP": false
   },
-  "versionId": "d2432276-9691-4403-8c96-26d6f76ad55c",
+  "versionId": "869ad5d1-d211-4c69-9141-d24803af9027",
   "meta": {
     "instanceId": "b46d0b13d69880a2fec430102877b55af4e44991549a68a3e78cd50a4dc1a09e"
   },

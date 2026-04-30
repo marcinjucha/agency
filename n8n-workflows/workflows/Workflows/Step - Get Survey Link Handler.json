@@ -5,32 +5,56 @@
       "parameters": {
         "inputSource": "passthrough"
       },
-      "id": "b2c3d4e5-2222-4bcd-9ef0-000000000001",
+      "id": "ff3120b2-9579-41c2-b549-1c92459264ef",
       "name": "Start",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.1,
       "position": [
-        0,
-        0
+        1856,
+        640
       ]
     },
     {
       "parameters": {
-        "jsCode": "// =============================================================\n// Get Survey Link Handler — fetch survey link data\n// =============================================================\n// Reads variableContext.surveyLinkId (trigger-level flat key),\n// fetches survey_links row joined to surveys, returns:\n//   notificationEmail, token, surveyTitle\n// tenant_id filter on survey_links fetch for security.\n// =============================================================\n\nconst https = require('https');\n\nconst SUPABASE_URL = $env.SUPABASE_URL;\nif (!SUPABASE_URL) throw new Error('SUPABASE_URL not configured');\nconst SUPABASE_KEY = $env.SUPABASE_SERVICE_ROLE_KEY;\n\nasync function supabaseRequest(path) {\n  const url = `${SUPABASE_URL}/rest/v1/${path}`;\n  return new Promise((resolve, reject) => {\n    const match = url.match(/^https?:\\/\\/([^/]+)(\\/.*)$/);\n    if (!match) { reject(new Error('Invalid SUPABASE_URL')); return; }\n    const options = {\n      hostname: match[1], path: match[2], method: 'GET',\n      headers: {\n        'apikey': SUPABASE_KEY,\n        'Authorization': `Bearer ${SUPABASE_KEY}`,\n        'Content-Type': 'application/json',\n      },\n    };\n    const req = https.request(options, (res) => {\n      let data = '';\n      res.on('data', (chunk) => data += chunk);\n      res.on('end', () => {\n        try {\n          const parsed = JSON.parse(data);\n          if (res.statusCode >= 400) reject(new Error(`Supabase ${path}: ${res.statusCode} ${data}`));\n          else resolve(parsed);\n        } catch (e) { reject(new Error(`Parse error for ${path}: ${data}`)); }\n      });\n    });\n    req.on('error', reject);\n    req.end();\n  });\n}\n\ntry {\n  const item = $input.first().json;\n  const { resolvedConfig, variableContext, tenantId } = item;\n\n  // surveyLinkIdExpression is pre-resolved by Prepare Current Step — use it directly.\n  // Falls back to trigger-level variableContext.surveyLinkId for backward compat.\n  const surveyLinkId = resolvedConfig?.surveyLinkIdExpression ?? variableContext.surveyLinkId;\n  if (!surveyLinkId) throw new Error('get_survey_link: surveyLinkId not found in resolvedConfig or variableContext');\n\n  const safeTenantId = tenantId ?? '00000000-0000-0000-0000-000000000000';\n\n  // Fetch survey_link row with tenant_id security filter\n  // Join surveys to get title\n  // survey_links has no tenant_id column — must verify tenant via survey_link.survey_id → surveys.tenant_id.\n  // Accept either survey_links.id OR survey_links.token as the lookup key (defensive — older trigger\n  // payloads may pass the token; current code passes the id). Try id first, then fall back to token.\n  let surveyLinks = await supabaseRequest(\n    `survey_links?id=eq.${surveyLinkId}&limit=1`\n  );\n  if (!surveyLinks.length) {\n    surveyLinks = await supabaseRequest(\n      `survey_links?token=eq.${surveyLinkId}&limit=1`\n    );\n  }\n  if (!surveyLinks.length) {\n    throw new Error(`Survey link ${surveyLinkId} not found by id or token`);\n  }\n  const surveyLink = surveyLinks[0];\n  if (!surveyLink.survey_id) {\n    throw new Error(`Survey link ${surveyLinkId} has no survey_id`);\n  }\n  // Fetch parent survey to verify tenant + get title\n  const surveys = await supabaseRequest(\n    `surveys?id=eq.${surveyLink.survey_id}&tenant_id=eq.${safeTenantId}&limit=1`\n  );\n  if (!surveys.length) {\n    throw new Error(`Survey link ${surveyLinkId} does not belong to tenant ${safeTenantId}`);\n  }\n  surveyLink.surveys = surveys[0];\n\n  // surveys.title comes from the inner-join in the survey_links query above\n  const surveyTitle = surveyLink.surveys?.title ?? '';\n\n  return {\n    json: {\n      ...item,\n      stepResult: {\n        success: true,\n        outputPayload: {\n          notificationEmail: surveyLink.notification_email ?? null,\n          token: surveyLink.token ?? null,\n          surveyTitle,\n        },\n      },\n    }\n  };\n} catch (err) {\n  const item = $input.first().json;\n  return { json: { ...item, stepResult: { success: false, error: err.message } } };\n}\n"
+        "jsCode": "// =============================================================\n// Save Input Payload — audit per attempt (T-209)\n// =============================================================\n// Save resolved surveyLinkId BEFORE Supabase fetch.\n// =============================================================\n\nconst https = require('https');\n\nconst SUPABASE_URL = $env.SUPABASE_URL;\nif (!SUPABASE_URL) throw new Error('SUPABASE_URL environment variable not configured');\nconst SUPABASE_KEY = $env.SUPABASE_SERVICE_ROLE_KEY;\n\n// @inline supabase-request\nasync function supabaseRequest(path, method, body) {\n  const url = `${SUPABASE_URL}/rest/v1/${path}`;\n  return new Promise((resolve, reject) => {\n    const match = url.match(/^https?:\\/\\/([^/]+)(\\/.*)$/);\n    if (!match) { reject(new Error('Invalid SUPABASE_URL')); return; }\n    const options = {\n      hostname: match[1],\n      path: match[2],\n      method: method || 'GET',\n      headers: {\n        'apikey': SUPABASE_KEY,\n        'Authorization': `Bearer ${SUPABASE_KEY}`,\n        'Content-Type': 'application/json',\n        'Prefer': 'return=representation',\n      },\n    };\n    const req = https.request(options, (res) => {\n      let data = '';\n      res.on('data', (chunk) => data += chunk);\n      res.on('end', () => {\n        if (res.statusCode >= 400) {\n          reject(new Error(`Supabase ${method || 'GET'} ${path} ${res.statusCode}: ${data}`));\n          return;\n        }\n        try {\n          resolve(data ? JSON.parse(data) : null);\n        } catch (e) {\n          reject(new Error(`Parse error for ${path}: ${data}`));\n        }\n      });\n    });\n    req.on('error', reject);\n    if (body !== undefined && body !== null) req.write(JSON.stringify(body));\n    req.end();\n  });\n}\n// @end-inline supabase-request\n\nconst item = $input.first().json;\nconst { resolvedConfig, variableContext, tenantId } = item;\nconst surveyLinkId = (resolvedConfig && resolvedConfig.surveyLinkIdExpression) ?? (variableContext && variableContext.surveyLinkId) ?? null;\nconst inputPayload = {\n  surveyLinkId,\n  tenant_id: tenantId,\n};\n\nif (item.currentStepExecId) {\n  await supabaseRequest(\n    `workflow_step_executions?id=eq.${item.currentStepExecId}`,\n    'PATCH',\n    { input_payload: inputPayload }\n  );\n}\n\nreturn { json: item };\n"
       },
-      "id": "b2c3d4e5-2222-4bcd-9ef0-000000000002",
+      "id": "ebf8a801-cf06-41bc-9288-373ce0bda9ff",
+      "name": "Save Input Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2080,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// =============================================================\n// Get Survey Link Handler — fetch survey link data\n// =============================================================\n// Reads variableContext.surveyLinkId (trigger-level flat key),\n// fetches survey_links row joined to surveys, returns:\n//   notificationEmail, token, surveyTitle\n// tenant_id filter on survey_links fetch for security.\n// =============================================================\n\nconst https = require('https');\n\nconst SUPABASE_URL = $env.SUPABASE_URL;\nif (!SUPABASE_URL) throw new Error('SUPABASE_URL not configured');\nconst SUPABASE_KEY = $env.SUPABASE_SERVICE_ROLE_KEY;\n\n// @inline supabase-request\nasync function supabaseRequest(path, method, body) {\n  const url = `${SUPABASE_URL}/rest/v1/${path}`;\n  return new Promise((resolve, reject) => {\n    const match = url.match(/^https?:\\/\\/([^/]+)(\\/.*)$/);\n    if (!match) { reject(new Error('Invalid SUPABASE_URL')); return; }\n    const options = {\n      hostname: match[1],\n      path: match[2],\n      method: method || 'GET',\n      headers: {\n        'apikey': SUPABASE_KEY,\n        'Authorization': `Bearer ${SUPABASE_KEY}`,\n        'Content-Type': 'application/json',\n        'Prefer': 'return=representation',\n      },\n    };\n    const req = https.request(options, (res) => {\n      let data = '';\n      res.on('data', (chunk) => data += chunk);\n      res.on('end', () => {\n        if (res.statusCode >= 400) {\n          reject(new Error(`Supabase ${method || 'GET'} ${path} ${res.statusCode}: ${data}`));\n          return;\n        }\n        try {\n          resolve(data ? JSON.parse(data) : null);\n        } catch (e) {\n          reject(new Error(`Parse error for ${path}: ${data}`));\n        }\n      });\n    });\n    req.on('error', reject);\n    if (body !== undefined && body !== null) req.write(JSON.stringify(body));\n    req.end();\n  });\n}\n// @end-inline supabase-request\n\ntry {\n  const item = $input.first().json;\n  const { resolvedConfig, variableContext, tenantId } = item;\n\n  // surveyLinkIdExpression is pre-resolved by Prepare Current Step — use it directly.\n  // Falls back to trigger-level variableContext.surveyLinkId for backward compat.\n  const surveyLinkId = resolvedConfig?.surveyLinkIdExpression ?? variableContext.surveyLinkId;\n  if (!surveyLinkId) throw new Error('get_survey_link: surveyLinkId not found in resolvedConfig or variableContext');\n\n  const safeTenantId = tenantId ?? '00000000-0000-0000-0000-000000000000';\n\n  // Fetch survey_link row with tenant_id security filter\n  // Join surveys to get title\n  // survey_links has no tenant_id column — must verify tenant via survey_link.survey_id → surveys.tenant_id.\n  // Accept either survey_links.id OR survey_links.token as the lookup key (defensive — older trigger\n  // payloads may pass the token; current code passes the id). Try id first, then fall back to token.\n  let surveyLinks = await supabaseRequest(\n    `survey_links?id=eq.${surveyLinkId}&limit=1`\n  );\n  if (!surveyLinks.length) {\n    surveyLinks = await supabaseRequest(\n      `survey_links?token=eq.${surveyLinkId}&limit=1`\n    );\n  }\n  if (!surveyLinks.length) {\n    throw new Error(`Survey link ${surveyLinkId} not found by id or token`);\n  }\n  const surveyLink = surveyLinks[0];\n  if (!surveyLink.survey_id) {\n    throw new Error(`Survey link ${surveyLinkId} has no survey_id`);\n  }\n  // Fetch parent survey to verify tenant + get title\n  const surveys = await supabaseRequest(\n    `surveys?id=eq.${surveyLink.survey_id}&tenant_id=eq.${safeTenantId}&limit=1`\n  );\n  if (!surveys.length) {\n    throw new Error(`Survey link ${surveyLinkId} does not belong to tenant ${safeTenantId}`);\n  }\n  surveyLink.surveys = surveys[0];\n\n  // surveys.title comes from the inner-join in the survey_links query above\n  const surveyTitle = surveyLink.surveys?.title ?? '';\n\n  return {\n    json: {\n      ...item,\n      stepResult: {\n        success: true,\n        outputPayload: {\n          notificationEmail: surveyLink.notification_email ?? null,\n          token: surveyLink.token ?? null,\n          surveyTitle,\n        },\n      },\n    }\n  };\n} catch (err) {\n  const item = $input.first().json;\n  return { json: { ...item, stepResult: { success: false, error: err.message } } };\n}\n"
+      },
+      "id": "e21e53a6-05e3-42fd-855d-07ed1b64b60e",
       "name": "Fetch Survey Link Data",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        224,
-        0
+        2304,
+        640
       ]
     }
   ],
   "pinData": {},
   "connections": {
     "Start": {
+      "main": [
+        [
+          {
+            "node": "Save Input Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Input Payload": {
       "main": [
         [
           {
@@ -45,16 +69,12 @@
   "active": true,
   "settings": {
     "executionOrder": "v1",
-    "binaryMode": "separate",
-    "timeSavedMode": "fixed",
-    "errorWorkflow": "pEvMbZGHKOsqaHmK",
-    "callerPolicy": "workflowsFromSameOwner",
-    "availableInMCP": false
+    "binaryMode": "separate"
   },
-  "versionId": "00000000-0000-4000-8000-000000000002",
+  "versionId": "04c6e0b4-53ac-4854-b9ee-16d7ea01ae45",
   "meta": {
     "instanceId": "b46d0b13d69880a2fec430102877b55af4e44991549a68a3e78cd50a4dc1a09e"
   },
-  "id": "00000000-0000-0000-0000-000000000001",
+  "id": "0bHL4z9dL5YqhT89",
   "tags": []
 }
