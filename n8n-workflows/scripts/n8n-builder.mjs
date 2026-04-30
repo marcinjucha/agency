@@ -12,7 +12,7 @@
  *   node n8n-workflows/scripts/n8n-builder.mjs --help
  */
 
-import { readFileSync, writeFileSync, existsSync } from 'node:fs'
+import { readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs'
 import { resolve, dirname } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { fileURLToPath } from 'node:url'
@@ -20,6 +20,7 @@ import { fileURLToPath } from 'node:url'
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const WORKFLOWS_DIR = resolve(__dirname, '../workflows/Workflows')
 const PROCESS_STEP_FILE = resolve(WORKFLOWS_DIR, 'Workflow Process Step.json')
+const EVALUATORS_DIR = resolve(__dirname, 'evaluators')
 
 // ─── Project-specific constants ───────────────────────────────────────────────
 // These are tied to the n8n instance and workspace. Update if instance changes.
@@ -209,6 +210,116 @@ function findFreePosition(nodes) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Command: regenerate-helpers
+// Re-inlines canonical helper source files (e.g. supabase-request.js) into
+// Code nodes that opt in via marker comments:
+//
+//   // @inline supabase-request
+//   <helper body — replaced>
+//   // @end-inline supabase-request
+//
+// Edit the canonical source in scripts/evaluators/<helper>.js, then run this
+// command to sync all opted-in Code nodes. Idempotent — running twice is a
+// no-op when nothing has drifted.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Map marker name → canonical source filename in evaluators/.
+// Add an entry here when introducing a new shared helper.
+const INLINE_HELPERS = {
+  'supabase-request': 'supabase-request.js',
+}
+
+function loadCanonicalHelper(name) {
+  const filename = INLINE_HELPERS[name]
+  if (!filename) throw new Error(`Unknown @inline helper: ${name}`)
+  const src = readFileSync(resolve(EVALUATORS_DIR, filename), 'utf8')
+  // Strip the leading comment block (everything up to the first non-comment line)
+  // so the inlined body is the implementation only — the marker comments in the
+  // Code node already serve as documentation.
+  const lines = src.split('\n')
+  let i = 0
+  while (i < lines.length) {
+    const line = lines[i].trim()
+    if (line === '' || line.startsWith('//')) { i++; continue }
+    break
+  }
+  return lines.slice(i).join('\n').replace(/\n+$/, '\n')
+}
+
+function regenerateNodeJsCode(jsCode, helpers) {
+  let result = jsCode
+  let changed = false
+  for (const [name, body] of Object.entries(helpers)) {
+    const startMarker = `// @inline ${name}`
+    const endMarker = `// @end-inline ${name}`
+    // Match: startMarker, then any content (including newlines), then endMarker.
+    // Replace the content between with the canonical body.
+    const pattern = new RegExp(
+      `(${escapeRegex(startMarker)}[ \\t]*\\n)([\\s\\S]*?)(\\n[ \\t]*${escapeRegex(endMarker)})`,
+      'g',
+    )
+    result = result.replace(pattern, (_match, start, _oldBody, end) => {
+      changed = true
+      // body has trailing newline; drop it so it joins cleanly with the end marker line
+      return `${start}${body.replace(/\n$/, '')}${end}`
+    })
+  }
+  return { jsCode: result, changed }
+}
+
+function escapeRegex(str) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+function regenerateHelpersInFile(filepath, helpers) {
+  const wf = JSON.parse(readFileSync(filepath, 'utf8'))
+  let nodesChanged = 0
+  for (const node of wf.nodes ?? []) {
+    if (node.type !== 'n8n-nodes-base.code') continue
+    const js = node.parameters?.jsCode
+    if (typeof js !== 'string') continue
+    const { jsCode: newJs, changed } = regenerateNodeJsCode(js, helpers)
+    if (changed && newJs !== js) {
+      node.parameters.jsCode = newJs
+      nodesChanged++
+    }
+  }
+  if (nodesChanged > 0) {
+    writeFileSync(filepath, JSON.stringify(wf, null, 2) + '\n')
+  }
+  return nodesChanged
+}
+
+function regenerateHelpers({ target }) {
+  // Load all canonical helpers up front
+  const helpers = {}
+  for (const name of Object.keys(INLINE_HELPERS)) {
+    helpers[name] = loadCanonicalHelper(name)
+  }
+
+  const targets = target
+    ? [resolve(process.cwd(), target)]
+    : readdirSync(WORKFLOWS_DIR)
+        .filter((f) => f.endsWith('.json'))
+        .map((f) => resolve(WORKFLOWS_DIR, f))
+
+  let totalNodes = 0
+  const fileResults = []
+  for (const filepath of targets) {
+    if (!existsSync(filepath)) {
+      console.warn(`⚠️  Target not found: ${filepath}`)
+      continue
+    }
+    const n = regenerateHelpersInFile(filepath, helpers)
+    if (n > 0) {
+      fileResults.push({ filepath, nodes: n })
+      totalNodes += n
+    }
+  }
+  return { totalNodes, fileResults, scanned: targets.length }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // CLI
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -267,12 +378,33 @@ Commands:
         --handler-name "Step - Switch Handler" \\
         --handler-id Sw1tch4H4ndl3rX9
 
+  regenerate-helpers
+    Re-inline canonical helpers from scripts/evaluators/<helper>.js into
+    every Code node that opted in via marker comments:
+      // @inline <helper>
+      <body — replaced>
+      // @end-inline <helper>
+
+    Currently registered helpers: ${Object.keys(INLINE_HELPERS).join(', ')}
+
+    Options:
+      --target <filepath>   Only process this workflow file (default: all)
+
+    Examples:
+      node scripts/n8n-builder.mjs regenerate-helpers
+      node scripts/n8n-builder.mjs regenerate-helpers \\
+        --target "n8n-workflows/workflows/Workflows/Step - AI Action Handler.json"
+
 Typical workflow for a new step type:
   1. Write evaluator JS code in scripts/evaluators/my-step-evaluator.js
   2. Run create-handler to generate the handler JSON
   3. Import the JSON into n8n, note the assigned workflow ID
   4. Run add-route with the real workflow ID
   5. Re-import Process Step into n8n
+
+After editing scripts/evaluators/supabase-request.js (or any other shared
+helper), run regenerate-helpers to sync all opted-in Code nodes, then
+re-import the affected workflows in n8n.
 `)
 }
 
@@ -336,6 +468,22 @@ if (command === 'create-handler') {
     console.log(`   Added node: "${result.callerNodeName}"`)
     console.log()
     console.log('Next: re-import Workflow Process Step.json into n8n')
+  }
+
+} else if (command === 'regenerate-helpers') {
+  const result = regenerateHelpers({ target: args.target ?? null })
+
+  if (result.totalNodes === 0) {
+    console.log(`No changes — all ${result.scanned} workflow file(s) already in sync with canonical helpers.`)
+  } else {
+    console.log(`✅  Regenerated helpers in ${result.fileResults.length} file(s):`)
+    for (const { filepath, nodes } of result.fileResults) {
+      const rel = filepath.split('n8n-workflows/').pop()
+      console.log(`   ${rel}  (${nodes} node${nodes === 1 ? '' : 's'})`)
+    }
+    console.log(`   ${result.totalNodes} Code node${result.totalNodes === 1 ? '' : 's'} updated`)
+    console.log()
+    console.log('Next: re-import affected workflows into n8n.')
   }
 
 } else {
