@@ -5,26 +5,26 @@
       "parameters": {
         "inputSource": "passthrough"
       },
-      "id": "7829f131-1ce9-4916-888a-dd5a330958f2",
+      "id": "58094881-3182-4df4-83ce-b4fbb5083743",
       "name": "Start",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.1,
       "position": [
-        -704,
-        112
+        -1040,
+        1200
       ]
     },
     {
       "parameters": {
         "jsCode": "// =============================================================\n// SSRF Check — block private IPs before HTTP Request\n// =============================================================\n// Uses regex parsing instead of new URL() (unavailable in n8n sandbox).\n// =============================================================\n\nconst item = $input.first().json;\nconst { resolvedConfig } = item;\nconst url = resolvedConfig.url;\n\nif (!url) {\n  return {\n    json: {\n      ...item,\n      stepResult: { success: false, error: 'Webhook step missing url in config' },\n    }\n  };\n}\n\ntry {\n  // Parse URL via regex (n8n sandbox lacks URL constructor)\n  const urlMatch = url.match(/^(https?):\\/\\/([^/:]+)(:\\d+)?(\\/.*)?$/);\n  if (!urlMatch) {\n    return {\n      json: {\n        ...item,\n        stepResult: { success: false, error: `Invalid webhook URL format: ${url}` },\n      }\n    };\n  }\n\n  const hostname = urlMatch[2].toLowerCase();\n\n  const privatePatterns = [\n    /^10\\./,\n    /^172\\.(1[6-9]|2\\d|3[01])\\./,\n    /^192\\.168\\./,\n    /^127\\./,\n    /^localhost$/i,\n    /^::1$/,\n    /\\.local$/,\n    /^0\\.0\\.0\\.0$/,\n    /^169\\.254\\./,\n  ];\n\n  const isPrivate = privatePatterns.some(p => p.test(hostname));\n  if (isPrivate) {\n    return {\n      json: {\n        ...item,\n        stepResult: { success: false, error: `Webhook URL targets private address: ${hostname}` },\n      }\n    };\n  }\n\n  return {\n    json: {\n      ...item,\n      webhookUrl: url,\n      webhookMethod: resolvedConfig.method || 'POST',\n      webhookBody: resolvedConfig.body || '{}',\n      ssrfPassed: true,\n    }\n  };\n} catch (e) {\n  return {\n    json: {\n      ...item,\n      stepResult: { success: false, error: `Invalid webhook URL: ${url}` },\n    }\n  };\n}\n"
       },
-      "id": "f76fbfad-8850-413f-8523-2d468be26a21",
+      "id": "0dadf9e0-ea70-486d-a013-0e60de157c18",
       "name": "SSRF Check",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -480,
-        112
+        -816,
+        1200
       ]
     },
     {
@@ -59,13 +59,26 @@
           "fallbackOutput": "extra"
         }
       },
-      "id": "d4f92464-5bc5-4240-b89a-590eaa26033c",
+      "id": "67872bdf-a2cd-4265-ad57-a14e95abebf1",
       "name": "SSRF Gate",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.2,
       "position": [
-        -240,
-        112
+        -592,
+        1200
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// =============================================================\n// Save Input Payload — audit per attempt (T-209)\n// =============================================================\n// Save resolved URL + method + body BEFORE HTTP Request.\n// =============================================================\n\nconst https = require('https');\n\nconst SUPABASE_URL = $env.SUPABASE_URL;\nif (!SUPABASE_URL) throw new Error('SUPABASE_URL environment variable not configured');\nconst SUPABASE_KEY = $env.SUPABASE_SERVICE_ROLE_KEY;\n\n// @inline supabase-request\nasync function supabaseRequest(path, method, body) {\n  const url = `${SUPABASE_URL}/rest/v1/${path}`;\n  return new Promise((resolve, reject) => {\n    const match = url.match(/^https?:\\/\\/([^/]+)(\\/.*)$/);\n    if (!match) { reject(new Error('Invalid SUPABASE_URL')); return; }\n    const options = {\n      hostname: match[1],\n      path: match[2],\n      method: method || 'GET',\n      headers: {\n        'apikey': SUPABASE_KEY,\n        'Authorization': `Bearer ${SUPABASE_KEY}`,\n        'Content-Type': 'application/json',\n        'Prefer': 'return=representation',\n      },\n    };\n    const req = https.request(options, (res) => {\n      let data = '';\n      res.on('data', (chunk) => data += chunk);\n      res.on('end', () => {\n        if (res.statusCode >= 400) {\n          reject(new Error(`Supabase ${method || 'GET'} ${path} ${res.statusCode}: ${data}`));\n          return;\n        }\n        try {\n          resolve(data ? JSON.parse(data) : null);\n        } catch (e) {\n          reject(new Error(`Parse error for ${path}: ${data}`));\n        }\n      });\n    });\n    req.on('error', reject);\n    if (body !== undefined && body !== null) req.write(JSON.stringify(body));\n    req.end();\n  });\n}\n// @end-inline supabase-request\n\nconst item = $input.first().json;\nconst inputPayload = {\n  url: item.webhookUrl,\n  method: item.webhookMethod,\n  body: item.webhookBody,\n};\n\nif (item.currentStepExecId) {\n  await supabaseRequest(\n    `workflow_step_executions?id=eq.${item.currentStepExecId}`,\n    'PATCH',\n    { input_payload: inputPayload }\n  );\n}\n\nreturn { json: item };\n"
+      },
+      "id": "fab9ba25-bc9a-4d95-bebc-b9c065d0fb5a",
+      "name": "Save Input Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -368,
+        1104
       ]
     },
     {
@@ -79,39 +92,39 @@
           "timeout": 10000
         }
       },
-      "id": "c296e848-829a-449b-80d9-ca4995d717d8",
+      "id": "4271c5a0-1546-42be-945e-8907f276076a",
       "name": "HTTP Request",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        0,
-        0
+        -144,
+        1104
       ]
     },
     {
       "parameters": {
         "jsCode": "// Build success result from HTTP response — preserve orchestrator context\ntry {\n  const item = $('SSRF Check').first().json;\n  const httpResult = $('HTTP Request').first().json;\n  return {\n    json: {\n      ...item,\n      stepResult: {\n        success: true,\n        outputPayload: {\n          statusCode: httpResult.statusCode || 200,\n          responseBody: typeof httpResult === 'string' ? httpResult : JSON.stringify(httpResult),\n        },\n      },\n    }\n  };\n} catch (e) {\n  const item = $('SSRF Check').first().json;\n  return {\n    json: {\n      ...item,\n      stepResult: { success: false, error: `Webhook failed: ${e.message}` },\n    }\n  };\n}\n"
       },
-      "id": "8c671251-b49e-42e2-946f-e26491c4ab49",
+      "id": "6799fd19-7dfb-4f30-bdc0-c734ee423de4",
       "name": "Build Webhook Result",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        240,
-        0
+        80,
+        1104
       ]
     },
     {
       "parameters": {
         "jsCode": "// Pass through SSRF/error result — preserve orchestrator context\nconst item = $input.first().json;\nreturn { json: { ...item } };\n"
       },
-      "id": "9f39d067-b5b0-46d1-9f33-e7f84d5a8e0b",
+      "id": "02d0a554-d638-4f8d-8db3-9fd065ffbbbf",
       "name": "Pass Error",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        0,
-        208
+        -368,
+        1296
       ]
     }
   ],
@@ -143,7 +156,7 @@
       "main": [
         [
           {
-            "node": "HTTP Request",
+            "node": "Save Input Payload",
             "type": "main",
             "index": 0
           }
@@ -151,6 +164,17 @@
         [
           {
             "node": "Pass Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Input Payload": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
             "type": "main",
             "index": 0
           }
@@ -178,7 +202,7 @@
     "callerPolicy": "workflowsFromSameOwner",
     "availableInMCP": false
   },
-  "versionId": "c9e42819-dbb1-4173-95cf-0affd85479a4",
+  "versionId": "b78b5548-abe4-40bf-876f-662874cb7935",
   "meta": {
     "instanceId": "b46d0b13d69880a2fec430102877b55af4e44991549a68a3e78cd50a4dc1a09e"
   },

@@ -5,26 +5,39 @@
       "parameters": {
         "inputSource": "passthrough"
       },
-      "id": "39bb4a9a-7044-4f66-aa5b-fafaa3a16d2e",
+      "id": "51254a61-fc0a-4b6a-a55a-14a27a5439cc",
       "name": "Start",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.1,
       "position": [
-        0,
-        0
+        4448,
+        272
       ]
     },
     {
       "parameters": {
         "jsCode": "// =============================================================\n// Build Prompt — resolve variables in prompt template\n// =============================================================\n\nconst item = $input.first().json;\nconst { resolvedConfig, variableContext, tenantId } = item;\n\nconst prompt = resolvedConfig.prompt || '';\nconst outputSchema = resolvedConfig.output_schema || [];\n\n// Build context string for LLM.\n// CANONICAL SOURCE: apps/cms/features/workflows/engine/context-builder.ts (flattenContextForLlm)\n// Changes here must be mirrored in the canonical TypeScript source.\n// Logic: trigger fields flat, step namespace objects expanded one level, aiOutputJson skipped.\nconst contextEntries = [];\nfor (const [k, v] of Object.entries(variableContext)) {\n  if (v !== null && typeof v === 'object' && !Array.isArray(v)) {\n    // Step namespace object — flatten its fields\n    for (const [fk, fv] of Object.entries(v)) {\n      if (fk !== 'aiOutputJson') {\n        contextEntries.push(`${fk}: ${JSON.stringify(fv)}`);\n      }\n    }\n  } else {\n    contextEntries.push(`${k}: ${JSON.stringify(v)}`);\n  }\n}\nconst contextString = contextEntries.join('\\n');\n\nreturn {\n  json: {\n    ...item,\n    aiPayload: {\n      prompt,\n      context: contextString,\n      output_schema: outputSchema,\n      tenant_id: tenantId,\n    },\n  }\n};\n"
       },
-      "id": "9b764c01-a615-419b-8a4d-2bc764783ff3",
+      "id": "3f155f04-5046-456b-8bdf-88f3960da53f",
       "name": "Build Prompt",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        224,
-        0
+        4672,
+        272
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// =============================================================\n// Save Input Payload — audit per attempt (T-209)\n// =============================================================\n// Save resolved AI prompt + context + output_schema BEFORE LLM call.\n// Each retry attempt produces a fresh render via this same path.\n// =============================================================\n\nconst https = require('https');\n\nconst SUPABASE_URL = $env.SUPABASE_URL;\nif (!SUPABASE_URL) throw new Error('SUPABASE_URL environment variable not configured');\nconst SUPABASE_KEY = $env.SUPABASE_SERVICE_ROLE_KEY;\n\n// @inline supabase-request\nasync function supabaseRequest(path, method, body) {\n  const url = `${SUPABASE_URL}/rest/v1/${path}`;\n  return new Promise((resolve, reject) => {\n    const match = url.match(/^https?:\\/\\/([^/]+)(\\/.*)$/);\n    if (!match) { reject(new Error('Invalid SUPABASE_URL')); return; }\n    const options = {\n      hostname: match[1],\n      path: match[2],\n      method: method || 'GET',\n      headers: {\n        'apikey': SUPABASE_KEY,\n        'Authorization': `Bearer ${SUPABASE_KEY}`,\n        'Content-Type': 'application/json',\n        'Prefer': 'return=representation',\n      },\n    };\n    const req = https.request(options, (res) => {\n      let data = '';\n      res.on('data', (chunk) => data += chunk);\n      res.on('end', () => {\n        if (res.statusCode >= 400) {\n          reject(new Error(`Supabase ${method || 'GET'} ${path} ${res.statusCode}: ${data}`));\n          return;\n        }\n        try {\n          resolve(data ? JSON.parse(data) : null);\n        } catch (e) {\n          reject(new Error(`Parse error for ${path}: ${data}`));\n        }\n      });\n    });\n    req.on('error', reject);\n    if (body !== undefined && body !== null) req.write(JSON.stringify(body));\n    req.end();\n  });\n}\n// @end-inline supabase-request\n\nconst item = $input.first().json;\nconst aiPayload = item.aiPayload || {};\nconst inputPayload = {\n  prompt: aiPayload.prompt,\n  context: aiPayload.context,\n  output_schema: aiPayload.output_schema,\n  tenant_id: aiPayload.tenant_id,\n};\n\nif (item.currentStepExecId) {\n  await supabaseRequest(\n    `workflow_step_executions?id=eq.${item.currentStepExecId}`,\n    'PATCH',\n    { input_payload: inputPayload }\n  );\n}\n\nreturn { json: item };\n"
+      },
+      "id": "4acc35e9-5ca7-4d37-ac2a-6587a86f93d6",
+      "name": "Save Input Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4896,
+        272
       ]
     },
     {
@@ -46,23 +59,23 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.3,
       "position": [
-        464,
-        0
+        5120,
+        272
       ],
-      "id": "d6e8da01-5f84-41ff-b5aa-ad5fb6b1c5b7",
+      "id": "fdb68586-a004-4526-b84c-73e2bbc646ba",
       "name": "Call MiniMax Agent"
     },
     {
       "parameters": {
         "jsCode": "// =============================================================\n// Parse AI Result — extract structured output from MiniMax Agent\n// =============================================================\n// MiniMax returns: { content: [{ type: 'thinking', ... }, { type: 'text', text: '```json\\n{...}\\n```' }] }\n// We need: find 'text' entry, strip markdown code fences, parse JSON.\n// If output_schema is defined, map parsed JSON to ONLY the configured keys.\n// =============================================================\n\nfunction stripCodeFences(str) {\n  const match = str.match(/```(?:json)?\\s*([\\s\\S]*?)```/);\n  return match ? match[1].trim() : str.trim();\n}\n\nfunction extractTextContent(aiOutput) {\n  // Case 1: content array with typed entries (MiniMax/Claude format)\n  if (aiOutput && Array.isArray(aiOutput.content)) {\n    const textEntry = aiOutput.content.find(c => c.type === 'text');\n    if (textEntry && textEntry.text) return textEntry.text;\n    // Fallback: first entry with text\n    const anyText = aiOutput.content.find(c => c.text);\n    if (anyText) return anyText.text;\n  }\n  // Case 2: direct text field\n  if (aiOutput && aiOutput.text) return aiOutput.text;\n  // Case 3: stringified response\n  return JSON.stringify(aiOutput);\n}\n\ntry {\n  const aiOutput = $('Call MiniMax Agent').first().json;\n  const rawText = extractTextContent(aiOutput);\n  const cleaned = stripCodeFences(rawText);\n\n  let parsedOutput;\n  let parsed;\n  try {\n    parsed = JSON.parse(cleaned);\n  } catch {\n    parsed = null;\n  }\n\n  if (parsed !== null) {\n    // If output_schema is configured, map to ONLY the defined keys\n    const item = $('Build Prompt').first().json;\n    const schema = item.currentStep && item.currentStep.step_config && item.currentStep.step_config.output_schema;\n    if (schema && Array.isArray(schema) && schema.length > 0) {\n      const mapped = {};\n      schema.forEach(field => {\n        if (parsed[field.key] !== undefined) mapped[field.key] = parsed[field.key];\n      });\n      parsedOutput = Object.keys(mapped).length > 0 ? mapped : parsed;\n    } else {\n      parsedOutput = parsed;\n    }\n  } else {\n    parsedOutput = { aiResponse: rawText };\n  }\n\n  // Always add aiOutputJson = aggregate of all mapped fields (object type).\n  // Built from snapshot BEFORE adding itself — no circular reference.\n  // Lets update_response map the whole result: ai_qualification → {{step.aiOutputJson}}\n  const outputSnapshot = { ...parsedOutput };\n  parsedOutput = { ...parsedOutput, aiOutputJson: outputSnapshot };\n\n  const item = $('Build Prompt').first().json;\n  return {\n    json: {\n      ...item,\n      stepResult: {\n        success: true,\n        outputPayload: parsedOutput,\n      },\n    }\n  };\n} catch (e) {\n  const item = $('Build Prompt').first().json;\n  return {\n    json: {\n      ...item,\n      stepResult: {\n        success: false,\n        error: `AI action failed: ${e.message}`,\n      },\n    }\n  };\n}\n"
       },
-      "id": "7a65248b-9b6b-42dc-902c-b5a564a54d8d",
+      "id": "56defe2e-5e3f-485e-9f2e-6d286b9c2f19",
       "name": "Parse AI Result",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        704,
-        0
+        5344,
+        272
       ]
     }
   ],
@@ -80,6 +93,17 @@
       ]
     },
     "Build Prompt": {
+      "main": [
+        [
+          {
+            "node": "Save Input Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Input Payload": {
       "main": [
         [
           {
@@ -111,7 +135,7 @@
     "callerPolicy": "workflowsFromSameOwner",
     "availableInMCP": false
   },
-  "versionId": "c7739b6e-c603-460e-9254-c38c7040bf57",
+  "versionId": "1c24078a-2e6a-493e-af48-7841c47c8cb6",
   "meta": {
     "instanceId": "b46d0b13d69880a2fec430102877b55af4e44991549a68a3e78cd50a4dc1a09e"
   },
