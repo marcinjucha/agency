@@ -5,68 +5,40 @@
       "parameters": {
         "inputSource": "passthrough"
       },
-      "id": "7bfc9149-f075-4ccf-933e-23e771e457f2",
+      "id": "d398fcda-8254-406f-a4d1-758bf4b763ff",
       "typeVersion": 1.1,
       "name": "Start",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "position": [
-        13680,
-        30224
+        16800,
+        35080
       ]
     },
     {
       "parameters": {
         "jsCode": "// =============================================================\n// Prepare Current Step — resolve variables in config\n// =============================================================\n// Uses execution-scoped state keyed by executionId to support\n// concurrent workflow executions. Initializes on stepIndex 0.\n// =============================================================\n\nconst Sentry = require('@sentry/node');\n\nfunction resolveVariables(template, context) {\n  if (typeof template !== 'string') return template;\n  return template.replace(/\\{\\{(\\s*[\\w.]+\\s*)\\}\\}/g, (_, rawKey) => {\n    const key = rawKey.trim();\n    const value = getNestedValue(context, key);\n    return (value !== undefined && value !== null) ? String(value) : `{{${key}}}`;\n  });\n}\n\nfunction getNestedValue(obj, path) {\n  const parts = path.split('.');\n  let current = obj;\n  for (const part of parts) {\n    if (current === null || current === undefined || typeof current !== 'object') return undefined;\n    current = current[part];\n  }\n  return current;\n}\n\nfunction resolveDeep(obj, context) {\n  if (typeof obj === 'string') return resolveVariables(obj, context);\n  if (Array.isArray(obj)) return obj.map(item => resolveDeep(item, context));\n  if (obj && typeof obj === 'object') {\n    const result = {};\n    for (const [key, value] of Object.entries(obj)) {\n      result[key] = resolveDeep(value, context);\n    }\n    return result;\n  }\n  return obj;\n}\n\ntry {\n  const item = $input.first().json;\n  const state = $getWorkflowStaticData('global');\n  const { currentStep, executionId } = item;\n\n  // Initialize execution-scoped state on first step\n  if (item.stepIndex === 0) {\n    // Clean up stale entries older than 2 hours (defensive)\n    for (const key of Object.keys(state)) {\n      const entry = state[key];\n      if (entry && entry._createdAt && (Date.now() - entry._createdAt > 7200000)) {\n        delete state[key];\n      }\n    }\n    state[executionId] = {\n      variableContext: item.initialVariableContext || {},\n      skippedStepIds: [],\n      failed: false,\n      failureError: null,\n      _createdAt: Date.now(),\n    };\n  }\n\n  const execState = state[executionId] || { variableContext: {}, skippedStepIds: [], failed: false };\n\n  if (execState.failed) {\n    return { json: { ...item, failed: true } };\n  }\n\n  if ((execState.skippedStepIds || []).includes(currentStep.id)) {\n    Sentry.addBreadcrumb({\n      message: `Step ${item.stepIndex + 1}/${item.totalSteps}: ${currentStep.step_type} (${currentStep.id}) SKIPPED by condition branch`,\n      level: 'info',\n    });\n    return {\n      json: {\n        ...item,\n        resolvedConfig: currentStep.step_config,\n        stepType: '__skipped__',\n        stepResult: { success: true, outputPayload: { skipped: true } },\n        alreadyPersisted: true,\n      }\n    };\n  }\n\n  const variableContext = execState.variableContext || {};\n  const resolvedConfig = resolveDeep(currentStep.step_config, variableContext);\n\n  Sentry.addBreadcrumb({\n    message: `Step ${item.stepIndex + 1}/${item.totalSteps}: ${currentStep.step_type} (${currentStep.name || currentStep.id})`,\n    level: 'info',\n  });\n\n  return {\n    json: {\n      ...item,\n      variableContext,\n      resolvedConfig,\n      stepType: currentStep.step_type,\n    }\n  };\n} catch (err) {\n  Sentry.captureException(err);\n  await Sentry.flush(2000);\n  throw err;\n}\n"
       },
-      "id": "0e7b9b86-4b48-424b-a980-4e2b0cf05694",
+      "id": "37f4eee6-7e9b-46a3-9d29-57ae5e48429c",
       "name": "Prepare Current Step",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        13904,
-        30224
+        17024,
+        35080
       ]
     },
     {
       "parameters": {
-        "operation": "update",
-        "tableId": "workflow_step_executions",
-        "filters": {
-          "conditions": [
-            {
-              "keyName": "id",
-              "condition": "eq",
-              "keyValue": "={{ $json.currentStepExecId }}"
-            }
-          ]
-        },
-        "fieldsUi": {
-          "fieldValues": [
-            {
-              "fieldId": "status",
-              "fieldValue": "running"
-            },
-            {
-              "fieldId": "started_at",
-              "fieldValue": "={{ new Date().toISOString() }}"
-            }
-          ]
-        }
+        "jsCode": "// Mark current step as running. PATCH then propagate item downstream so\n// Route by Step Type sees the same pipeline state. Replays bypass via\n// Should Mark Running [false] branch directly to Route by Step Type.\nconst item = $input.first().json;\nif (!item.currentStepExecId) return { json: item };\n\n// @inline supabase-request\nconst https = require('https');\nasync function supabaseRequest(path, method, body) {\n  const url = `${$env.SUPABASE_URL}/rest/v1/${path}`;\n  const headers = {\n    'apikey': $env.SUPABASE_SERVICE_ROLE_KEY,\n    'Authorization': `Bearer ${$env.SUPABASE_SERVICE_ROLE_KEY}`,\n    'Content-Type': 'application/json',\n    'Prefer': 'return=representation',\n  };\n  const opts = { method, headers };\n  if (body !== undefined) opts.body = JSON.stringify(body);\n  const res = await this.helpers.httpRequest({ url, ...opts });\n  return res;\n}\n// @end-inline supabase-request\n\nawait supabaseRequest(\n  `workflow_step_executions?id=eq.${item.currentStepExecId}`,\n  'PATCH',\n  { status: 'running', started_at: new Date().toISOString() }\n);\n\nreturn { json: item };\n"
       },
-      "id": "43a5f673-3c00-4bbb-b7dc-97069778d59c",
+      "id": "0fb8b2ea-955c-4eb7-a3d9-77d8e3494c36",
       "name": "Mark Step Running",
-      "type": "n8n-nodes-base.supabase",
-      "typeVersion": 1,
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [
-        14128,
-        30048
-      ],
-      "credentials": {
-        "supabaseApi": {
-          "id": "f048XNg2A6zhwlWZ",
-          "name": "Supabase account"
-        }
-      }
+        18368,
+        35152
+      ]
     },
     {
       "parameters": {
@@ -111,6 +83,50 @@
                       "operation": "equals"
                     },
                     "id": "sw-cond-skipped"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.stepType }}",
+                    "rightValue": "__replay__",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "sw-cond-replay"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.stepType }}",
+                    "rightValue": "__replay_skipped__",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "sw-cond-replay-skipped"
                   }
                 ],
                 "combinator": "and"
@@ -356,13 +372,13 @@
           "fallbackOutput": "extra"
         }
       },
-      "id": "03b0081c-eec6-4f6b-abce-0441d8be6717",
+      "id": "bf82034b-75d8-4b74-b686-d5e8d2c12b84",
       "name": "Route by Step Type",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.2,
       "position": [
-        14128,
-        30240
+        18592,
+        34888
       ]
     },
     {
@@ -384,10 +400,10 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.3,
       "position": [
-        14352,
-        29552
+        18816,
+        34288
       ],
-      "id": "c4f5f528-767c-4604-beb4-305d3ab44086",
+      "id": "299048c4-cdd2-48c9-8c24-e4acaf597778",
       "name": "Call Send Email Handler"
     },
     {
@@ -409,10 +425,10 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.3,
       "position": [
-        14352,
-        29744
+        18816,
+        34480
       ],
-      "id": "1c782f19-7e77-41a4-8f77-b8234648fdd4",
+      "id": "287ef713-7881-4aff-96ac-8ddbc8f68925",
       "name": "Call AI Action Handler"
     },
     {
@@ -434,10 +450,10 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.3,
       "position": [
-        14352,
-        29936
+        18816,
+        34672
       ],
-      "id": "40baa9dc-50ab-4f00-b543-c2f82f294898",
+      "id": "5bda16ba-89ab-4017-a0b5-95d83b113751",
       "name": "Call Webhook Handler"
     },
     {
@@ -462,10 +478,10 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.3,
       "position": [
-        14352,
-        30128
+        18816,
+        34864
       ],
-      "id": "f8e22c3c-ac8f-47f6-8156-98efeed9b21c",
+      "id": "b7ef2ebb-eb04-4e7d-af13-5b44b2c990e9",
       "name": "Call Switch Handler"
     },
     {
@@ -487,10 +503,10 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.3,
       "position": [
-        14352,
-        30320
+        18816,
+        35152
       ],
-      "id": "75cfbde7-1dd8-4994-bed3-59614e36ff1e",
+      "id": "2348dab8-3169-4f6c-8ff2-694394fe0060",
       "name": "Call Delay Handler"
     },
     {
@@ -515,10 +531,10 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.3,
       "position": [
-        14352,
-        30608
+        18816,
+        35344
       ],
-      "id": "b8180b0a-8679-4ad4-a774-ab5ee342358e",
+      "id": "117759d9-9361-49c0-b7e5-a850040b3a29",
       "name": "Call Get Response Handler"
     },
     {
@@ -543,36 +559,36 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.3,
       "position": [
-        14352,
-        30800
+        18816,
+        35536
       ],
-      "id": "f3fff2f1-4370-410c-b616-a9e740c8b681",
+      "id": "7d78b7c0-b866-404c-bebd-87d073516b65",
       "name": "Call Update Response Handler"
     },
     {
       "parameters": {
         "jsCode": "// Unknown step type handler\nconst item = $input.first().json;\nreturn {\n  json: {\n    ...item,\n    stepResult: {\n      success: false,\n      error: `Unknown step type: ${item.stepType}`,\n    },\n  }\n};\n"
       },
-      "id": "22a20b97-de43-46ed-a9ab-243613b661d3",
+      "id": "ae33e02d-4c3e-48b7-9c68-09f4c7db8b2f",
       "name": "Unknown Type Handler",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        14352,
-        31376
+        18816,
+        36112
       ]
     },
     {
       "parameters": {
         "jsCode": "// =============================================================\n// Process Step Result — merge context, handle failure/skipping\n// =============================================================\n// Uses execution-scoped state keyed by executionId.\n// Cleans up state entry on last step.\n// =============================================================\n\nconst Sentry = require('@sentry/node');\n\ntry {\n  const item = $input.first().json;\n  const state = $getWorkflowStaticData('global');\n  const { currentStep, executionId } = item;\n  const execState = state[executionId] || { variableContext: {}, skippedStepIds: [], failed: false };\n\n  // If already in failed passthrough mode, just return\n  if (item.failed || execState.failed) {\n    if (item.stepIndex === item.totalSteps - 1) delete state[executionId];\n    return { json: item };\n  }\n\n  // Get step result from subworkflow output\n  let stepResult = item.stepResult;\n  if (!stepResult) {\n    stepResult = { success: false, error: 'No step result produced' };\n  }\n\n  // Namespace step output by step number (1-based topological order) for human-readable templates.\n  // Trigger variables stay flat. Step outputs keyed by step.slug (not positional).\n  // Slug is per-workflow unique, user-editable, persisted on workflow_steps row.\n  // Template syntax: {{slug.fieldName}} — same key on both CMS and runtime sides.\n  if (stepResult.success && stepResult.outputPayload) {\n    const stepKey = currentStep.slug;\n    if (!stepKey) {\n      throw new Error(`Step ${currentStep.id} has no slug — required for variableContext keying`);\n    }\n    execState.variableContext[stepKey] = stepResult.outputPayload;\n  }\n\n  // Accumulate skipped step IDs from condition branching\n  const newSkipped = item.skippedStepIds || [];\n  if (newSkipped.length > 0) {\n    execState.skippedStepIds = [...(execState.skippedStepIds || []), ...newSkipped];\n  }\n\n  // Write back to state\n  state[executionId] = execState;\n\n  // Prepare DB update fields\n  const now = new Date().toISOString();\n  const alreadyPersisted = item.alreadyPersisted || stepResult.alreadyPersisted || false;\n  const isLastStep = item.stepIndex === item.totalSteps - 1;\n\n  // If step failed: signal to skip remaining steps\n  if (!stepResult.success) {\n    execState.failed = true;\n    execState.failureError = stepResult.error;\n    state[executionId] = execState;\n\n    Sentry.captureException(new Error(`Step failed: ${currentStep.step_type} — ${stepResult.error}`));\n    await Sentry.flush(2000);\n\n    if (isLastStep) delete state[executionId];\n\n    return {\n      json: {\n        ...item,\n        variableContext: execState.variableContext,\n        failed: true,\n        failureError: stepResult.error,\n        dbStatus: 'failed',\n        dbCompletedAt: now,\n        dbErrorMessage: stepResult.error || 'Unknown error',\n        dbOutputPayload: null,\n        alreadyPersisted,\n        skippedStepIds: newSkipped,\n      }\n    };\n  }\n\n  if (isLastStep) delete state[executionId];\n\n  return {\n    json: {\n      ...item,\n      variableContext: execState.variableContext,\n      stepResult: null,\n      dbStatus: 'completed',\n      dbCompletedAt: now,\n      dbOutputPayload: stepResult.outputPayload || {},\n      dbErrorMessage: null,\n      alreadyPersisted,\n      skippedStepIds: newSkipped,\n    }\n  };\n\n} catch (err) {\n  Sentry.captureException(err);\n  await Sentry.flush(2000);\n  throw err;\n}\n"
       },
-      "id": "29b4135f-8b65-4cd7-b186-a05e645e31fc",
+      "id": "10b8cb2f-b2ca-42fb-8c59-a69eb913d173",
       "name": "Process Step Result",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        14576,
-        30576
+        19040,
+        35080
       ]
     },
     {
@@ -594,23 +610,23 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.3,
       "position": [
-        14352,
-        31184
+        18816,
+        35920
       ],
-      "id": "c2dfc461-eb7c-463a-ba19-066a7802b3c4",
+      "id": "7580d30e-9291-41b1-b353-246517d7f482",
       "name": "Call Trigger Handler"
     },
     {
       "parameters": {
-        "jsCode": "// Failed passthrough — just forward the item\nconst item = $input.first().json;\nreturn { json: item };\n"
+        "jsCode": "// Failed passthrough — emit dbStatus='cancelled' so Update Step Execution\n// patches the row (T-208 fix: previously emitted bare item → row stuck running).\n// alreadyPersisted=false ensures Persist Gate routes to Update Step Execution.\nconst item = $input.first().json;\nreturn {\n  json: {\n    ...item,\n    dbStatus: 'cancelled',\n    dbCompletedAt: new Date().toISOString(),\n    dbErrorMessage: 'Anulowano — wcześniejszy krok zakończył się błędem',\n    dbOutputPayload: null,\n    alreadyPersisted: false,\n  },\n};\n"
       },
-      "id": "13c1fd15-74b6-42cd-8dc6-c2b444d10ba8",
+      "id": "c21f36af-8f88-4a6b-8be5-ee2a2441f1cf",
       "name": "Skip Step",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        14352,
-        29360
+        18816,
+        34096
       ]
     },
     {
@@ -635,11 +651,96 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.3,
       "position": [
-        14352,
-        30992
+        18816,
+        35728
       ],
-      "id": "0336c590-5fca-437c-907d-5c9c214f223e",
+      "id": "ce659c5c-d639-4591-af62-d826b9a32cad",
       "name": "Call Get Survey Link Handler"
+    },
+    {
+      "parameters": {
+        "jsCode": "// =============================================================\n// Hydrate State From DB — replay state reconstruction\n// =============================================================\n// On stepIndex === 0, replays prior step_executions (completed/skipped)\n// to rebuild state[executionId].variableContext + skippedStepIds.\n// Subsequent steps see fully restored state. Passthrough otherwise.\n// =============================================================\n\nconst https = require('https');\n\nconst SUPABASE_URL = $env.SUPABASE_URL;\nif (!SUPABASE_URL) throw new Error('SUPABASE_URL not configured');\nconst SUPABASE_KEY = $env.SUPABASE_SERVICE_ROLE_KEY;\n\n// @inline supabase-request\nasync function supabaseRequest(path, method, body) {\n  const url = `${SUPABASE_URL}/rest/v1/${path}`;\n  return new Promise((resolve, reject) => {\n    const match = url.match(/^https?:\\/\\/([^/]+)(\\/.*)$/);\n    if (!match) { reject(new Error('Invalid SUPABASE_URL')); return; }\n    const options = {\n      hostname: match[1],\n      path: match[2],\n      method: method || 'GET',\n      headers: {\n        'apikey': SUPABASE_KEY,\n        'Authorization': `Bearer ${SUPABASE_KEY}`,\n        'Content-Type': 'application/json',\n        'Prefer': 'return=representation',\n      },\n    };\n    const req = https.request(options, (res) => {\n      let data = '';\n      res.on('data', (chunk) => data += chunk);\n      res.on('end', () => {\n        if (res.statusCode >= 400) {\n          reject(new Error(`Supabase ${method || 'GET'} ${path} ${res.statusCode}: ${data}`));\n          return;\n        }\n        try {\n          resolve(data ? JSON.parse(data) : null);\n        } catch (e) {\n          reject(new Error(`Parse error for ${path}: ${data}`));\n        }\n      });\n    });\n    req.on('error', reject);\n    if (body !== undefined && body !== null) req.write(JSON.stringify(body));\n    req.end();\n  });\n}\n// @end-inline supabase-request\n\nconst item = $input.first().json;\n\n// Passthrough — reconstruction only on first step of execution\nif (item.stepIndex !== 0) return { json: item };\n\n// Passthrough — failed/skipped don't need state hydration\nif (item.failed) return { json: item };\nif (item.stepType === '__skipped__') return { json: item };\n\nconst state = $getWorkflowStaticData('global');\nconst executionId = item.executionId;\n\n// Defensive: state[executionId] should exist (Prepare Current Step inits it).\nif (!state[executionId]) return { json: item };\n\n// Query prior step_executions in completed/skipped status, latest per step_id.\n// DESC ordering means first occurrence per step is the latest attempt.\nconst priorRows = await supabaseRequest(\n  `workflow_step_executions?execution_id=eq.${executionId}&status=in.(completed,skipped)&order=attempt_number.desc&select=step_id,status,output_payload,attempt_number`,\n  'GET'\n);\n\n// Group by step_id, take latest attempt (explicit sort defensive against query ordering)\nconst latestPerStep = {};\nfor (const row of priorRows || []) {\n  if (!latestPerStep[row.step_id] || row.attempt_number > latestPerStep[row.step_id].attempt_number) {\n    latestPerStep[row.step_id] = row;\n  }\n}\n\nfor (const [stepId, row] of Object.entries(latestPerStep)) {\n  if (row.status === 'completed') {\n    Object.assign(state[executionId].variableContext, row.output_payload || {});\n  } else if (row.status === 'skipped') {\n    if (!state[executionId].skippedStepIds.includes(stepId)) {\n      state[executionId].skippedStepIds.push(stepId);\n    }\n  }\n}\n\nreturn { json: item };\n"
+      },
+      "id": "8ae7f405-2e2e-47c7-ada4-8dad7ae8927e",
+      "name": "Hydrate State From DB",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        17248,
+        35080
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// =============================================================\n// Find Latest Attempt — query prior attempt for current step\n// =============================================================\n// Per-step lookup: latest workflow_step_executions row for\n// (executionId, stepId). Attaches result to item._prevAttempt\n// for next node (Decide Replay Action) to branch on.\n// Passthrough for failed/skipped paths.\n// =============================================================\n\nconst https = require('https');\n\nconst SUPABASE_URL = $env.SUPABASE_URL;\nif (!SUPABASE_URL) throw new Error('SUPABASE_URL not configured');\nconst SUPABASE_KEY = $env.SUPABASE_SERVICE_ROLE_KEY;\n\n// @inline supabase-request\nasync function supabaseRequest(path, method, body) {\n  const url = `${SUPABASE_URL}/rest/v1/${path}`;\n  return new Promise((resolve, reject) => {\n    const match = url.match(/^https?:\\/\\/([^/]+)(\\/.*)$/);\n    if (!match) { reject(new Error('Invalid SUPABASE_URL')); return; }\n    const options = {\n      hostname: match[1],\n      path: match[2],\n      method: method || 'GET',\n      headers: {\n        'apikey': SUPABASE_KEY,\n        'Authorization': `Bearer ${SUPABASE_KEY}`,\n        'Content-Type': 'application/json',\n        'Prefer': 'return=representation',\n      },\n    };\n    const req = https.request(options, (res) => {\n      let data = '';\n      res.on('data', (chunk) => data += chunk);\n      res.on('end', () => {\n        if (res.statusCode >= 400) {\n          reject(new Error(`Supabase ${method || 'GET'} ${path} ${res.statusCode}: ${data}`));\n          return;\n        }\n        try {\n          resolve(data ? JSON.parse(data) : null);\n        } catch (e) {\n          reject(new Error(`Parse error for ${path}: ${data}`));\n        }\n      });\n    });\n    req.on('error', reject);\n    if (body !== undefined && body !== null) req.write(JSON.stringify(body));\n    req.end();\n  });\n}\n// @end-inline supabase-request\n\nconst item = $input.first().json;\n\n// Passthrough — no replay logic for failed/skipped paths\nif (item.failed) return { json: item };\nif (item.stepType === '__skipped__') return { json: item };\n\nconst executionId = item.executionId;\nconst stepId = item.currentStep.id;\n\nconst rows = await supabaseRequest(\n  `workflow_step_executions?execution_id=eq.${executionId}&step_id=eq.${stepId}&order=attempt_number.desc&limit=1&select=id,status,output_payload,attempt_number`,\n  'GET'\n);\n\nreturn { json: { ...item, _prevAttempt: rows && rows[0] ? rows[0] : null } };\n"
+      },
+      "id": "762895f9-459a-4005-ac58-7b43c136472c",
+      "name": "Find Latest Attempt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        17472,
+        35080
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// =============================================================\n// Decide Replay Action — pure branch decision (no DB writes)\n// =============================================================\n// Sets `replayAction` field marker on item. Side-effect (INSERT\n// for new attempts) extracted to next node Insert New Attempt.\n//   completed → reuse_completed (emit __replay__ + cached output)\n//   skipped   → reuse_skipped (emit __replay_skipped__)\n//   failed/pending/running (other than current) → new_attempt\n//     (Insert New Attempt node performs the INSERT)\n//   waiting/processing/cancelled / no prev → continue\n// Always strips _prevAttempt before forwarding (internal-only field).\n// =============================================================\n\nconst item = $input.first().json;\n\n// Passthrough — no replay logic for failed/skipped paths.\n// Strip _prevAttempt defensively (Find Latest Attempt skips it for these,\n// but be safe in case future changes attach it earlier).\nif (item.failed) {\n  const { _prevAttempt: _ignored1, ...rest } = item;\n  return { json: rest };\n}\nif (item.stepType === '__skipped__') {\n  const { _prevAttempt: _ignored2, ...rest } = item;\n  return { json: rest };\n}\n\nconst { _prevAttempt: prev, ...itemBase } = item;\n\nif (!prev) {\n  // First execution — no prior attempt. Continue with existing currentStepExecId.\n  return { json: { ...itemBase, replayAction: 'continue' } };\n}\n\nif (prev.status === 'completed') {\n  // Reuse cached output via __replay__ stepType\n  return {\n    json: {\n      ...itemBase,\n      replayAction: 'reuse_completed',\n      stepType: '__replay__',\n      stepResult: {\n        success: true,\n        outputPayload: prev.output_payload || {},\n        alreadyPersisted: true,\n      },\n      alreadyPersisted: true,\n    },\n  };\n}\n\nif (prev.status === 'skipped') {\n  // Step was skipped in prior attempt — preserve skip via __replay_skipped__\n  return {\n    json: {\n      ...itemBase,\n      replayAction: 'reuse_skipped',\n      stepType: '__replay_skipped__',\n      stepResult: {\n        success: true,\n        outputPayload: {},\n        alreadyPersisted: true,\n      },\n      alreadyPersisted: true,\n    },\n  };\n}\n\nif (prev.status === 'failed' || prev.status === 'pending' || prev.status === 'running') {\n  // Guard: if prev is our own eager-inserted row from Orchestrator init,\n  // this is the FIRST execution path (not a replay). The Orchestrator's\n  // Fetch and Initialize INSERTs workflow_step_executions with status='pending'\n  // attempt_number=1, then Find Latest Attempt returns this same row as 'latest'.\n  // Without this guard, we'd INSERT a duplicate attempt=2 row on every first run.\n  if (prev.id === itemBase.currentStepExecId) {\n    return { json: { ...itemBase, replayAction: 'continue' } };\n  }\n\n  // Real retry path: stuck failed/pending row from prior crashed execution.\n  // Mark for INSERT in next node; preserve attempt number for the INSERT.\n  return {\n    json: {\n      ...itemBase,\n      replayAction: 'new_attempt',\n      _newAttemptNumber: (prev.attempt_number || 1) + 1,\n    },\n  };\n}\n\n// Fallback (waiting/processing/cancelled/unknown) — passthrough.\n// In-flight or terminal states: replay should not interfere with concurrent\n// execution or revive cancelled work. Continue with existing currentStepExecId.\nreturn { json: { ...itemBase, replayAction: 'continue' } };\n"
+      },
+      "id": "c8ecf1b1-eccd-4f9c-9ed2-125fce518f1b",
+      "name": "Decide Replay Action",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        17696,
+        35080
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// =============================================================\n// Insert New Attempt — side-effect: INSERT new attempt row\n// =============================================================\n// When replayAction='new_attempt', INSERT new workflow_step_executions\n// row with attempt_number+1 and update currentStepExecId to point at it.\n// Other replayAction values are passthrough (no DB write).\n// Single responsibility — branch decision lives in Decide Replay Action.\n// =============================================================\n\nconst https = require('https');\n\nconst SUPABASE_URL = $env.SUPABASE_URL;\nif (!SUPABASE_URL) throw new Error('SUPABASE_URL not configured');\nconst SUPABASE_KEY = $env.SUPABASE_SERVICE_ROLE_KEY;\n\n// @inline supabase-request\nasync function supabaseRequest(path, method, body) {\n  const url = `${SUPABASE_URL}/rest/v1/${path}`;\n  return new Promise((resolve, reject) => {\n    const match = url.match(/^https?:\\/\\/([^/]+)(\\/.*)$/);\n    if (!match) { reject(new Error('Invalid SUPABASE_URL')); return; }\n    const options = {\n      hostname: match[1],\n      path: match[2],\n      method: method || 'GET',\n      headers: {\n        'apikey': SUPABASE_KEY,\n        'Authorization': `Bearer ${SUPABASE_KEY}`,\n        'Content-Type': 'application/json',\n        'Prefer': 'return=representation',\n      },\n    };\n    const req = https.request(options, (res) => {\n      let data = '';\n      res.on('data', (chunk) => data += chunk);\n      res.on('end', () => {\n        if (res.statusCode >= 400) {\n          reject(new Error(`Supabase ${method || 'GET'} ${path} ${res.statusCode}: ${data}`));\n          return;\n        }\n        try {\n          resolve(data ? JSON.parse(data) : null);\n        } catch (e) {\n          reject(new Error(`Parse error for ${path}: ${data}`));\n        }\n      });\n    });\n    req.on('error', reject);\n    if (body !== undefined && body !== null) req.write(JSON.stringify(body));\n    req.end();\n  });\n}\n// @end-inline supabase-request\n\nconst item = $input.first().json;\n\n// Passthrough for non-new_attempt paths (continue, reuse_completed, reuse_skipped).\n// Strip internal _newAttemptNumber + replayAction marker before forwarding.\nif (item.replayAction !== 'new_attempt') {\n  const { _newAttemptNumber, replayAction, ...rest } = item;\n  return { json: rest };\n}\n\n// new_attempt: INSERT new row with attempt_number+1.\nconst newRows = await supabaseRequest('workflow_step_executions', 'POST', [{\n  execution_id: item.executionId,\n  step_id: item.currentStep.id,\n  status: 'pending',\n  attempt_number: item._newAttemptNumber,\n  input_payload: {},\n  started_at: null,\n}]);\n\nconst { _newAttemptNumber, replayAction, ...itemBase } = item;\nreturn {\n  json: {\n    ...itemBase,\n    currentStepExecId: newRows && newRows[0] ? newRows[0].id : itemBase.currentStepExecId,\n    attemptNumber: item._newAttemptNumber,\n  },\n};\n"
+      },
+      "id": "93bb1e6f-b47d-4b93-9d7c-698143517aaa",
+      "name": "Insert New Attempt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        17920,
+        35080
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "9b0d9018-c1dc-43ff-b2ba-0d9c98e5506e",
+              "leftValue": "={{ $json.alreadyPersisted }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "name": "Should Mark Running",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        18144,
+        35080
+      ],
+      "id": "bc3b97f0-f195-4b4b-a181-dc77c78ebe26"
     }
   ],
   "pinData": {},
@@ -659,12 +760,40 @@
       "main": [
         [
           {
-            "node": "Mark Step Running",
+            "node": "Hydrate State From DB",
             "type": "main",
             "index": 0
-          },
+          }
+        ]
+      ]
+    },
+    "Hydrate State From DB": {
+      "main": [
+        [
           {
-            "node": "Route by Step Type",
+            "node": "Find Latest Attempt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Latest Attempt": {
+      "main": [
+        [
+          {
+            "node": "Decide Replay Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Decide Replay Action": {
+      "main": [
+        [
+          {
+            "node": "Insert New Attempt",
             "type": "main",
             "index": 0
           }
@@ -676,6 +805,20 @@
         [
           {
             "node": "Skip Step",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Process Step Result",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Process Step Result",
             "type": "main",
             "index": 0
           }
@@ -879,6 +1022,46 @@
           }
         ]
       ]
+    },
+    "Should Mark Running": {
+      "main": [
+        [
+          {
+            "node": "Mark Step Running",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Route by Step Type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark Step Running": {
+      "main": [
+        [
+          {
+            "node": "Route by Step Type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert New Attempt": {
+      "main": [
+        [
+          {
+            "node": "Should Mark Running",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": true,
@@ -890,7 +1073,7 @@
     "errorWorkflow": "pEvMbZGHKOsqaHmK",
     "callerPolicy": "workflowsFromSameOwner"
   },
-  "versionId": "d9fcaf27-9b9a-4b45-b441-b962c240ecb7",
+  "versionId": "05d468b7-bde0-46d9-b0f2-51df6c9db331",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "b46d0b13d69880a2fec430102877b55af4e44991549a68a3e78cd50a4dc1a09e"
