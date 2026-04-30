@@ -23,9 +23,11 @@ environment:
 
 **Critical:** Install modules OUTSIDE container, then mount. n8n official image doesn't persist npm installs.
 
-### Credential IDs Don't Survive Import
+### Re-Import Required After Every Workflow JSON Edit (and Credentials Drop)
 
-n8n workflow JSON contains workspace-specific credential IDs. After import: click EACH node with credentials → select from dropdown → save. ~5 min per workflow, unavoidable.
+Editing `workflows/*.json` does NOT auto-sync to the running n8n instance — every JSON-touching commit invalidates the imported snapshot. A multi-iteration debugging session needs re-import after **each** fix commit, not once at session end. On top of that, n8n drops credential refs on import: click EACH node with credentials → select from dropdown → save. ~5 min per workflow, unavoidable.
+
+**Why captured:** Discovered repeatedly during long debugging sessions — assuming "I already imported this workflow today" lets stale logic run for hours. The merge checklist for any workflow JSON change MUST include "re-import in n8n + verify credentials". Long-term mitigation tracked as follow-up: build an n8n import CLI that preserves credential refs by name.
 
 ### n8n Sandbox Limitations
 
@@ -56,6 +58,14 @@ Set node strips ALL fields not explicitly assigned. Looks like "add these fields
 - `mappingMode: "autoMapInputData"` — sends full pipeline data. **NOT `defineBelow` with empty value** (sends nothing when `convertFieldsToString: false`). When `convertFieldsToString: true`, it masks the empty-value bug by sending garbage stringified data instead of nothing.
 - `convertFieldsToString: false` — preserves objects. When `true`, `resolvedConfig: {prompt: "..."}` becomes `"[object Object]"`
 
+### Single Terminal Sink Rule (Output Aggregation Race)
+
+A subworkflow's output to its caller is whichever terminal node (no outgoing connection) finishes **last** — n8n picks "last executed" non-deterministically when multiple terminal sinks exist. A side-effect Code node returning `[]` finishing after the result-emitter silently makes the subworkflow output empty.
+
+**Verified production bug (T-209, 2026-04-30):** parallel `Process Step Result` + `Mark Step Running` (returns `[]`) caused the workflow to halt after the first iteration because the empty-array sink won the race.
+
+**Rule:** every subworkflow MUST have exactly ONE terminal sink. Side-effect Code nodes (`return []`) must be wired UPSTREAM in the chain (their output flowing into the eventual single terminal node), never as parallel sinks alongside the result emitter.
+
 ## Critical Mistakes We Made
 
 ### Queue Mode Not Obvious
@@ -74,6 +84,10 @@ Native Supabase UPDATE node output is the DB row, not original enriched item. Fi
 
 Failed items have no `stepType` field. If `failed` check is after step-type conditions, it never matches (undefined !== any type). Falls to fallback. During editing, `failed` condition got lost entirely. Always put `failed` at index 0.
 
+### Switch `rules` vs `connections` Drift
+
+A Switch node's `rules` array can hold a value whose corresponding key is missing from the source-node's `connections` object — a leftover from a partial edit. n8n does NOT validate this on import: the orphaned rule routes silently to whichever wire happens to exist at that array index, causing silent mis-routing. When reviewing any Switch node JSON, verify EVERY rule value also exists as a key under `connections.<switch-node-name>` for the source. Tooling follow-up: `n8n-builder.mjs` should grow a generic `add-switch-case --workflow X --node Y --condition Z` command that targets any Switch node by name within any workflow JSON, with `--dry-run` mandatory before mutating — currently only `Workflow Process Step.json` routing is automated, every other Switch (Trigger Handler, Send Email handler, etc.) requires hand-editing.
+
 ### Condition Evaluator + Pre-Resolved Literals
 
 Prepare Current Step resolves `{{overallScore}}` → `7` before condition handler. Handler gets `"7 >= 5"`, looks for key "7" in context → undefined → false. Fix: `coerceNumeric()` fallback for left operand.
@@ -81,6 +95,42 @@ Prepare Current Step resolves `{{overallScore}}` → `7` before condition handle
 ### JSONB Double-Encode
 
 `supabaseRequest()` does `req.write(JSON.stringify(body))`. If `output_payload` is already `JSON.stringify()`'d, PostgREST stores string-in-string. PostgREST handles JSONB natively — never `JSON.stringify()` values going into JSONB columns. Fix: pass objects directly.
+
+## Operational
+
+### Stuck Execution Cleanup via PostgREST PATCH
+
+When `workflow_executions` / `workflow_step_executions` rows stuck at `status='running'` from aborted runs, fix in the DB directly — no n8n UI clicks required:
+
+```bash
+curl -X PATCH "$SUPABASE_URL/rest/v1/workflow_step_executions?status=in.(running,pending)" \
+  -H "apikey: $SERVICE_ROLE" -H "Authorization: Bearer $SERVICE_ROLE" \
+  -H "Prefer: return=minimal" \
+  -d '{"status":"cancelled","completed_at":"<now>","error_message":"<reason>"}'
+```
+
+Same pattern for `workflow_executions`. Saves dozens of clicks vs cancelling each execution in the n8n UI. WHY captured: the Orchestrator can leave rows running indefinitely after a hard abort (no `finally`-style cleanup); operationally we mass-cancel rather than chase individual executions.
+
+## Tooling
+
+### `n8n-builder.mjs` — Workflow Authoring CLI
+
+Located at `n8n-workflows/scripts/n8n-builder.mjs`. Invoke via `npm run n8n:build -- <command>` from the workspace root.
+
+Commands:
+- `create-handler` — writes a new step-handler subworkflow (Step - *.json) by inlining canonical evaluator JS from `scripts/evaluators/*.js` into the Code-node body. Safe (only writes new file).
+- `add-route` — mutates Process Step Switch `connections` in-place to wire a new step type. **Riskier** — currently lacks `--dry-run`; review the diff before committing.
+- `regenerate-helpers` — re-inlines the canonical `supabaseRequest` helper into all opt-in Code nodes. Opt-in is via the marker `// @inline supabase-request` at the top of the Code node body. Adding a new shared helper = one entry in the INLINE_HELPERS map + one evaluator file.
+
+WHY this design: handler JSONs are export artifacts — diffing/reviewing logic embedded as a JSON-escaped string is hostile (newlines become `\n`, no syntax highlighting, no linting). Keeping evaluators as standalone `.js` files lets the build step inline them at scaffold time while preserving normal editor tooling. Pattern generalizes: any time JS-as-string ships in a JSON config, write the source as a real file and inline it via build script.
+
+Follow-up tooling (tracked): `add-switch-case` generic command for any in-workflow Switch (Trigger Handler, Send Email handler routing, etc.) with mandatory `--dry-run`.
+
+## Workflow Retry Foundation (T-208 / T-209, 2026-04-30)
+
+Replay engine landed in `Workflow Process Step.json`: a 4-node sequence (`Hydrate State From DB` → `Find Latest Attempt` → `Decide Replay Action` → `Insert New Attempt`) implements the Continuation-with-attempts model. `Mark Step Running` is gated by a `Should Mark Running` IF, and every handler now persists its incoming payload via `Save Input Payload` for audit. `workflow_executions.workflow_snapshot` (JSONB) decouples in-flight executions from live workflow edits.
+
+User-facing retry surface — Retry button, attempt history UI, batch cancellation — is intentionally deferred and tracked as T-210. Architecture supports it additively without rewrite (per the Continuation model captured in `docs/guides/workflow/WORKFLOW_RETRY_ARCHITECTURE.md`).
 
 ## MiniMax Agent Subworkflow
 

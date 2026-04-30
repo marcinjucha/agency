@@ -49,6 +49,21 @@ Different callers use different clients: CMS uses authenticated server client (t
 
 Provider returns flat `CalendarEvent { start: string, end: string }`. The slot calculator expects `BusyEvent { start: { dateTime: string } }`. Mapping happens in the slots API route, not in this package.
 
+## Provider Quirks
+
+### Baikal CalDAV exposes 2 calendars by default — must filter to "Appointments"
+
+`tsdav.fetchCalendars()` auto-discovers both calendars Baikal ships with: **"Appointments"** (used by the booking flow) and **"Default calendar"** (empty/unused). Both also appear in client UIs (macOS Calendar, iOS, Thunderbird), so this isn't a tsdav bug — Baikal genuinely exposes two.
+
+**Production code MUST filter** to the Appointments calendar after `client.fetchCalendars()`:
+
+```typescript
+const calendars = await client.fetchCalendars()
+const appointments = calendars.find(c => c.displayName === 'Appointments')
+```
+
+**Why:** Without filtering, queries either hit the wrong (empty) calendar or merge events from both, leading to silently-empty event lists or duplicated busy-slot calculations. The "Default calendar" is never written to — ignore it.
+
 ## Graceful Degradation (Still Applies)
 
 - **Booking:** Appointment is PRIMARY, calendar event is SECONDARY. Calendar failure = log + continue.

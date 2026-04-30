@@ -173,14 +173,18 @@ Format: `YYYYMMDDHHMMSS_description.sql`
 **Auto-generated from live database:**
 
 ```bash
-# Generate types
-supabase gen types typescript --linked > packages/database/src/types.ts
+# Generate types — filter "Initialising login role..." line that corrupts output
+supabase gen types typescript --linked 2>/dev/null | grep -v "^Initialising" > packages/database/src/types.ts
 
 # Or use npm script
 npm run db:types
 ```
 
 **Never manually edit** `packages/database/src/types.ts` - it's auto-generated!
+
+**Why the `grep -v "^Initialising"` filter:** `supabase gen types` prepends "Initialising login role..." status text to stdout, which corrupts `types.ts` and breaks TypeScript compilation. Manually removing the line each time is error-prone — bake the filter into the redirect.
+
+**`db:types` script targets `--local` by default** — when local Supabase isn't running, switch to `--linked` (or update the script) to hit Cloud directly. Otherwise the command silently produces an empty/stale types file.
 
 ## Local Development
 
@@ -297,6 +301,28 @@ Chained methods are separate HTTP request parts, not a single `UPDATE...RETURNIN
 **Fix:** Always verify the migration SQL has a matching `UNIQUE(col1, col2)` constraint or unique index before using `onConflict`. Check with: `\d table_name` in psql or inspect migration file.
 
 **Why:** Found in AAA-T-157 (marketplace listings). `onConflict: 'product_id,marketplace'` created duplicate listings silently because the unique constraint was missing from the migration. No error at any layer — Supabase JS, PostgREST, and PostgreSQL all succeed (as a regular INSERT).
+
+### Supabase Cloud blocks `ALTER DATABASE SET` for custom GUCs — use `app_config` table instead
+
+Supabase Cloud rejects `ALTER DATABASE postgres SET app.encryption_key = '...'`. Custom GUCs (Grand Unified Configuration parameters) cannot be set this way on managed Postgres.
+
+**Fix:** Store the value in an `app_config` table (one row per key) and read it from a `SECURITY DEFINER` function (e.g. `get_encryption_key()`). Call that function from pgcrypto wrappers instead of `current_setting('app.encryption_key')`.
+
+**Why:** Used by `shop_marketplace_connections.access_token` encryption (pgcrypto BYTEA). `current_setting('app.x')` would be the natural Postgres pattern but is unavailable on Cloud — `SELECT get_encryption_key()` from a SECURITY DEFINER function reading `app_config` is the workaround. Keeps the secret out of code/env while remaining queryable from migrations and triggers.
+
+### Nil UUID fallback for nullable filter values
+
+`.eq('column', maybeNullId)` where `maybeNullId` is `null` causes PostgreSQL to throw a UUID parse error (PostgREST forwards it as a 400). The query fails instead of returning zero rows.
+
+**Fix:** Coalesce to the nil UUID at the call site:
+
+```ts
+.eq('user_id', maybeUserId ?? '00000000-0000-0000-0000-000000000000')
+```
+
+The nil UUID is a valid UUID (parses fine) but never matches a real row → safely returns zero results.
+
+**Why:** Recurs in queries with optional FK filters (e.g., "responses for this user, or none if not logged in"). Conditional `.eq()` chaining works too but is verbose; the nil-UUID coalesce reads as a single expression and is the established pattern in this codebase.
 
 ## Related Documentation
 

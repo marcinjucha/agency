@@ -235,6 +235,18 @@ export const Route = createFileRoute('/admin/new-feature/')({
 
 **`OutputSchemaField` serves dual context — never convert `.label` to `labelKey`** — Same type used for static output schema definitions in step-registry (CAN use labelKey bridge) AND user-defined output fields saved to DB via AI Action config panel (MUST keep `.label` as freetext string entered by user, e.g. "Customer name"). Converting `.label` to `labelKey` would silently break user-defined output schemas. **WHY:** Only registry-level labels use the i18n bridge pattern. DB-persisted user input must remain raw strings — no message key lookup exists for dynamic user content. (AAA-T-190)
 
+### createServerFn Silent-Fail Pipeline Traps
+
+These are silent-fail patterns specific to the TanStack Start `createServerFn` pipeline. They recur across features post-Next.js migration. When debugging "fix doesn't work" loops in a server fn, suspect the pipeline before the handler.
+
+**`inputValidator(zodSchema)` direct form silently fails — wrap in a function** — `.inputValidator(zodSchema)` does NOT call `.parse()` on a raw schema; the input passes through unvalidated and the handler sees raw, unparsed values. Always wrap: `.inputValidator((input) => zodSchema.parse(input))`. **WHY:** The RPC layer doesn't invoke `.parse()` on raw schema objects — it only invokes the function form. Recurs across features.
+
+**Flat `inputValidator` schemas — avoid double-wrapping with `z.object({ data: X })`** — Using `z.object({ data: X })` as the inputValidator schema makes the call site read `fn({ data: { data: values } })`, which looks like a triple-wrap bug. Use flat `inputValidator((v: z.infer<X>) => X.parse(v))` + `fn({ data: values })`. **WHY:** The RPC already wraps the payload under `data` — adding another `data` layer in the schema duplicates it. Eliminates an entire class of confusion at call sites.
+
+**`inputValidator` throws SYNCHRONOUSLY before the handler runs — debug FIRST suspect** — `z.enum(EXTENSIBLE_TYPES)` rejecting an unknown value causes a silent fail from the handler's perspective: client gets a generic 500, ALL handler-level logging is dead code (the request never reaches the handler). Symptom: "Nie udało się zapisać X" with zero diagnostics, even after instrumenting the handler. **Rule:** when debugging a "fix doesn't work" loop in a `serverFn`, FIRST suspect the `inputValidator` schema. `z.enum(...)` on extensible value sets (step types, trigger types, action types from a registry) is a trap — use `z.string()` at the wire boundary and discriminate inside the handler. (AAA-T-211 follow-up, 2026-04-29)
+
+**`JSON.stringify(data.field)` migration residue from Server Actions corrupts JSONB** — Next.js Server Actions serialized payloads, so `JSON.stringify` was needed before storage. `createServerFn` does NOT serialize → stringify becomes redundant AND corrupts: stores a JSON string in JSONB instead of an object. The `typeof === 'object'` guard in deserializers then returns null silently on reload. **Audit rule:** post-migration, grep all server-fn mutations for leftover `JSON.stringify` calls on JSONB fields (Tiptap content, block configs, qualification analysis, etc.). Companion to the CMS-level "JSON.stringify(content) before server fn breaks Zod validation" gotcha.
+
 ## Related Documentation
 
 - [ADR-005: App vs Features Separation](../../../docs/adr/ARCHIVED-005-app-vs-features-separation.md)

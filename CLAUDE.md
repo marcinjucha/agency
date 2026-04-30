@@ -256,6 +256,22 @@ This monorepo contains two Notion projects with separate PROJECT_SPEC files:
 - **Stage agent-created files explicitly** — The Write tool creates files on disk but does NOT `git add` them. After any file creation step, verify the file appears in `git status` and stage it before committing. WHY: docs/polityka-prywatnosci.md was created during AAA-T-162 but never staged — untracked files are lost on branch switch.
 - **`chore/` branch prefix for tech-debt without a Notion task** — Use `chore/{slug}` branch naming (no `AAA-T-xxx` prefix) for internal cleanup/refactoring work that doesn't correspond to a tracked Notion task. Mirrors npm semver convention. Example: `chore/plugin-arch-cleanup`.
 - **Clean git history before merge** — Before merging any feature branch, squash/reorganize commits into logical groups using `git reset --soft <base>` + re-commit. WHY: user explicitly confirmed this pattern (AAA-T-196) — prevents WIP/fix commit noise in main history.
+- **Bash `cd` persists across tool calls — use absolute paths in git/pnpm/npm commands** — `cd` in one Bash call changes pwd for ALL subsequent Bash calls in the session. Caused accidental commits to wrong branch. Most tools (Read, Edit, Write) are absolute-path so pwd doesn't matter — only Bash carries state. Fix: use `git -C /path/to/worktree ...`, `pnpm -F @agency/cms ...` — never rely on an earlier `cd`.
+- **`git clean -fd` silently deletes untracked directories — always `-fdn` (dry-run) first** — Wiped `apps/shop/jacek/src/` (untracked, never in git history) with zero recovery path. Always run `git clean -fdn` first, read the output carefully, then `-fd`.
+
+**When working with worktrees:**
+
+- **Kill dev servers BEFORE `git worktree remove`** — `git worktree remove --force` kills live Vite dev servers with SIGABRT/exit 134; Vite segfaults when its working directory vanishes underneath it. Correct order: kill dev servers first, THEN remove the worktree.
+- **pnpm worktree + main share `node_modules`** — Lockfile install in either checkout affects both. Git worktree's `preview_start` from main's `.claude/launch.json` always spawns vite from main checkout path, NOT worktree. Start vite manually from worktree directory for worktree-local dev server.
+- **`preview_start` reuses the port, not the checkout** — If a Vite dev server is already bound to the target port from a DIFFERENT checkout (main vs worktree), preview tools attach to the stale server and serve wrong code. Symptom: edits in worktree don't show up in preview. Fix: kill port occupant before `preview_start` in a worktree.
+
+**When working with skills, commands, and memory:**
+
+- **Three-layer persistence for durable conventions** — `memory.md` alone doesn't enforce behavior. A durable convention must land in (1) `memory.md` for interactive context, (2) the specific slash-command markdown (e.g. `ag-develop.md`) for that flow, AND (3) the relevant skill SKILL.md for all agents loading it. Duplication across the three layers is a feature — each catches a different invocation path (human chat vs `/command` vs subagent loading a skill). Single-layer entries silently fail.
+
+**Workflow preferences:**
+
+- **"fix all - nie zostawiaj niczego" applies to validator findings** — When a validator reports CRITICAL/HIGH/MEDIUM/LOW findings, the default is fix-now in the current commit, not defer to follow-up Notion tasks. Generalizes prior "fix all" / "do all now" preferences (P2 items, MEDIUM severity). Defer is the exception requiring explicit justification (heroic effort, unscoped architecture work). Do NOT propose deferral as a default option in validator summaries.
 
 **When writing code:**
 
