@@ -1,9 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { createClient } from '@/lib/supabase/client'
-import { getResponseAiActionResults } from '../queries'
+import { describe, it, expect, vi } from 'vitest'
+import { createServerClient } from '@/lib/supabase/server-start'
+import { getResponseAiActionResultsHandler } from '../handlers.server'
 
-// createClient is mocked globally in vitest.setup.ts — we override per test
-const mockCreateClient = createClient as ReturnType<typeof vi.fn>
+// createServerClient is mocked globally in vitest.setup.ts — we override per test
+const mockCreateServerClient = createServerClient as ReturnType<typeof vi.fn>
 
 // ---------------------------------------------------------------------------
 // Test helpers
@@ -18,7 +18,7 @@ const mockCreateClient = createClient as ReturnType<typeof vi.fn>
  */
 function buildTwoStepClient(
   executionsResponse: { data: unknown; error: unknown },
-  stepExecsResponse: { data: unknown; error: unknown }
+  stepExecsResponse: { data: unknown; error: unknown },
 ): { supabase: { from: ReturnType<typeof vi.fn> }; executionsSelectSpy: ReturnType<typeof vi.fn> } {
   let callIndex = 0
   const responses = [executionsResponse, stepExecsResponse]
@@ -32,13 +32,15 @@ function buildTwoStepClient(
 
       const chain: Record<string, unknown> = {}
       chain.select = isFirstCall
-        ? vi.fn((...args: unknown[]) => { executionsSelectSpy(...args); return chain })
+        ? vi.fn((...args: unknown[]) => {
+            executionsSelectSpy(...args)
+            return chain
+          })
         : vi.fn().mockReturnValue(chain)
       chain.in = vi.fn().mockReturnValue(chain)
       chain.not = vi.fn().mockReturnValue(chain)
       chain.order = vi.fn().mockReturnValue(chain)
-      chain.then = (resolve: (v: unknown) => unknown) =>
-        Promise.resolve(response).then(resolve)
+      chain.then = (resolve: (v: unknown) => unknown) => Promise.resolve(response).then(resolve)
       return chain
     }),
   }
@@ -77,14 +79,15 @@ function buildAiStepExecution(overrides: {
     },
     workflow_steps: {
       step_type: overrides.stepType ?? 'ai_action',
-      step_config: overrides.stepConfig !== undefined
-        ? overrides.stepConfig
-        : {
-            output_schema: [
-              { key: 'overallScore', label: 'Ocena ogólna', type: 'number' },
-              { key: 'recommendation', label: 'Rekomendacja', type: 'string' },
-            ],
-          },
+      step_config:
+        overrides.stepConfig !== undefined
+          ? overrides.stepConfig
+          : {
+              output_schema: [
+                { key: 'overallScore', label: 'Ocena ogólna', type: 'number' },
+                { key: 'recommendation', label: 'Rekomendacja', type: 'string' },
+              ],
+            },
     },
   }
 }
@@ -96,19 +99,20 @@ function buildAiStepExecution(overrides: {
 /** Convenience: wire a two-step client into the mock and return the select spy */
 function mockWithTwoStepClient(
   executionsResponse: { data: unknown; error: unknown },
-  stepExecsResponse: { data: unknown; error: unknown }
+  stepExecsResponse: { data: unknown; error: unknown },
 ): ReturnType<typeof vi.fn> {
   const { supabase, executionsSelectSpy } = buildTwoStepClient(executionsResponse, stepExecsResponse)
-  mockCreateClient.mockReturnValue(supabase)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  mockCreateServerClient.mockReturnValue(supabase as any)
   return executionsSelectSpy
 }
 
-describe('getResponseAiActionResults', () => {
+describe('getResponseAiActionResultsHandler', () => {
   describe('select() argument — trigger_payload must be fetched', () => {
     it('calls .select() with trigger_payload so client-side filter has data to match', async () => {
       const selectSpy = mockWithTwoStepClient({ data: [], error: null }, { data: [], error: null })
 
-      await getResponseAiActionResults('response-1')
+      await getResponseAiActionResultsHandler({ responseId: 'response-1' })
 
       expect(selectSpy).toHaveBeenCalledWith(expect.stringContaining('trigger_payload'))
     })
@@ -118,7 +122,7 @@ describe('getResponseAiActionResults', () => {
     it('returns empty array when executions query returns empty data', async () => {
       mockWithTwoStepClient({ data: [], error: null }, { data: [], error: null })
 
-      const result = await getResponseAiActionResults('response-1')
+      const result = await getResponseAiActionResultsHandler({ responseId: 'response-1' })
 
       expect(result).toEqual([])
     })
@@ -126,7 +130,7 @@ describe('getResponseAiActionResults', () => {
     it('returns empty array when executions query returns null', async () => {
       mockWithTwoStepClient({ data: null, error: null }, { data: [], error: null })
 
-      const result = await getResponseAiActionResults('response-1')
+      const result = await getResponseAiActionResultsHandler({ responseId: 'response-1' })
 
       expect(result).toEqual([])
     })
@@ -137,7 +141,7 @@ describe('getResponseAiActionResults', () => {
       const executions = [buildExecution('exec-1', 'different-response-id')]
       mockWithTwoStepClient({ data: executions, error: null }, { data: [], error: null })
 
-      const result = await getResponseAiActionResults('response-1')
+      const result = await getResponseAiActionResultsHandler({ responseId: 'response-1' })
 
       expect(result).toEqual([])
     })
@@ -148,12 +152,9 @@ describe('getResponseAiActionResults', () => {
       const executions = [buildExecution('exec-1', 'response-1')]
       const stepExecs = [buildAiStepExecution({})]
 
-      mockWithTwoStepClient(
-        { data: executions, error: null },
-        { data: stepExecs, error: null }
-      )
+      mockWithTwoStepClient({ data: executions, error: null }, { data: stepExecs, error: null })
 
-      const result = await getResponseAiActionResults('response-1')
+      const result = await getResponseAiActionResultsHandler({ responseId: 'response-1' })
 
       expect(result).toHaveLength(1)
       expect(result[0]).toEqual({
@@ -175,12 +176,9 @@ describe('getResponseAiActionResults', () => {
         buildAiStepExecution({ stepType: 'condition' }),
       ]
 
-      mockWithTwoStepClient(
-        { data: executions, error: null },
-        { data: stepExecs, error: null }
-      )
+      mockWithTwoStepClient({ data: executions, error: null }, { data: stepExecs, error: null })
 
-      const result = await getResponseAiActionResults('response-1')
+      const result = await getResponseAiActionResultsHandler({ responseId: 'response-1' })
 
       expect(result).toHaveLength(1)
       expect(result[0].workflowName).toBe('AI Flow')
@@ -196,12 +194,9 @@ describe('getResponseAiActionResults', () => {
         buildAiStepExecution({ workflowName: 'Flow B', completedAt: '2026-04-12T10:00:00Z' }),
       ]
 
-      mockWithTwoStepClient(
-        { data: executions, error: null },
-        { data: stepExecs, error: null }
-      )
+      mockWithTwoStepClient({ data: executions, error: null }, { data: stepExecs, error: null })
 
-      const result = await getResponseAiActionResults('response-1')
+      const result = await getResponseAiActionResultsHandler({ responseId: 'response-1' })
 
       expect(result).toHaveLength(2)
       expect(result[0].workflowName).toBe('Flow A')
@@ -210,18 +205,20 @@ describe('getResponseAiActionResults', () => {
 
     it('returns outputSchema from step_config.output_schema', async () => {
       const executions = [buildExecution('exec-1', 'response-1')]
-      const stepExecs = [buildAiStepExecution({
-        stepConfig: {
-          output_schema: [
-            { key: 'concerns', label: 'Wątpliwości', type: 'string' },
-            { key: 'aiResponse', label: 'Analiza AI', type: 'string' },
-          ],
-        },
-      })]
+      const stepExecs = [
+        buildAiStepExecution({
+          stepConfig: {
+            output_schema: [
+              { key: 'concerns', label: 'Wątpliwości', type: 'string' },
+              { key: 'aiResponse', label: 'Analiza AI', type: 'string' },
+            ],
+          },
+        }),
+      ]
 
       mockWithTwoStepClient({ data: executions, error: null }, { data: stepExecs, error: null })
 
-      const result = await getResponseAiActionResults('response-1')
+      const result = await getResponseAiActionResultsHandler({ responseId: 'response-1' })
 
       expect(result[0].outputSchema).toEqual([
         { key: 'concerns', label: 'Wątpliwości', type: 'string' },
@@ -235,7 +232,7 @@ describe('getResponseAiActionResults', () => {
 
       mockWithTwoStepClient({ data: executions, error: null }, { data: stepExecs, error: null })
 
-      const result = await getResponseAiActionResults('response-1')
+      const result = await getResponseAiActionResultsHandler({ responseId: 'response-1' })
 
       expect(result[0].outputSchema).toEqual([])
     })
@@ -244,12 +241,9 @@ describe('getResponseAiActionResults', () => {
       const executions = [buildExecution('exec-1', 'response-1')]
       const stepExecs = [buildAiStepExecution({ completedAt: null })]
 
-      mockWithTwoStepClient(
-        { data: executions, error: null },
-        { data: stepExecs, error: null }
-      )
+      mockWithTwoStepClient({ data: executions, error: null }, { data: stepExecs, error: null })
 
-      const result = await getResponseAiActionResults('response-1')
+      const result = await getResponseAiActionResultsHandler({ responseId: 'response-1' })
 
       expect(result[0].completedAt).toBeNull()
     })
@@ -260,19 +254,20 @@ describe('getResponseAiActionResults', () => {
       const dbError = { message: 'RLS violation on workflow_executions' }
       mockWithTwoStepClient({ data: null, error: dbError }, { data: null, error: null })
 
-      await expect(getResponseAiActionResults('response-1')).rejects.toEqual(dbError)
+      await expect(getResponseAiActionResultsHandler({ responseId: 'response-1' })).rejects.toThrow(
+        'RLS violation on workflow_executions',
+      )
     })
 
     it('throws when workflow_step_executions query fails', async () => {
       const executions = [buildExecution('exec-1', 'response-1')]
       const dbError = { message: 'RLS violation on workflow_step_executions' }
 
-      mockWithTwoStepClient(
-        { data: executions, error: null },
-        { data: null, error: dbError }
-      )
+      mockWithTwoStepClient({ data: executions, error: null }, { data: null, error: dbError })
 
-      await expect(getResponseAiActionResults('response-1')).rejects.toEqual(dbError)
+      await expect(getResponseAiActionResultsHandler({ responseId: 'response-1' })).rejects.toThrow(
+        'RLS violation on workflow_step_executions',
+      )
     })
   })
 })
