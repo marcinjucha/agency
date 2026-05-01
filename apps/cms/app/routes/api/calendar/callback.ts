@@ -1,7 +1,7 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
 import { createServerFn } from '@tanstack/react-start'
 import { getRequest } from '@tanstack/start-server-core'
-import { handleCallback, revokeAccess } from '@/features/calendar/oauth'
+import { handleCallback, revokeAccess } from '@/features/calendar/oauth.server'
 import { routes } from '@/lib/routes'
 import { messages } from '@/lib/messages'
 import { createServerClient } from '@/lib/supabase/server-start'

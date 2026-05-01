@@ -7,7 +7,7 @@ import { caldavConnectionSchema } from './validation'
 import { calendarSettingsSchema } from './validation'
 import type { CalDAVConnectionFormValues, CalendarSettingsFormValues } from './types'
 import { CALENDAR_SETTINGS_DEFAULTS } from './types'
-import { getAuthUrl } from './oauth'
+import { getAuthUrl } from './oauth.server'
 import { type AuthContext, type StartClient, requireAuthContext } from '@/lib/server-auth'
 
 // ---------------------------------------------------------------------------
