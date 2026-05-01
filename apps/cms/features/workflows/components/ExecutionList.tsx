@@ -9,10 +9,10 @@ import { Skeleton, ErrorState, EmptyState } from '@agency/ui'
 import { queryKeys } from '@/lib/query-keys'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
-import { getAllExecutions, getWorkflows } from '../queries'
+import { getAllExecutionsFn, getWorkflowsFn } from '../server'
+import type { ExecutionFilters } from '../server'
 import { getTriggerTypeLabel, formatDate, formatExecutionDuration } from '../utils'
 import type { ExecutionStatus, ExecutionWithWorkflow, TriggerType } from '../types'
-import type { ExecutionFilters } from '../queries'
 import { Badge } from '@agency/ui'
 import { ExecutionStatusBadge } from './ExecutionStatusBadge'
 import { ExecutionFilters as ExecutionFiltersBar } from './ExecutionFilters'
@@ -46,7 +46,10 @@ export function ExecutionList({ workflowId: propWorkflowId }: ExecutionListProps
     refetch,
   } = useQuery({
     queryKey: queryKeys.executions.all(filters),
-    queryFn: () => getAllExecutions(Object.keys(filters).length ? filters : undefined),
+    queryFn: () =>
+      getAllExecutionsFn({
+        data: { filters: Object.keys(filters).length ? filters : undefined },
+      }),
     refetchInterval: (query) => {
       const data = query.state.data as ExecutionWithWorkflow[] | undefined
       if (!data) return 10_000
@@ -62,7 +65,7 @@ export function ExecutionList({ workflowId: propWorkflowId }: ExecutionListProps
     isLoading: workflowsLoading,
   } = useQuery({
     queryKey: queryKeys.workflows.list,
-    queryFn: getWorkflows,
+    queryFn: getWorkflowsFn,
     enabled: isGlobalView,
   })
 
@@ -140,7 +143,7 @@ export function ExecutionList({ workflowId: propWorkflowId }: ExecutionListProps
               </tr>
             </thead>
             <tbody>
-              {executions.map((execution) => (
+              {(executions as ExecutionWithWorkflow[]).map((execution) => (
                 <ExecutionRow
                   key={execution.id}
                   execution={execution}

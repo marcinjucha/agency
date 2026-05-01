@@ -27,7 +27,6 @@ import { Route as AdminIntakeIndexRouteImport } from './routes/admin/intake/inde
 import { Route as AdminEmailTemplatesIndexRouteImport } from './routes/admin/email-templates/index'
 import { Route as AdminBlogIndexRouteImport } from './routes/admin/blog/index'
 import { Route as ApiWorkflowsTriggerRouteImport } from './routes/api/workflows/trigger'
-import { Route as ApiWorkflowsRetryRouteImport } from './routes/api/workflows/retry'
 import { Route as ApiCalendarCallbackRouteImport } from './routes/api/calendar/callback'
 import { Route as AdminWorkflowsWorkflowIdRouteImport } from './routes/admin/workflows/$workflowId'
 import { Route as AdminTenantsNewRouteImport } from './routes/admin/tenants/new'
@@ -142,11 +141,6 @@ const AdminBlogIndexRoute = AdminBlogIndexRouteImport.update({
 const ApiWorkflowsTriggerRoute = ApiWorkflowsTriggerRouteImport.update({
   id: '/api/workflows/trigger',
   path: '/api/workflows/trigger',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiWorkflowsRetryRoute = ApiWorkflowsRetryRouteImport.update({
-  id: '/api/workflows/retry',
-  path: '/api/workflows/retry',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiCalendarCallbackRoute = ApiCalendarCallbackRouteImport.update({
@@ -299,7 +293,6 @@ export interface FileRoutesByFullPath {
   '/admin/tenants/new': typeof AdminTenantsNewRoute
   '/admin/workflows/$workflowId': typeof AdminWorkflowsWorkflowIdRouteWithChildren
   '/api/calendar/callback': typeof ApiCalendarCallbackRoute
-  '/api/workflows/retry': typeof ApiWorkflowsRetryRoute
   '/api/workflows/trigger': typeof ApiWorkflowsTriggerRoute
   '/admin/blog/': typeof AdminBlogIndexRoute
   '/admin/email-templates/': typeof AdminEmailTemplatesIndexRoute
@@ -343,7 +336,6 @@ export interface FileRoutesByTo {
   '/admin/tenants/new': typeof AdminTenantsNewRoute
   '/admin/workflows/$workflowId': typeof AdminWorkflowsWorkflowIdRouteWithChildren
   '/api/calendar/callback': typeof ApiCalendarCallbackRoute
-  '/api/workflows/retry': typeof ApiWorkflowsRetryRoute
   '/api/workflows/trigger': typeof ApiWorkflowsTriggerRoute
   '/admin/blog': typeof AdminBlogIndexRoute
   '/admin/email-templates': typeof AdminEmailTemplatesIndexRoute
@@ -389,7 +381,6 @@ export interface FileRoutesById {
   '/admin/tenants/new': typeof AdminTenantsNewRoute
   '/admin/workflows/$workflowId': typeof AdminWorkflowsWorkflowIdRouteWithChildren
   '/api/calendar/callback': typeof ApiCalendarCallbackRoute
-  '/api/workflows/retry': typeof ApiWorkflowsRetryRoute
   '/api/workflows/trigger': typeof ApiWorkflowsTriggerRoute
   '/admin/blog/': typeof AdminBlogIndexRoute
   '/admin/email-templates/': typeof AdminEmailTemplatesIndexRoute
@@ -436,7 +427,6 @@ export interface FileRouteTypes {
     | '/admin/tenants/new'
     | '/admin/workflows/$workflowId'
     | '/api/calendar/callback'
-    | '/api/workflows/retry'
     | '/api/workflows/trigger'
     | '/admin/blog/'
     | '/admin/email-templates/'
@@ -480,7 +470,6 @@ export interface FileRouteTypes {
     | '/admin/tenants/new'
     | '/admin/workflows/$workflowId'
     | '/api/calendar/callback'
-    | '/api/workflows/retry'
     | '/api/workflows/trigger'
     | '/admin/blog'
     | '/admin/email-templates'
@@ -525,7 +514,6 @@ export interface FileRouteTypes {
     | '/admin/tenants/new'
     | '/admin/workflows/$workflowId'
     | '/api/calendar/callback'
-    | '/api/workflows/retry'
     | '/api/workflows/trigger'
     | '/admin/blog/'
     | '/admin/email-templates/'
@@ -557,7 +545,6 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRouteWithChildren
   LoginRoute: typeof LoginRoute
   ApiCalendarCallbackRoute: typeof ApiCalendarCallbackRoute
-  ApiWorkflowsRetryRoute: typeof ApiWorkflowsRetryRoute
   ApiWorkflowsTriggerRoute: typeof ApiWorkflowsTriggerRoute
   ApiMarketplaceMarketplaceCallbackRoute: typeof ApiMarketplaceMarketplaceCallbackRoute
 }
@@ -688,13 +675,6 @@ declare module '@tanstack/react-router' {
       path: '/api/workflows/trigger'
       fullPath: '/api/workflows/trigger'
       preLoaderRoute: typeof ApiWorkflowsTriggerRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/workflows/retry': {
-      id: '/api/workflows/retry'
-      path: '/api/workflows/retry'
-      fullPath: '/api/workflows/retry'
-      preLoaderRoute: typeof ApiWorkflowsRetryRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/calendar/callback': {
@@ -980,7 +960,6 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRouteWithChildren,
   LoginRoute: LoginRoute,
   ApiCalendarCallbackRoute: ApiCalendarCallbackRoute,
-  ApiWorkflowsRetryRoute: ApiWorkflowsRetryRoute,
   ApiWorkflowsTriggerRoute: ApiWorkflowsTriggerRoute,
   ApiMarketplaceMarketplaceCallbackRoute:
     ApiMarketplaceMarketplaceCallbackRoute,

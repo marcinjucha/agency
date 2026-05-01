@@ -4,8 +4,7 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { queryKeys } from '@/lib/query-keys'
-import { getWorkflows } from '../queries'
-import { deleteWorkflowFn, toggleWorkflowActiveFn } from '../server'
+import { getWorkflowsFn, deleteWorkflowFn, toggleWorkflowActiveFn } from '../server'
 import { getTriggerTypeLabel, formatDate } from '../utils'
 import type { TriggerType, WorkflowListItem } from '../types'
 import {
@@ -58,7 +57,7 @@ export function WorkflowList() {
     refetch,
   } = useQuery({
     queryKey: queryKeys.workflows.list,
-    queryFn: getWorkflows,
+    queryFn: getWorkflowsFn,
   })
 
   const deleteMutation = useMutation({

@@ -15,7 +15,7 @@ import { format, parseISO } from 'date-fns'
 import { queryKeys } from '@/lib/query-keys'
 import { messages } from '@/lib/messages'
 import type { Tables } from '@agency/database'
-import { getWorkflowsForSelector } from '@/features/workflows/queries'
+import { getWorkflowsForSelectorFn } from '@/features/workflows/server'
 import { SurveyLinkCalendarSelect, useCalendarConnectionName } from './SurveyLinkCalendarSelect'
 
 type SurveyLinksProps = {
@@ -138,7 +138,7 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
   // Query for active survey_submitted workflows — used in selector dropdown
   const { data: workflows = [] } = useQuery<WorkflowSelectorOption[]>({
     queryKey: queryKeys.workflows.list,
-    queryFn: () => getWorkflowsForSelector(),
+    queryFn: () => getWorkflowsForSelectorFn({ data: {} }),
   })
 
   // Mutation for generating link — wraps to throw on failure (known project pattern)

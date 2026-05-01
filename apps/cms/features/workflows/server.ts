@@ -1,4 +1,5 @@
 import { createServerFn } from '@tanstack/react-start'
+import { z } from 'zod'
 import { ok, err, errAsync, ResultAsync } from 'neverthrow'
 import { fromSupabase, fromSupabaseVoid } from '@/lib/result-helpers'
 import {
@@ -12,23 +13,43 @@ import {
 } from './validation'
 import {
   toWorkflow,
-  toWorkflowListItem,
-  toWorkflowStep,
   toWorkflowEdge,
-  type WorkflowListItem,
-  type WorkflowWithSteps,
-  type EmailTemplateOption,
-  type EmailTemplateWithBody,
-  type SurveyOption,
+  toWorkflowStep,
 } from './types'
 import { createServiceClient } from '@/lib/supabase/service'
 import { messages } from '@/lib/messages'
 import { WORKFLOW_TEMPLATES } from './templates/workflow-templates'
-import { createServerClient } from '@/lib/supabase/server-start'
 import { type AuthContext, type StartClient, requireAuthContext } from '@/lib/server-auth'
 import { generateStepSlug, isValidSlugFormat } from './utils/slug'
 import { validateSurveyLinkIdInPayload } from './trigger-payload-validators'
 import { validateAllSteps } from './utils/validate-steps'
+import {
+  getWorkflowsHandler,
+  getWorkflowHandler,
+  getWorkflowsForSelectorHandler,
+  getWorkflowExecutionsHandler,
+  getEmailTemplatesForWorkflowHandler,
+  getEmailTemplatesWithBodyHandler,
+  getSurveysForWorkflowHandler,
+  getAllExecutionsHandler,
+  getExecutionWithStepsHandler,
+  retryWorkflowExecutionHandler,
+  dispatchToN8nHandler,
+  fetchWorkflowForPublicTriggerHandler,
+  type ExecutionFilters,
+  type WorkflowSelectorOption,
+  type RetryWorkflowResult,
+} from './handlers.server'
+
+// Re-export handler types for component-side consumption (type-only — does not
+// drag handlers.server.ts into client bundles).
+export type { ExecutionFilters, WorkflowSelectorOption, RetryWorkflowResult }
+
+// Re-export trigger-route helpers — the public /api/workflows/trigger route
+// imports these from this module. They live in handlers.server.ts but the
+// public stable name lives here.
+export const dispatchToN8n = dispatchToN8nHandler
+export const fetchWorkflowForPublicTrigger = fetchWorkflowForPublicTriggerHandler
 
 /**
  * Serializable subset of StepValidationError — the full type carries Zod's
@@ -303,116 +324,69 @@ export const createWorkflowFromTemplateFn = createServerFn({ method: 'POST' })
   )
 
 // ---------------------------------------------------------------------------
-// Query Server Functions (used by route loaders)
+// Query Server Functions (createServerFn wrappers around handlers.server.ts)
 // ---------------------------------------------------------------------------
 
-const LIST_FIELDS = 'id, name, description, trigger_type, is_active, created_at, updated_at' as const
+export const getWorkflowsFn = createServerFn({ method: 'POST' }).handler(() =>
+  getWorkflowsHandler(),
+)
 
-/**
- * Fetch the workflow list. Called from the /admin/workflows/ loader.
- *
- * Query fns throw on error (rather than returning Result) because they are
- * used with ensureQueryData — TanStack Query expects throws, not structured
- * error returns, to trigger its error handling + retry behaviour.
- */
-export const getWorkflowsFn = createServerFn({ method: 'POST' }).handler(async (): Promise<WorkflowListItem[]> => {
-  const supabase = createServerClient()
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JS v2.95.2 incompatibility
-  const { data, error } = await (supabase as any)
-    .from('workflows')
-    .select(LIST_FIELDS)
-    .order('updated_at', { ascending: false })
-
-  if (error) throw new Error(error.message)
-  return (data || []).map(toWorkflowListItem)
-})
-
-/**
- * Fetch a single workflow with steps and edges. Called from the /admin/workflows/$workflowId loader.
- * Throws on error — ensureQueryData expects throws, not Result, to trigger TanStack Query error handling.
- */
 export const getWorkflowFn = createServerFn({ method: 'POST' })
   .inputValidator((input: { id: string }) => input)
-  .handler(async ({ data }): Promise<WorkflowWithSteps> => {
-    const supabase = createServerClient()
+  .handler(({ data }) => getWorkflowHandler(data.id))
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JS v2.95.2 incompatibility
-    const { data: workflowData, error: workflowError } = await (supabase as any)
-      .from('workflows')
-      .select('*')
-      .eq('id', data.id)
-      .maybeSingle()
+export const getWorkflowsForSelectorFn = createServerFn({ method: 'POST' })
+  .inputValidator((input: { triggerType?: string }) => input)
+  .handler(({ data }) => getWorkflowsForSelectorHandler(data.triggerType))
 
-    if (workflowError) throw new Error(workflowError.message)
-    if (!workflowData) throw new Error(messages.workflows.workflowNotFound)
+export const getWorkflowExecutionsFn = createServerFn({ method: 'POST' })
+  .inputValidator(
+    (input: {
+      workflowId: string
+      options?: { limit?: number; offset?: number; excludeDryRuns?: boolean }
+    }) => input,
+  )
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TanStack Start serialization check trips on JSONB-derived `Json` types in WorkflowExecution; same pattern as blog/server.ts.
+  .handler(({ data }) =>
+    getWorkflowExecutionsHandler(data.workflowId, data.options) as any,
+  )
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: stepsData, error: stepsError } = await (supabase as any)
-      .from('workflow_steps')
-      .select('*')
-      .eq('workflow_id', data.id)
-      .order('created_at', { ascending: true })
-
-    if (stepsError) throw new Error(stepsError.message)
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: edgesData, error: edgesError } = await (supabase as any)
-      .from('workflow_edges')
-      .select('*')
-      .eq('workflow_id', data.id)
-      .order('sort_order', { ascending: true })
-
-    if (edgesError) throw new Error(edgesError.message)
-
-    const workflow = toWorkflow(workflowData)
-    return {
-      ...workflow,
-      steps: (stepsData || []).map(toWorkflowStep),
-      edges: (edgesData || []).map(toWorkflowEdge),
-    }
-  })
-
-/**
- * Fetch lightweight survey list for TriggerConfigPanel dropdown.
- * Called from the /admin/workflows/$workflowId loader.
- * Throws on error — ensureQueryData expects throws, not Result, to trigger TanStack Query error handling.
- */
-export const getSurveysForWorkflowFn = createServerFn({ method: 'POST' }).handler(
-  async (): Promise<SurveyOption[]> => {
-    const supabase = createServerClient()
-
-    const { data, error } = await supabase.from('surveys').select('id, title').order('title')
-
-    if (error) throw new Error(error.message)
-    return (data || []) as SurveyOption[]
-  }
-)
-
-/**
- * Fetch email templates for SendEmailConfigPanel dropdown with html_body for variable extraction.
- * html_body is needed to extract {{placeholder}} variables from the template for the binding table.
- * Called from the /admin/workflows/$workflowId loader.
- * Throws on error — ensureQueryData expects throws, not Result, to trigger TanStack Query error handling.
- */
 export const getEmailTemplatesForWorkflowFn = createServerFn({ method: 'POST' }).handler(
-  async (): Promise<EmailTemplateWithBody[]> => {
-    const supabase = createServerClient()
-
-    const { data, error } = await supabase
-      .from('email_templates')
-      .select('id, type, subject, html_body')
-      .order('type')
-
-    if (error) throw new Error(error.message)
-    return (data || []).map((row) => ({
-      id: row.id,
-      type: row.type,
-      subject: row.subject,
-      html_body: (row.html_body as string) ?? '',
-    }))
-  }
+  () => getEmailTemplatesWithBodyHandler(),
 )
+
+export const getEmailTemplatesForWorkflowLightFn = createServerFn({ method: 'POST' }).handler(
+  () => getEmailTemplatesForWorkflowHandler(),
+)
+
+export const getSurveysForWorkflowFn = createServerFn({ method: 'POST' }).handler(() =>
+  getSurveysForWorkflowHandler(),
+)
+
+export const getAllExecutionsFn = createServerFn({ method: 'POST' })
+  .inputValidator(
+    (input: {
+      filters?: ExecutionFilters
+      options?: { limit?: number; offset?: number }
+    }) => input,
+  )
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TanStack Start serialization check trips on JSONB-derived `Json`.
+  .handler(({ data }) => getAllExecutionsHandler(data.filters, data.options) as any)
+
+export const getExecutionWithStepsFn = createServerFn({ method: 'POST' })
+  .inputValidator((input: { executionId: string }) => input)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TanStack Start serialization check trips on JSONB-derived `Json`.
+  .handler(({ data }) => getExecutionWithStepsHandler(data.executionId) as any)
+
+// ---------------------------------------------------------------------------
+// Retry server function — replaces app/routes/api/workflows/retry.ts
+// ---------------------------------------------------------------------------
+
+export const retryWorkflowExecutionFn = createServerFn({ method: 'POST' })
+  .inputValidator((input: { executionId: string }) =>
+    z.object({ executionId: z.string().uuid() }).parse(input),
+  )
+  .handler(({ data }) => retryWorkflowExecutionHandler(data))
 
 // ---------------------------------------------------------------------------
 // DB helpers
@@ -729,45 +703,6 @@ function verifyManualWorkflow(supabase: StartClient, tenantId: string, workflowI
     })
 }
 
-/**
- * Fetch workflow for the public trigger entry point.
- * Uses service role (no user session). Verifies:
- * - workflow exists
- * - workflow is active
- * - trigger_type matches the requested action
- *
- * Returns the workflow's tenant_id — caller-supplied tenant_id is NEVER trusted.
- *
- * Why service role: the public /api/workflows/trigger route authenticates via
- * Bearer secret, not user cookies, so RLS-aware client wouldn't find the row.
- */
-export function fetchWorkflowForPublicTrigger(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  supabase: ReturnType<typeof createServiceClient> | any,
-  workflowId: string,
-  triggerType: string,
-): ResultAsync<{ tenantId: string }, string> {
-  return ResultAsync.fromPromise(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (supabase as any)
-      .from('workflows')
-      .select('id, tenant_id, trigger_type, is_active')
-      .eq('id', workflowId)
-      .maybeSingle() as Promise<{
-      data: { id: string; tenant_id: string; trigger_type: string; is_active: boolean } | null
-      error: { message: string } | null
-    }>,
-    dbError,
-  ).andThen((res) => {
-    if (res.error) return err(res.error.message)
-    const workflow = res.data
-    if (!workflow) return err('workflow_not_found')
-    if (!workflow.is_active) return err('workflow_not_active')
-    if (workflow.trigger_type !== triggerType) return err('trigger_type_mismatch')
-    return ok({ tenantId: workflow.tenant_id })
-  })
-}
-
 function fetchWorkflowForTest(supabase: StartClient, tenantId: string, workflowId: string) {
   return ResultAsync.fromPromise(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -786,28 +721,6 @@ function fetchWorkflowForTest(supabase: StartClient, tenantId: string, workflowI
       if (!workflow.is_active) return err(messages.workflows.workflowInactiveCannotTest)
       return ok({ tenantId, triggerType: workflow.trigger_type })
     })
-}
-
-export function dispatchToN8n(
-  n8nUrl: string,
-  workflowId: string,
-  tenantId: string,
-  triggerPayload: Record<string, unknown>
-) {
-  return ResultAsync.fromPromise(
-    fetch(n8nUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${process.env.ORCHESTRATOR_WEBHOOK_SECRET}`,
-      },
-      body: JSON.stringify({ workflowId, tenantId, triggerPayload }),
-    }).then(async (resp) => {
-      if (!resp.ok) throw new Error(`n8n dispatch failed: ${resp.status}`)
-      return resp.json() as Promise<{ executionId: string }>
-    }),
-    (e) => (e instanceof Error ? e.message : messages.common.unknownError)
-  )
 }
 
 function cancelExecution(tenantId: string, executionId: string) {

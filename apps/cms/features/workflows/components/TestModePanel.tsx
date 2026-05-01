@@ -14,9 +14,9 @@ import { Play, X, Loader2 } from 'lucide-react'
 import { messages } from '@/lib/messages'
 import { queryKeys } from '@/lib/query-keys'
 import { TRIGGER_VARIABLE_SCHEMAS } from '@/lib/trigger-schemas'
-import { getWorkflowExecutions, getExecutionWithSteps } from '../queries'
+import { getWorkflowExecutionsFn, getExecutionWithStepsFn } from '../server'
 import { testWorkflowFn } from '../server'
-import { EXECUTION_STATUS_LABELS } from '../types'
+import { EXECUTION_STATUS_LABELS, type WorkflowExecution } from '../types'
 
 interface TestModePanelProps {
   workflowId: string
@@ -65,7 +65,10 @@ export function TestModePanel({
   // Fetch recent executions for "Z wykonania" tab
   const { data: recentExecutions } = useQuery({
     queryKey: [...queryKeys.workflows.all, workflowId, 'executions-for-test'],
-    queryFn: () => getWorkflowExecutions(workflowId, { limit: 10, excludeDryRuns: true }),
+    queryFn: () =>
+      getWorkflowExecutionsFn({
+        data: { workflowId, options: { limit: 10, excludeDryRuns: true } },
+      }),
   })
 
   const handleJsonChange = useCallback((value: string) => {
@@ -82,7 +85,7 @@ export function TestModePanel({
     async (executionId: string) => {
       setSelectedExecutionId(executionId)
       try {
-        const execution = await getExecutionWithSteps(executionId)
+        const execution = await getExecutionWithStepsFn({ data: { executionId } })
         if (execution?.trigger_payload) {
           const formatted = JSON.stringify(execution.trigger_payload, null, 2)
           setJsonText(formatted)
@@ -182,7 +185,7 @@ export function TestModePanel({
               <div className="space-y-4">
                 {recentExecutions?.length ? (
                   <div className="space-y-2">
-                    {recentExecutions.map((exec) => (
+                    {(recentExecutions as WorkflowExecution[]).map((exec) => (
                       <button
                         key={exec.id}
                         className={`w-full text-left px-3 py-2 rounded-md border transition-colors text-sm ${

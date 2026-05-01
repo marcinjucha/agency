@@ -29,7 +29,7 @@ import { queryKeys } from '@/lib/query-keys'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
 import { usePermissions } from '@/contexts/permissions-context'
-import { getExecutionWithSteps } from '../queries'
+import { getExecutionWithStepsFn, retryWorkflowExecutionFn } from '../server'
 import { formatDate, formatExecutionDuration } from '../utils'
 import type { ExecutionWithSteps, ExecutionStatus } from '../types'
 import { ExecutionStatusBadge } from './ExecutionStatusBadge'
@@ -197,6 +197,7 @@ export function ExecutionDetail({ executionId, initialData }: ExecutionDetailPro
   const { hasPermission } = usePermissions()
   const canRetry = hasPermission('workflows.execute')
   const [isRetrying, setIsRetrying] = useState(false)
+  const [retryError, setRetryError] = useState<string | null>(null)
 
   const {
     data: execution,
@@ -205,7 +206,7 @@ export function ExecutionDetail({ executionId, initialData }: ExecutionDetailPro
     refetch,
   } = useQuery({
     queryKey: queryKeys.executions.detail(executionId),
-    queryFn: () => getExecutionWithSteps(executionId),
+    queryFn: () => getExecutionWithStepsFn({ data: { executionId } }),
     initialData: initialData ?? undefined,
     refetchInterval: (query) => {
       const data = query.state.data as ExecutionWithSteps | null | undefined
@@ -217,29 +218,22 @@ export function ExecutionDetail({ executionId, initialData }: ExecutionDetailPro
   const handleRetry = async () => {
     if (isRetrying) return
     setIsRetrying(true)
+    setRetryError(null)
     try {
-      const response = await fetch(routes.api.workflowRetry, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ execution_id: executionId }),
-      })
-      if (response.ok) {
+      const result = await retryWorkflowExecutionFn({ data: { executionId } })
+      if (result.ok) {
         await refetch()
-      } else if (response.status === 409) {
-        // Already running — refetch to surface the current running status.
+      } else if (result.error === 'conflict') {
+        // Already running — refetch to surface current running status.
         await refetch()
       } else {
-        // Infrastructure failure (500, 502, 503) — n8n down or config error.
-        // Surface to user: the retry did NOT start, optimistic lock was reversed server-side.
-        const data = await response.json().catch(() => ({}))
-        const msg = (data as Record<string, string>)?.error ?? messages.common.errorOccurred
-        // eslint-disable-next-line no-alert
-        window.alert(`${messages.workflows.retryButton}: ${msg}`)
+        // Infrastructure / auth failure — optimistic lock has been reversed
+        // server-side, so the execution stays retriable.
+        setRetryError(result.message ?? result.error)
       }
     } catch {
-      // Network error (offline, CORS) — fetch itself rejected.
-      // eslint-disable-next-line no-alert
-      window.alert(messages.common.errorOccurred)
+      // Network error (offline, CORS) — RPC itself rejected.
+      setRetryError(messages.common.errorOccurred)
     } finally {
       setIsRetrying(false)
     }
@@ -339,6 +333,15 @@ export function ExecutionDetail({ executionId, initialData }: ExecutionDetailPro
           </Button>
         </div>
       </div>
+
+      {retryError && (
+        <p
+          className="text-xs text-destructive"
+          role="alert"
+        >
+          {messages.workflows.retryButton}: {retryError}
+        </p>
+      )}
 
       {/* Page title */}
       <div>
