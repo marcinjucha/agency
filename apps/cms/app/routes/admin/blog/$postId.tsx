@@ -5,12 +5,12 @@ import {
   createBlogPostFn,
   updateBlogPostFn,
   deleteBlogPostFn,
+  getBlogPostFn,
 } from '@/features/blog/server'
 import { BlogPostEditor } from '@/features/blog/components/BlogPostEditor'
 import type { BlogPostPayload, SaveBlogPostResult } from '@/features/blog/components/BlogPostEditor'
 import type { BlogPost } from '@/features/blog/types'
 import { useQuery } from '@tanstack/react-query'
-import { getBlogPost, getBlogCategories } from '@/features/blog/queries'
 import { LoadingState, ErrorState } from '@agency/ui'
 import { queryKeys } from '@/lib/query-keys'
 
@@ -21,9 +21,10 @@ export const Route = createFileRoute('/admin/blog/$postId')({
 
 function BlogPostEditorPage() {
   const { postId } = Route.useParams()
-  const { data: blogPost, isLoading, error } = useQuery<BlogPost>({
+  const { data: blogPost, isLoading, error } = useQuery<BlogPost | null>({
     queryKey: queryKeys.blog.detail(postId),
-    queryFn: () => getBlogPost(postId),
+    queryFn: () =>
+      getBlogPostFn({ data: { id: postId } }) as Promise<BlogPost | null>,
   })
 
   if (isLoading) return <LoadingState variant="skeleton-card" rows={4} />
