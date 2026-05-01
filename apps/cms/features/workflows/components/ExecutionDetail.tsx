@@ -3,7 +3,8 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
-import { ExternalLink, ArrowLeft, ChevronDown, ChevronUp, History } from 'lucide-react'
+import { ExternalLink, ArrowLeft, ChevronDown, ChevronUp, History, RotateCcw } from 'lucide-react'
+import { cn } from '@agency/ui'
 import {
   Button,
   Card,
@@ -14,10 +15,20 @@ import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
 } from '@agency/ui'
 import { queryKeys } from '@/lib/query-keys'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
+import { usePermissions } from '@/contexts/permissions-context'
 import { getExecutionWithSteps } from '../queries'
 import { formatDate, formatExecutionDuration } from '../utils'
 import type { ExecutionWithSteps, ExecutionStatus } from '../types'
@@ -183,6 +194,10 @@ interface ExecutionDetailProps {
 // --- Main export ---
 
 export function ExecutionDetail({ executionId, initialData }: ExecutionDetailProps) {
+  const { hasPermission } = usePermissions()
+  const canRetry = hasPermission('workflows.execute')
+  const [isRetrying, setIsRetrying] = useState(false)
+
   const {
     data: execution,
     isLoading,
@@ -199,13 +214,44 @@ export function ExecutionDetail({ executionId, initialData }: ExecutionDetailPro
     },
   })
 
+  const handleRetry = async () => {
+    if (isRetrying) return
+    setIsRetrying(true)
+    try {
+      const response = await fetch(routes.api.workflowRetry, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ execution_id: executionId }),
+      })
+      if (response.ok) {
+        await refetch()
+      } else if (response.status === 409) {
+        // Already running — refetch to surface the current running status.
+        await refetch()
+      } else {
+        // Infrastructure failure (500, 502, 503) — n8n down or config error.
+        // Surface to user: the retry did NOT start, optimistic lock was reversed server-side.
+        const data = await response.json().catch(() => ({}))
+        const msg = (data as Record<string, string>)?.error ?? messages.common.errorOccurred
+        // eslint-disable-next-line no-alert
+        window.alert(`${messages.workflows.retryButton}: ${msg}`)
+      }
+    } catch {
+      // Network error (offline, CORS) — fetch itself rejected.
+      // eslint-disable-next-line no-alert
+      window.alert(messages.common.errorOccurred)
+    } finally {
+      setIsRetrying(false)
+    }
+  }
+
   if (isLoading && !initialData) return <ExecutionDetailSkeleton />
 
   if (error) {
     return (
       <ErrorState
         title={messages.workflows.executionDetailTitle}
-        message={error instanceof Error ? error.message : (error as any)?.message ?? messages.common.errorOccurred}
+        message={error instanceof Error ? error.message : messages.common.errorOccurred}
         onRetry={() => refetch()}
       />
     )
@@ -242,12 +288,56 @@ export function ExecutionDetail({ executionId, initialData }: ExecutionDetailPro
           {messages.workflows.backToExecutions}
         </Link>
 
-        <Button asChild variant="outline" size="sm">
-          <Link to={routes.admin.workflowEditor(execution.workflow_id)}>
-            <ExternalLink className="mr-2 h-4 w-4" aria-hidden="true" />
-            {messages.workflows.openInEditor}
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          {canRetry && (
+            <>
+              {execution.status === 'failed' || execution.status === 'cancelled' ? (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="outline" size="sm" disabled={isRetrying}>
+                      <RotateCcw
+                        className={cn('mr-2 h-4 w-4', isRetrying && 'animate-spin')}
+                        aria-hidden="true"
+                      />
+                      {messages.workflows.retryButton}
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>{messages.workflows.retryConfirmTitle}</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        {messages.workflows.retryConfirmDescription}
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>{messages.common.cancel}</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleRetry}>
+                        {messages.workflows.retryButton}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              ) : execution.status === 'running' ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled
+                  title={messages.workflows.retryDisabledRunning}
+                >
+                  <RotateCcw className="mr-2 h-4 w-4" aria-hidden="true" />
+                  {messages.workflows.retryButton}
+                </Button>
+              ) : null}
+            </>
+          )}
+
+          <Button asChild variant="outline" size="sm">
+            <Link to={routes.admin.workflowEditor(execution.workflow_id)}>
+              <ExternalLink className="mr-2 h-4 w-4" aria-hidden="true" />
+              {messages.workflows.openInEditor}
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {/* Page title */}
@@ -262,7 +352,10 @@ export function ExecutionDetail({ executionId, initialData }: ExecutionDetailPro
       <ExecutionHeaderCard execution={execution} />
 
       {/* Step timeline */}
-      <StepExecutionTimeline stepExecutions={execution.step_executions} />
+      <StepExecutionTimeline
+        stepExecutions={execution.step_executions}
+        snapshot={execution.workflow_snapshot}
+      />
     </div>
   )
 }

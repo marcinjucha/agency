@@ -1,18 +1,20 @@
 
-
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Clock, ChevronDown, ChevronUp } from 'lucide-react'
 import {
   Badge,
+  Button,
   Collapsible,
   CollapsibleContent,
-  Button,
+  CollapsibleTrigger,
 } from '@agency/ui'
 import { cn } from '@agency/ui'
 import { messages } from '@/lib/messages'
 import { formatDate, formatExecutionDuration } from '../utils'
 import { STEP_TYPE_LABELS, STEP_EXECUTION_STATUS_LABELS } from '../types'
-import type { StepExecutionWithMeta, StepExecutionStatus } from '../types'
+import type { StepExecutionWithMeta, StepExecutionStatus, WorkflowSnapshot } from '../types'
+import { groupAttemptsByStep } from '../utils/group-attempts'
+import type { StepAttemptGroup } from '../utils/group-attempts'
 
 // --- Step status → left border color ---
 
@@ -24,6 +26,7 @@ const STEP_BORDER_CLASSES: Record<StepExecutionStatus, string> = {
   waiting:    'border-l-amber-500',
   processing: 'border-l-amber-500',
   pending:    'border-l-border',
+  cancelled:  'border-l-zinc-500',
 }
 
 // --- Step status badge colors (inline, text-xs) ---
@@ -36,6 +39,7 @@ const STEP_STATUS_BADGE_CLASSES: Record<StepExecutionStatus, string> = {
   waiting:    'border-amber-500/30 bg-amber-500/10 text-amber-400',
   processing: 'border-amber-500/30 bg-amber-500/10 text-amber-400',
   pending:    'border-border bg-muted/50 text-muted-foreground',
+  cancelled:  'border-zinc-500/30 bg-zinc-500/10 text-zinc-400',
 }
 
 // --- JSON payload collapsible block ---
@@ -97,12 +101,16 @@ interface StepCardProps {
   step: StepExecutionWithMeta
   /** When true, both payload blocks are expanded */
   allExpanded: boolean
+  /** Snapshot step matching this execution — used for label resolution */
+  snapshotStep: WorkflowSnapshot['steps'][number] | null | undefined
 }
 
-function StepCard({ step, allExpanded }: StepCardProps) {
-
+function StepCard({ step, allExpanded, snapshotStep }: StepCardProps) {
   const stepTypeLabel =
-    STEP_TYPE_LABELS[step.step_type as keyof typeof STEP_TYPE_LABELS] ?? step.step_type
+    ((snapshotStep?.step_config as unknown as Record<string, unknown> | undefined)?._name as string | undefined)
+    ?? STEP_TYPE_LABELS[snapshotStep?.step_type as keyof typeof STEP_TYPE_LABELS]
+    ?? STEP_TYPE_LABELS[step.step_type as keyof typeof STEP_TYPE_LABELS]
+    ?? step.step_type
   const statusLabel =
     STEP_EXECUTION_STATUS_LABELS[step.status] ?? step.status
   const borderClass = STEP_BORDER_CLASSES[step.status] ?? 'border-l-border'
@@ -127,6 +135,7 @@ function StepCard({ step, allExpanded }: StepCardProps) {
         <Badge
           variant="outline"
           className={cn('text-xs font-normal', badgeClass)}
+          title={step.status === 'cancelled' ? messages.workflows.stepCancelledTooltip : undefined}
         >
           {statusLabel}
         </Badge>
@@ -192,19 +201,86 @@ function StepCard({ step, allExpanded }: StepCardProps) {
   )
 }
 
+// --- Previous attempts accordion ---
+
+interface StepGroupProps {
+  group: StepAttemptGroup
+  allExpanded: boolean
+  snapshotStepMap: Map<string, WorkflowSnapshot['steps'][number]> | null
+}
+
+function StepGroup({ group, allExpanded, snapshotStepMap }: StepGroupProps) {
+  const [previousOpen, setPreviousOpen] = useState(false)
+  const snapshotStep = snapshotStepMap?.get(group.step_id) ?? null
+  const latestAttempt = group.attempts[group.attempts.length - 1]
+  const previousAttempts = group.attempts.slice(0, -1)
+
+  return (
+    <li>
+      {/* Latest attempt — always visible */}
+      <StepCard step={latestAttempt} allExpanded={allExpanded} snapshotStep={snapshotStep} />
+
+      {/* Previous attempts accordion — only shown if >1 attempt */}
+      {previousAttempts.length > 0 && (
+        <Collapsible open={previousOpen} onOpenChange={setPreviousOpen}>
+          <CollapsibleTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="mt-2 ml-4 text-xs text-muted-foreground hover:text-foreground"
+            >
+              {previousOpen ? (
+                <>
+                  <ChevronUp className="mr-1 h-3 w-3" aria-hidden="true" />
+                  {messages.workflows.stepHidePreviousAttempts(previousAttempts.length)}
+                </>
+              ) : (
+                <>
+                  <ChevronDown className="mr-1 h-3 w-3" aria-hidden="true" />
+                  {messages.workflows.stepPreviousAttempts(previousAttempts.length)}
+                </>
+              )}
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <ol className="mt-2 ml-4 space-y-2 border-l-2 border-border/50 pl-4">
+              {previousAttempts.map((attempt) => (
+                <li key={attempt.id}>
+                  <StepCard step={attempt} allExpanded={allExpanded} snapshotStep={snapshotStep} />
+                </li>
+              ))}
+            </ol>
+          </CollapsibleContent>
+        </Collapsible>
+      )}
+    </li>
+  )
+}
+
 // --- Props ---
 
 interface StepExecutionTimelineProps {
   stepExecutions: StepExecutionWithMeta[]
+  snapshot?: WorkflowSnapshot | null
 }
 
 // --- Main export ---
 
-export function StepExecutionTimeline({ stepExecutions }: StepExecutionTimelineProps) {
+export function StepExecutionTimeline({ stepExecutions, snapshot }: StepExecutionTimelineProps) {
   const [allExpanded, setAllExpanded] = useState(false)
   // Key increments on each expand/collapse-all to force StepCard re-mount
   // so the child useState initializers re-run with the new allExpanded value.
   const [expandKey, setExpandKey] = useState(0)
+
+  const groups = useMemo(
+    () => groupAttemptsByStep(stepExecutions),
+    [stepExecutions]
+  )
+
+  const snapshotStepMap = useMemo(() => {
+    if (!snapshot?.steps?.length) return null
+    return new Map(snapshot.steps.map(s => [s.id, s]))
+  }, [snapshot])
 
   const handleToggleAll = () => {
     const next = !allExpanded
@@ -245,13 +321,13 @@ export function StepExecutionTimeline({ stepExecutions }: StepExecutionTimelineP
         <p className="text-sm text-muted-foreground">{messages.workflows.stepNoPayload}</p>
       ) : (
         <ol className="space-y-3" aria-label={messages.workflows.stepTimelineTitle}>
-          {stepExecutions.map((step) => (
-            <li key={`${step.id}-${expandKey}`}>
-              <StepCard
-                step={step}
-                allExpanded={allExpanded}
-              />
-            </li>
+          {groups.map((group) => (
+            <StepGroup
+              key={`${group.step_id}-${expandKey}`}
+              group={group}
+              allExpanded={allExpanded}
+              snapshotStepMap={snapshotStepMap}
+            />
           ))}
         </ol>
       )}
