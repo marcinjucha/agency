@@ -3,7 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '@/lib/query-keys'
 import { deleteShopProductFn, getShopProductsFn } from '../server'
-import { getShopCategories } from '@/features/shop-categories/queries'
+import { getShopCategoriesFn } from '@/features/shop-categories/server'
 import { getMarketplaceConnections, getMarketplaceListingsForProducts } from '@/features/shop-marketplace/queries'
 import {
   Button,
@@ -38,7 +38,7 @@ export function ShopProductList() {
     data: categories,
   } = useQuery({
     queryKey: queryKeys.shopCategories.list,
-    queryFn: () => getShopCategories(),
+    queryFn: () => getShopCategoriesFn(),
   })
 
   // Batch-fetch marketplace connections (to know which marketplaces are connected)
