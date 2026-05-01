@@ -40,6 +40,45 @@ export const getSurveysFn = createServerFn({ method: 'POST' }).handler(async () 
 })
 
 /**
+ * Fetch a single survey by id (current tenant via RLS).
+ */
+export const getSurveyFn = createServerFn({ method: 'POST' })
+  .inputValidator((input: { id: string }) => input)
+  .handler(async ({ data }): Promise<Tables<'surveys'>> => {
+    const supabase = createServerClient()
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: row, error } = await (supabase as any)
+      .from('surveys')
+      .select('*')
+      .eq('id', data.id)
+      .maybeSingle()
+
+    if (error) throw error
+    if (!row) throw new Error(messages.surveys.notFound)
+    return row as Tables<'surveys'>
+  })
+
+/**
+ * Fetch all links for a survey (newest first).
+ */
+export const getSurveyLinksFn = createServerFn({ method: 'POST' })
+  .inputValidator((input: { surveyId: string }) => input)
+  .handler(async ({ data }): Promise<Tables<'survey_links'>[]> => {
+    const supabase = createServerClient()
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: rows, error } = await (supabase as any)
+      .from('survey_links')
+      .select('*, workflow_id')
+      .eq('survey_id', data.surveyId)
+      .order('created_at', { ascending: false })
+
+    if (error) throw error
+    return (rows ?? []) as Tables<'survey_links'>[]
+  })
+
+/**
  * Create a new survey.
  * TanStack Start port of features/surveys/actions.ts#createSurvey.
  */

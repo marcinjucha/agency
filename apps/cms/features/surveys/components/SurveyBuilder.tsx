@@ -1,8 +1,7 @@
 import { useState, useMemo, useCallback, useEffect } from 'react'
 import { useNavigate, Link } from '@tanstack/react-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { updateSurveyFn, deleteSurveyFn } from '../server'
-import { getSurvey } from '../queries'
+import { updateSurveyFn, deleteSurveyFn, getSurveyFn } from '../server'
 import {
   Button, Input, Label, Card, CardHeader, CardContent, Badge, CollapsibleCard,
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Textarea, Checkbox,
@@ -301,7 +300,7 @@ export function SurveyBuilder({ surveyId }: SurveyBuilderProps) {
 
   const { data: survey, isLoading: surveyLoading, error: surveyError } = useQuery({
     queryKey: ['survey', surveyId],
-    queryFn: () => getSurvey(surveyId),
+    queryFn: () => getSurveyFn({ data: { id: surveyId } }),
   })
 
   const initialQuestions = useMemo(() => (survey ? parseQuestions(survey) : []), [survey])

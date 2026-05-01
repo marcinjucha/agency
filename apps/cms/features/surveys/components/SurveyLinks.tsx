@@ -1,7 +1,11 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getSurveyLinks } from '../queries'
-import { generateSurveyLinkFn, deleteSurveyLinkFn, updateSurveyLinkFn } from '../server'
+import {
+  generateSurveyLinkFn,
+  deleteSurveyLinkFn,
+  updateSurveyLinkFn,
+  getSurveyLinksFn,
+} from '../server'
 import type { UpdateSurveyLinkFormData } from '../validation'
 import {
   Button, Card, Input, Label, Switch,
@@ -132,7 +136,7 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
   // Query for links
   const { data: links, isLoading } = useQuery({
     queryKey: queryKeys.surveys.links(surveyId),
-    queryFn: () => getSurveyLinks(surveyId),
+    queryFn: () => getSurveyLinksFn({ data: { surveyId } }),
   })
 
   // Query for active survey_submitted workflows — used in selector dropdown
