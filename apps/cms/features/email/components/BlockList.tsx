@@ -4,7 +4,7 @@ import { Button } from '@agency/ui'
 import { Card } from '@agency/ui'
 import { ChevronUp, ChevronDown, Trash2, Plus } from 'lucide-react'
 import { BlockEditor } from './BlockEditor'
-import { AVAILABLE_BLOCKS } from '../types'
+import { AVAILABLE_BLOCKS } from '../constants'
 import type { Block } from '../types'
 import type { TriggerVariable } from '@/lib/trigger-schemas'
 
