@@ -9,6 +9,11 @@
 
 ## Bugs Found (project-specific, not yet in skill/CLAUDE.md)
 
+- **`tenant_roles.name` uses TitleCase ('Admin', 'Member') — and `super_admin` is NOT a role** — `super_admin` lives on `users.is_super_admin BOOLEAN`, not as a row in `tenant_roles`. Migration with `WHERE name IN ('super_admin','admin')` (lowercase) inserted ZERO rows silently — no error, just empty seed. ALWAYS run `SELECT DISTINCT name FROM tenant_roles;` before writing any permission seed migration. Lowercase role names are an AI-default assumption that doesn't match this DB.
+- **`workflow_snapshot` JSONB may contain webhook auth tokens — sanitize before returning to UI** — `step_config.headers` on webhook steps can hold Authorization/Bearer tokens. Added `parseWorkflowSnapshot()` helper to strip sensitive headers before sending snapshot to the client. Any new endpoint returning `workflow_snapshot` (or any JSONB containing user-supplied step config) must route through this helper, not pass-through.
+
+## Bugs Found (project-specific, not yet in skill/CLAUDE.md) — older
+
 - **`Separator` is NOT exported from `@agency/ui`** — Pre-existing bug. Workaround: `<hr className="border-border" />` until added to ui package barrel. Always verify named imports against `@agency/ui` index.ts before assuming availability — package is incomplete.
 - **Validator agent produces confident false-positive CRITICAL findings from static analysis** — Static-only validators flag missing `tenant_id` filters on handlers that actually have them (multi-line security filters escape shallow pattern matching). Treat validator CRITICAL findings as hypotheses until verified by direct file inspection.
 
@@ -18,6 +23,7 @@
 - **email_configs table empty in production** — N8n uses hardcoded Resend fallback (`noreply@haloefekt.pl`).
 - **notification_email per `survey_link`, not per tenant** — Each link has its own notification address.
 - **`surveys.status` DB column is vestigial** — Status computed from `survey_links`. Manual enum management is wrong model.
+- **n8n `Decide Replay Action`: `cancelled` status routes to `new_attempt`, NOT `continue`** — `continue` would send execution through Mark Step Running, which overwrites the cancelled row's status and destroys the audit trail. Retrying a cancelled step MUST create a new attempt row so the cancelled record stays intact. Same logic applies to any future "replay terminal status" branches — never reuse the existing row when the prior attempt's status is part of the audit history.
 
 ## Architecture Debt (Open Follow-Ups)
 

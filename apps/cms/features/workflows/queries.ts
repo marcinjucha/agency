@@ -18,6 +18,7 @@ import {
   toWorkflowExecution,
   toExecutionWithWorkflow,
   toStepExecutionWithMeta,
+  parseWorkflowSnapshot,
 } from './types'
 
 // Filters interface for getAllExecutions
@@ -222,12 +223,15 @@ export async function getExecutionWithSteps(executionId: string): Promise<Execut
 
   const execution = toExecutionWithWorkflow(execData)
 
+  const workflow_snapshot = parseWorkflowSnapshot(execData.workflow_snapshot)
+
   // Fetch step executions with workflow step metadata
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JS v2.95.2 incompatibility
   const { data: stepsData, error: stepsError } = await (supabase as any)
     .from('workflow_step_executions')
     .select('*, workflow_steps(step_type)')
     .eq('execution_id', executionId)
+    .order('attempt_number', { ascending: true })
     .order('created_at', { ascending: true })
 
   if (stepsError) throw stepsError
@@ -237,5 +241,6 @@ export async function getExecutionWithSteps(executionId: string): Promise<Execut
   return {
     ...execution,
     step_executions,
+    workflow_snapshot,
   }
 }
