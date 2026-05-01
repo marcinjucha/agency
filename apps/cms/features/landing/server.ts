@@ -6,8 +6,8 @@ import { landingPageSchema } from './validation'
 import type { LandingBlock, SeoMetadata } from '@agency/database'
 import { messages } from '@/lib/messages'
 import { toLandingPage, type LandingPage } from './types'
-import { createServerClient } from '@/lib/supabase/server-start'
-import { type AuthContext, requireAuthContext } from '@/lib/server-auth'
+import { createServerClient } from '@/lib/supabase/server-start.server'
+import { type AuthContext, requireAuthContext } from '@/lib/server-auth.server'
 
 // ---------------------------------------------------------------------------
 // Validation schemas

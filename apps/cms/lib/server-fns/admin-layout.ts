@@ -1,5 +1,5 @@
 import { createServerFn } from '@tanstack/react-start'
-import { createServerClient } from '@/lib/supabase/server-start'
+import { createServerClient } from '@/lib/supabase/server-start.server'
 import { ALL_PERMISSION_KEYS, validatePermissionKeys, type PermissionKey } from '@/lib/permissions'
 import type { Tenant } from '@/features/tenants/types'
 

@@ -2,7 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { handleCallback, revokeAccess } from '@/features/calendar/oauth.server'
 import { routes } from '@/lib/routes'
 import { messages } from '@/lib/messages'
-import { createServerClient } from '@/lib/supabase/server-start'
+import { createServerClient } from '@/lib/supabase/server-start.server'
 
 // ---------------------------------------------------------------------------
 // GET /api/calendar/callback

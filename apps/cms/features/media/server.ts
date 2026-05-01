@@ -4,8 +4,8 @@ import { DeleteObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import { fromSupabaseVoid } from '@/lib/result-helpers'
 import { getS3Client, S3_BUCKET, S3_REGION } from '@/lib/s3'
-import { createServerClient } from '@/lib/supabase/server-start'
-import { type AuthContext, requireAuthContext } from '@/lib/server-auth'
+import { createServerClient } from '@/lib/supabase/server-start.server'
+import { type AuthContext, requireAuthContext } from '@/lib/server-auth.server'
 import {
   createMediaItemSchema,
   updateMediaItemSchema,

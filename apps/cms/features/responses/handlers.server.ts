@@ -18,9 +18,9 @@
  */
 
 import { okAsync, errAsync, ResultAsync } from 'neverthrow'
-import { createServerClient } from '@/lib/supabase/server-start'
+import { createServerClient } from '@/lib/supabase/server-start.server'
 import { messages } from '@/lib/messages'
-import { type AuthContext, requireAuthContext } from '@/lib/server-auth'
+import { type AuthContext, requireAuthContext } from '@/lib/server-auth.server'
 import type {
   ResponseListItem,
   ResponseWithRelations,

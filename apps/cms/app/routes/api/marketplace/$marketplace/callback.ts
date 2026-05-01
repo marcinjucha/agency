@@ -3,7 +3,7 @@ import {
   getMarketplaceAdapter,
   isMarketplaceRegistered,
 } from '@/features/shop-marketplace/adapters/registry.server'
-import { createServerClient } from '@/lib/supabase/server-start'
+import { createServerClient } from '@/lib/supabase/server-start.server'
 import { routes } from '@/lib/routes'
 import { messages } from '@/lib/messages'
 import type { MarketplaceId } from '@/features/shop-marketplace/types'

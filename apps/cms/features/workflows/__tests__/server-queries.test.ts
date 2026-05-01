@@ -21,7 +21,7 @@ vi.mock('../types', () => ({
 
 const mockServerClient: Record<string, any> = {}
 
-vi.mock('@/lib/supabase/server-start', () => ({
+vi.mock('@/lib/supabase/server-start.server', () => ({
   createServerClient: vi.fn(() => mockServerClient),
 }))
 

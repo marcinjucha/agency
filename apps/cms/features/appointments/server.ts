@@ -1,7 +1,7 @@
 import { createServerFn } from '@tanstack/react-start'
 import { ResultAsync } from 'neverthrow'
 import { z } from 'zod'
-import { getAuth, requireAuthContext } from '@/lib/server-auth'
+import { getAuth, requireAuthContext } from '@/lib/server-auth.server'
 import { messages } from '@/lib/messages'
 import type { AppointmentListItem, AppointmentResponseContext } from './types'
 

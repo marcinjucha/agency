@@ -8,7 +8,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { okAsync, errAsync } from 'neverthrow'
 
-vi.mock('@/lib/server-auth', () => ({
+vi.mock('@/lib/server-auth.server', () => ({
   requireAuthContextFull: vi.fn(),
   hasPermission: vi.fn(),
 }))
@@ -17,7 +17,7 @@ vi.mock('@/lib/supabase/service', () => ({
   createServiceClient: vi.fn(),
 }))
 
-import { requireAuthContextFull, hasPermission } from '@/lib/server-auth'
+import { requireAuthContextFull, hasPermission } from '@/lib/server-auth.server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { retryWorkflowExecutionHandler } from '../handlers.server'
 

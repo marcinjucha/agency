@@ -5,8 +5,8 @@ import { createRoleSchema, updateRoleSchema } from './validation'
 import type { CreateRoleInput, UpdateRoleInput, TenantRoleWithPermissions } from './types'
 import { messages } from '@/lib/messages'
 import { hasPermission, validatePermissionKeys, type PermissionKey } from '@/lib/permissions'
-import { createServerClient } from '@/lib/supabase/server-start'
-import { type AuthContextFull as AuthContext, requireAuthContextFull as requireAuthContext } from '@/lib/server-auth'
+import { createServerClient } from '@/lib/supabase/server-start.server'
+import { type AuthContextFull as AuthContext, requireAuthContextFull as requireAuthContext } from '@/lib/server-auth.server'
 
 // ---------------------------------------------------------------------------
 // DB error mapper

@@ -2,7 +2,7 @@ import { createServerFn } from '@tanstack/react-start'
 import { err, ResultAsync } from 'neverthrow'
 import { fromSupabase, fromSupabaseVoid } from '@/lib/result-helpers'
 import { createServiceClient } from '@/lib/supabase/service'
-import { requireAuthContextFull, type AuthContextFull } from '@/lib/server-auth'
+import { requireAuthContextFull, type AuthContextFull } from '@/lib/server-auth.server'
 import { hasPermission } from '@/lib/permissions'
 import { messages } from '@/lib/messages'
 import { isMarketplaceRegistered } from './adapters/registry.server'
@@ -20,7 +20,7 @@ import {
   type UpdateListingFormData,
 } from './validation'
 import { z } from 'zod'
-import { getAuth } from '@/lib/server-auth'
+import { getAuth } from '@/lib/server-auth.server'
 import { toMarketplaceConnection, toMarketplaceListing, toMarketplaceImport } from './types'
 
 const CONNECTION_FIELDS = 'id, tenant_id, marketplace, display_name, is_active, token_expires_at, account_id, account_name, scopes, last_synced_at, created_at, updated_at' as const

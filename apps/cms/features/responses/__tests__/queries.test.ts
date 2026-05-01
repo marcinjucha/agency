@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { createServerClient } from '@/lib/supabase/server-start'
+import { createServerClient } from '@/lib/supabase/server-start.server'
 import { getResponseAiActionResultsHandler } from '../handlers.server'
 
 // createServerClient is mocked globally in vitest.setup.ts — we override per test

@@ -1,4 +1,4 @@
-import { createServerClient } from '@/lib/supabase/server-start'
+import { createServerClient } from '@/lib/supabase/server-start.server'
 import type { ShopProduct, ShopProductListItem } from './types'
 import { toShopProduct, toShopProductListItem } from './types'
 

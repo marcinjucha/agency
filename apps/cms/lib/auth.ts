@@ -1,4 +1,4 @@
-import { createServerClient } from '@/lib/supabase/server-start'
+import { createServerClient } from '@/lib/supabase/server-start.server'
 import { messages } from '@/lib/messages'
 import {
   ALL_PERMISSION_KEYS,

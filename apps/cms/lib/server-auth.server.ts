@@ -5,7 +5,7 @@ import {
   ALL_PERMISSION_KEYS,
   type PermissionKey,
 } from '@/lib/permissions'
-import { createServerClient } from '@/lib/supabase/server-start'
+import { createServerClient } from '@/lib/supabase/server-start.server'
 
 /** Supabase client type from TanStack Start — re-exported for feature files. */
 export type StartClient = ReturnType<typeof createServerClient>

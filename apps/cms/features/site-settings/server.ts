@@ -4,7 +4,7 @@ import type { Tables } from '@agency/database'
 import { messages } from '@/lib/messages'
 import { siteSettingsSchema, type SiteSettingsInput } from './validation'
 import type { SiteSettings } from './types'
-import { type AuthContext, requireAuthContext } from '@/lib/server-auth'
+import { type AuthContext, requireAuthContext } from '@/lib/server-auth.server'
 
 const dbError = (e: unknown) => (e instanceof Error ? e.message : messages.common.unknownError)
 

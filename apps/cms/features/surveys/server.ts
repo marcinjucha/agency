@@ -10,8 +10,8 @@ import {
 } from '@/features/surveys/validation'
 import type { UpdateSurveyLinkFormData } from '@/features/surveys/validation'
 import { messages } from '@/lib/messages'
-import { createServerClient } from '@/lib/supabase/server-start'
-import { type AuthContext, requireAuthContext, getAuth } from '@/lib/server-auth'
+import { createServerClient } from '@/lib/supabase/server-start.server'
+import { type AuthContext, requireAuthContext, getAuth } from '@/lib/server-auth.server'
 
 // ---------------------------------------------------------------------------
 // Server Functions (public API)

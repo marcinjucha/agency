@@ -19,7 +19,7 @@ import {
 import { createServiceClient } from '@/lib/supabase/service'
 import { messages } from '@/lib/messages'
 import { WORKFLOW_TEMPLATES } from './templates/workflow-templates'
-import { type AuthContext, type StartClient, requireAuthContext } from '@/lib/server-auth'
+import { type AuthContext, type StartClient, requireAuthContext } from '@/lib/server-auth.server'
 import { generateStepSlug, isValidSlugFormat } from './utils/slug'
 import { validateSurveyLinkIdInPayload } from './trigger-payload-validators'
 import { validateAllSteps } from './utils/validate-steps'

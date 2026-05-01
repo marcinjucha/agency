@@ -23,7 +23,7 @@ const mockSignOut = vi.fn()
 const mockGetUser = vi.fn()
 const mockUsersSelect = vi.fn()
 
-vi.mock('@/lib/supabase/server-start', () => ({
+vi.mock('@/lib/supabase/server-start.server', () => ({
   createServerClient: vi.fn(() => ({
     auth: {
       getUser: mockGetUser,

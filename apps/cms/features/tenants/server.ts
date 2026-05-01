@@ -4,7 +4,7 @@ import { fromSupabase, fromSupabaseVoid } from '@/lib/result-helpers'
 import { tenantSchema } from './validation'
 import type { TenantFormData, Tenant } from './types'
 import { messages } from '@/lib/messages'
-import { createServerClient } from '@/lib/supabase/server-start'
+import { createServerClient } from '@/lib/supabase/server-start.server'
 import { createServiceClient } from '@/lib/supabase/service'
 import {
   ALL_PERMISSION_KEYS,
@@ -15,7 +15,7 @@ import {
 import {
   type AuthContextFull as AuthContext,
   requireAuthContextFull as requireAuthContext,
-} from '@/lib/server-auth'
+} from '@/lib/server-auth.server'
 
 function requireSuperAdmin(): ResultAsync<AuthContext, string> {
   return requireAuthContext().andThen((auth) =>

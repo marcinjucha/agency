@@ -1,5 +1,5 @@
 import { createServerFn } from '@tanstack/react-start'
-import { createServerClient } from '@/lib/supabase/server-start'
+import { createServerClient } from '@/lib/supabase/server-start.server'
 import { getAuthContextFn } from '@/lib/server-fns/auth'
 
 export type DashboardStats = {

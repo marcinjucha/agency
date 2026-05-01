@@ -12,7 +12,7 @@ import { makeLicense } from './fixtures'
 
 // --- Mocks ---
 
-vi.mock('@/lib/server-auth', () => ({
+vi.mock('@/lib/server-auth.server', () => ({
   requireAuthContextFull: vi.fn(),
 }))
 
@@ -22,7 +22,7 @@ vi.mock('@/lib/supabase/service', () => ({
   createServiceClient: vi.fn(() => mockServiceClient),
 }))
 
-import { requireAuthContextFull } from '@/lib/server-auth'
+import { requireAuthContextFull } from '@/lib/server-auth.server'
 import {
   createLicenseHandler,
   updateLicenseHandler,

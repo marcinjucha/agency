@@ -22,7 +22,7 @@ const mockUsersSelect = vi.fn()
 const mockTenantsSelect = vi.fn()
 const mockUserRolesSelect = vi.fn()
 
-vi.mock('@/lib/supabase/server-start', () => ({
+vi.mock('@/lib/supabase/server-start.server', () => ({
   createServerClient: vi.fn(() => ({
     auth: {
       getUser: mockGetUser,
@@ -156,7 +156,7 @@ describe('getAdminLayoutDataFn', () => {
       ],
     })
     // Override the from mock for this test to handle fetchAllTenants
-    const { createServerClient } = await import('@/lib/supabase/server-start')
+    const { createServerClient } = await import('@/lib/supabase/server-start.server')
     vi.mocked(createServerClient).mockReturnValueOnce({
       auth: { getUser: mockGetUser } as ReturnType<typeof createServerClient>['auth'],
       from: vi.fn((table: string) => {

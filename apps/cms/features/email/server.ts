@@ -8,8 +8,8 @@ import type { Tables } from '@agency/database'
 import { messages } from '@/lib/messages'
 import { z } from 'zod'
 import { TEMPLATE_TYPE_LABELS, type EmailTemplate, type EmailTemplateType } from './types'
-import { createServerClient } from '@/lib/supabase/server-start'
-import { type AuthContext, requireAuthContext } from '@/lib/server-auth'
+import { createServerClient } from '@/lib/supabase/server-start.server'
+import { type AuthContext, requireAuthContext } from '@/lib/server-auth.server'
 
 // ---------------------------------------------------------------------------
 // Validation schemas

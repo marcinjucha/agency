@@ -10,13 +10,13 @@ import type { CreateUserInput, UpdateUserInput } from './types'
 import type { ChangePasswordFormData } from './validation'
 import type { UserWithRole } from './types'
 import { messages } from '@/lib/messages'
-import { createServerClient } from '@/lib/supabase/server-start'
+import { createServerClient } from '@/lib/supabase/server-start.server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { hasPermission } from '@/lib/permissions'
 import {
   type AuthContextFull as AuthContext,
   requireAuthContextFull as requireAuthContext,
-} from '@/lib/server-auth'
+} from '@/lib/server-auth.server'
 
 // ---------------------------------------------------------------------------
 // DB error mapper
