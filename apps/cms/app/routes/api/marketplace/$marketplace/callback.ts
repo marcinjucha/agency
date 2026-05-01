@@ -1,7 +1,7 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
 import { createServerFn } from '@tanstack/react-start'
 import { getRequest } from '@tanstack/start-server-core'
-import { getMarketplaceAdapter, isMarketplaceRegistered } from '@/features/shop-marketplace/adapters/registry'
+import { getMarketplaceAdapter, isMarketplaceRegistered } from '@/features/shop-marketplace/adapters/registry.server'
 import { createServerClient } from '@/lib/supabase/server-start'
 import { routes } from '@/lib/routes'
 import { messages } from '@/lib/messages'

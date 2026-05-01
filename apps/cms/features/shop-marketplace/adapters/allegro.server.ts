@@ -11,7 +11,7 @@ import {
   marketplaceFetch,
   marketplaceJson,
   MarketplaceApiError,
-} from './http'
+} from './http.server'
 
 // --- Constants ---
 

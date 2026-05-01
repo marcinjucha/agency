@@ -12,7 +12,7 @@ import {
   marketplaceJson,
   authHeaders,
   MarketplaceApiError,
-} from './http'
+} from './http.server'
 
 // --- Constants ---
 
