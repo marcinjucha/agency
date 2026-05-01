@@ -10,13 +10,68 @@ export { STEP_OUTPUT_SCHEMAS } from './step-registry'
 export { STEP_TYPE_LABELS } from './utils/step-labels'
 import { STEP_TYPE_LABELS } from './utils/step-labels'
 
+// --- Workflow snapshot (frozen definition stored at execution time) ---
+
+export type WorkflowSnapshot = {
+  workflow: {
+    id: string
+    name: string
+    trigger_type: TriggerType
+    trigger_config: TriggerConfig | null
+  }
+  steps: Array<{
+    id: string
+    slug: string
+    step_type: string
+    step_config: StepConfig
+  }>
+  edges: Array<{
+    id: string
+    source_step_id: string
+    target_step_id: string
+    condition_branch: string | null
+    sort_order: number
+  }>
+}
+
+/**
+ * Parses raw JSONB snapshot from DB into typed WorkflowSnapshot or null.
+ * Returns null for legacy executions (pre-T-209) that have empty '{}' snapshot.
+ * Sanitizes webhook step_config headers (may contain auth tokens — defense in depth).
+ */
+export function parseWorkflowSnapshot(raw: unknown): WorkflowSnapshot | null {
+  if (
+    !raw ||
+    typeof raw !== 'object' ||
+    Array.isArray(raw) ||
+    !Array.isArray((raw as any).steps) ||
+    (raw as any).steps.length === 0
+  ) {
+    return null
+  }
+  const snapshot = raw as unknown as WorkflowSnapshot
+  // Sanitize webhook step headers — may contain authorization tokens.
+  // The snapshot is returned to CMS UI; redact intra-tenant sensitive config.
+  const sanitizedSteps = snapshot.steps.map(step => {
+    if (step.step_type === 'webhook') {
+      const config = step.step_config as { type: 'webhook'; headers?: Record<string, string>; [key: string]: unknown }
+      if (config.headers) {
+        const { headers: _redacted, ...rest } = config
+        return { ...step, step_config: rest as typeof step.step_config }
+      }
+    }
+    return step
+  })
+  return { ...snapshot, steps: sanitizedSteps }
+}
+
 // --- Enums ---
 
 export type TriggerType = 'survey_submitted' | 'booking_created' | 'lead_scored' | 'manual' | 'scheduled'
 
 export type ExecutionStatus = 'pending' | 'running' | 'completed' | 'failed' | 'cancelled' | 'paused'
 
-export type StepExecutionStatus = 'pending' | 'running' | 'completed' | 'failed' | 'skipped' | 'waiting' | 'processing'
+export type StepExecutionStatus = 'pending' | 'running' | 'completed' | 'failed' | 'skipped' | 'waiting' | 'processing' | 'cancelled'
 
 // --- Trigger Config (discriminated union) ---
 
@@ -255,6 +310,7 @@ export const STEP_EXECUTION_STATUS_LABELS: Record<StepExecutionStatus, string> =
   skipped: messages.workflows.stepExecutionSkipped,
   waiting: messages.workflows.stepExecutionWaiting,
   processing: messages.workflows.stepExecutionProcessing,
+  cancelled: messages.workflows.stepExecutionCancelled,
 }
 
 // --- Options for select dropdowns (derived from label records) ---
@@ -313,6 +369,7 @@ export function toExecutionWithWorkflow(raw: unknown): ExecutionWithWorkflow {
 export type StepExecutionWithMeta = WorkflowStepExecution & {
   step_type: string
   resume_at: string | null
+  attempt_number: number
 }
 
 export function toStepExecutionWithMeta(raw: unknown): StepExecutionWithMeta {
@@ -323,11 +380,13 @@ export function toStepExecutionWithMeta(raw: unknown): StepExecutionWithMeta {
     ...toWorkflowStepExecution(row),
     step_type: row.workflow_steps?.step_type ?? '',
     resume_at: row.resume_at ?? null,
+    attempt_number: row.attempt_number ?? 1,
   }
 }
 
 export type ExecutionWithSteps = WorkflowExecution & {
   workflow_name: string
   step_executions: StepExecutionWithMeta[]
+  workflow_snapshot: WorkflowSnapshot | null
 }
 

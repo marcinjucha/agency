@@ -985,6 +985,7 @@ export const messages = {
     stepExecutionSkipped: 'Pominięto',
     stepExecutionWaiting: 'Czeka na wznowienie',
     stepExecutionProcessing: 'Przetwarzanie',
+    stepExecutionCancelled: 'Anulowany',
     // Executions page
     executionsTitle: 'Historia wykonań',
     noExecutions: 'Brak wykonań',
@@ -1272,8 +1273,11 @@ export const messages = {
     stepOutput: 'Dane wyjściowe',
     stepError: 'Błąd',
     stepNoPayload: 'Brak danych',
+    stepCancelledTooltip: 'Nie wykonany — błąd wcześniejszego kroku',
     stepPayloadExpand: 'Rozwiń',
     stepPayloadCollapse: 'Zwiń',
+    stepPreviousAttempts: (count: number) => `Poprzednie próby (${count})`,
+    stepHidePreviousAttempts: (count: number) => `Ukryj poprzednie próby (${count})`,
     expandAll: 'Rozwiń wszystkie',
     collapseAll: 'Zwiń wszystkie',
     // Duration formatting
@@ -1282,6 +1286,13 @@ export const messages = {
     durationHours: (h: number) => `${h}g ${Math.round((h % 1) * 60)}m`,
     // Open editor link
     openInEditor: 'Otwórz w edytorze',
+    // Retry
+    retryButton: 'Spróbuj ponownie',
+    retryConfirmTitle: 'Uruchomić ponownie?',
+    retryConfirmDescription: 'Workflow uruchomi się ponownie. Ukończone kroki zostaną pominięte (zostanie użyty ich poprzedni wynik). Nieudane kroki wykonają się od nowa z aktualnymi wartościami.',
+    retryToastSuccess: 'Workflow uruchomiony ponownie',
+    retryAlreadyRunning: 'Workflow jest już w trakcie ponownego uruchomienia',
+    retryDisabledRunning: 'W trakcie ponownego uruchomienia, odśwież za chwilę',
     // Nav
     navExecutions: 'Historia',
     // Test mode
@@ -1478,6 +1489,7 @@ export const messages = {
     'shop.marketplace': 'Marketplace',
     workflows: 'Automatyzacja',
     'workflows.executions': 'Wykonania',
+    'workflows.execute': 'Uruchamiaj workflow',
     system: 'System',
     management: 'Zarządzanie',
     'system.email_templates': 'Szablony email',

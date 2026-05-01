@@ -1,6 +1,6 @@
 import { createServerClient } from '@/lib/supabase/server-start'
 import type { WorkflowListItem, WorkflowWithSteps, ExecutionWithSteps, StepExecutionWithMeta } from './types'
-import { toWorkflow, toWorkflowListItem, toWorkflowStep, toWorkflowEdge, toExecutionWithWorkflow, toStepExecutionWithMeta } from './types'
+import { toWorkflow, toWorkflowListItem, toWorkflowStep, toWorkflowEdge, toExecutionWithWorkflow, toStepExecutionWithMeta, parseWorkflowSnapshot } from './types'
 
 const LIST_FIELDS = 'id, name, description, trigger_type, is_active, created_at, updated_at' as const
 
@@ -79,12 +79,15 @@ export async function getExecutionWithStepsServer(executionId: string): Promise<
 
   const execution = toExecutionWithWorkflow(execData)
 
+  const workflow_snapshot = parseWorkflowSnapshot(execData.workflow_snapshot)
+
   // Fetch step executions with workflow step metadata
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JS v2.95.2 incompatibility
   const { data: stepsData, error: stepsError } = await (supabase as any)
     .from('workflow_step_executions')
     .select('*, workflow_steps(step_type)')
     .eq('execution_id', executionId)
+    .order('attempt_number', { ascending: true })
     .order('created_at', { ascending: true })
 
   if (stepsError) throw stepsError
@@ -94,5 +97,6 @@ export async function getExecutionWithStepsServer(executionId: string): Promise<
   return {
     ...execution,
     step_executions,
+    workflow_snapshot,
   }
 }
