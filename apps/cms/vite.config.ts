@@ -11,8 +11,18 @@ export default defineConfig(({ command }) => ({
   },
   // These packages use #virtual imports resolved by tanstackStart plugin at build time.
   // Pre-bundling runs before plugin context is ready — must exclude.
+  // @tanstack/router-core/ssr/server is lazy-discovered on first browser request
+  // and transitively pulls start-server-core (with its virtual module imports)
+  // through esbuild optimizer (outside plugin chain) → causes
+  // "tanstack-start-injected-head-scripts:v" resolve failure. Excluding the whole
+  // router-core package keeps the optimizer from re-bundling it on lazy discovery.
   optimizeDeps: {
-    exclude: ['@tanstack/start-server-core', '@tanstack/react-start', '@tanstack/react-router'],
+    exclude: [
+      '@tanstack/start-server-core',
+      '@tanstack/react-start',
+      '@tanstack/react-router',
+      '@tanstack/router-core',
+    ],
   },
   plugins: [
     tsConfigPaths(),
