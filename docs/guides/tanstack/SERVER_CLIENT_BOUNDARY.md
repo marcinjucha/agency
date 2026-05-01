@@ -68,60 +68,75 @@ export const getBlogPostsFn = createServerFn({ method: 'POST' }).handler(async (
 
 ---
 
-### Pattern 2: Wrapper consolidation (✅ rekomendowany dla complex features)
+### Pattern 2: Decorator wrapper (✅ TYLKO dla shared cross-cutting semantics)
 
-Gdy jeden feature ma 5+ helpers z wspólnymi server-only deps, zamiast 5+ named imports — stwórz **jeden orchestrator function** w `helpers.server.ts`:
+**WAŻNE**: Wrapper sensowny TYLKO gdy 3-5 helpers ma **wspólną orchestrację** (auth + audit + cleanup), NIE jako "god switch dispatcher" dla niezwiązanych funkcji.
 
 ```ts
-// features/analytics/helpers.server.ts
-import { createServerClient } from '@/lib/supabase/server-start.server'
-import { requireAuthContext } from '@/lib/server-auth.server'
-
-// Internal helpers — NIE eksportowane
-async function ensureAccess() { ... }
-async function loadConfig() { ... }
-async function trackQuery(type: string) { ... }
-
-// Single entry point — orchestruje wszystko
-export async function runAnalyticsOperation(
-  type: 'reports' | 'export' | 'metrics',
-  data: unknown
-) {
-  await ensureAccess()
-  trackQuery(type)
-  const config = await loadConfig()
-  // ... routing per `type`
-  return result
+// ✅ OK — decorator z wspólną semantyką
+// features/X/decorators.server.ts
+export async function withAuthAndAudit<T>(
+  permission: PermissionKey,
+  fn: (ctx: AuthContext) => Promise<T>
+): Promise<T> {
+  const ctx = await requireAuthContext()
+  if (!hasPermission(ctx, permission)) throw new Error('forbidden')
+  const start = performance.now()
+  try {
+    const result = await fn(ctx)
+    await auditLog({ permission, durationMs: performance.now() - start })
+    return result
+  } catch (err) {
+    await auditLog({ permission, error: err })
+    throw err
+  }
 }
 ```
 
 ```ts
-// features/analytics/server.ts
+// features/X/server.ts — top-level OK (single decorator import)
 import { createServerFn } from '@tanstack/react-start'
-import { runAnalyticsOperation } from './helpers.server'  // ← single import
+import { withAuthAndAudit } from './decorators.server'
 
-export const getReportsFn = createServerFn().handler(({ data }) =>
-  runAnalyticsOperation('reports', data)
-)
-export const exportReportFn = createServerFn().handler(({ data }) =>
-  runAnalyticsOperation('export', data)
-)
-export const getMetricsFn = createServerFn().handler(({ data }) =>
-  runAnalyticsOperation('metrics', data)
+export const deleteFooFn = createServerFn().handler(({ data }) =>
+  withAuthAndAudit('foo.delete', async (ctx) => {
+    // ... actual delete logic, fully type-safe per Fn
+  })
 )
 ```
 
-**Dlaczego lepszy niż barrel z 5+ imports**:
-- Strip działa (single name)
-- Single boundary do testowania (mock `runAnalyticsOperation`)
-- Type inference cleaner
-- Reorganizacja wewnętrznych helperów nie ruszą `server.ts`
+**Dlaczego OK jako decorator**: shared cross-cutting concern (auth + audit), każda lambda ma własną logikę zachowuje type safety, decorator dodaje wspólną orchestrację bez kupowania switch'a.
+
+### ❌ Anti-pattern: God-switch dispatcher (NIE rób)
+
+```ts
+// ❌ BAD — false abstraction dla unrelated handlers
+export async function runWorkflowOp(op: AnyWorkflowOp) {
+  switch (op.kind) {
+    case 'list': /* logic A — różny return type */ break
+    case 'detail': /* logic B — inny shape */ break
+    case 'create': /* logic C — wymaga input validation */ break
+    // ... 10 more cases dla 13 unrelated handlers
+  }
+}
+```
+
+**Co to psuje**:
+- TypeScript musi narrow union 13× (każdy case ma inny return shape)
+- Adding nowy handler = touch wrapper + Fn + types — 3 places
+- Jedna funkcja dla 13 unrelated operations = nieczytelna, hard to debug
+- Shared orchestrator = false coupling — bug w wrapper crashuje wszystkich
+- Test wymaga setup dla wszystkich 13 path'ów
+
+**Decision rule**: jeśli switch ma 5+ case'ów dla **niezwiązanych** operacji — wrapper to false economy. Użyj **Pattern 3 (dynamic per-lambda)** zamiast.
 
 ---
 
-### Pattern 3: Dynamic import (✅ dla legacy barrel + re-exports)
+### Pattern 3: Dynamic import per lambda (✅ rekomendowany dla 5+ unrelated handlers)
 
-Workflows feature miał barrel + re-exports — Path B fix (commit `f3420ff`):
+**Najlepszy pattern** dla feature z wieloma niezwiązanymi handlers. Self-contained — każda lambda widzi tylko co potrzebuje, type inference automatic, łatwe dodawanie nowych Fn (1 file change), zero shared state.
+
+Workflows feature miał 13 unrelated handlers + barrel + re-exports — Path B fix (commit `f3420ff`):
 
 ```ts
 // features/workflows/server.ts (po Path B)
@@ -231,22 +246,34 @@ Czy plik importuje na top-level z .server.ts?
 │
 ├─ NIE (tylko z plain .ts) → top-level OK
 │
-├─ TAK, single direct leaf (np. createServerClient z lib/supabase/server-start.server)
-│   └─ used w 1-3 lambdach → top-level OK ✅
+├─ TAK, type-only (`import type`/`export type`) → top-level OK ✅ (TS erase)
 │
-├─ TAK, single name z helpers.server (wrapper consolidation)
-│   └─ Pattern 2 — top-level OK ✅
+├─ TAK, 1-4 direct leaf imports (createServerClient, requireAuthContext z osobnych plików)
+│   └─ Pattern 1 → top-level OK ✅ (jak blog/surveys/shop-products)
 │
-├─ TAK, 5+ named imports z handlers.server (barrel)
-│   └─ Pattern 3 — DYNAMIC await import('./handlers.server') w lambdach ❌
+├─ TAK, 3-5 helpers z SHARED CROSS-CUTTING semantics (auth + audit + cleanup)
+│   └─ Pattern 2 (decorator) → top-level OK ✅ (single decorator import)
+│
+├─ TAK, 5+ unrelated handlers z handlers.server.ts
+│   └─ Pattern 3 → DYNAMIC await import('./handlers.server') w każdej lambdzie ✅
+│       NIE god-switch wrapper — type-safety + self-contained > false consolidation
 │
 └─ TAK, ma `export { x } from './foo.server'` runtime re-export
-    └─ Pattern 3 — async wrapper ❌
+    └─ Pattern 3 — async wrapper ✅
 ```
 
 Plus zawsze:
 - `import type` / `export type` → top-level OK (zerowy runtime)
 - Jeśli masz wątpliwość → dynamic w lambdach jest defensive, działa zawsze
+- **NIE używaj wrappera z 5+ case'ami** — każda lambda dynamic import jest cleaner
+
+## Praktyczny ranking patternów (od najlepszego do najgorszego)
+
+1. **Pattern 1** (direct leaf imports) — gdy masz tylko 1-4 leaf utilities z `.server.ts` files. Zero komplikacji, top-level OK, najprostsze.
+2. **Pattern 3** (dynamic per-lambda) — gdy masz 5+ unrelated handlers. Self-contained, type-safe, łatwe dodawanie. Rekomendowany dla większości complex features.
+3. **Pattern 2** (decorator) — TYLKO gdy masz shared cross-cutting concern (auth + audit + log). Decorator dodaje wspólną orchestrację, NIE dispatchuje switch'a.
+
+**Anti-pattern (NIE rób)**: god-switch wrapper z 5+ case'ami dla niezwiązanych handlers — false abstraction, wszystko zyskane przez konsolidację imports tracone na komplikacje switch'a.
 
 ---
 
