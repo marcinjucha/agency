@@ -37,7 +37,7 @@ const PERMISSION_GROUPS = {
   },
   workflows: {
     key: 'workflows',
-    children: ['workflows.executions'] as const,
+    children: ['workflows.executions', 'workflows.execute'] as const,
   },
   system: {
     key: 'system',
