@@ -11,45 +11,56 @@ import {
   type UpdateWorkflowFormData,
   type SaveCanvasFormData,
 } from './validation'
-import {
-  toWorkflow,
-  toWorkflowEdge,
-  toWorkflowStep,
-} from './types'
-import { createServiceClient } from '@/lib/supabase/service'
+import { toWorkflow } from './types'
 import { messages } from '@/lib/messages'
-import { WORKFLOW_TEMPLATES } from './templates/workflow-templates'
 import { type AuthContext, type StartClient, requireAuthContext } from '@/lib/server-auth.server'
 import { generateStepSlug, isValidSlugFormat } from './utils/slug'
-import { validateSurveyLinkIdInPayload } from './trigger-payload-validators'
-import { validateAllSteps } from './utils/validate-steps'
-import {
-  getWorkflowsHandler,
-  getWorkflowHandler,
-  getWorkflowsForSelectorHandler,
-  getWorkflowExecutionsHandler,
-  getEmailTemplatesForWorkflowHandler,
-  getEmailTemplatesWithBodyHandler,
-  getSurveysForWorkflowHandler,
-  getAllExecutionsHandler,
-  getExecutionWithStepsHandler,
-  retryWorkflowExecutionHandler,
-  dispatchToN8nHandler,
-  fetchWorkflowForPublicTriggerHandler,
-  type ExecutionFilters,
-  type WorkflowSelectorOption,
-  type RetryWorkflowResult,
+
+// Type-only imports — do NOT pull runtime modules into client bundles.
+import type {
+  ExecutionFilters,
+  WorkflowSelectorOption,
+  RetryWorkflowResult,
 } from './handlers.server'
 
 // Re-export handler types for component-side consumption (type-only — does not
 // drag handlers.server.ts into client bundles).
 export type { ExecutionFilters, WorkflowSelectorOption, RetryWorkflowResult }
 
-// Re-export trigger-route helpers — the public /api/workflows/trigger route
-// imports these from this module. They live in handlers.server.ts but the
-// public stable name lives here.
-export const dispatchToN8n = dispatchToN8nHandler
-export const fetchWorkflowForPublicTrigger = fetchWorkflowForPublicTriggerHandler
+// ---------------------------------------------------------------------------
+// Server-only helpers — async wrappers around dynamic imports.
+//
+// WHY: Importing `./handlers.server`, `./templates/workflow-templates`,
+// `./trigger-payload-validators`, `./utils/validate-steps`, or
+// `@/lib/supabase/service` at the TOP LEVEL of this file causes a side-effect
+// cascade that pulls `start-server-core/request-response` (which calls
+// `new AsyncLocalStorage()` at import time) into client lazy chunks via
+// WorkflowEditor → TestModePanel → @/features/workflows/server. The
+// `.server.ts` strip-from-client mechanism handles direct `*.server.ts`
+// imports but NOT the chain that flows through this barrel module.
+//
+// Fix: every server-only callable lives behind a dynamic `await import(...)`
+// inside a server-fn handler lambda. Type-only imports (above) are safe.
+// ---------------------------------------------------------------------------
+
+/**
+ * Public re-export — `apps/cms/app/routes/api/workflows/trigger.ts` calls this
+ * directly (server route handler, runs only on the server). Async wrapper
+ * around dynamic import to keep `handlers.server` off the top level.
+ */
+export async function dispatchToN8n(
+  ...args: Parameters<typeof import('./handlers.server')['dispatchToN8nHandler']>
+) {
+  const mod = await import('./handlers.server')
+  return mod.dispatchToN8nHandler(...args)
+}
+
+export async function fetchWorkflowForPublicTrigger(
+  ...args: Parameters<typeof import('./handlers.server')['fetchWorkflowForPublicTriggerHandler']>
+) {
+  const mod = await import('./handlers.server')
+  return mod.fetchWorkflowForPublicTriggerHandler(...args)
+}
 
 /**
  * Serializable subset of StepValidationError — the full type carries Zod's
@@ -164,6 +175,7 @@ export const saveWorkflowCanvasFn = createServerFn({ method: 'POST' })
     }> => {
       // Defensive re-validation: client-side gate is the primary defense, but
       // re-validating here prevents bypass via direct API calls or stale cache.
+      const { validateAllSteps } = await import('./utils/validate-steps')
       const validation = validateAllSteps(
         data.data.steps.map((s) => ({
           id: s.id ?? crypto.randomUUID(),
@@ -229,7 +241,10 @@ export const triggerManualWorkflowFn = createServerFn({ method: 'POST' })
       const result = await requireAuthContext()
         .andThen(({ supabase, tenantId }) => verifyManualWorkflow(supabase, tenantId, data.workflowId))
         .andThen(({ tenantId }) =>
-          dispatchToN8n(n8nUrl, data.workflowId, tenantId, { trigger_type: 'manual' })
+          ResultAsync.fromPromise(
+            dispatchToN8n(n8nUrl, data.workflowId, tenantId, { trigger_type: 'manual' }),
+            dbError,
+          ).andThen((r) => r),
         )
 
       return result.match(
@@ -252,6 +267,8 @@ export const testWorkflowFn = createServerFn({ method: 'POST' })
         return { success: false, error: 'N8N_WORKFLOW_ORCHESTRATOR_URL not configured' }
       }
 
+      const { validateSurveyLinkIdInPayload } = await import('./trigger-payload-validators')
+
       const result = await requireAuthContext()
         .andThen(({ supabase, tenantId }) =>
           fetchWorkflowForTest(supabase, tenantId, data.workflowId).map(
@@ -267,10 +284,13 @@ export const testWorkflowFn = createServerFn({ method: 'POST' })
           ).map(() => ({ tenantId, triggerType }))
         )
         .andThen(({ tenantId, triggerType }) =>
-          dispatchToN8n(n8nUrl, data.workflowId, tenantId, {
-            trigger_type: triggerType,
-            ...data.triggerPayload,
-          })
+          ResultAsync.fromPromise(
+            dispatchToN8n(n8nUrl, data.workflowId, tenantId, {
+              trigger_type: triggerType,
+              ...data.triggerPayload,
+            }),
+            dbError,
+          ).andThen((r) => r),
         )
 
       return result.match(
@@ -307,6 +327,8 @@ export const createWorkflowFromTemplateFn = createServerFn({ method: 'POST' })
   )
   .handler(
     async ({ data }): Promise<{ success: boolean; data?: { id: string }; error?: string }> => {
+      const { WORKFLOW_TEMPLATES } = await import('./templates/workflow-templates')
+
       const result = await requireAuthContext()
         .andThen((auth) => {
           const template = WORKFLOW_TEMPLATES.find((t) => t.id === data.templateId)
@@ -325,19 +347,29 @@ export const createWorkflowFromTemplateFn = createServerFn({ method: 'POST' })
 
 // ---------------------------------------------------------------------------
 // Query Server Functions (createServerFn wrappers around handlers.server.ts)
+//
+// All `await import('./handlers.server')` calls keep the server-only module
+// out of the client bundle — see top-of-file note.
 // ---------------------------------------------------------------------------
 
-export const getWorkflowsFn = createServerFn({ method: 'POST' }).handler(() =>
-  getWorkflowsHandler(),
-)
+export const getWorkflowsFn = createServerFn({ method: 'POST' }).handler(async () => {
+  const { getWorkflowsHandler } = await import('./handlers.server')
+  return getWorkflowsHandler()
+})
 
 export const getWorkflowFn = createServerFn({ method: 'POST' })
   .inputValidator((input: { id: string }) => input)
-  .handler(({ data }) => getWorkflowHandler(data.id))
+  .handler(async ({ data }) => {
+    const { getWorkflowHandler } = await import('./handlers.server')
+    return getWorkflowHandler(data.id)
+  })
 
 export const getWorkflowsForSelectorFn = createServerFn({ method: 'POST' })
   .inputValidator((input: { triggerType?: string }) => input)
-  .handler(({ data }) => getWorkflowsForSelectorHandler(data.triggerType))
+  .handler(async ({ data }) => {
+    const { getWorkflowsForSelectorHandler } = await import('./handlers.server')
+    return getWorkflowsForSelectorHandler(data.triggerType)
+  })
 
 export const getWorkflowExecutionsFn = createServerFn({ method: 'POST' })
   .inputValidator(
@@ -347,21 +379,29 @@ export const getWorkflowExecutionsFn = createServerFn({ method: 'POST' })
     }) => input,
   )
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TanStack Start serialization check trips on JSONB-derived `Json` types in WorkflowExecution; same pattern as blog/server.ts.
-  .handler(({ data }) =>
-    getWorkflowExecutionsHandler(data.workflowId, data.options) as any,
-  )
+  .handler(async ({ data }) => {
+    const { getWorkflowExecutionsHandler } = await import('./handlers.server')
+    return getWorkflowExecutionsHandler(data.workflowId, data.options) as any
+  })
 
 export const getEmailTemplatesForWorkflowFn = createServerFn({ method: 'POST' }).handler(
-  () => getEmailTemplatesWithBodyHandler(),
+  async () => {
+    const { getEmailTemplatesWithBodyHandler } = await import('./handlers.server')
+    return getEmailTemplatesWithBodyHandler()
+  },
 )
 
 export const getEmailTemplatesForWorkflowLightFn = createServerFn({ method: 'POST' }).handler(
-  () => getEmailTemplatesForWorkflowHandler(),
+  async () => {
+    const { getEmailTemplatesForWorkflowHandler } = await import('./handlers.server')
+    return getEmailTemplatesForWorkflowHandler()
+  },
 )
 
-export const getSurveysForWorkflowFn = createServerFn({ method: 'POST' }).handler(() =>
-  getSurveysForWorkflowHandler(),
-)
+export const getSurveysForWorkflowFn = createServerFn({ method: 'POST' }).handler(async () => {
+  const { getSurveysForWorkflowHandler } = await import('./handlers.server')
+  return getSurveysForWorkflowHandler()
+})
 
 export const getAllExecutionsFn = createServerFn({ method: 'POST' })
   .inputValidator(
@@ -371,12 +411,18 @@ export const getAllExecutionsFn = createServerFn({ method: 'POST' })
     }) => input,
   )
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TanStack Start serialization check trips on JSONB-derived `Json`.
-  .handler(({ data }) => getAllExecutionsHandler(data.filters, data.options) as any)
+  .handler(async ({ data }) => {
+    const { getAllExecutionsHandler } = await import('./handlers.server')
+    return getAllExecutionsHandler(data.filters, data.options) as any
+  })
 
 export const getExecutionWithStepsFn = createServerFn({ method: 'POST' })
   .inputValidator((input: { executionId: string }) => input)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TanStack Start serialization check trips on JSONB-derived `Json`.
-  .handler(({ data }) => getExecutionWithStepsHandler(data.executionId) as any)
+  .handler(async ({ data }) => {
+    const { getExecutionWithStepsHandler } = await import('./handlers.server')
+    return getExecutionWithStepsHandler(data.executionId) as any
+  })
 
 // ---------------------------------------------------------------------------
 // Retry server function — replaces app/routes/api/workflows/retry.ts
@@ -386,7 +432,10 @@ export const retryWorkflowExecutionFn = createServerFn({ method: 'POST' })
   .inputValidator((input: { executionId: string }) =>
     z.object({ executionId: z.string().uuid() }).parse(input),
   )
-  .handler(({ data }) => retryWorkflowExecutionHandler(data))
+  .handler(async ({ data }) => {
+    const { retryWorkflowExecutionHandler } = await import('./handlers.server')
+    return retryWorkflowExecutionHandler(data)
+  })
 
 // ---------------------------------------------------------------------------
 // DB helpers
@@ -724,9 +773,13 @@ function fetchWorkflowForTest(supabase: StartClient, tenantId: string, workflowI
 }
 
 function cancelExecution(tenantId: string, executionId: string) {
-  const serviceClient = createServiceClient()
-
+  // Dynamic import — keeps `@/lib/supabase/service` off the top level.
+  // Wrap the import-then-build chain in a ResultAsync so callers can `.andThen`.
   return ResultAsync.fromPromise(
+    import('@/lib/supabase/service').then((m) => m.createServiceClient()),
+    dbError,
+  ).andThen((serviceClient) =>
+    ResultAsync.fromPromise(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (serviceClient as any)
       .from('workflow_executions')
@@ -772,12 +825,13 @@ function cancelExecution(tenantId: string, executionId: string) {
             })
         )
         .map(() => execution.workflow_id)
-    })
+    }),
+  )
 }
 
 function insertWorkflowFromTemplate(
   auth: AuthContext,
-  template: (typeof WORKFLOW_TEMPLATES)[number]
+  template: WorkflowTemplateValue,
 ) {
   const { supabase, tenantId } = auth
 
@@ -852,3 +906,7 @@ function insertWorkflowFromTemplate(
         .map(() => ({ id: workflowId }))
     })
 }
+
+// Type-only import of the array element shape. `import type` with a deep-type
+// expression is erased at compile time — does NOT pull templates into client.
+type WorkflowTemplateValue = (typeof import('./templates/workflow-templates'))['WORKFLOW_TEMPLATES'][number]
