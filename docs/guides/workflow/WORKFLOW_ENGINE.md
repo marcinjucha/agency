@@ -1,6 +1,6 @@
 # Workflow Engine — Architecture Guide
 
-> Updated: 2026-04-12 | Relates to: AAA-T-183 (n8n Orchestrator migration)
+> Updated: 2026-05-01 | T-183 (n8n migration) + T-208/T-209 (retry foundation) + T-210 (retry engine)
 
 ## Overview
 
@@ -160,11 +160,45 @@ Trigger types (`survey_submitted`, `booking_created`, etc.) are **NOT filtered o
 
 ## API Routes
 
-| Route | Method | Purpose |
-|-------|--------|---------|
-| `/api/workflows/trigger` | POST | Entry point — Bearer token auth, validates, POSTs to n8n Orchestrator. Returns 202 |
+| Route | Method | Auth | Purpose |
+|-------|--------|------|---------|
+| `/api/workflows/trigger` | POST | Bearer `WORKFLOW_TRIGGER_SECRET` | Website → CMS entry point — validates payload, derives tenant from DB, POSTs fire-and-forget to n8n Orchestrator. Returns 202. |
+| `/api/workflows/retry` | POST | User session + `workflows.execute` | (T-210) Admin restarts failed execution — optimistic lock, dispatch to n8n with `__retry_execution_id__`, rollback on n8n failure. Returns 200 / 409 / 502. |
 
 **Deleted routes (AAA-T-183):** `/api/workflows/callback`, `/api/workflows/resume`, `/api/workflows/process-due-delays`
+
+---
+
+## Retry Engine (T-208/T-209/T-210)
+
+### Model: Continuation-with-attempts
+
+Jeden `workflow_executions` row na jednostkę pracy. Retry tworzy NOWE wiersze `workflow_step_executions` z `attempt_number+1` dla nieudanych kroków — nie nadpisuje istniejących.
+
+**Dlaczego nie Fork:** Fork (nowe execution per retry) komplikuje "jeden job" semantykę i audit queries. Continuation zachowuje prostą strukturę: execution = jedna sprawa od początku do końca.
+
+### Zachowanie retry per status kroku
+
+| Status prev attempt | Akcja replay guard |
+|---|---|
+| `completed` | Reuse `output_payload` z DB → `__replay__` virtual step (no handler call) |
+| `skipped` | Reuse skip → `__replay_skipped__` |
+| `failed` | New attempt (attempt_number+1), fresh render z aktualnym `variableContext` |
+| `cancelled` | New attempt — **NIE** `continue` (niszczyłoby audit trail) |
+| `pending`/`running` | New attempt |
+| `waiting`/`processing` | `continue` (używa istniejącego wiersza — delay w trakcie) |
+
+### workflow_snapshot — izolacja od edycji
+
+`workflow_executions.workflow_snapshot` (T-209): frozen kopia definicji workflow w momencie startu wykonania.
+
+- **Retry używa snapshot** — edycja workflow między failure a retry nie wpływa na retry
+- **UI labels** — `StepExecutionTimeline` używa snapshot dla etykiet kroków (immutable at execution time)
+- **parseWorkflowSnapshot()** — sanityzuje `webhook.step_config.headers` (mogą zawierać auth tokeny) przed zwróceniem do UI
+
+### Deferred do T-216
+
+Exact reuse `input_payload` na retry failed step — handler re-renderuje świeże dane zamiast używać zapisanego payloadu. Pokrywa 95% przypadków. T-216: ~150 LOC w 9 plikach (Decide Replay Action + 8 handlers).
 
 ---
 
