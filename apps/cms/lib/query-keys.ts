@@ -45,7 +45,7 @@ export const queryKeys = {
   },
 
   /**
-   * @source getAppointmentsFn (features/appointments/queries.ts — no server.ts, uses queries.ts directly)
+   * @source getAppointmentsFn (features/appointments/server.ts)
    * @usedBy AppointmentList
    * @invalidatedBy AppointmentList (cancel), ResponseList (delete response), ResponseDetail (delete response with appointment)
    */
