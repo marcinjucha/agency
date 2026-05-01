@@ -25,6 +25,19 @@ export const ALLOWED_MIME_TYPES = [
   'video/quicktime',
 ]
 
+/**
+ * Browser-side helper: requests a presigned URL from the CMS API and PUTs the
+ * file directly to S3 from the user's browser.
+ *
+ * Why this is intentionally NOT a `createServerFn` (no boundary leak):
+ * - The actual security boundary is `generatePresignedUrlFn` in `./server.ts`
+ *   (auth check + MIME allowlist + hardcoded folder prefix).
+ * - Streaming a >5MB image through a server fn would force the file body
+ *   through Vercel's serverless function body limit and lambda RAM. The
+ *   browser-direct PUT avoids that entirely.
+ * - Mirrors `uploadImageToS3` in `features/blog/utils.ts` — same pattern,
+ *   same justification.
+ */
 export async function uploadMediaToS3(
   file: File
 ): Promise<{ fileUrl: string; s3Key: string }> {
