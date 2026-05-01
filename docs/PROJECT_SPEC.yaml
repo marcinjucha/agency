@@ -26,6 +26,8 @@ architecture:
     - "nitro() plugin build-only in all TanStack Start apps — nitro() crashes Vite dev server if not guarded; wrap in NODE_ENV check or separate vite.config build variant. Affects cms, website, jacek, oleg"
     - "ConsentBanner.tsx not CookieBanner.tsx — ad blockers match 'cookie' substring in filenames, blocking the file entirely; naming with 'consent' avoids the false-positive block"
     - "queries.ts (browser) vs queries.server.ts (server) — wrong naming causes silent build-time bugs"
+    - "TanStack Start .server.ts strip works per-import-statement, NOT transitively (2026-05-01) — direct leaf imports (createServerClient z lib/supabase/server-start.server) OK na top-level, ale barrel imports z handlers.server.ts (5+ named) + runtime re-exports block strip → ESM eval cascade → AsyncLocalStorage in client lazy chunks. Fix: dynamic await import('./handlers.server') wewnątrz createServerFn handler lambdas. Pełen guide: docs/guides/tanstack/SERVER_CLIENT_BOUNDARY.md"
+    - "createServerFn modules MUST be in plain .ts (NOT .server.ts) — Import Protection plugin denies UI route imports of .server.ts files. .server.ts suffix is for pure server utilities (createServerClient, requireAuthContext) — leaf modules without createServerFn"
     - "Feature-based folder structure (ADR-005) — thin route files <20 lines, business logic in features/"
     - "Centralized messages in lib/messages.ts — ~220 strings, nested by feature, prepares for i18n"
     - "Centralized routes in lib/routes.ts — prevents typos in hrefs, revalidatePath, API fetch calls"
@@ -243,7 +245,7 @@ features:
   - name: "TanStack Start Migration — CMS Core"
     status: done
     task_id: "AAA-T-192"
-    description: "TanStack Start scaffold in apps/cms/ alongside Next.js 16 (dual-framework, ports 3001/3004). Entry points (vite.config.ts, router.tsx, ssr.tsx, client.tsx), auth flow (createServerFn loginFn/logoutFn/getAuthContextFn, beforeLoad auth guard in __root.tsx), admin layout with SidebarV2 + PermissionsProvider + QueryClientProvider + Sentry. lib/supabase/server-start.ts for TanStack-compatible cookies. Migration docs: docs/TANSTACK_CMS_MIGRATION.md, docs/TANSTACK_START_GUIDE.md. Website migration (AAA-T-191) also complete — see 'TanStack Start Migration — Website' feature."
+    description: "TanStack Start scaffold in apps/cms/ alongside Next.js 16 (dual-framework, ports 3001/3004). Entry points (vite.config.ts, router.tsx, ssr.tsx, client.tsx), auth flow (createServerFn loginFn/logoutFn/getAuthContextFn, beforeLoad auth guard in __root.tsx), admin layout with SidebarV2 + PermissionsProvider + QueryClientProvider + Sentry. lib/supabase/server-start.ts for TanStack-compatible cookies. Website migration (AAA-T-191) also complete — see 'TanStack Start Migration — Website' feature."
     why: "Next.js App Router creates hard coupling to Vercel edge; TanStack Start enables migration to self-hosted VPS deployment without Vercel. Per-feature migration tasks (Surveys & Intake, Workflow & Calendar, Content, Shop) unblocked after this foundation."
     depends_on: ["Workflow Engine"]
     completion_notes: "Iter 1-3 complete. Dual framework coexists: Next.js on 3001, TanStack Start on 3004 (npm run dev:vite). Key gotchas: optimizeDeps.exclude for virtual imports, admin.tsx vs _admin.tsx (pathless layout), server-start.ts for cookies, beforeLoad mandatory over requestMiddleware. 337/337 tests pass."
