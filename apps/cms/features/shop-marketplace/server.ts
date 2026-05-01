@@ -135,6 +135,27 @@ export const getMarketplaceListingsFn = createServerFn({ method: 'POST' })
   })
 
 /**
+ * Batch fetch listings for multiple products at once.
+ * Used in product list view to avoid N+1 per-card queries.
+ */
+export const getMarketplaceListingsForProductsFn = createServerFn({ method: 'POST' })
+  .inputValidator((input: { productIds: string[] }) => input)
+  .handler(async ({ data: { productIds } }): Promise<MarketplaceListing[]> => {
+    if (productIds.length === 0) return []
+    const auth = await getAuth()
+    if (!auth) return []
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (auth.supabase as any)
+      .from('shop_marketplace_listings')
+      .select('id, product_id, connection_id, marketplace, status, last_sync_error')
+      .in('product_id', productIds)
+
+    if (error) throw error
+    return (data || []).map(toMarketplaceListing)
+  })
+
+/**
  * Fetch a single import record by ID for progress polling.
  * Mirrors getImportProgress from queries.ts but uses server client.
  */

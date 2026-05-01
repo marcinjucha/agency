@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '@/lib/query-keys'
 import { deleteShopProductFn, getShopProductsFn } from '../server'
 import { getShopCategoriesFn } from '@/features/shop-categories/server'
-import { getMarketplaceConnections, getMarketplaceListingsForProducts } from '@/features/shop-marketplace/queries'
+import { getMarketplaceConnectionsFn, getMarketplaceListingsForProductsFn } from '@/features/shop-marketplace/server'
 import {
   Button,
   Skeleton,
@@ -44,7 +44,7 @@ export function ShopProductList() {
   // Batch-fetch marketplace connections (to know which marketplaces are connected)
   const { data: connections } = useQuery({
     queryKey: queryKeys.marketplace.connections,
-    queryFn: () => getMarketplaceConnections(),
+    queryFn: () => getMarketplaceConnectionsFn(),
     enabled: typeof window !== 'undefined',
   })
 
@@ -52,7 +52,7 @@ export function ShopProductList() {
   const productIds = products?.map((p) => p.id) ?? []
   const { data: listingsBatch } = useQuery({
     queryKey: queryKeys.marketplace.listingsByProducts(productIds),
-    queryFn: () => getMarketplaceListingsForProducts(productIds),
+    queryFn: () => getMarketplaceListingsForProductsFn({ data: { productIds } }),
     enabled: productIds.length > 0 && typeof window !== 'undefined',
   })
 
