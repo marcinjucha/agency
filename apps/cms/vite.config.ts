@@ -9,6 +9,15 @@ export default defineConfig(({ command }) => ({
   server: {
     port: 3001,
   },
+  // Force single React instance across pre-bundled (optimizeDeps) and excluded
+  // packages. Without dedupe, @tanstack/react-router (excluded) resolves react
+  // via Node module resolution — different instance than Vite's pre-bundled
+  // react.js — useContext returns null because Provider was created by other
+  // React instance. Fixes "Cannot read properties of null (reading 'useContext')"
+  // crashes in useRouter / useNavigate / useContext callers.
+  resolve: {
+    dedupe: ['react', 'react-dom'],
+  },
   // These packages use #virtual imports resolved by tanstackStart plugin at build time.
   // Pre-bundling runs before plugin context is ready — must exclude.
   // @tanstack/router-core/ssr/server is lazy-discovered on first browser request
