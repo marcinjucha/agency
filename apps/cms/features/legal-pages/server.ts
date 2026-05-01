@@ -8,8 +8,8 @@ import { getAuth, requireAuthContextFull, type AuthContextFull } from '@/lib/ser
 import { hasPermission } from '@/lib/permissions'
 import { z } from 'zod'
 import type { TiptapContent } from '../editor/types'
-import type { LegalPageListItem } from './types'
-import { toLegalPageListItem } from './types'
+import type { LegalPage, LegalPageListItem } from './types'
+import { toLegalPage, toLegalPageListItem } from './types'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -62,6 +62,27 @@ export const getLegalPagesFn = createServerFn({ method: 'POST' }).handler(async 
   if (error) throw error
   return (data || []).map(toLegalPageListItem)
 })
+
+/**
+ * Fetch a single legal page by id for the authenticated tenant.
+ * Mirrors getLegalPage from queries.ts but uses server client.
+ */
+export const getLegalPageFn = createServerFn({ method: 'POST' })
+  .inputValidator((input: { id: string }) => input)
+  .handler(async ({ data }): Promise<LegalPage | null> => {
+    const auth = await getAuth()
+    if (!auth) throw new Error('Legal page not found')
+
+    const { data: row, error } = await pagesTable(auth.supabase)
+      .select('*')
+      .eq('id', data.id)
+      .eq('page_type', 'legal')
+      .maybeSingle()
+
+    if (error) throw error
+    if (!row) throw new Error('Legal page not found')
+    return toLegalPage(row)
+  })
 
 export const createLegalPageFn = createServerFn({ method: 'POST' })
   .inputValidator((input: z.infer<typeof legalPageSchema>) => legalPageSchema.parse(input))

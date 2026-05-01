@@ -3,8 +3,8 @@ import { useQuery } from '@tanstack/react-query'
 import { LoadingState, ErrorState } from '@agency/ui'
 import { buildCmsHead } from '@/lib/head'
 import { messages } from '@/lib/messages'
-import { updateLegalPageFn } from '@/features/legal-pages/server'
-import { legalPageKeys, getLegalPage } from '@/features/legal-pages/queries'
+import { updateLegalPageFn, getLegalPageFn } from '@/features/legal-pages/server'
+import { legalPageKeys } from '@/features/legal-pages/queries'
 import { LegalPageEditor } from '@/features/legal-pages/components/LegalPageEditor'
 import type { LegalPage } from '@/features/legal-pages/types'
 import type { LegalPageFormData } from '@/features/legal-pages/validation'
@@ -18,7 +18,7 @@ function LegalPageEditorPage() {
   const { pageId } = Route.useParams()
   const { data: legalPage, isLoading, error } = useQuery<LegalPage>({
     queryKey: legalPageKeys.detail(pageId),
-    queryFn: () => getLegalPage(pageId),
+    queryFn: () => getLegalPageFn({ data: { id: pageId } }) as Promise<LegalPage>,
   })
 
   if (isLoading) return <LoadingState variant="skeleton-table" rows={3} />
