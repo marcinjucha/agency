@@ -7,54 +7,64 @@
 ## 1. Component Diagram — System Overview
 
 ```mermaid
-C4Context
-    title Workflow Engine — Component Overview
+flowchart TD
+    classDef person fill:#166534,stroke:#4ade80,color:#ffffff,font-weight:bold
+    classDef cms fill:#1e3a8a,stroke:#93c5fd,color:#ffffff
+    classDef n8n fill:#78350f,stroke:#fcd34d,color:#ffffff
+    classDef external fill:#1f2937,stroke:#6b7280,color:#e5e7eb
+    classDef db fill:#312e81,stroke:#a78bfa,color:#ffffff
 
-    Person(admin, "Admin", "CMS user building workflows")
-    Person(visitor, "Visitor", "Fills surveys, books appointments")
+    ADMIN(["👤 Admin\nbuduje workflows,\nprzegląda logi"]):::person
+    VISITOR(["👤 Visitor\nwypełnia ankiety,\nrezerwuje terminy"]):::person
 
-    System_Boundary(cms, "CMS (Next.js on Vercel)") {
-        Component(builder, "Workflow Builder", "ReactFlow canvas, config panels, StepLibraryPanel")
-        Component(trigger_route, "Trigger Route", "/api/workflows/trigger — fire-and-forget POST to n8n")
-        Component(test_panel, "TestModePanel", "Dispatches test runs to real n8n Orchestrator")
-        Component(exec_viewer, "Execution Viewer", "Logs, step timeline, canvas status overlay")
-        Component(trigger_schemas, "trigger-schemas.ts", "Variable registry per trigger type")
-    }
+    subgraph CMS_BOX["🖥️  CMS  (TanStack Start / Vercel)"]
+        direction TB
+        BUILDER["🔧 Workflow Builder\nReactFlow canvas\nconfig panels · StepLibraryPanel\nvariable inserter"]:::cms
+        TRIGGER_ROUTE["🚀 /api/workflows/trigger\nBearer auth · fire-and-forget\nPOST do n8n Orchestrator"]:::cms
+        RETRY_ROUTE["🔄 /api/workflows/retry\nUser session · workflows.execute\noptimistic lock · dispatch do n8n"]:::cms
+        TEST_PANEL["🧪 TestModePanel\ndispatches test runs\ndo prawdziwego n8n"]:::cms
+        EXEC_VIEWER["📋 Execution Viewer\nlogi · timeline kroków\nattempts accordion"]:::cms
+    end
 
-    System_Boundary(n8n, "n8n (Hetzner VPS)") {
-        Component(orchestrator, "Workflow Orchestrator", "SplitInBatches loop, staticData state, Switch routing")
-        Component(trigger_handler, "Trigger Handler", "Fetches real data from Supabase per trigger type")
-        Component(email_handler, "Send Email Handler", "Template resolution + Resend via Send Email subworkflow")
-        Component(ai_handler, "AI Action Handler", "Prompt building + MiniMax Agent (Claude Haiku)")
-        Component(condition_handler, "Condition Handler", "Expression evaluator + skip propagation")
-        Component(delay_handler, "Delay Handler", "Native Wait node, self-managed DB state")
-        Component(webhook_handler, "Webhook Handler", "SSRF check + HTTP Request")
-        Component(minimax, "MiniMax Agent", "Reusable Claude API wrapper (LangChain node)")
-        Component(send_email, "Send Email", "Reusable Resend email sender")
-    }
+    subgraph N8N_BOX["⚙️  n8n  (Hetzner VPS)"]
+        direction TB
+        ORCH["🎛️ Workflow Orchestrator\nFetch and Initialize (fresh + retry)\nSplitInBatches loop\nstaticData state · Switch routing\nbatch cancel na failure"]:::n8n
+        subgraph HANDLERS["Handlery (subworkflows)"]
+            direction LR
+            TH["Trigger\nHandler"]:::n8n
+            EH["Send Email\nHandler"]:::n8n
+            AH["AI Action\nHandler"]:::n8n
+            WH["Webhook\nHandler"]:::n8n
+            SH["Switch\nHandler"]:::n8n
+            DH["Delay\nHandler"]:::n8n
+            GR["Get Response\nHandler"]:::n8n
+            GS["Get Survey Link\nHandler"]:::n8n
+            UR["Update Response\nHandler"]:::n8n
+        end
+    end
 
-    System_Ext(supabase, "Supabase", "PostgreSQL + RLS + REST API")
-    System_Ext(resend, "Resend", "Email delivery")
-    System_Ext(claude, "Anthropic API", "Claude Haiku 4.5")
+    SUPABASE[("🗄️ Supabase\nPostgreSQL + RLS")]:::db
+    RESEND["📧 Resend\nemail delivery"]:::external
+    CLAUDE["🤖 Anthropic API\nClaude Haiku 4.5"]:::external
 
-    Rel(admin, builder, "Builds workflows")
-    Rel(admin, exec_viewer, "Views execution logs")
-    Rel(visitor, trigger_route, "Survey/booking triggers")
-    Rel(trigger_route, orchestrator, "POST {workflowId, triggerPayload}")
-    Rel(test_panel, orchestrator, "Same POST as production")
-    Rel(orchestrator, trigger_handler, "executeWorkflow")
-    Rel(orchestrator, email_handler, "executeWorkflow")
-    Rel(orchestrator, ai_handler, "executeWorkflow")
-    Rel(orchestrator, condition_handler, "executeWorkflow")
-    Rel(orchestrator, delay_handler, "executeWorkflow")
-    Rel(orchestrator, webhook_handler, "executeWorkflow")
-    Rel(ai_handler, minimax, "executeWorkflow")
-    Rel(email_handler, send_email, "executeWorkflow")
-    Rel(minimax, claude, "API call")
-    Rel(send_email, resend, "API call")
-    Rel(orchestrator, supabase, "Read/write workflow state")
-    Rel(trigger_handler, supabase, "Fetch trigger data")
-    Rel(builder, supabase, "CRUD workflows/steps/edges")
+    ADMIN -->|"buduje"| BUILDER
+    ADMIN -->|"przegląda"| EXEC_VIEWER
+    VISITOR -->|"events ankiet / rezerwacji"| TRIGGER_ROUTE
+
+    TRIGGER_ROUTE -->|"POST workflowId + triggerPayload"| ORCH
+    RETRY_ROUTE -->|"POST + __retry_execution_id__"| ORCH
+    TEST_PANEL -->|"ten sam POST co produkcja"| ORCH
+
+    ORCH -->|"executeWorkflow"| TH & EH & AH & WH & SH & DH & GR & GS & UR
+
+    ORCH <-->|"odczyt/zapis stanu\nexecution + step_executions"| SUPABASE
+    TH -->|"fetch danych triggera"| SUPABASE
+    BUILDER <-->|"CRUD workflows/steps/edges"| SUPABASE
+    EXEC_VIEWER -->|"read execution logs"| SUPABASE
+    GR & GS & UR -->|"read/write responses"| SUPABASE
+
+    EH -->|"Resend API"| RESEND
+    AH -->|"Anthropic API"| CLAUDE
 ```
 
 ---
@@ -129,17 +139,17 @@ flowchart LR
 
 ```mermaid
 flowchart TD
-    T["buildTriggerContext()<br/>{trigger_type, responseId, surveyLinkId}"]
-    T --> TH["Trigger Handler<br/>adds: surveyTitle, qaContext,<br/>clientEmail, respondentName,<br/>submittedAt, answers"]
-    TH --> C["Condition Step<br/>adds: {branch: 'true'}"]
-    C --> AI["AI Action Step<br/>adds: {overallScore: 8,<br/>recommendation: 'QUALIFIED'}"]
-    AI --> SE["Send Email Step<br/>can use ALL accumulated:<br/>{{qaContext}}, {{surveyTitle}},<br/>{{overallScore}}, {{recommendation}}"]
+    T["🏁 buildTriggerContext\ntrigger_type · responseId · surveyLinkId"]
+    T --> TH["📡 Trigger Handler\n+ surveyTitle · qaContext\n+ clientEmail · respondentName\n+ submittedAt · answers"]
+    TH --> C["🔀 Switch Step\n+ branch: 'qualified' / 'rejected'"]
+    C --> AI["🤖 AI Action Step\n+ overallScore: 8\n+ recommendation: 'QUALIFIED'\n+ summary: '...'"]
+    AI --> SE["📧 Send Email Step\nma dostęp do WSZYSTKICH:\n{{qaContext}} · {{surveyTitle}}\n{{overallScore}} · {{recommendation}}"]
 
-    style T fill:#1a1a2e,stroke:#e94560,color:#fff
-    style TH fill:#1a1a2e,stroke:#0f3460,color:#fff
-    style C fill:#1a1a2e,stroke:#f39c12,color:#fff
-    style AI fill:#1a1a2e,stroke:#16a085,color:#fff
-    style SE fill:#1a1a2e,stroke:#8e44ad,color:#fff
+    style T fill:#be123c,stroke:#fda4af,color:#fff,font-weight:bold
+    style TH fill:#1d4ed8,stroke:#93c5fd,color:#fff
+    style C fill:#b45309,stroke:#fcd34d,color:#fff
+    style AI fill:#065f46,stroke:#6ee7b7,color:#fff
+    style SE fill:#6b21a8,stroke:#d8b4fe,color:#fff
 ```
 
 ---
@@ -168,19 +178,20 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-    COND{"Condition<br/>overallScore >= 7<br/>→ branch: 'false'"}
+    COND{"🔀 Switch Step\noverallScore >= 7\nbranch: 'false'"}
 
-    COND -->|"true (edge)"| SE[Send Email]
-    COND -->|"false (edge)"| WH[Webhook]
+    COND -->|"✅ true edge\n(qualified)"| SE["📧 Send Email\n(wykonany)"]
+    COND -->|"❌ false edge\n(rejected)"| WH["🔗 Webhook\n(wykonany)"]
 
-    SE --> JOIN[Join Step]
+    SE --> JOIN["⬛ Join Step"]
     WH --> JOIN
 
-    COND -.->|"skippedStepIds"| SE
+    COND -.->|"Send Email → skippedStepIds\n(pomijany, nie wykonywany)"| SE
 
-    style SE fill:#2d1117,stroke:#f85149,color:#fff
-    style WH fill:#0d1117,stroke:#3fb950,color:#fff
-    style COND fill:#1a1a2e,stroke:#f39c12,color:#fff
+    style SE fill:#7f1d1d,stroke:#f87171,color:#fff
+    style WH fill:#14532d,stroke:#4ade80,color:#fff
+    style COND fill:#78350f,stroke:#fcd34d,color:#fff,font-weight:bold
+    style JOIN fill:#1e3a8a,stroke:#93c5fd,color:#fff
 ```
 
 When condition evaluates to `false`:
