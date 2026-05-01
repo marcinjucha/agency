@@ -1,15 +1,14 @@
 
 
 import { useCallback, useMemo, useState } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Button, EmptyState, ErrorState, Skeleton } from '@agency/ui'
 import { KeyRound, Plus } from 'lucide-react'
 import { messages } from '@/lib/messages'
 import { queryKeys } from '@/lib/query-keys'
 import { useViewMode } from '@/hooks/use-view-mode'
 import { ViewModeToggle } from '@/components/shared/ViewModeToggle'
-import { useLicenses } from '../queries'
-import { toggleLicenseActiveFn } from '../server'
+import { getLicensesFn, toggleLicenseActiveFn } from '../server'
 import { computeLicenseStatus } from '../utils'
 import type { License } from '../types'
 import { StatsBar } from './StatsBar'
@@ -91,7 +90,10 @@ export function LicenseList() {
   const [search, setSearch] = useState('')
   const [selectedLicenseId, setSelectedLicenseId] = useState<string | null>(null)
 
-  const { data: licenses, isLoading, error, refetch } = useLicenses()
+  const { data: licenses, isLoading, error, refetch } = useQuery({
+    queryKey: queryKeys.docforgeLicenses.all,
+    queryFn: () => getLicensesFn(),
+  })
 
   const toggleMutation = useMutation({
     mutationFn: async ({ id, isActive }: { id: string; isActive: boolean }) => {

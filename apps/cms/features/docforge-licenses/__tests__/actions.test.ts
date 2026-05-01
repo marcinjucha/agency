@@ -1,15 +1,19 @@
+/**
+ * Tests for mutation handlers in handlers.server.ts.
+ *
+ * Targets pure handlers (e.g. createLicenseHandler) so we don't drive the
+ * createServerFn RPC pipeline. Same pattern as workflows tests.
+ */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { ok, err, okAsync, errAsync } from 'neverthrow'
+import { okAsync } from 'neverthrow'
 import { messages } from '@/lib/messages'
+import { mockChain } from '@/__tests__/utils/supabase-mocks'
 import { makeLicense } from './fixtures'
 
 // --- Mocks ---
 
-vi.mock('@/lib/result-helpers', () => ({
-  requireAuthResult: vi.fn(),
-  zodParse: vi.fn(),
-  fromSupabase: vi.fn(),
-  fromSupabaseVoid: vi.fn(),
+vi.mock('@/lib/server-auth', () => ({
+  requireAuthContextFull: vi.fn(),
 }))
 
 const mockServiceClient: Record<string, any> = {}
@@ -18,23 +22,18 @@ vi.mock('@/lib/supabase/service', () => ({
   createServiceClient: vi.fn(() => mockServiceClient),
 }))
 
-import { requireAuthResult, zodParse, fromSupabase, fromSupabaseVoid } from '@/lib/result-helpers'
+import { requireAuthContextFull } from '@/lib/server-auth'
 import {
-  createLicense,
-  updateLicense,
-  deleteLicense,
-  toggleLicenseActive,
-  deactivateActivation,
-} from '../actions'
+  createLicenseHandler,
+  updateLicenseHandler,
+  deleteLicenseHandler,
+  toggleLicenseActiveHandler,
+  deactivateActivationHandler,
+} from '../handlers.server'
 
-const mockRequireAuth = requireAuthResult as ReturnType<typeof vi.fn>
-const mockZodParse = zodParse as ReturnType<typeof vi.fn>
-const mockFromSupabase = fromSupabase as ReturnType<typeof vi.fn>
-const mockFromSupabaseVoid = fromSupabaseVoid as ReturnType<typeof vi.fn>
+const mockRequireAuth = requireAuthContextFull as ReturnType<typeof vi.fn>
 
 // --- Helpers ---
-
-import { mockChain } from '@/__tests__/utils/supabase-mocks'
 
 function makeAuth(overrides: Partial<{ isSuperAdmin: boolean }> = {}) {
   return {
@@ -62,22 +61,13 @@ function setupServiceFrom(...chains: ReturnType<typeof mockChain>[]) {
 
 beforeEach(() => {
   vi.clearAllMocks()
-  mockFromSupabase.mockReturnValue((response: any) => {
-    if (response.error) return err(response.error.message)
-    if (!response.data) return err('Brak danych')
-    return ok(response.data)
-  })
-  mockFromSupabaseVoid.mockReturnValue((response: any) => {
-    if (response.error) return err(response.error.message)
-    return ok(undefined)
-  })
 })
 
 // =========================================================================
-// createLicense
+// createLicenseHandler
 // =========================================================================
 
-describe('createLicense', () => {
+describe('createLicenseHandler', () => {
   const validData = {
     key: 'DF-ABCD-EFGH-IJKL',
     client_name: 'Jan Kowalski',
@@ -88,14 +78,13 @@ describe('createLicense', () => {
   }
 
   it('creates license and returns ok on success', async () => {
-    mockZodParse.mockReturnValue(ok(validData))
     mockRequireAuth.mockReturnValue(okAsync(makeAuth()))
 
     const licenseRow = { id: 'lic-new', ...validData, is_active: true, created_at: '2026-04-08T10:00:00Z' }
     const insertChain = mockChain({ data: licenseRow, error: null })
     setupServiceFrom(insertChain)
 
-    const result = await createLicense(validData)
+    const result = await createLicenseHandler(validData)
 
     expect(result.success).toBe(true)
     if (result.success) {
@@ -104,45 +93,32 @@ describe('createLicense', () => {
   })
 
   it('rejects non-super-admin', async () => {
-    mockZodParse.mockReturnValue(ok(validData))
     mockRequireAuth.mockReturnValue(okAsync(makeAuth({ isSuperAdmin: false })))
 
-    const result = await createLicense(validData)
+    const result = await createLicenseHandler(validData)
 
     expect(result.success).toBe(false)
     if (!result.success) {
       expect(result.error).toBe(messages.common.noPermission)
     }
   })
-
-  it('returns validation error on invalid data', async () => {
-    mockZodParse.mockReturnValue(err('Klucz licencji jest wymagany'))
-
-    const result = await createLicense({} as any)
-
-    expect(result.success).toBe(false)
-    if (!result.success) {
-      expect(result.error).toBe('Klucz licencji jest wymagany')
-    }
-  })
 })
 
 // =========================================================================
-// updateLicense
+// updateLicenseHandler
 // =========================================================================
 
-describe('updateLicense', () => {
-  const updateData = { client_name: 'Updated Name', max_seats: 5 }
+describe('updateLicenseHandler', () => {
+  const updateData = { client_name: 'Updated Name', max_seats: 5, grace_days: 7 }
 
   it('updates license on success', async () => {
-    mockZodParse.mockReturnValue(ok(updateData))
     mockRequireAuth.mockReturnValue(okAsync(makeAuth()))
 
     const updatedRow = makeLicense({ client_name: 'Updated Name', max_seats: 5 })
     const updateChain = mockChain({ data: updatedRow, error: null })
     setupServiceFrom(updateChain)
 
-    const result = await updateLicense('lic-001', updateData)
+    const result = await updateLicenseHandler('lic-001', updateData)
 
     expect(result.success).toBe(true)
     if (result.success) {
@@ -151,10 +127,9 @@ describe('updateLicense', () => {
   })
 
   it('rejects non-super-admin', async () => {
-    mockZodParse.mockReturnValue(ok(updateData))
     mockRequireAuth.mockReturnValue(okAsync(makeAuth({ isSuperAdmin: false })))
 
-    const result = await updateLicense('lic-001', updateData)
+    const result = await updateLicenseHandler('lic-001', updateData)
 
     expect(result.success).toBe(false)
     if (!result.success) {
@@ -164,17 +139,17 @@ describe('updateLicense', () => {
 })
 
 // =========================================================================
-// deleteLicense
+// deleteLicenseHandler
 // =========================================================================
 
-describe('deleteLicense', () => {
+describe('deleteLicenseHandler', () => {
   it('deletes license on success', async () => {
     mockRequireAuth.mockReturnValue(okAsync(makeAuth()))
 
     const deleteChain = mockChain({ data: null, error: null })
     setupServiceFrom(deleteChain)
 
-    const result = await deleteLicense('lic-001')
+    const result = await deleteLicenseHandler('lic-001')
 
     expect(result.success).toBe(true)
   })
@@ -182,7 +157,7 @@ describe('deleteLicense', () => {
   it('rejects non-super-admin', async () => {
     mockRequireAuth.mockReturnValue(okAsync(makeAuth({ isSuperAdmin: false })))
 
-    const result = await deleteLicense('lic-001')
+    const result = await deleteLicenseHandler('lic-001')
 
     expect(result.success).toBe(false)
     if (!result.success) {
@@ -192,10 +167,10 @@ describe('deleteLicense', () => {
 })
 
 // =========================================================================
-// toggleLicenseActive
+// toggleLicenseActiveHandler
 // =========================================================================
 
-describe('toggleLicenseActive', () => {
+describe('toggleLicenseActiveHandler', () => {
   it('toggles is_active to false', async () => {
     mockRequireAuth.mockReturnValue(okAsync(makeAuth()))
 
@@ -203,7 +178,7 @@ describe('toggleLicenseActive', () => {
     const updateChain = mockChain({ data: updatedRow, error: null })
     setupServiceFrom(updateChain)
 
-    const result = await toggleLicenseActive('lic-001', false)
+    const result = await toggleLicenseActiveHandler('lic-001', false)
 
     expect(result.success).toBe(true)
     if (result.success) {
@@ -218,7 +193,7 @@ describe('toggleLicenseActive', () => {
     const updateChain = mockChain({ data: updatedRow, error: null })
     setupServiceFrom(updateChain)
 
-    const result = await toggleLicenseActive('lic-001', true)
+    const result = await toggleLicenseActiveHandler('lic-001', true)
 
     expect(result.success).toBe(true)
     if (result.success) {
@@ -228,17 +203,17 @@ describe('toggleLicenseActive', () => {
 })
 
 // =========================================================================
-// deactivateActivation
+// deactivateActivationHandler
 // =========================================================================
 
-describe('deactivateActivation', () => {
+describe('deactivateActivationHandler', () => {
   it('sets activation is_active to false', async () => {
     mockRequireAuth.mockReturnValue(okAsync(makeAuth()))
 
     const deactivateChain = mockChain({ data: null, error: null })
     setupServiceFrom(deactivateChain)
 
-    const result = await deactivateActivation('act-001')
+    const result = await deactivateActivationHandler('act-001')
 
     expect(result.success).toBe(true)
   })
@@ -246,7 +221,7 @@ describe('deactivateActivation', () => {
   it('rejects non-super-admin', async () => {
     mockRequireAuth.mockReturnValue(okAsync(makeAuth({ isSuperAdmin: false })))
 
-    const result = await deactivateActivation('act-001')
+    const result = await deactivateActivationHandler('act-001')
 
     expect(result.success).toBe(false)
     if (!result.success) {

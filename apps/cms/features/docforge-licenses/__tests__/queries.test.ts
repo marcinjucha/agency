@@ -1,36 +1,45 @@
+/**
+ * Tests for query handlers in handlers.server.ts.
+ *
+ * Targets pure handlers (e.g. getLicensesHandler) so we don't drive the
+ * createServerFn RPC pipeline. Same pattern as actions.test.ts.
+ */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { License, Activation } from '../types'
+import { mockChain } from '@/__tests__/utils/supabase-mocks'
 import { makeLicense, makeActivation } from './fixtures'
 
-// ---------------------------------------------------------------------------
-// Mock: @/lib/supabase/client — chainable Supabase mock
-// ---------------------------------------------------------------------------
+// --- Mocks ---
 
-let mockResolvedValue: { data: unknown; error: unknown }
+const mockServerClient: Record<string, any> = {}
 
-function createChainProxy(): Record<string, unknown> {
-  const handler: ProxyHandler<Record<string, never>> = {
-    get(_target, prop) {
-      if (prop === 'then') return undefined // prevent auto-await of chain
-      if (prop === 'single') {
-        return () => Promise.resolve(mockResolvedValue)
-      }
-      if (prop === 'order') {
-        // Terminal for list queries (no .single())
-        return (..._args: unknown[]) => Promise.resolve(mockResolvedValue)
-      }
-      // All other chain methods return proxy
-      return (..._args: unknown[]) => createChainProxy()
-    },
-  }
-  return new Proxy({} as Record<string, never>, handler)
-}
-
-vi.mock('@/lib/supabase/client', () => ({
-  createClient: () => createChainProxy(),
+vi.mock('@/lib/supabase/server-start', () => ({
+  createServerClient: vi.fn(() => mockServerClient),
 }))
 
-const { getLicenses, getLicense, getLicenseActivations } = await import('../queries')
+import {
+  getLicensesHandler,
+  getLicenseHandler,
+  getLicenseActivationsHandler,
+} from '../handlers.server'
+
+// --- Helpers ---
+
+let fromCalls: ReturnType<typeof mockChain>[] = []
+
+function setupServerFrom(...chains: ReturnType<typeof mockChain>[]) {
+  fromCalls = chains
+  let callIndex = 0
+  mockServerClient.from = vi.fn(() => {
+    const chain = fromCalls[callIndex] ?? fromCalls[fromCalls.length - 1]
+    callIndex++
+    return chain
+  })
+}
+
+beforeEach(() => {
+  vi.clearAllMocks()
+})
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -39,89 +48,79 @@ const { getLicenses, getLicense, getLicenseActivations } = await import('../quer
 const licenseFixture: License = makeLicense()
 const activationFixture: Activation = makeActivation()
 
-// ---------------------------------------------------------------------------
-// Tests: getLicenses
-// ---------------------------------------------------------------------------
+// =========================================================================
+// getLicensesHandler
+// =========================================================================
 
-describe('getLicenses', () => {
-  beforeEach(() => {
-    mockResolvedValue = { data: null, error: null }
-  })
-
+describe('getLicensesHandler', () => {
   it('returns array of licenses on success', async () => {
-    mockResolvedValue = { data: [licenseFixture], error: null }
+    setupServerFrom(mockChain({ data: [licenseFixture], error: null }))
 
-    const result = await getLicenses()
+    const result = await getLicensesHandler()
 
     expect(result).toEqual([licenseFixture])
   })
 
   it('throws on supabase error', async () => {
-    mockResolvedValue = { data: null, error: { message: 'DB error' } }
+    setupServerFrom(mockChain({ data: null, error: { message: 'DB error' } }))
 
-    await expect(getLicenses()).rejects.toEqual({ message: 'DB error' })
+    await expect(getLicensesHandler()).rejects.toEqual({ message: 'DB error' })
   })
 
   it('returns empty array when no data', async () => {
-    mockResolvedValue = { data: null, error: null }
+    setupServerFrom(mockChain({ data: null, error: null }))
 
-    const result = await getLicenses()
+    const result = await getLicensesHandler()
 
     expect(result).toEqual([])
   })
 })
 
-// ---------------------------------------------------------------------------
-// Tests: getLicense
-// ---------------------------------------------------------------------------
+// =========================================================================
+// getLicenseHandler
+// =========================================================================
 
-describe('getLicense', () => {
-  beforeEach(() => {
-    mockResolvedValue = { data: null, error: null }
-  })
-
+describe('getLicenseHandler', () => {
   it('returns single license by id', async () => {
-    mockResolvedValue = { data: licenseFixture, error: null }
+    setupServerFrom(mockChain({ data: licenseFixture, error: null }))
 
-    const result = await getLicense(licenseFixture.id)
+    const result = await getLicenseHandler(licenseFixture.id)
 
     expect(result).toEqual(licenseFixture)
   })
 
   it('throws on supabase error', async () => {
-    mockResolvedValue = { data: null, error: { message: 'Not found' } }
+    setupServerFrom(mockChain({ data: null, error: { message: 'Not found' } }))
 
-    await expect(getLicense('bad-id')).rejects.toEqual({ message: 'Not found' })
+    await expect(getLicenseHandler('bad-id')).rejects.toEqual({ message: 'Not found' })
   })
 })
 
-// ---------------------------------------------------------------------------
-// Tests: getLicenseActivations
-// ---------------------------------------------------------------------------
+// =========================================================================
+// getLicenseActivationsHandler
+// =========================================================================
 
-describe('getLicenseActivations', () => {
-  beforeEach(() => {
-    mockResolvedValue = { data: null, error: null }
-  })
-
+describe('getLicenseActivationsHandler', () => {
   it('returns activations for a license', async () => {
-    mockResolvedValue = { data: [activationFixture], error: null }
+    setupServerFrom(mockChain({ data: [activationFixture], error: null }))
 
-    const result = await getLicenseActivations('lic-001')
+    const result = await getLicenseActivationsHandler('lic-001')
 
     expect(result).toEqual([activationFixture])
   })
 
   it('throws on supabase error', async () => {
-    mockResolvedValue = { data: null, error: { message: 'DB error' } }
+    setupServerFrom(mockChain({ data: null, error: { message: 'DB error' } }))
 
-    await expect(getLicenseActivations('lic-001')).rejects.toEqual({ message: 'DB error' })
+    await expect(getLicenseActivationsHandler('lic-001')).rejects.toEqual({
+      message: 'DB error',
+    })
   })
 
   it('returns empty array when no activations', async () => {
-    mockResolvedValue = { data: null, error: null }
+    setupServerFrom(mockChain({ data: null, error: null }))
 
-    const result = await getLicenseActivations('lic-001')
+    const result = await getLicenseActivationsHandler('lic-001')
 
     expect(result).toEqual([])
   })

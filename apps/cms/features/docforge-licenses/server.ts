@@ -1,158 +1,71 @@
 import { createServerFn } from '@tanstack/react-start'
-import { errAsync, ResultAsync } from 'neverthrow'
 import { z } from 'zod'
-import { requireAuthContextFull } from '@/lib/server-auth'
-import { fromSupabase, fromSupabaseVoid } from '@/lib/result-helpers'
-import { createServiceClient } from '@/lib/supabase/service'
-import { createLicenseSchema, updateLicenseSchema } from './validation'
-import { messages } from '@/lib/messages'
-import type { LicenseFormData, License } from './types'
+import { createLicenseSchema } from './validation'
+import type { LicenseFormData } from './types'
+// Pure handler implementations live in handlers.server.ts — that file's
+// `.server.ts` suffix is the canonical TanStack Start signal for "this code
+// must NEVER reach the client bundle". Importing the handlers here lets us
+// wrap them in `createServerFn` while the vite plugin transform strips the
+// `.server.ts` module from any client-side import graph.
+//
+// Tests import handlers directly from `./handlers.server` — DO NOT add
+// re-exports for them here, that would force the module into the client
+// bundle through `import { ... } from './server'` in client components.
+import {
+  getLicensesHandler,
+  getLicenseHandler,
+  getLicenseActivationsHandler,
+  createLicenseHandler,
+  updateLicenseHandler,
+  deleteLicenseHandler,
+  toggleLicenseActiveHandler,
+  deactivateActivationHandler,
+} from './handlers.server'
 
 // ---------------------------------------------------------------------------
-// Server functions
+// Query server functions
+// ---------------------------------------------------------------------------
+
+export const getLicensesFn = createServerFn({ method: 'POST' }).handler(
+  async () => getLicensesHandler(),
+)
+
+export const getLicenseFn = createServerFn({ method: 'POST' })
+  .inputValidator((input: { id: string }) => input)
+  .handler(async ({ data: { id } }) => getLicenseHandler(id))
+
+export const getLicenseActivationsFn = createServerFn({ method: 'POST' })
+  .inputValidator((input: { licenseId: string }) => input)
+  .handler(async ({ data: { licenseId } }) => getLicenseActivationsHandler(licenseId))
+
+// ---------------------------------------------------------------------------
+// Mutation server functions
 // ---------------------------------------------------------------------------
 
 export const createLicenseFn = createServerFn({ method: 'POST' })
-  .inputValidator((input: z.infer<typeof createLicenseSchema>) => createLicenseSchema.parse(input))
-  .handler(async ({ data }) => {
-    const result = await requireAuthContextFull()
-      .andThen((auth) => {
-        if (!auth.isSuperAdmin) return errAsync(messages.common.noPermission)
-        return insertLicense(buildCreatePayload(data))
-      })
-
-    return result.match(
-      (created) => ({ success: true as const, data: created }),
-      (error) => ({ success: false as const, error }),
-    )
-  })
+  .inputValidator((input: z.infer<typeof createLicenseSchema>) =>
+    createLicenseSchema.parse(input),
+  )
+  .handler(async ({ data }) => createLicenseHandler(data))
 
 export const updateLicenseFn = createServerFn({ method: 'POST' })
   .inputValidator((input: { id: string; data: Partial<LicenseFormData> }) => input)
-  .handler(async ({ data: { id, data: licenseData } }) => {
-    const parsed = updateLicenseSchema.safeParse(licenseData)
-    if (!parsed.success) {
-      return { success: false as const, error: parsed.error.errors[0]?.message ?? 'Validation error' }
-    }
-
-    const result = await requireAuthContextFull()
-      .andThen((auth) => {
-        if (!auth.isSuperAdmin) return errAsync(messages.common.noPermission)
-        return updateLicenseRow(id, parsed.data as Record<string, unknown>)
-      })
-
-    return result.match(
-      (updated) => ({ success: true as const, data: updated }),
-      (error) => ({ success: false as const, error }),
-    )
-  })
+  .handler(async ({ data: { id, data: licenseData } }) =>
+    updateLicenseHandler(id, licenseData),
+  )
 
 export const deleteLicenseFn = createServerFn({ method: 'POST' })
   .inputValidator((input: { id: string }) => input)
-  .handler(async ({ data: { id } }) => {
-    const result = await requireAuthContextFull()
-      .andThen((auth) => {
-        if (!auth.isSuperAdmin) return errAsync(messages.common.noPermission)
-        return deleteLicenseRow(id)
-      })
-
-    return result.match(
-      () => ({ success: true as const }),
-      (error) => ({ success: false as const, error }),
-    )
-  })
+  .handler(async ({ data: { id } }) => deleteLicenseHandler(id))
 
 export const toggleLicenseActiveFn = createServerFn({ method: 'POST' })
   .inputValidator((input: { id: string; isActive: boolean }) => input)
-  .handler(async ({ data: { id, isActive } }) => {
-    const result = await requireAuthContextFull()
-      .andThen((auth) => {
-        if (!auth.isSuperAdmin) return errAsync(messages.common.noPermission)
-        return updateLicenseRow(id, { is_active: isActive })
-      })
-
-    return result.match(
-      (updated) => ({ success: true as const, data: updated }),
-      (error) => ({ success: false as const, error }),
-    )
-  })
+  .handler(async ({ data: { id, isActive } }) =>
+    toggleLicenseActiveHandler(id, isActive),
+  )
 
 export const deactivateActivationFn = createServerFn({ method: 'POST' })
   .inputValidator((input: { activationId: string }) => input)
-  .handler(async ({ data: { activationId } }) => {
-    const result = await requireAuthContextFull()
-      .andThen((auth) => {
-        if (!auth.isSuperAdmin) return errAsync(messages.common.noPermission)
-        return deactivateActivationRow(activationId)
-      })
-
-    return result.match(
-      () => ({ success: true as const }),
-      (error) => ({ success: false as const, error }),
-    )
-  })
-
-// ---------------------------------------------------------------------------
-// DB helpers
-// ---------------------------------------------------------------------------
-
-const dbError = (e: unknown) =>
-  e instanceof Error ? e.message : messages.common.unknownError
-
-function insertLicense(payload: Record<string, unknown>) {
-  return ResultAsync.fromPromise(
-    (createServiceClient() as any)
-      .from('docforge_licenses')
-      .insert(payload)
-      .select()
-      .single(),
-    dbError,
-  ).andThen(fromSupabase<License>())
-}
-
-function updateLicenseRow(id: string, payload: Record<string, unknown>) {
-  return ResultAsync.fromPromise(
-    (createServiceClient() as any)
-      .from('docforge_licenses')
-      .update(payload)
-      .eq('id', id)
-      .select()
-      .single(),
-    dbError,
-  ).andThen(fromSupabase<License>())
-}
-
-function deleteLicenseRow(id: string) {
-  return ResultAsync.fromPromise(
-    (createServiceClient() as any)
-      .from('docforge_licenses')
-      .delete()
-      .eq('id', id),
-    dbError,
-  ).andThen(fromSupabaseVoid())
-}
-
-function deactivateActivationRow(activationId: string) {
-  return ResultAsync.fromPromise(
-    (createServiceClient() as any)
-      .from('docforge_activations')
-      .update({ is_active: false })
-      .eq('id', activationId),
-    dbError,
-  ).andThen(fromSupabaseVoid())
-}
-
-// ---------------------------------------------------------------------------
-// Business logic
-// ---------------------------------------------------------------------------
-
-function buildCreatePayload(parsed: LicenseFormData) {
-  return {
-    key: parsed.key,
-    client_name: parsed.client_name ?? null,
-    email: parsed.email ?? null,
-    expires_at: parsed.expires_at ?? null,
-    max_seats: parsed.max_seats,
-    grace_days: parsed.grace_days,
-  }
-}
+  .handler(async ({ data: { activationId } }) =>
+    deactivateActivationHandler(activationId),
+  )

@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Button,
   Input,
@@ -24,8 +24,13 @@ import {
 import { ArrowLeft, Check, Clipboard, Trash2 } from 'lucide-react'
 import { messages } from '@/lib/messages'
 import { queryKeys } from '@/lib/query-keys'
-import { useLicense, useLicenseActivations } from '../queries'
-import { updateLicenseFn, deleteLicenseFn, deactivateActivationFn } from '../server'
+import {
+  getLicenseFn,
+  getLicenseActivationsFn,
+  updateLicenseFn,
+  deleteLicenseFn,
+  deactivateActivationFn,
+} from '../server'
 import { computeLicenseStatus } from '../utils'
 import { updateLicenseSchema, type UpdateLicenseValues } from '../validation'
 import { StatusBadge } from './LicenseCard'
@@ -106,8 +111,16 @@ export function LicenseDetailPanel({ licenseId, onClose }: LicenseDetailPanelPro
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [isPerpetual, setIsPerpetual] = useState(true)
 
-  const { data: license, isLoading: licenseLoading } = useLicense(licenseId)
-  const { data: activations, isLoading: activationsLoading } = useLicenseActivations(licenseId)
+  const { data: license, isLoading: licenseLoading } = useQuery({
+    queryKey: queryKeys.docforgeLicenses.detail(licenseId),
+    queryFn: () => getLicenseFn({ data: { id: licenseId } }),
+    enabled: !!licenseId,
+  })
+  const { data: activations, isLoading: activationsLoading } = useQuery({
+    queryKey: queryKeys.docforgeLicenses.activations(licenseId),
+    queryFn: () => getLicenseActivationsFn({ data: { licenseId } }),
+    enabled: !!licenseId,
+  })
 
   const activeActivations = activations?.filter((a) => a.is_active) ?? []
   const activeSeats = activeActivations.length
