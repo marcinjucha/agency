@@ -44,6 +44,29 @@
 - **"Gramy long term" applies to architecture even in MVP** — User-facing feature can be deferred (MVP cut) but architecture MUST support future extension without rewriting. Cut UI surface, NOT structural decisions that would force a rewrite. Applied: T-209 chose Continuation-with-attempts so adding Fork later is purely additive.
 - **"Rób commity co feature" — sequential agent → review → commit per feature for multi-feature refactors** — User mandate after parallel agent dispatch (7 at once) created inconsistent state: 5/7 only added orphan `handlers.server.ts` without updating `server.ts` or removing `queries.ts`. Parallel agents only valid when (a) each scope is fully isolated (no shared files), (b) each agent's work committed before next dispatch, (c) orchestrator verifies claimed result with `git status` (agent reports unreliable — they say "DELETED" while file still on disk). Default to sequential for any refactor touching shared file types across features. Reaffirmed 2026-05-01: 24 atomic commits in single session via sequential dispatch worked cleanly, each independently testable/revertable.
 
+## TanStack Start Server/Client Boundary (Critical)
+
+- **`.server.ts` strip is per-import-statement, NOT transitive** — TanStack Start strips `import { x } from './foo.server'` from client lazy chunks AT THE IMPORT STATEMENT LEVEL. Direct leaf imports (`import { createServerClient } from '@/lib/supabase/server-start.server'`) at top-level in `features/X/server.ts` are fine — bundler removes them from client chunks. BUT: barrel imports with 5+ named imports from `./handlers.server.ts` AND runtime re-exports (`export { dispatchToN8n } from './handlers.server'`) BLOCK the strip — bundler must keep the reference, ESM evaluates the entire graph, AsyncLocalStorage side-effect leaks into client lazy chunk. Symptom: `node:async_hooks` crash on client when lazy split component evaluates.
+- **Fix for barrel pattern: dynamic `await import('./handlers.server')` inside createServerFn handler lambda** — Lambda body is stripped from client bundle, dynamic import is "behind" the strip boundary, never evaluated on client. For runtime re-exports use async wrapper functions instead of `export { x } from './handlers.server'`:
+  ```ts
+  export async function dispatchToN8n(...args) {
+    const mod = await import('./handlers.server')
+    return mod.dispatchToN8n(...args)
+  }
+  ```
+  Type-only re-exports (`export type { X } from './handlers.server'`) stay top-level — TS erases them.
+- **Cross-feature `from '@/features/Y/server'` imports propagate transitively** — `SurveyLinks.tsx` (component in SurveyBuilder lazy chunk) imported from `@/features/workflows/server` — surveys feature crashed transitively through workflows/server.ts barrel chain, NOT through its own server.ts (which was clean). When diagnosing `node:async_hooks` crashes in feature X, always check whether components of X import cross-feature from `feature Y/server` — Y can be the real offender.
+- **Decision tree for new feature server.ts imports**:
+  - Direct leaf import (`import { x } from 'lib/leaf.server'`) → top-level OK
+  - 1-3 named imports from `*.handler.server.ts`, used in 1-3 lambdas → top-level OK
+  - 5+ named imports from a `.server.ts` barrel → DYNAMIC import inside lambdas
+  - `export { x } from 'foo.server'` (runtime re-export) → ASYNC WRAPPER function
+  - `import type { X }` / `export type { X }` → top-level always OK (TS erases)
+- **Wrapper pattern preferred for new features** — Instead of 5+ named imports from `helpers.server.ts` in server.ts, create ONE orchestrator function in `helpers.server.ts` that internally composes multiple helpers. Top-level import of single name → strip works. Less code, easier to test, single boundary.
+- **Diagnostic flow for `node:async_hooks` crashes**: (1) Read stack trace — which component is top-level. (2) Trace `from '../server'` in lazy split components. (3) Inspect `features/X/server.ts` top-level imports. (4) If barrel from `./handlers.server.ts` (5+ imports) or runtime re-exports → that's the offender. (5) If only direct leaf imports → search cross-feature pull (component of X imports from feature Y server).
+- **Path B (single-file refactor) preferred over Path A (prop drilling)** — When fixing async_hooks leak across many components, prefer fixing the source (single `features/X/server.ts`) over prop-drilling values through 8+ components. Path A (prop drilling) is defensive but each new lazy-split component needs new drilling. Path B is single source fix; explicitly chosen 2026-05-01.
+- **Falsy starts dropped (lessons)** — (1) Renaming `features/*/server.ts` + `lib/server-fns/*.ts` + `lib/auth.ts` to `*.server.ts` was rejected by Import Protection plugin (UI cannot import from `.server.ts`). createServerFn modules MUST live in plain `.ts`. (2) Surveys POC + Phase 3 lib/server-fns split worked but 18 features still leaked — abandoned. (3) Blog pattern (commit c9918bf) drilled props through WorkflowEditor/SurveyBuilder/ExecutionDetail — dropped via `git rebase --onto` after Path B made it unnecessary.
+
 ## Workflow / Tooling Lessons (Project-Specific)
 
 - **Pattern A boundary audit must grep BOTH `apps/cms/app/routes/` AND `apps/cms/features/`** — Initial ag-analyst-agent audit returned "P0: 0 boundary violations" false negative because grep was scoped only to `app/routes/`. Real debt: 22+ files in 15 features with pure async exports in non-`.server.ts`. Always include `features/` in any Pattern A / server-boundary audit.
