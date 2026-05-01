@@ -78,5 +78,6 @@ export const routes = {
     authGoogleCallback: '/api/auth/google/callback',
     workflowTrigger: '/api/workflows/trigger',
     workflowCallback: '/api/workflows/callback',
+    workflowRetry: '/api/workflows/retry',
   },
 } as const
