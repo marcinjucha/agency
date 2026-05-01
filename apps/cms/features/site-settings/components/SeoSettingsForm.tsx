@@ -6,8 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useQuery } from '@tanstack/react-query'
 import { Loader2, CheckCircle, AlertCircle } from 'lucide-react'
 import { Button, Card, Input, LoadingState, ErrorState, TooltipProvider } from '@agency/ui'
-import { getSiteSettings, getKeywordPool } from '../queries'
-import { updateSiteSettingsFn } from '../server'
+import { getSiteSettingsFn, getKeywordPoolFn, updateSiteSettingsFn } from '../server'
 import { siteSettingsSchema, type SiteSettingsInput } from '../validation'
 import { siteSettingsKeys } from '../types'
 import { FormFieldWithTooltip } from './FormFieldWithTooltip'
@@ -20,12 +19,19 @@ export function SeoSettingsForm() {
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: siteSettingsKeys.detail,
-    queryFn: getSiteSettings,
+    queryFn: async () => {
+      const res = await getSiteSettingsFn()
+      if (!res.success) throw new Error(res.error)
+      return res.data
+    },
   })
 
   const { data: keywordPool = [], isLoading: isPoolLoading } = useQuery({
     queryKey: siteSettingsKeys.keywordPool,
-    queryFn: getKeywordPool,
+    queryFn: async () => {
+      const res = await getKeywordPoolFn()
+      return res.success ? res.data : []
+    },
   })
 
   const {
