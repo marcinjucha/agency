@@ -5,13 +5,13 @@ import {
   createShopProductFn,
   updateShopProductFn,
   deleteShopProductFn,
+  getShopProductFn,
 } from '@/features/shop-products/server'
 import { queryKeys } from '@/lib/query-keys'
 import { ShopProductEditor } from '@/features/shop-products/components/ShopProductEditor'
 import type { ShopProduct } from '@/features/shop-products/types'
 import type { CreateShopProductFormData } from '@/features/shop-products/validation'
 import { useQuery } from '@tanstack/react-query'
-import { getShopProduct } from '@/features/shop-products/queries'
 import { LoadingState, ErrorState, EmptyState } from '@agency/ui'
 import { FileX } from 'lucide-react'
 
@@ -24,7 +24,7 @@ function ShopProductEditorPage() {
   const { productId } = Route.useParams()
   const { data: product, isLoading, error } = useQuery<ShopProduct>({
     queryKey: queryKeys.shopProducts.detail(productId),
-    queryFn: () => getShopProduct(productId),
+    queryFn: () => getShopProductFn({ data: { id: productId } }) as Promise<ShopProduct>,
   })
 
   if (isLoading) return <LoadingState variant="skeleton-card" rows={4} />

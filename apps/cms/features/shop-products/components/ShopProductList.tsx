@@ -2,8 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '@/lib/query-keys'
-import { deleteShopProductFn } from '../server'
-import { getShopProducts } from '../queries'
+import { deleteShopProductFn, getShopProductsFn } from '../server'
 import { getShopCategories } from '@/features/shop-categories/queries'
 import { getMarketplaceConnections, getMarketplaceListingsForProducts } from '@/features/shop-marketplace/queries'
 import {
@@ -32,7 +31,7 @@ export function ShopProductList() {
     refetch,
   } = useQuery({
     queryKey: queryKeys.shopProducts.list,
-    queryFn: () => getShopProducts(),
+    queryFn: () => getShopProductsFn(),
   })
 
   const {
