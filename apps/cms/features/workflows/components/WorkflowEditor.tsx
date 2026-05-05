@@ -1,54 +1,35 @@
 
 
-import { useState, useCallback, useEffect, useRef, useMemo, lazy, Suspense } from 'react'
+import { useState, useEffect, useRef, lazy, Suspense } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useNavigate, useSearch } from '@tanstack/react-router'
 import { messages } from '@/lib/messages'
 import { getWorkflowFn, saveWorkflowCanvasFn, toggleWorkflowActiveFn, updateStepSlugFn } from '../server'
 import { queryKeys } from '@/lib/query-keys'
 import type { SaveCanvasFormData } from '../validation'
 import { WorkflowEditorHeader } from './WorkflowEditorHeader'
 import type { WorkflowCanvasHandle, CanvasNodeData, CanvasEdgeData } from './WorkflowCanvas'
-import {
-  TRIGGER_TYPE_LABELS,
-  type WorkflowWithSteps,
-  type TriggerType,
-  type StepType,
-} from '../types'
-import { LayoutGrid, FlaskConical, AlertTriangle } from 'lucide-react'
+import { type WorkflowWithSteps, type TriggerType } from '../types'
+import { validateAllSteps } from '../utils/validate-steps'
+import { LayoutGrid, FlaskConical, History, AlertTriangle } from 'lucide-react'
 import { Button, ErrorState } from '@agency/ui'
 import { ConfigPanelWrapper, getPanelComponent } from './panels'
 import type { ConfigPanelProps } from './panels'
 import { StepLibraryPanel } from './StepLibraryPanel'
 import { TestModePanel } from './TestModePanel'
-import { collectAvailableVariables } from '../engine/utils'
-import { getStepTypeLabel, getOutputFieldLabel } from '../utils/step-labels'
-import { validateAllSteps, type ValidationResult } from '../utils/validate-steps'
+import { ExecutionHistoryPanel } from './ExecutionHistoryPanel'
+import { buildInitialNodes, getLabel, isTriggerType } from '../utils/build-initial-nodes'
+import { computeAvailableVariables } from '../utils/compute-available-variables'
+import { computeValidation } from '../utils/compute-validation'
+
+/**
+ * Right-side panel state machine. Mutually exclusive — opening one closes the
+ * other. Replaces the previous `isTestMode: boolean` to make room for the
+ * in-editor execution-history panel (AAA-T-220).
+ */
+type RightPanel = 'none' | 'test' | 'history'
 
 const WorkflowCanvas = lazy(() => import('./WorkflowCanvas'))
-
-const TRIGGER_TYPES = new Set<string>([
-  'survey_submitted',
-  'booking_created',
-  'lead_scored',
-  'manual',
-  'scheduled',
-])
-
-function isTriggerType(type: string): type is TriggerType {
-  return TRIGGER_TYPES.has(type)
-}
-
-function getNodeType(stepType: string): string {
-  if (isTriggerType(stepType)) return 'trigger'
-  return stepType
-}
-
-function getLabel(stepType: string): string {
-  if (isTriggerType(stepType)) {
-    return TRIGGER_TYPE_LABELS[stepType as TriggerType] ?? stepType
-  }
-  return getStepTypeLabel(stepType as StepType)
-}
 
 interface WorkflowEditorProps {
   /** Route param — editor fetches workflow data via useQuery (cache pre-populated by loader) */
@@ -90,61 +71,14 @@ function WorkflowEditorContent({ workflow, workflowId }: WorkflowEditorContentPr
   // Stable UUID for synthetic trigger node (when no trigger step exists in DB)
   const syntheticTriggerIdRef = useRef(crypto.randomUUID())
 
-  const initialNodes = useMemo<CanvasNodeData[]>(() => {
-    const stepNodes: CanvasNodeData[] = workflow.steps.map((step) => {
-      const isTrigger = getNodeType(step.step_type) === 'trigger'
-      return {
-        id: step.id,
-        type: getNodeType(step.step_type),
-        position: { x: step.position_x, y: step.position_y },
-        deletable: isTrigger ? false : undefined,
-        data: {
-          label: (step.step_config as Record<string, unknown>)?._name as string ?? getLabel(step.step_type),
-          stepType: step.step_type,
-          stepConfig: step.step_config,
-          slug: step.slug,
-        },
-      }
-    })
-
-    // Always render a synthetic trigger node when the workflow has no trigger step.
-    // 'manual' is a legitimate trigger type (not a placeholder), and AAA-T-211 removed
-    // the AddNodeDropdown — without a synthetic trigger, empty workflows have no UI to
-    // bootstrap a trigger and the canvas drag-drop also rejects trigger drops by design.
-    const hasTriggerStep = stepNodes.some((n) => n.type === 'trigger')
-    if (!hasTriggerStep) {
-      stepNodes.unshift({
-        id: syntheticTriggerIdRef.current,
-        type: 'trigger',
-        position: { x: 50, y: 150 },
-        deletable: false,
-        data: {
-          label: getLabel(workflow.trigger_type),
-          stepType: workflow.trigger_type,
-          stepConfig: workflow.trigger_config,
-          slug: 'trigger',
-        },
-      })
-    }
-
-    return stepNodes
-  }, [workflow])
-
-  const initialEdges = useMemo<CanvasEdgeData[]>(
-    () =>
-      workflow.edges.map((edge) => ({
-        id: edge.id,
-        source: edge.source_step_id,
-        target: edge.target_step_id,
-        sourceHandle: edge.condition_branch || undefined,
-      })),
-    [workflow]
-  )
-
-  const hasTriggerNode = useMemo(
-    () => initialNodes.some((n) => n.type === 'trigger'),
-    [initialNodes]
-  )
+  const initialNodes: CanvasNodeData[] = buildInitialNodes(workflow, syntheticTriggerIdRef.current)
+  const initialEdges: CanvasEdgeData[] = workflow.edges.map((edge) => ({
+    id: edge.id,
+    source: edge.source_step_id,
+    target: edge.target_step_id,
+    sourceHandle: edge.condition_branch || undefined,
+  }))
+  const hasTriggerNode = initialNodes.some((n) => n.type === 'trigger')
 
   const canvasRef = useRef<WorkflowCanvasHandle>(null)
   const [isLibraryOpen, setIsLibraryOpen] = useState(true)
@@ -153,17 +87,24 @@ function WorkflowEditorContent({ workflow, workflowId }: WorkflowEditorContentPr
   const [isSaving, setIsSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
 
-  // Test mode state
-  const [isTestMode, setIsTestMode] = useState(false)
+  // URL search — `?execution=<uuid>` controls auto-open of history-detail.
+  // `replace: true` on every navigate prevents browser-history pollution from
+  // panel toggles / row clicks.
+  const search = useSearch({ from: '/admin/workflows/$workflowId' })
+  const searchExecution = search.execution
+  const navigate = useNavigate()
 
-  const handleTestModeToggle = useCallback(() => {
-    setIsTestMode((prev) => {
-      if (!prev) {
-        setSelectedNode(null)
-      }
-      return !prev
-    })
-  }, [])
+  // Right-side panel state. Initial value derives from URL so a deep link to
+  // `?execution=...` opens the history panel directly with no mount-effect
+  // sync (cleaner than a useEffect — avoids a one-frame flash of the wrong
+  // panel state and dodges the hooks-deps eslint trap).
+  const [rightPanel, setRightPanel] = useState<RightPanel>(searchExecution ? 'history' : 'none')
+
+  // Cross-panel pre-fill (history → test). Set when user clicks "Kopiuj
+  // payload" in the detail view; consumed by TestModePanel.initialJson when
+  // the next mount happens. Reset on plain test toggle so re-opening test
+  // doesn't keep showing a stale prefill from a previous copy action.
+  const [testInitialJson, setTestInitialJson] = useState<string | undefined>(undefined)
 
   // Config panel state
   const [selectedNode, setSelectedNode] = useState<{
@@ -173,81 +114,164 @@ function WorkflowEditorContent({ workflow, workflowId }: WorkflowEditorContentPr
     slug?: string
   } | null>(null)
 
-  const handleNodeSelect = useCallback(
-    (nodeId: string | null, stepType: string, stepConfig: Record<string, unknown>) => {
-      if (isTestMode) return // Disable config panel in test mode
-      if (!nodeId) {
+  // --- URL helpers (centralized so transition rules stay in one place) ---
+  function clearExecutionParam() {
+    if (!searchExecution) return
+    navigate({
+      to: '/admin/workflows/$workflowId',
+      params: { workflowId: workflow.id },
+      search: (prev) => ({ ...prev, execution: undefined }),
+      replace: true,
+    })
+  }
+
+  function setExecutionParam(executionId: string) {
+    navigate({
+      to: '/admin/workflows/$workflowId',
+      params: { workflowId: workflow.id },
+      search: (prev) => ({ ...prev, execution: executionId }),
+      replace: true,
+    })
+  }
+
+  // --- Panel toggle handlers ---
+  function handleTestPanelToggle() {
+    setRightPanel((prev) => {
+      const next = prev === 'test' ? 'none' : 'test'
+      if (next === 'test') {
         setSelectedNode(null)
-        return
       }
-      // Pull slug from the canvas node data — onNodeSelect doesn't ship it directly.
-      const node = canvasRef.current?.getNodes().find((n) => n.id === nodeId)
-      const slug = node ? ((node.data as { slug?: string }).slug ?? undefined) : undefined
-      setSelectedNode({ id: nodeId, stepType, stepConfig, slug })
-    },
-    [isTestMode]
-  )
+      return next
+    })
+    // Plain toggle = user did not request a payload prefill; clear stale state.
+    setTestInitialJson(undefined)
+  }
 
-  const handleSlugCommit = useCallback(
-    async (newSlug: string): Promise<{ ok: true } | { ok: false; error: string }> => {
-      if (!selectedNode) return { ok: false, error: messages.common.errorOccurred }
-
-      // New (unsaved) steps have no row in DB yet — rename locally only.
-      const isPersisted = workflow.steps.some((s) => s.id === selectedNode.id)
-      if (!isPersisted) {
-        canvasRef.current?.updateNodeData(selectedNode.id, { slug: newSlug })
-        setSelectedNode((prev) => (prev ? { ...prev, slug: newSlug } : prev))
-        return { ok: true }
+  function handleHistoryPanelToggle() {
+    setRightPanel((prev) => {
+      const next = prev === 'history' ? 'none' : 'history'
+      if (next === 'history') {
+        setSelectedNode(null)
+      } else {
+        // Closing history MUST clear ?execution — keeps URL truthful: panel
+        // gone ⇒ no detail to share. (Centralized rule per task spec.)
+        clearExecutionParam()
       }
+      return next
+    })
+  }
 
-      const result = await updateStepSlugFn({
-        data: { stepId: selectedNode.id, newSlug },
-      })
+  // --- Bidirectional callbacks ---
 
-      if (!result.success) {
-        return { ok: false, error: result.error ?? messages.common.errorOccurred }
-      }
+  /**
+   * History → Test. User clicks "Kopiuj payload" in execution-detail. Pre-fill
+   * the test JSON editor, switch panels, and clear `?execution` since the
+   * detail view is no longer visible (URL must reflect actual UI state).
+   */
+  function handleCopyPayloadToTest(payload: Record<string, unknown>) {
+    setTestInitialJson(JSON.stringify(payload, null, 2))
+    setRightPanel('test')
+    clearExecutionParam()
+  }
 
-      const persistedSlug = result.data?.slug ?? newSlug
-      canvasRef.current?.updateNodeData(selectedNode.id, { slug: persistedSlug })
-      setSelectedNode((prev) => (prev ? { ...prev, slug: persistedSlug } : prev))
-      queryClient.invalidateQueries({ queryKey: queryKeys.workflows.detail(workflow.id) })
+  /**
+   * Test → History. After successful test dispatch in TestModePanel, swap to
+   * the history panel and deep-link to the freshly-created execution. User
+   * sees their running execution's progress immediately.
+   */
+  function handleRequestOpenHistory(executionId: string) {
+    setTestInitialJson(undefined)
+    setRightPanel('history')
+    setExecutionParam(executionId)
+  }
+
+  /**
+   * History list ↔ detail navigation inside the panel. `undefined` = back to
+   * list (clears `?execution`); UUID = open detail (sets `?execution`).
+   */
+  function handleExecutionChange(executionId: string | undefined) {
+    if (executionId === undefined) {
+      clearExecutionParam()
+    } else {
+      setExecutionParam(executionId)
+    }
+  }
+
+  function handleNodeSelect(
+    nodeId: string | null,
+    stepType: string,
+    stepConfig: Record<string, unknown>,
+  ) {
+    // Mirror previous test-mode rule for ALL right-side panels: when a panel
+    // is open, canvas node clicks are no-ops. Single rule beats per-panel
+    // branching.
+    if (rightPanel !== 'none') return
+    if (!nodeId) {
+      setSelectedNode(null)
+      return
+    }
+    // Pull slug from the canvas node data — onNodeSelect doesn't ship it directly.
+    const node = canvasRef.current?.getNodes().find((n) => n.id === nodeId)
+    const slug = node ? ((node.data as { slug?: string }).slug ?? undefined) : undefined
+    setSelectedNode({ id: nodeId, stepType, stepConfig, slug })
+  }
+
+  async function handleSlugCommit(
+    newSlug: string,
+  ): Promise<{ ok: true } | { ok: false; error: string }> {
+    if (!selectedNode) return { ok: false, error: messages.common.errorOccurred }
+
+    // New (unsaved) steps have no row in DB yet — rename locally only.
+    const isPersisted = workflow.steps.some((s) => s.id === selectedNode.id)
+    if (!isPersisted) {
+      canvasRef.current?.updateNodeData(selectedNode.id, { slug: newSlug })
+      setSelectedNode((prev) => (prev ? { ...prev, slug: newSlug } : prev))
       return { ok: true }
-    },
-    [selectedNode, workflow.id, workflow.steps, queryClient]
-  )
+    }
 
-  const handleConfigChange = useCallback(
-    (config: Record<string, unknown>, triggerType?: TriggerType) => {
-      if (!selectedNode || !canvasRef.current) return
+    const result = await updateStepSlugFn({
+      data: { stepId: selectedNode.id, newSlug },
+    })
 
-      // Update node data on canvas — always include label so _name edits update in real-time
-      const effectiveName = config._name as string | undefined
-      const baseLabel = triggerType ? getLabel(triggerType) : getLabel(selectedNode.stepType)
-      const label = effectiveName?.trim() || baseLabel
-      canvasRef.current.updateNodeData(selectedNode.id, {
-        stepConfig: config,
-        label,
-        ...(triggerType ? { stepType: triggerType } : {}),
-      })
+    if (!result.success) {
+      return { ok: false, error: result.error ?? messages.common.errorOccurred }
+    }
 
-      // Update local selected node state to keep panel in sync
-      setSelectedNode((prev) =>
-        prev ? { ...prev, stepConfig: config, ...(triggerType ? { stepType: triggerType } : {}) } : prev
-      )
-    },
-    [selectedNode]
-  )
+    const persistedSlug = result.data?.slug ?? newSlug
+    canvasRef.current?.updateNodeData(selectedNode.id, { slug: persistedSlug })
+    setSelectedNode((prev) => (prev ? { ...prev, slug: persistedSlug } : prev))
+    queryClient.invalidateQueries({ queryKey: queryKeys.workflows.detail(workflow.id) })
+    return { ok: true }
+  }
 
-  const handlePanelClose = useCallback(() => {
+  function handleConfigChange(config: Record<string, unknown>, triggerType?: TriggerType) {
+    if (!selectedNode || !canvasRef.current) return
+
+    // Update node data on canvas — always include label so _name edits update in real-time
+    const effectiveName = config._name as string | undefined
+    const baseLabel = triggerType ? getLabel(triggerType) : getLabel(selectedNode.stepType)
+    const label = effectiveName?.trim() || baseLabel
+    canvasRef.current.updateNodeData(selectedNode.id, {
+      stepConfig: config,
+      label,
+      ...(triggerType ? { stepType: triggerType } : {}),
+    })
+
+    // Update local selected node state to keep panel in sync
+    setSelectedNode((prev) =>
+      prev ? { ...prev, stepConfig: config, ...(triggerType ? { stepType: triggerType } : {}) } : prev
+    )
+  }
+
+  function handlePanelClose() {
     setSelectedNode(null)
-  }, [])
+  }
 
-  const handleDirtyChange = useCallback((dirty: boolean) => {
+  function handleDirtyChange(dirty: boolean) {
     setIsDirty(dirty)
-  }, [])
+  }
 
-  const handleSave = useCallback(async () => {
+  async function handleSave() {
     if (!canvasRef.current) return
     setIsSaving(true)
     setSaveError(null)
@@ -301,19 +325,16 @@ function WorkflowEditorContent({ workflow, workflowId }: WorkflowEditorContentPr
     } finally {
       setIsSaving(false)
     }
-  }, [workflow.id])
+  }
 
-  const handleToggleActive = useCallback(
-    async (active: boolean) => {
-      setIsActive(active)
-      const result = await toggleWorkflowActiveFn({ data: { id: workflow.id, isActive: active } })
-      if (!result.success) {
-        setIsActive(!active)
-        console.error('Toggle failed:', result.error)
-      }
-    },
-    [workflow.id]
-  )
+  async function handleToggleActive(active: boolean) {
+    setIsActive(active)
+    const result = await toggleWorkflowActiveFn({ data: { id: workflow.id, isActive: active } })
+    if (!result.success) {
+      setIsActive(!active)
+      console.error('Toggle failed:', result.error)
+    }
+  }
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -326,53 +347,18 @@ function WorkflowEditorContent({ workflow, workflowId }: WorkflowEditorContentPr
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [isDirty, isSaving, handleSave])
 
-  const availableVariables = useMemo(() => {
-    if (!selectedNode || !canvasRef.current) return []
-    const nodes = canvasRef.current.getNodes()
-    const edges = canvasRef.current.getEdges()
-
-    const steps = nodes.map((n) => ({
-      id: n.id,
-      slug: ((n.data as { slug?: string }).slug ?? n.id),
-      step_type: (n.data as { stepType: string }).stepType,
-      step_config: ((n.data as { stepConfig?: Record<string, unknown> }).stepConfig ?? {}) as Record<string, unknown>,
-    }))
-    const edgeList = edges.map((e) => ({
-      source_step_id: e.source,
-      target_step_id: e.target,
-    }))
-
-    return collectAvailableVariables(selectedNode.id, steps, edgeList, workflow.trigger_type, getStepTypeLabel, getOutputFieldLabel)
-  }, [selectedNode, workflow.trigger_type, isDirty])
-
-  // Live validation derived from canvas state. Re-runs when isDirty toggles
-  // (closest reactive proxy for canvas mutations) or when a node is selected
-  // (config panel edits flow through onConfigChange → updateNodeData → isDirty).
-  const validation = useMemo<ValidationResult>(() => {
-    if (!canvasRef.current) {
-      return { isValid: true, errors: [], errorsByStepId: new Map() }
-    }
-    const nodes = canvasRef.current.getNodes()
-    const steps = nodes.map((n) => {
-      const isSelected = selectedNode !== null && n.id === selectedNode.id
-      return {
-        id: n.id,
-        step_type: isSelected
-          ? selectedNode.stepType
-          : (n.data as { stepType: string }).stepType,
-        step_config: isSelected
-          ? selectedNode.stepConfig // synchronously updated via setSelectedNode in handleConfigChange
-          : ((n.data as { stepConfig?: Record<string, unknown> }).stepConfig ?? {}) as Record<string, unknown>,
-      }
-    })
-    return validateAllSteps(steps)
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- selectedNode is the sync proxy for canvas state
-  }, [isDirty, selectedNode, workflow.trigger_type])
-
-  const invalidStepIds = useMemo(
-    () => new Set(validation.errorsByStepId.keys()),
-    [validation],
+  // Re-derived every render. Plain expressions — React Compiler auto-memoizes.
+  // The previous `isDirty` dep on these memos was a canvas-mutation proxy
+  // forcing re-eval; without manual memoization every render recomputes
+  // naturally, which is correct for state held outside React (`canvasRef`).
+  // `isDirty` toggles trigger renders, so the linkage is preserved implicitly.
+  const availableVariables = computeAvailableVariables(
+    selectedNode,
+    canvasRef.current,
+    workflow.trigger_type,
   )
+  const validation = computeValidation(canvasRef.current, selectedNode)
+  const invalidStepIds = new Set(validation.errorsByStepId.keys())
 
   const PanelComponent = selectedNode ? getPanelComponent(selectedNode.stepType) : null
 
@@ -420,14 +406,26 @@ function WorkflowEditorContent({ workflow, workflowId }: WorkflowEditorContentPr
               {messages.workflows.editor.stepLibraryToggle}
             </Button>
             <Button
-              variant={isTestMode ? 'default' : 'outline'}
+              variant={rightPanel === 'test' ? 'default' : 'outline'}
               size="sm"
-              onClick={handleTestModeToggle}
+              onClick={handleTestPanelToggle}
               className="gap-1.5"
               aria-label={messages.workflows.testMode.toggle}
+              aria-pressed={rightPanel === 'test'}
             >
               <FlaskConical className="h-4 w-4" />
               {messages.workflows.testMode.toggle}
+            </Button>
+            <Button
+              variant={rightPanel === 'history' ? 'default' : 'outline'}
+              size="sm"
+              onClick={handleHistoryPanelToggle}
+              className="gap-1.5"
+              aria-label={messages.workflows.executionHistory.panelTitle}
+              aria-pressed={rightPanel === 'history'}
+            >
+              <History className="h-4 w-4" />
+              {messages.workflows.executionHistory.panelTitle}
             </Button>
           </div>
           <Suspense fallback={<div className="flex-1 flex items-center justify-center text-muted-foreground">{messages.workflows.editor.canvasLoading}</div>}>
@@ -445,35 +443,45 @@ function WorkflowEditorContent({ workflow, workflowId }: WorkflowEditorContentPr
             />
           </Suspense>
         </div>
-        {isTestMode ? (
+        {rightPanel === 'test' && (
           <TestModePanel
             workflowId={workflow.id}
             triggerType={workflow.trigger_type}
             isActive={isActive}
-            onClose={handleTestModeToggle}
+            onClose={handleTestPanelToggle}
+            initialJson={testInitialJson}
+            onRequestOpenHistory={handleRequestOpenHistory}
           />
-        ) : (
-          selectedNode && PanelComponent && (
-            <ConfigPanelWrapper
+        )}
+        {rightPanel === 'history' && (
+          <ExecutionHistoryPanel
+            workflowId={workflow.id}
+            executionId={searchExecution}
+            onExecutionChange={handleExecutionChange}
+            onClose={handleHistoryPanelToggle}
+            onCopyPayloadToTest={handleCopyPayloadToTest}
+          />
+        )}
+        {rightPanel === 'none' && selectedNode && PanelComponent && (
+          <ConfigPanelWrapper
+            nodeId={selectedNode.id}
+            stepType={selectedNode.stepType}
+            slug={isTriggerType(selectedNode.stepType) ? undefined : selectedNode.slug}
+            onSlugCommit={isTriggerType(selectedNode.stepType) ? undefined : handleSlugCommit}
+            stepConfig={selectedNode.stepConfig}
+            onStepConfigChange={handleConfigChange}
+            onClose={handlePanelClose}
+          >
+            <PanelComponent
               nodeId={selectedNode.id}
               stepType={selectedNode.stepType}
-              slug={isTriggerType(selectedNode.stepType) ? undefined : selectedNode.slug}
-              onSlugCommit={isTriggerType(selectedNode.stepType) ? undefined : handleSlugCommit}
               stepConfig={selectedNode.stepConfig}
-              onStepConfigChange={handleConfigChange}
-              onClose={handlePanelClose}
-            >
-              <PanelComponent
-                nodeId={selectedNode.id}
-                stepType={selectedNode.stepType}
-                stepConfig={selectedNode.stepConfig}
-                onChange={handleConfigChange}
-                triggerType={workflow.trigger_type}
-                availableVariables={availableVariables}
-                isInvalid={validation.errorsByStepId.has(selectedNode.id)}
-              />
-            </ConfigPanelWrapper>
-          )
+              onChange={handleConfigChange}
+              triggerType={workflow.trigger_type}
+              availableVariables={availableVariables}
+              isInvalid={validation.errorsByStepId.has(selectedNode.id)}
+            />
+          </ConfigPanelWrapper>
         )}
       </div>
     </div>

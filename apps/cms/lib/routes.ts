@@ -51,7 +51,6 @@ export const routes = {
     workflowNew: '/admin/workflows/new',
     workflow: (id: string) => `/admin/workflows/${id}`,
     workflowEditor: (id: string) => `/admin/workflows/${id}/editor`,
-    workflowExecutions: (id: string) => `/admin/workflows/${id}/executions`,
     executionsList: '/admin/workflows/executions',
     execution: (id: string) => `/admin/workflows/executions/${id}`,
 

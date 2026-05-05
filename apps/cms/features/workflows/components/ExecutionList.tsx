@@ -12,6 +12,10 @@ import { routes } from '@/lib/routes'
 import { getAllExecutionsFn, getWorkflowsFn } from '../server'
 import type { ExecutionFilters } from '../server'
 import { getTriggerTypeLabel, formatDate, formatExecutionDuration } from '../utils'
+import {
+  ACTIVE_EXECUTION_STATUSES,
+  EXECUTION_POLL_INTERVAL_MS,
+} from '../utils/execution-polling'
 import type { ExecutionStatus, ExecutionWithWorkflow, TriggerType } from '../types'
 import { Badge } from '@agency/ui'
 import { ExecutionStatusBadge } from './ExecutionStatusBadge'
@@ -52,11 +56,9 @@ export function ExecutionList({ workflowId: propWorkflowId }: ExecutionListProps
       }),
     refetchInterval: (query) => {
       const data = query.state.data as ExecutionWithWorkflow[] | undefined
-      if (!data) return 10_000
-      const hasActive = data.some((e) =>
-        (['pending', 'running', 'paused'] as ExecutionStatus[]).includes(e.status)
-      )
-      return hasActive ? 10_000 : false
+      if (!data) return EXECUTION_POLL_INTERVAL_MS
+      const hasActive = data.some((e) => ACTIVE_EXECUTION_STATUSES.includes(e.status))
+      return hasActive ? EXECUTION_POLL_INTERVAL_MS : false
     },
   })
 

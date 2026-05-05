@@ -31,13 +31,13 @@ import { routes } from '@/lib/routes'
 import { usePermissions } from '@/contexts/permissions-context'
 import { getExecutionWithStepsFn, retryWorkflowExecutionFn } from '../server'
 import { formatDate, formatExecutionDuration } from '../utils'
-import type { ExecutionWithSteps, ExecutionStatus } from '../types'
+import {
+  EXECUTION_POLL_INTERVAL_MS,
+  TERMINAL_EXECUTION_STATUSES,
+} from '../utils/execution-polling'
+import type { ExecutionWithSteps } from '../types'
 import { ExecutionStatusBadge } from './ExecutionStatusBadge'
 import { StepExecutionTimeline } from './StepExecutionTimeline'
-
-// --- Terminal statuses — polling stops when reached ---
-
-const TERMINAL_STATUSES: ExecutionStatus[] = ['completed', 'failed', 'cancelled']
 
 // --- Skeleton shown while loading ---
 
@@ -210,8 +210,8 @@ export function ExecutionDetail({ executionId, initialData }: ExecutionDetailPro
     initialData: initialData ?? undefined,
     refetchInterval: (query) => {
       const data = query.state.data as ExecutionWithSteps | null | undefined
-      if (!data) return 10_000
-      return TERMINAL_STATUSES.includes(data.status) ? false : 10_000
+      if (!data) return EXECUTION_POLL_INTERVAL_MS
+      return TERMINAL_EXECUTION_STATUSES.includes(data.status) ? false : EXECUTION_POLL_INTERVAL_MS
     },
   })
 

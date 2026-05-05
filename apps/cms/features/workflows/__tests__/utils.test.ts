@@ -96,6 +96,66 @@ describe('formatDate', () => {
     const result = formatDate('not-a-date')
     expect(result).toBe('\u2014')
   })
+
+  // --- Deterministic tests using explicit `now` parameter ---
+
+  describe('with explicit now parameter (deterministic, no fake timers)', () => {
+    const NOW = new Date('2026-04-07T12:00:00Z')
+
+    it('returns relative time for 30 seconds ago', () => {
+      const past = new Date(NOW.getTime() - 30 * 1000).toISOString()
+      const result = formatDate(past, NOW)
+      // Polish "ago" suffix
+      expect(result).toContain('temu')
+    })
+
+    it('returns relative time for 5 minutes ago', () => {
+      const past = new Date(NOW.getTime() - 5 * 60 * 1000).toISOString()
+      const result = formatDate(past, NOW)
+      expect(result).toContain('temu')
+      // Should mention minutes
+      expect(result.toLowerCase()).toMatch(/minut/)
+    })
+
+    it('returns relative time for 2 hours ago', () => {
+      const past = new Date(NOW.getTime() - 2 * 60 * 60 * 1000).toISOString()
+      const result = formatDate(past, NOW)
+      expect(result).toContain('temu')
+      expect(result.toLowerCase()).toMatch(/godz/)
+    })
+
+    it('returns relative time for 3 days ago', () => {
+      const past = new Date(NOW.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString()
+      const result = formatDate(past, NOW)
+      expect(result).toContain('temu')
+      expect(result.toLowerCase()).toMatch(/dni/)
+    })
+
+    it('returns absolute Polish date for 8 days ago', () => {
+      const past = new Date(NOW.getTime() - 8 * 24 * 60 * 60 * 1000).toISOString()
+      const result = formatDate(past, NOW)
+      // Should NOT contain "temu" \u2014 it's outside the 7-day window
+      expect(result).not.toContain('temu')
+      // Should be a localized Polish date like "30 mar 2026"
+      expect(result).toMatch(/\d{1,2}\s\w+\s\d{4}/)
+    })
+
+    it('returns em-dash for null input even with now provided', () => {
+      expect(formatDate(null, NOW)).toBe('\u2014')
+    })
+
+    it('returns em-dash for invalid date string even with now provided', () => {
+      expect(formatDate('not-a-date', NOW)).toBe('\u2014')
+    })
+
+    it('produces identical output to no-arg form when now matches system time', () => {
+      const past = new Date(NOW.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString()
+      // Both should produce same relative-time output (within the same fake-timer "now")
+      const withExplicitNow = formatDate(past, NOW)
+      const withDefaultNow = formatDate(past)
+      expect(withExplicitNow).toBe(withDefaultNow)
+    })
+  })
 })
 
 // --- formatDuration ---

@@ -1,4 +1,4 @@
-import { formatDistanceToNow } from 'date-fns'
+import { formatDistance } from 'date-fns'
 import { pl } from 'date-fns/locale'
 import type { TriggerType, StepType, ExecutionStatus, StepExecutionStatus } from './types'
 import {
@@ -12,15 +12,20 @@ const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000
 
 /**
  * Format a date string as relative time (< 7 days) or localized date.
+ *
+ * @param dateString ISO date string to format, or null
+ * @param now Optional reference time for relative calculations. When provided,
+ *   used as the comparison anchor \u2014 enables deterministic tests without
+ *   faking timers. When omitted, defaults to `new Date()`.
  */
-export function formatDate(dateString: string | null): string {
+export function formatDate(dateString: string | null, now?: Date): string {
   if (!dateString) return '\u2014'
   try {
     const date = new Date(dateString)
     if (isNaN(date.getTime())) return '\u2014'
-    const now = new Date()
-    if (now.getTime() - date.getTime() < SEVEN_DAYS_MS) {
-      return formatDistanceToNow(date, { addSuffix: true, locale: pl })
+    const effectiveNow = now ?? new Date()
+    if (effectiveNow.getTime() - date.getTime() < SEVEN_DAYS_MS) {
+      return formatDistance(date, effectiveNow, { addSuffix: true, locale: pl })
     }
     return date.toLocaleDateString('pl-PL', {
       day: 'numeric',

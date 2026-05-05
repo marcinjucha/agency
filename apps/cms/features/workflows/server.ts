@@ -417,7 +417,9 @@ export const getAllExecutionsFn = createServerFn({ method: 'POST' })
   })
 
 export const getExecutionWithStepsFn = createServerFn({ method: 'POST' })
-  .inputValidator((input: { executionId: string }) => input)
+  .inputValidator((input: { executionId: string }) =>
+    z.object({ executionId: z.string().uuid() }).parse(input),
+  )
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TanStack Start serialization check trips on JSONB-derived `Json`.
   .handler(async ({ data }) => {
     const { getExecutionWithStepsHandler } = await import('./handlers.server')
