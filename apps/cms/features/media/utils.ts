@@ -6,23 +6,15 @@ export function formatBytes(bytes: number | null): string | null {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
-/**
- * Formats bytes into human-readable file size string.
- * Distinct from `formatBytes` which returns null for null input and
- * has different boundary thresholds (no sub-1KB display).
- * Used for downloadable asset display where '0 B' / 'X B' representation is needed.
- */
-export function formatFileSize(bytes: number | null): string {
-  if (bytes === null) return ''
-  if (bytes === 0) return '0 B'
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-}
+// Re-export the shared file-size formatter — single source of truth lives in
+// `@/lib/utils/file-size`. Kept as a named re-export so existing consumers
+// (`features/media`, `features/blog`, modals) don't all need updated imports
+// in this PR — the shared canonical home is what matters.
+export { formatFileSize } from '@/lib/utils/file-size'
 
-import { routes } from '@/lib/routes'
 import { messages, templates } from '@/lib/messages'
 import { type MediaType } from './types'
+import { generatePresignedUrlFn } from './server'
 
 // --- S3 upload helper for media files ---
 
@@ -108,17 +100,24 @@ export function getMaxSizeForMime(mimeType: string): number {
 }
 
 /**
- * Browser-side helper: requests a presigned URL from the CMS API and PUTs the
- * file directly to S3 from the user's browser.
+ * Browser-side helper: requests a presigned URL via the `generatePresignedUrlFn`
+ * server function (RPC over HTTP — handled by TanStack Start's createServerFn
+ * pipeline) and PUTs the file directly to S3 from the user's browser.
  *
- * Why this is intentionally NOT a `createServerFn` (no boundary leak):
+ * Why this is intentionally NOT itself a `createServerFn` (no boundary leak):
  * - The actual security boundary is `generatePresignedUrlFn` in `./server.ts`
- *   (auth check + MIME allowlist + hardcoded folder prefix).
+ *   (auth check + MIME allowlist + tenant-derived folder prefix).
  * - Streaming a >5MB image through a server fn would force the file body
  *   through Vercel's serverless function body limit and lambda RAM. The
  *   browser-direct PUT avoids that entirely.
- * - Mirrors `uploadImageToS3` in `features/blog/utils.ts` — same pattern,
- *   same justification.
+ *
+ * Why we call `generatePresignedUrlFn` directly (NOT `fetch('/api/upload')`):
+ * - There is no `/api/upload` route in `app/routes/api/` — the previous
+ *   `routes.api.upload` constant pointed at a non-existent endpoint, so every
+ *   InsertDownloadableAssetModal / blog cover image / LibraryTab upload 404'd.
+ * - `generatePresignedUrlFn` is the canonical server fn that already enforces
+ *   auth + MIME allowlist + per-tenant folder prefix. Calling it directly
+ *   removes the broken HTTP indirection and makes the boundary explicit.
  */
 export async function uploadMediaToS3(
   file: File
@@ -133,17 +132,9 @@ export async function uploadMediaToS3(
     throw new Error(templates.media.fileTooLarge(limitMB))
   }
 
-  const res = await fetch(routes.api.upload, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      fileName: file.name,
-      contentType: file.type,
-      folder: 'haloefekt/media',
-    }),
+  const { uploadUrl, fileUrl, s3Key } = await generatePresignedUrlFn({
+    data: { fileName: file.name, contentType: file.type },
   })
-  if (!res.ok) throw new Error(messages.media.uploadUrlError)
-  const { uploadUrl, fileUrl, s3Key } = await res.json()
 
   const uploadRes = await fetch(uploadUrl, {
     method: 'PUT',

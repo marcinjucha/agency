@@ -1,7 +1,9 @@
 import { parseContent as _parseContent, generateHtmlFromContent as _generateHtml } from '../editor/utils'
 import { editorExtensions } from './extensions'
 import type { TiptapContent } from '../editor/types'
-import { routes } from '@/lib/routes'
+import { messages, templates } from '@/lib/messages'
+import { generatePresignedUrlFn } from '@/features/media/server'
+import { IMAGE_MAX_SIZE, getMaxSizeForMime } from '@/features/media/utils'
 import {
   coerceAssetType,
   isSafeUrl,
@@ -172,38 +174,44 @@ function decodeAttrValue(raw: string): string {
 
 // --- S3 upload helper (shared by cover image + inline image upload) ---
 
-const MAX_UPLOAD_SIZE = 5 * 1024 * 1024 // 5MB
-
 /**
- * NOTE: the `folder` parameter is now IGNORED by the server. Since AAA-T-110
- * iter 6, the S3 folder prefix is server-controlled per-tenant via
- * `getUploadFolderPrefix(tenantId)` in `features/media/server.ts` — the
- * authenticated tenant determines the prefix, never the client. The param
- * is kept for backward-compatible signature only; passing any value has no
- * effect on the resulting S3 key.
+ * Browser-side image upload for blog cover and inline editor images.
+ *
+ * Routes through `generatePresignedUrlFn` directly (NOT a non-existent
+ * `/api/upload` route — `routes.api.upload` constant pointed at a route that
+ * was never created, so every blog cover upload 404'd before this fix).
+ *
+ * Server-controlled S3 prefix (per AAA-T-110 iter 6): the authenticated
+ * tenant determines the folder prefix server-side via
+ * `getUploadFolderPrefix(tenantId)`. The dead `folder` parameter that the
+ * old fetch call passed has been removed — server ignored it anyway.
+ *
+ * Image-only allowlist enforced client-side in addition to the server-side
+ * MIME registry check inside `generatePresignedUrlFn` — defense in depth.
  */
-export async function uploadImageToS3(file: File, folder = 'haloefekt/blog'): Promise<string> {
-  if (file.size > MAX_UPLOAD_SIZE) {
-    throw new Error('Plik jest za duzy. Maksymalny rozmiar to 5MB.')
-  }
+export async function uploadImageToS3(file: File): Promise<string> {
   if (!file.type.startsWith('image/')) {
-    throw new Error('Dozwolone sa tylko pliki graficzne.')
+    throw new Error(messages.media.fileTypeNotAllowed)
+  }
+  // Use the canonical per-mime size table for image inputs (5MB) — single
+  // source of truth, no duplicated constant. `getMaxSizeForMime('image/...')`
+  // returns IMAGE_MAX_SIZE for any image MIME type.
+  const maxSize = getMaxSizeForMime(file.type) || IMAGE_MAX_SIZE
+  if (file.size > maxSize) {
+    const limitMB = maxSize / (1024 * 1024)
+    throw new Error(templates.media.fileTooLarge(limitMB))
   }
 
-  const res = await fetch(routes.api.upload, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ fileName: file.name, contentType: file.type, folder }),
+  const { uploadUrl, fileUrl } = await generatePresignedUrlFn({
+    data: { fileName: file.name, contentType: file.type },
   })
-  if (!res.ok) throw new Error('Nie udalo sie wygenerowac URL do uploadu')
-  const { uploadUrl, fileUrl } = await res.json()
 
   const uploadRes = await fetch(uploadUrl, {
     method: 'PUT',
     headers: { 'Content-Type': file.type },
     body: file,
   })
-  if (!uploadRes.ok) throw new Error('Upload nie powiodl sie')
+  if (!uploadRes.ok) throw new Error(messages.media.s3UploadFailed)
 
   return fileUrl
 }

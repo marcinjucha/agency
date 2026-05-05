@@ -72,7 +72,13 @@ export const routes = {
   },
 
   api: {
-    upload: '/api/upload',
+    // NOTE: there is no `upload` route — uploads go through the
+    // `generatePresignedUrlFn` server fn directly (see
+    // `features/media/utils.ts#uploadMediaToS3` and
+    // `features/blog/utils.ts#uploadImageToS3`). Adding a dangling constant
+    // here pointed `fetch(routes.api.upload, ...)` at a 404 for the entire
+    // duration of AAA-T-110 — keep this comment as a tombstone so the
+    // mistake doesn't recur.
     emailTemplatesRender: '/api/email-templates/render',
     authGoogle: '/api/auth/google',
     authGoogleCallback: '/api/auth/google/callback',

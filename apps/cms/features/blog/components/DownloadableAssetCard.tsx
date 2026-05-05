@@ -23,7 +23,7 @@
  */
 
 import { NodeViewWrapper, type NodeViewProps } from '@tiptap/react'
-import { Download, FileText, Image as ImageIcon, Music, Video, X } from 'lucide-react'
+import { Download, X } from 'lucide-react'
 import { Button } from '@agency/ui'
 import { messages } from '@/lib/messages'
 import {
@@ -32,15 +32,8 @@ import {
   formatFileSize,
   isSafeUrl,
   type DownloadableAssetAttrs,
-  type DownloadableAssetType,
 } from '../extensions/downloadable-asset-html'
-
-const ASSET_TYPE_ICON: Record<DownloadableAssetType, typeof FileText> = {
-  document: FileText,
-  audio: Music,
-  image: ImageIcon,
-  video: Video,
-}
+import { DOWNLOADABLE_TYPE_ICON } from '../extensions/downloadable-asset-react-icons'
 
 /**
  * Reads the node attributes off the Tiptap node prop.
@@ -66,7 +59,7 @@ function readAttrs(node: NodeViewProps['node']): DownloadableAssetAttrs {
 
 export function DownloadableAssetCard(props: NodeViewProps) {
   const attrs = readAttrs(props.node)
-  const Icon = ASSET_TYPE_ICON[attrs.assetType] ?? FileText
+  const Icon = DOWNLOADABLE_TYPE_ICON[attrs.assetType]
   const typeLabel = deriveTypeLabel(attrs.name, attrs.mimeType, attrs.assetType)
   const sizeText = formatFileSize(attrs.sizeBytes)
   // Defense in depth: even though save-time validation rejects unsafe
@@ -134,7 +127,17 @@ export function DownloadableAssetCard(props: NodeViewProps) {
             the author can verify the file. When it's NOT safe (legacy posts
             with javascript:/data: URLs) we render a disabled <button> so
             clicking doesn't fire a navigation. The element shape stays the
-            same so layout doesn't shift. */}
+            same so layout doesn't shift.
+
+            FIX 2 (CMS button content invisible): when `Button asChild` slots
+            its classes onto an `<a>` child, the browser's user-agent stylesheet
+            colors the link with `-webkit-link` (visited/unvisited blue), which
+            wins over the inherited `text-primary-foreground` from the Button
+            class set inside the Tiptap editor's cascade context. The icon
+            also inherits that link color and becomes invisible against the
+            orange `bg-primary`. Forcing `text-primary-foreground no-underline`
+            directly on the `<a>` overrides UA color and underline so both
+            the icon and the "Pobierz" label render in white as designed. */}
         {urlIsSafe ? (
           <Button asChild size="sm" className="flex-shrink-0">
             <a
@@ -145,6 +148,7 @@ export function DownloadableAssetCard(props: NodeViewProps) {
               // by atom NodeViews across the codebase.
               contentEditable={false}
               aria-label={`${messages.blog.downloadable.downloadButton} ${attrs.name}`.trim()}
+              className="text-primary-foreground no-underline hover:text-primary-foreground hover:no-underline"
             >
               <Download className="mr-1.5 h-4 w-4" aria-hidden="true" />
               {messages.blog.downloadable.downloadButton}
