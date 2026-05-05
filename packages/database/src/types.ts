@@ -568,6 +568,7 @@ export type Database = {
           folder_id: string | null
           height: number | null
           id: string
+          is_downloadable: boolean
           mime_type: string | null
           name: string
           s3_key: string | null
@@ -584,6 +585,7 @@ export type Database = {
           folder_id?: string | null
           height?: number | null
           id?: string
+          is_downloadable?: boolean
           mime_type?: string | null
           name: string
           s3_key?: string | null
@@ -600,6 +602,7 @@ export type Database = {
           folder_id?: string | null
           height?: number | null
           id?: string
+          is_downloadable?: boolean
           mime_type?: string | null
           name?: string
           s3_key?: string | null
