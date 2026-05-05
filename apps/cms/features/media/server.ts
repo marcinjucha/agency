@@ -141,8 +141,37 @@ export const getMediaItemFn = createServerFn({ method: 'POST' })
 // Server Functions — Presigned URL
 // ---------------------------------------------------------------------------
 
-// Hardcoded upload prefix — never derived from client input to prevent path traversal.
-const UPLOAD_FOLDER_PREFIX = 'haloefekt/media'
+/**
+ * Halo Efekt's tenant UUID — production tenant ("Halo Efekt", kontakt@haloefekt.pl).
+ *
+ * Hardcoded as a legacy carve-out for S3 prefix routing: existing media files
+ * uploaded by this tenant live under `haloefekt/media/` (absolute URLs in DB),
+ * and we keep new uploads in the same prefix so the S3 layout stays consistent
+ * with the existing team's mental model. All other tenants use the per-tenant
+ * isolation prefix — see `getUploadFolderPrefix` below.
+ */
+export const HALOEFEKT_TENANT_ID = '19342448-4e4e-49ba-8bf0-694d5376f953'
+
+/**
+ * Build the S3 folder prefix for a tenant's uploads.
+ *
+ * Halo Efekt keeps the legacy 'haloefekt/media' prefix — existing files
+ * have absolute URLs in the DB and continue to load; new uploads stay in
+ * the same folder for operational consistency with the existing team.
+ *
+ * Other tenants get per-tenant isolation: 'tenants/{tenantId}/media'.
+ * This means S3 inspection / future bucket policies / quotas can be
+ * scoped per tenant, and an accidental cross-tenant URL mix-up in a
+ * blog post or media item is structurally avoidable.
+ *
+ * No S3 object migration — URLs in DB are absolute and remain valid.
+ */
+export function getUploadFolderPrefix(tenantId: string): string {
+  if (tenantId === HALOEFEKT_TENANT_ID) {
+    return 'haloefekt/media'
+  }
+  return `tenants/${tenantId}/media`
+}
 
 export const generatePresignedUrlFn = createServerFn({ method: 'POST' })
   .inputValidator(
@@ -166,8 +195,9 @@ export const generatePresignedUrlFn = createServerFn({ method: 'POST' })
 
       const timestamp = Date.now()
       const sanitized = fileName.replace(/[^a-zA-Z0-9.\-_]/g, '_')
-      // SECURITY: Folder always hardcoded — client cannot override to escape tenant prefix
-      const s3Key = `${UPLOAD_FOLDER_PREFIX}/${timestamp}_${sanitized}`
+      // SECURITY: Folder derived from server-side auth context — never from client input.
+      // Halo Efekt = legacy 'haloefekt/media' prefix; all other tenants = 'tenants/{id}/media'.
+      const s3Key = `${getUploadFolderPrefix(authResult.value.tenantId)}/${timestamp}_${sanitized}`
 
       const s3 = getS3Client()
       const command = new PutObjectCommand({

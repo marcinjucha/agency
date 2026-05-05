@@ -174,6 +174,14 @@ function decodeAttrValue(raw: string): string {
 
 const MAX_UPLOAD_SIZE = 5 * 1024 * 1024 // 5MB
 
+/**
+ * NOTE: the `folder` parameter is now IGNORED by the server. Since AAA-T-110
+ * iter 6, the S3 folder prefix is server-controlled per-tenant via
+ * `getUploadFolderPrefix(tenantId)` in `features/media/server.ts` — the
+ * authenticated tenant determines the prefix, never the client. The param
+ * is kept for backward-compatible signature only; passing any value has no
+ * effect on the resulting S3 key.
+ */
 export async function uploadImageToS3(file: File, folder = 'haloefekt/blog'): Promise<string> {
   if (file.size > MAX_UPLOAD_SIZE) {
     throw new Error('Plik jest za duzy. Maksymalny rozmiar to 5MB.')
