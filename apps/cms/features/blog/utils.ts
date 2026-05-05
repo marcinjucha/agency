@@ -172,30 +172,13 @@ function decodeAttrValue(raw: string): string {
     .replace(/&amp;/g, '&')
 }
 
-// --- S3 upload helper (shared by cover image + inline image upload) ---
-
-/**
- * Browser-side image upload for blog cover and inline editor images.
- *
- * Routes through `generatePresignedUrlFn` directly (NOT a non-existent
- * `/api/upload` route — `routes.api.upload` constant pointed at a route that
- * was never created, so every blog cover upload 404'd before this fix).
- *
- * Server-controlled S3 prefix (per AAA-T-110 iter 6): the authenticated
- * tenant determines the folder prefix server-side via
- * `getUploadFolderPrefix(tenantId)`. The dead `folder` parameter that the
- * old fetch call passed has been removed — server ignored it anyway.
- *
- * Image-only allowlist enforced client-side in addition to the server-side
- * MIME registry check inside `generatePresignedUrlFn` — defense in depth.
- */
+// Browser requests a presigned URL from the server fn, then PUTs the file
+// directly to S3. We don't stream the body through a server fn because Vercel's
+// serverless body limit caps it well below typical image sizes.
 export async function uploadImageToS3(file: File): Promise<string> {
   if (!file.type.startsWith('image/')) {
     throw new Error(messages.media.fileTypeNotAllowed)
   }
-  // Use the canonical per-mime size table for image inputs (5MB) — single
-  // source of truth, no duplicated constant. `getMaxSizeForMime('image/...')`
-  // returns IMAGE_MAX_SIZE for any image MIME type.
   const maxSize = getMaxSizeForMime(file.type) || IMAGE_MAX_SIZE
   if (file.size > maxSize) {
     const limitMB = maxSize / (1024 * 1024)

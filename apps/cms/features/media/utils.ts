@@ -99,26 +99,10 @@ export function getMaxSizeForMime(mimeType: string): number {
   return IMAGE_MAX_SIZE
 }
 
-/**
- * Browser-side helper: requests a presigned URL via the `generatePresignedUrlFn`
- * server function (RPC over HTTP — handled by TanStack Start's createServerFn
- * pipeline) and PUTs the file directly to S3 from the user's browser.
- *
- * Why this is intentionally NOT itself a `createServerFn` (no boundary leak):
- * - The actual security boundary is `generatePresignedUrlFn` in `./server.ts`
- *   (auth check + MIME allowlist + tenant-derived folder prefix).
- * - Streaming a >5MB image through a server fn would force the file body
- *   through Vercel's serverless function body limit and lambda RAM. The
- *   browser-direct PUT avoids that entirely.
- *
- * Why we call `generatePresignedUrlFn` directly (NOT `fetch('/api/upload')`):
- * - There is no `/api/upload` route in `app/routes/api/` — the previous
- *   `routes.api.upload` constant pointed at a non-existent endpoint, so every
- *   InsertDownloadableAssetModal / blog cover image / LibraryTab upload 404'd.
- * - `generatePresignedUrlFn` is the canonical server fn that already enforces
- *   auth + MIME allowlist + per-tenant folder prefix. Calling it directly
- *   removes the broken HTTP indirection and makes the boundary explicit.
- */
+// Browser requests a presigned URL from the server fn, then PUTs the file
+// directly to S3. Streaming via a server fn would hit Vercel's body limit;
+// the security boundary (auth + MIME allowlist + tenant prefix) lives in
+// generatePresignedUrlFn.
 export async function uploadMediaToS3(
   file: File
 ): Promise<{ fileUrl: string; s3Key: string }> {
