@@ -26,6 +26,12 @@ interface TiptapEditorProps {
   mediaModal?: React.ReactNode
   /** Callback for toolbar media button + drop/paste interception. Hides media button if not provided. */
   onOpenMediaModal?: () => void
+  /** Slot for downloadable-asset picker modal (rendered alongside mediaModal). */
+  downloadModal?: React.ReactNode
+  /** Callback for toolbar download button. Hides the button if not provided. */
+  onOpenDownloadModal?: () => void
+  /** Tooltip/aria label for the download button (consumer-supplied — kept out of base for i18n boundary). */
+  downloadModalLabel?: string
   /** Embed dimension overrides for iframe CSS (instagram/tiktok). Omitted = no embed CSS rules. */
   embedDimensions?: EmbedDimensions
   /** Callback fired when the Tiptap editor instance is ready — lets parent access the editor (e.g. for media modal). */
@@ -39,6 +45,9 @@ export function TiptapEditor({
   extensions,
   mediaModal,
   onOpenMediaModal,
+  downloadModal,
+  onOpenDownloadModal,
+  downloadModalLabel,
   embedDimensions,
   onEditorReady,
 }: TiptapEditorProps) {
@@ -107,7 +116,12 @@ export function TiptapEditor({
     <div className="tiptap-editor overflow-clip rounded-lg border border-border bg-background shadow-sm transition-shadow focus-within:shadow-md focus-within:ring-1 focus-within:ring-ring">
       {/* Sticky toolbar — offset below BlogPostEditor's top bar (~61px) */}
       <div className="sticky top-[61px] z-10 bg-background">
-        <EditorToolbar editor={editor} onOpenMediaModal={onOpenMediaModal} />
+        <EditorToolbar
+          editor={editor}
+          onOpenMediaModal={onOpenMediaModal}
+          onOpenDownloadModal={onOpenDownloadModal}
+          downloadModalLabel={downloadModalLabel}
+        />
       </div>
 
       {/* Bubble menu — appears on text selection */}
@@ -199,6 +213,9 @@ export function TiptapEditor({
 
       {/* Media modal slot — rendered only when provided by consumer (e.g. blog) */}
       {mediaModal}
+
+      {/* Downloadable-asset picker slot — blog-only (AAA-T-110 iter 4) */}
+      {downloadModal}
 
       {/* Prose styles scoped to this editor */}
       <style>{`

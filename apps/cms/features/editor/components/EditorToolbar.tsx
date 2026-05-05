@@ -25,18 +25,34 @@ import {
   Minus,
   Link,
   Film,
+  FileDown,
   Undo2,
   Redo2,
   X,
   Check,
 } from 'lucide-react'
+import { messages } from '@/lib/messages'
 
 interface EditorToolbarProps {
   editor: Editor | null
   onOpenMediaModal?: () => void
+  /**
+   * Optional — when provided, renders a "Wstaw plik do pobrania" button next
+   * to the media insert button. Blog editor uses this to open the
+   * InsertDownloadableAssetModal. Other consumers (legal-pages, shop-products)
+   * omit it; the button is hidden when not wired.
+   */
+  onOpenDownloadModal?: () => void
+  /** Tooltip/aria label for the download button (consumer-supplied so message keys stay app-side). */
+  downloadModalLabel?: string
 }
 
-export function EditorToolbar({ editor, onOpenMediaModal }: EditorToolbarProps) {
+export function EditorToolbar({
+  editor,
+  onOpenMediaModal,
+  onOpenDownloadModal,
+  downloadModalLabel,
+}: EditorToolbarProps) {
   const [linkInput, setLinkInput] = useState<{ visible: boolean; url: string }>({
     visible: false,
     url: '',
@@ -218,6 +234,14 @@ export function EditorToolbar({ editor, onOpenMediaModal }: EditorToolbarProps) 
               title="Media"
             >
               <Film className="h-4 w-4" />
+            </ToolbarButton>
+          )}
+          {onOpenDownloadModal && (
+            <ToolbarButton
+              onClick={onOpenDownloadModal}
+              title={downloadModalLabel ?? messages.editor.toolbar.insertDownloadFallback}
+            >
+              <FileDown className="h-4 w-4" />
             </ToolbarButton>
           )}
         </ToolbarGroup>

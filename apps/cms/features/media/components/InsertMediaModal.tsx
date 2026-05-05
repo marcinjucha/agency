@@ -25,8 +25,8 @@ import { createMediaItemFn, getMediaItemsFn, getMediaFoldersFn } from '@/feature
 import {
   uploadMediaToS3,
   ALLOWED_MIME_TYPES,
-  IMAGE_MAX_SIZE,
-  VIDEO_MAX_SIZE,
+  getMaxSizeForMime,
+  getMediaTypeFromMime,
 } from '@/features/media/utils'
 import { extractVideoId, generateThumbnailUrl, buildEmbedUrl, fetchVimeoThumbnail } from '@/lib/video-utils'
 import { MediaTypeFilter } from '@/features/media/components/MediaTypeFilter'
@@ -53,9 +53,32 @@ const MEDIA_TYPE_ABBREVIATIONS: Record<MediaType, string> = {
   vimeo: 'VM',
   instagram: 'IG',
   tiktok: 'TT',
+  document: 'DOC',
+  audio: 'AUD',
 }
 
-const MEDIA_INSERT_HANDLERS: Record<MediaType, (editor: Editor, url: string) => void> = {
+/**
+ * Media types this modal can insert INLINE into the Tiptap editor. Document
+ * and audio are intentionally absent — those are downloadable-only assets
+ * inserted via `InsertDownloadableAssetModal` (a separate toolbar entry).
+ *
+ * The modal's library grid is filtered to this set so a user clicking a doc
+ * or audio item never lands in a silent-no-op handler — the UI simply
+ * doesn't render them. Single source of truth for both filter + handler
+ * keys: typing this map as `Record<InlineInsertableType, ...>` means a new
+ * inline-insertable type requires editing exactly this declaration.
+ */
+const INLINE_INSERTABLE_TYPES = [
+  'image',
+  'video',
+  'youtube',
+  'vimeo',
+  'instagram',
+  'tiktok',
+] as const
+type InlineInsertableType = (typeof INLINE_INSERTABLE_TYPES)[number]
+
+const MEDIA_INSERT_HANDLERS: Record<InlineInsertableType, (editor: Editor, url: string) => void> = {
   image: (editor, url) => editor.chain().focus().setImage({ src: url }).run(),
   video: (editor, url) => editor.chain().focus().setVideo({ src: url }).run(),
   youtube: (editor, url) => editor.chain().focus().setYouTube({ src: url }).run(),
@@ -64,12 +87,22 @@ const MEDIA_INSERT_HANDLERS: Record<MediaType, (editor: Editor, url: string) => 
   tiktok: (editor, url) => editor.chain().focus().setTikTok({ src: url }).run(),
 }
 
+function isInlineInsertableType(type: MediaType): type is InlineInsertableType {
+  return (INLINE_INSERTABLE_TYPES as readonly string[]).includes(type)
+}
+
 // --- Helpers ---
 
 function insertMediaIntoEditor(
   editor: Editor,
   item: { type: MediaType; url: string }
 ) {
+  if (!isInlineInsertableType(item.type)) {
+    // Defense in depth: the grid is already filtered to inline-insertable
+    // types; if a row of an unsupported type ever reaches here it's a bug,
+    // not a user-facing case worth localizing.
+    return
+  }
   MEDIA_INSERT_HANDLERS[item.type](editor, item.url)
 }
 
@@ -213,10 +246,17 @@ function LibraryTab({
   const fileInputRef = useRef<HTMLInputElement>(null)
   const queryClient = useQueryClient()
 
-  const { data: items, isLoading } = useQuery({
+  const { data: rawItems, isLoading } = useQuery({
     queryKey: mediaKeys.list({ type: typeFilter, folder_id: folderFilter }),
     queryFn: () => getMediaItemsFn({ data: { type: typeFilter, folder_id: folderFilter } }),
   })
+
+  // FIX 7 — strip document/audio from this modal's grid. Those are
+  // downloadable-only assets inserted via `InsertDownloadableAssetModal`,
+  // not inline media. Without this filter, clicking a doc/audio row
+  // produced a silent no-op (handler returned undefined), leaving users
+  // staring at a closed modal with no inserted content and no error.
+  const items = rawItems?.filter((item) => isInlineInsertableType(item.type as MediaType))
 
   const { data: folders } = useQuery({
     queryKey: folderKeys.list,
@@ -232,9 +272,22 @@ function LibraryTab({
       setUploadError(messages.media.fileTypeNotAllowed)
       return
     }
-    const maxSize = file.type.startsWith('video/') ? VIDEO_MAX_SIZE : IMAGE_MAX_SIZE
+    // FIX 8 — Boy Scout. Use the canonical per-mime size table from the MIME
+    // registry (single source of truth), not the IMAGE/VIDEO max heuristic
+    // which silently mis-sized documents and audio at 5MB.
+    const maxSize = getMaxSizeForMime(file.type)
     if (file.size > maxSize) {
       setUploadError(templates.media.fileTooLarge(maxSize / (1024 * 1024)))
+      return
+    }
+
+    // Boy Scout — derive the persisted MediaType from the MIME registry
+    // instead of a string-prefix heuristic. Previously, uploading a PDF or
+    // audio file via this modal saved a row typed `image` (anything not
+    // `video/`) — silently mis-typed in DB.
+    const detectedType = getMediaTypeFromMime(file.type)
+    if (!detectedType) {
+      setUploadError(messages.media.fileTypeNotAllowed)
       return
     }
 
@@ -246,7 +299,7 @@ function LibraryTab({
       const result = await createMediaItemFn({
         data: {
           name: file.name.replace(/\.[^.]+$/, ''),
-          type: file.type.startsWith('video/') ? 'video' : 'image',
+          type: detectedType,
           url: fileUrl,
           s3_key: s3Key,
           mime_type: file.type,

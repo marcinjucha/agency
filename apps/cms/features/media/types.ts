@@ -9,9 +9,24 @@ export const MEDIA_TYPES = {
   vimeo: 'vimeo',
   instagram: 'instagram',
   tiktok: 'tiktok',
+  document: 'document',
+  audio: 'audio',
 } as const
 
 export type MediaType = (typeof MEDIA_TYPES)[keyof typeof MEDIA_TYPES]
+
+/**
+ * MediaType values eligible for the "Pliki do pobrania" mode.
+ * Embed types (youtube/vimeo/instagram/tiktok) are excluded — they're URL embeds, not files.
+ * Single source of truth — consumed by MediaTypeFilter (downloadable mode pills) and
+ * InsertDownloadableAssetModal (icon mapping + filter pills).
+ */
+export const DOWNLOADABLE_MEDIA_TYPES: readonly MediaType[] = [
+  'image',
+  'video',
+  'document',
+  'audio',
+] as const
 
 // --- Full media item (no JSONB overrides needed — all scalar columns) ---
 
@@ -29,6 +44,7 @@ export type MediaItemListItem = Pick<
   | 'size_bytes'
   | 'thumbnail_url'
   | 'folder_id'
+  | 'is_downloadable'
   | 'created_at'
 >
 
@@ -49,6 +65,7 @@ export function toMediaItemListItem(raw: unknown): MediaItemListItem {
     size_bytes: row.size_bytes,
     thumbnail_url: row.thumbnail_url,
     folder_id: row.folder_id,
+    is_downloadable: row.is_downloadable,
     created_at: row.created_at,
   }
 }

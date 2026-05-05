@@ -71,7 +71,6 @@ export const routes = {
   },
 
   api: {
-    upload: '/api/upload',
     emailTemplatesRender: '/api/email-templates/render',
     authGoogle: '/api/auth/google',
     authGoogleCallback: '/api/auth/google/callback',

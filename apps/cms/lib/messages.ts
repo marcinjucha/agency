@@ -163,6 +163,19 @@ export const messages = {
     statusInactive: 'Nieaktywna',
   },
 
+  // Shared Tiptap editor (used by blog, shop-products, legal-pages, landing).
+  // Per-consumer labels come from the consumer's namespace (e.g. blog.toolbar) —
+  // strings here are generic fallbacks for cases where a consumer wires a
+  // toolbar handler without supplying a label.
+  editor: {
+    toolbar: {
+      // Fallback for `downloadModalLabel` prop on EditorToolbar — only renders
+      // if a future consumer wires `onOpenDownloadModal` without passing a label.
+      // Blog's wrapper (TiptapEditor) supplies messages.blog.toolbar.insertDownload.
+      insertDownloadFallback: 'Wstaw plik do pobrania',
+    },
+  },
+
   blog: {
     // BlogPostEditor
     newPost: 'Nowy artykuł',
@@ -261,6 +274,34 @@ export const messages = {
       titleAZ: 'Tytuł A–Z',
       titleZA: 'Tytuł Z–A',
     },
+    // Downloadable asset block (Tiptap NodeView + public render)
+    downloadable: {
+      downloadButton: 'Pobierz',
+      editorBadge: 'Plik do pobrania',
+      removeBlock: 'Usuń blok pliku',
+      unnamedFile: 'Plik bez nazwy',
+    },
+    // Editor toolbar — blog-specific buttons (insert flows)
+    toolbar: {
+      insertDownload: 'Wstaw plik do pobrania',
+    },
+    // Downloadable asset picker modal (toolbar entry point — AAA-T-110 iter 4)
+    downloadModal: {
+      title: 'Wybierz plik do pobrania',
+      search: 'Szukaj pliku…',
+      empty:
+        'Brak plików do pobrania w bibliotece. Prześlij nowy plik poniżej lub przejdź do Biblioteki Mediów i oznacz istniejący plik jako „do pobrania”.',
+      uploadCta: 'Prześlij nowy plik',
+      cancel: 'Anuluj',
+      goToLibrary: 'Przejdź do Biblioteki Mediów',
+      loading: 'Ładowanie plików…',
+      loadFailed: 'Nie udało się pobrać plików.',
+      retry: 'Spróbuj ponownie',
+      uploadFailed: 'Nie udało się przesłać pliku.',
+      uploading: 'Przesyłanie…',
+      noResults: 'Brak wyników dla bieżących filtrów.',
+      filterByType: 'Filtruj po typie',
+    },
   },
 
   media: {
@@ -282,7 +323,7 @@ export const messages = {
     // MediaUploadZone
     dropOrClick: 'Przeciągnij pliki lub kliknij aby wybrać',
     dropOrClickAria: 'Strefa przesyłania plików. Przeciągnij pliki lub naciśnij Enter aby wybrać.',
-    fileLimits: 'Obrazy (max 5MB), Wideo (max 50MB)',
+    fileLimits: 'Obrazy (max 5MB), Wideo (max 50MB), Dokumenty (max 25MB), Audio (max 25MB)',
     fileTypeNotAllowed: 'Niedozwolony typ pliku.',
     uploadProgress: 'Postęp przesyłania',
     uploadUrlError: 'Błąd generowania URL uploadu',
@@ -290,6 +331,7 @@ export const messages = {
     dbSaveFailed: 'Błąd zapisu do bazy',
     // MediaPreviewDialog
     preview: 'Podgląd',
+    previewDescription: 'Podgląd pliku multimedialnego',
     previewLoadFailed: 'Nie można załadować podglądu.',
     typeLabel: 'Typ:',
     sizeLabel: 'Rozmiar:',
@@ -321,6 +363,38 @@ export const messages = {
     renameFolderFailed: 'Nie udało się zmienić nazwy folderu',
     deleteFolderFailed: 'Nie udało się usunąć folderu',
     moveFailed: 'Nie udało się przenieść',
+    // Single source of truth for media-type labels — used by MediaTypeFilter
+    // tabs, MediaCard badges, and any future surface that needs to render a
+    // type label. Adding a new media type means adding ONE entry here.
+    fileTypes: {
+      all: 'Wszystko',
+      image: 'Obrazy',
+      video: 'Wideo',
+      youtube: 'YouTube',
+      vimeo: 'Vimeo',
+      instagram: 'Instagram',
+      tiktok: 'TikTok',
+      document: 'Dokumenty',
+      audio: 'Audio',
+    },
+    // Mode tabs (inline media vs downloadable files)
+    modeAll: 'Wszystkie media',
+    modeAllDescription: 'Media wstawiane do treści — obrazy, wideo, embedy social.',
+    modeDownloadable: 'Pliki do pobrania',
+    modeDownloadableDescription: 'Pliki, które klienci pobierają z bloga lub stron — PDF, Word, audio.',
+    downloadableBadge: 'Plik do pobrania',
+    downloadableBadgeAria: 'Ten plik jest oznaczony jako do pobrania',
+    // PreviewDialog — document/audio
+    documentNoPreview: 'Dokumenty nie mają podglądu w przeglądarce.',
+    downloadFile: 'Pobierz plik',
+    audioPreviewLabel: 'Odtwarzacz audio',
+    // MediaCard — strings used by the editor card surface (rename + delete)
+    clickToRename: 'Kliknij, aby zmienić nazwę',
+    renameAriaLabel: 'Zmień nazwę',
+    renameInputAriaLabel: 'Zmień nazwę pliku',
+    deleteConfirmTitle: 'Usunąć plik?',
+    deleteConfirmDescription: 'Ten plik może być używany w postach. Na pewno chcesz go usunąć?',
+    selectInOverlay: 'Wybierz',
   },
 
   calendar: {
@@ -1904,12 +1978,15 @@ export const messages = {
 export const templates = {
   blog: {
     addCategory: (name: string) => `Dodaj: ${name}`,
+    selectDownloadAriaLabel: (name: string) => `Wstaw plik: ${name}`,
   },
   media: {
     fileTooLarge: (limitMB: number) => `Plik za duży. Max: ${limitMB}MB.`,
     fileTypeNotAllowed: (types: string) => `Niedozwolony typ pliku. Dozwolone: ${types}`,
     insertItemAriaLabel: (name: string) => `Wstaw: ${name}`,
     uploadingProgress: (fileName: string, progress: number) => `Przesyłanie ${fileName}: ${progress}%`,
+    previewAriaLabel: (name: string) => `Podgląd: ${name}`,
+    deleteAriaLabel: (name: string) => `Usuń ${name}`,
   },
   marketplace: {
     removeListingTitle: (label: string) => `Usuń ogłoszenie z ${label}?`,

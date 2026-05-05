@@ -5,7 +5,11 @@ import { Progress } from '@agency/ui'
 import { UploadCloud, CheckCircle2, XCircle } from 'lucide-react'
 import { createMediaItemFn, generatePresignedUrlFn } from '../server'
 import type { MediaType } from '../types'
-import { ALLOWED_MIME_TYPES, IMAGE_MAX_SIZE, VIDEO_MAX_SIZE } from '../utils'
+import {
+  ALLOWED_MIME_TYPES,
+  getMaxSizeForMime,
+  getMediaTypeFromMime,
+} from '../utils'
 import { messages, templates } from '@/lib/messages'
 
 type UploadState = 'idle' | 'uploading' | 'done' | 'error'
@@ -19,10 +23,21 @@ type UploadJob = {
 
 type MediaUploadZoneProps = {
   onUploadComplete: () => void
+  /**
+   * When true, uploaded items are flagged as `is_downloadable: true`.
+   * Set by MediaLibrary based on the active library mode (downloadable vs inline).
+   */
+  isDownloadable?: boolean
+  /**
+   * Optional folder context — uploads land in this folder if provided.
+   */
+  folderId?: string | null
 }
 
 function detectMediaType(mime: string): MediaType {
-  return mime.startsWith('image/') ? 'image' : 'video'
+  // Use registry-backed lookup; fall back to image for safety (server gates on
+  // ALLOWED_MIME_TYPES anyway, so fallback path is unreachable in practice).
+  return getMediaTypeFromMime(mime) ?? 'image'
 }
 
 async function simulateProgress(
@@ -48,7 +63,7 @@ async function simulateProgress(
   })
 }
 
-export function MediaUploadZone({ onUploadComplete }: MediaUploadZoneProps) {
+export function MediaUploadZone({ onUploadComplete, isDownloadable = false, folderId = null }: MediaUploadZoneProps) {
   const inputId = useId()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [isDragOver, setIsDragOver] = useState(false)
@@ -74,8 +89,8 @@ export function MediaUploadZone({ onUploadComplete }: MediaUploadZoneProps) {
       return
     }
 
-    // Validate size
-    const maxSize = file.type.startsWith('video/') ? VIDEO_MAX_SIZE : IMAGE_MAX_SIZE
+    // Validate size — registry-aware so document/audio uploads use correct limits
+    const maxSize = getMaxSizeForMime(file.type)
     if (file.size > maxSize) {
       const limitMB = maxSize / (1024 * 1024)
       setJobField(index, {
@@ -117,7 +132,7 @@ export function MediaUploadZone({ onUploadComplete }: MediaUploadZoneProps) {
 
       setJobField(index, { progress: 100 })
 
-      // 3. Create DB record
+      // 3. Create DB record — propagate active mode + folder context
       const result = await createMediaItemFn({
         data: {
           name: file.name.replace(/\.[^.]+$/, ''),
@@ -126,6 +141,8 @@ export function MediaUploadZone({ onUploadComplete }: MediaUploadZoneProps) {
           s3_key: s3Key,
           mime_type: file.type,
           size_bytes: file.size,
+          is_downloadable: isDownloadable,
+          folder_id: folderId,
         },
       })
 

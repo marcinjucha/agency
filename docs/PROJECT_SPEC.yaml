@@ -51,6 +51,10 @@ architecture:
     - "URL search param for shareable execution detail (?execution=<uuid>, AAA-T-220) — WorkflowEditor route uses TanStack Router validateSearch with Zod; all writes use replace:true to avoid history pollution; panel opens to detail view on load when param present"
     - "Polling gate via useDocumentVisible hook (AAA-T-220) — execution history polling pauses when document.visibilityState is 'hidden', resumes on 'visibilitychange' to 'visible'; hook has 5 unit tests; applied at panel level so list+detail share one gate"
     - "ExecutionHistoryPanel is panel-level chrome (AAA-T-220) — close/back buttons live in the panel's own header, not in WorkflowEditor canvas chrome; rightPanel state machine ('none'|'test'|'history') in WorkflowEditor coordinates mutual exclusion with TestModePanel"
+    - "Tiptap downloadable asset block uses split rendering — React NodeView for CMS editor (Tailwind, dark theme), pure renderDownloadableAssetHtml with INLINE STYLES for public website (no Tailwind context available). Post-processor swapDownloadableAssetMarkers in blog/utils.ts replaces lightweight <downloadable-asset> markers emitted by Tiptap renderHTML with fully-styled card HTML. Single forward-pass O(L) scanner with quote-aware tag boundary detection (HTML5 permits unescaped < inside attribute values). (AAA-T-110)"
+    - "4-layer URL scheme allowlist for downloadable asset hrefs (http/https only) as defense-in-depth against stored XSS via crafted Tiptap node attrs: renderHTML returns null on unsafe url, parseHTML rejects on load, Zod schema refines, NodeView renders disabled button. validateDownloadableAssets walker called from createBlogPostFn/updateBlogPostFn before persist. (AAA-T-110)"
+    - "S3 per-tenant prefix for new media uploads — Halo Efekt keeps legacy 'haloefekt/media' prefix (operational consistency with existing S3 objects); other tenants get 'tenants/{tenantId}/media' isolation. tenantId resolved server-side from requireAuthContext (never client-supplied). No object migration — DB stores absolute S3 URLs. (AAA-T-110)"
+    - "is_downloadable BOOLEAN flag on media_items is orthogonal to MediaType — any type (image/video/document/audio) can be downloadable. Distinguishes inline content from files intended for download. MEDIA_MIME_REGISTRY is single source of truth for allowed MIME types per MediaType, consumed by client filter, server allowlist, and reverse lookup for type detection. (AAA-T-110)"
 
 features:
   # Phase 1: Foundation
@@ -300,6 +304,14 @@ features:
     why: "Warm light aesthetic better suits professional services ICP (law firms, coaching, medical) and improves perceived quality of the intake funnel. Dark navy read as too tech-startup for target market."
     depends_on: ["TanStack Start Migration — Website"]
     completion_notes: "Visitors experience a warm, light website across all pages — landing page, blog listing, blog articles, and survey flow. All text-muted-foreground violations on body copy resolved. Lora Variable applied consistently to all headings sitewide."
+
+  - name: "Blog Downloadable Assets"
+    status: done
+    task_id: "AAA-T-110"
+    description: "Authors can attach downloadable files (PDF, DOCX, MP3, video, etc.) to blog articles. Files are sourced from the Media Library where any media item can be flagged as downloadable via a dedicated tab. A Tiptap DownloadableAsset block renders the file as a styled card (icon + filename + size + Pobierz button) in the CMS editor and on the public website. Post-processor in blog/utils.ts swaps Tiptap markers for full inline-styled HTML (no Tailwind on the website). 4-layer XSS defense (renderHTML, parseHTML, Zod, NodeView) blocks stored XSS via crafted URLs. S3 uploads use per-tenant path prefixes. 103 vitest tests."
+    why: "Clients publishing legal/educational content need to offer downloadable resources (guides, templates, checklists) alongside articles — a core lead-magnet pattern for professional services."
+    depends_on: ["Blog / Articles with WYSIWYG Editor", "Media Library"]
+    completion_notes: "Authors use the 'Wstaw plik do pobrania' toolbar button to attach files from the Media Library. Documents and audio types added to the library. Downloadable card renders identically in the CMS editor and on the public website using inline styles (no shared Tailwind bundle). Critical fix: /api/upload route never existed — presigned URL generation rewired to call generatePresignedUrlFn directly."
 
   # Backlog
   - name: "Multi-language Support (PL/EN)"
