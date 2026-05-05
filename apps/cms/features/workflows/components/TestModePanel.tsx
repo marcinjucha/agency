@@ -1,6 +1,6 @@
 
 
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Button,
@@ -23,6 +23,21 @@ interface TestModePanelProps {
   triggerType: string
   isActive: boolean
   onClose: () => void
+  /**
+   * Pre-fill the mock JSON editor on mount or whenever the parent supplies a
+   * new defined value (e.g. user clicked "Kopiuj payload" in execution-history
+   * detail view). Reset back to `undefined` does NOT wipe the editor — that
+   * would clobber user edits if the parent clears its prefill state.
+   * Optional — backward-compatible with callers that don't pass it.
+   */
+  initialJson?: string
+  /**
+   * Notify the parent after a successful test dispatch so it can swap to the
+   * history panel and deep-link to the new execution. Fire-and-forget — this
+   * component does NOT continue to interact after the callback (parent
+   * unmounts us when it switches panels). Optional — backward-compatible.
+   */
+  onRequestOpenHistory?: (executionId: string) => void
 }
 
 function generateMockData(triggerType: string): Record<string, unknown> {
@@ -49,18 +64,35 @@ export function TestModePanel({
   triggerType,
   isActive,
   onClose,
+  initialJson,
+  onRequestOpenHistory,
 }: TestModePanelProps) {
   const queryClient = useQueryClient()
-  const initialJson = useMemo(
+  const generatedMockJson = useMemo(
     () => JSON.stringify(generateMockData(triggerType), null, 2),
     [triggerType]
   )
 
-  const [jsonText, setJsonText] = useState(initialJson)
+  // Initial editor value: explicit prefill from parent (history copy) wins,
+  // otherwise fall back to the generated mock for this trigger type.
+  const [jsonText, setJsonText] = useState(initialJson ?? generatedMockJson)
   const [jsonError, setJsonError] = useState<string | null>(null)
   const [selectedExecutionId, setSelectedExecutionId] = useState<string | null>(null)
   const [isRunning, setIsRunning] = useState(false)
   const [runResult, setRunResult] = useState<{ success: boolean; executionId?: string; error?: string } | null>(null)
+
+  // React to parent-supplied prefill changes AFTER mount (e.g. user clicks
+  // "Kopiuj payload" again on a different execution while the test panel is
+  // already open). Only applies when prefill becomes a defined string —
+  // transitioning back to undefined would wipe user edits. Trade-off: copy
+  // payload from a different execution clobbers in-progress edits — that's
+  // the explicit user action, so clobbering is correct.
+  useEffect(() => {
+    if (initialJson !== undefined) {
+      setJsonText(initialJson)
+      setJsonError(null)
+    }
+  }, [initialJson])
 
   // Fetch recent executions for "Z wykonania" tab
   const { data: recentExecutions } = useQuery({
@@ -119,6 +151,15 @@ export function TestModePanel({
       queryClient.invalidateQueries({
         queryKey: [...queryKeys.workflows.all, workflowId],
       })
+      // Hand off to the history panel if the parent wired the callback AND
+      // the server actually returned an executionId. Guard against undefined:
+      // the server fn return type marks executionId optional, and a `success:
+      // true` with no id should not deep-link to an unknown row.
+      // Fire-and-forget — parent unmounts this panel by swapping right-panel
+      // state, so DO NOT touch local state below this line.
+      if (onRequestOpenHistory && result.executionId) {
+        onRequestOpenHistory(result.executionId)
+      }
     } else {
       setRunResult({ success: false, error: result.error })
     }
