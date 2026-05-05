@@ -89,6 +89,8 @@ vi.mock('lucide-react', () => {
     LogOut: stub, Mail: stub, Globe: stub, Newspaper: stub, Images: stub, Scale: stub,
     ShoppingBag: stub, Tags: stub, Store: stub, Zap: stub, History: stub, Users: stub,
     Building2: stub, Check: stub, Minus: stub, ChevronDown: stub, Search: stub, Star: stub, KeyRound: stub, RefreshCw: stub,
+    // DownloadableAssetCard icons
+    Download: stub, Image: stub, Music: stub, Video: stub, X: stub,
   }
 })
 

@@ -261,6 +261,13 @@ export const messages = {
       titleAZ: 'Tytuł A–Z',
       titleZA: 'Tytuł Z–A',
     },
+    // Downloadable asset block (Tiptap NodeView + public render)
+    downloadable: {
+      downloadButton: 'Pobierz',
+      editorBadge: 'Plik do pobrania',
+      removeBlock: 'Usuń blok pliku',
+      unnamedFile: 'Plik bez nazwy',
+    },
   },
 
   media: {
@@ -290,6 +297,7 @@ export const messages = {
     dbSaveFailed: 'Błąd zapisu do bazy',
     // MediaPreviewDialog
     preview: 'Podgląd',
+    previewDescription: 'Podgląd pliku multimedialnego',
     previewLoadFailed: 'Nie można załadować podglądu.',
     typeLabel: 'Typ:',
     sizeLabel: 'Rozmiar:',
@@ -323,20 +331,35 @@ export const messages = {
     moveFailed: 'Nie udało się przenieść',
     // Downloadable assets
     downloadable: 'Do pobrania',
+    // Single source of truth for media-type labels — used by MediaTypeFilter
+    // tabs, MediaCard badges, and any future surface that needs to render a
+    // type label. Adding a new media type means adding ONE entry here.
     fileTypes: {
-      image: 'Obraz',
+      all: 'Wszystko',
+      image: 'Obrazy',
       video: 'Wideo',
       youtube: 'YouTube',
       vimeo: 'Vimeo',
       instagram: 'Instagram',
       tiktok: 'TikTok',
-      document: 'Dokument',
+      document: 'Dokumenty',
       audio: 'Audio',
     },
     tabs: {
       all: 'Wszystkie',
       downloadable: 'Do pobrania',
     },
+    // Mode tabs (inline media vs downloadable files)
+    modeAll: 'Wszystkie media',
+    modeAllDescription: 'Media wstawiane do treści — obrazy, wideo, embedy social.',
+    modeDownloadable: 'Pliki do pobrania',
+    modeDownloadableDescription: 'Pliki, które klienci pobierają z bloga lub stron — PDF, Word, audio.',
+    downloadableBadge: 'Plik do pobrania',
+    downloadableBadgeAria: 'Ten plik jest oznaczony jako do pobrania',
+    // PreviewDialog — document/audio
+    documentNoPreview: 'Dokumenty nie mają podglądu w przeglądarce.',
+    downloadFile: 'Pobierz plik',
+    audioPreviewLabel: 'Odtwarzacz audio',
   },
 
   calendar: {

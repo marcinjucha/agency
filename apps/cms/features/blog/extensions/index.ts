@@ -4,6 +4,7 @@ import { YouTubeExtension } from './YouTubeExtension'
 import { VimeoExtension } from './VimeoExtension'
 import { InstagramExtension } from './InstagramExtension'
 import { TikTokExtension } from './TikTokExtension'
+import { DownloadableAssetExtension } from './DownloadableAssetExtension'
 
 export const mediaExtensions = [
   VideoExtension,
@@ -11,6 +12,7 @@ export const mediaExtensions = [
   VimeoExtension,
   InstagramExtension,
   TikTokExtension,
+  DownloadableAssetExtension,
 ]
 
 /**
@@ -24,4 +26,11 @@ export const editorExtensions = [
 ]
 
 export { baseExtensions }
-export { VideoExtension, YouTubeExtension, VimeoExtension, InstagramExtension, TikTokExtension }
+export {
+  VideoExtension,
+  YouTubeExtension,
+  VimeoExtension,
+  InstagramExtension,
+  TikTokExtension,
+  DownloadableAssetExtension,
+}
