@@ -96,9 +96,23 @@
       "name": "HTTP Request",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
+      "onError": "continueErrorOutput",
       "position": [
         -144,
         1104
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Handle HTTP Request failure — return failed stepResult to Process Step\nconst originalItem = $('SSRF Check').first().json;\nconst errorInput = $input.first().json;\nconst errorMsg = errorInput?.error?.message\n  || errorInput?.message\n  || 'HTTP request failed (connection error)';\nreturn {\n  json: {\n    ...originalItem,\n    stepResult: { success: false, error: `Webhook HTTP error: ${errorMsg}` },\n  }\n};\n"
+      },
+      "id": "e3a7f2b1-9c4d-4e8f-b6a0-5d2c1f3e7890",
+      "name": "Handle HTTP Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        80,
+        1296
       ]
     },
     {
@@ -186,6 +200,13 @@
         [
           {
             "node": "Build Webhook Result",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Handle HTTP Error",
             "type": "main",
             "index": 0
           }
