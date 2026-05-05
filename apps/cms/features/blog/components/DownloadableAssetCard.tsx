@@ -148,7 +148,11 @@ export function DownloadableAssetCard(props: NodeViewProps) {
               // by atom NodeViews across the codebase.
               contentEditable={false}
               aria-label={`${messages.blog.downloadable.downloadButton} ${attrs.name}`.trim()}
-              className="text-primary-foreground no-underline hover:text-primary-foreground hover:no-underline"
+              // Inline style wins over UA `a:link` stylesheet (which made
+              // class-inherited text-primary-foreground lose). Tailwind class
+              // approach didn't work — UA `a:link` has equal CSS specificity
+              // and renders blue link color. Inline style has higher specificity.
+              style={{ color: 'hsl(0 0% 100%)', textDecoration: 'none' }}
             >
               <Download className="mr-1.5 h-4 w-4" aria-hidden="true" />
               {messages.blog.downloadable.downloadButton}
