@@ -1280,6 +1280,10 @@ export const messages = {
     stepHidePreviousAttempts: (count: number) => `Ukryj poprzednie próby (${count})`,
     expandAll: 'Rozwiń wszystkie',
     collapseAll: 'Zwiń wszystkie',
+    stepExpand: 'Rozwiń krok',
+    stepCollapse: 'Zwiń krok',
+    copyPayload: 'Kopiuj JSON',
+    copyPayloadDone: 'Skopiowano',
     // Duration formatting
     durationSeconds: (s: number) => `${s}s`,
     durationMinutes: (m: number) => `${m}m`,
@@ -1351,6 +1355,37 @@ export const messages = {
         name: 'Onboarding nowego klienta',
         description: 'Deal closed w CRM → email powitalny → utworzenie zadań → SMS przypomnienie → wait 7 dni → AI check-in → email feedback.',
       },
+    },
+    // Execution history panel (in-editor 560px right panel — AAA-T-220).
+    // Reuses existing keys from the surrounding workflows block:
+    //   - status labels: executionPending/Running/Completed/Failed/Cancelled/Paused
+    //   - empty state: noExecutions, noExecutionsDescription
+    //   - retry UX: retryButton, retryConfirmTitle, retryConfirmDescription, retryToastSuccess,
+    //     retryAlreadyRunning, retryDisabledRunning
+    //   - payload label: executionTriggerPayload
+    executionHistory: {
+      // Panel container
+      panelTitle: 'Wykonania',
+      panelClose: 'Zamknij panel wykonań',
+      panelToggle: 'Wykonania',
+      // List view
+      filterAll: 'Wszystkie',
+      filterCompleted: 'Zakończone',
+      filterFailed: 'Z błędem',
+      pollingActive: 'Odświeżanie na żywo',
+      viewAllInGlobal: 'Zobacz wszystkie wykonania',
+      viewAllInGlobalAriaLabel: 'Otwórz globalną historię wykonań',
+      colStartedAt: 'Start',
+      colTrigger: 'Wyzwalacz',
+      colStatus: 'Status',
+      // Detail view
+      detailBack: 'Wróć do listy',
+      detailExecutionId: 'ID wykonania',
+      detailCopyPayload: 'Kopiuj payload do trybu testu',
+      detailPayloadCopied: 'Skopiowano payload do trybu testu',
+      detailOpenInTestMode: 'Otwórz w trybie testu',
+      // Errors
+      loadFailed: 'Nie udało się pobrać wykonań',
     },
   },
 
