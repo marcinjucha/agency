@@ -33,6 +33,7 @@
  */
 
 import { getAssetTypeIconSvg, getDownloadIconSvg } from './downloadable-asset-icons'
+import { formatFileSize } from '@/lib/utils/file-size'
 
 /**
  * Single source of truth for the asset-type union — derived from a frozen
@@ -125,14 +126,12 @@ export function deriveTypeLabel(name: string, mimeType: string, assetType: Downl
   return assetType.toUpperCase()
 }
 
-/** Pure size formatter — same thresholds as features/media/utils.ts formatFileSize. */
-export function formatFileSize(bytes: number | null): string {
-  if (bytes === null) return ''
-  if (bytes === 0) return '0 B'
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-}
+// Re-export the imported `formatFileSize` so existing consumers (e.g.
+// `DownloadableAssetCard`) keep working. ESM re-export `export { X } from
+// 'mod'` only forwards to external importers — it does NOT create a local
+// binding inside this file, so the internal use of `formatFileSize` below
+// requires the explicit `import { formatFileSize }` at the top.
+export { formatFileSize }
 
 // HTML escaping — every interpolated attr/value goes through this.
 // Output goes verbatim into html_body; an un-escaped quote in a filename or

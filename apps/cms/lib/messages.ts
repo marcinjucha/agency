@@ -363,8 +363,6 @@ export const messages = {
     renameFolderFailed: 'Nie udało się zmienić nazwy folderu',
     deleteFolderFailed: 'Nie udało się usunąć folderu',
     moveFailed: 'Nie udało się przenieść',
-    // Downloadable assets
-    downloadable: 'Do pobrania',
     // Single source of truth for media-type labels — used by MediaTypeFilter
     // tabs, MediaCard badges, and any future surface that needs to render a
     // type label. Adding a new media type means adding ONE entry here.
@@ -379,10 +377,6 @@ export const messages = {
       document: 'Dokumenty',
       audio: 'Audio',
     },
-    tabs: {
-      all: 'Wszystkie',
-      downloadable: 'Do pobrania',
-    },
     // Mode tabs (inline media vs downloadable files)
     modeAll: 'Wszystkie media',
     modeAllDescription: 'Media wstawiane do treści — obrazy, wideo, embedy social.',
@@ -394,6 +388,13 @@ export const messages = {
     documentNoPreview: 'Dokumenty nie mają podglądu w przeglądarce.',
     downloadFile: 'Pobierz plik',
     audioPreviewLabel: 'Odtwarzacz audio',
+    // MediaCard — strings used by the editor card surface (rename + delete)
+    clickToRename: 'Kliknij, aby zmienić nazwę',
+    renameAriaLabel: 'Zmień nazwę',
+    renameInputAriaLabel: 'Zmień nazwę pliku',
+    deleteConfirmTitle: 'Usunąć plik?',
+    deleteConfirmDescription: 'Ten plik może być używany w postach. Na pewno chcesz go usunąć?',
+    selectInOverlay: 'Wybierz',
   },
 
   calendar: {
@@ -1949,6 +1950,8 @@ export const templates = {
     fileTypeNotAllowed: (types: string) => `Niedozwolony typ pliku. Dozwolone: ${types}`,
     insertItemAriaLabel: (name: string) => `Wstaw: ${name}`,
     uploadingProgress: (fileName: string, progress: number) => `Przesyłanie ${fileName}: ${progress}%`,
+    previewAriaLabel: (name: string) => `Podgląd: ${name}`,
+    deleteAriaLabel: (name: string) => `Usuń ${name}`,
   },
   marketplace: {
     removeListingTitle: (label: string) => `Usuń ogłoszenie z ${label}?`,

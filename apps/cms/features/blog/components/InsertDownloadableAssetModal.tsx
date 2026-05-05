@@ -24,7 +24,7 @@ import {
   Input,
   Progress,
 } from '@agency/ui'
-import { Loader2, UploadCloud, Search, FileDown, FileText, Image as ImageIcon, Video, Music } from 'lucide-react'
+import { Loader2, UploadCloud, Search, FileDown } from 'lucide-react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { mediaKeys } from '@/features/media/queries'
 import { createMediaItemFn, getMediaItemsFn } from '@/features/media/server'
@@ -40,6 +40,7 @@ import {
   type MediaItemListItem,
   type MediaType,
 } from '@/features/media/types'
+import { getDownloadableTypeIcon } from '../extensions/downloadable-asset-react-icons'
 import { Link as RouterLink } from '@tanstack/react-router'
 import { routes } from '@/lib/routes'
 import { messages, templates } from '@/lib/messages'
@@ -56,22 +57,14 @@ type InsertDownloadableAssetModalProps = {
   onSelect: (item: MediaItemListItem) => void
 }
 
-// Per-type icon for the grid card and filter pills. Reuses `FileDown` as a
-// neutral fallback only for unknown types (defensive — DB rows should be
-// constrained to DOWNLOADABLE_MEDIA_TYPES via the is_downloadable filter, but
-// the type column accepts any MediaType so we guard).
-const TYPE_ICONS: Record<MediaType, typeof FileDown> = {
-  image: ImageIcon,
-  video: Video,
-  document: FileText,
-  audio: Music,
-  // Embed types — won't appear under is_downloadable=true in practice. Falls
-  // back to FileDown so a stray row still renders.
-  youtube: FileDown,
-  vimeo: FileDown,
-  instagram: FileDown,
-  tiktok: FileDown,
-}
+// Per-type icon resolution lives in the consolidated registry
+// `extensions/downloadable-asset-react-icons.ts`, shared with
+// `DownloadableAssetCard`. The local `TYPE_ICONS` map (8-entry,
+// 4 unreachable embed entries -> FileDown) was redundant — we now route
+// through `getDownloadableTypeIcon()` which falls back to FileText for
+// unknown values (defensive — embed types shouldn't appear here because
+// is_downloadable=true filters them out, but the DB type column accepts
+// any MediaType so we guard).
 
 // --- Modal ---
 
@@ -420,7 +413,9 @@ function DownloadableAssetGridCard({
   item: MediaItemListItem
   onSelect: () => void
 }) {
-  const Icon = TYPE_ICONS[item.type as MediaType] ?? FileDown
+  // Convert raw MediaType (DB-string) to DownloadableAssetType via the
+  // single-source-of-truth registry. Unknown values fall back to FileText.
+  const Icon = getDownloadableTypeIcon(item.type)
   const sizeText = formatFileSize(item.size_bytes)
   const typeLabel = messages.media.fileTypes[item.type as MediaType] ?? ''
 
