@@ -1,7 +1,7 @@
 import { createServerFn } from '@tanstack/react-start'
 import { err, ResultAsync } from 'neverthrow'
 import { fromSupabase, fromSupabaseVoid } from '@/lib/result-helpers'
-import { blogPostSchema, type BlogPostFormData } from './validation'
+import { blogPostSchema, validateDownloadableAssets, type BlogPostFormData } from './validation'
 import { toBlogPost, toBlogPostListItem, type BlogPost, type BlogPostListItem } from './types'
 import { parseContent } from './utils'
 import { messages } from '@/lib/messages'
@@ -101,6 +101,16 @@ export const createBlogPostFn = createServerFn({ method: 'POST' })
   .inputValidator((input: z.infer<typeof blogPostInputSchema>) => blogPostInputSchema.parse(input))
   .handler(
     async ({ data }): Promise<{ success: boolean; data?: BlogPost; error?: string }> => {
+      // Defense-in-depth: walk the Tiptap doc and reject any
+      // downloadableAsset node with an unsafe URL or out-of-allowlist
+      // attrs BEFORE persisting. The wire schema accepts the loose
+      // `z.array(z.any())` for content (Tiptap shapes are open-ended),
+      // so this is the first real per-node guard.
+      const assetCheck = validateDownloadableAssets(data.content)
+      if (!assetCheck.valid) {
+        return { success: false, error: assetCheck.error }
+      }
+
       const result = await requireAuthContextFull().andThen((auth) => {
         if (!hasPermission('content.blog', auth.permissions)) {
           return err(messages.common.noPermission)
@@ -119,6 +129,12 @@ export const updateBlogPostFn = createServerFn({ method: 'POST' })
   .inputValidator((input: z.infer<typeof updateBlogPostInputSchema>) => updateBlogPostInputSchema.parse(input))
   .handler(
     async ({ data: input }): Promise<{ success: boolean; data?: BlogPost; error?: string }> => {
+      // See createBlogPostFn — same defense-in-depth applies on update.
+      const assetCheck = validateDownloadableAssets(input.data.content)
+      if (!assetCheck.valid) {
+        return { success: false, error: assetCheck.error }
+      }
+
       const result = await requireAuthContextFull()
         .andThen((auth) => {
           if (!hasPermission('content.blog', auth.permissions)) {
