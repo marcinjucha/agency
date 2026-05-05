@@ -282,7 +282,7 @@ export const messages = {
     // MediaUploadZone
     dropOrClick: 'Przeciągnij pliki lub kliknij aby wybrać',
     dropOrClickAria: 'Strefa przesyłania plików. Przeciągnij pliki lub naciśnij Enter aby wybrać.',
-    fileLimits: 'Obrazy (max 5MB), Wideo (max 50MB)',
+    fileLimits: 'Obrazy (max 5MB), Wideo (max 50MB), Dokumenty (max 25MB), Audio (max 25MB)',
     fileTypeNotAllowed: 'Niedozwolony typ pliku.',
     uploadProgress: 'Postęp przesyłania',
     uploadUrlError: 'Błąd generowania URL uploadu',
@@ -321,6 +321,22 @@ export const messages = {
     renameFolderFailed: 'Nie udało się zmienić nazwy folderu',
     deleteFolderFailed: 'Nie udało się usunąć folderu',
     moveFailed: 'Nie udało się przenieść',
+    // Downloadable assets
+    downloadable: 'Do pobrania',
+    fileTypes: {
+      image: 'Obraz',
+      video: 'Wideo',
+      youtube: 'YouTube',
+      vimeo: 'Vimeo',
+      instagram: 'Instagram',
+      tiktok: 'TikTok',
+      document: 'Dokument',
+      audio: 'Audio',
+    },
+    tabs: {
+      all: 'Wszystkie',
+      downloadable: 'Do pobrania',
+    },
   },
 
   calendar: {

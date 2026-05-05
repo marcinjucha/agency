@@ -53,8 +53,14 @@ const MEDIA_TYPE_ABBREVIATIONS: Record<MediaType, string> = {
   vimeo: 'VM',
   instagram: 'IG',
   tiktok: 'TT',
+  document: 'DOC',
+  audio: 'AUD',
 }
 
+// Document and audio are downloadable-only assets — no Tiptap insert handler.
+// If a downloadable asset is selected via this modal, insertion is a no-op.
+// Insertion of downloadable links is handled by a separate flow (see blog
+// downloadable assets — AAA-T-110 iter 2+).
 const MEDIA_INSERT_HANDLERS: Record<MediaType, (editor: Editor, url: string) => void> = {
   image: (editor, url) => editor.chain().focus().setImage({ src: url }).run(),
   video: (editor, url) => editor.chain().focus().setVideo({ src: url }).run(),
@@ -62,6 +68,8 @@ const MEDIA_INSERT_HANDLERS: Record<MediaType, (editor: Editor, url: string) => 
   vimeo: (editor, url) => editor.chain().focus().setVimeo({ src: url }).run(),
   instagram: (editor, url) => editor.chain().focus().setInstagram({ src: url }).run(),
   tiktok: (editor, url) => editor.chain().focus().setTikTok({ src: url }).run(),
+  document: () => undefined,
+  audio: () => undefined,
 }
 
 // --- Helpers ---

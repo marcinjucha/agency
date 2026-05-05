@@ -20,6 +20,7 @@ import {
 } from './folder-validation'
 import { toMediaItem, type MediaItem, type MediaItemListItem, type MediaType, toMediaItemListItem } from './types'
 import type { MediaFolder } from './folder-types'
+import { ALLOWED_MIME_TYPES } from './utils'
 import { messages } from '@/lib/messages'
 
 // ---------------------------------------------------------------------------
@@ -32,42 +33,72 @@ const dbError = (e: unknown) => (e instanceof Error ? e.message : messages.commo
 // Server Functions — Queries
 // ---------------------------------------------------------------------------
 
+export type MediaItemFilters = {
+  type?: MediaType
+  search?: string
+  folder_id?: string | null
+  is_downloadable?: boolean
+}
+
 /**
- * Fetch media items with optional filters.
+ * Applies media item filters to a Supabase query.
+ *
+ * Extracted as a pure helper (taking a pre-built query builder) so the
+ * filter behavior can be tested in isolation without driving the
+ * createServerFn RPC pipeline. The query builder must support `.eq`,
+ * `.ilike`, and `.is` chained method calls (matches Supabase JS API).
  *
  * folder_id behavior (3-way distinction — MUST be preserved):
  * - undefined (default): no folder filter — returns ALL items (backward compat for InsertMediaModal)
  * - null: items without a folder (unsorted/root)
  * - string: items in a specific folder
+ *
+ * is_downloadable behavior:
+ * - undefined: no filter — returns all items
+ * - true/false: filters by flag
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function applyMediaItemFilters(query: any, filters: MediaItemFilters | undefined): any {
+  if (filters?.type) {
+    query = query.eq('type', filters.type)
+  }
+
+  if (filters?.search) {
+    query = query.ilike('name', `%${filters.search}%`)
+  }
+
+  // folder_id: undefined = all items, null = unsorted/root, string = specific folder
+  if (filters?.folder_id !== undefined) {
+    if (filters.folder_id === null) {
+      query = query.is('folder_id', null)
+    } else {
+      query = query.eq('folder_id', filters.folder_id)
+    }
+  }
+
+  // is_downloadable: undefined = all items, true/false = filter by flag
+  if (filters?.is_downloadable !== undefined) {
+    query = query.eq('is_downloadable', filters.is_downloadable)
+  }
+
+  return query
+}
+
+/**
+ * Fetch media items with optional filters.
+ * Filter logic delegated to applyMediaItemFilters for testability.
  */
 export const getMediaItemsFn = createServerFn({ method: 'POST' })
-  .inputValidator(
-    (input: { type?: MediaType; search?: string; folder_id?: string | null }) => input
-  )
+  .inputValidator((input: MediaItemFilters) => input)
   .handler(async ({ data: filters }): Promise<MediaItemListItem[]> => {
     const supabase = createServerClient()
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let query = (supabase as any)
+    const baseQuery = (supabase as any)
       .from('media_items')
-      .select('id, name, type, url, mime_type, size_bytes, thumbnail_url, created_at, folder_id')
+      .select('id, name, type, url, mime_type, size_bytes, thumbnail_url, created_at, folder_id, is_downloadable')
       .order('created_at', { ascending: false })
 
-    if (filters?.type) {
-      query = query.eq('type', filters.type)
-    }
-
-    if (filters?.search) {
-      query = query.ilike('name', `%${filters.search}%`)
-    }
-
-    // folder_id: undefined = all items, null = unsorted/root, string = specific folder
-    if (filters?.folder_id !== undefined) {
-      if (filters.folder_id === null) {
-        query = query.is('folder_id', null)
-      } else {
-        query = query.eq('folder_id', filters.folder_id)
-      }
-    }
+    const query = applyMediaItemFilters(baseQuery, filters)
 
     const { data, error } = await query
 
@@ -110,19 +141,6 @@ export const getMediaItemFn = createServerFn({ method: 'POST' })
 // Server Functions — Presigned URL
 // ---------------------------------------------------------------------------
 
-// Allowed MIME types for direct S3 upload. Matches client-side ALLOWED_MIME_TYPES
-// in features/media/utils.ts. Validated server-side to prevent arbitrary file upload.
-const ALLOWED_UPLOAD_MIME_TYPES = [
-  'image/jpeg',
-  'image/jpg',
-  'image/png',
-  'image/gif',
-  'image/webp',
-  'image/svg+xml',
-  'video/mp4',
-  'video/webm',
-] as const
-
 // Hardcoded upload prefix — never derived from client input to prevent path traversal.
 const UPLOAD_FOLDER_PREFIX = 'haloefekt/media'
 
@@ -139,8 +157,10 @@ export const generatePresignedUrlFn = createServerFn({ method: 'POST' })
       }
 
       // SECURITY: Validate content type against allowlist — rejects .exe, text/html, etc.
+      // Single source of truth (ALLOWED_MIME_TYPES from utils) shared with client-side
+      // validation in uploadMediaToS3 / InsertMediaModal — drift impossible.
       const { fileName, contentType } = data
-      if (!(ALLOWED_UPLOAD_MIME_TYPES as readonly string[]).includes(contentType)) {
+      if (!ALLOWED_MIME_TYPES.includes(contentType)) {
         throw new Error(messages.media.fileTypeNotAllowed)
       }
 
@@ -307,6 +327,7 @@ function insertMediaItem(
         height: data.height ?? null,
         thumbnail_url: data.thumbnail_url ?? null,
         folder_id: data.folder_id ?? null,
+        is_downloadable: data.is_downloadable ?? false,
       })
       .select()
       .single()

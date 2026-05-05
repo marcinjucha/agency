@@ -9,6 +9,8 @@ export const MEDIA_TYPES = {
   vimeo: 'vimeo',
   instagram: 'instagram',
   tiktok: 'tiktok',
+  document: 'document',
+  audio: 'audio',
 } as const
 
 export type MediaType = (typeof MEDIA_TYPES)[keyof typeof MEDIA_TYPES]
@@ -29,6 +31,7 @@ export type MediaItemListItem = Pick<
   | 'size_bytes'
   | 'thumbnail_url'
   | 'folder_id'
+  | 'is_downloadable'
   | 'created_at'
 >
 
@@ -49,6 +52,7 @@ export function toMediaItemListItem(raw: unknown): MediaItemListItem {
     size_bytes: row.size_bytes,
     thumbnail_url: row.thumbnail_url,
     folder_id: row.folder_id,
+    is_downloadable: row.is_downloadable,
     created_at: row.created_at,
   }
 }
