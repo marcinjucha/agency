@@ -45,6 +45,7 @@ import { MediaPreviewDialog } from './MediaPreviewDialog'
 import { MediaCardInner } from './MediaCard'
 import { FolderTree } from './FolderTree'
 import { FolderCreateDialog } from './FolderCreateDialog'
+import { MediaModeTabs, MEDIA_MODES, type MediaMode } from './MediaModeTabs'
 import { folderKeys } from '../folder-queries'
 import { deleteFolderFn } from '../server'
 import { buildFolderTree } from '../folder-types'
@@ -83,8 +84,21 @@ function MediaGridSkeleton() {
   )
 }
 
+const MODE_STORAGE_KEY = 'media:mode'
+
+/** Read persisted mode synchronously on mount — avoids useEffect flicker. */
+function readPersistedMode(): MediaMode {
+  if (typeof window === 'undefined') return MEDIA_MODES.inline
+  const stored = window.localStorage.getItem(MODE_STORAGE_KEY)
+  if (stored === MEDIA_MODES.downloadable || stored === MEDIA_MODES.inline) {
+    return stored
+  }
+  return MEDIA_MODES.inline
+}
+
 export function MediaLibrary() {
   const queryClient = useQueryClient()
+  const [mode, setMode] = useState<MediaMode>(readPersistedMode)
   const [typeFilter, setTypeFilter] = useState<MediaType | undefined>(undefined)
   const [previewItem, setPreviewItem] = useState<MediaItemListItem | null>(null)
   const [previewOpen, setPreviewOpen] = useState(false)
@@ -109,28 +123,45 @@ export function MediaLibrary() {
 
   const folderTree = folders ? buildFolderTree(folders) : []
 
-  // Media items -- filtered by folder_id
+  // Mode → is_downloadable filter (single source of truth for query param)
+  const isDownloadable = mode === MEDIA_MODES.downloadable
+
+  // Media items — filtered by folder_id + mode
   const {
     data,
     isLoading,
     error,
     refetch,
   } = useQuery({
-    queryKey: mediaKeys.list({ type: typeFilter, folder_id: selectedFolderId }),
-    queryFn: () => getMediaItemsFn({ data: { type: typeFilter, folder_id: selectedFolderId } }),
+    queryKey: mediaKeys.list({ type: typeFilter, folder_id: selectedFolderId, is_downloadable: isDownloadable }),
+    queryFn: () => getMediaItemsFn({ data: { type: typeFilter, folder_id: selectedFolderId, is_downloadable: isDownloadable } }),
   })
 
-  // All items query (for total count in sidebar)
+  // All items query (for total count in sidebar) — scoped to current mode
   const { data: allItems } = useQuery({
-    queryKey: mediaKeys.list({ type: typeFilter }),
-    queryFn: () => getMediaItemsFn({ data: { type: typeFilter } }),
+    queryKey: mediaKeys.list({ type: typeFilter, is_downloadable: isDownloadable }),
+    queryFn: () => getMediaItemsFn({ data: { type: typeFilter, is_downloadable: isDownloadable } }),
   })
 
-  // Unsorted items query (for unsorted count in sidebar)
+  // Unsorted items query (for unsorted count in sidebar) — scoped to current mode
   const { data: unsortedItems } = useQuery({
-    queryKey: mediaKeys.list({ type: typeFilter, folder_id: null }),
-    queryFn: () => getMediaItemsFn({ data: { type: typeFilter, folder_id: null } }),
+    queryKey: mediaKeys.list({ type: typeFilter, folder_id: null, is_downloadable: isDownloadable }),
+    queryFn: () => getMediaItemsFn({ data: { type: typeFilter, folder_id: null, is_downloadable: isDownloadable } }),
   })
+
+  /**
+   * Switch library mode and persist. Resets the type filter because the type set
+   * differs per mode (e.g. 'document' is not selectable in inline mode, 'youtube'
+   * is not selectable in downloadable mode) — keeping a stale filter would yield
+   * an empty grid that's hard to debug for the user.
+   */
+  function handleModeChange(next: MediaMode) {
+    setMode(next)
+    setTypeFilter(undefined)
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(MODE_STORAGE_KEY, next)
+    }
+  }
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -319,31 +350,40 @@ export function MediaLibrary() {
         {/* Page header */}
         <h1 className="text-2xl font-bold text-foreground">{messages.media.libraryTitle}</h1>
 
-        {/* Upload zone */}
-        <MediaUploadZone onUploadComplete={handleUploadComplete} />
+        {/* Top-level mode switch — inline media vs downloadable files */}
+        <MediaModeTabs value={mode} onChange={handleModeChange} />
 
-        {/* Social media URL input */}
-        <div className="space-y-2">
-          <div className="flex gap-2">
-            <div className="relative flex-1">
-              <Link2 className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={socialUrl}
-                onChange={(e) => { setSocialUrl(e.target.value); setSocialError(null) }}
-                placeholder={messages.media.socialPlaceholder}
-                className="pl-9"
-                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddSocialUrl() } }}
-              />
+        {/* Upload zone — auto-flags items per active mode */}
+        <MediaUploadZone
+          onUploadComplete={handleUploadComplete}
+          isDownloadable={isDownloadable}
+          folderId={typeof selectedFolderId === 'string' ? selectedFolderId : null}
+        />
+
+        {/* Social media URL input — only in inline mode (embeds aren't downloadable) */}
+        {mode === MEDIA_MODES.inline && (
+          <div className="space-y-2">
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Link2 className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={socialUrl}
+                  onChange={(e) => { setSocialUrl(e.target.value); setSocialError(null) }}
+                  placeholder={messages.media.socialPlaceholder}
+                  className="pl-9"
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddSocialUrl() } }}
+                />
+              </div>
+              <Button onClick={handleAddSocialUrl} disabled={!socialUrl.trim() || isAddingSocial}>
+                {isAddingSocial ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{messages.media.adding}</> : messages.media.addButton}
+              </Button>
             </div>
-            <Button onClick={handleAddSocialUrl} disabled={!socialUrl.trim() || isAddingSocial}>
-              {isAddingSocial ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{messages.media.adding}</> : messages.media.addButton}
-            </Button>
+            {socialError && <p className="text-xs text-destructive" role="alert">{socialError}</p>}
           </div>
-          {socialError && <p className="text-xs text-destructive" role="alert">{socialError}</p>}
-        </div>
+        )}
 
-        {/* Type filter */}
-        <MediaTypeFilter value={typeFilter} onChange={setTypeFilter} />
+        {/* Type filter — pills relevant to the active mode */}
+        <MediaTypeFilter value={typeFilter} onChange={setTypeFilter} mode={mode} />
 
         {/* Delete error */}
         {deleteError && (

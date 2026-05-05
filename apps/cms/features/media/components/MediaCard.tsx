@@ -17,9 +17,10 @@ import {
   AlertDialogCancel,
   Button,
 } from '@agency/ui'
-import { Trash2, Video, Play, Image as ImageIcon, Edit2 } from 'lucide-react'
-import type { MediaItemListItem } from '../types'
+import { Trash2, Video, Play, Image as ImageIcon, Edit2, Download, FileText, Music } from 'lucide-react'
+import type { MediaItemListItem, MediaType } from '../types'
 import { formatBytes } from '../utils'
+import { messages } from '@/lib/messages'
 
 type MediaCardProps = {
   item: MediaItemListItem
@@ -29,18 +30,48 @@ type MediaCardProps = {
   selectable?: boolean
 }
 
+// All labels resolve through the single source of truth in
+// `messages.media.fileTypes`. The visual variant per type stays here
+// (it's display logic, not a label).
 function TypeBadge({ type }: { type: MediaItemListItem['type'] }) {
-  if (type === 'image') return <Badge>Obraz</Badge>
-  if (type === 'video') return <Badge variant="secondary">Wideo</Badge>
+  // DB column type is `string`, but the CHECK constraint matches MediaType.
+  // Cast to the typed union for the lookup; falls back to type as label
+  // if the DB ever returns an out-of-allowlist value (defensive).
+  const label = messages.media.fileTypes[type as MediaType] ?? type
+  if (type === 'image') return <Badge>{label}</Badge>
+  if (type === 'video') return <Badge variant="secondary">{label}</Badge>
+  if (type === 'document') return <Badge variant="secondary">{label}</Badge>
+  if (type === 'audio') return <Badge variant="secondary">{label}</Badge>
   if (type === 'youtube')
     return (
       <Badge variant="outline" className="text-orange-400 border-orange-400/50">
-        YouTube
+        {label}
       </Badge>
     )
-  if (type === 'instagram') return <Badge variant="outline">Instagram</Badge>
-  if (type === 'tiktok') return <Badge variant="outline">TikTok</Badge>
-  return <Badge variant="outline">Vimeo</Badge>
+  if (type === 'instagram') return <Badge variant="outline">{label}</Badge>
+  if (type === 'tiktok') return <Badge variant="outline">{label}</Badge>
+  return <Badge variant="outline">{label}</Badge>
+}
+
+/**
+ * Subtle indicator placed on the thumbnail when an item is flagged as downloadable.
+ * Uses bg-secondary + Download icon — distinct from the TypeBadge (top-right) by
+ * sitting on the top-LEFT corner. Always visible (not hover-only) so users can
+ * spot downloadable items at a glance even when scanning a mixed grid.
+ */
+function DownloadableIndicator() {
+  return (
+    <div
+      className="rounded-md bg-secondary/90 backdrop-blur-sm px-1.5 py-1 shadow-sm"
+      title={messages.media.downloadableBadge}
+    >
+      <Download
+        className="h-3.5 w-3.5 text-secondary-foreground"
+        aria-hidden="true"
+      />
+      <span className="sr-only">{messages.media.downloadableBadgeAria}</span>
+    </div>
+  )
 }
 
 function Thumbnail({
@@ -93,8 +124,15 @@ function Thumbnail({
     )
   }
 
-  // vimeo, video, or youtube without thumbnail — placeholder
-  const PlaceholderIcon = item.type === 'video' ? Video : Play
+  // vimeo, video, document, audio, or youtube without thumbnail — placeholder
+  const PlaceholderIcon =
+    item.type === 'video'
+      ? Video
+      : item.type === 'document'
+        ? FileText
+        : item.type === 'audio'
+          ? Music
+          : Play
 
   return (
     <button
@@ -225,6 +263,12 @@ export function MediaCardInner({
         <div className="absolute right-2 top-2 pointer-events-none">
           <TypeBadge type={item.type} />
         </div>
+        {/* Downloadable indicator — top-left overlay */}
+        {item.is_downloadable && (
+          <div className="absolute left-2 top-2 pointer-events-none">
+            <DownloadableIndicator />
+          </div>
+        )}
         {/* Selection overlay — shown when in selectable mode */}
         {selectable && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors duration-200 group-hover:bg-black/40 pointer-events-none">
