@@ -155,7 +155,7 @@ const ROOT_STYLE = [
   'box-sizing:border-box',
   'width:100%',
   'max-width:640px',
-  'margin:24px 0',
+  'margin:24px auto',
   'padding:16px 18px',
   'background-color:#ffffff',
   'border:1px solid #e7e1d4',
