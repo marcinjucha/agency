@@ -1,6 +1,6 @@
 
-import { useMemo, useState } from 'react'
-import { Clock, ChevronDown, ChevronUp } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { Check, ChevronDown, ChevronUp, Clock, Copy } from 'lucide-react'
 import {
   Badge,
   Button,
@@ -42,22 +42,29 @@ const STEP_STATUS_BADGE_CLASSES: Record<StepExecutionStatus, string> = {
   cancelled:  'border-zinc-500/30 bg-zinc-500/10 text-zinc-400',
 }
 
-// --- JSON payload collapsible block ---
+// --- JSON payload block (plain — collapse handled by parent StepCard) ---
 
 interface PayloadBlockProps {
   label: string
   payload: Record<string, unknown> | null | undefined
   /** When true, renders in red-tinted block (error display) */
   isError?: boolean
-  /** Controlled open state — driven by parent expand/collapse all */
-  open: boolean
 }
 
-function PayloadBlock({ label, payload, isError = false, open }: PayloadBlockProps) {
+function PayloadBlock({ label, payload, isError = false }: PayloadBlockProps) {
   const isEmpty =
     payload === null ||
     payload === undefined ||
     (typeof payload === 'object' && Object.keys(payload).length === 0)
+
+  const [justCopied, setJustCopied] = useState(false)
+
+  // Clear the "Skopiowano" feedback after 1.5s; cleanup on unmount/re-trigger.
+  useEffect(() => {
+    if (!justCopied) return
+    const handle = setTimeout(() => setJustCopied(false), 1500)
+    return () => clearTimeout(handle)
+  }, [justCopied])
 
   if (isEmpty) {
     return (
@@ -68,30 +75,61 @@ function PayloadBlock({ label, payload, isError = false, open }: PayloadBlockPro
     )
   }
 
+  const json = JSON.stringify(payload, null, 2)
+
+  const handleCopy = () => {
+    if (typeof navigator === 'undefined' || !navigator.clipboard?.writeText) {
+      console.warn('Clipboard API unavailable — payload copy skipped')
+      return
+    }
+    navigator.clipboard.writeText(json).then(
+      () => setJustCopied(true),
+      (err) => console.warn('Clipboard write failed', err)
+    )
+  }
+
   return (
-    <Collapsible open={open}>
-      <p
-        className={cn(
-          'text-xs font-medium',
-          isError ? 'text-red-400' : 'text-muted-foreground'
-        )}
-      >
-        {label}
-      </p>
-      <CollapsibleContent>
-        <pre
+    <div>
+      <div className="flex items-center justify-between gap-2">
+        <p
           className={cn(
-            'mt-1.5 overflow-x-auto overflow-y-auto rounded-md p-3 font-mono text-xs',
-            'max-h-48',
-            isError
-              ? 'border border-red-500/20 bg-red-500/5 text-red-300'
-              : 'bg-muted/50 text-foreground'
+            'text-xs font-medium',
+            isError ? 'text-red-400' : 'text-muted-foreground'
           )}
         >
-          {JSON.stringify(payload, null, 2)}
-        </pre>
-      </CollapsibleContent>
-    </Collapsible>
+          {label}
+        </p>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={handleCopy}
+          className="h-6 w-6 text-muted-foreground hover:text-foreground"
+          aria-label={
+            justCopied
+              ? messages.workflows.copyPayloadDone
+              : messages.workflows.copyPayload
+          }
+        >
+          {justCopied ? (
+            <Check className="h-3.5 w-3.5" aria-hidden="true" />
+          ) : (
+            <Copy className="h-3.5 w-3.5" aria-hidden="true" />
+          )}
+        </Button>
+      </div>
+      <pre
+        className={cn(
+          'mt-1.5 overflow-x-auto overflow-y-auto rounded-md p-3 font-mono text-xs',
+          'max-h-48',
+          isError
+            ? 'border border-red-500/20 bg-red-500/5 text-red-300'
+            : 'bg-muted/50 text-foreground'
+        )}
+      >
+        {json}
+      </pre>
+    </div>
   )
 }
 
@@ -106,6 +144,11 @@ interface StepCardProps {
 }
 
 function StepCard({ step, allExpanded, snapshotStep }: StepCardProps) {
+  // Per-step collapse state — `allExpanded` is the INITIAL value only. Parent
+  // remounts via `key={...}-${expandKey}` when the global toggle flips, which
+  // re-runs this initializer with the new value.
+  const [isExpanded, setIsExpanded] = useState(allExpanded)
+
   const stepTypeLabel =
     ((snapshotStep?.step_config as unknown as Record<string, unknown> | undefined)?._name as string | undefined)
     ?? STEP_TYPE_LABELS[snapshotStep?.step_type as keyof typeof STEP_TYPE_LABELS]
@@ -129,74 +172,92 @@ function StepCard({ step, allExpanded, snapshotStep }: StepCardProps) {
         borderClass
       )}
     >
-      {/* Step header row */}
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className="text-sm font-medium text-foreground">{stepTypeLabel}</span>
-        <Badge
-          variant="outline"
-          className={cn('text-xs font-normal', badgeClass)}
-          title={step.status === 'cancelled' ? messages.workflows.stepCancelledTooltip : undefined}
-        >
-          {statusLabel}
-        </Badge>
-      </div>
-
-      {/* Timestamps */}
-      <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1.5 sm:grid-cols-3">
-        <div>
-          <p className="text-xs text-muted-foreground">{messages.workflows.stepStarted}</p>
-          <p className="text-xs text-foreground">{formatDate(step.started_at)}</p>
+      <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
+        {/* Step header row */}
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span className="text-sm font-medium text-foreground">{stepTypeLabel}</span>
+          <div className="flex items-center gap-2">
+            <Badge
+              variant="outline"
+              className={cn('text-xs font-normal', badgeClass)}
+              title={step.status === 'cancelled' ? messages.workflows.stepCancelledTooltip : undefined}
+            >
+              {statusLabel}
+            </Badge>
+            <CollapsibleTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                aria-label={isExpanded ? messages.workflows.stepCollapse : messages.workflows.stepExpand}
+                aria-expanded={isExpanded}
+              >
+                <ChevronDown
+                  className={cn(
+                    'h-4 w-4 transition-transform duration-150',
+                    isExpanded && 'rotate-180'
+                  )}
+                  aria-hidden="true"
+                />
+              </Button>
+            </CollapsibleTrigger>
+          </div>
         </div>
-        <div>
-          <p className="text-xs text-muted-foreground">{messages.workflows.stepCompleted}</p>
-          <p className="text-xs text-foreground">{formatDate(step.completed_at)}</p>
-        </div>
-        <div>
-          <p className="text-xs text-muted-foreground">{messages.workflows.stepDuration}</p>
-          <p className="text-xs text-foreground">
-            {formatExecutionDuration(step.started_at, step.completed_at)}
-          </p>
-        </div>
-      </div>
 
-      {/* Delay waiting: show resume_at */}
-      {step.status === 'waiting' && step.resume_at && (
-        <div className="mt-3 flex items-center gap-1.5 text-xs text-amber-400">
-          <Clock className="h-3.5 w-3.5 flex-shrink-0" aria-hidden="true" />
-          <span>
-            {messages.workflows.stepResumeAt}:{' '}
-            <span className="font-medium">{formatDate(step.resume_at)}</span>
-          </span>
+        {/* Timestamps */}
+        <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1.5 sm:grid-cols-3">
+          <div>
+            <p className="text-xs text-muted-foreground">{messages.workflows.stepStarted}</p>
+            <p className="text-xs text-foreground">{formatDate(step.started_at)}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">{messages.workflows.stepCompleted}</p>
+            <p className="text-xs text-foreground">{formatDate(step.completed_at)}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">{messages.workflows.stepDuration}</p>
+            <p className="text-xs text-foreground">
+              {formatExecutionDuration(step.started_at, step.completed_at)}
+            </p>
+          </div>
         </div>
-      )}
 
-      {/* Payload section — side-by-side on md+ */}
-      <div className="mt-4 border-t border-border/60 pt-3">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Input */}
-          <PayloadBlock
-            label={messages.workflows.stepInput}
-            payload={step.input_payload}
-            open={allExpanded}
-          />
+        {/* Delay waiting: show resume_at */}
+        {step.status === 'waiting' && step.resume_at && (
+          <div className="mt-3 flex items-center gap-1.5 text-xs text-amber-400">
+            <Clock className="h-3.5 w-3.5 flex-shrink-0" aria-hidden="true" />
+            <span>
+              {messages.workflows.stepResumeAt}:{' '}
+              <span className="font-medium">{formatDate(step.resume_at)}</span>
+            </span>
+          </div>
+        )}
 
-          {/* Error block (failed step) or Output */}
-          {errorPayload ? (
+        {/* Payload section — vertical stack, collapsible per step */}
+        <CollapsibleContent>
+          <div className="mt-4 space-y-4 border-t border-border/60 pt-3">
+            {/* Input */}
             <PayloadBlock
-              label={messages.workflows.stepError}
-              payload={errorPayload}
-              isError
-              open={allExpanded}
+              label={messages.workflows.stepInput}
+              payload={step.input_payload}
             />
-          ) : (
-            <PayloadBlock
-              label={messages.workflows.stepOutput}
-              payload={step.output_payload}
-              open={allExpanded}
-            />
-          )}
-        </div>
-      </div>
+
+            {/* Error block (failed step) or Output */}
+            {errorPayload ? (
+              <PayloadBlock
+                label={messages.workflows.stepError}
+                payload={errorPayload}
+                isError
+              />
+            ) : (
+              <PayloadBlock
+                label={messages.workflows.stepOutput}
+                payload={step.output_payload}
+              />
+            )}
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
     </div>
   )
 }
