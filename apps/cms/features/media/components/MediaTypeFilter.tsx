@@ -1,5 +1,5 @@
 import { Tabs, TabsList, TabsTrigger } from '@agency/ui'
-import type { MediaType } from '../types'
+import { DOWNLOADABLE_MEDIA_TYPES, type MediaType } from '../types'
 import type { MediaMode } from './MediaModeTabs'
 import { messages } from '@/lib/messages'
 
@@ -13,12 +13,12 @@ type MediaTypeFilterProps = {
 /**
  * Type-relevance matrix per library mode.
  *  - inline: image + video + social embeds (what you'd embed in a blog post)
- *  - downloadable: image + video + document + audio (downloadable file types only —
- *    social embeds are URLs, not files, so they cannot be downloaded)
+ *  - downloadable: pulled from DOWNLOADABLE_MEDIA_TYPES (single source of truth in types.ts) —
+ *    social embeds are URLs, not files, so they cannot be downloaded
  */
 const TYPES_BY_MODE: Record<MediaMode, readonly MediaType[]> = {
   inline: ['image', 'video', 'youtube', 'vimeo', 'instagram', 'tiktok'],
-  downloadable: ['image', 'video', 'document', 'audio'],
+  downloadable: DOWNLOADABLE_MEDIA_TYPES,
 }
 
 // Pulls labels from the single source of truth in messages.media.fileTypes.

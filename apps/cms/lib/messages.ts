@@ -163,6 +163,19 @@ export const messages = {
     statusInactive: 'Nieaktywna',
   },
 
+  // Shared Tiptap editor (used by blog, shop-products, legal-pages, landing).
+  // Per-consumer labels come from the consumer's namespace (e.g. blog.toolbar) —
+  // strings here are generic fallbacks for cases where a consumer wires a
+  // toolbar handler without supplying a label.
+  editor: {
+    toolbar: {
+      // Fallback for `downloadModalLabel` prop on EditorToolbar — only renders
+      // if a future consumer wires `onOpenDownloadModal` without passing a label.
+      // Blog's wrapper (TiptapEditor) supplies messages.blog.toolbar.insertDownload.
+      insertDownloadFallback: 'Wstaw plik do pobrania',
+    },
+  },
+
   blog: {
     // BlogPostEditor
     newPost: 'Nowy artykuł',
@@ -267,6 +280,27 @@ export const messages = {
       editorBadge: 'Plik do pobrania',
       removeBlock: 'Usuń blok pliku',
       unnamedFile: 'Plik bez nazwy',
+    },
+    // Editor toolbar — blog-specific buttons (insert flows)
+    toolbar: {
+      insertDownload: 'Wstaw plik do pobrania',
+    },
+    // Downloadable asset picker modal (toolbar entry point — AAA-T-110 iter 4)
+    downloadModal: {
+      title: 'Wybierz plik do pobrania',
+      search: 'Szukaj pliku…',
+      empty:
+        'Brak plików do pobrania w bibliotece. Prześlij nowy plik poniżej lub przejdź do Biblioteki Mediów i oznacz istniejący plik jako „do pobrania”.',
+      uploadCta: 'Prześlij nowy plik',
+      cancel: 'Anuluj',
+      goToLibrary: 'Przejdź do Biblioteki Mediów',
+      loading: 'Ładowanie plików…',
+      loadFailed: 'Nie udało się pobrać plików.',
+      retry: 'Spróbuj ponownie',
+      uploadFailed: 'Nie udało się przesłać pliku.',
+      uploading: 'Przesyłanie…',
+      noResults: 'Brak wyników dla bieżących filtrów.',
+      filterByType: 'Filtruj po typie',
     },
   },
 
@@ -1908,6 +1942,7 @@ export const messages = {
 export const templates = {
   blog: {
     addCategory: (name: string) => `Dodaj: ${name}`,
+    selectDownloadAriaLabel: (name: string) => `Wstaw plik: ${name}`,
   },
   media: {
     fileTooLarge: (limitMB: number) => `Plik za duży. Max: ${limitMB}MB.`,

@@ -94,8 +94,13 @@ export function isDownloadableMediaType(type: MediaType): boolean {
   return type === 'document' || type === 'audio'
 }
 
-/** Returns the per-type max upload size in bytes. */
-function resolveMaxSize(mimeType: string): number {
+/**
+ * Returns the per-mime-type max upload size in bytes.
+ * Single source of truth — used by uploadMediaToS3 (browser-side validation),
+ * MediaUploadZone (per-job size check), and InsertDownloadableAssetModal
+ * (single-file upload size check).
+ */
+export function getMaxSizeForMime(mimeType: string): number {
   if (mimeType.startsWith('video/')) return VIDEO_MAX_SIZE
   if (mimeType.startsWith('audio/')) return AUDIO_MAX_SIZE
   if (mimeType.startsWith('application/')) return DOCUMENT_MAX_SIZE
@@ -122,7 +127,7 @@ export async function uploadMediaToS3(
     throw new Error(messages.media.fileTypeNotAllowed)
   }
 
-  const maxSize = resolveMaxSize(file.type)
+  const maxSize = getMaxSizeForMime(file.type)
   if (file.size > maxSize) {
     const limitMB = maxSize / (1024 * 1024)
     throw new Error(templates.media.fileTooLarge(limitMB))

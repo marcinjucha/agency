@@ -7,10 +7,7 @@ import { createMediaItemFn, generatePresignedUrlFn } from '../server'
 import type { MediaType } from '../types'
 import {
   ALLOWED_MIME_TYPES,
-  AUDIO_MAX_SIZE,
-  DOCUMENT_MAX_SIZE,
-  IMAGE_MAX_SIZE,
-  VIDEO_MAX_SIZE,
+  getMaxSizeForMime,
   getMediaTypeFromMime,
 } from '../utils'
 import { messages, templates } from '@/lib/messages'
@@ -41,14 +38,6 @@ function detectMediaType(mime: string): MediaType {
   // Use registry-backed lookup; fall back to image for safety (server gates on
   // ALLOWED_MIME_TYPES anyway, so fallback path is unreachable in practice).
   return getMediaTypeFromMime(mime) ?? 'image'
-}
-
-/** Resolve max-size for upload validation, mirrors server-side resolveMaxSize. */
-function resolveMaxSize(mimeType: string): number {
-  if (mimeType.startsWith('video/')) return VIDEO_MAX_SIZE
-  if (mimeType.startsWith('audio/')) return AUDIO_MAX_SIZE
-  if (mimeType.startsWith('application/')) return DOCUMENT_MAX_SIZE
-  return IMAGE_MAX_SIZE
 }
 
 async function simulateProgress(
@@ -101,7 +90,7 @@ export function MediaUploadZone({ onUploadComplete, isDownloadable = false, fold
     }
 
     // Validate size — registry-aware so document/audio uploads use correct limits
-    const maxSize = resolveMaxSize(file.type)
+    const maxSize = getMaxSizeForMime(file.type)
     if (file.size > maxSize) {
       const limitMB = maxSize / (1024 * 1024)
       setJobField(index, {
