@@ -18,6 +18,7 @@ import {
   type GoogleCredentials,
   type ProviderCalendarEventInput,
 } from '@agency/calendar'
+import { findAnswerByRole, type BookingCreatedPayload } from '@agency/validators'
 import type { BookingRequest, BookingResult, BookingError } from './types'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
@@ -49,10 +50,16 @@ interface CalendarEventResult {
   connectionId: string | null
 }
 
+interface ClientIdentity {
+  name: string
+  email: string
+}
+
 async function createCalendarEvent(
   supabase: SupabaseClient,
   surveyLinkId: string,
-  data: BookingRequest
+  data: BookingRequest,
+  client: ClientIdentity
 ): Promise<CalendarEventResult> {
   const noEvent: CalendarEventResult = {
     eventId: null,
@@ -79,12 +86,12 @@ async function createCalendarEvent(
   })
 
   const eventInput: ProviderCalendarEventInput = {
-    summary: `Appointment: ${data.clientName}`,
-    description: `Client: ${data.clientName}\nEmail: ${data.clientEmail}\nNotes: ${data.notes || 'N/A'}`,
+    summary: `Appointment: ${client.name}`,
+    description: `Client: ${client.name}\nEmail: ${client.email}`,
     start: data.startTime,
     end: data.endTime,
     timeZone: 'Europe/Warsaw',
-    attendees: [{ email: data.clientEmail }],
+    attendees: [{ email: client.email }],
   }
 
   const eventResult = await provider.createEvent(eventInput)
@@ -123,10 +130,13 @@ export async function bookAppointment(
   supabase: SupabaseClient,
   data: BookingRequest
 ): Promise<{ success: true; data: BookingResult } | { success: false; error: BookingError }> {
-  // Step 1: Validate survey exists and get lawyer info
+  // Step 1: Validate survey exists and get lawyer info + survey questions.
+  // AAA-T-63: booking_workflow_id added in Commit 1 — main repo's types.ts catches up on merge.
+  // `surveys.questions` (JSONB) is needed to resolve semantic_role -> answer mapping
+  // when extracting client identity from `responses.answers` below.
   const { data: surveyLink, error: surveyError } = await supabase
     .from('survey_links')
-    .select('surveys(id, created_by, tenant_id)')
+    .select('booking_workflow_id, surveys(id, created_by, tenant_id, questions)')
     .eq('id', data.surveyId)
     .single()
 
@@ -137,18 +147,30 @@ export async function bookAppointment(
     }
   }
 
-  const survey = surveyLink.surveys as unknown as {
-    id: string
-    created_by: string
-    tenant_id: string
+  // AAA-T-63: booking_workflow_id is a top-level survey_links column (nullable).
+  // `surveys.questions` is JSONB typed as `unknown[]` — extractClientInfo casts internally.
+  const surveyLinkRow = surveyLink as unknown as {
+    booking_workflow_id: string | null
+    surveys: {
+      id: string
+      created_by: string
+      tenant_id: string
+      questions: unknown[] | null
+    }
   }
+  const survey = surveyLinkRow.surveys
   const userId = survey.created_by
   const tenantId = survey.tenant_id
+  const surveyQuestions = survey.questions ?? []
 
-  // Step 2: Validate response exists and belongs to this survey
+  // Step 2: Validate response exists and belongs to this survey.
+  // Client identity is derived from `responses.answers` JSONB (the booking
+  // widget no longer asks the client to re-type name/email). The survey
+  // questions tagged with `semantic_role: 'client_name' / 'client_email'`
+  // are the canonical source.
   const { data: response, error: responseError } = await supabase
     .from('responses')
-    .select('id, survey_link_id')
+    .select('id, survey_link_id, answers')
     .eq('id', data.responseId)
     .eq('survey_link_id', data.surveyId)
     .single()
@@ -162,6 +184,41 @@ export async function bookAppointment(
         status: 404,
       },
     }
+  }
+
+  const responseRow = response as {
+    id: string
+    survey_link_id: string
+    answers: Record<string, unknown> | null
+  }
+
+  // Strict extraction — booking flow MUST have a real name AND email.
+  // Use findAnswerByRole (returns null when the role is unmapped or the answer
+  // is blank) instead of extractClientInfo which would substitute "first answer"
+  // or "Odpowiedź #N" — those fallbacks are fine for CMS UI labels but would
+  // put garbage like "yes, I agree" on calendar invites and trigger payloads.
+  const answers = responseRow.answers ?? {}
+  const clientName = findAnswerByRole(answers, surveyQuestions, 'client_name')
+  const clientEmail = findAnswerByRole(answers, surveyQuestions, 'client_email')
+
+  if (!clientName || !clientEmail) {
+    // Defensive: surveys feeding the booking widget must tag a question with
+    // `semantic_role: 'client_name'` and another with `'client_email'`, and
+    // the respondent must have answered both. If we ever land here in
+    // production, the upstream survey wiring is broken.
+    return {
+      success: false,
+      error: {
+        error: messages.calendar.surveyMissingClientFields,
+        code: 'RESPONSE_MISSING_CLIENT_DATA',
+        status: 422,
+      },
+    }
+  }
+
+  const client: ClientIdentity = {
+    name: clientName,
+    email: clientEmail,
   }
 
   // Step 3: Check for double-booking conflicts
@@ -203,7 +260,8 @@ export async function bookAppointment(
     }
   }
 
-  // Step 4: Create appointment in database
+  // Step 4: Create appointment row. Client identity lives on the linked
+  // response (extractClientInfo from answers JSONB).
   const { data: newAppointment, error: createError } = await supabase
     .from('appointments')
     .insert({
@@ -212,9 +270,6 @@ export async function bookAppointment(
       tenant_id: tenantId,
       start_time: data.startTime,
       end_time: data.endTime,
-      client_name: data.clientName,
-      client_email: data.clientEmail,
-      notes: data.notes || null,
       status: 'scheduled',
     })
     .select()
@@ -233,7 +288,22 @@ export async function bookAppointment(
   }
 
   // Trigger CMS workflow engine (fire-and-forget)
-  if (process.env.CMS_BASE_URL && process.env.WORKFLOW_TRIGGER_SECRET) {
+  // AAA-T-63: skip dispatch when no workflow attached for booking trigger on this link
+  if (
+    process.env.CMS_BASE_URL &&
+    process.env.WORKFLOW_TRIGGER_SECRET &&
+    surveyLinkRow.booking_workflow_id
+  ) {
+    // WHY BookingCreatedPayload: shared type from @agency/validators ensures the payload
+    // fields here stay in sync with what the CMS engine/types.ts expects and what
+    // lib/trigger-schemas.ts declares as available {{variables}}. Changing the payload
+    // shape without updating the shared type is now a compile-time error.
+    const triggerPayload: BookingCreatedPayload = {
+      appointmentId: newAppointment.id,
+      responseId: data.responseId,
+      surveyLinkId: data.surveyId,
+    }
+
     fetch(`${process.env.CMS_BASE_URL}/api/workflows/trigger`, {
       method: 'POST',
       headers: {
@@ -242,21 +312,16 @@ export async function bookAppointment(
       },
       body: JSON.stringify({
         trigger_type: 'booking_created',
+        workflow_id: surveyLinkRow.booking_workflow_id,
         tenant_id: tenantId,
-        payload: {
-          appointmentId: newAppointment.id,
-          responseId: data.responseId,
-          surveyLinkId: data.surveyId,
-          clientEmail: data.clientEmail,
-          appointmentAt: data.startTime,
-        },
+        payload: triggerPayload,
       }),
     }).catch((err) => console.error('[Workflow] booking_created trigger failed:', err))
   }
 
   // Step 5: Create calendar event via multi-provider system (graceful degradation)
   try {
-    const calendarResult = await createCalendarEvent(supabase, data.surveyId, data)
+    const calendarResult = await createCalendarEvent(supabase, data.surveyId, data, client)
 
     if (calendarResult.eventId) {
       const { error: updateError } = await supabase
@@ -284,8 +349,9 @@ export async function bookAppointment(
         id: newAppointment.id,
         startTime: newAppointment.start_time,
         endTime: newAppointment.end_time,
-        clientName: newAppointment.client_name,
-        clientEmail: newAppointment.client_email,
+        // Sourced from `client` (derived from response.answers via findAnswerByRole).
+        clientName: client.name,
+        clientEmail: client.email,
         status: newAppointment.status,
         createdAt: newAppointment.created_at,
       },

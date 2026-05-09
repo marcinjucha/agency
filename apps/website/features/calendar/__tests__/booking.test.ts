@@ -96,6 +96,7 @@ vi.mock('@/lib/messages', () => ({
     calendar: {
       surveyNotFound: 'Survey not found',
       responseNotFound: 'Response not found',
+      surveyMissingClientFields: 'Survey missing client fields',
       availabilityCheckFailed: 'Availability check failed',
       slotUnavailable: 'Slot unavailable',
       appointmentCreationFailed: 'Appointment creation failed',
@@ -138,29 +139,83 @@ const USER_ID = '44444444-4444-4444-4444-444444444444'
 const TENANT_ID = '55555555-5555-5555-5555-555555555555'
 const APPOINTMENT_ID = '66666666-6666-6666-6666-666666666666'
 const CONNECTION_ID = '77777777-7777-7777-7777-777777777777'
+const BOOKING_WORKFLOW_ID = '00000000-0000-0000-0000-000000000bbb'
+
+// Question IDs used both in `surveys.questions` (with semantic_role) AND as
+// keys in `responses.answers` — that's how findAnswerByRole resolves the
+// `client_name` / `client_email` roles.
+const Q_NAME_ID = 'qq-name-aaaa-aaaa-aaaaaaaaaaaa'
+const Q_EMAIL_ID = 'qq-mail-bbbb-bbbb-bbbbbbbbbbbb'
 
 function validBookingRequest() {
+  // AAA-T-63 (Commit 9): clientName/clientEmail/notes removed —
+  // derived server-side from response.answers via semantic_role.
   return {
     surveyId: SURVEY_LINK_ID,
     responseId: RESPONSE_ID,
     startTime: '2026-04-10T10:00:00Z',
     endTime: '2026-04-10T11:00:00Z',
-    clientName: 'Jan Kowalski',
-    clientEmail: 'jan@test.pl',
-    notes: '',
   }
 }
 
-function mockSurveyLinkFound() {
+function defaultSurveyQuestions() {
+  // Mirrors the shape of `surveys.questions` JSONB — only the fields
+  // findAnswerByRole reads (`id` + `semantic_role`) matter here.
+  return [
+    {
+      id: Q_NAME_ID,
+      type: 'text',
+      question: 'Jak masz na imię?',
+      required: true,
+      order: 0,
+      semantic_role: 'client_name',
+    },
+    {
+      id: Q_EMAIL_ID,
+      type: 'email',
+      question: 'Twój email?',
+      required: true,
+      order: 1,
+      semantic_role: 'client_email',
+    },
+  ]
+}
+
+function mockSurveyLinkFound(bookingWorkflowId: string | null = null) {
   tableQueries['survey_links'] = createChainableQuery({
-    data: { surveys: { id: SURVEY_ID, created_by: USER_ID, tenant_id: TENANT_ID } },
+    data: {
+      booking_workflow_id: bookingWorkflowId,
+      surveys: {
+        id: SURVEY_ID,
+        created_by: USER_ID,
+        tenant_id: TENANT_ID,
+        questions: defaultSurveyQuestions(),
+      },
+    },
     error: null,
   })
 }
 
-function mockResponseFound() {
+/**
+ * Mock the response row.
+ *
+ * `answers` defaults to a populated client_name + client_email keyed by the
+ * semantic_role question IDs. Pass `answers: { ... }` explicitly to override
+ * (e.g. to simulate missing email for the RESPONSE_MISSING_CLIENT_DATA case).
+ */
+function mockResponseFound(
+  overrides: Partial<{ answers: Record<string, unknown> }> = {},
+) {
+  const defaultAnswers: Record<string, unknown> = {
+    [Q_NAME_ID]: 'Jan Kowalski',
+    [Q_EMAIL_ID]: 'jan@test.pl',
+  }
   tableQueries['responses'] = createChainableQuery({
-    data: { id: RESPONSE_ID, survey_link_id: SURVEY_LINK_ID },
+    data: {
+      id: RESPONSE_ID,
+      survey_link_id: SURVEY_LINK_ID,
+      answers: 'answers' in overrides ? overrides.answers : defaultAnswers,
+    },
     error: null,
   })
 }
@@ -176,6 +231,9 @@ function mockNoConflicts() {
 
 function mockAppointmentCreated() {
   // The insert chain: .insert().select().single()
+  // The appointments table does NOT store client_name/client_email/notes —
+  // client identity is sourced from response.answers by the booking handler,
+  // not read back from the inserted row.
   const appointmentData = {
     id: APPOINTMENT_ID,
     response_id: RESPONSE_ID,
@@ -183,9 +241,6 @@ function mockAppointmentCreated() {
     tenant_id: TENANT_ID,
     start_time: '2026-04-10T10:00:00Z',
     end_time: '2026-04-10T11:00:00Z',
-    client_name: 'Jan Kowalski',
-    client_email: 'jan@test.pl',
-    notes: null,
     status: 'scheduled',
     created_at: '2026-04-10T08:00:00Z',
     calendar_event_id: null,
@@ -432,11 +487,44 @@ describe('bookAppointment', () => {
   })
 
   // -------------------------------------------------------------------------
+  // 6b. AAA-T-63 (Commit 9 / Iter 1): response.answers missing client_email
+  // role — must fail strictly (not fall back to "first answer").
+  // -------------------------------------------------------------------------
+
+  it('returns RESPONSE_MISSING_CLIENT_DATA when answers do not cover client_email role', async () => {
+    mockSurveyLinkFound()
+    // Only the client_name role is answered — client_email role question
+    // exists in `surveys.questions` but the respondent left it blank.
+    mockResponseFound({ answers: { [Q_NAME_ID]: 'Jan Kowalski' } })
+
+    const result = await bookAppointment(mockSupabase as any, validBookingRequest())
+
+    expect(result.success).toBe(false)
+    if (result.success) return
+
+    expect(result.error.code).toBe('RESPONSE_MISSING_CLIENT_DATA')
+    expect(result.error.status).toBe(422)
+  })
+
+  it('returns RESPONSE_MISSING_CLIENT_DATA when answers do not cover client_name role', async () => {
+    mockSurveyLinkFound()
+    mockResponseFound({ answers: { [Q_EMAIL_ID]: 'jan@test.pl' } })
+
+    const result = await bookAppointment(mockSupabase as any, validBookingRequest())
+
+    expect(result.success).toBe(false)
+    if (result.success) return
+
+    expect(result.error.code).toBe('RESPONSE_MISSING_CLIENT_DATA')
+    expect(result.error.status).toBe(422)
+  })
+
+  // -------------------------------------------------------------------------
   // 7. Workflow trigger fires after successful booking
   // -------------------------------------------------------------------------
 
   it('fires booking_created workflow trigger after successful appointment', async () => {
-    mockSurveyLinkFound()
+    mockSurveyLinkFound(BOOKING_WORKFLOW_ID)
     mockResponseFound()
     mockAppointmentCreated()
     mockGetConnectionForSurveyLink.mockResolvedValue(err('No connection'))
@@ -456,9 +544,31 @@ describe('bookAppointment', () => {
     const body = JSON.parse(options.body)
     expect(body.trigger_type).toBe('booking_created')
     expect(body.tenant_id).toBe(TENANT_ID)
+    expect(body.workflow_id).toBe(BOOKING_WORKFLOW_ID)
     expect(body.payload.appointmentId).toBe(APPOINTMENT_ID)
     expect(body.payload.responseId).toBe(RESPONSE_ID)
-    expect(body.payload.clientEmail).toBe('jan@test.pl')
+    expect(body.payload.surveyLinkId).toBe(SURVEY_LINK_ID)
+    // AAA-T-63 Commit 7: trigger payload carries IDs only — no clientEmail/appointmentAt.
+    // Hydration of appointment data happens via explicit get_appointment step (Commit 8).
+    expect(body.payload).not.toHaveProperty('clientEmail')
+    expect(body.payload).not.toHaveProperty('appointmentAt')
+  })
+
+  // -------------------------------------------------------------------------
+  // 7b. AAA-T-63: skip workflow trigger dispatch when booking_workflow_id is null
+  // -------------------------------------------------------------------------
+
+  it('skips workflow trigger dispatch when booking_workflow_id is null', async () => {
+    mockSurveyLinkFound(null)
+    mockResponseFound()
+    mockAppointmentCreated()
+    mockGetConnectionForSurveyLink.mockResolvedValue(err('No connection'))
+
+    const result = await bookAppointment(mockSupabase as any, validBookingRequest())
+
+    // Appointment still created — only the trigger dispatch is skipped
+    expect(result.success).toBe(true)
+    expect(mockFetch).not.toHaveBeenCalled()
   })
 
   // -------------------------------------------------------------------------
@@ -532,7 +642,8 @@ describe('bookAppointment', () => {
   it('does not fire workflow trigger when CMS_BASE_URL is not set', async () => {
     vi.stubEnv('CMS_BASE_URL', '')
 
-    mockSurveyLinkFound()
+    // Use a populated booking_workflow_id so the env-var guard is the only thing skipping dispatch
+    mockSurveyLinkFound(BOOKING_WORKFLOW_ID)
     mockResponseFound()
     mockAppointmentCreated()
     mockGetConnectionForSurveyLink.mockResolvedValue(err('No connection'))

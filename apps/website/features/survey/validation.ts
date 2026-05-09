@@ -11,25 +11,9 @@ import { z } from 'zod'
 import type { Question } from './types'
 import { messages } from '@/lib/messages'
 
-// --- Booking form ---
-
-export const bookingFormSchema = z.object({
-  clientName: z
-    .string()
-    .min(2, messages.validation.nameTooShort)
-    .max(100, messages.validation.nameTooLong),
-  clientEmail: z
-    .string()
-    .min(1, messages.validation.emailRequired)
-    .email(messages.validation.invalidEmail),
-  notes: z
-    .string()
-    .max(500, messages.validation.notesTooLong)
-    .optional()
-    .default(''),
-})
-
-export type BookingFormData = z.infer<typeof bookingFormSchema>
+// AAA-T-63 (Commit 9): bookingFormSchema removed.
+// Booking widget no longer collects clientName/clientEmail/notes — they are
+// derived server-side from the survey response. See BookingForm.tsx.
 
 /**
  * Dynamically generate Zod schema from survey questions

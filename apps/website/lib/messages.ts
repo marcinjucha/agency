@@ -48,12 +48,6 @@ export const messages = {
     calendarError: 'Błąd kalendarza',
     selectedAppointment: 'Wybrany termin:',
     at: 'o',
-    yourName: 'Twoje imię i nazwisko',
-    yourNamePlaceholder: 'Jan Kowalski',
-    emailAddress: 'Adres email',
-    emailPlaceholder: 'jan@przyklad.pl',
-    additionalNotes: 'Dodatkowe uwagi (opcjonalne)',
-    notesPlaceholder: 'Opisz swoją sprawę lub szczególne wymagania…',
     selectTimeSlot: 'Wybierz termin',
     bookingError: 'Błąd rezerwacji',
     bookingFailed: 'Rezerwacja nie powiodła się. Spróbuj ponownie.',
@@ -68,6 +62,8 @@ export const messages = {
     // booking.ts errors (user-visible, codes stay in English)
     surveyNotFound: 'Nie znaleziono ankiety',
     responseNotFound: 'Nie znaleziono odpowiedzi lub nie pasuje do ankiety',
+    surveyMissingClientFields:
+      'Ankieta nie ma poprawnie oznaczonych pytań o imię i email. Skontaktuj się z administratorem.',
     availabilityCheckFailed: 'Nie udało się sprawdzić dostępności',
     slotUnavailable: 'Wybrany termin nie jest już dostępny',
     appointmentCreationFailed: 'Nie udało się utworzyć wizyty',
@@ -123,9 +119,6 @@ export const messages = {
     selectOption: 'Wybierz opcję',
     selectAtLeastOne: 'Wybierz co najmniej jedną opcję',
     consentRequired: 'Musisz wyrazić zgodę, aby wysłać formularz',
-    nameTooShort: 'Imię musi mieć co najmniej 2 znaki',
-    nameTooLong: 'Imię jest za długie',
-    notesTooLong: 'Notatki nie mogą przekraczać 500 znaków',
     selectPlaceholder: 'Wybierz opcję…',
   },
 } as const

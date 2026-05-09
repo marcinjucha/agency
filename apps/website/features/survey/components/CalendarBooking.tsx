@@ -1,9 +1,6 @@
 import { useState } from 'react'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { Button, Card } from '@agency/ui'
+import { Card } from '@agency/ui'
 import { messages } from '@/lib/messages'
-import { bookingFormSchema, type BookingFormData } from '../validation'
 import type { CalendarSlot } from '../types'
 import { BookingSuccess } from './BookingSuccess'
 import { BookingForm } from './BookingForm'
@@ -15,6 +12,13 @@ interface CalendarBookingProps {
   responseId: string
 }
 
+/**
+ * Booking flow orchestrator.
+ *
+ * AAA-T-63 (Commit 9): React Hook Form removed — the booking widget no longer
+ * collects client name/email/notes (derived server-side from the response).
+ * State is plain useState; submit is a click handler on the confirm button.
+ */
 export function CalendarBooking({ surveyId, responseId }: CalendarBookingProps) {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [selectedSlot, setSelectedSlot] = useState<CalendarSlot | null>(null)
@@ -22,16 +26,9 @@ export function CalendarBooking({ surveyId, responseId }: CalendarBookingProps) 
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<BookingFormData>({
-    resolver: zodResolver(bookingFormSchema as any),
-    mode: 'onBlur',
-  })
+  const onSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
 
-  const onSubmit = async (data: BookingFormData) => {
     if (!selectedSlot) {
       setSubmitError(messages.calendar.selectTimeSlot)
       return
@@ -47,9 +44,6 @@ export function CalendarBooking({ surveyId, responseId }: CalendarBookingProps) 
           responseId,
           startTime: selectedSlot.start,
           endTime: selectedSlot.end,
-          clientName: data.clientName,
-          clientEmail: data.clientEmail,
-          notes: data.notes || '',
         },
       })
 
@@ -85,7 +79,6 @@ export function CalendarBooking({ surveyId, responseId }: CalendarBookingProps) 
       <div className="max-w-4xl mx-auto">
         <Card className="shadow-xl border-0">
           <div className="p-8 sm:p-12">
-            {/* Header */}
             <div className="mb-8 pb-6 border-b border-border">
               <h1 className="text-4xl font-bold text-foreground mb-3">
                 {messages.calendar.bookAppointment}
@@ -95,7 +88,7 @@ export function CalendarBooking({ surveyId, responseId }: CalendarBookingProps) 
               </p>
             </div>
 
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
+            <form onSubmit={onSubmit} className="space-y-8">
               <DateSlotPicker
                 surveyId={surveyId}
                 selectedDate={selectedDate}
@@ -106,8 +99,6 @@ export function CalendarBooking({ surveyId, responseId }: CalendarBookingProps) 
 
               {selectedSlot && (
                 <BookingForm
-                  register={register}
-                  errors={errors}
                   isSubmitting={isSubmitting}
                   submitError={submitError}
                   selectedDate={selectedDate}

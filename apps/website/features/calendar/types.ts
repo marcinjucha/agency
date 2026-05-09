@@ -52,15 +52,16 @@ export interface CalendarEvent {
 
 /**
  * Validated booking request data (output of Zod schema)
+ *
+ * AAA-T-63 (Commit 9): clientName/clientEmail/notes removed. Client identity
+ * is derived server-side from the linked response row to eliminate the
+ * survey→booking re-typing duplication and prevent name/email mismatch.
  */
 export interface BookingRequest {
   surveyId: string
   responseId: string
   startTime: string
   endTime: string
-  clientName: string
-  clientEmail: string
-  notes: string
 }
 
 /**
