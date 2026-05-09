@@ -30,7 +30,7 @@ Ephemeral, worktree-scoped notes — the conversation's scratch pad. Distinct fr
 **Suggested skeleton (keep it short — bullets, not prose):**
 
 ```markdown
-# Session: [task ID + slug, e.g. AAA-T-206 workflow retry response mapping]
+# Session: [slug, e.g. booking-confirmation-email]
 
 ## Done
 - [decision/implementation 1] — WHY: [...]
@@ -121,17 +121,16 @@ Note: `apps/shop/jacek/` and `apps/shop/oleg/` migrated from Next.js 16 to TanSt
 
 ## PROJECT_SPEC Files (Dual-Project Monorepo)
 
-This monorepo contains two Notion projects with separate PROJECT_SPEC files:
+This monorepo contains two ClickUp projects with separate PROJECT_SPEC files:
 
-| File | Notion Project | Scope |
-|------|---------------|-------|
-| `docs/PROJECT_SPEC.yaml` | AAA-P-4 — Halo Efekt Core CMS | Agency platform: surveys, intake, calendar, email, blog, landing pages, SEO |
-| `docs/SHOP_PROJECT_SPEC.yaml` | AAA-P-9 — Platforma Sklepowa | E-commerce: product catalog, shop frontends, CMS shop features |
+| File | ClickUp Lists | Scope |
+|------|--------------|-------|
+| `docs/PROJECT_SPEC.yaml` | Email, Workflow Engine, Intake, Blog & Media, Tech | Agency platform: surveys, intake, calendar, email, blog, landing pages, SEO |
+| `docs/SHOP_PROJECT_SPEC.yaml` | Platforma Sklepowa (901217824196) | E-commerce: product catalog, shop frontends, CMS shop features |
 
 **Routing rule for `/develop` command:**
-- Check task's `📊 Projects` relation in Notion to determine which PROJECT_SPEC
-- AAA-P-4 tasks → `docs/PROJECT_SPEC.yaml`
-- AAA-P-9 tasks → `docs/SHOP_PROJECT_SPEC.yaml`
+- Tasks in Email / Workflow Engine / Intake / Blog & Media / Tech lists → `docs/PROJECT_SPEC.yaml`
+- Tasks in Platforma Sklepowa list → `docs/SHOP_PROJECT_SPEC.yaml`
 
 **Shared infrastructure:** Both projects share the same Supabase DB (shop tables use `shop_` prefix), the same CMS app (shop features in `features/shop-*/`), and the same packages. Only the public frontends will be separate (`apps/website/` vs future `apps/shop/*/`).
 
@@ -185,14 +184,26 @@ This monorepo contains two Notion projects with separate PROJECT_SPEC files:
 
 ---
 
-## Notion Integration
+## ClickUp Integration
 
-**This project uses Agency Database (NOT Private Dashboard).**
+**This project uses ClickUp as the primary task tracker (migrated from Notion 2026-05-09).**
 
-- Agency Projects: `collection://29284f14-76e0-802f-a1de-000b357345a9`
-- Agency Tasks: `collection://29284f14-76e0-8062-a18d-000bfce0cf23`
+| List | ID | Scope |
+|------|----|-------|
+| Email | `901217856226` | Email notifications, templates, provider config |
+| Workflow Engine | `901217856227` | Visual builder, n8n, retry, triggers |
+| Intake | `901217856228` | Surveys, booking, calendar, confirmations |
+| Blog & Media | `901217856229` | Blog editor, media library, social embeds |
+| Tech | `901217856230` | Staging, auth, code review, cross-cutting |
+| Platforma Sklepowa | `901217824196` | Shop platform (separate project) |
+| VPS Infrastructure | `901217824194` | Hetzner VPS, Docker stacks |
+| DocForge | `901217824193` | Desktop app (separate project) |
 
-**Notion task naming for XL features:** When a feature has 10+ iterations with dependency graph, create separate tasks per iteration with shared prefix (e.g., "Workflow:") for easy filtering. Single-task-with-checklist pattern still applies to S/M tasks.
+**Task naming:** Use ClickUp task hash (e.g. `869d78dc4`) as primary identifier for all API calls. Titles are free-form — no mandatory prefix convention. Existing tasks may still have old `[AAA-T-N]` prefix from Notion migration — that's OK, not required to clean up.
+
+**XL features:** Create separate tasks per iteration with a shared slug prefix (e.g. `booking-flow: iter 1 ...`, `booking-flow: iter 2 ...`) for easy filtering. Single-task-with-checklist for S/M tasks.
+
+**Notion (DEPRECATED):** Was `collection://29284f14-76e0-8062-a18d-000bfce0cf23`. Keep for historical reference only — all new tasks in ClickUp.
 
 ---
 
@@ -204,7 +215,8 @@ This monorepo contains two Notion projects with separate PROJECT_SPEC files:
 | **database-patterns**    | `.claude/skills/database-patterns/SKILL.md`    | Supabase RLS policies, PostgreSQL functions, migrations, type regeneration, client selection (server vs browser), fromSupabaseVoid for void operations, is_super_admin() for global tables. Avoids RLS infinite recursion |
 | **development-workflow** | `.claude/skills/development-workflow/SKILL.md` | Testing decisions (3-Question Rule), severity classification (P0/P1/P2), implementation validation, PROJECT_SPEC.yaml updates, validate after each iteration   |
 | **n8n-patterns**         | `.claude/skills/n8n-patterns/SKILL.md`         | N8n background processing — fire-and-forget webhooks, ai_qualification JSONB, credential selection, Sentry Init subworkflow pattern                           |
-| **notion-patterns**      | `.claude/skills/notion-patterns/SKILL.md`      | Notion MCP tools — task status updates, project tracking. Properties are CASE-SENSITIVE. Contains Agency database IDs and filter rules                        |
+| **notion-patterns**      | `.claude/skills/notion-patterns/SKILL.md`      | Notion MCP tools — task status updates, project tracking. Properties are CASE-SENSITIVE. Contains Agency database IDs and filter rules. DEPRECATED — project migrated to ClickUp |
+| **clickup-patterns**     | `.claude/skills/clickup-patterns/SKILL.md`     | ClickUp MCP tools — task status updates, project tracking. Status values are CASE-SENSITIVE lowercase (`to do`, `in progress`, `complete`). Contains workspace/list IDs, markdown_description pattern, document (Docs) patterns |
 | **design-patterns**      | `.claude/skills/ag-ui-components/SKILL.md`     | React components, shadcn/ui design system, WCAG 2.1 AA accessibility, responsive design, visual design decisions (dark/moody tonality, layout/spacing/typography choices, quality gates), edit pattern decisions (RHF form vs inline, DatePicker vs native). Controller for checkbox arrays, TanStack Query CMS-only, 4 UI states |
 | **validation-patterns**  | `.claude/skills/validation-patterns/SKILL.md`  | Two-pass validation (functional + architecture), YAML report formats, severity classification, 8-point architecture checklist. Loaded by validator-agent      |
 | **iterative-planning**   | `.claude/skills/iterative-planning/SKILL.md`   | Task size assessment (S/M/L/XL), iterative breakdown for M/L/XL tasks, dependency graph patterns (sequential/parallel/convergent), iteration sizing, parallelization identification. Used by analyst-agent in /develop Phase 2 |
@@ -221,11 +233,16 @@ This monorepo contains two Notion projects with separate PROJECT_SPEC files:
 
 ## Quick Reference
 
-**When working with Notion:**
+**When working with ClickUp (current task tracker):**
 
-1. ALWAYS use Agency Database for this project
-2. Properties are CASE-SENSITIVE (silent failure if wrong case)
-3. See `.claude/skills/notion-patterns/SKILL.md` for patterns
+1. ALWAYS use lowercase status values: `to do`, `in progress`, `complete`
+2. ALWAYS use `markdown_description` (not `description`) for formatted task content
+3. See `.claude/skills/clickup-patterns/SKILL.md` for list IDs, patterns, and document creation
+
+**When working with Notion (DEPRECATED — migrated to ClickUp):**
+
+1. Notion is no longer the task tracker — use ClickUp for all new task operations
+2. See `.claude/skills/notion-patterns/SKILL.md` only if accessing historical Notion data
 
 **When working with n8n:**
 
@@ -249,13 +266,13 @@ This monorepo contains two Notion projects with separate PROJECT_SPEC files:
 **When committing:**
 
 - **No Co-Authored-By in commits** — Never add AI attribution footer ("Co-Authored-By: Claude" or similar) to commit messages.
-- **Always use feature branches** — Never commit directly to main. Create `feature/aaa-t-{id}-{slug}` branch, implement, test, then merge with `--no-ff`.
+- **Always use feature branches** — Never commit directly to main. Create `feature/{slug}` branch, implement, test, then merge with `--no-ff`.
 - **All docs commits before merge** — memory.md, PROJECT_SPEC.yaml updates go on the feature branch BEFORE merging to main.
 - **Commit before side-quests** — When user requests work outside current task scope (skill updates, visual audit), commit current progress first.
 - **Worktree needs .env.local** — Git worktrees don't include .env.local (gitignored). Symlink from main (stays in sync): `ln -s $(pwd)/apps/cms/.env.local ./worktree-pnpm/apps/cms/.env.local` (repeat for website, shop/jacek, shop/oleg). Copy (`cp`) also works for one-off setups.
-- **Stage agent-created files explicitly** — The Write tool creates files on disk but does NOT `git add` them. After any file creation step, verify the file appears in `git status` and stage it before committing. WHY: docs/polityka-prywatnosci.md was created during AAA-T-162 but never staged — untracked files are lost on branch switch.
-- **`chore/` branch prefix for tech-debt without a Notion task** — Use `chore/{slug}` branch naming (no `AAA-T-xxx` prefix) for internal cleanup/refactoring work that doesn't correspond to a tracked Notion task. Mirrors npm semver convention. Example: `chore/plugin-arch-cleanup`.
-- **Clean git history before merge** — Before merging any feature branch, squash/reorganize commits into logical groups using `git reset --soft <base>` + re-commit. WHY: user explicitly confirmed this pattern (AAA-T-196) — prevents WIP/fix commit noise in main history.
+- **Stage agent-created files explicitly** — The Write tool creates files on disk but does NOT `git add` them. After any file creation step, verify the file appears in `git status` and stage it before committing. WHY: production incident — `docs/polityka-prywatnosci.md` was created by Write but never staged, lost on branch switch.
+- **`chore/` branch prefix for tech-debt without a ClickUp task** — Use `chore/{slug}` branch naming for internal cleanup/refactoring work that doesn't correspond to a tracked ClickUp task. Mirrors npm semver convention. Example: `chore/plugin-arch-cleanup`.
+- **Clean git history before merge** — Before merging any feature branch, squash/reorganize commits into logical groups using `git reset --soft <base>` + re-commit. WHY: user explicitly confirmed this pattern — prevents WIP/fix commit noise in main history.
 - **Bash `cd` persists across tool calls — use absolute paths in git/pnpm/npm commands** — `cd` in one Bash call changes pwd for ALL subsequent Bash calls in the session. Caused accidental commits to wrong branch. Most tools (Read, Edit, Write) are absolute-path so pwd doesn't matter — only Bash carries state. Fix: use `git -C /path/to/worktree ...`, `pnpm -F @agency/cms ...` — never rely on an earlier `cd`.
 - **`git clean -fd` silently deletes untracked directories — always `-fdn` (dry-run) first** — Wiped `apps/shop/jacek/src/` (untracked, never in git history) with zero recovery path. Always run `git clean -fdn` first, read the output carefully, then `-fd`.
 
@@ -271,7 +288,7 @@ This monorepo contains two Notion projects with separate PROJECT_SPEC files:
 
 **Workflow preferences:**
 
-- **"fix all - nie zostawiaj niczego" applies to validator findings** — When a validator reports CRITICAL/HIGH/MEDIUM/LOW findings, the default is fix-now in the current commit, not defer to follow-up Notion tasks. Generalizes prior "fix all" / "do all now" preferences (P2 items, MEDIUM severity). Defer is the exception requiring explicit justification (heroic effort, unscoped architecture work). Do NOT propose deferral as a default option in validator summaries.
+- **"fix all - nie zostawiaj niczego" applies to validator findings** — When a validator reports CRITICAL/HIGH/MEDIUM/LOW findings, the default is fix-now in the current commit, not defer to follow-up tickets. Generalizes prior "fix all" / "do all now" preferences (P2 items, MEDIUM severity). Defer is the exception requiring explicit justification (heroic effort, unscoped architecture work). Do NOT propose deferral as a default option in validator summaries.
 
 **When writing code:**
 
@@ -288,7 +305,7 @@ This monorepo contains two Notion projects with separate PROJECT_SPEC files:
 ## Project CLAUDE.md Files
 
 Index of all CLAUDE.md files and their scope:
-- `./CLAUDE.md` — Root project overview, skills reference, Notion integration
+- `./CLAUDE.md` — Root project overview, skills reference, ClickUp integration
 - `./.claude/CLAUDE.md` — Claude-dev artifact repo (agents, skills, commands)
 - `./apps/CLAUDE.md` — Apps directory (CMS vs Website separation, shared patterns)
 - `./apps/cms/CLAUDE.md` — CMS admin panel (auth, routes, TanStack Query)

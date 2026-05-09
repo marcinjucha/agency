@@ -1,7 +1,7 @@
 project:
   name: "Platforma Sklepowa"
   type: monorepo-extension
-  notion_project: "AAA-P-9"
+  clickup_list_id: "901217824196"
   parent_monorepo: "legal-mind (Halo Efekt)"
   tech_stack: "TanStack Start v1.167, Vite 8, React 19, Tailwind CSS 4 (@tailwindcss/vite), shadcn/ui, Supabase (shared DB, shop_ prefix), Plausible Analytics (reuse). CMS features still Next.js 16."
 
