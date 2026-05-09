@@ -59,12 +59,9 @@ export type Database = {
           calendar_connection_id: string | null
           calendar_event_id: string | null
           calendar_provider: string | null
-          client_email: string
-          client_name: string
           created_at: string | null
           end_time: string
           id: string
-          notes: string | null
           response_id: string | null
           start_time: string
           status: string | null
@@ -76,12 +73,9 @@ export type Database = {
           calendar_connection_id?: string | null
           calendar_event_id?: string | null
           calendar_provider?: string | null
-          client_email: string
-          client_name: string
           created_at?: string | null
           end_time: string
           id?: string
-          notes?: string | null
           response_id?: string | null
           start_time: string
           status?: string | null
@@ -93,12 +87,9 @@ export type Database = {
           calendar_connection_id?: string | null
           calendar_event_id?: string | null
           calendar_provider?: string | null
-          client_email?: string
-          client_name?: string
           created_at?: string | null
           end_time?: string
           id?: string
-          notes?: string | null
           response_id?: string | null
           start_time?: string
           status?: string | null
@@ -1180,6 +1171,7 @@ export type Database = {
       }
       survey_links: {
         Row: {
+          booking_workflow_id: string | null
           calendar_connection_id: string | null
           created_at: string | null
           expires_at: string | null
@@ -1193,6 +1185,7 @@ export type Database = {
           workflow_id: string | null
         }
         Insert: {
+          booking_workflow_id?: string | null
           calendar_connection_id?: string | null
           created_at?: string | null
           expires_at?: string | null
@@ -1206,6 +1199,7 @@ export type Database = {
           workflow_id?: string | null
         }
         Update: {
+          booking_workflow_id?: string | null
           calendar_connection_id?: string | null
           created_at?: string | null
           expires_at?: string | null
@@ -1219,6 +1213,13 @@ export type Database = {
           workflow_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "survey_links_booking_workflow_id_fkey"
+            columns: ["booking_workflow_id"]
+            isOneToOne: false
+            referencedRelation: "workflows"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "survey_links_calendar_connection_id_fkey"
             columns: ["calendar_connection_id"]
@@ -2262,10 +2263,6 @@ export type Database = {
         Args: { bucketid: string; metadata: Json; name: string; owner: string }
         Returns: undefined
       }
-      delete_leaf_prefixes: {
-        Args: { bucket_ids: string[]; names: string[] }
-        Returns: undefined
-      }
       extension: { Args: { name: string }; Returns: string }
       filename: { Args: { name: string }; Returns: string }
       foldername: { Args: { name: string }; Returns: string[] }
@@ -2273,9 +2270,6 @@ export type Database = {
         Args: { p_delimiter: string; p_key: string; p_prefix: string }
         Returns: string
       }
-      get_level: { Args: { name: string }; Returns: number }
-      get_prefix: { Args: { name: string }; Returns: string }
-      get_prefixes: { Args: { name: string }; Returns: string[] }
       get_size_by_bucket: {
         Args: never
         Returns: {
@@ -2353,26 +2347,6 @@ export type Database = {
           created_at: string
           id: string
           key: string
-          last_accessed_at: string
-          metadata: Json
-          name: string
-          updated_at: string
-        }[]
-      }
-      search_legacy_v1: {
-        Args: {
-          bucketname: string
-          levels?: number
-          limits?: number
-          offsets?: number
-          prefix: string
-          search?: string
-          sortcolumn?: string
-          sortorder?: string
-        }
-        Returns: {
-          created_at: string
-          id: string
           last_accessed_at: string
           metadata: Json
           name: string
