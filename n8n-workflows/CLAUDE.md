@@ -9,6 +9,10 @@ Also hosts standalone workflows: Survey Response AI Analysis, Marketplace sync (
 
 ## The Weird Parts
 
+### Helper Drift Is Silent — Use `regenerate-helpers` Religiously
+
+JS-as-string in Code-node JSON has no compiler, no linter, no de-duplication. Before the inline-marker convention landed, the same `supabaseRequest()` body existed in 5 distinct slightly-different versions across 17+ Code nodes — including one variant that referenced `this.helpers.httpRequest` (n8n internal API) instead of the `https` module, which would silently work in some contexts and fail in others. The `expression-evaluator` `compare` function was already drifting whitespace-only between Condition and Switch handlers when the helpers were extracted. The fix: every shared body lives in `scripts/evaluators/<name>.js` exactly once, and Code nodes opt in via `// @inline <name>` … `// @end-inline <name>` markers. Run `npm run n8n:build -- regenerate-helpers` after editing any helper to sync all opted-in copies.
+
 ### Custom Modules Mount (Sentry SDK)
 
 **Why:** Code nodes in n8n can't access npm packages by default. Need to mount external modules as read-only volume.
@@ -120,7 +124,12 @@ Located at `n8n-workflows/scripts/n8n-builder.mjs`. Invoke via `npm run n8n:buil
 Commands:
 - `create-handler` — writes a new step-handler subworkflow (Step - *.json) by inlining canonical evaluator JS from `scripts/evaluators/*.js` into the Code-node body. Safe (only writes new file).
 - `add-route` — mutates Process Step Switch `connections` in-place to wire a new step type. **Riskier** — currently lacks `--dry-run`; review the diff before committing.
-- `regenerate-helpers` — re-inlines the canonical `supabaseRequest` helper into all opt-in Code nodes. Opt-in is via the marker `// @inline supabase-request` at the top of the Code node body. Adding a new shared helper = one entry in the INLINE_HELPERS map + one evaluator file.
+- `regenerate-helpers` — re-inlines canonical helpers into all opt-in Code nodes. Opt-in is via paired markers (`// @inline <name>` … `// @end-inline <name>`) wrapping the helper body in the Code node. Adding a new shared helper = one entry in the INLINE_HELPERS map + one evaluator file. **Currently inlined helpers (5):**
+  - `supabase-request` — Promise/`https`-based PostgREST client (~30 lines, used in 17+ nodes)
+  - `env-supabase-preamble` — boilerplate `require('https')` + `SUPABASE_URL`/`SUPABASE_KEY` from `$env` + missing-env throw (4 lines, ~17 nodes)
+  - `get-nested-value` — safe nested-path object accessor (used by condition, switch, send-email, process-step)
+  - `expression-evaluator` — 5-function bundle (`coerceNumeric`, `escapeRegex`, `parseExpression`, `resolveField`, `compare`) for condition + switch handlers; mirrors `apps/cms/features/workflows/engine/condition-evaluator.ts`
+  - `resolve-variables` — `{{var}}` substitution for Process Step + Send Email; depends on `getNestedValue` being in scope
 
 WHY this design: handler JSONs are export artifacts — diffing/reviewing logic embedded as a JSON-escaped string is hostile (newlines become `\n`, no syntax highlighting, no linting). Keeping evaluators as standalone `.js` files lets the build step inline them at scaffold time while preserving normal editor tooling. Pattern generalizes: any time JS-as-string ships in a JSON config, write the source as a real file and inline it via build script.
 

@@ -226,6 +226,10 @@ function findFreePosition(nodes) {
 // Map marker name → canonical source filename in evaluators/.
 // Add an entry here when introducing a new shared helper.
 const INLINE_HELPERS = {
+  'env-supabase-preamble': 'env-supabase-preamble.js',
+  'expression-evaluator': 'expression-evaluator.js',
+  'get-nested-value': 'get-nested-value.js',
+  'resolve-variables': 'resolve-variables.js',
   'supabase-request': 'supabase-request.js',
 }
 
