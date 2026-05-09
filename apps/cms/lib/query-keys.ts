@@ -105,6 +105,7 @@ export const queryKeys = {
   workflows: {
     all: ['workflows'] as const,
     list: ['workflows', 'list'] as const,
+    byTrigger: (triggerType: string) => ['workflows', 'byTrigger', triggerType] as const,
     detail: (id: string) => ['workflows', 'detail', id] as const,
     executions: (workflowId: string) => ['workflows', 'executions', workflowId] as const,
     emailTemplates: ['workflows', 'email-templates'] as const,

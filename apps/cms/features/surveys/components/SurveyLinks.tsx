@@ -26,7 +26,11 @@ type SurveyLinksProps = {
   surveyId: string
 }
 
-type SurveyLink = Tables<'survey_links'>
+// Cast: booking_workflow_id added in AAA-T-63 commit 1; main-repo types.ts (consumed by
+// worktree via symlink) lags until that types regen lands on main. Same pattern as
+// existing casts in features/surveys/server.ts. Once types are regenerated, drop the
+// intersection and read link.booking_workflow_id directly.
+type SurveyLink = Tables<'survey_links'> & { booking_workflow_id: string | null }
 
 function CalendarConnectionDisplay({ connectionId }: { connectionId: string | null }) {
   const name = useCalendarConnectionName(connectionId)
@@ -40,24 +44,46 @@ function CalendarConnectionDisplay({ connectionId }: { connectionId: string | nu
 }
 
 function WorkflowDisplay({
-  workflowId,
-  workflows,
+  surveyWorkflowId,
+  bookingWorkflowId,
+  surveyWorkflows,
+  bookingWorkflows,
 }: {
-  workflowId: string | null
-  workflows: WorkflowSelectorOption[]
+  surveyWorkflowId: string | null
+  bookingWorkflowId: string | null
+  surveyWorkflows: WorkflowSelectorOption[]
+  bookingWorkflows: WorkflowSelectorOption[]
 }) {
-  const label = messages.surveys.workflowSelectorLabel
-  let displayValue: string
-  if (!workflowId) {
-    displayValue = messages.surveys.workflowSelectorNone
-  } else {
-    const found = workflows.find((w) => w.id === workflowId)
-    displayValue = found ? found.name : workflowId
+  function resolveName(id: string | null, options: WorkflowSelectorOption[]): string | null {
+    if (!id) return null
+    const found = options.find((w) => w.id === id)
+    return found ? found.name : id
   }
+
+  const surveyName = resolveName(surveyWorkflowId, surveyWorkflows)
+  const bookingName = resolveName(bookingWorkflowId, bookingWorkflows)
+
+  if (!surveyName && !bookingName) {
+    return (
+      <div>
+        {messages.surveys.workflowSelectorLabel}: {messages.surveys.workflowSelectorNone}
+      </div>
+    )
+  }
+
   return (
-    <div>
-      {label}: {displayValue}
-    </div>
+    <>
+      {surveyName && (
+        <div>
+          {messages.surveys.workflowDisplayAfterSurvey}: {surveyName}
+        </div>
+      )}
+      {bookingName && (
+        <div>
+          {messages.surveys.workflowDisplayAfterBooking}: {bookingName}
+        </div>
+      )}
+    </>
   )
 }
 
@@ -68,16 +94,30 @@ type WorkflowSelectorProps = {
   value: string | null
   onChange: (workflowId: string | null) => void
   selectId: string
+  label?: string
+  hint?: string
+  emptyOptionLabel?: string
 }
 
-function WorkflowSelector({ workflows, value, onChange, selectId }: WorkflowSelectorProps) {
+function WorkflowSelector({
+  workflows,
+  value,
+  onChange,
+  selectId,
+  label,
+  hint,
+  emptyOptionLabel,
+}: WorkflowSelectorProps) {
   const NONE_VALUE = '__none__'
   const selectedValue = value ?? NONE_VALUE
+  const labelText = label ?? messages.surveys.workflowSelectorLabel
+  const hintText = hint ?? messages.surveys.workflowSelectorHint
+  const noneText = emptyOptionLabel ?? messages.surveys.workflowSelectorNone
 
   return (
     <div>
       <Label htmlFor={selectId} className="text-sm">
-        {messages.surveys.workflowSelectorLabel}
+        {labelText}
       </Label>
       <Select
         value={selectedValue}
@@ -87,9 +127,7 @@ function WorkflowSelector({ workflows, value, onChange, selectId }: WorkflowSele
           <SelectValue placeholder={messages.surveys.workflowSelectorPlaceholder} />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value={NONE_VALUE}>
-            {messages.surveys.workflowSelectorNone}
-          </SelectItem>
+          <SelectItem value={NONE_VALUE}>{noneText}</SelectItem>
           {workflows.map((wf) => (
             <SelectItem key={wf.id} value={wf.id}>
               {wf.name}
@@ -104,7 +142,7 @@ function WorkflowSelector({ workflows, value, onChange, selectId }: WorkflowSele
           aria-live="polite"
         >
           <TriangleAlert className="h-3.5 w-3.5 mt-0.5 shrink-0" aria-hidden="true" />
-          <span>{messages.surveys.workflowSelectorHint}</span>
+          <span>{hintText}</span>
         </div>
       )}
     </div>
@@ -124,6 +162,7 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
     isActive: true,
     calendarConnectionId: null as string | null,
     workflowId: null as string | null,
+    bookingWorkflowId: null as string | null,
   })
   const [editFormData, setEditFormData] = useState({
     notificationEmail: '',
@@ -131,6 +170,7 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
     maxSubmissions: '',
     calendarConnectionId: null as string | null,
     workflowId: null as string | null,
+    bookingWorkflowId: null as string | null,
   })
 
   // Query for links
@@ -139,10 +179,15 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
     queryFn: () => getSurveyLinksFn({ data: { surveyId } }),
   })
 
-  // Query for active survey_submitted workflows — used in selector dropdown
-  const { data: workflows = [] } = useQuery<WorkflowSelectorOption[]>({
-    queryKey: queryKeys.workflows.list,
-    queryFn: () => getWorkflowsForSelectorFn({ data: {} }),
+  // Query for active survey_submitted workflows — used in survey workflow selector
+  const { data: surveyWorkflows = [] } = useQuery<WorkflowSelectorOption[]>({
+    queryKey: queryKeys.workflows.byTrigger('survey_submitted'),
+    queryFn: () => getWorkflowsForSelectorFn({ data: { triggerType: 'survey_submitted' } }),
+  })
+  // Query for active booking_created workflows — used in booking workflow selector
+  const { data: bookingWorkflows = [] } = useQuery<WorkflowSelectorOption[]>({
+    queryKey: queryKeys.workflows.byTrigger('booking_created'),
+    queryFn: () => getWorkflowsForSelectorFn({ data: { triggerType: 'booking_created' } }),
   })
 
   // Mutation for generating link — wraps to throw on failure (known project pattern)
@@ -157,6 +202,7 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
           isActive: formData.isActive,
           calendarConnectionId: formData.calendarConnectionId,
           workflowId: formData.workflowId,
+          bookingWorkflowId: formData.bookingWorkflowId,
         },
       })
       if (!result.success) throw new Error(result.error || messages.surveys.generateFailed)
@@ -166,7 +212,7 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
       queryClient.invalidateQueries({ queryKey: queryKeys.surveys.links(surveyId) })
       queryClient.invalidateQueries({ queryKey: queryKeys.surveys.all })
       setShowForm(false)
-      setFormData({ notificationEmail: '', expiresAt: '', maxSubmissions: '', isActive: true, calendarConnectionId: null, workflowId: null })
+      setFormData({ notificationEmail: '', expiresAt: '', maxSubmissions: '', isActive: true, calendarConnectionId: null, workflowId: null, bookingWorkflowId: null })
       setError(null)
     },
     onError: (err: Error) => {
@@ -234,6 +280,7 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
         isActive: link.is_active,
         calendarConnectionId: editFormData.calendarConnectionId,
         workflowId: editFormData.workflowId,
+        bookingWorkflowId: editFormData.bookingWorkflowId,
       }
       const result = await updateSurveyLinkFn({ data: { linkId, surveyId, data } })
       if (!result.success) throw new Error(result.error || messages.surveys.updateLinkFailed)
@@ -273,6 +320,7 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
       maxSubmissions: link.max_submissions !== null ? String(link.max_submissions) : '',
       calendarConnectionId: link.calendar_connection_id ?? null,
       workflowId: link.workflow_id ?? null,
+      bookingWorkflowId: link.booking_workflow_id ?? null,
     })
     setError(null)
   }
@@ -375,10 +423,21 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
             />
 
             <WorkflowSelector
-              workflows={workflows}
+              workflows={surveyWorkflows}
               value={formData.workflowId}
               onChange={(workflowId) => setFormData({ ...formData, workflowId })}
-              selectId="newLink-workflowId"
+              selectId="newLink-survey-workflowId"
+              label={messages.surveys.surveyWorkflowSelectorLabel}
+              hint={messages.surveys.surveyWorkflowSelectorHint}
+            />
+
+            <WorkflowSelector
+              workflows={bookingWorkflows}
+              value={formData.bookingWorkflowId}
+              onChange={(bookingWorkflowId) => setFormData({ ...formData, bookingWorkflowId })}
+              selectId="newLink-booking-workflowId"
+              label={messages.surveys.bookingWorkflowSelectorLabel}
+              hint={messages.surveys.bookingWorkflowSelectorHint}
             />
 
             <div className="flex gap-2 pt-2">
@@ -599,10 +658,21 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
                     />
 
                     <WorkflowSelector
-                      workflows={workflows}
+                      workflows={surveyWorkflows}
                       value={editFormData.workflowId}
                       onChange={(workflowId) => setEditFormData({ ...editFormData, workflowId })}
-                      selectId={`edit-workflowId-${link.id}`}
+                      selectId={`edit-survey-workflowId-${link.id}`}
+                      label={messages.surveys.surveyWorkflowSelectorLabel}
+                      hint={messages.surveys.surveyWorkflowSelectorHint}
+                    />
+
+                    <WorkflowSelector
+                      workflows={bookingWorkflows}
+                      value={editFormData.bookingWorkflowId}
+                      onChange={(bookingWorkflowId) => setEditFormData({ ...editFormData, bookingWorkflowId })}
+                      selectId={`edit-booking-workflowId-${link.id}`}
+                      label={messages.surveys.bookingWorkflowSelectorLabel}
+                      hint={messages.surveys.bookingWorkflowSelectorHint}
                     />
 
                     <div className="flex gap-2 pt-1">
@@ -642,7 +712,12 @@ export function SurveyLinks({ surveyId }: SurveyLinksProps) {
                       {link.max_submissions !== null ? link.max_submissions : messages.surveys.unlimited}
                     </div>
                     <CalendarConnectionDisplay connectionId={link.calendar_connection_id} />
-                    <WorkflowDisplay workflowId={link.workflow_id} workflows={workflows} />
+                    <WorkflowDisplay
+                      surveyWorkflowId={link.workflow_id}
+                      bookingWorkflowId={link.booking_workflow_id}
+                      surveyWorkflows={surveyWorkflows}
+                      bookingWorkflows={bookingWorkflows}
+                    />
                   </div>
                 )}
               </div>

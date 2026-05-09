@@ -12,6 +12,7 @@ import type { UpdateSurveyLinkFormData } from '@/features/surveys/validation'
 import { messages } from '@/lib/messages'
 import { createServerClient } from '@/lib/supabase/server-start.server'
 import { type AuthContext, requireAuthContext, getAuth } from '@/lib/server-auth.server'
+import type { TriggerType } from '@/features/workflows/types'
 
 // ---------------------------------------------------------------------------
 // Server Functions (public API)
@@ -149,6 +150,7 @@ export const generateSurveyLinkFn = createServerFn({ method: 'POST' })
       isActive?: boolean
       calendarConnectionId?: string | null
       workflowId?: string | null
+      bookingWorkflowId?: string | null
     }) => {
       const normalized = {
         surveyId: input.surveyId,
@@ -158,6 +160,7 @@ export const generateSurveyLinkFn = createServerFn({ method: 'POST' })
         isActive: input.isActive ?? true,
         calendarConnectionId: input.calendarConnectionId ?? null,
         workflowId: input.workflowId ?? null,
+        bookingWorkflowId: input.bookingWorkflowId ?? null,
       }
       return generateSurveyLinkSchema.parse(normalized)
     }
@@ -171,6 +174,14 @@ export const generateSurveyLinkFn = createServerFn({ method: 'POST' })
         .andThen(({ auth, data: parsed }) =>
           parsed.workflowId
             ? verifyWorkflowAccess(auth, parsed.workflowId).map(() => ({ auth, parsed }))
+            : ok({ auth, parsed })
+        )
+        .andThen(({ auth, parsed }) =>
+          parsed.bookingWorkflowId
+            ? verifyWorkflowAccess(auth, parsed.bookingWorkflowId, 'booking_created').map(() => ({
+                auth,
+                parsed,
+              }))
             : ok({ auth, parsed })
         )
         .andThen(({ auth, parsed }) => insertSurveyLink(auth, parsed.surveyId, parsed))
@@ -217,6 +228,14 @@ export const updateSurveyLinkFn = createServerFn({ method: 'POST' })
       .andThen((auth) =>
         parsed.workflowId
           ? verifyWorkflowAccess(auth, parsed.workflowId).map(() => ({ auth, parsed }))
+          : ok({ auth, parsed })
+      )
+      .andThen(({ auth, parsed }) =>
+        parsed.bookingWorkflowId
+          ? verifyWorkflowAccess(auth, parsed.bookingWorkflowId, 'booking_created').map(() => ({
+              auth,
+              parsed,
+            }))
           : ok({ auth, parsed })
       )
       .andThen(({ auth, parsed }) => patchSurveyLink(auth, data.linkId, parsed))
@@ -283,12 +302,16 @@ function verifySurveyAccess(auth: AuthContext, surveyId: string) {
   })
 }
 
-function verifyWorkflowAccess(auth: AuthContext, workflowId: string) {
+function verifyWorkflowAccess(
+  auth: AuthContext,
+  workflowId: string,
+  expectedTriggerType?: TriggerType
+) {
   return ResultAsync.fromPromise(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (auth.supabase as any)
       .from('workflows')
-      .select('id')
+      .select('id, trigger_type')
       .eq('id', workflowId)
       .eq('tenant_id', auth.tenantId)
       .maybeSingle(),
@@ -297,6 +320,9 @@ function verifyWorkflowAccess(auth: AuthContext, workflowId: string) {
   ).andThen((res: any) => {
     if (res.error) return err(res.error.message as string)
     if (!res.data) return err(messages.surveys.notFound)
+    if (expectedTriggerType && res.data.trigger_type !== expectedTriggerType) {
+      return err(messages.surveys.workflowTriggerTypeMismatch)
+    }
     return ok(undefined)
   })
 }
@@ -311,11 +337,15 @@ function insertSurveyLink(
     isActive: boolean
     calendarConnectionId?: string | null
     workflowId?: string | null
+    bookingWorkflowId?: string | null
   }
 ) {
   const token = crypto.randomUUID()
 
-  const linkData: TablesInsert<'survey_links'> = {
+  // Cast: booking_workflow_id added in AAA-T-63 commit 1; main-repo types.ts (consumed by
+  // worktree via symlink) lags until that types regen lands on main. Same pattern as
+  // existing Supabase JS v2.95.2 incompatibility casts in this file.
+  const linkData = {
     survey_id: surveyId,
     token,
     notification_email: parsed.notificationEmail,
@@ -325,7 +355,8 @@ function insertSurveyLink(
     is_active: parsed.isActive,
     calendar_connection_id: parsed.calendarConnectionId ?? null,
     workflow_id: parsed.workflowId ?? null,
-  }
+    booking_workflow_id: parsed.bookingWorkflowId ?? null,
+  } as unknown as TablesInsert<'survey_links'>
 
   return ResultAsync.fromPromise(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -344,6 +375,7 @@ function patchSurveyLink(
     isActive: boolean
     calendarConnectionId?: string | null
     workflowId?: string | null
+    bookingWorkflowId?: string | null
   }
 ) {
   const updatePayload: Record<string, unknown> = {
@@ -359,6 +391,10 @@ function patchSurveyLink(
 
   if (parsed.workflowId !== undefined) {
     updatePayload.workflow_id = parsed.workflowId ?? null
+  }
+
+  if (parsed.bookingWorkflowId !== undefined) {
+    updatePayload.booking_workflow_id = parsed.bookingWorkflowId ?? null
   }
 
   return ResultAsync.fromPromise(
