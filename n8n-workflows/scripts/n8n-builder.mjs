@@ -243,6 +243,7 @@ function findFreePosition(nodes) {
 // Map marker name → canonical source filename in evaluators/.
 // Add an entry here when introducing a new shared helper.
 const INLINE_HELPERS = {
+  'claude-response': 'claude-response.js',
   'env-supabase-preamble': 'env-supabase-preamble.js',
   'expression-evaluator': 'expression-evaluator.js',
   'get-nested-value': 'get-nested-value.js',
@@ -340,6 +341,65 @@ function regenerateHelpers({ target }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Command: lint-helpers
+// Audit every Code node under workflows/ for un-marked duplication of known
+// helpers. A node opts out via `// @lint-ignore <name>` for legitimate
+// same-named-different-purpose functions.
+//
+// Detection signatures — one regex per known helper. Pick a unique anchor in
+// the helper body that isn't likely to appear in unrelated code.
+// ─────────────────────────────────────────────────────────────────────────────
+const HELPER_SIGNATURES = {
+  'supabase-request': /function\s+supabaseRequest\b/,
+  'supabase-crud': /function\s+(supabaseGet|supabasePatch)\b/,
+  'env-supabase-preamble': /const\s+SUPABASE_URL\s*=\s*\$env\.SUPABASE_URL/,
+  'get-nested-value': /function\s+getNestedValue\b/,
+  'expression-evaluator': /function\s+(coerceNumeric|escapeRegex|parseExpression|resolveField|compare)\b/,
+  'resolve-variables': /function\s+resolveVariables\b/,
+  'claude-response': /function\s+(extractTextContent|stripCodeFences)\b/,
+}
+
+function lintHelpersInNode(jsCode, nodeName, filepath) {
+  const violations = []
+  for (const [name, signature] of Object.entries(HELPER_SIGNATURES)) {
+    if (!signature.test(jsCode)) continue
+    // Per-node opt-out
+    const ignoreMarker = new RegExp(`//\\s*@lint-ignore\\s+${escapeRegex(name)}\\b`)
+    if (ignoreMarker.test(jsCode)) continue
+    // Marker present?
+    const startMarker = new RegExp(`//\\s*@inline\\s+${escapeRegex(name)}\\b`)
+    const endMarker = new RegExp(`//\\s*@end-inline\\s+${escapeRegex(name)}\\b`)
+    if (startMarker.test(jsCode) && endMarker.test(jsCode)) continue
+    violations.push({
+      filepath,
+      nodeName,
+      helper: name,
+      reason: startMarker.test(jsCode)
+        ? 'start marker present, end-inline marker missing'
+        : endMarker.test(jsCode)
+          ? 'end-inline marker present, start marker missing'
+          : 'helper signature found, no marker',
+    })
+  }
+  return violations
+}
+
+function lintHelpers() {
+  const targets = findAllWorkflowJsons(WORKFLOWS_ROOT)
+  const violations = []
+  for (const filepath of targets) {
+    const wf = JSON.parse(readFileSync(filepath, 'utf8'))
+    for (const node of wf.nodes ?? []) {
+      if (node.type !== 'n8n-nodes-base.code') continue
+      const js = node.parameters?.jsCode
+      if (typeof js !== 'string') continue
+      violations.push(...lintHelpersInNode(js, node.name ?? '<unnamed>', filepath))
+    }
+  }
+  return { violations, scanned: targets.length }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // CLI
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -414,6 +474,18 @@ Commands:
       node scripts/n8n-builder.mjs regenerate-helpers
       node scripts/n8n-builder.mjs regenerate-helpers \\
         --target "n8n-workflows/workflows/Workflows/Step - AI Action Handler.json"
+
+  lint-helpers
+    Audit every Code node under workflows/ for un-marked duplication of
+    known helpers. Reports nodes that contain a helper's signature without
+    paired // @inline / // @end-inline markers.
+
+    Use as a pre-commit / CI guard — exits 0 if clean, 1 if any violations.
+    Per-node escape hatch: add // @lint-ignore <helper-name> to opt out
+    when a same-named function is intentionally different.
+
+    Example:
+      node scripts/n8n-builder.mjs lint-helpers
 
 Typical workflow for a new step type:
   1. Write evaluator JS code in scripts/evaluators/my-step-evaluator.js
@@ -505,6 +577,27 @@ if (command === 'create-handler') {
     console.log()
     console.log('Next: re-import affected workflows into n8n.')
   }
+
+} else if (command === 'lint-helpers') {
+  const { violations, scanned } = lintHelpers()
+
+  if (violations.length === 0) {
+    console.log(`✅  No helper duplication — scanned ${scanned} workflow file(s), all known helpers properly marked.`)
+    process.exit(0)
+  }
+
+  console.error(`❌  ${violations.length} helper duplication violation(s) across ${scanned} workflow file(s):`)
+  console.error()
+  for (const v of violations) {
+    const rel = v.filepath.split('n8n-workflows/').pop()
+    console.error(`  ${rel}`)
+    console.error(`    node: ${v.nodeName}`)
+    console.error(`    helper: ${v.helper}  (${v.reason})`)
+    console.error()
+  }
+  console.error('Fix: wrap the helper body with // @inline <name> ... // @end-inline <name>,')
+  console.error('     or add // @lint-ignore <name> if the same-named function is intentionally different.')
+  process.exit(1)
 
 } else {
   console.error(`Unknown command: ${command}`)
