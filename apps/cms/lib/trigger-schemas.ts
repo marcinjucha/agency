@@ -7,6 +7,8 @@
  * Shared contract between triggers and email templates.
  */
 
+import type { BookingCreatedPayload, SurveySubmittedPayload } from '@agency/validators'
+
 export type TriggerVariable = {
   key: string
   label: string
@@ -14,6 +16,62 @@ export type TriggerVariable = {
   category: string
   example?: string
 }
+
+// ---------------------------------------------------------------------------
+// Typed schema entries for payload-backed trigger types
+//
+// WHY: `satisfies` checks that every `key` in these arrays is a valid key of
+// the corresponding canonical payload type from @agency/validators. This is the
+// compile-time bridge — rename or remove a payload field → TS error here.
+//
+// The type is `Array<Omit<TriggerVariable, 'key'> & { key: keyof P & string }>`.
+// `satisfies` checks conformance without widening the literal array — so keys
+// that aren't on the payload type cause a TS error at the literal, not at a
+// later call site.
+//
+// Zero runtime overhead — `satisfies` is a type-only operator, erased from JS.
+// ---------------------------------------------------------------------------
+
+const bookingCreatedSchema = [
+  {
+    key: 'appointmentId',
+    label: 'ID wizyty',
+    description: 'UUID wizyty w bazie danych',
+    category: 'System',
+    example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+  },
+  {
+    key: 'responseId',
+    label: 'ID odpowiedzi',
+    description: 'UUID odpowiedzi powiązanej z wizytą',
+    category: 'System',
+    example: '2584aca8-6f61-4504-84fb-378b67150eb0',
+  },
+  {
+    key: 'surveyLinkId',
+    label: 'ID linku ankiety',
+    description: 'UUID linku ankiety, z którego pochodzi rezerwacja',
+    category: 'System',
+    example: '01c54fc5-f6b0-422e-abb2-72d85b145f5e',
+  },
+] satisfies Array<Omit<TriggerVariable, 'key'> & { key: keyof BookingCreatedPayload & string }>
+
+const surveySubmittedSchema = [
+  {
+    key: 'responseId',
+    label: 'ID odpowiedzi',
+    description: 'UUID odpowiedzi w bazie danych',
+    category: 'System',
+    example: '2584aca8-6f61-4504-84fb-378b67150eb0',
+  },
+  {
+    key: 'surveyLinkId',
+    label: 'ID linku ankiety',
+    description: 'UUID linku ankiety',
+    category: 'System',
+    example: '01c54fc5-f6b0-422e-abb2-72d85b145f5e',
+  },
+] satisfies Array<Omit<TriggerVariable, 'key'> & { key: keyof SurveySubmittedPayload & string }>
 
 export const TRIGGER_VARIABLE_SCHEMAS: Record<string, TriggerVariable[]> = {
   form_confirmation: [
@@ -54,67 +112,16 @@ export const TRIGGER_VARIABLE_SCHEMAS: Record<string, TriggerVariable[]> = {
    * and avoids connection-pool timing issues (trigger fires 500ms after DB insert).
    * Workflow authors must add a get_response step to access survey data.
    */
-  survey_submitted: [
-    {
-      key: 'responseId',
-      label: 'ID odpowiedzi',
-      description: 'UUID odpowiedzi w bazie danych',
-      category: 'System',
-      example: '2584aca8-6f61-4504-84fb-378b67150eb0',
-    },
-    {
-      key: 'surveyLinkId',
-      label: 'ID linku ankiety',
-      description: 'UUID linku ankiety',
-      category: 'System',
-      example: '01c54fc5-f6b0-422e-abb2-72d85b145f5e',
-    },
-  ],
+  survey_submitted: surveySubmittedSchema,
 
-  booking_created: [
-    {
-      key: 'clientName',
-      label: 'Imię klienta',
-      description: 'Z rezerwacji wizyty',
-      category: 'Klient',
-      example: 'Jan Kowalski',
-    },
-    {
-      key: 'clientEmail',
-      label: 'Email klienta',
-      description: 'Z rezerwacji wizyty',
-      category: 'Klient',
-      example: 'jan@firma.pl',
-    },
-    {
-      key: 'appointmentAt',
-      label: 'Data i godzina wizyty',
-      description: 'Pełna data i czas rezerwacji (ISO 8601)',
-      category: 'Wizyta',
-      example: '2026-04-15T14:00:00Z',
-    },
-    {
-      key: 'notes',
-      label: 'Notatki do wizyty',
-      description: 'Dodatkowe uwagi klienta (jeśli podane)',
-      category: 'Wizyta',
-      example: 'Proszę o kontakt telefoniczny przed wizytą',
-    },
-    {
-      key: 'appointmentId',
-      label: 'ID wizyty',
-      description: 'UUID wizyty w bazie danych',
-      category: 'System',
-      example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
-    },
-    {
-      key: 'companyName',
-      label: 'Nazwa firmy',
-      description: 'Z profilu organizacji',
-      category: 'Firma',
-      example: 'Halo Efekt',
-    },
-  ],
+  /**
+   * booking_created trigger exposes only IDs.
+   * WHY: All hydrated appointment data (clientEmail, appointmentAt, clientName, notes)
+   * must be fetched by an explicit get_appointment step (added in Commit 8). This decouples
+   * trigger from data fetching, mirroring survey_submitted, and gives visual clarity on the
+   * canvas — every data dependency is a step, not an implicit trigger field.
+   */
+  booking_created: bookingCreatedSchema,
 
   lead_scored: [
     {

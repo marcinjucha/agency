@@ -209,6 +209,11 @@ export const getSurveyLinkConfigSchema = z.object({
   surveyLinkIdExpression: expressionWithVariable,
 })
 
+export const getAppointmentConfigSchema = z.object({
+  type: z.literal('get_appointment'),
+  appointmentIdExpression: expressionWithVariable,
+})
+
 /**
  * Registry mapping step types to their config Zod schemas.
  * Adding a new step type = add schema above + entry here.
@@ -224,6 +229,7 @@ export const stepConfigSchemaMap: Record<StepType, ZodSchema> = {
   get_response: getResponseConfigSchema,
   update_response: updateResponseConfigSchema,
   get_survey_link: getSurveyLinkConfigSchema,
+  get_appointment: getAppointmentConfigSchema,
 }
 
 export const triggerConfigSchemaMap: Record<TriggerType, ZodSchema> = {

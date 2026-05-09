@@ -49,6 +49,7 @@ const NODE_COMPONENTS: Record<StepType | 'trigger', React.ComponentType<any>> = 
   get_response: ActionNode,
   update_response: ActionNode,
   get_survey_link: ActionNode,
+  get_appointment: ActionNode,
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- ReactFlow NodeTypes accepts arbitrary ComponentType

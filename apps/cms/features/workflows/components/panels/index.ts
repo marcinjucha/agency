@@ -14,6 +14,7 @@ import { WebhookConfigPanel } from './WebhookConfigPanel'
 import { AiActionConfigPanel } from './AiActionConfigPanel'
 import { GetResponseConfigPanel } from './GetResponseConfigPanel'
 import { GetSurveyLinkConfigPanel } from './GetSurveyLinkConfigPanel'
+import { GetAppointmentConfigPanel } from './GetAppointmentConfigPanel'
 import { UpdateResponseConfigPanel } from './UpdateResponseConfigPanel'
 import { PlaceholderStepPanel } from './PlaceholderStepPanel'
 import { ConfigPanelWrapper } from './ConfigPanelWrapper'
@@ -62,6 +63,7 @@ const STEP_PANEL_REGISTRY: Record<StepType, React.ComponentType<ConfigPanelProps
   get_response: GetResponseConfigPanel,
   update_response: UpdateResponseConfigPanel,
   get_survey_link: GetSurveyLinkConfigPanel,
+  get_appointment: GetAppointmentConfigPanel,
 }
 
 /** Get the correct panel component for a given step type */
@@ -85,6 +87,7 @@ const _WebhookConfigPanel = WebhookConfigPanel
 const _AiActionConfigPanel = AiActionConfigPanel
 const _GetResponseConfigPanel = GetResponseConfigPanel
 const _GetSurveyLinkConfigPanel = GetSurveyLinkConfigPanel
+const _GetAppointmentConfigPanel = GetAppointmentConfigPanel
 const _UpdateResponseConfigPanel = UpdateResponseConfigPanel
 const _PlaceholderStepPanel = PlaceholderStepPanel
 
@@ -98,6 +101,7 @@ export {
   _AiActionConfigPanel as AiActionConfigPanel,
   _GetResponseConfigPanel as GetResponseConfigPanel,
   _GetSurveyLinkConfigPanel as GetSurveyLinkConfigPanel,
+  _GetAppointmentConfigPanel as GetAppointmentConfigPanel,
   _UpdateResponseConfigPanel as UpdateResponseConfigPanel,
   _PlaceholderStepPanel as PlaceholderStepPanel,
 }

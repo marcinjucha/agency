@@ -1,4 +1,5 @@
 import type { TriggerType } from '../types'
+import type { BookingCreatedPayload, SurveySubmittedPayload } from '@agency/validators'
 
 // --- Execution Context ---
 
@@ -16,19 +17,17 @@ export type ExecutionContext = {
 
 // --- Trigger Payloads (discriminated union by trigger_type) ---
 
-export type TriggerPayloadSurveySubmitted = {
+/**
+ * WHY: Payload shapes imported from @agency/validators — the single source of truth shared
+ * by both apps. This prevents drift between what booking.ts dispatches and what the engine
+ * expects. @agency/validators is the canonical cross-app contract package (ADR-005).
+ */
+export type TriggerPayloadSurveySubmitted = SurveySubmittedPayload & {
   trigger_type: 'survey_submitted'
-  responseId: string
-  surveyLinkId: string
 }
 
-export type TriggerPayloadBookingCreated = {
+export type TriggerPayloadBookingCreated = BookingCreatedPayload & {
   trigger_type: 'booking_created'
-  appointmentId: string
-  responseId?: string
-  surveyLinkId?: string
-  clientEmail?: string
-  appointmentAt?: string
 }
 
 export type TriggerPayloadLeadScored = {

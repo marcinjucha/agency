@@ -222,12 +222,13 @@ describe('buildTriggerContext', () => {
     })
   })
 
-  it('maps booking_created with required + optional fields', () => {
+  it('maps booking_created with required + optional ID fields', () => {
+    // AAA-T-63 Commit 7: trigger payload is IDs only. Hydration via get_appointment step.
     const payload: TriggerPayload = {
       trigger_type: 'booking_created',
       appointmentId: 'apt-1',
-      clientEmail: 'test@example.com',
-      appointmentAt: '2026-04-07T10:00:00Z',
+      responseId: 'resp-1',
+      surveyLinkId: 'link-1',
     }
 
     const ctx = buildTriggerContext('booking_created', payload)
@@ -235,8 +236,8 @@ describe('buildTriggerContext', () => {
     expect(ctx).toEqual({
       trigger_type: 'booking_created',
       appointmentId: 'apt-1',
-      clientEmail: 'test@example.com',
-      appointmentAt: '2026-04-07T10:00:00Z',
+      responseId: 'resp-1',
+      surveyLinkId: 'link-1',
     })
   })
 
@@ -244,7 +245,7 @@ describe('buildTriggerContext', () => {
     const payload: TriggerPayload = {
       trigger_type: 'booking_created',
       appointmentId: 'apt-1',
-      // responseId, surveyLinkId, clientEmail, appointmentAt all undefined
+      // responseId, surveyLinkId all undefined
     }
 
     const ctx = buildTriggerContext('booking_created', payload)
@@ -254,8 +255,7 @@ describe('buildTriggerContext', () => {
       appointmentId: 'apt-1',
     })
     expect(ctx).not.toHaveProperty('responseId')
-    expect(ctx).not.toHaveProperty('clientEmail')
-    expect(ctx).not.toHaveProperty('appointmentAt')
+    expect(ctx).not.toHaveProperty('surveyLinkId')
   })
 
   it('remaps lead_scored score -> overallScore (critical non-obvious remapping)', () => {

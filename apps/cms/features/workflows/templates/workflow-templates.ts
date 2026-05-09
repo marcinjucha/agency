@@ -120,7 +120,7 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
   {
     id: 'booking_notification',
     name: 'Powiadomienie o rezerwacji',
-    description: 'Wyślij email potwierdzający po złożeniu rezerwacji.',
+    description: 'Po rezerwacji: pobierz dane spotkania i odpowiedzi z ankiety, wyślij email potwierdzający.',
     icon: '📅',
     trigger_type: 'booking_created',
     trigger_config: {},
@@ -133,23 +133,61 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
         position_y: 0,
       },
       {
+        tempId: 'get-appointment-1',
+        step_type: 'get_appointment',
+        step_config: {
+          type: 'get_appointment',
+          appointmentIdExpression: '{{appointmentId}}',
+        },
+        position_x: 350,
+        position_y: -80,
+      },
+      {
+        tempId: 'get-response-1',
+        step_type: 'get_response',
+        step_config: {
+          type: 'get_response',
+          responseIdExpression: '{{responseId}}',
+        },
+        position_x: 350,
+        position_y: 80,
+      },
+      {
         tempId: 'send-email-1',
         step_type: 'send_email',
         step_config: {
           type: 'send_email',
           template_id: null,
-          to_expression: '{{contact.email}}',
+          to_expression: '{{clientEmail}}',
         },
-        position_x: 350,
+        position_x: 700,
         position_y: 0,
       },
     ],
     edges: [
       {
         source_temp_id: 'trigger-1',
-        target_temp_id: 'send-email-1',
+        target_temp_id: 'get-appointment-1',
         condition_branch: null,
         sort_order: 0,
+      },
+      {
+        source_temp_id: 'trigger-1',
+        target_temp_id: 'get-response-1',
+        condition_branch: null,
+        sort_order: 1,
+      },
+      {
+        source_temp_id: 'get-appointment-1',
+        target_temp_id: 'send-email-1',
+        condition_branch: null,
+        sort_order: 2,
+      },
+      {
+        source_temp_id: 'get-response-1',
+        target_temp_id: 'send-email-1',
+        condition_branch: null,
+        sort_order: 3,
       },
     ],
   },

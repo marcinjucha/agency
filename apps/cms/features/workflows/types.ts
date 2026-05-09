@@ -169,6 +169,11 @@ export type StepConfigGetSurveyLink = {
   surveyLinkIdExpression?: string
 }
 
+export type StepConfigGetAppointment = {
+  type: 'get_appointment'
+  appointmentIdExpression?: string
+}
+
 export type StepConfig =
   | StepConfigSendEmail
   | StepConfigDelay
@@ -178,6 +183,7 @@ export type StepConfig =
   | StepConfigGetResponse
   | StepConfigUpdateResponse
   | StepConfigGetSurveyLink
+  | StepConfigGetAppointment
 
 // --- Domain types with typed JSONB fields ---
 

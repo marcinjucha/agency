@@ -63,6 +63,7 @@ const STEP_ICON_MAP: Record<StepType, LucideIcon> = {
   get_response: Database,
   update_response: PenLine,
   get_survey_link: Link,
+  get_appointment: Database,
 }
 
 export const NODE_TYPE_CONFIGS: Record<StepType | 'trigger', NodeTypeConfig> = {

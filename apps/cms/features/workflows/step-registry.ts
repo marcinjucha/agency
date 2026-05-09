@@ -189,6 +189,23 @@ const GET_SURVEY_LINK_STEP = defineStep({
   defaultConfig: { type: 'get_survey_link', surveyLinkIdExpression: '{{surveyLinkId}}' },
 })
 
+const GET_APPOINTMENT_STEP = defineStep({
+  id: 'get_appointment' as const,
+  labelKey: 'stepGetAppointment',
+  descriptionKey: 'descGetAppointment',
+  borderColor: 'border-l-4 border-l-emerald-400',
+  category: 'actions',
+  outputSchema: [
+    { key: 'appointmentId',        labelKey: 'outputAppointmentId',        type: 'string' },
+    { key: 'appointmentStartTime', labelKey: 'outputAppointmentStartTime', type: 'string' },
+    { key: 'appointmentEndTime',   labelKey: 'outputAppointmentEndTime',   type: 'string' },
+    { key: 'appointmentStatus',    labelKey: 'outputAppointmentStatus',    type: 'string' },
+    { key: 'calendarProvider',     labelKey: 'outputCalendarProvider',     type: 'string' },
+    { key: 'calendarEventId',      labelKey: 'outputCalendarEventId',      type: 'string' },
+  ],
+  defaultConfig: { type: 'get_appointment', appointmentIdExpression: '{{appointmentId}}' },
+})
+
 // --- Registry ---
 
 export const STEP_REGISTRY = [
@@ -200,6 +217,7 @@ export const STEP_REGISTRY = [
   GET_RESPONSE_STEP,
   UPDATE_RESPONSE_STEP,
   GET_SURVEY_LINK_STEP,
+  GET_APPOINTMENT_STEP,
 ] as const
 
 // --- Derived Types ---

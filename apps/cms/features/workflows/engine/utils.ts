@@ -265,8 +265,6 @@ export function buildTriggerContext(
         appointmentId: triggerPayload.appointmentId,
         ...(triggerPayload.responseId !== undefined && { responseId: triggerPayload.responseId }),
         ...(triggerPayload.surveyLinkId !== undefined && { surveyLinkId: triggerPayload.surveyLinkId }),
-        ...(triggerPayload.clientEmail !== undefined && { clientEmail: triggerPayload.clientEmail }),
-        ...(triggerPayload.appointmentAt !== undefined && { appointmentAt: triggerPayload.appointmentAt }),
       }
 
     case 'lead_scored':
