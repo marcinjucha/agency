@@ -46,6 +46,8 @@ architecture:
     - "_name in step_config drives canvas labels (AAA-T-211) — step_config._name ?? getLabel(step_type) pattern; editable via ConfigPanelWrapper 'Nazwa kroku' field; persisted to DB as part of step_config JSONB on Save. All 12 templates pre-fill _name with descriptive Polish labels."
     - "Step config validation gates save client+server (AAA-T-212) — validateAllSteps utility runs Zod schemas per step type; WorkflowEditor blocks save when invalid (disabled Save button + amber banner over canvas); saveWorkflowCanvasFn re-validates server-side as defense-in-depth. Invalid nodes show amber ring + AlertTriangle icon. 13 tests for validate-steps.ts utility."
     - "Trigger Handler is pure pass-through (AAA-T-212) — exists for handler-per-step-type consistency; no data hydration; Orchestrator buildTriggerContext does universal `return { ...payload, trigger_type: triggerType }` instead of per-trigger switch. All context hydration (survey answers, appointments) must use explicit get_response / get_survey_link steps downstream."
+    - "Trigger payload contract: trigger carries IDs only; downstream hydration via explicit steps (AAA-T-63) — booking_created trigger passes appointmentId/responseId/surveyLinkId only. No auto-hydration in the trigger handler. Every step that needs data fetches it explicitly (get_appointment, get_response, get_survey_link). Why: handlers stay consistent, workflow graph is readable (visible which data each step fetches), no implicit magic payload. Applies to all trigger types — survey_submitted was already ID-only after AAA-T-206."
+    - "Dual workflow attachment per survey_link (AAA-T-63) — survey_links carries two nullable FK columns: workflow_id (survey_submitted slot) and booking_workflow_id (booking_created slot). verifyWorkflowAccess validates expectedTriggerType to prevent cross-slot assignment. NULL booking_workflow_id = skip dispatch entirely. Pattern enforces one workflow per trigger event type per survey link."
     - "RHF mode: 'onChange' required for live validation clearing (AAA-T-212) — trigger() alone does not enable reValidateMode; without mode: 'onChange', errors shown by trigger() persist even after user fixes the field. All 9 workflow config panels updated to mode: 'onChange' + trigger() on panel open when step is invalid."
     - "cancelled step status = terminal non-executed state (AAA-T-210) — n8n Orchestrator batch-PATCHes pending/running→cancelled on failure; Decide Replay Action treats cancelled as new_attempt (preserves audit trail); parseWorkflowSnapshot sanitizes webhook step_config.headers before UI exposure"
     - "URL search param for shareable execution detail (?execution=<uuid>, AAA-T-220) — WorkflowEditor route uses TanStack Router validateSearch with Zod; all writes use replace:true to avoid history pollution; panel opens to detail view on load when param present"
@@ -213,11 +215,19 @@ features:
     depends_on: ["Roles & Permissions System"]
     completion_notes: "Super admins can create, edit, deactivate, and delete tenant organisations. Each tenant's feature set is controllable via granular flags. Scope Bar allows cross-tenant management without route changes. 84 tests provide regression coverage for permissions, tenant CRUD, and cache behaviour."
 
+  - name: "Booking-Triggered Workflow Infrastructure"
+    status: done
+    task_id: "AAA-T-63"
+    description: "Per-survey-link dual workflow attachment: each survey_link row now carries two nullable workflow FK columns — workflow_id (survey_submitted trigger) and booking_workflow_id (booking_created trigger). DB: survey_links.booking_workflow_id UUID NULL FK to workflows(id) ON DELETE SET NULL + partial index. CMS: second WorkflowSelector in survey-link create + edit forms; verifyWorkflowAccess extended with optional expectedTriggerType to ensure the attached workflow's trigger_type matches the slot. Website: booking.ts dispatch reads booking_workflow_id (folded into existing survey_links SELECT), includes workflow_id in POST body, skips dispatch when NULL. Pre-existing 400 bug (every booking produced a silent 400 CMS-log entry) fixed as side-effect. 11/11 tests pass."
+    why: "Required foundation for booking-triggered automations (confirmation email, notifications). One attachment slot per trigger event type keeps routing explicit and prevents workflows from firing on the wrong event."
+    depends_on: ["Workflow Engine", "Calendar Integration"]
+    completion_notes: "Survey links can now have a separate workflow attached for the booking_created event, independently of the survey_submitted workflow. When a client books a slot, the booking workflow fires automatically. The first concrete workflow to build on this is booking_confirmation — that is a separate downstream task (define email steps in the visual builder)."
+
   - name: "Email: Booking Confirmation"
     status: not_started
-    description: "n8n workflow triggered after booking creation — email to client (date, time, link) + notification to firm"
+    description: "n8n workflow (trigger_type: booking_created) attached via survey_link.booking_workflow_id — sends two emails: client confirmation (date, time, link) + firm notification. Email template seeds (booking_confirmation_client + booking_confirmation_internal) with {{date}} {{time}} {{link}} {{client_name}} variable blocks. Reuses Send Email subworkflow and email_templates CMS editor."
     why: "Client and firm need confirmation after appointment booking"
-    depends_on: ["Calendar Integration", "Email Notifications + Template Management"]
+    depends_on: ["Booking-Triggered Workflow Infrastructure", "Email Notifications + Template Management"]
 
   - name: "Email: Booking Reminder"
     status: not_started
