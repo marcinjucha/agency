@@ -193,8 +193,8 @@ export function AppointmentsTable() {
                         </p>
                       </td>
                       <td className="px-6 py-4">
-                        <p className="text-sm text-muted-foreground truncate" title={appointment.client_email}>
-                          {appointment.client_email}
+                        <p className="text-sm text-muted-foreground truncate" title={appointment.client_email ?? undefined}>
+                          {appointment.client_email ?? ''}
                         </p>
                       </td>
                       <td className="px-6 py-4">

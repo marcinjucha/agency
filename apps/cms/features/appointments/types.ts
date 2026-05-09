@@ -41,6 +41,24 @@ export interface AppointmentResponseContext {
 }
 
 /**
+ * Base appointment row + derived client identity fields.
+ *
+ * The `appointments` table does not store `client_name`/`client_email` —
+ * these are derived at query time from the joined response's `answers` JSONB
+ * via `extractClientInfo` (see `features/appointments/server.ts#transformToListItem`).
+ */
+// Omit defends against a future migration that re-adds `client_name` /
+// `client_email` columns with a different type — without Omit, the intersection
+// would silently widen the field type. Today the Omit is a no-op (DROP COLUMN
+// already removed them from `Tables<'appointments'>`), but documents intent.
+type AppointmentBase = Omit<Tables<'appointments'>, 'client_name' | 'client_email'> & {
+  /** Derived from joined response.answers via `extractClientInfo` (lenient — falls back to messages.appointments.unknownClient). */
+  client_name: string
+  /** Derived from joined response.answers via `extractClientInfo`. Null when response/email is missing. */
+  client_email: string | null
+}
+
+/**
  * Appointment with optional response relationship
  * Used in detail view when displaying appointment with its associated response
  * Includes all appointment fields + optional response join
@@ -53,17 +71,16 @@ export interface AppointmentResponseContext {
  *   response_id: "r-123",
  *   start_time: "2026-01-20T10:00:00Z",
  *   end_time: "2026-01-20T11:00:00Z",
- *   client_name: "John Doe",
- *   client_email: "john@example.com",
+ *   client_name: "John Doe",          // derived from response.answers
+ *   client_email: "john@example.com", // derived from response.answers
  *   status: "scheduled",
- *   notes: "Initial consultation",
  *   calendar_event_id: "evt_123",
  *   created_at: "2026-01-15T10:30:00Z",
  *   updated_at: "2026-01-15T10:30:00Z",
  *   response: { id: "r-123", status: "qualified", created_at: "2026-01-15T10:00:00Z" }
  * }
  */
-export type AppointmentWithResponse = Tables<'appointments'> & {
+export type AppointmentWithResponse = AppointmentBase & {
   /** Optional joined response data (null if no response_id) */
   response?: AppointmentResponseContext | null
 }
@@ -73,7 +90,7 @@ export type AppointmentWithResponse = Tables<'appointments'> & {
  * Extends base appointment with computed fields for efficient list rendering
  * Includes only fields needed for:
  * - Status badge display
- * - Client name/email columns
+ * - Client name/email columns (derived from response.answers)
  * - Time and duration display
  * - Optional response relationship
  * - Detail view link
@@ -87,17 +104,16 @@ export type AppointmentWithResponse = Tables<'appointments'> & {
  *   start_time: "2026-01-20T10:00:00Z",
  *   end_time: "2026-01-20T11:00:00Z",
  *   duration_minutes: 60,
- *   client_name: "John Doe",
- *   client_email: "john@example.com",
+ *   client_name: "John Doe",          // derived from response.answers
+ *   client_email: "john@example.com", // derived from response.answers
  *   status: "scheduled",
- *   notes: "Initial consultation",
  *   calendar_event_id: "evt_123",
  *   created_at: "2026-01-15T10:30:00Z",
  *   updated_at: "2026-01-15T10:30:00Z",
  *   response: { id: "r-123", status: "qualified", created_at: "2026-01-15T10:00:00Z" }
  * }
  */
-export type AppointmentListItem = Tables<'appointments'> & {
+export type AppointmentListItem = AppointmentBase & {
   /**
    * Computed duration in minutes
    * Calculated from start_time and end_time

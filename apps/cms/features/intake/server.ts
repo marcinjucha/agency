@@ -3,7 +3,7 @@ import { ok, err, ResultAsync } from 'neverthrow'
 import { messages } from '@/lib/messages'
 import { updateStatusSchema, updateNotesSchema } from '@/features/intake/validation'
 import { getAuth, requireAuthContext, type AuthContext } from '@/lib/server-auth.server'
-import { extractClientInfo } from './utils/extractClientInfo'
+import { extractClientInfo } from '@agency/validators'
 import type { AIQualification } from '../responses/types'
 import type { PipelineResponse, IntakeStats } from './types'
 

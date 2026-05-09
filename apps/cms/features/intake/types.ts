@@ -39,13 +39,14 @@ export interface PipelineColumnConfig {
   statuses: ResponseStatus[]
 }
 
-/** Client contact info extracted from survey answers via semantic_role */
-export interface ClientInfo {
-  name: string
-  email: string | null
-  companyName: string | null
-  phone: string | null
-}
+/** Client contact info extracted from survey answers via semantic_role.
+ *
+ * Re-exported from `@agency/validators` — single source of truth lives in
+ * `packages/validators/src/extract-client-info.ts` (shared with website
+ * booking flow). Kept as a re-export here for backward compatibility with
+ * existing intake feature imports.
+ */
+export type { ClientInfo } from '@agency/validators'
 
 /** Response as displayed in Pipeline card */
 export interface PipelineResponse {
