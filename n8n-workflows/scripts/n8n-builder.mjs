@@ -12,15 +12,32 @@
  *   node n8n-workflows/scripts/n8n-builder.mjs --help
  */
 
-import { readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs'
+import { readFileSync, writeFileSync, existsSync, readdirSync, statSync } from 'node:fs'
 import { resolve, dirname } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { fileURLToPath } from 'node:url'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const WORKFLOWS_DIR = resolve(__dirname, '../workflows/Workflows')
+const WORKFLOWS_ROOT = resolve(__dirname, '../workflows')
 const PROCESS_STEP_FILE = resolve(WORKFLOWS_DIR, 'Workflow Process Step.json')
 const EVALUATORS_DIR = resolve(__dirname, 'evaluators')
+
+// Recursively find all .json workflow files under a directory.
+// Used by regenerate-helpers to scan every subdirectory (Workflows/, Marketplace/, ...).
+function findAllWorkflowJsons(rootDir) {
+  const results = []
+  function walk(dir) {
+    for (const entry of readdirSync(dir)) {
+      const full = resolve(dir, entry)
+      const st = statSync(full)
+      if (st.isDirectory()) walk(full)
+      else if (entry.endsWith('.json')) results.push(full)
+    }
+  }
+  walk(rootDir)
+  return results
+}
 
 // ─── Project-specific constants ───────────────────────────────────────────────
 // These are tied to the n8n instance and workspace. Update if instance changes.
@@ -230,6 +247,7 @@ const INLINE_HELPERS = {
   'expression-evaluator': 'expression-evaluator.js',
   'get-nested-value': 'get-nested-value.js',
   'resolve-variables': 'resolve-variables.js',
+  'supabase-crud': 'supabase-crud.js',
   'supabase-request': 'supabase-request.js',
 }
 
@@ -303,9 +321,7 @@ function regenerateHelpers({ target }) {
 
   const targets = target
     ? [resolve(process.cwd(), target)]
-    : readdirSync(WORKFLOWS_DIR)
-        .filter((f) => f.endsWith('.json'))
-        .map((f) => resolve(WORKFLOWS_DIR, f))
+    : findAllWorkflowJsons(WORKFLOWS_ROOT)
 
   let totalNodes = 0
   const fileResults = []

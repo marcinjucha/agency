@@ -21,15 +21,19 @@
 //   - POST/PATCH/DELETE — same; PostgREST returns the row(s) when
 //     Prefer: return=representation
 //   - 4xx/5xx — rejects with detailed error
+//   - opts.prefer — overrides the Prefer header (default: 'return=representation').
+//     Pass 'return=minimal' for fire-and-forget writes that don't need the row back
+//     (resolves with null on success).
 //   - Callers that don't need the result (e.g. Save Input Payload PATCH)
 //     can simply ignore the resolved value
 // =============================================================
 
-async function supabaseRequest(path, method, body) {
+async function supabaseRequest(path, method, body, opts) {
   const url = `${SUPABASE_URL}/rest/v1/${path}`;
   return new Promise((resolve, reject) => {
     const match = url.match(/^https?:\/\/([^/]+)(\/.*)$/);
     if (!match) { reject(new Error('Invalid SUPABASE_URL')); return; }
+    const prefer = (opts && opts.prefer) || 'return=representation';
     const options = {
       hostname: match[1],
       path: match[2],
@@ -38,7 +42,7 @@ async function supabaseRequest(path, method, body) {
         'apikey': SUPABASE_KEY,
         'Authorization': `Bearer ${SUPABASE_KEY}`,
         'Content-Type': 'application/json',
-        'Prefer': 'return=representation',
+        'Prefer': prefer,
       },
     };
     const req = https.request(options, (res) => {
