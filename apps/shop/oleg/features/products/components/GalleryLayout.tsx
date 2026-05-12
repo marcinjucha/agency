@@ -91,6 +91,15 @@ export function GalleryLayout({ product }: GalleryLayoutProps) {
           </div>
         )}
       </div>
+
+      {product.html_body && (
+        <div className="mt-12 border-t border-border pt-10">
+          <div
+            className="product-prose"
+            dangerouslySetInnerHTML={{ __html: product.html_body }}
+          />
+        </div>
+      )}
     </div>
   )
 }
