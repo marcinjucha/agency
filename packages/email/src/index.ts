@@ -1,2 +1,5 @@
 export * from './blocks/types'
 export * from './EmailRenderer'
+export { BLOCK_REGISTRY } from './blocks/registry'
+export type { BlockRegistryEntry } from './blocks/registry'
+export { BLOCK_DEFAULT_VALUES, DEFAULT_BLOCKS } from './blocks/defaults'

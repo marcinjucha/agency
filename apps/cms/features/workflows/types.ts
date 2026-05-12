@@ -113,9 +113,10 @@ export type StepConfigSendEmail = {
   variable_bindings?: Record<string, string>
 }
 
-/** Email template with html_body and subject for variable extraction in SendEmailConfigPanel. */
+/** Email template with html_body, subject, and template_variables for binding table in SendEmailConfigPanel. */
 export type EmailTemplateWithBody = EmailTemplateOption & {
   html_body: string
+  template_variables: Array<{ key: string; label: string; description?: string; source?: string }>
 }
 
 export type StepConfigDelay = {

@@ -136,7 +136,8 @@ features:
 
   - name: "Email Notifications + Template Management"
     status: done
-    description: "n8n Send Email subworkflow (per-tenant config, Resend fallback), Form Confirmation workflow, CMS block editor with live preview, email_templates table with RLS"
+    task_id: "AAA-T-221"
+    description: "n8n Send Email subworkflow (per-tenant config, Resend fallback), Form Confirmation workflow, CMS block editor with live preview. AAA-T-221: BLOCK_REGISTRY pattern (9 block types: header/text/cta/divider/footer/heading/image/spacer/columns), 3-column layout with scaled preview, premium ColorPicker, @dnd-kit accordion, BlockPalette, variable system (template_variables JSONB + VariablesEditor + workflow SendEmailConfigPanel integration)"
     why: "Automated confirmation emails with per-tenant template customization"
     depends_on: ["n8n Infrastructure"]
 

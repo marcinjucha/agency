@@ -183,7 +183,7 @@ export async function getEmailTemplatesWithBodyHandler(): Promise<
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- email_templates type resolves to never (Supabase JS v2.95.2 incompatibility)
   const { data, error } = await (supabase as any)
     .from('email_templates')
-    .select('id, type, subject, html_body')
+    .select('id, type, subject, html_body, template_variables')
     .order('type')
 
   if (error) throw error
@@ -193,6 +193,7 @@ export async function getEmailTemplatesWithBodyHandler(): Promise<
     type: row.type,
     subject: row.subject,
     html_body: (row.html_body as string) ?? '',
+    template_variables: Array.isArray(row.template_variables) ? row.template_variables : [],
   }))
 }
 

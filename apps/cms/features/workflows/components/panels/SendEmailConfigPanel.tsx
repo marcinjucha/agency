@@ -24,15 +24,14 @@ import type { ConfigPanelProps } from './index'
 type SendEmailFormData = StepConfigSendEmail
 
 // ---------------------------------------------------------------------------
-// Template variable extraction
+// Template variable extraction (fallback when template_variables not available)
 // ---------------------------------------------------------------------------
 
 /**
- * Extracts single-level {{var}} placeholders from an email template's html_body and subject.
- * Single-level only (no dots) — dot-notation would indicate a workflow variable reference,
- * not a template placeholder.
+ * Extracts single-level {{var}} placeholders from html_body + subject.
+ * Single-level only — dot-notation indicates workflow variable reference, not template placeholder.
  */
-function extractTemplateVars(html: string, subject: string): string[] {
+function extractTemplateVarsFromHtml(html: string, subject: string): string[] {
   const pattern = /\{\{(\s*[\w]+\s*)\}\}/g
   const vars = new Set<string>()
   for (const match of [...html.matchAll(pattern), ...subject.matchAll(pattern)]) {
@@ -41,19 +40,36 @@ function extractTemplateVars(html: string, subject: string): string[] {
   return [...vars].sort()
 }
 
+/**
+ * Resolves template variable display data.
+ * Prefers template_variables from DB (has user-edited labels).
+ * Falls back to regex extraction from html_body when template_variables is empty.
+ */
+function resolveTemplateVarEntries(
+  template: EmailTemplateWithBody
+): Array<{ key: string; label: string }> {
+  const fromMeta = template.template_variables
+  if (fromMeta.length > 0) {
+    return fromMeta.map(({ key, label }) => ({ key, label: label || key }))
+  }
+  // Fallback: extract from rendered HTML — no user-defined labels available
+  return extractTemplateVarsFromHtml(template.html_body, template.subject)
+    .map((key) => ({ key, label: key }))
+}
+
 // ---------------------------------------------------------------------------
 // Sub-components
 // ---------------------------------------------------------------------------
 
 interface VariableBindingTableProps {
-  templateVars: string[]
+  varEntries: Array<{ key: string; label: string }>
   bindings: Record<string, string>
   onChange: (key: string, value: string) => void
   availableVariables: ConfigPanelProps['availableVariables']
 }
 
 function VariableBindingTable({
-  templateVars,
+  varEntries,
   bindings,
   onChange,
   availableVariables,
@@ -63,13 +79,13 @@ function VariableBindingTable({
   const inputRefs = useRef<Record<string, RefObject<HTMLInputElement | null>>>({})
 
   // Ensure a ref exists for each template var
-  for (const key of templateVars) {
+  for (const { key } of varEntries) {
     if (!inputRefs.current[key]) {
       inputRefs.current[key] = { current: null }
     }
   }
 
-  if (templateVars.length === 0) {
+  if (varEntries.length === 0) {
     return (
       <p className="text-xs text-muted-foreground italic py-2">
         {m.variableBindingsEmpty}
@@ -79,9 +95,10 @@ function VariableBindingTable({
 
   return (
     <div className="space-y-3">
-      {templateVars.map((key) => {
+      {varEntries.map(({ key, label }) => {
         const ref = inputRefs.current[key] ?? { current: null }
         const currentValue = bindings[key] ?? ''
+        const displayLabel = label !== key ? label : undefined
 
         return (
           <div
@@ -90,11 +107,16 @@ function VariableBindingTable({
             role="group"
             aria-label={m.variableBindingInputAriaLabel(key)}
           >
-            {/* Template variable name (read-only label) */}
-            <div className="w-36 shrink-0">
-              <code className="text-xs bg-muted rounded px-1.5 py-0.5 font-mono text-foreground">
+            {/* Template variable (key + optional label) */}
+            <div className="w-36 shrink-0 space-y-0.5">
+              <code className="text-xs bg-muted rounded px-1.5 py-0.5 font-mono text-foreground block">
                 {`{{${key}}}`}
               </code>
+              {displayLabel && (
+                <span className="text-[10px] text-muted-foreground block truncate pl-0.5">
+                  {displayLabel}
+                </span>
+              )}
             </div>
 
             {/* Workflow expression input */}
@@ -138,10 +160,10 @@ function VariableBindingsSection({
 }: VariableBindingsSectionProps) {
   const m = messages.workflows.editor
 
-  const templateVars = useMemo(() => {
+  const varEntries = useMemo(() => {
     if (!selectedTemplate) return []
-    return extractTemplateVars(selectedTemplate.html_body, selectedTemplate.subject)
-  }, [selectedTemplate?.id, selectedTemplate?.html_body, selectedTemplate?.subject])
+    return resolveTemplateVarEntries(selectedTemplate)
+  }, [selectedTemplate?.id, selectedTemplate?.html_body, selectedTemplate?.subject, selectedTemplate?.template_variables])
 
   if (!selectedTemplate) return null
 
@@ -152,7 +174,7 @@ function VariableBindingsSection({
         <p className="text-xs text-muted-foreground">{m.variableBindingsHint}</p>
       </div>
       <VariableBindingTable
-        templateVars={templateVars}
+        varEntries={varEntries}
         bindings={bindings}
         onChange={onBindingChange}
         availableVariables={availableVariables}

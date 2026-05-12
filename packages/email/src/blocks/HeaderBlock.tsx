@@ -1,5 +1,5 @@
 import { Section, Text } from '@react-email/components'
-import type { HeaderBlock } from './types'
+import type { HeaderBlock } from './block-interfaces'
 
 export function HeaderBlockComponent({ block }: { block: HeaderBlock }) {
   return (
