@@ -121,16 +121,16 @@ Note: `apps/shop/jacek/` and `apps/shop/oleg/` migrated from Next.js 16 to TanSt
 
 ## PROJECT_SPEC Files (Dual-Project Monorepo)
 
-This monorepo contains two ClickUp projects with separate PROJECT_SPEC files:
+This monorepo contains two Notion projects with separate PROJECT_SPEC files:
 
-| File | ClickUp Lists | Scope |
-|------|--------------|-------|
-| `docs/PROJECT_SPEC.yaml` | Email, Workflow Engine, Intake, Blog & Media, Tech | Agency platform: surveys, intake, calendar, email, blog, landing pages, SEO |
-| `docs/SHOP_PROJECT_SPEC.yaml` | Platforma Sklepowa (901217824196) | E-commerce: product catalog, shop frontends, CMS shop features |
+| File | Notion Projects | Scope |
+|------|----------------|-------|
+| `docs/PROJECT_SPEC.yaml` | AAA-P-11 Email + AAA-P-12 Workflow Engine + AAA-P-13 Intake + AAA-P-14 Blog & Media + AAA-P-15 Tech + AAA-P-16 Metoda Halo Filter + legacy AAA-P-4 Core CMS | Agency platform: surveys, intake, calendar, email, blog, landing pages, SEO |
+| `docs/SHOP_PROJECT_SPEC.yaml` | AAA-P-9 Platforma Sklepowa | E-commerce: product catalog, shop frontends, CMS shop features |
 
 **Routing rule for `/develop` command:**
-- Tasks in Email / Workflow Engine / Intake / Blog & Media / Tech lists → `docs/PROJECT_SPEC.yaml`
-- Tasks in Platforma Sklepowa list → `docs/SHOP_PROJECT_SPEC.yaml`
+- Tasks under AAA-P-11 Email / AAA-P-12 Workflow Engine / AAA-P-13 Intake / AAA-P-14 Blog & Media / AAA-P-15 Tech / AAA-P-16 Metoda Halo Filter / legacy AAA-P-4 Core CMS → `docs/PROJECT_SPEC.yaml`
+- Tasks under AAA-P-9 Platforma Sklepowa → `docs/SHOP_PROJECT_SPEC.yaml`
 
 **Shared infrastructure:** Both projects share the same Supabase DB (shop tables use `shop_` prefix), the same CMS app (shop features in `features/shop-*/`), and the same packages. Only the public frontends will be separate (`apps/website/` vs future `apps/shop/*/`).
 
@@ -184,26 +184,39 @@ This monorepo contains two ClickUp projects with separate PROJECT_SPEC files:
 
 ---
 
-## ClickUp Integration
+## Notion Integration
 
-**This project uses ClickUp as the primary task tracker (migrated from Notion 2026-05-09).**
+**This project uses the Notion Agency Database as the primary task tracker (reverted from ClickUp 2026-05-12).**
 
-| List | ID | Scope |
-|------|----|-------|
-| Email | `901217856226` | Email notifications, templates, provider config |
-| Workflow Engine | `901217856227` | Visual builder, n8n, retry, triggers |
-| Intake | `901217856228` | Surveys, booking, calendar, confirmations |
-| Blog & Media | `901217856229` | Blog editor, media library, social embeds |
-| Tech | `901217856230` | Staging, auth, code review, cross-cutting |
-| Platforma Sklepowa | `901217824196` | Shop platform (separate project) |
-| VPS Infrastructure | `901217824194` | Hetzner VPS, Docker stacks |
-| DocForge | `901217824193` | Desktop app (separate project) |
+- **Projects collection:** `collection://29284f14-76e0-802f-a1de-000b357345a9` (database `29284f14-76e0-8065-ae11-ebe3685f4c02`)
+- **Tasks collection:** `collection://29284f14-76e0-8062-a18d-000bfce0cf23` (database `29284f14-76e0-8012-8708-f1c5d3a78386`)
 
-**Task naming:** Use ClickUp task hash (e.g. `869d78dc4`) as primary identifier for all API calls. Titles are free-form — no mandatory prefix convention. Existing tasks may still have old `[AAA-T-N]` prefix from Notion migration — that's OK, not required to clean up.
+| Notion Project | Project UUID | Scope |
+|---|---|---|
+| AAA-P-11 Email | `35e84f14-76e0-8198-a73c-e02066ed90aa` | Email notifications, templates, provider config (new 2026-05-12) |
+| AAA-P-12 Workflow Engine | `35e84f14-76e0-81a8-bf14-d11966986d82` | Visual builder, n8n, retry, triggers (new 2026-05-12) |
+| AAA-P-13 Intake | `35e84f14-76e0-8131-89f5-c9af874dc516` | Surveys, booking, calendar, confirmations (new 2026-05-12) |
+| AAA-P-14 Blog & Media | `35e84f14-76e0-810b-aef8-d2718ebad9cf` | Blog editor, media library, social embeds (new 2026-05-12) |
+| AAA-P-15 Tech | `35e84f14-76e0-81fe-a6d6-ed0633ed1a9e` | Staging, auth, code review, cross-cutting (new 2026-05-12) |
+| AAA-P-16 Metoda Halo Filter | `35e84f14-76e0-8175-b607-f7f3681c098d` | Offer roadmap tracker (S1/S2/S6/S8/B1-B8/MRR/UP positions + T-* dev subtasks) (new 2026-05-12) |
+| AAA-P-7 Halo Efekt - Website & Content | (existing) | Marketing site content, copy, landing pages |
+| AAA-P-10 Marketing i Social Media | (existing) | Marketing campaigns, social media work |
+| AAA-P-9 Platforma Sklepowa | `33284f14-76e0-816c-943a-c80f812a6f10` | Shop platform |
+| AAA-P-8 Halo Efekt - VPS Infrastructure | `32984f14-76e0-8134-81cc-f44104e84db0` | Hetzner VPS, Docker stacks |
+| AAA-P-6 DocForge - Desktop App | `31a84f14-76e0-814a-a30c-d3d210ad3862` | Desktop app |
+| AAA-P-4 Halo Efekt - Core CMS (archived) | `2e384f14-76e0-8034-8530-f530c28e6641` | Pre-2026-05-12 archive — 0 active tasks, all reparented to AAA-P-11 through AAA-P-15 |
+
+**Agency Clients (unified CRM):** UUID `29284f14-76e0-8046-9c53-e09ac8084aa2`. Extended 2026-05-12 to cover full lifecycle: `Ready to contact` → `Contacted` → `Replied` → `Meeting booked` → `Proposal` → `Negotiation` → `Active` → `Retained` → `Paused` → `Lost`. Adds 10 outreach properties (Outcome, Priorytet, ICP priority, Branża, Tagi, Hook użyty, Następny follow-up, Liczba follow-upów, Czy odpisał?, Źródło renamed from Lead Source). See `.claude/skills/ag-notion-patterns/SKILL.md` for property schemas.
+
+**Task naming:** Notion auto-generates `AAA-T-N` IDs on the Tasks database. Newly created tasks MUST have the title prefixed `[AAA-T-N] <title>` — workflow: `notion-create-pages` → fetch page → read `ID` → `notion-update-page` setting title with prefix.
+
+**Status values (CASE-SENSITIVE):** `Inbox` | `To Do` | `In Progress` | `On Hold` | `Done` | `Cancelled`. Wrong case = silent property mismatch.
+
+**Priority values:** `🔴 Urgent` | `🟠 High` | `🟡 Medium` | `🟢 Low`.
 
 **XL features:** Create separate tasks per iteration with a shared slug prefix (e.g. `booking-flow: iter 1 ...`, `booking-flow: iter 2 ...`) for easy filtering. Single-task-with-checklist for S/M tasks.
 
-**Notion (DEPRECATED):** Was `collection://29284f14-76e0-8062-a18d-000bfce0cf23`. Keep for historical reference only — all new tasks in ClickUp.
+**Task tracking history:** Project used ClickUp from 2026-05-09 to 2026-05-12, then migrated back to Notion Agency Database. ClickUp references in older memory/docs are historical only — `ag-clickup-patterns` skill has been deleted; do NOT create new tasks in ClickUp.
 
 ---
 
@@ -215,8 +228,7 @@ This monorepo contains two ClickUp projects with separate PROJECT_SPEC files:
 | **database-patterns**    | `.claude/skills/database-patterns/SKILL.md`    | Supabase RLS policies, PostgreSQL functions, migrations, type regeneration, client selection (server vs browser), fromSupabaseVoid for void operations, is_super_admin() for global tables. Avoids RLS infinite recursion |
 | **development-workflow** | `.claude/skills/development-workflow/SKILL.md` | Testing decisions (3-Question Rule), severity classification (P0/P1/P2), implementation validation, PROJECT_SPEC.yaml updates, validate after each iteration   |
 | **n8n-patterns**         | `.claude/skills/n8n-patterns/SKILL.md`         | N8n background processing — fire-and-forget webhooks, ai_qualification JSONB, credential selection, Sentry Init subworkflow pattern                           |
-| **notion-patterns**      | `.claude/skills/notion-patterns/SKILL.md`      | Notion MCP tools — task status updates, project tracking. Properties are CASE-SENSITIVE. Contains Agency database IDs and filter rules. DEPRECATED — project migrated to ClickUp |
-| **clickup-patterns**     | `.claude/skills/clickup-patterns/SKILL.md`     | ClickUp MCP tools — task status updates, project tracking. Status values are CASE-SENSITIVE lowercase (`to do`, `in progress`, `complete`). Contains workspace/list IDs, markdown_description pattern, document (Docs) patterns |
+| **notion-patterns**      | `.claude/skills/ag-notion-patterns/SKILL.md`   | Notion MCP tools — task status updates, project tracking. Properties are CASE-SENSITIVE. Contains Agency database IDs, filter rules, and reusable Features Overview / Change Log subpage schemas. **Primary tracker skill** |
 | **design-patterns**      | `.claude/skills/ag-ui-components/SKILL.md`     | React components, shadcn/ui design system, WCAG 2.1 AA accessibility, responsive design, visual design decisions (dark/moody tonality, layout/spacing/typography choices, quality gates), edit pattern decisions (RHF form vs inline, DatePicker vs native). Controller for checkbox arrays, TanStack Query CMS-only, 4 UI states |
 | **validation-patterns**  | `.claude/skills/validation-patterns/SKILL.md`  | Two-pass validation (functional + architecture), YAML report formats, severity classification, 8-point architecture checklist. Loaded by validator-agent      |
 | **iterative-planning**   | `.claude/skills/iterative-planning/SKILL.md`   | Task size assessment (S/M/L/XL), iterative breakdown for M/L/XL tasks, dependency graph patterns (sequential/parallel/convergent), iteration sizing, parallelization identification. Used by analyst-agent in /develop Phase 2 |
@@ -233,16 +245,12 @@ This monorepo contains two ClickUp projects with separate PROJECT_SPEC files:
 
 ## Quick Reference
 
-**When working with ClickUp (current task tracker):**
+**When working with Notion (primary task tracker):**
 
-1. ALWAYS use lowercase status values: `to do`, `in progress`, `complete`
-2. ALWAYS use `markdown_description` (not `description`) for formatted task content
-3. See `.claude/skills/clickup-patterns/SKILL.md` for list IDs, patterns, and document creation
-
-**When working with Notion (DEPRECATED — migrated to ClickUp):**
-
-1. Notion is no longer the task tracker — use ClickUp for all new task operations
-2. See `.claude/skills/notion-patterns/SKILL.md` only if accessing historical Notion data
+1. ALWAYS use TitleCase status values: `To Do`, `In Progress`, `Done`, `Cancelled`, `On Hold`, `Inbox` — wrong case = silent property mismatch
+2. Property names are CASE-SENSITIVE (e.g. `📊 Projects`, `Status`, `Priority`/`Priorytety` — verify against schema before bulk operations)
+3. Newly created tasks must get the `[AAA-T-N]` title prefix: `notion-create-pages` → fetch new page → read auto-generated `ID` → `notion-update-page` setting title to `[AAA-T-N] <title>`
+4. See `.claude/skills/ag-notion-patterns/SKILL.md` for database IDs, filter rules, and reusable Features Overview / Change Log subpage schemas
 
 **When working with n8n:**
 
@@ -271,7 +279,7 @@ This monorepo contains two ClickUp projects with separate PROJECT_SPEC files:
 - **Commit before side-quests** — When user requests work outside current task scope (skill updates, visual audit), commit current progress first.
 - **Worktree needs .env.local** — Git worktrees don't include .env.local (gitignored). Symlink from main (stays in sync): `ln -s $(pwd)/apps/cms/.env.local ./worktree-pnpm/apps/cms/.env.local` (repeat for website, shop/jacek, shop/oleg). Copy (`cp`) also works for one-off setups.
 - **Stage agent-created files explicitly** — The Write tool creates files on disk but does NOT `git add` them. After any file creation step, verify the file appears in `git status` and stage it before committing. WHY: production incident — `docs/polityka-prywatnosci.md` was created by Write but never staged, lost on branch switch.
-- **`chore/` branch prefix for tech-debt without a ClickUp task** — Use `chore/{slug}` branch naming for internal cleanup/refactoring work that doesn't correspond to a tracked ClickUp task. Mirrors npm semver convention. Example: `chore/plugin-arch-cleanup`.
+- **`chore/` branch prefix for tech-debt without a Notion task** — Use `chore/{slug}` branch naming for internal cleanup/refactoring work that doesn't correspond to a tracked Notion task. Mirrors npm semver convention. Example: `chore/plugin-arch-cleanup`.
 - **Clean git history before merge** — Before merging any feature branch, squash/reorganize commits into logical groups using `git reset --soft <base>` + re-commit. WHY: user explicitly confirmed this pattern — prevents WIP/fix commit noise in main history.
 - **Bash `cd` persists across tool calls — use absolute paths in git/pnpm/npm commands** — `cd` in one Bash call changes pwd for ALL subsequent Bash calls in the session. Caused accidental commits to wrong branch. Most tools (Read, Edit, Write) are absolute-path so pwd doesn't matter — only Bash carries state. Fix: use `git -C /path/to/worktree ...`, `pnpm -F @agency/cms ...` — never rely on an earlier `cd`.
 - **`git clean -fd` silently deletes untracked directories — always `-fdn` (dry-run) first** — Wiped `apps/shop/jacek/src/` (untracked, never in git history) with zero recovery path. Always run `git clean -fdn` first, read the output carefully, then `-fd`.
@@ -302,10 +310,22 @@ This monorepo contains two ClickUp projects with separate PROJECT_SPEC files:
 
 ---
 
+## Workflow Preferences (User Rules)
+
+These are durable user-preference rules promoted from `memory.md`. Each has WHY context explaining the production incident or pattern that motivated it.
+
+- **Staging-first workflow — never auto-apply to prod, queue prod actions in `SESSION.md`** — Default scope of every action (DB migrations, deploys, destructive ops, schema changes, n8n imports) is **staging**. Apply to **prod** ONLY after (a) tests pass and (b) user explicitly says "merge to prod" / "robimy merge'a na produkcję" / equivalent. Anything that needs to happen on prod gets QUEUED in `SESSION.md` under a clear "Pending prod actions" section — never executed inline alongside the staging step. **WHY:** AAA-T-63 Iter 3 (2026-05-09) — orchestrator applied `ALTER TABLE appointments DROP COLUMN ...` + `DELETE FROM appointments WHERE response_id IS NULL` to BOTH staging AND prod in a single inline flow, asking confirmation only about the legacy row. User pushed back AFTER prod was already touched. Production is irreversible; staging-first is the only safe default. Applies to deploys, infra changes, n8n workflow imports, anything touching a live customer-facing system.
+
+- **Sequential agent → review → commit per feature for multi-feature refactors** — Parallel agent dispatch (7 at once) creates inconsistent state when scopes overlap. Default to sequential for any refactor touching shared file types across features. Parallel only when: (a) each scope fully isolated (no shared files), (b) each agent's work committed before next dispatch, (c) orchestrator verifies claimed result with `git status` (agent reports unreliable — they say "DELETED" while file still on disk). **WHY:** Earlier parallel dispatch of 7 agents created mixed state — 5/7 only added orphan `handlers.server.ts` without updating `server.ts` or removing `queries.ts`. Reaffirmed 2026-05-01: 24 atomic commits in single session via sequential dispatch worked cleanly, each independently testable/revertable.
+
+- **Validator agent with `tool_uses: 0` produces hallucinated reports** — ALWAYS check `tool_uses` count before trusting validator verdicts (regardless of PASS or CRITICAL). Zero tool uses = agent didn't read files = hallucinated review. Companion to "validator produces confident false-positive CRITICAL findings" rule — same root cause, opposite sign. **WHY:** Pass 3 security validator returned `tool_uses: 0` and a detailed YAML referencing file paths that DO NOT EXIST in the codebase (e.g. `apps/website/features/blog/lib/downloadable-assets.ts`). Verdict was "PASS" but evidence was fabricated. Static-only validators also produce false-positive CRITICALs by flagging missing `tenant_id` filters on handlers that actually have them — treat any validator finding without verified tool use as a hypothesis until confirmed by direct file inspection.
+
+---
+
 ## Project CLAUDE.md Files
 
 Index of all CLAUDE.md files and their scope:
-- `./CLAUDE.md` — Root project overview, skills reference, ClickUp integration
+- `./CLAUDE.md` — Root project overview, skills reference, Notion integration
 - `./.claude/CLAUDE.md` — Claude-dev artifact repo (agents, skills, commands)
 - `./apps/CLAUDE.md` — Apps directory (CMS vs Website separation, shared patterns)
 - `./apps/cms/CLAUDE.md` — CMS admin panel (auth, routes, TanStack Query)
