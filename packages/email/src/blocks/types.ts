@@ -1,79 +1,64 @@
-export type BlockType = 'header' | 'text' | 'cta' | 'divider' | 'footer'
+/**
+ * Publiczne typy pakietu @agency/email.
+ *
+ * BlockType i Block są DERIVED z BLOCK_REGISTRY — nie są ręcznie pisane.
+ * Dodanie nowego typu bloku = wpis w registry.ts, nie edycja tego pliku.
+ *
+ * Interfejsy poszczególnych bloków są w block-interfaces.ts (oddzielone żeby
+ * uniknąć circular dependency z registry.ts).
+ */
 
-export interface HeaderBlock {
-  id: string
-  type: 'header'
-  companyName: string
-  backgroundColor: string  // hex, default '#1a1a2e'
-  textColor: string        // hex, default '#ffffff'
-}
+// Re-eksport interfejsów bloków — backward compat (istniejący kod importuje z './types')
+export type {
+  HeaderBlock,
+  TextBlock,
+  CtaBlock,
+  DividerBlock,
+  FooterBlock,
+  HeadingBlock,
+  ImageBlock,
+  SpacerBlock,
+  ColumnsBlock,
+  NonColumnsBlock,
+} from './block-interfaces'
 
-export interface TextBlock {
-  id: string
-  type: 'text'
-  content: string  // HTML content, supports {{clientName}}, {{surveyTitle}} variables
-}
+import { BLOCK_REGISTRY } from './registry'
+import type {
+  HeaderBlock,
+  TextBlock,
+  CtaBlock,
+  DividerBlock,
+  FooterBlock,
+  HeadingBlock,
+  ImageBlock,
+  SpacerBlock,
+  ColumnsBlock,
+} from './block-interfaces'
 
-export interface CtaBlock {
-  id: string
-  type: 'cta'
-  label: string
-  url: string
-  backgroundColor: string  // hex, default '#1a1a2e'
-  textColor: string        // hex, default '#ffffff'
-}
+/**
+ * Union wszystkich typów bloków — derived z kluczy BLOCK_REGISTRY.
+ * Dodanie nowego wpisu do registry automatycznie rozszerza ten union.
+ */
+export type BlockType = keyof typeof BLOCK_REGISTRY
 
-export interface DividerBlock {
-  id: string
-  type: 'divider'
-  color: string  // hex, default '#e5e7eb'
-}
+/**
+ * Union wszystkich interfejsów bloków.
+ * Jawnie wymieniony discriminated union — zapewnia TypeScript exhaustiveness checking.
+ */
+export type Block = HeaderBlock | TextBlock | CtaBlock | DividerBlock | FooterBlock | HeadingBlock | ImageBlock | SpacerBlock | ColumnsBlock
 
-export interface FooterBlock {
-  id: string
-  type: 'footer'
-  text: string  // default 'Wiadomość wysłana automatycznie. Prosimy nie odpowiadać na ten email.'
-}
+/**
+ * Lista bloków dostępnych w edytorze — derived z BLOCK_REGISTRY.
+ * Używana przez CMS do renderowania palety bloków.
+ */
+export const AVAILABLE_BLOCKS: { type: BlockType; label: string; description: string }[] =
+  (Object.values(BLOCK_REGISTRY) as Array<{ id: string; label: string; description: string }>).map(
+    (entry) => ({
+      type: entry.id as BlockType,
+      label: entry.label,
+      description: entry.description,
+    })
+  )
 
-export type Block = HeaderBlock | TextBlock | CtaBlock | DividerBlock | FooterBlock
-
-export const AVAILABLE_BLOCKS: { type: BlockType; label: string; description: string }[] = [
-  { type: 'header', label: 'Nagłówek', description: 'Logo i nazwa firmy' },
-  { type: 'text', label: 'Tekst', description: 'Akapit z treścią, obsługuje {{zmienne}}' },
-  { type: 'cta', label: 'Przycisk CTA', description: 'Przycisk z linkiem' },
-  { type: 'divider', label: 'Linia', description: 'Pozioma linia rozdzielająca' },
-  { type: 'footer', label: 'Stopka', description: 'Nota prawna / informacja o automatycznej wysyłce' },
-]
-
-export const DEFAULT_BLOCKS: Block[] = [
-  {
-    id: 'default-header',
-    type: 'header',
-    companyName: '{{companyName}}',
-    backgroundColor: '#1a1a2e',
-    textColor: '#ffffff',
-  },
-  {
-    id: 'default-text',
-    type: 'text',
-    content: 'Otrzymałeś nowe zgłoszenie z formularza <strong>{{surveyTitle}}</strong>.<br/><br/>Klient: <strong>{{clientName}}</strong>',
-  },
-  {
-    id: 'default-cta',
-    type: 'cta',
-    label: 'Zobacz zgłoszenie',
-    url: '{{responseUrl}}',
-    backgroundColor: '#1a1a2e',
-    textColor: '#ffffff',
-  },
-  {
-    id: 'default-divider',
-    type: 'divider',
-    color: '#e5e7eb',
-  },
-  {
-    id: 'default-footer',
-    type: 'footer',
-    text: 'Wiadomość wygenerowana automatycznie przez system Halo Efekt.',
-  },
-]
+// DEFAULT_BLOCKS — re-export z defaults.ts (SSoT)
+export { DEFAULT_BLOCKS } from './defaults'

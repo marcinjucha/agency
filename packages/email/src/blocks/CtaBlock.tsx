@@ -1,5 +1,5 @@
 import { Section, Button } from '@react-email/components'
-import type { CtaBlock } from './types'
+import type { CtaBlock } from './block-interfaces'
 
 export function CtaBlockComponent({ block }: { block: CtaBlock }) {
   return (

@@ -1,5 +1,5 @@
 import { Hr } from '@react-email/components'
-import type { DividerBlock } from './types'
+import type { DividerBlock } from './block-interfaces'
 
 export function DividerBlockComponent({ block }: { block: DividerBlock }) {
   return <Hr style={{ borderColor: block.color, margin: '8px 0' }} />

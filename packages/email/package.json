@@ -4,8 +4,18 @@
   "private": true,
   "main": "./src/index.ts",
   "types": "./src/index.ts",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
   "dependencies": {
     "@react-email/components": "^0.0.34",
-    "@react-email/render": "^1.0.6"
+    "@react-email/render": "^1.0.6",
+    "sanitize-html": "^2.17.3"
+  },
+  "devDependencies": {
+    "@types/sanitize-html": "^2.16.1",
+    "@vitejs/plugin-react": "^6.0.1",
+    "vitest": "^3.2.4"
   }
 }

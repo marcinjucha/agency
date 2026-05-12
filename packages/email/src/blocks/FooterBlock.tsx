@@ -1,5 +1,5 @@
 import { Section, Text } from '@react-email/components'
-import type { FooterBlock } from './types'
+import type { FooterBlock } from './block-interfaces'
 
 export function FooterBlockComponent({ block }: { block: FooterBlock }) {
   return (
