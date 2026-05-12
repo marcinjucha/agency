@@ -1,0 +1,87 @@
+import { useRef } from 'react'
+import { Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@agency/ui'
+import { ColorPicker } from '@/components/ui/color-picker'
+import { VariableInserter } from '../VariableInserter'
+import type { HeadingBlock, Block } from '../../types'
+import type { TriggerVariable } from '@/lib/trigger-schemas'
+
+interface HeadingBlockEditorProps {
+  block: HeadingBlock
+  onChange: (updated: Block) => void
+  variables?: TriggerVariable[]
+}
+
+export function HeadingBlockEditor({ block, onChange, variables = [] }: HeadingBlockEditorProps) {
+  const textRef = useRef<HTMLInputElement>(null)
+
+  return (
+    <div className="space-y-3">
+      {/* Tekst nagłówka */}
+      <div>
+        <div className="flex items-center justify-between mb-1.5">
+          <Label htmlFor={`${block.id}-text`}>Tekst nagłówka</Label>
+          <VariableInserter
+            variables={variables}
+            inputRef={textRef}
+            onChange={(val) => onChange({ ...block, text: val })}
+            currentValue={block.text}
+          />
+        </div>
+        <Input
+          ref={textRef}
+          id={`${block.id}-text`}
+          value={block.text}
+          onChange={(e) => onChange({ ...block, text: e.target.value })}
+          placeholder="Wpisz treść nagłówka…"
+        />
+      </div>
+
+      {/* Poziom */}
+      <div>
+        <Label htmlFor={`${block.id}-level`} className="mb-1.5 block">Poziom</Label>
+        <Select
+          value={block.level}
+          onValueChange={(val) => onChange({ ...block, level: val as HeadingBlock['level'] })}
+        >
+          <SelectTrigger id={`${block.id}-level`}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="h1">H1 — Tytuł główny</SelectItem>
+            <SelectItem value="h2">H2 — Podtytuł</SelectItem>
+            <SelectItem value="h3">H3 — Nagłówek sekcji</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Wyrównanie */}
+      <div>
+        <Label htmlFor={`${block.id}-align`} className="mb-1.5 block">Wyrównanie</Label>
+        <Select
+          value={block.textAlign}
+          onValueChange={(val) => onChange({ ...block, textAlign: val as HeadingBlock['textAlign'] })}
+        >
+          <SelectTrigger id={`${block.id}-align`}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="left">Do lewej</SelectItem>
+            <SelectItem value="center">Wyśrodkowane</SelectItem>
+            <SelectItem value="right">Do prawej</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Kolor */}
+      <div className="flex items-center justify-between">
+        <Label htmlFor={`${block.id}-color`} className="text-sm">Kolor tekstu</Label>
+        <ColorPicker
+          id={`${block.id}-color`}
+          label="Kolor nagłówka"
+          value={block.color}
+          onChange={(color) => onChange({ ...block, color })}
+        />
+      </div>
+    </div>
+  )
+}
