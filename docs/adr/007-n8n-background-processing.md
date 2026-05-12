@@ -1,5 +1,9 @@
 # ADR-007: N8n Background Processing for AI Qualification
 
+> **Status:** Superseded by Workflow Engine (AAA-T-183, 2026-04-27).
+> The standalone Survey Response AI Analysis workflow described below has been replaced by the workflow engine's `ai_action` step type.
+> This ADR is preserved as the historical record of the original fire-and-forget pattern that motivated the workflow engine.
+
 **Status:** Accepted
 **Date:** 2026-02-05
 **Context:** Agency SaaS Platform - Survey AI analysis

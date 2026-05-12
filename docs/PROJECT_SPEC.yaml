@@ -57,6 +57,7 @@ architecture:
     - "4-layer URL scheme allowlist for downloadable asset hrefs (http/https only) as defense-in-depth against stored XSS via crafted Tiptap node attrs: renderHTML returns null on unsafe url, parseHTML rejects on load, Zod schema refines, NodeView renders disabled button. validateDownloadableAssets walker called from createBlogPostFn/updateBlogPostFn before persist. (AAA-T-110)"
     - "S3 per-tenant prefix for new media uploads — Halo Efekt keeps legacy 'haloefekt/media' prefix (operational consistency with existing S3 objects); other tenants get 'tenants/{tenantId}/media' isolation. tenantId resolved server-side from requireAuthContext (never client-supplied). No object migration — DB stores absolute S3 URLs. (AAA-T-110)"
     - "is_downloadable BOOLEAN flag on media_items is orthogonal to MediaType — any type (image/video/document/audio) can be downloadable. Distinguishes inline content from files intended for download. MEDIA_MIME_REGISTRY is single source of truth for allowed MIME types per MediaType, consumed by client filter, server allowlist, and reverse lookup for type detection. (AAA-T-110)"
+    - "lead_scored trigger type has no live dispatcher — historical caller (Survey Response AI Analysis) deleted in AAA-T-63; re-emission expected via future ai_action-based workflow (AAA-T-231)"
 
 features:
   # Phase 1: Foundation

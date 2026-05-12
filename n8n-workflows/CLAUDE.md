@@ -2,7 +2,7 @@
 
 n8n owns ALL workflow execution. CMS sends fire-and-forget POST, n8n Orchestrator handles everything: step sequencing, handler dispatch, state management, DB writes.
 
-Also hosts standalone workflows: Survey Response AI Analysis, Marketplace sync (4 workflows), Send Email subworkflow.
+Also hosts standalone workflows: Marketplace sync (4 workflows), Send Email subworkflow.
 
 **Detailed architecture docs:** `docs/guides/workflow/WORKFLOW_ENGINE.md` (diagrams, state management, data flow)
 **Handler patterns:** `.claude/skills/ag-n8n-step-handlers/SKILL.md`
@@ -131,7 +131,7 @@ Commands:
   - `get-nested-value` — safe nested-path object accessor (used by condition, switch, send-email, process-step)
   - `expression-evaluator` — 5-function bundle (`coerceNumeric`, `escapeRegex`, `parseExpression`, `resolveField`, `compare`) for condition + switch handlers; mirrors `apps/cms/features/workflows/engine/condition-evaluator.ts`
   - `resolve-variables` — `{{var}}` substitution for Process Step + Send Email; depends on `getNestedValue` being in scope
-  - `claude-response` — `extractTextContent(aiOutput)` + `stripCodeFences(str)` for parsing MiniMax/Claude responses. Finds `content[].type === 'text'` (NOT `content[0]` — that's the `thinking` entry) and strips ```json fences before `JSON.parse()`. Used by AI Action Handler + Survey Response AI Analysis
+  - `claude-response` — `extractTextContent(aiOutput)` + `stripCodeFences(str)` for parsing MiniMax/Claude responses. Finds `content[].type === 'text'` (NOT `content[0]` — that's the `thinking` entry) and strips ```json fences before `JSON.parse()`. Used by AI Action Handler
 
 - `lint-helpers` — audit every Code node under `workflows/` for un-marked duplication of known helpers. Reports nodes containing a helper's signature without paired `// @inline` / `// @end-inline` markers. Exits 0 if clean, 1 if any violations — useful as a pre-commit / CI guard. Per-node escape hatch: `// @lint-ignore <helper-name>` opts out a node when a same-named function is intentionally different.
 
@@ -153,7 +153,7 @@ Reusable Claude API wrapper (workflow ID: `xaU50vf4eiNTeqSf`). Any workflow need
 
 **Output:** `content[].type === 'text'` — NOT `content[0]` (that's `thinking` type). Strip markdown code fences before `JSON.parse()`.
 
-**Callers:** Survey Response AI Analysis, Workflow Orchestrator (via AI Action Handler)
+**Callers:** Workflow Orchestrator (via AI Action Handler)
 
 ## Workflow Orchestrator
 

@@ -63,7 +63,7 @@ Triggers fire the workflow. Each trigger type defines a payload, maps it to init
 
 ### `lead_scored`
 
-**Fired from:** n8n `Survey Response AI Analysis` workflow (after AI qualification completes)
+**Fired from:** (currently no live dispatcher — historical caller was the deleted Survey Response AI Analysis workflow; a future workflow using an `ai_action` lead-scoring step is expected to re-emit this trigger)
 
 **Initial payload (from n8n):**
 ```ts
