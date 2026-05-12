@@ -434,7 +434,7 @@ export type Database = {
           is_active: boolean
           name: string | null
           subject: string
-          template_variables: Json | null
+          template_variables: Json
           tenant_id: string
           type: string
           updated_at: string
@@ -447,7 +447,7 @@ export type Database = {
           is_active?: boolean
           name?: string | null
           subject?: string
-          template_variables?: Json | null
+          template_variables?: Json
           tenant_id: string
           type: string
           updated_at?: string
@@ -460,7 +460,7 @@ export type Database = {
           is_active?: boolean
           name?: string | null
           subject?: string
-          template_variables?: Json | null
+          template_variables?: Json
           tenant_id?: string
           type?: string
           updated_at?: string
