@@ -31,10 +31,12 @@ interface ColumnsBlockEditorProps {
   variables?: TriggerVariable[]
 }
 
-// Typy bloków dostępne w kolumnach — wyklucza 'columns' (max nesting = 1)
-const NON_COLUMNS_ENTRIES = Object.values(CMS_BLOCK_REGISTRY).filter(
-  (entry) => entry.id !== 'columns'
-)
+// Typy bloków dostępne w kolumnach — wyklucza 'columns' (max nesting = 1).
+// Lazy getter (NIE top-level const): block-registry.ts importuje ColumnsBlockEditor,
+// więc top-level Object.values(CMS_BLOCK_REGISTRY) tworzy TDZ ("Cannot access ... before initialization").
+function getNonColumnsEntries() {
+  return Object.values(CMS_BLOCK_REGISTRY).filter((entry) => entry.id !== 'columns')
+}
 
 // --- ColumnPanel: jeden panel kolumny (lewa lub prawa) ---
 
@@ -144,7 +146,7 @@ function ColumnPanel({ label, children, onChange, variables }: ColumnPanelProps)
 
       {/* Mini-paleta — tylko non-columns */}
       <div className="flex flex-wrap gap-1 pt-1">
-        {NON_COLUMNS_ENTRIES.map((entry) => {
+        {getNonColumnsEntries().map((entry) => {
           const Icon = entry.icon
           return (
             <Button
