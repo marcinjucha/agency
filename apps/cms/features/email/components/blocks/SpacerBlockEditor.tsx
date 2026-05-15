@@ -1,4 +1,6 @@
-import { Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@agency/ui'
+import type { SpacerSize } from '@agency/email'
+import { messages } from '@/lib/messages'
+import { SegmentedControl } from '../editor/controls/SegmentedControl'
 import type { SpacerBlock, Block } from '../../types'
 import type { TriggerVariable } from '@/lib/trigger-schemas'
 
@@ -8,25 +10,23 @@ interface SpacerBlockEditorProps {
   variables?: TriggerVariable[]
 }
 
+/**
+ * SpacerBlockEditor — 4 presety wysokości (sm/md/lg/xl). Bez customHeight.
+ */
 export function SpacerBlockEditor({ block, onChange }: SpacerBlockEditorProps) {
+  const sizeOptions: ReadonlyArray<{ value: SpacerSize; label: string }> = [
+    { value: 'sm', label: 'S' },
+    { value: 'md', label: 'M' },
+    { value: 'lg', label: 'L' },
+    { value: 'xl', label: messages.email.inspectorSpacerHeightXl },
+  ]
+
   return (
-    <div className="space-y-3">
-      <div>
-        <Label htmlFor={`${block.id}-size`} className="mb-1.5 block">Rozmiar odstępu</Label>
-        <Select
-          value={block.size}
-          onValueChange={(val) => onChange({ ...block, size: val as SpacerBlock['size'] })}
-        >
-          <SelectTrigger id={`${block.id}-size`}>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="sm">S — 16px</SelectItem>
-            <SelectItem value="md">M — 32px</SelectItem>
-            <SelectItem value="lg">L — 64px</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-    </div>
+    <SegmentedControl<SpacerSize>
+      label={messages.email.inspectorSpacerSizeLabel}
+      value={block.size}
+      options={sizeOptions}
+      onChange={(next) => onChange({ ...block, size: next })}
+    />
   )
 }

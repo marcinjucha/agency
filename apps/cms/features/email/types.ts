@@ -15,6 +15,9 @@ export type {
   SpacerBlock,
   ColumnsBlock,
   NonColumnsBlock,
+  BlockStyleCommon,
+  BlockTypography,
+  BlockBorder,
 } from '@agency/email'
 
 // EmailTemplate from DB with typed blocks
@@ -22,13 +25,11 @@ export type EmailTemplate = Omit<Tables<'email_templates'>, 'blocks'> & {
   blocks: Block[]
 }
 
-export const TEMPLATE_TYPE_LABELS = {
-  form_confirmation: 'Potwierdzenie formularza',
-  workflow_custom: 'Szablon workflow',
-} as const
-
-// Derived from TEMPLATE_TYPE_LABELS — single source of truth
-export type EmailTemplateType = keyof typeof TEMPLATE_TYPE_LABELS
+// User-defined template slug (e.g. 'form_confirmation', 'marketing_blast').
+// Validated by `templateSlugSchema` in `./validation` — lowercase ASCII, digits,
+// underscores, must start with a letter, max 50 chars.
+// Workflows reference templates by slug, so the slug is immutable post-creation.
+export type EmailTemplateType = string
 
 // ---------------------------------------------------------------------------
 // Template Variables
@@ -36,11 +37,17 @@ export type EmailTemplateType = keyof typeof TEMPLATE_TYPE_LABELS
 // Zmienne szablonu — auto-wykrywane z {{key}} w treści (subject + bloki).
 // User może edytować label i description dla każdej zmiennej.
 // Zapisywane w email_templates.template_variables JSONB.
+//
+// `source`:
+// - 'trigger' — auto-detected from template body (subject/blocks scan)
+// - 'manual'  — user-added explicitly; must survive body edits / re-extraction
 // ---------------------------------------------------------------------------
+
+export type TemplateVariableSource = 'trigger' | 'manual'
 
 export interface TemplateVariable {
   key: string
   label: string
   description?: string
-  source?: string  // 'trigger' — auto-detected, 'manual' — future
+  source?: TemplateVariableSource
 }

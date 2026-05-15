@@ -46,6 +46,13 @@ async function supabaseRequest(path, method, body, opts) {
       },
     };
     const req = https.request(options, (res) => {
+      // UTF-8 boundary safety: without setEncoding, chunks are Buffers and
+      // `data += chunk` does an implicit chunk.toString() PER chunk. When a
+      // multi-byte UTF-8 character (e.g. 'ł' = 0xC5 0x82) straddles a chunk
+      // boundary, each half decodes to U+FFFD (replacement char). setEncoding
+      // makes Node buffer internally and emit string chunks only at character
+      // boundaries — concat-safe for any UTF-8 payload.
+      res.setEncoding('utf8');
       let data = '';
       res.on('data', (chunk) => data += chunk);
       res.on('end', () => {

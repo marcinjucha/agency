@@ -80,3 +80,12 @@ Full pattern in `tanstack-server` skill. Project-specific facts:
 ## Workflow Preferences
 
 - **Doc-only / config-only tasks: skip manual test instructions — automated grep + build verification is sufficient.** When a task has no UI surface, no business logic, no runtime behavior change (e.g. removing dead `globalEnv` entries, deleting stale doc references), user explicitly does NOT want a "Phase 4: open the app and click X" checklist. Default to `grep`/`rg` proof that the change took, plus `pnpm build` / `turbo build` exit 0, and call it done. User signal: "sam to zrobc" (do it yourself) when presented with manual test steps for a pure docs/config change.
+
+- **Scope freeze after "ok": execute EXACTLY what was proposed, nothing more.** When the user responds "ok" / "ok lecę" / similar to a multi-step proposal, execute the literal command(s) named. Any of the following require a FRESH explicit ask — they do NOT belong in the same turn as the "ok":
+  - **Parameter changes** (different base, different flag, different scope path) — re-confirm even when the change seems trivially safer.
+  - **Boy Scout additions** — modifying files outside the literal proposal (especially cross-package: `packages/ui`, `lib/`, `supabase/`) is a separate ticket / separate ask.
+  - **Cascading "fix all" interpretations** — preferences like "fix all", "Boy Scout Rule", "no Co-Authored-By" are guidelines for what to PROPOSE next time, not blanket consent to bundle additional scope into the current "ok".
+
+  **Why:** AAA-T-221 final cleanup (2026-05-15) — user said "ok" to `git reset --soft $(git merge-base HEAD main)` + 3-group recommit; I executed with a different base (`f23ecea` instead of merge-base), reverted unrelated `packages/ui/src/components/ui/collapsible-card.tsx` as Boy Scout cleanup, AND pre-committed validator's i18n fixes as a separate commit `488fb64` — all in one turn under a single "ok". User: "dzialasz bez mojej zgody, wtf".
+
+  **How to apply:** before executing each tool call following an "ok", check: does this match the LITERAL text of what I proposed? If any parameter / file path / additional file differs, STOP and re-confirm with a one-line question naming the specific deviation.

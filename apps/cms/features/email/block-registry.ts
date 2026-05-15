@@ -37,42 +37,106 @@ const hexColorSchema = z
   .string()
   .regex(/^#[0-9a-fA-F]{6}$/, 'Nieprawidłowy kolor hex (wymagany format #rrggbb)')
 
+// BlockStyleCommon — vertical-rhythm preset only (margines dolny).
+// Internal padding is BAKED per-block-type in the renderer (v2 design model,
+// AAA-T-221 2026-05-15) and is NOT user-controllable. Mapowanie marginBottom
+// na piksele żyje w renderze (MARGIN_BOTTOM_PX). Istniejące rekordy JSONB
+// z polami w starszym formacie (numerycznym marginBottom / per-side paddingami
+// / padding preset) walidują się jako passthrough — Zod ignoruje nieznane klucze.
+const blockStyleCommonShape = {
+  marginBottom: z.enum(['none', 'compact', 'normal', 'large']).optional(),
+} as const
+
+// BlockTypography — minimalny tekstowy mixin (textAlign + textColor).
+// Pozostałe atrybuty typograficzne (font-family/size/weight/line-height/
+// letter-spacing) NIE są konfigurowalne — żyją w hardcoded stylach bloków.
+export const blockTypographyShape = {
+  textAlign: z.enum(['left', 'center', 'right']).optional(),
+  textColor: z
+    .string()
+    .regex(/^#[0-9a-fA-F]{6}$/, 'Nieprawidłowy kolor hex (wymagany format #rrggbb)')
+    .optional(),
+} as const
+
+// BlockBorder — minimalny mixin obramowania.
+// - borderColor: gdy ustawiony, renderer rysuje 1px solid w tym kolorze.
+// - borderRadius: semantyczne 3 wartości (none/soft/pill) — mapowane do px w rendererze.
+// - backgroundColor: opcjonalne tło bloku.
+export const blockBorderShape = {
+  borderColor: z
+    .string()
+    .regex(/^#[0-9a-fA-F]{6}$/, 'Nieprawidłowy kolor hex (wymagany format #rrggbb)')
+    .optional(),
+  borderRadius: z.enum(['none', 'soft', 'pill']).optional(),
+  backgroundColor: z
+    .string()
+    .regex(/^#[0-9a-fA-F]{6}$/, 'Nieprawidłowy kolor hex (wymagany format #rrggbb)')
+    .optional(),
+} as const
+
+// Phase 3 (AAA-T-221, design review fix P0-1) — `textColor` is single-sourced
+// from the BlockTypography mixin (optional). Header retains backward-compat
+// `textColor` field on existing JSONB rows: mixin's optional textColor accepts
+// the legacy required value. New rows created via the editor leave it unset
+// and the renderer uses the typography mixin instead.
+// Phase 4 (AAA-T-221) — `backgroundColor` removed from this schema; lives in
+// BlockBorder mixin. Existing JSONB rows with `backgroundColor` set still
+// validate (mixin field has same key, optional accepts the legacy value).
 const headerBlockSchema = z.object({
   type: z.literal('header'),
   companyName: z.string(),
-  backgroundColor: hexColorSchema,
-  textColor: hexColorSchema,
+  ...blockStyleCommonShape,
+  ...blockTypographyShape,
+  ...blockBorderShape,
 })
 
 const textBlockSchema = z.object({
   type: z.literal('text'),
   content: z.string().min(1, 'Treść jest wymagana'),
+  ...blockStyleCommonShape,
+  ...blockTypographyShape,
+  ...blockBorderShape,
 })
 
+// Phase 3 (AAA-T-221, design review fix P0-1) — `textColor` is single-sourced
+// from the BlockTypography mixin.
+// Phase 4 (AAA-T-221) — `backgroundColor` removed from this schema; lives in
+// BlockBorder mixin. `width` added for CTA full-width toggle.
 const ctaBlockSchema = z.object({
   type: z.literal('cta'),
   label: z.string().min(1, 'Tekst przycisku jest wymagany'),
   url: z.string(),
-  backgroundColor: hexColorSchema,
-  textColor: hexColorSchema,
+  width: z.enum(['auto', 'full']).optional(),
+  ...blockStyleCommonShape,
+  ...blockTypographyShape,
+  ...blockBorderShape,
 })
 
 const dividerBlockSchema = z.object({
   type: z.literal('divider'),
   color: hexColorSchema,
+  ...blockStyleCommonShape,
 })
 
 const footerBlockSchema = z.object({
   type: z.literal('footer'),
   text: z.string().min(1, 'Tekst stopki jest wymagany'),
+  ...blockStyleCommonShape,
+  ...blockTypographyShape,
+  ...blockBorderShape,
 })
 
+// Phase 3 (AAA-T-221) — `textAlign` promoted to BlockTypography mixin.
+// Existing JSONB rows with textAlign='left' still validate (mixin field has same key,
+// optional accepts it). New rows created via BLOCK_DEFAULT_VALUES.heading also work.
 const headingBlockSchema = z.object({
   type: z.literal('heading'),
   text: z.string().max(500),
   level: z.enum(['h1', 'h2', 'h3']),
-  textAlign: z.enum(['left', 'center', 'right']),
   color: hexColorSchema,
+  ...blockStyleCommonShape,
+  ...blockTypographyShape,
+  ...blockBorderShape,
 })
 
 // Walidacja URL obrazu: akceptuje puste (render pomijany), zmienne {{...}} oraz http(s):// i data:image/
@@ -100,11 +164,15 @@ const imageBlockSchema = z.object({
   alt: z.string().max(300),
   width: z.number().int().min(1).max(2400),
   alignment: z.enum(['left', 'center', 'right']),
+  ...blockStyleCommonShape,
+  ...blockBorderShape,
 })
 
+// Spacer — 4 presety (sm/md/lg/xl), żadnych customHeight.
 const spacerBlockSchema = z.object({
   type: z.literal('spacer'),
-  size: z.enum(['sm', 'md', 'lg']),
+  size: z.enum(['sm', 'md', 'lg', 'xl']),
+  ...blockStyleCommonShape,
 })
 
 // columnsBlockSchema — children walidowane przez nonColumnsBlockSchema w validation.ts (rekurencja z z.lazy).
@@ -115,6 +183,8 @@ const columnsBlockSchema = z.object({
   rightChildren: z.array(z.unknown()),
   gap: z.enum(['sm', 'md', 'lg']),
   verticalAlign: z.enum(['top', 'middle', 'bottom']),
+  ...blockStyleCommonShape,
+  ...blockBorderShape,
 })
 
 // ---------------------------------------------------------------------------
@@ -262,7 +332,8 @@ export const CMS_BLOCK_REGISTRY: Record<BlockType, CmsBlockRegistryEntry> = {
     group: 'layout',
     getSummary: (block) => {
       const s = block as SpacerBlock
-      const sizeLabel = s.size === 'sm' ? '16px' : s.size === 'md' ? '32px' : '64px'
+      const sizeLabel =
+        s.size === 'sm' ? '16px' : s.size === 'md' ? '32px' : s.size === 'lg' ? '64px' : '96px'
       return `Odstęp: ${sizeLabel}`
     },
     EditorComponent: SpacerBlockEditor as EditorComponentType,

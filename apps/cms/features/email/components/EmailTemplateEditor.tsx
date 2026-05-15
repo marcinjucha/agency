@@ -1,32 +1,26 @@
 import { useState, useRef, useEffect } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import {
-  Button,
-  Input,
-  Label,
-  Tabs,
-  TabsList,
-  TabsTrigger,
-  TabsContent,
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from '@agency/ui'
-import { LayoutGrid } from 'lucide-react'
-import { BlockList } from './BlockList'
-import { BlockPalette } from './BlockPalette'
-import { EmailPreview } from './EmailPreview'
-import { VariableInserter } from './VariableInserter'
-import { VariablesEditor } from './VariablesEditor'
+import { useNavigate } from '@tanstack/react-router'
+import { Button, Input } from '@agency/ui'
+import { ArrowLeft, Save } from 'lucide-react'
+import { OutlinePanel } from './editor/OutlinePanel'
+import { Canvas } from './editor/Canvas'
+import { Inspector } from './editor/Inspector'
+import { DeleteTemplateDialog } from './DeleteTemplateDialog'
 import { DEFAULT_BLOCKS } from '../constants'
-import type { Block, BlockType, EmailTemplate, EmailTemplateType, TemplateVariable } from '../types'
-import { updateEmailTemplateFn, resetEmailTemplateToDefaultFn, parseTemplateVariables } from '../server'
+import type {
+  Block,
+  BlockType,
+  EmailTemplate,
+  EmailTemplateType,
+  TemplateVariable,
+} from '../types'
+import { updateEmailTemplateFn, parseTemplateVariables } from '../server'
 import { messages } from '@/lib/messages'
-import { getTriggerVariables } from '@/lib/trigger-schemas'
+import { routes } from '@/lib/routes'
 import { CMS_BLOCK_REGISTRY } from '../block-registry'
 import { extractTemplateVariableKeys } from '../utils/extract-variable-keys'
+import { validateVariableKey } from '../utils/validate-variable-key'
 import { queryKeys } from '@/lib/query-keys'
 
 interface EmailTemplateEditorProps {
@@ -34,89 +28,163 @@ interface EmailTemplateEditorProps {
   initialTemplate: EmailTemplate | null
 }
 
+type SaveState = 'idle' | 'saving' | 'saved' | 'error'
+
+// ---------------------------------------------------------------------------
+// EmailTemplateEditor — full-screen 3-column editor (Outline | Canvas | Inspector)
+// Iter 1/4 — topbar + Outline panel real; Canvas + Inspector are placeholders
+// ---------------------------------------------------------------------------
+
 export function EmailTemplateEditor({ templateType, initialTemplate }: EmailTemplateEditorProps) {
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
+
+  // Core state
+  const [label, setLabel] = useState(initialTemplate?.label ?? templateType)
   const [subject, setSubject] = useState(initialTemplate?.subject ?? '')
   const [blocks, setBlocks] = useState<Block[]>(initialTemplate?.blocks ?? DEFAULT_BLOCKS)
-  const [userEditedVariables, setUserEditedVariables] = useState<TemplateVariable[]>(
-    () => parseTemplateVariables(initialTemplate?.template_variables)
+  const [userEditedVariables, setUserEditedVariables] = useState<TemplateVariable[]>(() =>
+    parseTemplateVariables(initialTemplate?.template_variables),
   )
-  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
-  const [errorMessage, setErrorMessage] = useState<string | null>(null)
-  const [paletteSheetOpen, setPaletteSheetOpen] = useState(false)
 
-  // Sync state when initialTemplate loads asynchronously (prefetchQuery is non-blocking)
+  // Selection — passed to Canvas and Inspector
+  const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null)
+
+  // Viewport toggle for canvas preview
+  const [viewport, setViewport] = useState<'desktop' | 'mobile'>('desktop')
+
+  // Save state
+  const [saveState, setSaveState] = useState<SaveState>('idle')
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [dirty, setDirty] = useState(false)
+
+  // Delete dialog
+  const [deleteOpen, setDeleteOpen] = useState(false)
+
+  // Hydrate when initialTemplate loads asynchronously
   useEffect(() => {
     if (initialTemplate) {
+      setLabel(initialTemplate.label ?? templateType)
       setSubject(initialTemplate.subject ?? '')
       setBlocks(initialTemplate.blocks ?? DEFAULT_BLOCKS)
       setUserEditedVariables(parseTemplateVariables(initialTemplate.template_variables))
+      setDirty(false)
     }
-  }, [initialTemplate])
+  }, [initialTemplate, templateType])
 
-  // Auto-detect variables from current content (subject + blocks).
-  // Merge detected keys with user-edited labels so UI shows up-to-date variable list.
-  // React Compiler auto-memoizuje — useMemo zbędny (project rule: no manual memoization).
-  const detectedVariableKeys = extractTemplateVariableKeys(subject, blocks)
+  // Track dirty — skip first render
+  const mountedRef = useRef(false)
+  useEffect(() => {
+    if (!mountedRef.current) {
+      mountedRef.current = true
+      return
+    }
+    setDirty(true)
+  }, [label, subject, blocks, userEditedVariables])
 
-  const mergedVariables: TemplateVariable[] = detectedVariableKeys.map((key) => {
-    const existing = userEditedVariables.find((v) => v.key === key)
-    return existing ?? { key, label: key, source: 'trigger' }
-  })
+  // Variables model (AAA-T-221, 2026-05-15): user-managed list ONLY.
+  // Previously the inspector showed an auto-merged view of detected `{{key}}`
+  // tokens from content + user-edited entries. Result: user couldn't delete
+  // auto-detected ones because they re-appeared on every render. Now the
+  // inspector edits ONLY userEditedVariables — same source as the saved
+  // template_variables JSONB. Auto-detected keys still feed the {{}} picker
+  // autocomplete via `detectedKeys` (so users can insert known variables),
+  // they just don't auto-populate the saved Zmienne list.
+  const detectedKeys = extractTemplateVariableKeys(subject, blocks)
+  const hasInvalidVariableKey = userEditedVariables.some((v, i) =>
+    validateVariableKey(v.key, i, userEditedVariables) !== null,
+  )
 
-  const variables = getTriggerVariables(templateType)
-  const subjectRef = useRef<HTMLInputElement>(null)
+  // ---- Block operations (passed down to OutlinePanel) ----
+
+  function updateBlock(updated: Block) {
+    setBlocks((prev) => prev.map((b) => (b.id === updated.id ? updated : b)))
+  }
 
   function addBlock(type: BlockType) {
     const entry = CMS_BLOCK_REGISTRY[type]
     if (!entry) return
-
     const id = crypto.randomUUID()
     const newBlock = { id, ...entry.defaultValue } as Block
     setBlocks((prev) => [...prev, newBlock])
-
-    // Zamknij Sheet na mobile po dodaniu bloku
-    setPaletteSheetOpen(false)
+    setSelectedBlockId(id)
   }
 
-  async function resetToDefaults() {
-    setSaveState('saving')
-    setErrorMessage(null)
-    try {
-      const result = await resetEmailTemplateToDefaultFn({ data: { type: templateType as EmailTemplateType } })
-      if (result.success) {
-        setBlocks(DEFAULT_BLOCKS)
-        setSubject('Dziękujemy za wypełnienie formularza - {{surveyTitle}}')
-        setSaveState('saved')
-      } else {
-        setSaveState('error')
-        setErrorMessage(result.error ?? null)
-      }
-    } catch (err) {
-      setSaveState('error')
-      setErrorMessage(err instanceof Error ? err.message : messages.common.unknownError)
-    } finally {
-      setTimeout(() => setSaveState('idle'), 2500)
-    }
+  function deleteBlock(id: string) {
+    setBlocks((prev) => prev.filter((b) => b.id !== id))
+    if (selectedBlockId === id) setSelectedBlockId(null)
   }
+
+  function duplicateBlock(id: string) {
+    const idx = blocks.findIndex((b) => b.id === id)
+    if (idx < 0) return
+    const copy = { ...blocks[idx], id: crypto.randomUUID() } as Block
+    setBlocks((prev) => {
+      const next = prev.slice()
+      next.splice(idx + 1, 0, copy)
+      return next
+    })
+    setSelectedBlockId(copy.id)
+  }
+
+  function reorderBlock(from: number, to: number) {
+    setBlocks((prev) => {
+      const next = prev.slice()
+      const [moved] = next.splice(from, 1)
+      next.splice(to, 0, moved)
+      return next
+    })
+  }
+
+  function insertBlockAt(type: BlockType, index: number) {
+    const entry = CMS_BLOCK_REGISTRY[type]
+    if (!entry) return
+    const id = crypto.randomUUID()
+    const newBlock = { id, ...entry.defaultValue } as Block
+    setBlocks((prev) => {
+      const next = prev.slice()
+      next.splice(index, 0, newBlock)
+      return next
+    })
+    setSelectedBlockId(id)
+  }
+
+  function moveBlock(id: string, dir: -1 | 1) {
+    const idx = blocks.findIndex((b) => b.id === id)
+    if (idx < 0) return
+    const to = idx + dir
+    if (to < 0 || to >= blocks.length) return
+    reorderBlock(idx, to)
+  }
+
+  function onCanvasBackdropClick(e: React.MouseEvent) {
+    if (e.target === e.currentTarget) setSelectedBlockId(null)
+  }
+
+  // ---- Save ----
 
   async function handleSave() {
+    if (saveState === 'saving' || hasInvalidVariableKey) return
     setSaveState('saving')
     setErrorMessage(null)
+
+    const cleanedVariables = userEditedVariables.filter((v) => v.key.trim().length > 0)
+
     try {
       const result = await updateEmailTemplateFn({
         data: {
           type: templateType as EmailTemplateType,
-          data: { subject, blocks, template_variables: mergedVariables },
+          data: { subject, blocks, template_variables: cleanedVariables, label },
         },
       })
-      setSaveState(result.success ? 'saved' : 'error')
-      if (result.success) {
-        // Unieważnij cache email-templates i workflows (Send Email config panel korzysta z listy szablonów)
+      if (result && result.success) {
+        setSaveState('saved')
+        setDirty(false)
         void queryClient.invalidateQueries({ queryKey: queryKeys.email.all })
         void queryClient.invalidateQueries({ queryKey: queryKeys.workflows.all })
       } else {
-        setErrorMessage(result.error ?? null)
+        setSaveState('error')
+        setErrorMessage(result?.error ?? messages.email.templateSaveFailed)
       }
     } catch (err) {
       setSaveState('error')
@@ -126,205 +194,248 @@ export function EmailTemplateEditor({ templateType, initialTemplate }: EmailTemp
     }
   }
 
-  const saveLabel = {
-    idle: messages.common.save,
-    saving: messages.common.saving,
-    saved: messages.common.saved,
-    error: messages.common.saveError,
-  }[saveState]
+  // ⌘S / Ctrl+S keyboard shortcut + Esc deselect + Backspace/Delete block delete
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault()
+        void handleSave()
+        return
+      }
+      if (e.key === 'Escape') {
+        setSelectedBlockId(null)
+        return
+      }
+      if (
+        (e.key === 'Backspace' || e.key === 'Delete') &&
+        selectedBlockId &&
+        !(e.target as Element)?.matches?.('input,textarea,[contenteditable]')
+      ) {
+        e.preventDefault()
+        deleteBlock(selectedBlockId)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+    // handleSave + deleteBlock read state via closure; re-run on dependencies.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [saveState, hasInvalidVariableKey, label, subject, blocks, userEditedVariables, selectedBlockId])
+
+  // ---- Render ----
 
   return (
-    <div className="mx-auto max-w-[1400px] flex flex-col gap-6">
-      {/* Temat emaila — pełna szerokość */}
-      <div className="space-y-1.5">
-        <div className="flex items-center justify-between">
-          <Label htmlFor="email-subject">{messages.email.subjectLabel}</Label>
-          <VariableInserter
-            variables={variables}
-            inputRef={subjectRef}
-            onChange={setSubject}
-            currentValue={subject}
-          />
-        </div>
-        <Input
-          ref={subjectRef}
-          id="email-subject"
-          value={subject}
-          onChange={(e) => setSubject(e.target.value)}
-          placeholder={messages.email.subjectPlaceholder}
-        />
-      </div>
-
-      {/* Zmienne szablonu */}
-      <div className="space-y-2">
-        <p className="text-xs font-semibold uppercase text-muted-foreground tracking-wide">
-          Zmienne szablonu
-        </p>
-        <VariablesEditor
-          variables={mergedVariables}
-          onChange={setUserEditedVariables}
-        />
-      </div>
-
-      {/* --- Layout responsywny --- */}
-
-      {/* xl (≥1280px): 3 kolumny — paleta | edytor | podgląd */}
-      <div className="hidden xl:grid xl:grid-cols-[260px_1fr_440px] xl:gap-4 min-h-[600px]">
-        {/* Kolumna 1: Paleta bloków */}
-        <div className="overflow-y-auto border-r border-border pr-4">
-          <BlockPalette onAddBlock={addBlock} />
-        </div>
-
-        {/* Kolumna 2: Lista bloków */}
-        <div className="overflow-y-auto px-2">
-          <p className="text-xs font-semibold uppercase text-muted-foreground tracking-wide mb-3">
-            {messages.email.blocksLabel}
-          </p>
-          <BlockList blocks={blocks} onChange={setBlocks} variables={variables} />
-        </div>
-
-        {/* Kolumna 3: Podgląd emaila */}
-        <div className="border-l border-border pl-4">
-          <ScaledEmailPreview blocks={blocks} />
-        </div>
-      </div>
-
-      {/* lg (≥1024px, <1280px): 2 kolumny — edytor | podgląd + Sheet trigger dla palety */}
-      <div className="hidden lg:grid xl:hidden lg:grid-cols-[1fr_440px] lg:gap-4 min-h-[600px]">
-        {/* Edytor z Sheet triggerem dla palety */}
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center justify-between">
-            <p className="text-xs font-semibold uppercase text-muted-foreground tracking-wide">
-              {messages.email.blocksLabel}
-            </p>
-            <Sheet open={paletteSheetOpen} onOpenChange={setPaletteSheetOpen}>
-              <SheetTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-1.5">
-                  <LayoutGrid className="h-3.5 w-3.5" />
-                  Dodaj blok
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="left" className="w-[280px]">
-                <SheetHeader>
-                  <SheetTitle>Bloki emaila</SheetTitle>
-                </SheetHeader>
-                <div className="mt-4 overflow-y-auto">
-                  <BlockPalette onAddBlock={addBlock} />
-                </div>
-              </SheetContent>
-            </Sheet>
-          </div>
-          <div className="overflow-y-auto">
-            <BlockList blocks={blocks} onChange={setBlocks} variables={variables} />
-          </div>
-        </div>
-
-        {/* Podgląd */}
-        <div className="border-l border-border pl-4">
-          <ScaledEmailPreview blocks={blocks} />
-        </div>
-      </div>
-
-      {/* <lg (mobile): 1 kolumna + Tabs */}
-      <div className="lg:hidden">
-        <Tabs defaultValue="editor">
-          <div className="flex items-center justify-between mb-3">
-            <TabsList>
-              <TabsTrigger value="editor">Edytor</TabsTrigger>
-              <TabsTrigger value="preview">Podgląd</TabsTrigger>
-            </TabsList>
-
-            <Sheet open={paletteSheetOpen} onOpenChange={setPaletteSheetOpen}>
-              <SheetTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-1.5">
-                  <LayoutGrid className="h-3.5 w-3.5" />
-                  Dodaj blok
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="bottom" className="h-[70vh]">
-                <SheetHeader>
-                  <SheetTitle>Bloki emaila</SheetTitle>
-                </SheetHeader>
-                <div className="mt-4 overflow-y-auto h-full pb-8">
-                  <BlockPalette onAddBlock={addBlock} />
-                </div>
-              </SheetContent>
-            </Sheet>
-          </div>
-
-          <TabsContent value="editor" className="mt-0">
-            <BlockList blocks={blocks} onChange={setBlocks} variables={variables} />
-          </TabsContent>
-
-          <TabsContent value="preview" className="mt-0">
-            <EmailPreview blocks={blocks} className="min-h-[500px]" />
-          </TabsContent>
-        </Tabs>
-      </div>
-
-      {/* Action bar */}
-      <div className="flex items-center gap-3 pt-2 border-t">
-        <Button onClick={handleSave} disabled={saveState === 'saving'}>
-          {saveLabel}
-        </Button>
+    <div className="absolute inset-0 grid grid-rows-[52px_1fr] grid-cols-[280px_1fr_360px] bg-background">
+      {/* Topbar — spans all 3 columns */}
+      <header className="col-span-3 z-10 flex items-center gap-3 border-b border-border bg-background px-4">
         <Button
-          variant="outline"
-          onClick={resetToDefaults}
-          className="text-destructive border-destructive/40 hover:bg-destructive/5"
+          variant="ghost"
+          size="sm"
+          onClick={() => navigate({ to: routes.admin.emailTemplates })}
+          className="-ml-2 gap-1.5 text-muted-foreground hover:text-foreground"
         >
-          {messages.email.restoreDefaults}
+          <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
+          <span className="text-xs">{messages.nav.emailTemplates}</span>
         </Button>
-        {saveState === 'error' && (
-          <p className="text-sm text-destructive">
-            {messages.email.templateSaveFailed}
-            {errorMessage && (
-              <span className="block mt-1 text-xs opacity-75">{errorMessage}</span>
-            )}
-          </p>
-        )}
-      </div>
+
+        <span className="h-4 w-px bg-border" aria-hidden="true" />
+
+        <LabelInline value={label} onChange={setLabel} />
+
+        <SavePill saveState={saveState} dirty={dirty} />
+
+        <code className="hidden sm:inline-block shrink-0 rounded border border-border/60 bg-muted/40 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+          {templateType}
+        </code>
+
+        <div className="ml-auto flex items-center gap-1.5">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setDeleteOpen(true)}
+            className="border-destructive/40 text-destructive hover:bg-destructive/5 hover:text-destructive"
+          >
+            {messages.email.deleteAction}
+          </Button>
+          <Button
+            variant="default"
+            size="sm"
+            onClick={() => void handleSave()}
+            disabled={saveState === 'saving' || !dirty || hasInvalidVariableKey}
+            className="gap-1.5"
+            aria-label={messages.common.save}
+          >
+            <Save className="h-3.5 w-3.5" aria-hidden="true" />
+            <span>
+              {saveState === 'saving' ? messages.common.saving : messages.common.save}
+            </span>
+            <kbd className="ml-1 hidden sm:inline-flex h-4 items-center rounded border border-primary-foreground/30 bg-primary-foreground/10 px-1 font-mono text-[10px] text-primary-foreground/70">
+              ⌘S
+            </kbd>
+          </Button>
+        </div>
+      </header>
+
+      {/* Outline (left) */}
+      <OutlinePanel
+        blocks={blocks}
+        selectedId={selectedBlockId}
+        onSelect={setSelectedBlockId}
+        onAdd={addBlock}
+        onDelete={deleteBlock}
+        onDuplicate={duplicateBlock}
+        onReorder={reorderBlock}
+      />
+
+      {/* Canvas (center) */}
+      <Canvas
+        blocks={blocks}
+        subject={subject}
+        setSubject={setSubject}
+        selectedBlockId={selectedBlockId}
+        setSelectedBlockId={setSelectedBlockId}
+        onAddAt={insertBlockAt}
+        onDelete={deleteBlock}
+        onDuplicate={duplicateBlock}
+        onMove={moveBlock}
+        viewport={viewport}
+        setViewport={setViewport}
+        onBackdropClick={onCanvasBackdropClick}
+        detectedKeys={detectedKeys}
+      />
+
+      {/* Inspector (right) */}
+      <Inspector
+        blocks={blocks}
+        selectedBlockId={selectedBlockId}
+        onUpdateBlock={updateBlock}
+        onDeleteBlock={deleteBlock}
+        onDuplicateBlock={duplicateBlock}
+        label={label}
+        setLabel={setLabel}
+        userEditedVariables={userEditedVariables}
+        setUserEditedVariables={setUserEditedVariables}
+        detectedKeys={detectedKeys}
+        templateType={templateType}
+        onDelete={() => setDeleteOpen(true)}
+      />
+
+      {errorMessage && (
+        <div
+          role="alert"
+          className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-2 text-sm text-destructive shadow-md"
+        >
+          {errorMessage}
+        </div>
+      )}
+
+      <DeleteTemplateDialog
+        template={initialTemplate}
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        onDeleted={() => navigate({ to: routes.admin.emailTemplates })}
+      />
     </div>
   )
 }
 
-// --- Skalowany podgląd emaila ---
-// Email standard width = 600px, skalowany do kontenera 440px
-// scale = 440/600 = 0.733...
+// ---------------------------------------------------------------------------
+// LabelInline — click-to-edit label in topbar
+// ---------------------------------------------------------------------------
 
-function ScaledEmailPreview({ blocks }: { blocks: Block[] }) {
-  const SCALE = 440 / 600
-  // Wysokość kontenera = skalowana wysokość iframe (600px * SCALE w pionie to za mało,
-  // używamy overflow + stałej wysokości żeby podgląd był czytelny)
-  const CONTAINER_HEIGHT = 700
+interface LabelInlineProps {
+  value: string
+  onChange: (v: string) => void
+}
+
+function LabelInline({ value, onChange }: LabelInlineProps) {
+  const [editing, setEditing] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (editing) inputRef.current?.select()
+  }, [editing])
+
+  function commit(next: string) {
+    onChange(next.trim() || value)
+    setEditing(false)
+  }
+
+  if (editing) {
+    return (
+      <Input
+        ref={inputRef}
+        defaultValue={value}
+        onBlur={(e) => commit(e.currentTarget.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') commit(e.currentTarget.value)
+          else if (e.key === 'Escape') setEditing(false)
+        }}
+        className="h-7 max-w-xs text-sm font-semibold"
+        maxLength={100}
+        aria-label={messages.email.templateNameField}
+      />
+    )
+  }
 
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          Podgląd
-        </span>
-        <span className="text-xs text-muted-foreground">600px email</span>
-      </div>
+    <button
+      type="button"
+      onClick={() => setEditing(true)}
+      title={messages.email.labelEditHint}
+      className="max-w-xs truncate rounded border border-transparent px-2 py-1 text-sm font-semibold text-foreground transition-colors hover:border-border hover:bg-card"
+    >
+      {value}
+    </button>
+  )
+}
 
-      <div
-        className="relative overflow-hidden rounded-lg border border-border bg-white"
-        style={{ height: CONTAINER_HEIGHT }}
-        aria-label="Podgląd emaila w skali"
-      >
-        <div
-          style={{
-            transform: `scale(${SCALE})`,
-            transformOrigin: 'top left',
-            width: `${100 / SCALE}%`,
-            height: `${CONTAINER_HEIGHT / SCALE}px`,
-          }}
-        >
-          <EmailPreview
-            blocks={blocks}
-            className="h-full"
-          />
-        </div>
-      </div>
+// ---------------------------------------------------------------------------
+// SavePill — small status indicator next to label
+// ---------------------------------------------------------------------------
+
+interface SavePillProps {
+  saveState: SaveState
+  dirty: boolean
+}
+
+function SavePill({ saveState, dirty }: SavePillProps) {
+  const status = resolveSavePillStatus(saveState, dirty)
+  return (
+    <div className="ml-2 inline-flex items-center gap-1.5 rounded-full border border-border bg-card/40 px-2.5 py-0.5 text-xs text-muted-foreground">
+      <span
+        className={`h-1.5 w-1.5 rounded-full ${status.dot}`}
+        aria-label={status.ariaLabel}
+      />
+      <span>{status.text}</span>
     </div>
   )
+}
+
+function resolveSavePillStatus(saveState: SaveState, dirty: boolean) {
+  if (saveState === 'saving') {
+    return {
+      text: messages.common.saving,
+      dot: 'bg-amber-500 animate-pulse',
+      ariaLabel: messages.common.saving,
+    }
+  }
+  if (saveState === 'error') {
+    return {
+      text: messages.common.saveError,
+      dot: 'bg-destructive',
+      ariaLabel: messages.common.saveError,
+    }
+  }
+  if (dirty) {
+    return {
+      text: messages.email.unsavedChanges,
+      dot: 'bg-amber-500',
+      ariaLabel: messages.email.unsavedChanges,
+    }
+  }
+  return {
+    text: messages.common.saved,
+    dot: 'bg-emerald-500',
+    ariaLabel: messages.common.saved,
+  }
 }

@@ -91,6 +91,9 @@ vi.mock('lucide-react', () => {
     Building2: stub, Check: stub, Minus: stub, ChevronDown: stub, Search: stub, Star: stub, KeyRound: stub, RefreshCw: stub,
     // DownloadableAssetCard icons
     Download: stub, Image: stub, Music: stub, Video: stub, X: stub,
+    // Email block-registry icons (features/email/block-registry.ts)
+    AlignLeft: stub, MousePointerClick: stub, Heading: stub, ImageIcon: stub,
+    AlignVerticalSpaceAround: stub, Columns2: stub,
   }
 })
 

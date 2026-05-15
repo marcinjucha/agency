@@ -1,86 +1,184 @@
 /**
  * Interfejsy poszczególnych bloków emaila.
+ *
  * Plik oddzielony od types.ts żeby uniknąć circular dependency:
  *   block-interfaces.ts ← registry.ts ← types.ts
  *
- * Kształt każdego interfejsu MUSI pozostać kompatybilny wstecznie —
- * CMS przechowuje bloki jako JSONB w bazie danych.
+ * Backward compat NIE wymagana — istniejące rekordy JSONB z usuniętymi polami
+ * (fontFamily/fontSize/fontWeight/lineHeight/letterSpacing/borderWidth/borderStyle
+ * /per-side padding/marginBottom-as-number/padding-preset) wciąż walidują się
+ * przez optional() w registry, ale renderer ich nie czyta.
+ *
+ * Mixiny (BlockStyleCommon / Typography / Border) są celowo MINIMALNE — Halo
+ * Efekt potrzebuje "wystarczająco" konfigurowalności na 9 typów bloków, nie
+ * Figmę. Każde dodane pole rośnie pole zaufania użytkownika + powierzchnię
+ * walidacji + dług w 3 miejscach (defaults / renderer / inspector). Trzymamy
+ * skromnie.
  */
 
-export interface HeaderBlock {
+/**
+ * BlockStyleCommon — vertical-rhythm preset.
+ *
+ * Tylko jedno pole: marginBottom (odstęp pod blokiem). Internal padding NIE
+ * jest user-controllable — każdy typ bloku ma własny baked padding w rendererze
+ * (v2 design model). Mapowanie marginBottom presetu na piksele żyje w defaults.ts
+ * (MARGIN_BOTTOM_PX).
+ */
+export type MarginBottomPreset = 'none' | 'compact' | 'normal' | 'large'
+
+export interface BlockStyleCommon {
+  marginBottom?: MarginBottomPreset
+}
+
+/**
+ * BlockTypography — minimalny mixin tekstowy.
+ *
+ * Tylko 2 pola: wyrównanie + kolor. Font family / size / weight / line-height /
+ * letter-spacing celowo USUNIĘTE — nie działały widocznie w canvasie i mnożyły
+ * powierzchnię konfiguracji bez wartości. Dla nagłówków user używa HeadingBlock
+ * (osobny typ z poziomem h1/h2/h3 i własną typografią w renderze).
+ */
+export interface BlockTypography {
+  textAlign?: 'left' | 'center' | 'right'
+  /** Hex z prefiksem # (np. '#334155'). */
+  textColor?: string
+}
+
+/**
+ * BlockBorder — minimalny mixin obramowania.
+ *
+ * - borderColor: gdy ustawiony, renderer rysuje 1px solid w tym kolorze.
+ *   Brak osobnego "borderWidth" / "borderStyle" — zawsze 1px solid. Email
+ *   klienty i tak ignorują niestandardowe style border.
+ * - borderRadius: semantyczne 3 wartości (none/soft/pill). Mapowanie do px
+ *   w defaults.ts (BORDER_RADIUS_PX).
+ * - backgroundColor: opcjonalne tło bloku.
+ */
+export type BorderRadiusToken = 'none' | 'soft' | 'pill'
+
+export interface BlockBorder {
+  borderColor?: string
+  borderRadius?: BorderRadiusToken
+  backgroundColor?: string
+}
+
+/**
+ * Block types that carry the BlockBorder mixin.
+ * Mirrors DEFAULT_BLOCK_BORDER keys in defaults.ts.
+ */
+export type BorderableBlockType =
+  | 'heading'
+  | 'text'
+  | 'cta'
+  | 'header'
+  | 'footer'
+  | 'image'
+  | 'columns'
+
+export type HeaderBlock = {
   id: string
   type: 'header'
   companyName: string
-  backgroundColor: string // hex, default '#1a1a2e'
-  textColor: string // hex, default '#ffffff'
-}
+  /** Legacy block-specific textColor — nadal czytany przez renderer dla wstecznej kompatybilności. */
+  textColor: string
+  /** Legacy block-specific backgroundColor. Renderer preferuje BlockBorder.backgroundColor. */
+  backgroundColor?: string
+} & BlockStyleCommon &
+  BlockTypography &
+  BlockBorder
 
-export interface TextBlock {
+export type TextBlock = {
   id: string
   type: 'text'
-  content: string // HTML content, obsługuje {{clientName}}, {{surveyTitle}} variables
-}
+  /** HTML produkowane przez Tiptap editor (Bold/Italic/Underline/Link/UL/OL). Sanitizowane w rendererze. */
+  content: string
+} & BlockStyleCommon &
+  BlockTypography &
+  BlockBorder
 
-export interface CtaBlock {
+/**
+ * CTA width: 'auto' (content-sized button, default) or 'full' (stretches container).
+ */
+export type CtaWidth = 'auto' | 'full'
+
+export type CtaBlock = {
   id: string
   type: 'cta'
   label: string
   url: string
-  backgroundColor: string // hex, default '#1a1a2e'
-  textColor: string // hex, default '#ffffff'
-}
+  /** Legacy block-specific textColor — nadal czytany przez renderer. */
+  textColor: string
+  /** Legacy block-specific backgroundColor. Renderer preferuje BlockBorder.backgroundColor. */
+  backgroundColor?: string
+  width?: CtaWidth
+} & BlockStyleCommon &
+  BlockTypography &
+  BlockBorder
 
-export interface DividerBlock {
+export type DividerBlock = {
   id: string
   type: 'divider'
-  color: string // hex, default '#e5e7eb'
-}
+  color: string
+} & BlockStyleCommon
 
-export interface FooterBlock {
+export type FooterBlock = {
   id: string
   type: 'footer'
-  text: string // default 'Wiadomość wysłana automatycznie. Prosimy nie odpowiadać na ten email.'
-}
+  text: string
+} & BlockStyleCommon &
+  BlockTypography &
+  BlockBorder
 
-export interface HeadingBlock {
+export type HeadingBlock = {
   id: string
   type: 'heading'
   text: string
   level: 'h1' | 'h2' | 'h3'
-  textAlign: 'left' | 'center' | 'right'
-  color: string // hex
-}
+  /** Legacy block-specific color — nadal czytany przez renderer. */
+  color: string
+} & BlockStyleCommon &
+  BlockTypography &
+  BlockBorder
 
-export interface ImageBlock {
+export type ImageBlock = {
   id: string
   type: 'image'
-  src: string // URL (z Media Library lub ręcznie)
+  src: string
   alt: string
-  width: number // px, default 600
+  width: number
   alignment: 'left' | 'center' | 'right'
-}
-
-export interface SpacerBlock {
-  id: string
-  type: 'spacer'
-  size: 'sm' | 'md' | 'lg' // 16/32/64px
-}
+} & BlockStyleCommon &
+  BlockBorder
 
 /**
- * Blok kolumnowy — dwukolumnowy nested layout (max nesting = 1, columns nie może zawierać columns).
- * leftChildren / rightChildren = zagnieżdżone bloki (wszystkie typy OPRÓCZ ColumnsBlock).
+ * SpacerBlock — pionowy odstęp.
  *
- * Ograniczenie max nesting depth = 1 wymuszone przez:
- *   - Zod schema (nonColumnsBlockSchema wyklucza 'columns' z discriminatedUnion dzieci)
- *   - EditorComponent (paleta mini nie oferuje 'columns')
+ * Tylko 4 presety (sm/md/lg/xl). customHeight usunięty — spacer ma być prosty.
  */
-export type NonColumnsBlock = HeaderBlock | TextBlock | CtaBlock | DividerBlock | FooterBlock | HeadingBlock | ImageBlock | SpacerBlock
+export type SpacerSize = 'sm' | 'md' | 'lg' | 'xl' // 16/32/64/96px
 
-export interface ColumnsBlock {
+export type SpacerBlock = {
+  id: string
+  type: 'spacer'
+  size: SpacerSize
+} & BlockStyleCommon
+
+export type NonColumnsBlock =
+  | HeaderBlock
+  | TextBlock
+  | CtaBlock
+  | DividerBlock
+  | FooterBlock
+  | HeadingBlock
+  | ImageBlock
+  | SpacerBlock
+
+export type ColumnsBlock = {
   id: string
   type: 'columns'
   leftChildren: NonColumnsBlock[]
   rightChildren: NonColumnsBlock[]
-  gap: 'sm' | 'md' | 'lg' // 8/16/32px między kolumnami
+  gap: 'sm' | 'md' | 'lg'
   verticalAlign: 'top' | 'middle' | 'bottom'
-}
+} & BlockStyleCommon &
+  BlockBorder
