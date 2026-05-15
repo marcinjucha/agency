@@ -1,806 +1,379 @@
 # ADR-006: Agency Project Structure and Architecture Patterns
 
-> **Note:** This project was renamed from "halo-efekt" to "agency" in February 2026.
-
-**Status:** Accepted
-**Date:** 2025-12-05 (Last Updated: 2026-02-06)
-**Context:** Agency SaaS Platform - Multi-tenant business automation platform
+**Status:** Accepted (revised)
+**Original Date:** 2025-12-05
+**Last Revision:** 2026-05-15 — TanStack Start migration, 4-app monorepo, embeds former ADR-005 (app vs features) and supersedes ARCHIVED-001 (monorepo).
+**Context:** Halo Efekt — multi-tenant business automation platform (Turborepo monorepo)
 **Deciders:** Marcin Jucha
+
+---
+
+## Why this ADR was revised
+
+Two architectural shifts since the original (Dec 2025) made large parts of the document misleading rather than wrong:
+
+1. **Framework migration (2026-04-15):** Next.js → **TanStack Start v1.167 + Vite 8**. Eliminated Server Actions, Server Components, Next.js middleware, `next.config.ts`, `transpilePackages`. Replaced by `createServerFn`, server routes (`server.handlers`), `createMiddleware`, isomorphic execution model.
+2. **Monorepo growth:** 2 apps → **4 apps** (CMS + Website + 2 shop frontends), 3 packages → **5 packages** (+ email, calendar).
+
+The decisions about *boundaries* (PUBLIC vs ADMIN, app/ vs features/, RLS-first, type-safe DB, shared packages) all survived. The decisions about *Next.js-specific mechanics* did not. This revision keeps the former and rewrites the latter.
+
+ADR-005 (app vs features) is folded into Section 2 below. ADR-001 (Turborepo) is folded into Section 1. ADR-007 (n8n standalone "Survey Analysis" workflow) is superseded by [ADR-008: Workflow Engine](./008-workflow-engine-architecture.md).
 
 ---
 
 ## Context and Problem Statement
 
-Halo-Efekt requires a scalable, maintainable architecture that supports:
-- Multi-tenant SaaS for law firms
-- Two distinct user-facing applications (public website + admin CMS)
-- Shared business logic and UI components
-- Future team growth (1-2 developers in 3-6 months)
-- Flexibility for subdomain deployment strategy
-- Type-safe database operations
-- Efficient development workflow
+Halo Efekt needs an architecture that supports:
 
-We need to decide on:
-1. Monorepo structure (Turborepo vs single repo)
-2. Application separation strategy
-3. Folder organization pattern
-4. Shared code management
-5. State management approach
-6. Database and type safety patterns
-
----
-
-## Decision Drivers
-
-### Business Requirements
-- **Speed to market:** MVP in 10-12 weeks
-- **Scalability:** Support 100-1000 law firms
-- **Team growth:** Solo → 2-3 developers within 6 months
-- **Deployment flexibility:** Single domain now, subdomains later
-
-### Technical Requirements
-- **Type safety:** End-to-end TypeScript
-- **Code reuse:** Minimize duplication between apps
-- **Independent deployments:** Website and CMS can deploy separately
-- **Developer experience:** Fast iteration, clear boundaries
-- **Performance:** Optimized bundles, efficient builds
-
----
-
-## Considered Options
-
-### Option 1: Single Next.js App with Route Groups
-- All code in one app
-- Use route groups: `(public)`, `(admin)`
-- Shared components via `/features` folder
-
-**Pros:**
-- Fastest to start
-- Simplest for solo developer
-- Single deployment
-
-**Cons:**
-- Hard to split later
-- No deployment independence
-- Larger bundle size
-
-### Option 2: Full Turborepo with 3 Apps
-- Separate apps: website, survey, cms
-- Maximum separation
-- Individual package.json for each
-
-**Pros:**
-- Maximum isolation
-- Independent deployments
-- Clear ownership
-
-**Cons:**
-- High initial complexity
-- Overhead for solo developer
-- More configuration
-
-### Option 3: Turborepo with 2 Apps (CHOSEN)
-- `apps/website` - Public landing + survey forms
-- `apps/cms` - Admin panel for law firms
-- Shared packages for common code
-
-**Pros:**
-- Logical separation (PUBLIC vs ADMIN)
-- Ready for subdomain split
-- Shared packages prevent duplication
-- Balanced complexity
-
-**Cons:**
-- More setup than Option 1
-- Learning curve for Turborepo
+- Multi-tenant SaaS (currently single tenant: Halo Efekt, but tenant model designed for >1 since day one)
+- Multiple user-facing frontends sharing one backend (admin CMS + marketing website + per-client shop frontends)
+- Shared business logic, types, and UI components across apps
+- Solo → small-team developer scaling (1 → 2–3 developers)
+- Background AI/automation processing without blocking user requests
+- Type safety end-to-end (DB schema → server function → React component)
 
 ---
 
 ## Decision Outcome
 
-**Chosen option:** Turborepo with 2 Next.js Applications + Shared Packages
+**Turborepo monorepo, multiple TanStack Start applications, shared packages, Supabase as the single source of truth for cross-app data.**
 
-### Architecture Overview
+### Current shape (2026-05-15)
 
 ```
-agency/
+legal-mind/
 ├── apps/
-│   ├── website/          # PUBLIC: Marketing + Survey Forms
-│   └── cms/              # ADMIN: Management Panel
+│   ├── cms/                # ADMIN: management panel (auth required)
+│   ├── website/            # PUBLIC: marketing + survey/booking forms
+│   └── shop/
+│       ├── jacek/          # PUBLIC: per-client shop frontend
+│       └── oleg/           # PUBLIC: per-client shop frontend
 │
-└── packages/
-    ├── ui/               # Shared UI components (shadcn/ui)
-    ├── database/         # Supabase types and queries
-    └── validators/       # Zod validation schemas
+├── packages/
+│   ├── ui/                 # shadcn/ui primitives, shared components, Tiptap editor
+│   ├── database/           # Supabase types (auto-generated) + tenant helpers
+│   ├── validators/         # Zod schemas shared across apps + n8n
+│   ├── email/              # Email block editor model + EmailRenderer (HTML compile)
+│   └── calendar/           # Google Calendar OAuth + booking helpers
+│
+├── supabase/               # Migrations, RLS policies (single DB for all apps)
+├── n8n-workflows/          # Workflow JSONs (workflow engine + step handlers)
+└── infra/n8n-vps/          # VPS infrastructure (symlink)
 ```
+
+**Apps communicate via Supabase only — never direct HTTP between apps.** CMS reads/writes via authenticated client; public apps via anonymous client; n8n via service role.
 
 ---
 
 ## Architecture Patterns
 
-### 1. Application Separation Pattern
+### 1. Monorepo: Turborepo + pnpm workspaces
 
-**Principle:** Separate by authentication boundary, not by feature
+**Why Turborepo:** task pipeline caching, `dependsOn: ["^build"]` for package→app ordering, per-app filtering (`turbo run dev --filter=@agency/cms`). pnpm workspaces handle package linking with strict isolation.
 
-**Website App (`apps/website/`):**
-- **Purpose:** Public-facing, no authentication required
-- **Users:** Prospective clients, survey respondents
-- **Routes:**
-  - `/` - Marketing homepage
-  - `/pricing` - Pricing information
-  - `/o-nas` - About page
-  - `/kontakt` - Contact page
-  - `/survey/[token]` - Client survey form + calendar booking
-- **No middleware:** All routes publicly accessible
-- **State:** React Hook Form for forms, no TanStack Query needed
+**Key configuration:**
 
-**CMS App (`apps/cms/`):**
-- **Purpose:** Admin panel for law firms
-- **Users:** Lawyers, law firm staff
-- **Routes:**
-  - `/login` - Authentication
-  - `/admin` - Dashboard
-  - `/admin/surveys` - Survey management
-  - `/admin/responses` - Client submissions
-  - `/admin/calendar` - Calendar management
-  - `/admin/settings` - Settings
-- **Middleware:** Protects ALL routes except `/login`
-- **State:** TanStack Query for data fetching and caching
-
-**Rationale:**
-- Survey forms are public (sent via email) → belong with website
-- Admin features require authentication → separate app with middleware
-- Clear mental model: "Can anyone access this?" → Website vs CMS
-
----
-
-### 2. Folder Structure Pattern (ADR-005 Inspired)
-
-**Principle:** Routing in `app/`, business logic in `features/`
-
-```typescript
-// ❌ BAD: Business logic mixed with routing
-app/admin/surveys/page.tsx:
-  - Fetches data
-  - Renders UI
-  - Handles mutations
-  - Validation logic
-
-// ✅ GOOD: Clear separation
-app/admin/surveys/page.tsx:
-  - Imports SurveyList component
-  - Minimal routing logic only
-
-features/surveys/components/SurveyList.tsx:
-  - Contains business logic
-  - Data fetching
-  - UI rendering
-
-features/surveys/queries.ts:
-  - Database queries
-  - Supabase calls
-
-features/surveys/actions.ts:
-  - Server Actions
-  - Mutations
-
-features/surveys/validations.ts:
-  - Zod schemas
-  - Validation logic
-```
-
-**Folder Structure Template:**
-
-```
-apps/{app-name}/
-├── app/                    # ROUTING ONLY
-│   ├── (group)/           # Route groups for layouts
-│   ├── [dynamic]/         # Dynamic routes
-│   └── api/               # API routes
-│
-├── features/              # BUSINESS LOGIC (ADR-005)
-│   └── {feature}/
-│       ├── components/    # Feature-specific components
-│       ├── actions.ts     # Server Actions
-│       ├── queries.ts     # Data fetching
-│       ├── validations.ts # Zod schemas
-│       └── types.ts       # TypeScript types
-│
-├── components/            # SHARED UI COMPONENTS
-│   ├── layout/           # Navbar, Footer, Sidebar
-│   ├── shared/           # Reusable UI components
-│   └── providers/        # React Context providers
-│
-└── lib/                  # UTILITIES
-    ├── supabase/         # Supabase clients
-    ├── utils/            # Helper functions
-    └── {service}/        # External service integrations
-```
-
-**Benefits:**
-- **Clear responsibility:** app/ = routing, features/ = logic
-- **Testable:** Business logic isolated from Next.js
-- **Reusable:** Features can be extracted to packages if needed
-- **Discoverable:** Find logic by feature, not by route
-
----
-
-### 3. Shared Code Pattern
-
-**Principle:** Share via packages, not copy-paste
-
-**When to create a shared package:**
-- ✅ Used in 2+ apps
-- ✅ Has clear API boundary
-- ✅ Changes infrequently
-- ✅ Needs version control (future)
-
-**Our Shared Packages:**
-
-**@agency/ui**
-```typescript
-// Purpose: UI components used in both apps
-// Examples:
-- Button, Input, Form (shadcn/ui)
-- SurveyForm component (used in CMS preview + Website client form)
-- CalendarBooking component (shared logic)
-
-// Usage:
-import { Button, SurveyForm } from '@agency/ui'
-```
-
-**@agency/database**
-```typescript
-// Purpose: Single source of truth for DB types
-// Auto-generated from Supabase schema
-
-// Usage:
-import type { Database, Tables } from '@agency/database'
-type Survey = Tables<'surveys'>
-```
-
-**@agency/validators**
-```typescript
-// Purpose: Shared validation logic
-// Examples:
-- surveySchema (validates survey structure)
-- Used in: CMS (when creating), Website (when submitting), n8n (webhooks)
-
-// Usage:
-import { surveySchema } from '@agency/validators'
-```
-
-**Anti-pattern:**
-```typescript
-// ❌ Don't create @agency/admin (too app-specific)
-// ❌ Don't create @agency/utils (too generic)
-// ✅ Keep app-specific logic in apps/{app}/features/
-```
-
----
-
-### 4. State Management Pattern
-
-**Principle:** Use the right tool for the job
-
-**State Management Hierarchy:**
-- ✅ **TanStack Query** for server state (CMS only)
-- ✅ **Zustand** for client state when React Context is too complex
-- ✅ **React Context** for simple global state (theme, i18n)
-- ✅ **URL params** for filter state (search, pagination)
-- ❌ **No Redux** (too heavy, unnecessary for our use case)
-
-**CMS App (Complex Data Fetching):**
-```typescript
-// ✅ TanStack Query for SERVER state:
-- Surveys list (cache, refetch, optimistic updates)
-- Responses list (pagination, filtering)
-- Dashboard stats (background refetch)
-
-// Example:
-const { data: surveys } = useQuery({
-  queryKey: ['surveys', filters],
-  queryFn: () => getSurveys(filters),
-  staleTime: 1000 * 60 * 5, // 5 min cache
-})
-
-// ✅ Zustand for CLIENT state (when needed):
-- Survey Builder UI state (selected question, drag state)
-- Multi-step form progress
-- Sidebar collapse/expand state
-- Any complex local state that multiple components need
-
-// Example (Survey Builder):
-import { create } from 'zustand'
-
-interface SurveyBuilderStore {
-  selectedQuestionId: string | null
-  setSelectedQuestion: (id: string | null) => void
-  isDragging: boolean
-  setIsDragging: (dragging: boolean) => void
-}
-
-export const useSurveyBuilder = create<SurveyBuilderStore>((set) => ({
-  selectedQuestionId: null,
-  setSelectedQuestion: (id) => set({ selectedQuestionId: id }),
-  isDragging: false,
-  setIsDragging: (dragging) => set({ isDragging: dragging }),
-}))
-```
-
-**Website App (Simple Forms):**
-```typescript
-// ✅ React Hook Form for:
-- Survey form submission (one-time submit)
-- Contact form (no server state needed)
-
-// Example:
-const { handleSubmit } = useForm()
-const onSubmit = async (data) => {
-  await fetch('/api/survey/submit', {
-    method: 'POST',
-    body: JSON.stringify(data)
-  })
-}
-```
-
-**When to use Zustand:**
-- ✅ Survey Builder (selected questions, drag state, preview mode)
-- ✅ Complex forms with multi-step wizards
-- ✅ UI state shared across many components
-- ✅ State that needs to persist during navigation
-- ❌ Simple component state (use useState)
-- ❌ Server state (use TanStack Query)
-- ❌ Form state (use React Hook Form)
-
-**Installation (when needed):**
-```bash
-# Add to apps/cms/package.json
-npm install zustand --workspace=@halo-efekt/cms
-```
-
-**Rationale:**
-- Zustand is lightweight (1kb) and has excellent DevTools
-- Simpler API than Context + useReducer for complex state
-- Better performance than Context (no re-render cascades)
-- Perfect for Survey Builder drag-drop UI state
-- TanStack Query handles server state → Zustand for client state
-- Website forms are simple → React Hook Form sufficient
-
----
-
-### 5. Database Access Pattern
-
-**Principle:** RLS first, Service Role only when necessary
-
-**Multi-Tenant Isolation via RLS:**
-```typescript
-// ✅ Browser/Server: Use anon key (respects RLS)
-const supabase = createClient() // Uses NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-const { data } = await supabase
-  .from('surveys')
-  .select('*')
-// Automatically filtered by user's tenant_id via RLS policy
-
-// ❌ Don't use service_role for normal queries
-// Only use for:
-// - Admin operations (delete tenant)
-// - Bypassing RLS intentionally
-// - Background jobs
-```
-
-**Type-Safe Queries:**
-```typescript
-// ✅ Always use Database type from @agency/database
-import type { Database } from '@agency/database'
-
-const supabase = createClient<Database>()
-
-// TypeScript knows about all tables, columns, relationships
-const { data } = await supabase
-  .from('surveys') // ✓ Autocomplete
-  .select('id, title, created_by(full_name)') // ✓ Type-safe joins
-```
-
-**Query Organization:**
-```typescript
-// ✅ Encapsulate queries in features/
-features/surveys/queries.ts:
-export async function getSurveys() {
-  const supabase = createClient()
-  const { data, error } = await supabase
-    .from('surveys')
-    .select('*')
-
-  if (error) throw error
-  return data
-}
-
-// Usage in components:
-const { data } = useQuery({
-  queryKey: ['surveys'],
-  queryFn: getSurveys,
-})
-```
-
----
-
-### 6. Type Safety Pattern
-
-**Principle:** Generate, don't write
-
-**Database Types (Auto-generated):**
-```bash
-# After schema changes:
-supabase gen types typescript --linked > packages/database/src/types.ts
-
-# Or use npm script:
-npm run db:types
-```
-
-**Form Validation (Zod schemas):**
-```typescript
-// packages/validators/src/survey.ts
-export const surveySchema = z.object({
-  title: z.string().min(1).max(200),
-  questions: z.array(questionSchema),
-})
-
-export type Survey = z.infer<typeof surveySchema>
-
-// Use in React Hook Form:
-const form = useForm<Survey>({
-  resolver: zodResolver(surveySchema)
-})
-```
-
-**Benefits:**
-- Single source of truth (database schema)
-- Compile-time safety
-- Autocomplete in IDE
-- Refactoring safety
-
----
-
-### 7. Component Organization Pattern
-
-**Principle:** Colocation by feature, not by type
-
-```typescript
-// ❌ BAD: Organize by component type
-components/
-├── buttons/
-│   ├── PrimaryButton.tsx
-│   └── SecondaryButton.tsx
-├── forms/
-│   ├── SurveyForm.tsx
-│   └── LoginForm.tsx
-└── cards/
-    └── SurveyCard.tsx
-
-// ✅ GOOD: Organize by feature
-features/
-├── surveys/
-│   └── components/
-│       ├── SurveyForm.tsx
-│       ├── SurveyCard.tsx
-│       └── SurveyBuilder.tsx
-│
-└── auth/
-    └── components/
-        └── LoginForm.tsx
-
-// Shared primitives go in packages/ui
-packages/ui/src/components/
-├── button.tsx         # Generic Button (from shadcn/ui)
-├── input.tsx          # Generic Input
-└── form.tsx           # Generic Form wrapper
-```
-
-**Rationale:**
-- **Colocation:** Related code stays together
-- **Discovery:** Find all survey code in one place
-- **Extraction:** Easy to move feature to separate package later
-- **Clarity:** No guessing "where does this belong?"
-
----
-
-### 8. Import Alias Pattern
-
-**Principle:** Consistent, predictable imports
-
-**Alias Configuration:**
-
-```typescript
-// All apps use:
-"@/*" // Maps to app root
-
-// Examples:
-import { createClient } from '@/lib/supabase/client'
-import { SurveyList } from '@/features/surveys/components/SurveyList'
-import { Navbar } from '@/components/layout/Navbar'
-
-// Shared packages:
-import { Button } from '@agency/ui'
-import type { Database } from '@agency/database'
-import { surveySchema } from '@agency/validators'
-```
-
-**Rules:**
-- `@/` for same-app imports (features, components, lib)
-- `@agency/*` for cross-app imports (shared packages)
-- Relative imports `./` only within same folder
-- No `../../../` (use aliases instead)
-
----
-
-### 9. Environment Variables Pattern
-
-**Principle:** Explicit, documented, secure
-
-**Structure:**
-```bash
-# .env.local.example (committed)
-NEXT_PUBLIC_SUPABASE_URL=your-url-here
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-key-here
-
-# .env.local (NOT committed, in .gitignore)
-NEXT_PUBLIC_SUPABASE_URL=https://zsrpdslhnuwmzewwoexr.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGc...
-```
-
-**Naming Convention:**
-- `NEXT_PUBLIC_*` - Exposed to browser (safe)
-- `SUPABASE_SERVICE_ROLE_KEY` - Server-only (secret)
-- `GOOGLE_CLIENT_SECRET` - Server-only (secret)
-
-**Documentation:**
-- Every app has `.env.local.example`
-- Comments explain where to get each value
-- Secrets clearly marked "KEEP SECRET"
-
----
-
-### 10. API Routes Pattern
-
-**Principle:** Minimal API routes, prefer Server Actions
-
-**When to use API routes:**
-- ✅ Webhooks (n8n, Google Calendar)
-- ✅ External integrations
-- ✅ Public endpoints (survey submission)
-
-**When to use Server Actions:**
-- ✅ Form submissions (authenticated)
-- ✅ CRUD operations
-- ✅ Internal mutations
-
-**Example:**
-
-```typescript
-// ✅ Server Action (preferred for CMS)
-'use server'
-export async function createSurvey(data: Survey) {
-  const supabase = await createClient()
-  return await supabase.from('surveys').insert(data)
-}
-
-// ✅ API Route (for webhooks)
-app/api/webhooks/n8n/route.ts:
-export async function POST(req: Request) {
-  const payload = await req.json()
-  // Process webhook
-}
-```
-
----
-
-## Implementation Details
-
-### Monorepo Configuration
-
-**turbo.json:**
-```json
+```jsonc
+// turbo.json
 {
   "tasks": {
     "dev": { "cache": false, "persistent": true },
-    "build": {
-      "dependsOn": ["^build"],
-      "outputs": [".next/**", "dist/**"]
-    }
+    "build": { "dependsOn": ["^build"], "outputs": [".output/**", "dist/**"] }
   }
 }
-```
-
-**Key Points:**
-- Use `tasks` (not `pipeline` - Turborepo 2.0)
-- `dependsOn: ["^build"]` builds packages before apps
-- Persistent dev servers
-- Cache build outputs
-
----
-
-### Package Structure
-
-**Template for each package:**
-
-```
-packages/{package-name}/
-├── package.json
-│   ├── name: "@agency/{package-name}"
-│   ├── main: "./src/index.ts"
-│   └── dependencies: { ... }
-│
-├── tsconfig.json
-│   ├── extends: "../../tsconfig.json"
-│   └── include: ["src/**/*"]
-│
-└── src/
-    ├── index.ts        # Public API exports
-    └── ...             # Implementation
 ```
 
 **Rules:**
-- Package name: `@agency/{name}` (scoped)
-- Main entry: `./src/index.ts` (not dist/)
-- Version: `*` in app dependencies (monorepo link)
-- Private: `"private": true` (not published to npm)
 
----
+- Package name: `@agency/{name}` (scoped, private)
+- App name: `@agency/{app-name}` (e.g. `@agency/cms`, `@agency/shop-jacek`)
+- Main entry of packages: `./src/index.ts` (source, not dist) — TanStack Start consumes TS directly
+- Version of internal deps: `*` or `workspace:*` (monorepo link)
 
-### Feature Structure (ADR-005 Pattern)
+### 2. Application separation: by authentication boundary
 
-**Template for each feature:**
+**Principle:** Separate apps by *who can access them*, not by feature.
+
+| App | Audience | Auth | Routing example |
+|---|---|---|---|
+| `apps/cms/` | Admin staff | Required (middleware) | `/admin/surveys`, `/admin/calendar`, `/admin/email-templates` |
+| `apps/website/` | Public visitors | None | `/`, `/survey/[token]`, `/o-nas` |
+| `apps/shop/jacek/` | Public visitors | None | Per-client product catalog |
+| `apps/shop/oleg/` | Public visitors | None | Per-client product catalog |
+
+**Rationale:**
+
+- Survey forms are public (sent via email) → live with website
+- Admin features need auth + caching → CMS with TanStack Query + middleware
+- Per-client shops have distinct branding/domains → separate apps, shared shop features in `apps/cms/features/shop-*/`
+
+**When to add a new app:** new audience boundary (e.g. mobile, public API). When *not* to add: new feature for an existing audience — extend existing app's `features/`.
+
+### 3. App/features separation (formerly ADR-005)
+
+**Principle:** Routing lives in `app/`; business logic lives in `features/`.
+
+**Forbidden imports:**
+
+- ❌ `features/X` → `app/...` (features must not depend on routes)
+- ❌ `packages/*` → `apps/*` (packages must not depend on apps)
+- ❌ `lib/` → `features/...` (lib is for cross-feature utilities; feature-specific helpers stay in the feature)
+
+**Allowed imports:**
+
+- ✅ `app/...` → `features/X`
+- ✅ `features/X` → `features/Y` (cross-feature is fine; create shared module if it grows)
+- ✅ `app/`, `features/`, `lib/` → `@agency/*` packages
+- ✅ `features/X` → `lib/` (utilities), `@/components/...` (shared UI primitives)
+
+**Folder template (inside each app):**
 
 ```
-features/{feature-name}/
-├── components/
-│   ├── {Feature}List.tsx
-│   ├── {Feature}Form.tsx
-│   └── {Feature}Detail.tsx
+apps/{app-name}/
+├── app/                    # ROUTING ONLY — thin route files, <20 lines ideal
+│   ├── __root.tsx          # TanStack Start root layout
+│   ├── index.tsx           # / route
+│   ├── admin/              # nested routes
+│   └── api/                # server routes (server.handlers)
 │
-├── actions.ts         # Server Actions
-├── queries.ts         # Data fetching (Supabase)
-├── validations.ts     # Zod schemas
-├── types.ts           # TypeScript interfaces
-└── __tests__/         # Tests
-    └── {feature}.test.ts
-```
-
-**Example (Surveys feature):**
-
-```
-features/surveys/
-├── components/
-│   ├── SurveyList.tsx      # List all surveys
-│   ├── SurveyBuilder.tsx   # Create/edit UI
-│   └── SurveyPreview.tsx   # Preview mode
+├── features/               # BUSINESS LOGIC
+│   └── {feature}/
+│       ├── components/     # Feature-specific React components
+│       ├── server.ts       # createServerFn handlers (server-only)
+│       ├── handlers.server.ts  # Implementations marked .server.ts (stripped on client)
+│       ├── queries.ts      # Supabase reads (callable from RSC-like contexts)
+│       ├── validation.ts   # Zod schemas (often re-exported from @agency/validators)
+│       └── types.ts        # TypeScript types
 │
-├── actions.ts
-│   ├── createSurvey()      # Server Action
-│   ├── updateSurvey()      # Server Action
-│   └── deleteSurvey()      # Server Action
-│
-├── queries.ts
-│   ├── getSurveys()        # Fetch list
-│   ├── getSurvey(id)       # Fetch single
-│   └── getSurveyByToken()  # Public access
-│
-├── validations.ts
-│   └── surveySchema        # Zod schema
-│
-└── types.ts
-    ├── Survey              # Inferred from Zod
-    ├── Question            # Question interface
-    └── SurveyStatus        # Status enum
+├── components/             # SHARED UI (layout, providers)
+└── lib/                    # CROSS-FEATURE UTILITIES (supabase clients, helpers)
 ```
 
----
+**Naming convention:**
 
-### Database Schema Pattern
+- Server-only code → `*.server.ts` suffix (TanStack Start strips per-import-statement, see Section 5)
+- `queries.ts` for read functions; `server.ts` for `createServerFn` handlers
+- `validation.ts` (singular) — Zod schemas; legacy code uses `validations.ts`, new code uses singular
 
-**Principle:** Multi-tenant first, secure by default
+### 4. Shared packages
 
-**Table Naming:**
-- Plural: `tenants`, `users`, `surveys` (not `tenant`, `user`, `survey`)
-- Snake_case: `survey_links`, `ai_qualification`
-- Descriptive: `appointments` (not `bookings` or `events`)
+**Principle:** Share via packages when (a) used in 2+ apps, (b) has a clear API boundary, (c) changes infrequently.
 
-**Required Columns (All Tables):**
-```sql
-id UUID PRIMARY KEY DEFAULT gen_random_uuid()
-created_at TIMESTAMPTZ DEFAULT NOW()
-updated_at TIMESTAMPTZ DEFAULT NOW()  -- with trigger
-```
+| Package | Purpose | Consumers |
+|---|---|---|
+| `@agency/ui` | shadcn/ui primitives, shared components (Tiptap editor, NodeViews, design tokens) | All apps |
+| `@agency/database` | Supabase generated types, tenant helpers, type guards | All apps + n8n |
+| `@agency/validators` | Zod schemas for surveys, bookings, workflows | All apps + n8n |
+| `@agency/email` | Block-based email model, `EmailRenderer`, `BLOCK_REGISTRY` | CMS (editor) + n8n (renderer) |
+| `@agency/calendar` | Google Calendar OAuth + booking helpers | CMS + Website |
 
-**Multi-Tenant Pattern:**
-```sql
--- Every tenant-owned table has:
-tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE
+**Anti-pattern:**
 
--- RLS Policy:
-CREATE POLICY "Users can view own tenant"
-  ON {table} FOR SELECT
-  USING (tenant_id = (SELECT tenant_id FROM users WHERE id = auth.uid()));
-```
+- ❌ `@agency/utils` (too generic — leads to dumping ground)
+- ❌ `@agency/cms-shared` (app-specific — keep inside `apps/cms/features/`)
 
-**Audit Pattern:**
-```sql
--- Track who created/modified
-created_by UUID NOT NULL REFERENCES users(id)
-updated_at TIMESTAMPTZ  -- Auto-updated via trigger
-```
+### 5. TanStack Start server/client boundary
 
----
+**Principle:** Server-only code MUST sit behind a `.server.ts` import that the bundler strips on the client.
 
-### Authentication Pattern
+**Critical mechanics:**
 
-**Principle:** Middleware for routes, RLS for data
+- TanStack Start strips `.server.ts` imports **per import statement, not transitively**. A barrel re-export from `.server.ts` defeats stripping.
+- 5+ named imports from a single `*.server.ts` file + runtime re-exports → use **dynamic `await import('./handlers.server')`** inside the `createServerFn` handler lambda, with async wrapper functions for runtime re-exports. Type-only re-exports stay top-level.
+- Cross-feature `from '@/features/Y/server'` imports propagate transitively — if feature X crashes with `node:async_hooks` on client, also check feature X's components importing Y.
 
-**CMS Middleware:**
+**Decision tree for new feature `server.ts`:**
+
+| Situation | Pattern |
+|---|---|
+| Direct leaf, 1–4 imports from `.server.ts` | Top-level import OK |
+| 5+ named imports from `.server.ts` barrel | Dynamic `await import(...)` inside handler lambda |
+| `export { x } from 'foo.server'` (runtime re-export) | Async wrapper function |
+| Type-only re-export | Top-level OK |
+
+**Server function pattern:**
+
 ```typescript
-// Protects ALL routes except login
-export async function middleware(request: NextRequest) {
-  const { user } = await supabase.auth.getUser()
+// features/email/server.ts
+import { createServerFn } from '@tanstack/react-start'
+import { z } from 'zod'
 
-  if (!user && !isPublicRoute) {
-    return redirect('/login')
-  }
-
-  return response
-}
+export const updateTemplate = createServerFn({ method: 'POST' })
+  .validator(templateSchema)
+  .handler(async ({ data }) => {
+    // Server-only — dynamic import keeps client bundle clean
+    const { saveTemplate } = await import('./handlers.server')
+    return saveTemplate(data)
+  })
 ```
 
-**User Session:**
+**Server routes (webhooks, public APIs):**
+
 ```typescript
-// Server Components (recommended):
-const supabase = await createClient()
-const { data: { user } } = await supabase.auth.getUser()
+// app/api/webhooks/n8n.ts
+import { createServerFileRoute } from '@tanstack/react-start/server'
 
-// Client Components (when needed):
-const supabase = createClient()
-const { data: { user } } = await supabase.auth.getUser()
+export const ServerRoute = createServerFileRoute('/api/webhooks/n8n').methods({
+  POST: async ({ request }) => { /* ... */ },
+})
 ```
 
-**User-Tenant Relationship:**
+**Reference:** `tanstack-server` skill has the full pattern catalog.
+
+### 6. State management
+
+**Principle:** Right tool for the job. No one-size-fits-all store.
+
+| State type | Tool | Where |
+|---|---|---|
+| Server data (cache, refetch, optimistic) | TanStack Query | **CMS only** (public apps avoid query caches) |
+| Form state | React Hook Form + Zod resolver | All apps |
+| Complex client UI state | `useState` / Zustand if shared across many components | CMS (Workflow Builder, Email Block Editor) |
+| URL state (filters, pagination, panel open) | TanStack Router search params (`useSearch`, `useNavigate`) | All apps |
+| Theme, i18n | React Context | All apps |
+
+**Hard rule:** TanStack Query lives in CMS only. Public apps (website, shop) use server-loaded data via TanStack Router loaders and React Hook Form for submission. Putting a query cache in a public app inflates the client bundle for one-shot pages.
+
+**URL writes for transient panel state must use `replace: true`** — `push` pollutes history (e.g. `?execution=<id>` updates on row click should replace, not push).
+
+**React Compiler enabled (all apps):** `babel-plugin-react-compiler` in each app's `vite.config.ts`. Auto-memoizes — **don't** add `useCallback`/`useMemo` to new code. Boy Scout Rule: remove manual memoization when touching files. The cleanup must be **whole-file**, not partial (partial removal creates inconsistency).
+
+### 7. Database access
+
+**Principle:** RLS first. Service role only when intentional.
+
+| Client | When | Where |
+|---|---|---|
+| Browser anon (`createBrowserClient`) | Public reads (RLS enforced) | Public apps, CMS client components |
+| Server anon (`createServerClient`) | Authenticated reads (RLS sees `auth.uid()`) | CMS server functions/routes |
+| Service role | Background jobs, cross-tenant ops, super admin | n8n, CMS admin-only flows |
+
+**Type safety:** All clients typed with `Database` from `@agency/database`. Types auto-generated via `pnpm db:types` (regenerates `packages/database/src/types.ts` from local Supabase).
+
+**Query organization:** Encapsulate inside `features/{feature}/queries.ts` (reads) and `features/{feature}/server.ts` (writes via `createServerFn`). Never inline Supabase in components.
+
+**Multi-tenant RLS pattern:** every tenant-owned table has `tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE` + policy `USING (tenant_id = current_user_tenant_id())`. The `current_user_tenant_id()` SQL function is the canonical guard — never write `tenant_id = (SELECT tenant_id FROM users WHERE id = auth.uid())` directly because it triggers RLS infinite recursion.
+
+**Global tables (cross-tenant):** super admin guard via `is_super_admin()` SQL function. Pattern in `ag-database-patterns` skill.
+
+### 8. Type safety: generate, don't write
+
+- **DB types:** `pnpm db:types` → `packages/database/src/types.ts` (Supabase CLI generates from live schema).
+- **Validation:** Zod schemas in `@agency/validators` are the source of truth. Inferred types (`z.infer<typeof X>`) feed React Hook Form (`useForm<T>`) and `createServerFn().validator(X)`.
+- **Domain types:** Derived from `as const` objects (RBAC `PermissionKey`, workflow step types). Validate at DB boundary with a validator function. Never pass plain `string` where a domain type exists.
+
+### 9. Error handling: `neverthrow` + `remeda`
+
+**Principle:** Functional error handling. New code uses `Result<T, E>`, not `try/catch`.
+
 ```typescript
-// Always fetch user's tenant context
-const { data: userData } = await supabase
-  .from('users')
-  .select('tenant_id, role, full_name')
-  .eq('id', user.id)
-  .single()
+import { ResultAsync, ok, err } from 'neverthrow'
+import { pipe } from 'remeda'
 
-// RLS automatically filters by tenant_id
-const { data: surveys } = await supabase
-  .from('surveys')
-  .select('*') // Only sees own tenant's surveys
+const saveTemplate = (input: TemplateInput): ResultAsync<Template, DbError> =>
+  validate(input)
+    .asyncAndThen(insertRow)
+    .map(toTemplate)
 ```
+
+**Boundary rule:** wrap unsafe code (Supabase, fetch, `JSON.parse`) at the boundary with `ResultAsync.fromPromise` / `Result.fromThrowable`. Internal functions return `Result` directly. Final consumer (route handler, server function) does `.match({ ok: ..., err: ... })`.
+
+**Boy Scout:** when touching a file with `try/catch`, migrate to `Result`. Don't proactively refactor untouched files.
+
+### 10. Routing: TanStack Router file-based
+
+- Route conventions: `__root.tsx`, `index.tsx`, `$param.tsx`, `[.ext].tsx` for raw extensions
+- `createFileRoute(...).options({ loader, head, headers, validateSearch, loaderDeps })`
+- ISR via `Cache-Control` headers + `staleTime` on TanStack Query (CMS)
+- Images via `@unpic/react` (handles `<img>` sizing for Vite)
+- 404 via `notFound()` + `notFoundComponent` on routes
+
+**Reference:** `tanstack-routing` skill.
+
+### 11. Middleware
+
+**Principle:** TanStack Start middleware via `createMiddleware`. Global middleware registered in `start.ts`.
+
+```typescript
+// apps/cms/start.ts
+import { createStart } from '@tanstack/react-start'
+
+export const startInstance = createStart(() => ({
+  requestMiddleware: [authMiddleware], // every request
+  functionMiddleware: [tenantMiddleware], // every createServerFn
+}))
+```
+
+**Auth middleware:** redirects unauthenticated users to `/login`. Pattern: read Supabase session cookie, attach `user` + `tenant_id` to context, forward.
+
+### 12. Background processing
+
+See **[ADR-008: Workflow Engine](./008-workflow-engine-architecture.md)** for the current architecture.
+
+Short summary: long-running operations (>2s), AI calls, scheduled jobs, retries, and any cross-step orchestration go through the **workflow engine** (n8n + step handlers). Fast CRUD (<2s) stays in `createServerFn` / server routes.
 
 ---
 
-## Migration Path
+## What we don't do
 
-### When to Split Further (3 Apps)
+- ❌ **Server Actions** — Next.js feature; we're on TanStack Start. Use `createServerFn`.
+- ❌ **Server Components / RSC** — Same reason. Use server functions + client components.
+- ❌ **Direct HTTP between apps** — CMS and website never call each other's APIs. Communication via Supabase rows or n8n webhooks only.
+- ❌ **Redux** — too heavy. TanStack Query + Zustand + URL state cover the use cases.
+- ❌ **`@agency/utils`** — generic dumping-ground packages. Utilities live in `lib/` of the consuming app or in a domain-specific package.
+- ❌ **`useCallback`/`useMemo` in new code** — React Compiler memoizes automatically. Manual memo only when profiler proves a hot path needs it.
+- ❌ **`fetch()` in n8n Code nodes** — sandbox blocks fetch/SDK. Use native `https` module.
 
-**Trigger:** If any of these occur:
-- Website traffic >> CMS traffic (need separate scaling)
-- Survey forms need different domain (survey.haloefekt.pl)
-- Team > 5 developers (need more isolation)
+---
 
-**How to split:**
-```bash
-# Create new survey app
-cp -r apps/website apps/survey
+## Quick Reference
 
-# Keep only survey routes in survey app
-# Remove (marketing) routes
-
-# Update deployments
-# website: haloefekt.pl
-# survey: survey.haloefekt.pl
-# cms: app.haloefekt.pl
+```
+┌─────────────────────────────────────────────────────┐
+│  HALO EFEKT ARCHITECTURE CHEAT SHEET                │
+├─────────────────────────────────────────────────────┤
+│  APPS                                               │
+│  ├─ cms/         → Admin (auth required)            │
+│  ├─ website/     → Marketing + survey/booking       │
+│  └─ shop/        → Per-client shop frontends        │
+│                                                      │
+│  PACKAGES                                           │
+│  ├─ ui/          → shadcn/ui + shared components    │
+│  ├─ database/    → Supabase types (auto-generated)  │
+│  ├─ validators/  → Zod schemas (shared)             │
+│  ├─ email/       → Block editor + EmailRenderer     │
+│  └─ calendar/    → Google Calendar OAuth/booking    │
+│                                                      │
+│  FOLDER PATTERN (inside apps)                       │
+│  ├─ app/         → Routes (thin, <20 lines)         │
+│  ├─ features/    → Business logic                   │
+│  │   ├─ server.ts          createServerFn handlers  │
+│  │   ├─ handlers.server.ts server-stripped impl     │
+│  │   ├─ queries.ts         Supabase reads           │
+│  │   └─ validation.ts      Zod                      │
+│  ├─ components/  → Shared UI                        │
+│  └─ lib/         → Cross-feature utils              │
+│                                                      │
+│  STATE                                              │
+│  ├─ Server      → TanStack Query (CMS only)         │
+│  ├─ Forms       → React Hook Form + Zod             │
+│  ├─ URL         → TanStack Router search params     │
+│  └─ Client UI   → useState / Zustand if shared      │
+│                                                      │
+│  DB ACCESS                                          │
+│  ├─ Anon        → Browser/Server (RLS enforced)     │
+│  ├─ Service role → n8n, super admin flows           │
+│  └─ Types       → pnpm db:types                     │
+│                                                      │
+│  ERRORS                                             │
+│  ├─ Boundary    → ResultAsync.fromPromise           │
+│  ├─ Internal    → Result<T, E>                      │
+│  └─ Consumer    → .match({ ok, err })               │
+│                                                      │
+│  IMPORTS                                            │
+│  ├─ Same app    → @/features/...                    │
+│  └─ Packages    → @agency/...                       │
+└─────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -809,290 +382,49 @@ cp -r apps/website apps/survey
 
 ### Positive
 
-✅ **Clear boundaries:** PUBLIC vs ADMIN separation
-✅ **Type safety:** End-to-end TypeScript from DB to UI
-✅ **Code reuse:** Shared packages prevent duplication
-✅ **Independent deployment:** Website and CMS deploy separately
-✅ **Team-ready:** Structure supports 2-3 developers
-✅ **Scalable:** Easy to add mobile app or API server later
-✅ **Testable:** Features isolated and unit-testable
+- ✅ Clear PUBLIC vs ADMIN boundaries; per-client shop split without app duplication for shared CMS features
+- ✅ Type safety end-to-end (DB → server function → form → component)
+- ✅ Code reuse via 5 shared packages; n8n consumes same Zod schemas as the apps
+- ✅ Independent deployments per app (Vercel projects)
+- ✅ React Compiler removes manual memoization burden
 
 ### Negative
 
-❌ **Initial complexity:** More setup than single app
-❌ **Learning curve:** Team must learn Turborepo + patterns
-❌ **Build times:** Slightly slower than single app (but cached)
-❌ **Configuration overhead:** 2 apps = 2 configs
+- ⚠️ TanStack Start `.server.ts` strip is fragile (per-statement, not transitive) — barrel imports and runtime re-exports must use dynamic import workaround
+- ⚠️ Cross-worktree Supabase CLI quirks (container name keyed off main checkout dir) — see `memory.md` "Worktree Gotchas"
+- ⚠️ 4 apps × per-env config = more places to keep `.env.local` in sync (gitignored, must symlink from main into worktrees)
 
 ### Neutral
 
-⚖️ **Bundle size:** Slightly larger due to some duplication, but route-based splitting helps
-⚖️ **Monorepo tools:** Requires Turborepo knowledge
-⚖️ **Deployment:** 2 Vercel projects (but automated)
+- ⚖️ Single Supabase DB across all apps — strong tenant isolation via RLS, but no per-app DB independence
+- ⚖️ Shared `node_modules` (pnpm + Turborepo) between main checkout and worktrees — lockfile changes affect both
 
 ---
 
-## Examples and Templates
+## Migration history
 
-### Creating a New Feature
-
-```bash
-# 1. Decide which app it belongs to
-# PUBLIC (no auth) → apps/website
-# ADMIN (auth required) → apps/cms
-
-# 2. Create feature folder
-mkdir -p apps/cms/features/new-feature/{components,__tests__}
-
-# 3. Create files
-touch apps/cms/features/new-feature/{actions,queries,validations,types}.ts
-
-# 4. Add route
-mkdir -p apps/cms/app/admin/new-feature
-touch apps/cms/app/admin/new-feature/page.tsx
-
-# 5. Import in page
-import { NewFeatureList } from '@/features/new-feature/components/NewFeatureList'
-```
-
-### Creating a New Shared Component
-
-```bash
-# 1. Add to packages/ui
-cd packages/ui/src/components
-npx shadcn@latest add {component-name}
-
-# 2. Export from index.ts
-echo "export * from './components/{component-name}'" >> src/index.ts
-
-# 3. Use in apps
-import { ComponentName } from '@agency/ui'
-```
-
-### Adding a New Database Table
-
-```bash
-# 1. Create migration
-supabase migration new add_{table_name}
-
-# 2. Write SQL
-CREATE TABLE {table_name} (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id UUID NOT NULL REFERENCES tenants(id),
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-ALTER TABLE {table_name} ENABLE ROW LEVEL SECURITY;
-
-# 3. Push migration
-supabase db push
-
-# 4. Regenerate types
-npm run db:types
-
-# 5. Use in code with type safety
-const { data } = await supabase.from('{table_name}').select('*')
-```
-
----
-
-## Reference Implementation
-
-### File: `apps/cms/features/surveys/components/SurveyList.tsx`
-
-```typescript
-'use client'
-
-import { useQuery } from '@tanstack/react-query'
-import { getSurveys } from '../queries'
-import { Button } from '@agency/ui'
-import Link from 'next/link'
-
-export function SurveyList() {
-  const { data: surveys, isLoading, error } = useQuery({
-    queryKey: ['surveys'],
-    queryFn: getSurveys,
-  })
-
-  if (isLoading) return <div>Loading...</div>
-  if (error) return <div>Error: {error.message}</div>
-
-  return (
-    <div>
-      <div className="flex justify-between mb-4">
-        <h2 className="text-2xl font-bold">Surveys</h2>
-        <Link href="/admin/surveys/new">
-          <Button>Create Survey</Button>
-        </Link>
-      </div>
-
-      <div className="space-y-4">
-        {surveys?.map((survey) => (
-          <div key={survey.id} className="p-4 border rounded">
-            <h3 className="font-semibold">{survey.title}</h3>
-            <p className="text-sm text-gray-500">{survey.description}</p>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-```
-
-### File: `apps/cms/features/surveys/queries.ts`
-
-```typescript
-import { createClient } from '@/lib/supabase/client'
-
-export async function getSurveys() {
-  const supabase = createClient()
-
-  const { data, error } = await supabase
-    .from('surveys')
-    .select('*')
-    .order('created_at', { ascending: false })
-
-  if (error) throw error
-  return data
-}
-
-export async function getSurvey(id: string) {
-  const supabase = createClient()
-
-  const { data, error } = await supabase
-    .from('surveys')
-    .select('*, created_by(full_name)')
-    .eq('id', id)
-    .single()
-
-  if (error) throw error
-  return data
-}
-```
-
-### File: `apps/cms/app/admin/surveys/page.tsx`
-
-```typescript
-import { SurveyList } from '@/features/surveys/components/SurveyList'
-
-export default function SurveysPage() {
-  return (
-    <div>
-      <SurveyList />
-    </div>
-  )
-}
-```
-
----
-
-## Validation and Quality
-
-### TypeScript Strict Mode
-- Enabled across all packages and apps
-- No `any` types without explicit justification
-- Strict null checks enforced
-
-### Linting
-- ESLint with Next.js recommended rules
-- Prettier for code formatting
-- Pre-commit hooks (future)
-
-### Testing Strategy (Future)
-```
-features/{feature}/__tests__/
-├── components/
-│   └── {Component}.test.tsx    # Unit tests
-├── queries.test.ts              # Integration tests
-└── actions.test.ts              # E2E tests
-```
+- **2025-12-05** — Original ADR-006: Next.js, 2 apps, 3 packages, Server Actions
+- **2026-02-06** — Renamed project halo-efekt → agency (internal); kept "Halo Efekt" as product name
+- **2026-04-15** — Migrated apps/shop/jacek + apps/shop/oleg to TanStack Start + Vite 8; later CMS + website followed
+- **2026-04-27** — Standalone "Survey Response AI Analysis" n8n workflow replaced by workflow engine (`ai_action` step). See [ADR-008](./008-workflow-engine-architecture.md).
+- **2026-05-15** — This revision: rewritten under TanStack Start, ADR-005 + ADR-001 folded in, ADR-007 superseded.
 
 ---
 
 ## Related ADRs
 
-- [ARCHIVED-001: Monorepo Structure](./ARCHIVED-001-monorepo-structure.md) - Historical reference from Multi-tenant CMS project
-- [ARCHIVED-005: App vs Features Separation](./ARCHIVED-005-app-vs-features-separation.md) - Pattern now in ADR-006 Section 2, from Multi-tenant CMS project
-- [ADR-007: N8n Background Processing](./007-n8n-background-processing.md) - AI workflow automation
+- [ADR-008: Workflow Engine Architecture](./008-workflow-engine-architecture.md) — n8n Orchestrator + step handlers, replaces the standalone AI workflow from former ADR-007
+
+## Related skills (canonical for day-to-day decisions)
+
+- `ag-architecture` — monorepo + import rules + N8n vs server route decision tree
+- `ag-database-patterns` — RLS, client selection, tenant helpers
+- `ag-coding-practices` — neverthrow/remeda, earned abstractions, SOLID by actor
+- `tanstack-server` — `createServerFn`, `.server.ts` strip rules, middleware
+- `tanstack-routing` — file-based routing, search params, loaders
+- `tanstack-setup` — vite.config.ts, entry points, fonts
 
 ---
 
-## Notes
-
-### Differences from Multi-Tenant CMS Project
-
-Halo-Efekt is simpler:
-- **2 apps** (not 3+) - Website + CMS (not multiple tenant frontends)
-- **No plugin system** - Straightforward SaaS
-- **Simpler state** - TanStack Query only in CMS (not everywhere)
-- **Single product** - One offering (not multi-product platform)
-
-### Future Considerations
-
-When adding:
-- **Mobile app** → Create `apps/mobile`, reuse `packages/*`
-- **Public API** → Create `apps/api`, reuse `packages/database`
-- **Lex integration** → Add `features/lex-search/` in CMS
-- **White-label** → Requires architecture rethink (not planned)
-
----
-
-## Quick Reference Card
-
-```
-┌─────────────────────────────────────────────────────┐
-│  HALO-EFEKT ARCHITECTURE CHEAT SHEET                │
-├─────────────────────────────────────────────────────┤
-│  APPS                                               │
-│  ├─ website/  → Public (no auth)                    │
-│  └─ cms/      → Admin (auth required)               │
-│                                                      │
-│  PACKAGES                                           │
-│  ├─ ui/         → Components (shadcn/ui)            │
-│  ├─ database/   → Supabase types (auto-generated)   │
-│  └─ validators/ → Zod schemas (shared validation)   │
-│                                                      │
-│  FOLDER PATTERN (inside apps)                       │
-│  ├─ app/        → Routes (minimal logic)            │
-│  ├─ features/   → Business logic (most code here)   │
-│  ├─ components/ → Shared UI (layout, primitives)    │
-│  └─ lib/        → Utils (supabase, helpers)         │
-│                                                      │
-│  STATE MANAGEMENT                                   │
-│  ├─ Server     → TanStack Query (API data)          │
-│  ├─ Client     → Zustand (UI state, lightweight)    │
-│  └─ Forms      → React Hook Form (validation)       │
-│                                                      │
-│  DATABASE                                           │
-│  ├─ Access     → RLS policies (multi-tenant)        │
-│  ├─ Types      → Auto-generated (npm run db:types)  │
-│  └─ Migrations → SQL files (supabase db push)       │
-│                                                      │
-│  IMPORTS                                            │
-│  ├─ Same app   → @/features/...                     │
-│  └─ Packages   → @agency/ui                         │
-└─────────────────────────────────────────────────────┘
-```
-
----
-
-## Decision Review
-
-**Review Date:** 2025-06-05 (6 months from now)
-**Review Criteria:**
-- Team size (still solo or grown?)
-- Traffic patterns (website vs cms ratio)
-- Pain points (what's slowing us down?)
-- New requirements (mobile app, API, etc.)
-
-**Possible changes:**
-- Split website into website + survey (if traffic demands)
-- Merge apps if team stays solo (simplify)
-- Extract more packages (if mobile app added)
-
----
-
-**Status:** ✅ Implemented and Validated
-**Last Updated:** 2025-12-05
-**Next Review:** 2025-06-05
+**Last Updated:** 2026-05-15
+**Next Review:** When 5th app added, or when TanStack Start v2 migration is on the roadmap.
