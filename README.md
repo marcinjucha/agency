@@ -203,12 +203,8 @@ See `supabase/seed_first_user.sql` for detailed instructions.
 See [/docs/adr/](./docs/adr/) for all Architecture Decision Records:
 
 **Active ADRs:**
-- [ADR-006: Agency Project Structure](./docs/adr/006-agency-project-structure.md) - Monorepo, features/, state management, database patterns
-- [ADR-007: N8n Background Processing](./docs/adr/007-n8n-background-processing.md) - AI workflow automation, queue mode, Claude Haiku
-
-**Historical Reference:**
-- [ARCHIVED-001: Monorepo Structure](./docs/adr/ARCHIVED-001-monorepo-structure.md) - Turborepo patterns from Multi-tenant CMS
-- [ARCHIVED-005: App vs Features](./docs/adr/ARCHIVED-005-app-vs-features-separation.md) - Folder structure pattern (now in ADR-006 Section 2)
+- [ADR-006: Agency Project Structure](./docs/adr/006-agency-project-structure.md) — Turborepo, 4 apps, 5 packages, TanStack Start, app/features separation, RLS, state management
+- [ADR-008: Workflow Engine Architecture](./docs/adr/008-workflow-engine-architecture.md) — n8n Orchestrator + step handler subworkflows, replaces single-purpose AI workflows
 
 ---
 

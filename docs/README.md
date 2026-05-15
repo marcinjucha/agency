@@ -35,8 +35,8 @@ Welcome to Halo-Efekt documentation. This directory contains architecture, desig
 
 Documents explaining **why** we made specific architectural choices:
 
-- **[001-monorepo-structure.md](./adr/001-monorepo-structure.md)** - Why Turborepo
-- **[005-app-vs-features-separation.md](./adr/005-app-vs-features-separation.md)** - Code organization pattern
+- **[006-agency-project-structure.md](./adr/006-agency-project-structure.md)** — Turborepo, TanStack Start, 4 apps, 5 packages, app/features separation, state management, DB access (folds in former ADR-001 and ADR-005)
+- **[008-workflow-engine-architecture.md](./adr/008-workflow-engine-architecture.md)** — n8n Orchestrator + step handlers, replaces former ADR-007
 
 ### Technology Guides
 
@@ -83,7 +83,7 @@ Reference guides for learning (12 files in `guides/` directory):
 3. Read ARCHITECTURE.md (Tech Stack)
 
 **Day 2-7:**
-- Study ADRs to understand patterns (adr/001, adr/005)
+- Study ADRs to understand patterns (adr/006, adr/008)
 - Read CODE_PATTERNS.md for implementation examples
 - Explore guides/ directory for learning
 
@@ -125,7 +125,7 @@ Reference guides for learning (12 files in `guides/` directory):
 |----------|----------|
 | Know what to build next | **Notion** → Tasks with status "In Progress" |
 | Understand the architecture | ARCHITECTURE.md |
-| Understand code organization | adr/005-app-vs-features-separation.md |
+| Understand code organization | adr/006-agency-project-structure.md (Section 3) |
 | See implementation patterns | CODE_PATTERNS.md |
 | Understand UI/UX guidelines | design-system.md |
 
@@ -133,8 +133,9 @@ Reference guides for learning (12 files in `guides/` directory):
 
 | Question | Document |
 |----------|----------|
-| Use Turborepo | adr/001-monorepo-structure.md |
-| Separate app/ and features/ | adr/005-app-vs-features-separation.md |
+| Use Turborepo | adr/006-agency-project-structure.md (Section 1) |
+| Separate app/ and features/ | adr/006-agency-project-structure.md (Section 3) |
+| Run background AI / orchestration | adr/008-workflow-engine-architecture.md |
 | Choose this tech stack | PROJECT_SPEC.yaml → architecture.tech_stack[*].why |
 | Make specific decisions | PROJECT_SPEC.yaml → architecture.key_decisions |
 
