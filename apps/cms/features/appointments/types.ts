@@ -47,14 +47,8 @@ export interface AppointmentResponseContext {
  * these are derived at query time from the joined response's `answers` JSONB
  * via `extractClientInfo` (see `features/appointments/server.ts#transformToListItem`).
  */
-// Omit defends against a future migration that re-adds `client_name` /
-// `client_email` columns with a different type — without Omit, the intersection
-// would silently widen the field type. Today the Omit is a no-op (DROP COLUMN
-// already removed them from `Tables<'appointments'>`), but documents intent.
-type AppointmentBase = Omit<Tables<'appointments'>, 'client_name' | 'client_email'> & {
-  /** Derived from joined response.answers via `extractClientInfo` (lenient — falls back to messages.appointments.unknownClient). */
+type AppointmentBase = Tables<'appointments'> & {
   client_name: string
-  /** Derived from joined response.answers via `extractClientInfo`. Null when response/email is missing. */
   client_email: string | null
 }
 

@@ -54,12 +54,9 @@ export type Database = {
           calendar_connection_id: string | null
           calendar_event_id: string | null
           calendar_provider: string | null
-          client_email: string
-          client_name: string
           created_at: string | null
           end_time: string
           id: string
-          notes: string | null
           response_id: string | null
           start_time: string
           status: string | null
@@ -71,12 +68,9 @@ export type Database = {
           calendar_connection_id?: string | null
           calendar_event_id?: string | null
           calendar_provider?: string | null
-          client_email: string
-          client_name: string
           created_at?: string | null
           end_time: string
           id?: string
-          notes?: string | null
           response_id?: string | null
           start_time: string
           status?: string | null
@@ -88,12 +82,9 @@ export type Database = {
           calendar_connection_id?: string | null
           calendar_event_id?: string | null
           calendar_provider?: string | null
-          client_email?: string
-          client_name?: string
           created_at?: string | null
           end_time?: string
           id?: string
-          notes?: string | null
           response_id?: string | null
           start_time?: string
           status?: string | null
