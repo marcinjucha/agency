@@ -1,26 +1,34 @@
 import { useRef } from 'react'
 import { Input, Label } from '@agency/ui'
-import { ColorPicker } from '@/components/ui/color-picker'
+import { messages } from '@/lib/messages'
 import { VariableInserter } from '../VariableInserter'
+import { SegmentedControl } from '../editor/controls/SegmentedControl'
 import type { CtaBlock, Block } from '../../types'
+import type { CtaWidth } from '@agency/email'
 import type { TriggerVariable } from '@/lib/trigger-schemas'
 
-interface CtaBlockEditorProps {
-  block: CtaBlock
-  onChange: (updated: Block) => void
-  variables?: TriggerVariable[]
-}
-
+// Phase 3 (AAA-T-221, design review fix P0-1) — "Kolor tekstu" moved to
+// BlockTypography mixin (Inspector "Typografia").
+// Phase 4 (AAA-T-221) — "Kolor tła" moved to BlockBorder mixin (Inspector
+// "Bordery i tło"). CtaBlockEditor now only owns the CTA-specific fields:
+// label, URL, and the new width toggle. `block.textColor` and
+// `block.backgroundColor` retained on the type for backward compat with
+// existing JSONB rows; renderer falls through to them when mixin is absent.
 export function CtaBlockEditor({ block, onChange, variables = [] }: CtaBlockEditorProps) {
   const labelRef = useRef<HTMLInputElement>(null)
   const urlRef = useRef<HTMLInputElement>(null)
 
+  const widthOptions: ReadonlyArray<{ value: CtaWidth; label: string }> = [
+    { value: 'auto', label: messages.email.inspectorCtaWidthAuto },
+    { value: 'full', label: messages.email.inspectorCtaWidthFull },
+  ]
+
   return (
     <div className="space-y-3">
-      {/* Tekst przycisku */}
+      {/* Tekst przycisku (P2-1: label/placeholder moved to messages.ts) */}
       <div>
         <div className="flex items-center justify-between mb-1.5">
-          <Label htmlFor={`${block.id}-label`}>Tekst przycisku</Label>
+          <Label htmlFor={`${block.id}-label`}>{messages.email.inspectorCtaLabel}</Label>
           <VariableInserter
             variables={variables}
             inputRef={labelRef}
@@ -33,14 +41,14 @@ export function CtaBlockEditor({ block, onChange, variables = [] }: CtaBlockEdit
           id={`${block.id}-label`}
           value={block.label}
           onChange={(e) => onChange({ ...block, label: e.target.value })}
-          placeholder="Kliknij tutaj"
+          placeholder={messages.email.inspectorCtaLabelPlaceholder}
         />
       </div>
 
       {/* URL */}
       <div>
         <div className="flex items-center justify-between mb-1.5">
-          <Label htmlFor={`${block.id}-url`}>URL</Label>
+          <Label htmlFor={`${block.id}-url`}>{messages.email.inspectorCtaUrl}</Label>
           <VariableInserter
             variables={variables}
             inputRef={urlRef}
@@ -54,34 +62,28 @@ export function CtaBlockEditor({ block, onChange, variables = [] }: CtaBlockEdit
           type="url"
           value={block.url}
           onChange={(e) => onChange({ ...block, url: e.target.value })}
-          placeholder="https://example.com lub {{responseUrl}}"
+          placeholder={messages.email.inspectorCtaUrlPlaceholder}
         />
       </div>
 
-      {/* Sekcja Styl */}
-      <div className="pt-1">
-        <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Styl</p>
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <Label htmlFor={`${block.id}-bg-color`} className="text-sm">Kolor tła</Label>
-            <ColorPicker
-              id={`${block.id}-bg-color`}
-              label="Kolor tła przycisku CTA"
-              value={block.backgroundColor}
-              onChange={(color) => onChange({ ...block, backgroundColor: color })}
-            />
-          </div>
-          <div className="flex items-center justify-between">
-            <Label htmlFor={`${block.id}-text-color`} className="text-sm">Kolor tekstu</Label>
-            <ColorPicker
-              id={`${block.id}-text-color`}
-              label="Kolor tekstu przycisku CTA"
-              value={block.textColor}
-              onChange={(color) => onChange({ ...block, textColor: color })}
-            />
-          </div>
-        </div>
-      </div>
+      {/*
+        Width — auto / full. P2-4 verified: Inspector default 'auto' matches
+        renderer behavior (CtaBlock.tsx treats `block.width === 'full'` as the
+        full-width trigger; any other value, including undefined, renders as
+        inline-block auto width).
+      */}
+      <SegmentedControl<CtaWidth>
+        label={messages.email.inspectorCtaWidth}
+        value={(block.width ?? 'auto') as CtaWidth}
+        options={widthOptions}
+        onChange={(next) => onChange({ ...block, width: next })}
+      />
     </div>
   )
+}
+
+interface CtaBlockEditorProps {
+  block: CtaBlock
+  onChange: (updated: Block) => void
+  variables?: TriggerVariable[]
 }

@@ -1,14 +1,13 @@
 import { Section } from '@react-email/components'
 import type { SpacerBlock } from './block-interfaces'
+import { SPACER_HEIGHT_PX } from './defaults'
 
-const SIZE_MAP: Record<SpacerBlock['size'], number> = {
-  sm: 16,
-  md: 32,
-  lg: 64,
-}
-
+/**
+ * SpacerBlock — pionowy odstęp.
+ *
+ * Wysokość ustalona przez `size` preset (sm/md/lg/xl) — żadnych customHeight.
+ */
 export function SpacerBlockComponent({ block }: { block: SpacerBlock }) {
-  return (
-    <Section style={{ height: `${SIZE_MAP[block.size]}px` }} />
-  )
+  const height = SPACER_HEIGHT_PX[block.size] ?? 32
+  return <Section style={{ height: `${height}px` }} />
 }

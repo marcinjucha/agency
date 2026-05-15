@@ -1,25 +1,27 @@
 import { useRef } from 'react'
 import { Input, Label } from '@agency/ui'
-import { ColorPicker } from '@/components/ui/color-picker'
+import { messages } from '@/lib/messages'
 import { VariableInserter } from '../VariableInserter'
 import type { HeaderBlock, Block } from '../../types'
 import type { TriggerVariable } from '@/lib/trigger-schemas'
 
-interface HeaderBlockEditorProps {
-  block: HeaderBlock
-  onChange: (updated: Block) => void
-  variables?: TriggerVariable[]
-}
-
+// Phase 3 (AAA-T-221, design review fix P0-1) — "Kolor tekstu" moved to
+// BlockTypography mixin (Inspector "Typografia").
+// Phase 4 (AAA-T-221) — "Kolor tła" moved to BlockBorder mixin (Inspector
+// "Bordery i tło"). HeaderBlockEditor only owns the company name. Legacy
+// `block.textColor` / `block.backgroundColor` retained on the type for
+// backward compat with existing JSONB rows.
 export function HeaderBlockEditor({ block, onChange, variables = [] }: HeaderBlockEditorProps) {
   const companyNameRef = useRef<HTMLInputElement>(null)
 
   return (
     <div className="space-y-3">
-      {/* Nazwa firmy */}
+      {/* Nazwa firmy (P2-1: label moved to messages.ts) */}
       <div>
         <div className="flex items-center justify-between mb-1.5">
-          <Label htmlFor={`${block.id}-company-name`}>Nazwa firmy</Label>
+          <Label htmlFor={`${block.id}-company-name`}>
+            {messages.email.inspectorHeaderCompanyName}
+          </Label>
           <VariableInserter
             variables={variables}
             inputRef={companyNameRef}
@@ -35,31 +37,12 @@ export function HeaderBlockEditor({ block, onChange, variables = [] }: HeaderBlo
           placeholder="{{companyName}}"
         />
       </div>
-
-      {/* Sekcja Styl */}
-      <div className="pt-1">
-        <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Styl</p>
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <Label htmlFor={`${block.id}-bg-color`} className="text-sm">Kolor tła</Label>
-            <ColorPicker
-              id={`${block.id}-bg-color`}
-              label="Kolor tła nagłówka"
-              value={block.backgroundColor}
-              onChange={(color) => onChange({ ...block, backgroundColor: color })}
-            />
-          </div>
-          <div className="flex items-center justify-between">
-            <Label htmlFor={`${block.id}-text-color`} className="text-sm">Kolor tekstu</Label>
-            <ColorPicker
-              id={`${block.id}-text-color`}
-              label="Kolor tekstu nagłówka"
-              value={block.textColor}
-              onChange={(color) => onChange({ ...block, textColor: color })}
-            />
-          </div>
-        </div>
-      </div>
     </div>
   )
+}
+
+interface HeaderBlockEditorProps {
+  block: HeaderBlock
+  onChange: (updated: Block) => void
+  variables?: TriggerVariable[]
 }

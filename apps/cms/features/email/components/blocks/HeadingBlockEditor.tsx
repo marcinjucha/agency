@@ -1,6 +1,5 @@
 import { useRef } from 'react'
 import { Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@agency/ui'
-import { ColorPicker } from '@/components/ui/color-picker'
 import { VariableInserter } from '../VariableInserter'
 import type { HeadingBlock, Block } from '../../types'
 import type { TriggerVariable } from '@/lib/trigger-schemas'
@@ -11,6 +10,12 @@ interface HeadingBlockEditorProps {
   variables?: TriggerVariable[]
 }
 
+// Phase 3 (AAA-T-221, design review fix P0-1) — text color moved fully to
+// BlockTypography mixin (Inspector "Typografia" section). Legacy `block.color`
+// field retained in interface for backward compat with existing JSONB rows,
+// but no longer exposed in this editor — renderer merges legacy + mixin so old
+// data still paints correctly. Block-specific `textAlign` already moved to
+// mixin earlier in Phase 3.
 export function HeadingBlockEditor({ block, onChange, variables = [] }: HeadingBlockEditorProps) {
   const textRef = useRef<HTMLInputElement>(null)
 
@@ -52,35 +57,6 @@ export function HeadingBlockEditor({ block, onChange, variables = [] }: HeadingB
             <SelectItem value="h3">H3 — Nagłówek sekcji</SelectItem>
           </SelectContent>
         </Select>
-      </div>
-
-      {/* Wyrównanie */}
-      <div>
-        <Label htmlFor={`${block.id}-align`} className="mb-1.5 block">Wyrównanie</Label>
-        <Select
-          value={block.textAlign}
-          onValueChange={(val) => onChange({ ...block, textAlign: val as HeadingBlock['textAlign'] })}
-        >
-          <SelectTrigger id={`${block.id}-align`}>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="left">Do lewej</SelectItem>
-            <SelectItem value="center">Wyśrodkowane</SelectItem>
-            <SelectItem value="right">Do prawej</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Kolor */}
-      <div className="flex items-center justify-between">
-        <Label htmlFor={`${block.id}-color`} className="text-sm">Kolor tekstu</Label>
-        <ColorPicker
-          id={`${block.id}-color`}
-          label="Kolor nagłówka"
-          value={block.color}
-          onChange={(color) => onChange({ ...block, color })}
-        />
       </div>
     </div>
   )

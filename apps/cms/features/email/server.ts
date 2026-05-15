@@ -1,23 +1,27 @@
 import { createServerFn } from '@tanstack/react-start'
 import { ResultAsync } from 'neverthrow'
 import { fromSupabaseVoid } from '@/lib/result-helpers'
-import { updateEmailTemplateSchema } from '@/features/email/validation'
+import {
+  updateEmailTemplateSchema,
+  createEmailTemplateSchema,
+  templateSlugSchema,
+} from '@/features/email/validation'
 import { renderEmailBlocks, DEFAULT_BLOCKS } from './render.server'
 import type { Block } from '@agency/email'
 import type { Tables } from '@agency/database'
 import { messages } from '@/lib/messages'
 import { z } from 'zod'
-import { TEMPLATE_TYPE_LABELS, type EmailTemplate, type EmailTemplateType, type TemplateVariable } from './types'
+import type { EmailTemplate, EmailTemplateType, TemplateVariable } from './types'
 import { type AuthContext, requireAuthContext } from '@/lib/server-auth.server'
-import { extractTemplateVariableKeys } from './utils/extract-variable-keys'
 
 // ---------------------------------------------------------------------------
 // Validation schemas
 // ---------------------------------------------------------------------------
 
-const emailTemplateTypeSchema = z.enum(
-  Object.keys(TEMPLATE_TYPE_LABELS) as [keyof typeof TEMPLATE_TYPE_LABELS, ...Array<keyof typeof TEMPLATE_TYPE_LABELS>]
-)
+// Template type at the wire boundary is a free-form slug (validated via
+// `templateSlugSchema`) — no longer constrained to a hardcoded enum, since
+// tenants can create custom slugs.
+const emailTemplateTypeSchema = templateSlugSchema
 
 const getEmailTemplateInputSchema = z.object({ type: emailTemplateTypeSchema })
 
@@ -27,6 +31,10 @@ const updateEmailTemplateInputSchema = z.object({
 })
 
 const resetEmailTemplateInputSchema = z.object({ type: emailTemplateTypeSchema })
+
+const createEmailTemplateInputSchema = createEmailTemplateSchema
+
+const deleteEmailTemplateInputSchema = z.object({ type: emailTemplateTypeSchema })
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -42,39 +50,13 @@ function toEmailTemplate(raw: unknown): EmailTemplate {
   } as unknown as EmailTemplate
 }
 
-/**
- * Scans subject + all block string values for {{variable}} patterns.
- * Returns empty array when no variables found (never null).
- * Delegates key extraction to the pure utility function.
- */
-function extractTemplateVariables(subject: string, blocks: Block[]): TemplateVariable[] {
-  return extractTemplateVariableKeys(subject, blocks).map((key) => ({
-    key,
-    label: key,
-    source: 'trigger',
-  }))
-}
-
-/**
- * Merges auto-detected variables with user-edited ones.
- * Preserves user-edited label/description for matching keys.
- * Prunes variables that are no longer detected in content.
- */
-function mergeTemplateVariables(
-  detected: TemplateVariable[],
-  existing: TemplateVariable[]
-): TemplateVariable[] {
-  return detected.map((d) => {
-    const userEdited = existing.find((e) => e.key === d.key)
-    return userEdited
-      ? { ...d, label: userEdited.label, description: userEdited.description }
-      : d
-  })
-}
 
 /**
  * Parses raw JSONB template_variables from DB into typed TemplateVariable[].
  * Returns empty array for null / malformed data.
+ *
+ * `source` zwężamy do unii `'trigger' | 'manual' | undefined` — w DB mogą być
+ * inne stringi (legacy / błędne wpisy), traktujemy je jak brak `source`.
  */
 export function parseTemplateVariables(raw: unknown): TemplateVariable[] {
   if (!Array.isArray(raw)) return []
@@ -84,7 +66,12 @@ export function parseTemplateVariables(raw: unknown): TemplateVariable[] {
       key: item.key as string,
       label: typeof item.label === 'string' ? item.label : (item.key as string),
       description: typeof item.description === 'string' ? item.description : undefined,
-      source: typeof item.source === 'string' ? item.source : undefined,
+      source:
+        item.source === 'manual'
+          ? ('manual' as const)
+          : item.source === 'trigger'
+            ? ('trigger' as const)
+            : undefined,
     }))
 }
 
@@ -174,7 +161,8 @@ export const updateEmailTemplateFn = createServerFn({ method: 'POST' })
         input.type,
         input.data.subject,
         input.data.blocks,
-        input.data.template_variables as TemplateVariable[] | undefined
+        input.data.template_variables as TemplateVariable[] | undefined,
+        input.data.label
       )
     )
 
@@ -198,6 +186,45 @@ export const resetEmailTemplateToDefaultFn = createServerFn({ method: 'POST' })
     )
   })
 
+export const createEmailTemplateFn = createServerFn({ method: 'POST' })
+  .inputValidator((input: z.infer<typeof createEmailTemplateInputSchema>) =>
+    createEmailTemplateInputSchema.parse(input)
+  )
+  .handler(async ({ data }): Promise<{ success: boolean; error?: string }> => {
+    const result = await requireAuthContext().andThen((auth) =>
+      insertTemplate(auth, data.type, data.label)
+    )
+
+    return result.match(
+      () => ({ success: true }),
+      (error) => ({ success: false, error })
+    )
+  })
+
+export const deleteEmailTemplateFn = createServerFn({ method: 'POST' })
+  .inputValidator((input: z.infer<typeof deleteEmailTemplateInputSchema>) =>
+    deleteEmailTemplateInputSchema.parse(input)
+  )
+  .handler(async ({ data }): Promise<{ success: boolean; error?: string }> => {
+    const result = await requireAuthContext().andThen(({ supabase, tenantId }) =>
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ResultAsync.fromPromise<{ error: unknown }, string>(
+        (supabase as any)
+          .from('email_templates')
+          .delete()
+          .eq('tenant_id', tenantId)
+          .eq('type', data.type),
+        dbError
+      )
+    )
+
+    return result.match(
+      ({ error }) =>
+        error ? { success: false, error: dbError(error) } : { success: true },
+      (error) => ({ success: false, error })
+    )
+  })
+
 // ---------------------------------------------------------------------------
 // DB helpers
 // ---------------------------------------------------------------------------
@@ -207,17 +234,22 @@ function saveTemplate(
   type: EmailTemplateType,
   subject: string,
   blocks: Block[],
-  userEditedVariables?: TemplateVariable[]
+  userEditedVariables?: TemplateVariable[],
+  label?: string
 ): ResultAsync<undefined, string> {
   return ResultAsync.fromPromise(
     (async () => {
       const html_body = await renderEmailBlocks(blocks)
 
-      // Auto-detect variables from content, then merge with user-edited labels/descriptions
-      const detected = extractTemplateVariables(subject, blocks)
-      const template_variables = userEditedVariables
-        ? mergeTemplateVariables(detected, userEditedVariables)
-        : detected
+      // AAA-T-221 (2026-05-15): persist EXACTLY the user-managed list — no
+      // server-side auto-merge with detected `{{key}}` tokens from content.
+      // Previously the server was silently appending detected entries back
+      // into template_variables even when the user had deleted them from the
+      // inspector, making "delete" effectively impossible. The variable
+      // picker autocomplete still uses live content detection (client-side),
+      // so users can insert known variables — but the saved list is owned
+      // entirely by the user.
+      const template_variables = userEditedVariables ?? []
 
       // Check if template already exists
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -228,6 +260,11 @@ function saveTemplate(
         .eq('type', type)
         .maybeSingle()
 
+      // `label` is included only when explicitly provided. Otherwise an update
+      // without label would overwrite the stored value with undefined.
+      // saveTemplate is only called from update / reset paths (both run against
+      // existing rows), so NOT NULL on label is never violated here — new rows
+      // go through `insertTemplate` which always passes label.
       const templatePayload = {
         tenant_id: auth.tenantId,
         type,
@@ -237,6 +274,7 @@ function saveTemplate(
         template_variables,
         is_active: true,
         updated_at: new Date().toISOString(),
+        ...(label !== undefined ? { label } : {}),
       }
 
       return existing
@@ -247,4 +285,49 @@ function saveTemplate(
     })(),
     dbError
   ).andThen(fromSupabaseVoid())
+}
+
+function insertTemplate(
+  auth: AuthContext,
+  type: EmailTemplateType,
+  label: string
+): ResultAsync<undefined, string> {
+  return ResultAsync.fromPromise(
+    (async () => {
+      const defaultSubject = 'Temat wiadomości — {{firstName}}'
+      const html_body = await renderEmailBlocks(DEFAULT_BLOCKS)
+
+      // AAA-T-221 (2026-05-15): no auto-seed. User decides which variables
+      // to register via the Zmienne tab — empty list at creation time, opt-in
+      // via "Wykryj z treści" button when they want auto-detection.
+      const payload = {
+        tenant_id: auth.tenantId,
+        type,
+        label,
+        subject: defaultSubject,
+        blocks: DEFAULT_BLOCKS,
+        html_body,
+        template_variables: [],
+        is_active: true,
+      }
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (auth.supabase as any).from('email_templates').insert(payload)
+      if (error) {
+        // 23505 = unique_violation on (tenant_id, type) — translate to user-facing message.
+        if (typeof error === 'object' && error && 'code' in error && (error as { code: string }).code === '23505') {
+          throw new Error(messages.email.slugAlreadyExists)
+        }
+        const msg =
+          typeof (error as { message?: unknown }).message === 'string'
+            ? (error as { message: string }).message
+            : messages.email.createFailed
+        throw new Error(msg)
+      }
+    })(),
+    dbError
+  )
+  // IIFE awaits insert + throws on error itself → ResultAsync<void, string> already.
+  // NO .andThen(fromSupabaseVoid()) — IIFE returns undefined (implicit), and
+  // fromSupabaseVoid would try to read `.error` on undefined.
 }
