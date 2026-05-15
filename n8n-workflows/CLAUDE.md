@@ -115,6 +115,23 @@ curl -X PATCH "$SUPABASE_URL/rest/v1/workflow_step_executions?status=in.(running
 
 Same pattern for `workflow_executions`. Saves dozens of clicks vs cancelling each execution in the n8n UI. WHY captured: the Orchestrator can leave rows running indefinitely after a hard abort (no `finally`-style cleanup); operationally we mass-cancel rather than chase individual executions.
 
+### n8n Staging REST API for Read-Only Verification
+
+Diagnosing whether staging workflow JSON matches local source requires reading remote state without re-importing (re-import drops credential refs — see "Re-Import Required" above). The n8n staging instance exposes a REST API at `https://n8n-staging.trustcode.pl/api/v1/workflows/{id}` authenticated via `X-N8N-API-KEY` header. Credentials live in `n8n-workflows/.env.local`.
+
+Use for READ verification only:
+- Diff staging vs local Code-node body
+- List active workflows
+- Check `updatedAt` timestamps
+
+**Not a substitute for manual UI re-import** after canonical-source changes — credential refs drop on programmatic import. PUT writes via this API are untested; don't use them.
+
+### n8n Workflow IDs Are Shared Across Staging and Prod
+
+During a deploy that touched both environments, workflow IDs (e.g. `GzqdOgElGDMW8lCI` for `Step - Send Email Handler`) were identical on staging and prod. `n8n-cli workflow list --json | jq '.[] | select(.name == ...)'` returns the same ID regardless of `N8N_STAGING_API_KEY` vs `N8N_PROD_API_KEY`.
+
+Mental model: n8n workflow IDs are global within the org's n8n instance pair. When classifying workflows by name → ID, you can do it once and reuse the result for both envs — no per-env divergence.
+
 ## Tooling
 
 ### `n8n-builder.mjs` — Workflow Authoring CLI

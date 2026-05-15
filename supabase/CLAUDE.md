@@ -22,6 +22,14 @@ supabase/
 
 ## Database Schema
 
+### Schema Notes
+
+**`surveys.status` DB column is vestigial — status is computed from `survey_links`.**
+
+**Why:** The column exists historically but is never authoritative. Manual enum management on `surveys.status` is the wrong model — survey status derives from whether its survey_links are active/expired.
+
+**How to apply:** Never set `surveys.status` directly in new code; never add UI that edits it. If a feature needs survey status, compute it from `survey_links`.
+
 ### Tables (27 total)
 
 **tenants** - Organizations/firms (multi-tenant root)
@@ -167,6 +175,11 @@ Format: `YYYYMMDDHHMMSS_description.sql`
 3. **Add comments** for complex logic
 4. **Test locally** before pushing to production
 5. **Regenerate types** after migration
+6. **Defensive column adds** — use `ADD COLUMN IF NOT EXISTS` + explicit `UPDATE ... WHERE col IS NULL` backfill
+
+**Why defensive column adds:** Local databases are long-lived and shared across worktrees + main checkout. A previous session may have already applied a column change via ad-hoc psql or partial migration. Assuming a clean slate breaks the next migration run.
+
+**How to apply:** Every column-add migration must use `ADD COLUMN IF NOT EXISTS` and backfill defaults with `UPDATE ... WHERE col IS NULL` rather than relying on table-creation defaults. Never assume the column doesn't already exist.
 
 ## TypeScript Types
 
@@ -275,6 +288,22 @@ Already enabled in migration: `CREATE EXTENSION IF NOT EXISTS "pgcrypto";`
 
 **Cause:** Database schema changed but types not regenerated
 **Fix:** `npm run db:types`
+
+### `supabase db push` fails after prior session ran ad-hoc DDL via psql
+
+**Fix:** `supabase migration repair --status applied <version>`
+
+**Why:** After AAA-T-63 applied `ALTER TABLE appointments DROP COLUMN ...` directly via psql (bypassing the migration system), subsequent `supabase db push` failed with `column "client_name" of relation "appointments" does not exist (SQLSTATE 42703)` because the migration file existed but was never registered.
+
+**How to apply:** When `supabase db push` fails with a "column does not exist" / "relation already exists" error referencing a migration that should have been applied, run `supabase migration list` to inspect status. If the migration is unregistered but its effect is already in the DB, `supabase migration repair --status applied <version>` registers it as done WITHOUT re-running its SQL. Then `db push` proceeds with the remaining migrations.
+
+### Supabase CLI from a worktree can't find the local Docker container
+
+**Symptom:** `pnpm db:types` or `supabase migration up` from a worktree fails — CLI can't locate the local Supabase Docker container.
+
+**Why:** The local Supabase Docker container is named `supabase_db_<main-dir-name>`. From a worktree, the CLI looks for a container named after the worktree directory and can't find it.
+
+**How to apply:** From a worktree, run migrations via `docker exec -i supabase_db_<main-dir> psql -U postgres -d postgres < <migration>` and regenerate types from the main checkout (`pnpm db:types` from the main directory).
 
 ## Gotchas (Supabase JS / PostgREST Limitations)
 

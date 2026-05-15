@@ -1,6 +1,6 @@
 # features/ - Business Logic (Website)
 
-Business logic for the public website, separated from routing (same ADR-005 pattern as CMS).
+Business logic for the public website, separated from routing (same ADR-006 §3 pattern as CMS).
 
 ## Structure
 

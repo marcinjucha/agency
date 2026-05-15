@@ -50,7 +50,7 @@ apps/cms/
 │           ├── marketplace/ # OAuth callbacks (OLX, Allegro)
 │           └── workflows/   # Workflow trigger (POST to n8n Orchestrator)
 │
-├── features/                # BUSINESS LOGIC (ADR-005 pattern)
+├── features/                # BUSINESS LOGIC (ADR-006 §3 pattern)
 │   ├── appointments/        # Appointment management (Google Calendar sync)
 │   ├── blog/                # Blog with Tiptap WYSIWYG, S3 images, SEO, ISR
 │   ├── calendar/            # Calendar booking UI + settings
@@ -106,7 +106,7 @@ apps/cms/
 └── package.json             # Dependencies (@agency/cms)
 ```
 
-## Folder Patterns (ADR-005)
+## Folder Patterns (ADR-006 §3)
 
 ### app/routes/ - Routing Only
 ```typescript
@@ -237,6 +237,10 @@ Only for admin operations that bypass RLS. Use `createServiceClient()` from `lib
 - **TanStack Router flat file dots = parent-child nesting** — `survey.$token.success.tsx` is a CHILD of `survey.$token.tsx`. Child renders inside parent's `<Outlet />`. Fix: split into layout + index.
 
 - **`npm install` after removing deps can downgrade unrelated packages** — Removing `next` and running `npm install` changed lockfile and downgraded TanStack Start. Fix: `rm -rf node_modules` + `npm ci` with lockfile from git.
+
+- **Dangling `routes.*` constants pointing to non-existent routes silently 404** — When adding any `routes.*` constant, verify either (a) the corresponding route file exists at the named path OR (b) the constant is consumed by something other than `fetch()`. No compile-time error, no runtime crash on import — fails only when invoked. **WHY:** `/api/upload` route NEVER existed but `routes.api.upload` constant pointed at it for entire feature history (pre-T-110). Primary upload (MediaUploadZone) calls `generatePresignedUrlFn` directly, bypassing the broken indirection — so the dangling constant didn't crash, it just silently 404'd whenever something tried to use it.
+
+- **`createMediaProxyEditor` bridge enables `InsertMediaModal` reuse without a Tiptap `Editor` instance** — When an `Editor`-typed prop appears to block reuse of a media-related UI component, grep for `createMediaProxyEditor` (`apps/cms/lib/utils/media-proxy.ts`) BEFORE designing a parallel media picker. Reuse the bridge. **WHY:** `InsertMediaModal` was originally typed to require a real Tiptap `Editor` instance — but several CMS flows (cover image picker, block-editor media slot) needed the same modal without a live editor. The `createMediaProxyEditor` helper synthesises just enough of the `Editor` surface for the modal.
 
 ## Routes
 

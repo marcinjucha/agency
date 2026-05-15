@@ -1,6 +1,6 @@
 # features/ - Business Logic (CMS)
 
-This directory contains business logic separated from routing (ADR-005 pattern).
+This directory contains business logic separated from routing (ADR-006 §3 pattern).
 
 ## Purpose
 
@@ -34,7 +34,7 @@ features/
 └── workflows/           # Workflow engine — visual builder (ReactFlow), templates, test mode (dispatches to real n8n). ALL execution in n8n Orchestrator (staticData state, Trigger Handler, 6 step handlers).
 ```
 
-## Pattern (ADR-005)
+## Pattern (ADR-006 §3 — app vs features)
 
 Each feature follows this structure:
 
@@ -249,5 +249,5 @@ These are silent-fail patterns specific to the TanStack Start `createServerFn` p
 
 ## Related Documentation
 
-- [ADR-005: App vs Features Separation](../../../docs/adr/ARCHIVED-005-app-vs-features-separation.md)
-- [ADR-006: Component Organization](../../../docs/adr/006-agency-project-structure.md#7-component-organization-pattern)
+- [ADR-006: App vs Features Separation (Section 3)](../../../docs/adr/006-agency-project-structure.md#3-appfeatures-separation-formerly-adr-005)
+- [ADR-008: Workflow Engine Architecture](../../../docs/adr/008-workflow-engine-architecture.md) — for `features/workflows/`
