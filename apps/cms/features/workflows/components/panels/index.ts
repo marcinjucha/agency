@@ -20,6 +20,7 @@ import { PlaceholderStepPanel } from './PlaceholderStepPanel'
 import { ConfigPanelWrapper } from './ConfigPanelWrapper'
 import { PLACEHOLDER_STEP_MAP } from '../../step-registry'
 import type { StepType, PlaceholderStepType } from '../../step-registry'
+import { TRIGGER_TYPE_SET } from '../../trigger-registry'
 import type { TriggerType, SurveyOption, EmailTemplateOption } from '../../types'
 import type { VariableItem } from '@agency/ui'
 
@@ -42,14 +43,6 @@ export interface ConfigPanelProps {
   isInvalid?: boolean
 }
 
-const TRIGGER_TYPES = new Set<string>([
-  'survey_submitted',
-  'booking_created',
-  'lead_scored',
-  'manual',
-  'scheduled',
-])
-
 /**
  * Registry mapping step type to its config panel component.
  * Trigger types all resolve to TriggerConfigPanel (handled separately in getPanelComponent).
@@ -68,7 +61,7 @@ const STEP_PANEL_REGISTRY: Record<StepType, React.ComponentType<ConfigPanelProps
 
 /** Get the correct panel component for a given step type */
 export function getPanelComponent(stepType: string): React.ComponentType<ConfigPanelProps> | null {
-  if (TRIGGER_TYPES.has(stepType)) {
+  if (TRIGGER_TYPE_SET.has(stepType as TriggerType)) {
     return TriggerConfigPanel
   }
   if ((PLACEHOLDER_STEP_MAP as Record<string, unknown>)[stepType]) {

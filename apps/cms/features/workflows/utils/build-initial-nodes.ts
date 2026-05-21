@@ -4,19 +4,12 @@ import {
   type TriggerType,
   type StepType,
 } from '../types'
+import { TRIGGER_TYPE_SET } from '../trigger-registry'
 import type { CanvasNodeData } from '../components/WorkflowCanvas'
 import { getStepTypeLabel } from './step-labels'
 
-const TRIGGER_TYPES = new Set<string>([
-  'survey_submitted',
-  'booking_created',
-  'lead_scored',
-  'manual',
-  'scheduled',
-])
-
 export function isTriggerType(type: string): type is TriggerType {
-  return TRIGGER_TYPES.has(type)
+  return TRIGGER_TYPE_SET.has(type as TriggerType)
 }
 
 export function getNodeType(stepType: string): string {

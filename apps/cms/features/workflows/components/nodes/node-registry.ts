@@ -22,11 +22,15 @@ import {
   Table2,
   Linkedin,
   ListOrdered,
+  TrendingUp,
+  Hand,
   type LucideIcon,
 } from 'lucide-react'
 import { messages } from '@/lib/messages'
 import { STEP_REGISTRY, PLACEHOLDER_REGISTRY } from '../../step-registry'
 import type { StepType } from '../../step-registry'
+import { TRIGGER_REGISTRY } from '../../trigger-registry'
+import { TRIGGER_TYPE_LABELS } from '../../types'
 import type { TriggerType } from '../../types'
 import { STEP_TYPE_LABELS, getStepTypeDescription } from '../../utils/step-labels'
 
@@ -91,39 +95,27 @@ export const NODE_TYPE_CONFIGS: Record<StepType | 'trigger', NodeTypeConfig> = {
   ) as Record<StepType, NodeTypeConfig>,
 }
 
-/** Trigger-specific subtypes share the trigger border/icon */
-export const TRIGGER_SUBTYPE_CONFIGS: Record<TriggerType, NodeTypeConfig> = {
-  survey_submitted: {
-    icon: Zap,
-    label: messages.workflows.triggerSurveySubmitted,
-    borderColor: 'border-l-4 border-l-orange-500',
-    isTrigger: true,
-  },
-  booking_created: {
-    icon: Zap,
-    label: messages.workflows.triggerBookingCreated,
-    borderColor: 'border-l-4 border-l-orange-500',
-    isTrigger: true,
-  },
-  lead_scored: {
-    icon: Zap,
-    label: messages.workflows.triggerLeadScored,
-    borderColor: 'border-l-4 border-l-orange-500',
-    isTrigger: true,
-  },
-  manual: {
-    icon: Zap,
-    label: messages.workflows.triggerManual,
-    borderColor: 'border-l-4 border-l-orange-500',
-    isTrigger: true,
-  },
-  scheduled: {
-    icon: Zap,
-    label: messages.workflows.triggerScheduled,
-    borderColor: 'border-l-4 border-l-orange-500',
-    isTrigger: true,
-  },
+/** Icon map for trigger types — maps TRIGGER_REGISTRY.iconName to LucideIcon component. */
+const TRIGGER_ICON_MAP: Record<TriggerType, LucideIcon> = {
+  survey_submitted: Zap,
+  booking_created: Calendar,
+  lead_scored: TrendingUp,
+  manual: Hand,
+  scheduled: Clock,
 }
+
+/** Trigger-specific subtypes — derived from TRIGGER_REGISTRY (single source of truth). */
+export const TRIGGER_SUBTYPE_CONFIGS: Record<TriggerType, NodeTypeConfig> = Object.fromEntries(
+  TRIGGER_REGISTRY.map((t) => [
+    t.id,
+    {
+      icon: TRIGGER_ICON_MAP[t.id],
+      label: TRIGGER_TYPE_LABELS[t.id],
+      borderColor: t.borderColor,
+      isTrigger: true,
+    } satisfies NodeTypeConfig,
+  ])
+) as Record<TriggerType, NodeTypeConfig>
 
 /** Icon map for placeholder step types — maps PLACEHOLDER_REGISTRY.iconName to LucideIcon */
 export const PLACEHOLDER_ICON_MAP: Record<string, LucideIcon> = {
