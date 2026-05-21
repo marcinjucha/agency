@@ -156,6 +156,24 @@ WHY this design: handler JSONs are export artifacts — diffing/reviewing logic 
 
 Follow-up tooling (tracked): `add-switch-case` generic command for any in-workflow Switch (Trigger Handler, Send Email handler routing, etc.) with mandatory `--dry-run`.
 
+## TRIGGER_TYPES Drift (Cross-File List Duplication)
+
+**Canonical source (going forward):** `apps/cms/features/workflows/trigger-registry.ts` — `TRIGGER_TYPE_IDS` (derived from `TRIGGER_REGISTRY` per AAA-T-284, 2026-05-15).
+
+**Duplicated copies in n8n JSON** (kept in sync MANUALLY today — no build-time link):
+- `n8n-workflows/workflows/Workflows/Workflow Orchestrator.json` — `Fetch and Initialize Execution` Code node, `TRIGGER_TYPES = ['survey_submitted', 'booking_created', 'lead_scored', 'manual', 'scheduled']` (used in both the trigger-step filter and the retry-mode filter — TWO occurrences in the same Code node body)
+- `n8n-workflows/workflows/Workflows/Workflow Process Step.json` — `Route by Step Type` Switch node `rules` (trigger types collapsed into the trigger_types(10) OR rule) — see WORKFLOW_ENGINE.md routing table
+
+**Drift risk:** Adding a new trigger type in CMS (`defineTrigger` in `trigger-registry.ts`) does NOT automatically update n8n. If skipped, the n8n Orchestrator will silently drop the new trigger's executions (filter rejects unknown type).
+
+**Sync mechanism — use `n8n-workflows/scripts/` tooling for ALL n8n JSON changes:** the build system already supports cross-node code sync via the `// @inline <name>` … `// @end-inline <name>` markers + `npm run n8n:build -- regenerate-helpers` (see `Tooling` section above). For trigger-types specifically, the planned follow-up is:
+1. Add `n8n-workflows/scripts/evaluators/trigger-types.js` exporting `const TRIGGER_TYPES = [...]`
+2. Wrap the duplicated arrays in `// @inline trigger-types` markers
+3. Add to `INLINE_HELPERS` map in `n8n-builder.mjs`
+4. Future trigger-type adds: edit `trigger-types.js`, run `regenerate-helpers`, re-import workflows. Still a manual step because `trigger-registry.ts` is TS — a true single-source sync needs a TS-to-JS codegen (further follow-up). For now: keep `trigger-types.js` in sync with `trigger-registry.ts` by hand, but at least the n8n side is single-sourced.
+
+Tracked as follow-up after AAA-T-284 lands (likely the same task that ships scheduled-trigger cron, since that's the first trigger-type-affecting change post-refactor).
+
 ## Workflow Retry Foundation (T-208 / T-209, 2026-04-30)
 
 Replay engine landed in `Workflow Process Step.json`: a 4-node sequence (`Hydrate State From DB` → `Find Latest Attempt` → `Decide Replay Action` → `Insert New Attempt`) implements the Continuation-with-attempts model. `Mark Step Running` is gated by a `Should Mark Running` IF, and every handler now persists its incoming payload via `Save Input Payload` for audit. `workflow_executions.workflow_snapshot` (JSONB) decouples in-flight executions from live workflow edits.

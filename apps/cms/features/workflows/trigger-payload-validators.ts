@@ -1,5 +1,7 @@
 import { ResultAsync, errAsync, okAsync } from 'neverthrow'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import type { TriggerType } from './trigger-registry'
+import { TRIGGER_TYPES_WITH_SURVEY_LINK } from './trigger-registry'
 
 /**
  * Defense-in-depth: payload.surveyLinkId must reference an actual
@@ -10,8 +12,6 @@ import type { SupabaseClient } from '@supabase/supabase-js'
  * Tenant scope: survey_links has no tenant_id column. We join via the
  * surveys table — survey_links.survey_id -> surveys.id -> surveys.tenant_id.
  */
-
-const SURVEY_TRIGGER_TYPES = new Set(['survey_submitted', 'booking_created'])
 
 type ValidationResult = ResultAsync<{ valid: true }, string>
 
@@ -27,7 +27,7 @@ export function validateSurveyLinkIdInPayload(
   payload: Record<string, unknown>,
   tenantId: string,
 ): ValidationResult {
-  if (!SURVEY_TRIGGER_TYPES.has(triggerType)) {
+  if (!TRIGGER_TYPES_WITH_SURVEY_LINK.has(triggerType as TriggerType)) {
     return okAsync({ valid: true })
   }
 

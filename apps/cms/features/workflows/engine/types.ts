@@ -1,5 +1,6 @@
 import type { TriggerType } from '../types'
 import type { BookingCreatedPayload, SurveySubmittedPayload } from '@agency/validators'
+import { TRIGGER_TYPE_SET } from '../trigger-registry'
 
 // --- Execution Context ---
 
@@ -62,5 +63,5 @@ export type VariableContext = Record<string, unknown>
 // --- Type guard helpers ---
 
 export function isTriggerType(value: string): value is TriggerType {
-  return ['survey_submitted', 'booking_created', 'lead_scored', 'manual', 'scheduled'].includes(value)
+  return (TRIGGER_TYPE_SET as ReadonlySet<string>).has(value)
 }

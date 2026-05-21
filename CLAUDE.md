@@ -94,6 +94,8 @@ Ephemeral, worktree-scoped notes — the conversation's scratch pad. Distinct fr
 
 **Pattern:** See `.claude/skills/n8n-patterns/SKILL.md` for workflow integration patterns
 
+**Tooling — always use `n8n-workflows/scripts/` for n8n JSON changes:** `n8n-builder.mjs` (workspace command `npm run n8n:build -- <command>`) provides `create-handler` (new step-handler subworkflow), `add-route` (Process Step Switch wiring), `regenerate-helpers` (re-inline canonical evaluator JS into all opted-in Code nodes via `// @inline <name>` markers), and `lint-helpers` (audit drift). Add shared JS as `scripts/evaluators/<name>.js`. Direct hand-editing of `workflows/*.json` is the fallback only — first ask whether the change fits one of these commands. Full inventory + WHY in `n8n-workflows/CLAUDE.md` `Tooling` section.
+
 **Reference:** Background processing decisions and patterns documented in project docs
 
 ---

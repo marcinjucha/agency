@@ -20,23 +20,8 @@ import {
   TRIGGER_TYPE_OPTIONS,
   type TriggerType,
 } from '../../types'
-import {
-  triggerConfigSurveySubmittedSchema,
-  triggerConfigBookingCreatedSchema,
-  triggerConfigLeadScoredSchema,
-  triggerConfigManualSchema,
-  triggerConfigScheduledSchema,
-} from '../../validation'
-import type { ZodSchema } from 'zod'
+import { triggerConfigSchemaMap, triggerConfigManualSchema } from '../../validation'
 import type { ConfigPanelProps } from './index'
-
-const triggerSchemaMap: Record<TriggerType, ZodSchema> = {
-  survey_submitted: triggerConfigSurveySubmittedSchema,
-  booking_created: triggerConfigBookingCreatedSchema,
-  lead_scored: triggerConfigLeadScoredSchema,
-  manual: triggerConfigManualSchema,
-  scheduled: triggerConfigScheduledSchema,
-}
 
 /**
  * Flat form type for trigger config — avoids discriminated union issues with RHF.
@@ -50,7 +35,7 @@ interface TriggerFormValues {
 
 export function TriggerConfigPanel({ stepConfig, onChange, isInvalid }: ConfigPanelProps) {
   const currentType = (stepConfig?.type as TriggerType) || 'manual'
-  const schema = triggerSchemaMap[currentType] ?? triggerConfigManualSchema
+  const schema = triggerConfigSchemaMap[currentType] ?? triggerConfigManualSchema
 
   const isFirstRender = useRef(true)
   const onChangeRef = useRef(onChange)

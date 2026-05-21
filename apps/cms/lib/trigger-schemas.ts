@@ -54,7 +54,11 @@ const bookingCreatedSchema = [
     category: 'System',
     example: '01c54fc5-f6b0-422e-abb2-72d85b145f5e',
   },
-] satisfies Array<Omit<TriggerVariable, 'key'> & { key: keyof BookingCreatedPayload & string }>
+] satisfies Array<
+  Omit<TriggerVariable, 'key'> & {
+    key: keyof BookingCreatedPayload & string
+  }
+>
 
 const surveySubmittedSchema = [
   {
@@ -71,7 +75,11 @@ const surveySubmittedSchema = [
     category: 'System',
     example: '01c54fc5-f6b0-422e-abb2-72d85b145f5e',
   },
-] satisfies Array<Omit<TriggerVariable, 'key'> & { key: keyof SurveySubmittedPayload & string }>
+] satisfies Array<
+  Omit<TriggerVariable, 'key'> & {
+    key: keyof SurveySubmittedPayload & string
+  }
+>
 
 export const TRIGGER_VARIABLE_SCHEMAS: Record<string, TriggerVariable[]> = {
   form_confirmation: [
