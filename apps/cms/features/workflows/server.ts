@@ -15,6 +15,7 @@ import { toWorkflow } from './types'
 import { messages } from '@/lib/messages'
 import { type AuthContext, type StartClient, requireAuthContext } from '@/lib/server-auth.server'
 import { generateStepSlug, isValidSlugFormat } from './utils/slug'
+import { TRIGGER_TYPE_SET } from './trigger-registry'
 
 // Type-only imports — do NOT pull runtime modules into client bundles.
 import type {
@@ -716,14 +717,7 @@ function syncTriggerType(
   workflowId: string,
   steps: SaveCanvasFormData['steps']
 ) {
-  const triggerTypes = new Set([
-    'survey_submitted',
-    'booking_created',
-    'lead_scored',
-    'manual',
-    'scheduled',
-  ])
-  const triggerStep = steps.find((s) => triggerTypes.has(s.step_type))
+  const triggerStep = steps.find((s) => (TRIGGER_TYPE_SET as ReadonlySet<string>).has(s.step_type))
   if (!triggerStep) return ResultAsync.fromSafePromise(Promise.resolve(undefined))
 
   return ResultAsync.fromPromise(

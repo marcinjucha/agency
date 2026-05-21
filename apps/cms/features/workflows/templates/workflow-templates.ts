@@ -50,7 +50,7 @@ export type WorkflowTemplate = {
   description: string
   /** Emoji icon for UI display */
   icon: string
-  trigger_type: 'survey_submitted' | 'booking_created' | 'lead_scored' | 'manual' | 'scheduled'
+  trigger_type: TriggerType
   trigger_config: Record<string, unknown>
   steps: TemplateStep[]
   edges: TemplateEdge[]

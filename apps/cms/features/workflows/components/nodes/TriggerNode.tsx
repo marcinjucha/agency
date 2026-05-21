@@ -23,7 +23,9 @@ const INVALID_RING = 'ring-2 ring-amber-500'
 
 function TriggerNodeComponent({ data, selected }: NodeProps) {
   const nodeData = data as unknown as TriggerNodeData
-  const borderClass = lookupNodeConfig(nodeData.stepType)?.borderColor ?? 'border-l-4 border-l-orange-500'
+  const config = lookupNodeConfig(nodeData.stepType)
+  const borderClass = config?.borderColor ?? 'border-l-4 border-l-orange-500'
+  const Icon = config?.icon ?? Zap
   // Invalid takes precedence over selection so users see the validation cue while editing.
   const ring = nodeData.isInvalid
     ? INVALID_RING
@@ -39,7 +41,7 @@ function TriggerNodeComponent({ data, selected }: NodeProps) {
       aria-invalid={nodeData.isInvalid ? 'true' : undefined}
     >
       <div className="flex items-center gap-2">
-        <Zap className="h-4 w-4 text-orange-500 shrink-0" />
+        <Icon className="h-4 w-4 text-orange-500 shrink-0" />
         <div className="min-w-0">
           <p className="text-xs uppercase tracking-wide text-muted-foreground">
             {messages.workflows.editor.trigger}
