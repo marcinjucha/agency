@@ -2,13 +2,16 @@ import type { Tables } from '@agency/database'
 import { messages } from '@/lib/messages'
 import { STEP_REGISTRY } from './step-registry'
 import type { StepType, OutputSchemaField } from './step-registry'
-
 // --- Re-exports from step-registry (single source of truth) ---
 
 export type { StepType, OutputSchemaDefinition, OutputSchemaField } from './step-registry'
 export { STEP_OUTPUT_SCHEMAS } from './step-registry'
 export { STEP_TYPE_LABELS } from './utils/step-labels'
 import { STEP_TYPE_LABELS } from './utils/step-labels'
+
+// --- Re-export TriggerType from trigger-registry (single source of truth) ---
+export type { TriggerType } from './trigger-registry'
+import type { TriggerType } from './trigger-registry'
 
 // --- Workflow snapshot (frozen definition stored at execution time) ---
 
@@ -67,7 +70,7 @@ export function parseWorkflowSnapshot(raw: unknown): WorkflowSnapshot | null {
 
 // --- Enums ---
 
-export type TriggerType = 'survey_submitted' | 'booking_created' | 'lead_scored' | 'manual' | 'scheduled'
+// TriggerType is re-exported from ./trigger-registry above (single source of truth).
 
 export type ExecutionStatus = 'pending' | 'running' | 'completed' | 'failed' | 'cancelled' | 'paused'
 

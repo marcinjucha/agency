@@ -1,7 +1,8 @@
 import { z, type ZodSchema } from 'zod'
 import { messages } from '@/lib/messages'
 import { STEP_REGISTRY, type StepType } from './step-registry'
-import type { TriggerType } from './types'
+import { TRIGGER_TYPE_IDS } from './trigger-registry'
+import type { TriggerType } from './trigger-registry'
 
 const STEP_TYPE_ENUM = STEP_REGISTRY.map((s) => s.id) as [StepType, ...StepType[]]
 
@@ -40,17 +41,9 @@ const recipientExpression = z
   })
 
 /** All canvas step types (step types + trigger types that appear as workflow_steps in the canvas) */
-const TRIGGER_TYPES_FOR_CANVAS = [
-  'survey_submitted',
-  'booking_created',
-  'lead_scored',
-  'manual',
-  'scheduled',
-] as const satisfies TriggerType[]
-
 const CANVAS_STEP_TYPE_ENUM = [
   ...STEP_TYPE_ENUM,
-  ...TRIGGER_TYPES_FOR_CANVAS,
+  ...(TRIGGER_TYPE_IDS as unknown as TriggerType[]),
 ] as [StepType | TriggerType, ...(StepType | TriggerType)[]]
 
 // --- Per-step-type config schemas (for config panels) ---
@@ -232,6 +225,11 @@ export const stepConfigSchemaMap: Record<StepType, ZodSchema> = {
   get_appointment: getAppointmentConfigSchema,
 }
 
+/**
+ * Maps each TriggerType to its Zod config schema.
+ * Typed as Record<TriggerType, ZodSchema> for compile-time exhaustiveness:
+ * adding a new TriggerType without a schema here = TS error at this point.
+ */
 export const triggerConfigSchemaMap: Record<TriggerType, ZodSchema> = {
   survey_submitted: triggerConfigSurveySubmittedSchema,
   booking_created: triggerConfigBookingCreatedSchema,
@@ -248,7 +246,7 @@ export const createWorkflowSchema = z.object({
     .min(1, messages.validation.workflowNameRequired)
     .max(100, messages.validation.workflowNameMax),
   description: z.string().nullable().optional(),
-  trigger_type: z.enum(['survey_submitted', 'booking_created', 'lead_scored', 'manual', 'scheduled']).optional().default('manual'),
+  trigger_type: z.enum(TRIGGER_TYPE_IDS as unknown as [TriggerType, ...TriggerType[]]).optional().default('manual'),
   trigger_config: z.record(z.unknown()).optional().default({}),
   is_active: z.boolean().default(false),
 })
