@@ -394,6 +394,16 @@ export function SurveyBuilder({ surveyId }: SurveyBuilderProps) {
         semantic_role: 'client_email',
         placeholder: '',
       },
+      {
+        id: crypto.randomUUID(),
+        type: 'consent',
+        question: messages.surveys.consentDefaultText,
+        required: true,
+        order: baseOrder + 2,
+        semantic_role: null,
+        placeholder: '',
+        consent_url: '/polityka-prywatnosci',
+      },
     ]
     setQuestions((prev) => [...prev, ...contactQuestions])
   }, [questions.length])
