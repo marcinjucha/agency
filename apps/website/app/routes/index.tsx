@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, redirect } from '@tanstack/react-router'
 import { CACHE_STATIC } from '@/lib/cache-headers'
 import {
   DEFAULT_BLOCKS,
@@ -35,6 +35,9 @@ const FALLBACK_OG_IMAGE = '/og-image.png'
 // ---------------------------------------------------------------------------
 
 export const Route = createFileRoute('/')({
+  beforeLoad: () => {
+    throw redirect({ to: '/blog' })
+  },
   loader: async () => {
     const [page, siteSettings] = await Promise.all([
       getPublicLandingPageFn(),
