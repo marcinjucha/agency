@@ -97,7 +97,7 @@ export function generateSurveySchema(questions: Question[]) {
           ? selectSchema.refine((val: string) => val !== '', {
               message: messages.validation.selectOption,
             })
-          : selectSchema
+          : selectSchema.or(z.literal(''))
         break
       }
 
