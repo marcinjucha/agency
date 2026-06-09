@@ -1,9 +1,13 @@
+// Global navbar — renders on /blog and blog article pages via __root.tsx.
+// Mirrors LandingNavbar's chrome (h-16, max-w-6xl, scroll bg/blur, Logo lockup, primary CTA)
+// so navigating between the landing and the blog feels seamless. The landing renders its
+// own LandingNavbar; this one covers every other page.
 import { useState, useEffect } from 'react'
 import { ArrowRight } from 'lucide-react'
 import { Link, useRouterState } from '@tanstack/react-router'
-import { Button } from '@agency/ui'
 import { routes } from '@/lib/routes'
-import { CtaLink } from './primitives'
+import { Logo } from './Logo'
+import { CtaLink, buttonClasses } from './primitives'
 
 const CTA_LABEL = 'Umów bezpłatny audyt'
 
@@ -12,13 +16,14 @@ interface NavbarProps {
 }
 
 export function Navbar({ ctaUrl }: NavbarProps) {
-  const [isScrolled, setIsScrolled] = useState(false)
+  const [scrolled, setScrolled] = useState(false)
   const pathname = useRouterState({ select: (s) => s.location.pathname })
 
   useEffect(() => {
-    const handleScroll = () => setIsScrolled(window.scrollY > 20)
-    window.addEventListener('scroll', handleScroll)
-    return () => window.removeEventListener('scroll', handleScroll)
+    const onScroll = () => setScrolled(window.scrollY > 16)
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
   const isBlogActive = pathname.startsWith(routes.blog)
@@ -26,45 +31,37 @@ export function Navbar({ ctaUrl }: NavbarProps) {
   return (
     <>
       <header
-        className={`fixed top-0 left-0 right-0 z-40 transition-all duration-500 ease-out ${
-          isScrolled
-            ? 'bg-background/80 backdrop-blur-2xl border-b border-border/50 shadow-sm shadow-black/8'
-            : 'bg-transparent backdrop-blur-none border-b border-transparent'
+        className={`fixed inset-x-0 top-0 z-40 transition-all duration-300 ${
+          scrolled
+            ? 'border-b border-[var(--hair)] bg-[var(--bg)]/85 backdrop-blur-xl'
+            : 'border-b border-transparent bg-transparent'
         }`}
       >
-        <nav className="mx-auto px-4 sm:px-6 py-3 max-w-6xl">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-8">
-              <Link to={routes.home} className="group flex items-center gap-2">
-                <span className="text-lg font-bold tracking-tight bg-linear-to-r from-orange-700 via-primary to-amber-500 bg-clip-text text-gradient transition-all duration-300 group-hover:from-primary group-hover:via-primary group-hover:to-amber-400">
-                  Halo Efekt
-                </span>
-              </Link>
-
+        <div className="mx-auto max-w-6xl px-5 sm:px-8">
+          <div className="flex h-16 items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <Logo size={28} />
               <Link
                 to={routes.blog}
-                className={`nav-link-underline px-3 py-1.5 text-sm font-medium transition-colors duration-200 ${
-                  isBlogActive ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
+                className={`relative ml-4 px-3 py-2 text-[14px] font-medium transition-colors ${
+                  isBlogActive
+                    ? 'text-[var(--ink)]'
+                    : 'text-[var(--muted)] hover:text-[var(--ink)]'
                 }`}
               >
                 Blog
                 {isBlogActive && (
-                  <span className="absolute bottom-[-2px] left-0 w-full h-px bg-primary" />
+                  <span className="absolute bottom-1 left-3 right-3 h-px bg-primary" aria-hidden="true" />
                 )}
               </Link>
             </div>
 
-            <CtaLink href={ctaUrl}>
-              <Button
-                size="sm"
-                className="cta-glow bg-primary hover:bg-primary/90 text-primary-foreground transition-all duration-200 gap-1.5 group/cta"
-              >
-                {CTA_LABEL}
-                <ArrowRight className="h-3.5 w-3.5 transition-transform duration-200 group-hover/cta:translate-x-0.5" />
-              </Button>
+            <CtaLink href={ctaUrl} className={buttonClasses('primary', 'sm')}>
+              {CTA_LABEL}
+              <ArrowRight size={14} strokeWidth={1.75} />
             </CtaLink>
           </div>
-        </nav>
+        </div>
       </header>
 
       <div className="h-16" />
