@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { Button, Card, CardContent, CardHeader, CardTitle, Input, Label } from '@agency/ui'
 import type { LandingPage } from '../types'
+import { isValidCtaUrl } from '../validation'
 import { messages } from '@/lib/messages'
 
 type SaveState = 'idle' | 'saving' | 'saved' | 'error'
@@ -19,6 +20,7 @@ interface CtaFormValues {
 
 export function LandingPageEditor({ page, isLoading, error, saveFn }: LandingPageEditorProps) {
   const [saveState, setSaveState] = useState<SaveState>('idle')
+  const [serverError, setServerError] = useState<string | null>(null)
 
   const {
     register,
@@ -41,9 +43,15 @@ export function LandingPageEditor({ page, isLoading, error, saveFn }: LandingPag
 
   const onSubmit = handleSubmit(async (values) => {
     setSaveState('saving')
+    setServerError(null)
     try {
       const result = await saveFn(page.id, values.cta_url.trim())
-      setSaveState(result.success ? 'saved' : 'error')
+      if (result.success) {
+        setSaveState('saved')
+      } else {
+        setServerError(result.error ?? null)
+        setSaveState('error')
+      }
     } catch (err) {
       console.error('[LandingPage] Save failed:', err)
       setSaveState('error')
@@ -68,6 +76,8 @@ export function LandingPageEditor({ page, isLoading, error, saveFn }: LandingPag
                 id="landing-cta-url"
                 {...register('cta_url', {
                   required: messages.landing.ctaUrlRequired,
+                  validate: (value) =>
+                    isValidCtaUrl(value) || messages.landing.ctaUrlInvalid,
                 })}
                 placeholder={messages.landing.ctaUrlPlaceholder}
                 aria-invalid={!!errors.cta_url}
@@ -85,7 +95,9 @@ export function LandingPageEditor({ page, isLoading, error, saveFn }: LandingPag
             </div>
 
             {saveState === 'error' && (
-              <p className="text-sm text-destructive">{messages.landing.saveFailed}</p>
+              <p role="alert" className="text-sm text-destructive">
+                {serverError ?? messages.landing.saveFailed}
+              </p>
             )}
 
             <Button

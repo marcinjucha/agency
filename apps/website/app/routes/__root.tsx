@@ -20,7 +20,10 @@ import { SiteFooter } from '@/features/marketing/components/SiteFooter'
 const ROOT_DESCRIPTION =
   'Inteligentne ankiety, kwalifikacja AI i automatyczne rezerwacje dla polskich firm usługowych'
 
-async function fetchRootData() {
+// Exported so child routes (e.g. `/`) can re-use the SAME queryKey + queryFn
+// with `ensureQueryData` — the root loader has already populated this cache
+// entry, so the child read is a cache hit and the server fns do NOT run again.
+export async function fetchRootData() {
   const [ctaUrl, siteSettings] = await Promise.all([
     getLandingCtaUrlFn(),
     getSiteSettingsFn(),

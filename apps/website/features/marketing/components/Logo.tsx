@@ -1,7 +1,8 @@
-// Halo Efekt brand lockup — the real social-media mark (PNG) + serif "Halo Efekt" wordmark.
-// SINGLE source of truth for the brand lockup across the site (landing + global navbar + footer).
-// The mark is served from /halo-efekt-logo.png (public/). Links to the landing ("/") so it
-// doubles as "back to home" from the blog and other routes (the homepage has no nav home link).
+// Halo Efekt brand lockup — the real social-media mark (transparent SVG) + serif "Halo Efekt"
+// wordmark. SINGLE source of truth for the brand lockup across the site (landing + global navbar
+// + footer). The mark is served from /logo.svg (public/, transparent background — no white box on
+// tinted sections). Links to the landing ("/") so it doubles as "back to home" from the blog and
+// other routes (the homepage has no nav home link).
 import { Link } from '@tanstack/react-router'
 
 interface LogoProps {
@@ -13,7 +14,7 @@ export function Logo({ size = 30, word = true }: LogoProps) {
   return (
     <Link to="/" className="group flex items-center gap-2.5" aria-label="Halo Efekt — strona główna">
       <img
-        src="/halo-efekt-logo.png"
+        src="/logo.svg"
         alt="Halo Efekt"
         width={size}
         height={size}

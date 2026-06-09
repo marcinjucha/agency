@@ -475,33 +475,24 @@ export type Database = {
       }
       landing_pages: {
         Row: {
-          blocks: Json
           created_at: string
+          cta_url: string | null
           id: string
-          is_published: boolean
-          seo_metadata: Json | null
           slug: string
-          title: string
           updated_at: string
         }
         Insert: {
-          blocks?: Json
           created_at?: string
+          cta_url?: string | null
           id?: string
-          is_published?: boolean
-          seo_metadata?: Json | null
           slug?: string
-          title?: string
           updated_at?: string
         }
         Update: {
-          blocks?: Json
           created_at?: string
+          cta_url?: string | null
           id?: string
-          is_published?: boolean
-          seo_metadata?: Json | null
           slug?: string
-          title?: string
           updated_at?: string
         }
         Relationships: []
