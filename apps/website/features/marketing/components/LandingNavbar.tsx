@@ -3,6 +3,7 @@
 // room for the overlaying fixed header (matches the prototype).
 import { useState, useEffect } from 'react'
 import { ArrowRight, Menu, X } from 'lucide-react'
+import { Link } from '@tanstack/react-router'
 
 import { landingContent } from '../content'
 import { Logo } from './Logo'
@@ -45,6 +46,12 @@ export function LandingNavbar({ ctaUrl }: LandingNavbarProps) {
                 {label}
               </a>
             ))}
+            <Link
+              to="/blog"
+              className="px-3 py-2 text-[14px] font-medium text-[var(--muted)] transition-colors hover:text-[var(--ink)]"
+            >
+              Blog
+            </Link>
           </nav>
           <div className="flex items-center gap-2">
             <CtaLink href={ctaUrl} className={buttonClasses('primary', 'sm', 'hidden sm:inline-flex')}>
@@ -76,6 +83,13 @@ export function LandingNavbar({ ctaUrl }: LandingNavbarProps) {
                 {label}
               </a>
             ))}
+            <Link
+              to="/blog"
+              onClick={() => setOpen(false)}
+              className="py-2.5 text-[15px] text-[var(--ink)]"
+            >
+              Blog
+            </Link>
             <CtaLink
               href={ctaUrl}
               className={buttonClasses('primary', 'md', 'mt-3 w-full')}
