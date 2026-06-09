@@ -24,8 +24,8 @@ export function BlogArticlePage({ post, isPreview = false }: BlogArticlePageProp
     <div className="min-h-screen bg-background">
       {/* Preview banner */}
       {isPreview && (
-        <div className="border-b border-yellow-500/30 bg-yellow-500/10 py-3 text-center">
-          <p className="text-sm font-medium text-yellow-300">
+        <div className="border-b border-[var(--hair)] bg-[var(--accent-soft)] py-3 text-center">
+          <p className="text-sm font-medium text-[var(--accent-ink)]">
             {'Podgl\u0105d artyku\u0142u \u2014 ta wersja nie jest jeszcze opublikowana'}
           </p>
         </div>
@@ -41,7 +41,10 @@ export function BlogArticlePage({ post, isPreview = false }: BlogArticlePageProp
               </Badge>
             )}
 
-            <h1 className="text-3xl font-bold leading-tight tracking-tight text-foreground sm:text-4xl md:text-5xl">
+            <h1
+              className="serif text-[32px] leading-[1.08] tracking-[-0.02em] text-[var(--ink)] md:text-[44px]"
+              style={{ fontWeight: 500, textWrap: 'balance' }}
+            >
               {post.title}
             </h1>
 

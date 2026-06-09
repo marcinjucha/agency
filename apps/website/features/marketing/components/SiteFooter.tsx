@@ -18,8 +18,18 @@ export function SiteFooter({ ctaUrl }: SiteFooterProps) {
       <Container>
         <div className="grid items-start gap-10 md:grid-cols-[1fr_auto] md:gap-16">
           <div className="max-w-md">
-            <div className="serif text-[24px] tracking-[-0.01em] text-[var(--ink)]" style={{ fontWeight: 600 }}>
-              Halo<span className="text-primary"> Efekt</span>
+            <div className="flex items-center gap-3">
+              <img
+                src="/halo-efekt-logo.png"
+                alt="Halo Efekt"
+                width={32}
+                height={32}
+                className="block object-contain"
+                style={{ width: 32, height: 32 }}
+              />
+              <div className="serif text-[24px] tracking-[-0.01em] text-[var(--ink)]" style={{ fontWeight: 600 }}>
+                Halo<span className="text-primary"> Efekt</span>
+              </div>
             </div>
             <p className="mt-3 text-[15.5px] leading-relaxed text-[var(--muted)]" style={{ textWrap: 'pretty' }}>
               {tagline}

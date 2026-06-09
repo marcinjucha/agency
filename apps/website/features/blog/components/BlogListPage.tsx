@@ -5,6 +5,7 @@ import { Image } from '@unpic/react'
 import type { WebsiteBlogListItem } from '../types'
 import { formatPolishDate } from '../utils'
 import { routes } from '@/lib/routes'
+import { Eyebrow } from '@/features/marketing/components/primitives'
 
 function CoverImage({
   src,
@@ -120,7 +121,7 @@ function FeaturedPostCard({ post }: { post: WebsiteBlogListItem }) {
               {post.title}
             </h2>
             {post.excerpt && (
-              <p className="text-base leading-relaxed text-foreground/80 line-clamp-3">
+              <p className="text-base leading-relaxed text-[var(--muted)] line-clamp-3">
                 {post.excerpt}
               </p>
             )}
@@ -159,7 +160,7 @@ function PostCard({ post }: { post: WebsiteBlogListItem }) {
             {post.title}
           </h2>
           {post.excerpt && (
-            <p className="mb-4 flex-1 text-sm leading-relaxed text-foreground/75 line-clamp-3">
+            <p className="mb-4 flex-1 text-sm leading-relaxed text-[var(--muted)] line-clamp-3">
               {post.excerpt}
             </p>
           )}
@@ -197,14 +198,18 @@ export function BlogListPage({ posts }: BlogListPageProps) {
         <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-border/50 to-transparent" />
 
         <div className="relative mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
-          <p className="mb-4 text-sm font-semibold uppercase tracking-widest text-primary">
-            Blog
-          </p>
+          <Eyebrow>Blog</Eyebrow>
           {/* h1 keeps Lora via global selector — it's the hero-level heading */}
-          <h1 className="max-w-3xl text-4xl font-bold tracking-tight text-foreground md:text-5xl lg:text-6xl">
+          <h1
+            className="serif max-w-3xl text-[32px] leading-[1.08] tracking-[-0.02em] text-[var(--ink)] md:text-[44px]"
+            style={{ fontWeight: 500, textWrap: 'balance' }}
+          >
             {`Wiedza, kt\u00f3ra nap\u0119dza Tw\u00f3j biznes`}
           </h1>
-          <p className="mt-6 max-w-2xl text-lg leading-relaxed text-foreground/80 md:text-xl">
+          <p
+            className="mt-4 max-w-2xl text-[16.5px] leading-relaxed text-[var(--muted)]"
+            style={{ textWrap: 'pretty' }}
+          >
             {`Artyku\u0142y o AI, automatyzacji i optymalizacji proces\u00f3w biznesowych. Praktyczne wskaz\u00f3wki, kt\u00f3re mo\u017cesz wdro\u017cy\u0107 od razu.`}
           </p>
         </div>
