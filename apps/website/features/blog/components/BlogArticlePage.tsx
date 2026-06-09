@@ -34,7 +34,7 @@ export function BlogArticlePage({ post, isPreview = false }: BlogArticlePageProp
       <article className="pb-16">
         {/* Article header — cream hero, matches blog listing */}
         <div className="bg-accent pt-24 md:pt-32 pb-10">
-          <header className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
+          <header className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
             {post.category && (
               <Badge className="mb-6 bg-primary/10 text-primary hover:bg-primary/10">
                 {post.category}
@@ -68,7 +68,7 @@ export function BlogArticlePage({ post, isPreview = false }: BlogArticlePageProp
 
         {/* Cover image */}
         {post.cover_image_url && (
-          <div className="mx-auto mt-10 max-w-4xl px-4 sm:px-6 lg:px-8">
+          <div className="mx-auto mt-10 max-w-5xl px-4 sm:px-6 lg:px-8">
             <div className="overflow-hidden rounded-2xl shadow-lg">
               <Image
                 src={post.cover_image_url}
@@ -84,7 +84,7 @@ export function BlogArticlePage({ post, isPreview = false }: BlogArticlePageProp
 
         {/* Article content */}
         {post.html_body && (
-          <div className="mx-auto mt-12 max-w-4xl px-4 sm:px-6 lg:px-8">
+          <div className="mx-auto mt-12 max-w-5xl px-4 sm:px-6 lg:px-8">
             <div
               className="blog-prose"
               dangerouslySetInnerHTML={{ __html: post.html_body }}
@@ -93,7 +93,7 @@ export function BlogArticlePage({ post, isPreview = false }: BlogArticlePageProp
         )}
 
         {/* Article footer */}
-        <div className="mx-auto mt-16 max-w-4xl px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto mt-16 max-w-5xl px-4 sm:px-6 lg:px-8">
           <hr className="border-border" />
 
           <div className="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-between">
