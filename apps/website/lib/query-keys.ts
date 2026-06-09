@@ -11,7 +11,7 @@
  */
 export const queryKeys = {
   /**
-   * @source getPublicLandingPageFn (features/marketing/server.ts)
+   * @source getLandingCtaUrlFn, getSiteSettingsFn (features/marketing/server.ts, features/site-settings/server.ts)
    * @usedBy app/routes/__root.tsx (loader: ensureQueryData → useLoaderData)
    * @staleTime 1h (set per-query in __root.tsx loader, aligned with CACHE_STATIC s-maxage=3600)
    * @invalidatedBy zmiana landing page w CMS (brak auto-invalidacji — ISR/TTL)

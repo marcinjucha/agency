@@ -19,6 +19,21 @@ export function ScrollReveal({ children, className = '', delay = 0 }: ScrollReve
     const el = ref.current
     if (!el) return
 
+    // Reduced-motion users: reveal immediately, no animation gating.
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+      setIsVisible(true)
+      return
+    }
+
+    // Already in (or above) the viewport on mount — reveal now. Without this an
+    // element that is on-screen at load (or an anchor jump that lands directly on
+    // a section, e.g. navbar "#wspolpraca") may never receive an intersection event.
+    const rect = el.getBoundingClientRect()
+    if (rect.top < window.innerHeight && rect.bottom > 0) {
+      setIsVisible(true)
+      return
+    }
+
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
@@ -30,7 +45,18 @@ export function ScrollReveal({ children, className = '', delay = 0 }: ScrollReve
     )
 
     observer.observe(el)
-    return () => observer.disconnect()
+
+    // Safety net: never leave content stuck at opacity 0. A fast scroll can skip the
+    // frame where the element is intersecting, so the observer never fires.
+    const fallback = window.setTimeout(() => {
+      setIsVisible(true)
+      observer.disconnect()
+    }, 900)
+
+    return () => {
+      observer.disconnect()
+      window.clearTimeout(fallback)
+    }
   }, [])
 
   return (
