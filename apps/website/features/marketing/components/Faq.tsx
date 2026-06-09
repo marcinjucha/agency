@@ -40,7 +40,7 @@ export function Faq() {
                         {it.q}
                       </span>
                       <span
-                        className={`mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full border transition-all duration-300 ${
+                        className={`mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full border transition-all duration-300 motion-reduce:transition-none ${
                           isOpen
                             ? 'rotate-45 border-primary bg-primary text-white'
                             : 'border-[var(--hair)] text-[var(--muted)] group-hover:border-primary/50'
@@ -50,7 +50,7 @@ export function Faq() {
                       </span>
                     </button>
                     <div
-                      className="grid transition-all duration-300 ease-out"
+                      className="grid transition-all duration-300 ease-out motion-reduce:transition-none"
                       style={{ gridTemplateRows: isOpen ? '1fr' : '0fr' }}
                     >
                       <div className="overflow-hidden">

@@ -197,7 +197,7 @@ export function BlogListPage({ posts }: BlogListPageProps) {
         {/* Gradient divider bottom */}
         <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-border/50 to-transparent" />
 
-        <div className="relative mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+        <div className="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <Eyebrow>Blog</Eyebrow>
           {/* h1 keeps Lora via global selector — it's the hero-level heading */}
           <h1
@@ -216,7 +216,7 @@ export function BlogListPage({ posts }: BlogListPageProps) {
       </section>
 
       {/* Content */}
-      <div className="mx-auto max-w-5xl px-4 pb-24 sm:px-6 lg:px-8 pt-12">
+      <div className="mx-auto max-w-6xl px-4 pb-24 sm:px-6 lg:px-8 pt-12">
         {/* Category filters */}
         {categories.length > 0 && (
           <nav

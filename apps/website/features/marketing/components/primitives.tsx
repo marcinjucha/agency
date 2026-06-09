@@ -52,11 +52,11 @@ export function Eyebrow({ children, className = '' }: EyebrowProps) {
   return (
     <div
       className={cn(
-        'inline-flex items-center gap-2.5 mono text-[11px] font-medium uppercase tracking-[.2em] text-primary',
+        'inline-flex items-center gap-2.5 mono text-[11px] font-medium uppercase tracking-[.2em] text-[var(--accent-ink)]',
         className,
       )}
     >
-      <span className="block h-px w-6 bg-primary" />
+      <span className="block h-px w-6 bg-[var(--accent-ink)]" />
       {children}
     </div>
   )
@@ -152,7 +152,7 @@ interface CtaLinkProps {
  * prop (ctaUrl) from the page — never read from content.ts.
  */
 export function CtaLink({ href, className, children, id }: CtaLinkProps) {
-  if (href.startsWith('http')) {
+  if (/^https?:\/\//i.test(href)) {
     return (
       <a id={id} href={href} target="_blank" rel="noopener noreferrer" className={className}>
         {children}

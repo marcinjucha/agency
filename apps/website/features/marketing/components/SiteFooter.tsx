@@ -20,7 +20,7 @@ export function SiteFooter({ ctaUrl }: SiteFooterProps) {
           <div className="max-w-md">
             <div className="flex items-center gap-3">
               <img
-                src="/halo-efekt-logo.png"
+                src="/logo.svg"
                 alt="Halo Efekt"
                 width={32}
                 height={32}

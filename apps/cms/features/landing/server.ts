@@ -20,8 +20,7 @@ const dbError = (e: unknown) => (e instanceof Error ? e.message : messages.commo
 export const getLandingPageFn = createServerFn({ method: 'POST' }).handler(
   async (): Promise<LandingPage | null> => {
     const supabase = createServerClient()
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- landing_pages not in generated types
-    const { data, error } = await (supabase as any)
+    const { data, error } = await supabase
       .from('landing_pages')
       .select('*')
       .eq('slug', 'home')
@@ -54,7 +53,12 @@ export const updateLandingCtaFn = createServerFn({ method: 'POST' })
 
 function updateCtaUrl(auth: AuthContext, input: UpdateLandingCtaInput): ResultAsync<undefined, string> {
   return ResultAsync.fromPromise(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- landing_pages not in generated types
+    // Supabase JS v2.95.2 (PostgrestVersion 13) types the `.update()` parameter as `never`,
+    // so the typed client rejects any payload — the same incompatibility that forces the
+    // `(supabase as any)` + `as unknown as TablesInsert<...>` casts in surveys/server.ts.
+    // This is NOT the old "landing_pages missing from generated types" cast (now resolved):
+    // the READ above uses the fully-typed client. Only this write still needs the escape.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase JS update() param resolves to never
     (auth.supabase as any).from('landing_pages').update({ cta_url: input.cta_url }).eq('id', input.id),
     dbError
   ).andThen(fromSupabaseVoid())
