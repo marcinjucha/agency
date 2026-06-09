@@ -1,68 +1,75 @@
-import { ArrowRight, ShieldCheck } from 'lucide-react'
-import type { HeroBlock } from '@agency/database'
-import { CtaLink } from './CtaLink'
+// Hero — centered variant only (faithful port of project/landing/hero.jsx `centered`).
+// The headlineAccent fragment is rendered inside the headline in primary/orange.
+import { ArrowRight, ArrowDown } from 'lucide-react'
 
-export function Hero({ headline, subheadline, cta, trustLine }: HeroBlock) {
+import { landingContent } from '../content'
+import { ScrollReveal } from './ScrollReveal'
+import { Eyebrow, CtaLink, buttonClasses } from './primitives'
+
+interface HeroProps {
+  ctaUrl: string
+}
+
+function HeadlineMark() {
+  const { headline, headlineAccent } = landingContent.hero
+  const parts = headline.split(headlineAccent)
   return (
-    <section className="relative pt-16 pb-16 md:pt-24 md:pb-24 lg:pt-32 lg:pb-24 bg-background overflow-hidden">
-      {/* Ambient glow orbs */}
-      <div className="absolute top-[-200px] right-[-100px] w-[600px] h-[600px] rounded-full bg-primary/5 blur-[120px] animate-glow-pulse pointer-events-none" />
-      <div className="absolute bottom-[-150px] left-[-80px] w-[500px] h-[500px] rounded-full bg-primary/3 blur-[100px] animate-glow-pulse pointer-events-none" style={{ animationDelay: '2s' }} />
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[400px] rounded-full bg-primary/[0.015] blur-[150px] pointer-events-none" />
+    <>
+      {parts[0]}
+      <em className="not-italic text-primary">{headlineAccent}</em>
+      {parts[1] || ''}
+    </>
+  )
+}
 
-      {/* Grid pattern overlay */}
-      <div className="gridlines absolute inset-0 pointer-events-none opacity-40" />
+export function Hero({ ctaUrl }: HeroProps) {
+  const { eyebrow, sub, cta, alt } = landingContent.hero
+  return (
+    <section className="relative overflow-hidden bg-[var(--bg)] grain pt-28 md:pt-36 pb-16 md:pb-20">
+      <div
+        className="gridlines pointer-events-none absolute inset-0 opacity-[0.5]"
+        style={{
+          maskImage: 'radial-gradient(ellipse 80% 70% at 50% 30%, #000 30%, transparent 75%)',
+          WebkitMaskImage: 'radial-gradient(ellipse 80% 70% at 50% 30%, #000 30%, transparent 75%)',
+        }}
+      />
+      <div className="pointer-events-none absolute top-[-180px] left-1/2 h-[480px] w-[680px] -translate-x-1/2 rounded-full bg-primary/[0.06] blur-[120px]" />
 
-      <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-          {/* Text column */}
-          <div className="max-w-2xl">
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.1] mb-6 animate-fade-in-up">
-              <span className="text-gradient bg-gradient-to-r from-primary to-primary/60">
-                {headline}
-              </span>
+      <div className="relative z-10 mx-auto max-w-6xl px-5 sm:px-8">
+        <div className="mx-auto flex max-w-3xl flex-col items-center text-center">
+          <ScrollReveal>
+            <Eyebrow className="justify-center">{eyebrow}</Eyebrow>
+          </ScrollReveal>
+          <ScrollReveal delay={80}>
+            <h1
+              className="serif mt-6 text-[40px] sm:text-[54px] lg:text-[64px] leading-[1.04] tracking-[-0.025em] text-[var(--ink)]"
+              style={{ fontWeight: 500, textWrap: 'balance' }}
+            >
+              <HeadlineMark />
             </h1>
-
-            <p className="text-lg md:text-xl text-foreground/80 leading-relaxed mb-10 animate-fade-in-up animate-delay-200">
-              {subheadline}
+          </ScrollReveal>
+          <ScrollReveal delay={160}>
+            <p
+              className="mt-6 max-w-2xl text-[17px] md:text-[18.5px] leading-relaxed text-[var(--muted)]"
+              style={{ textWrap: 'pretty' }}
+            >
+              {sub}
             </p>
-
-            <div className="animate-fade-in-up animate-delay-300">
-              <CtaLink
-                id="hero-cta"
-                href={cta.href}
-                location="hero"
-                className="inline-flex items-center gap-3 bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl px-8 py-4 text-base font-semibold shadow-xl shadow-primary/25 hover:shadow-primary/40 hover:scale-[1.02] transition-all duration-300 group cta-glow"
-              >
-                {cta.text}
-                <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
-              </CtaLink>
-            </div>
-
-            <div className="inline-flex items-center gap-3 border border-primary/30 bg-accent rounded-xl px-4 py-3 mt-6 animate-fade-in-up animate-delay-400">
-              <div className="w-6 h-6 rounded-full bg-primary/15 flex items-center justify-center shrink-0">
-                <ShieldCheck className="w-3.5 h-3.5 text-primary" />
+          </ScrollReveal>
+          <ScrollReveal delay={240}>
+            <div className="mt-9 flex justify-center">
+              <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
+                <CtaLink href={ctaUrl} className={buttonClasses('primary', 'lg')}>
+                  {cta}
+                  <ArrowRight size={17} strokeWidth={1.75} />
+                </CtaLink>
+                <a href="#obszary" className={buttonClasses('ghost', 'lg')}>
+                  {alt}
+                  <ArrowDown size={16} strokeWidth={1.75} />
+                </a>
               </div>
-              <p className="text-sm text-foreground/70">{trustLine}</p>
             </div>
-          </div>
-
-          {/* Decorative element — abstract geometric shape */}
-          <div className="hidden lg:flex items-center justify-center" aria-hidden="true">
-            <div className="relative w-80 h-80">
-              {/* Outer ring */}
-              <div className="absolute inset-0 rounded-full border border-primary/20 animate-float" />
-              {/* Middle ring */}
-              <div className="absolute inset-8 rounded-full border border-primary/30 animate-float" style={{ animationDelay: '1s' }} />
-              {/* Inner glow */}
-              <div className="absolute inset-16 rounded-full bg-primary/8 blur-xl" />
-              {/* Center dot */}
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-primary/50" />
-              {/* Accent lines */}
-              <div className="absolute top-1/2 left-0 w-full h-px bg-gradient-to-r from-transparent via-primary/25 to-transparent" />
-              <div className="absolute top-0 left-1/2 w-px h-full bg-gradient-to-b from-transparent via-primary/25 to-transparent" />
-            </div>
-          </div>
+          </ScrollReveal>
         </div>
       </div>
     </section>

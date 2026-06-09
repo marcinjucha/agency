@@ -1,25 +1,9 @@
-import { createFileRoute, redirect } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
 import { CACHE_STATIC } from '@/lib/cache-headers'
-import {
-  DEFAULT_BLOCKS,
-  type SeoMetadata,
-  type HeroBlock,
-  type IdentificationBlock,
-  type ProblemsBlock,
-  type ProcessBlock,
-  type ResultsBlock,
-  type CtaBlock,
-} from '@agency/database'
-import { getPublicLandingPageFn } from '@/features/marketing/server'
+import { getLandingCtaUrlFn } from '@/features/marketing/server'
 import { getSiteSettingsFn } from '@/features/site-settings/server'
-import { findBlock, hasNewBlockTypes } from '@/features/marketing/utils'
-import { buildWebsiteHead, BASE_URL } from '@/lib/head'
-import { Hero } from '@/features/marketing/components/Hero'
-import { Identification } from '@/features/marketing/components/Identification'
-import { Problems } from '@/features/marketing/components/Problems'
-import { Process } from '@/features/marketing/components/Process'
-import { Results } from '@/features/marketing/components/Results'
-import { FinalCTA } from '@/features/marketing/components/FinalCTA'
+import { buildWebsiteHead } from '@/lib/head'
+import { Landing } from '@/features/marketing/components/Landing'
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -35,33 +19,21 @@ const FALLBACK_OG_IMAGE = '/og-image.png'
 // ---------------------------------------------------------------------------
 
 export const Route = createFileRoute('/')({
-  beforeLoad: () => {
-    throw redirect({ to: '/blog' })
-  },
-  loader: async () => {
-    const [page, siteSettings] = await Promise.all([
-      getPublicLandingPageFn(),
-      getSiteSettingsFn(),
-    ])
-    return { page, siteSettings }
-  },
+  loader: async () => ({
+    ctaUrl: await getLandingCtaUrlFn(),
+    siteSettings: await getSiteSettingsFn(),
+  }),
   head: ({ loaderData }) => {
-    const seo = (loaderData?.page?.seo_metadata ?? {}) as SeoMetadata
-    const title = seo.title || FALLBACK_TITLE
-    const description = seo.description || FALLBACK_DESCRIPTION
-    const ogImage = seo.ogImage || FALLBACK_OG_IMAGE
+    const title = FALLBACK_TITLE
+    const description = FALLBACK_DESCRIPTION
+    const ogImage = FALLBACK_OG_IMAGE
 
-    // Merge page keywords + site defaults with deduplication (old Next.js behavior)
+    // Merge site default keywords with deduplication (old Next.js behavior)
     const mergedKeywords = [
-      ...new Set(
-        [...(seo.keywords ?? []), ...(loaderData?.siteSettings?.default_keywords ?? [])].map(
-          (k) => k.toLowerCase(),
-        ),
-      ),
+      ...new Set((loaderData?.siteSettings?.default_keywords ?? []).map((k) => k.toLowerCase())),
     ]
     const keywords = mergedKeywords.length ? mergedKeywords : undefined
 
-    const absoluteOgImage = ogImage.startsWith('/') ? `${BASE_URL}${ogImage}` : ogImage
     const base = buildWebsiteHead(title, description, ogImage, keywords, '')
 
     return {
@@ -88,32 +60,6 @@ export const Route = createFileRoute('/')({
 // ---------------------------------------------------------------------------
 
 function HomePage() {
-  const { page } = Route.useLoaderData()
-
-  const rawBlocks = page?.blocks?.length ? page.blocks : DEFAULT_BLOCKS
-  const blocks = hasNewBlockTypes(rawBlocks) ? rawBlocks : DEFAULT_BLOCKS
-
-  const hero = findBlock<HeroBlock>(blocks, 'hero') ??
-    (DEFAULT_BLOCKS.find((b) => b.type === 'hero') as HeroBlock)
-  const identification = findBlock<IdentificationBlock>(blocks, 'identification') ??
-    (DEFAULT_BLOCKS.find((b) => b.type === 'identification') as IdentificationBlock)
-  const problems = findBlock<ProblemsBlock>(blocks, 'problems') ??
-    (DEFAULT_BLOCKS.find((b) => b.type === 'problems') as ProblemsBlock)
-  const process = findBlock<ProcessBlock>(blocks, 'process') ??
-    (DEFAULT_BLOCKS.find((b) => b.type === 'process') as ProcessBlock)
-  const results = findBlock<ResultsBlock>(blocks, 'results') ??
-    (DEFAULT_BLOCKS.find((b) => b.type === 'results') as ResultsBlock)
-  const cta = findBlock<CtaBlock>(blocks, 'cta') ??
-    (DEFAULT_BLOCKS.find((b) => b.type === 'cta') as CtaBlock)
-
-  return (
-    <main className="w-full">
-      <Hero {...hero} />
-      <Identification {...identification} />
-      <Problems {...problems} />
-      <Process {...process} />
-      <Results {...results} />
-      <FinalCTA {...cta} />
-    </main>
-  )
+  const { ctaUrl } = Route.useLoaderData()
+  return <Landing ctaUrl={ctaUrl} />
 }

@@ -2,10 +2,16 @@ import { useState, useEffect } from 'react'
 import { ArrowRight } from 'lucide-react'
 import { Link, useRouterState } from '@tanstack/react-router'
 import { Button } from '@agency/ui'
-import type { NavbarBlock } from '@agency/database'
 import { routes } from '@/lib/routes'
+import { CtaLink } from './primitives'
 
-export function Navbar({ ctaText, ctaHref }: NavbarBlock) {
+const CTA_LABEL = 'Umów bezpłatny audyt'
+
+interface NavbarProps {
+  ctaUrl: string
+}
+
+export function Navbar({ ctaUrl }: NavbarProps) {
   const [isScrolled, setIsScrolled] = useState(false)
   const pathname = useRouterState({ select: (s) => s.location.pathname })
 
@@ -48,15 +54,15 @@ export function Navbar({ ctaText, ctaHref }: NavbarBlock) {
               </Link>
             </div>
 
-            <Link to={ctaHref}>
+            <CtaLink href={ctaUrl}>
               <Button
                 size="sm"
                 className="cta-glow bg-primary hover:bg-primary/90 text-primary-foreground transition-all duration-200 gap-1.5 group/cta"
               >
-                {ctaText}
+                {CTA_LABEL}
                 <ArrowRight className="h-3.5 w-3.5 transition-transform duration-200 group-hover/cta:translate-x-0.5" />
               </Button>
-            </Link>
+            </CtaLink>
           </div>
         </nav>
       </header>
