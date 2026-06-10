@@ -15,7 +15,7 @@ export const baseExtensions = [
     heading: { levels: [1, 2, 3] },
   }),
   Link.configure({ openOnClick: false }),
-  Image,
+  Image.configure({ HTMLAttributes: { loading: 'lazy', decoding: 'async' } }),
   Underline,
   TextAlign.configure({ types: ['heading', 'paragraph'] }),
   Highlight.configure({ multicolor: true }),
