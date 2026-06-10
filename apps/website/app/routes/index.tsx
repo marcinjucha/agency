@@ -1,7 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { CACHE_STATIC } from '@/lib/cache-headers'
-import { queryKeys } from '@/lib/query-keys'
-import { fetchRootData } from './__root'
 import { buildWebsiteHead } from '@/lib/head'
 import { Landing } from '@/features/marketing/components/Landing'
 
@@ -19,16 +17,10 @@ const FALLBACK_OG_IMAGE = '/og-image.png'
 // ---------------------------------------------------------------------------
 
 export const Route = createFileRoute('/')({
-  // Read the same { ctaUrl, siteSettings } the __root loader already fetched.
-  // The root ran `ensureQueryData(queryKeys.landing.all, fetchRootData)` before
-  // this child loader; re-using the SAME key + queryFn here is a cache hit, so
-  // getLandingCtaUrlFn + getSiteSettingsFn do NOT execute a second time per nav.
-  loader: ({ context: { queryClient } }) =>
-    queryClient.ensureQueryData({
-      queryKey: queryKeys.landing.all,
-      queryFn: fetchRootData,
-      staleTime: 1000 * 60 * 60, // 1h — must match __root.tsx so the entry is shared
-    }),
+  // Read the same { ctaUrl, siteSettings } the __root route already fetched in
+  // its `beforeLoad` (exposed via router context). The server fns run ONCE per
+  // request in __root; this loader just forwards that data — no second invocation.
+  loader: ({ context }) => context.rootData,
   head: ({ loaderData }) => {
     const title = FALLBACK_TITLE
     const description = FALLBACK_DESCRIPTION

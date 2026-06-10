@@ -3,19 +3,18 @@ import { getPublishedBlogPostFn } from '@/features/blog/server'
 import { BlogArticlePage } from '@/features/blog/components/BlogArticlePage'
 import { buildArticleJsonLd } from '@/features/blog/utils'
 import { buildWebsiteHead } from '@/lib/head'
-import { queryKeys } from '@/lib/query-keys'
 import { CACHE_BLOG } from '@/lib/cache-headers'
 import type { SeoMetadata } from '@/features/blog/types'
 
 export const Route = createFileRoute('/blog/$slug')({
-  loader: async ({ params, context: { queryClient } }) => {
-    const post = await queryClient.ensureQueryData({
-      queryKey: queryKeys.blog.detail(params.slug),
-      queryFn: () => getPublishedBlogPostFn({ data: { slug: params.slug } }),
-    })
+  loader: async ({ params }) => {
+    const post = await getPublishedBlogPostFn({ data: { slug: params.slug } })
     if (!post) throw notFound()
     return { post }
   },
+  // Router loader cache: keep article fresh for 5min (matches the prior
+  // TanStack Query staleTime default) before re-running on next navigation.
+  staleTime: 1000 * 60 * 5,
   head: ({ loaderData }) => {
     if (!loaderData?.post) return { meta: [{ title: 'Nie znaleziono artykułu | Halo Efekt' }] }
 
@@ -113,7 +112,7 @@ function BlogArticleSkeleton() {
 }
 
 function BlogPostPage() {
-  // ensureQueryData in loader guarantees post is in cache — useLoaderData() is safe here.
+  // Loader awaits the server fn (and throws notFound on miss), so post is always present.
   // WHY: website is not CMS, useQuery is CMS-only (memory.md architecture decision).
   const { post } = Route.useLoaderData()
 
