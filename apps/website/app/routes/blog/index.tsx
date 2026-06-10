@@ -2,7 +2,6 @@ import { createFileRoute } from '@tanstack/react-router'
 import { getPublishedBlogPostsFn } from '@/features/blog/server'
 import { BlogListPage } from '@/features/blog/components/BlogListPage'
 import { buildWebsiteHead } from '@/lib/head'
-import { queryKeys } from '@/lib/query-keys'
 import { CACHE_BLOG } from '@/lib/cache-headers'
 
 const BLOG_TITLE = 'Blog | Halo Efekt'
@@ -22,11 +21,10 @@ const collectionJsonLd = {
 }
 
 export const Route = createFileRoute('/blog/')({
-  loader: ({ context: { queryClient } }) =>
-    queryClient.ensureQueryData({
-      queryKey: queryKeys.blog.all,
-      queryFn: () => getPublishedBlogPostsFn(),
-    }),
+  loader: () => getPublishedBlogPostsFn(),
+  // Router loader cache: keep blog list fresh for 5min (matches the prior
+  // TanStack Query staleTime default) before re-running on next navigation.
+  staleTime: 1000 * 60 * 5,
   head: () => ({
     ...buildWebsiteHead(BLOG_TITLE, BLOG_DESCRIPTION, undefined, undefined, '/blog'),
     meta: [
@@ -123,7 +121,7 @@ function BlogListSkeleton() {
 }
 
 function BlogPage() {
-  // ensureQueryData in loader guarantees data is in cache — useLoaderData() is safe here.
+  // Loader awaits the server fn, so useLoaderData() always has the posts.
   // WHY: website is not CMS, useQuery is CMS-only (memory.md architecture decision).
   const posts = Route.useLoaderData() ?? []
 
