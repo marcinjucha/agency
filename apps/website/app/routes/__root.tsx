@@ -9,6 +9,8 @@ import {
 import { QueryClientProvider } from '@tanstack/react-query'
 import type { RouterContext } from '../router'
 import appCss from '../globals.css?url'
+import loraLatin from '@fontsource-variable/lora/files/lora-latin-wght-normal.woff2?url'
+import loraLatinExt from '@fontsource-variable/lora/files/lora-latin-ext-wght-normal.woff2?url'
 import { buildWebsiteHead, BASE_URL } from '@/lib/head'
 import { queryKeys } from '@/lib/query-keys'
 import { getLandingCtaUrlFn } from '@/features/marketing/server'
@@ -60,6 +62,10 @@ export const Route = createRootRouteWithContext<RouterContext>()({
     return {
       meta: [...baseMeta.meta, ...extraMeta],
       links: [
+        { rel: 'preconnect', href: 'https://analytics.trustcode.pl', crossOrigin: 'anonymous' },
+        { rel: 'dns-prefetch', href: 'https://analytics.trustcode.pl' },
+        { rel: 'preload', as: 'font', type: 'font/woff2', href: loraLatin, crossOrigin: 'anonymous' },
+        { rel: 'preload', as: 'font', type: 'font/woff2', href: loraLatinExt, crossOrigin: 'anonymous' },
         { rel: 'stylesheet', href: appCss },
         { rel: 'icon', href: '/favicon.ico' },
       ],
