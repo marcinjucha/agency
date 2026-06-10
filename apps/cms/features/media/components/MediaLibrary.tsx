@@ -204,8 +204,35 @@ export function MediaLibrary() {
     },
   })
 
+  // Save the library-level alt text for an image item. Sent alongside the
+  // current name (updateMediaItemSchema requires name). The grid is refetched on
+  // success; previewItem is patched locally so the open dialog reflects the save
+  // without waiting for a refetch (it holds list-item state, not a live query).
+  const altMutation = useMutation({
+    mutationFn: async ({ id, name, alt_text }: { id: string; name: string; alt_text: string | null }) => {
+      const result = await updateMediaItemFn({ data: { id, data: { name, alt_text } } })
+      if (!result.success) throw new Error(result.error ?? messages.media.altSaveFailed)
+      return result
+    },
+    onSuccess: (_result, variables) => {
+      queryClient.invalidateQueries({ queryKey: mediaKeys.all })
+      setPreviewItem((prev) =>
+        prev && prev.id === variables.id ? { ...prev, alt_text: variables.alt_text } : prev
+      )
+    },
+  })
+
   function handleRename(id: string, newName: string) {
     renameMutation.mutate({ id, name: newName })
+  }
+
+  function handleSaveAlt(altText: string) {
+    if (!previewItem) return
+    altMutation.mutate({
+      id: previewItem.id,
+      name: previewItem.name,
+      alt_text: altText.trim() || null,
+    })
   }
 
   function handlePreview(item: MediaItemListItem) {
@@ -443,6 +470,9 @@ export function MediaLibrary() {
           item={previewItem as unknown as MediaItem | null}
           open={previewOpen}
           onClose={() => setPreviewOpen(false)}
+          onSaveAlt={handleSaveAlt}
+          isSavingAlt={altMutation.isPending}
+          altSaveError={altMutation.error?.message ?? null}
         />
 
         {/* Folder create/rename dialog */}

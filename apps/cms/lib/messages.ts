@@ -354,6 +354,13 @@ export const messages = {
     uploadToAdd: 'Przeciągnij pliki powyżej, aby dodać nowe media.',
     dragOrClickUpload: 'Przeciągnij lub kliknij aby przesłać',
     uploadDone: 'Gotowe',
+    // Alt text — set ONCE per image in the Media Library (media_items.alt_text)
+    // and reused across all insert paths. Improves a11y (WCAG) + SEO on the
+    // public site. `alt_text || name` fallback means the public <img> always has alt.
+    altTextLabel: 'Tekst alternatywny (opis obrazka)',
+    altTextPlaceholder: 'np. Zespół Halo Efekt podczas warsztatu',
+    altTextHelp: 'Opcjonalny, ale zalecany — opisuje obrazek czytnikom ekranu i wyszukiwarkom. Ustawiany raz i używany przy każdym wstawieniu.',
+    altSaveFailed: 'Nie udało się zapisać tekstu alternatywnego',
     // Folders
     folders: 'Foldery',
     createFolder: 'Nowy folder',

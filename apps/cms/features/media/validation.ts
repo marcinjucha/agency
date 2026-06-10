@@ -45,10 +45,13 @@ export const createMediaItemSchema = z.object({
   is_downloadable: z.boolean().optional(),
 })
 
-// --- Update media item (rename only) ---
+// --- Update media item (rename + alt text) ---
 
 export const updateMediaItemSchema = z.object({
   name: z.string().min(1, messages.validation.nameRequired),
+  // .nullable().optional() — DB column is nullable and the field is optional in
+  // partial updates (rename-only updates omit it). null clears the alt text.
+  alt_text: z.string().max(300).nullable().optional(),
 })
 
 // --- Inferred types ---

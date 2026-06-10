@@ -46,6 +46,12 @@ export type MediaItemListItem = Pick<
   | 'folder_id'
   | 'is_downloadable'
   | 'created_at'
+  // alt_text + intrinsic dimensions flow to the modal grid + insert handlers:
+  // alt_text drives the inserted <img> alt (reused from the library), width/height
+  // reserve layout space to prevent CLS.
+  | 'alt_text'
+  | 'width'
+  | 'height'
 >
 
 // --- Cast helper (for consistency with blog pattern) ---
@@ -67,5 +73,8 @@ export function toMediaItemListItem(raw: unknown): MediaItemListItem {
     folder_id: row.folder_id,
     is_downloadable: row.is_downloadable,
     created_at: row.created_at,
+    alt_text: row.alt_text,
+    width: row.width,
+    height: row.height,
   }
 }
