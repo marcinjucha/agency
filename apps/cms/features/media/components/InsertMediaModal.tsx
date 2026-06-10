@@ -8,7 +8,6 @@ import {
   DialogTitle,
   Button,
   Input,
-  Label,
   Progress,
   Select,
   SelectContent,
@@ -31,6 +30,7 @@ import {
 } from '@/features/media/utils'
 import { extractVideoId, generateThumbnailUrl, buildEmbedUrl, fetchVimeoThumbnail } from '@/lib/video-utils'
 import { MediaTypeFilter } from '@/features/media/components/MediaTypeFilter'
+import { resolveInsertAlt } from '@/features/media/insert-alt'
 import type { MediaType, MediaItemListItem } from '@/features/media/types'
 import type { Editor } from '@tiptap/react'
 import { messages, templates } from '@/lib/messages'
@@ -79,23 +79,26 @@ const INLINE_INSERTABLE_TYPES = [
 ] as const
 type InlineInsertableType = (typeof INLINE_INSERTABLE_TYPES)[number]
 
-// Only the image handler consumes `alt` — video/youtube/etc. ignore it. Passing
-// an alt threads it onto the generated public `<img>` for a11y (WCAG) + SEO.
+// Only the image handler consumes `alt` / dimensions — video/youtube/etc. ignore
+// them. Alt is derived ONCE per media item in the Media Library (media_items.alt_text)
+// and reused here, with `name` as the last-resort fallback so the public `<img>` is
+// never missing alt. width/height come from the stored intrinsic dimensions and
+// reserve layout space (prevents CLS) when present.
 const MEDIA_INSERT_HANDLERS: Record<
   InlineInsertableType,
-  (editor: Editor, url: string, alt?: string) => void
+  (editor: Editor, attrs: ImageInsertAttrs) => void
 > = {
-  image: (editor, url, alt) =>
+  image: (editor, { src, alt, width, height }) =>
     editor
       .chain()
       .focus()
-      .setImage(alt ? { src: url, alt } : { src: url })
+      .setImage({ src, alt, ...(width ? { width } : {}), ...(height ? { height } : {}) })
       .run(),
-  video: (editor, url) => editor.chain().focus().setVideo({ src: url }).run(),
-  youtube: (editor, url) => editor.chain().focus().setYouTube({ src: url }).run(),
-  vimeo: (editor, url) => editor.chain().focus().setVimeo({ src: url }).run(),
-  instagram: (editor, url) => editor.chain().focus().setInstagram({ src: url }).run(),
-  tiktok: (editor, url) => editor.chain().focus().setTikTok({ src: url }).run(),
+  video: (editor, { src }) => editor.chain().focus().setVideo({ src }).run(),
+  youtube: (editor, { src }) => editor.chain().focus().setYouTube({ src }).run(),
+  vimeo: (editor, { src }) => editor.chain().focus().setVimeo({ src }).run(),
+  instagram: (editor, { src }) => editor.chain().focus().setInstagram({ src }).run(),
+  tiktok: (editor, { src }) => editor.chain().focus().setTikTok({ src }).run(),
 }
 
 function isInlineInsertableType(type: MediaType): type is InlineInsertableType {
@@ -104,9 +107,29 @@ function isInlineInsertableType(type: MediaType): type is InlineInsertableType {
 
 // --- Helpers ---
 
+type ImageInsertAttrs = {
+  src: string
+  alt: string
+  width?: number | null
+  height?: number | null
+}
+
 function insertMediaIntoEditor(
   editor: Editor,
-  item: { type: MediaType; url: string; alt?: string }
+  item: {
+    type: MediaType
+    url: string
+    // `name` is optional because only the image branch consumes it (for alt
+    // resolution). Embed types (youtube/vimeo/instagram/tiktok) carry no
+    // meaningful filename — fabricating one would produce junk alt text — so
+    // they pass `{ type, url }` only. The image branch narrows below and
+    // guarantees a defined `name` before calling `resolveInsertAlt`, keeping
+    // its "alt is never empty" invariant intact.
+    name?: string
+    alt_text?: string | null
+    width?: number | null
+    height?: number | null
+  }
 ) {
   if (!isInlineInsertableType(item.type)) {
     // Defense in depth: the grid is already filtered to inline-insertable
@@ -114,7 +137,21 @@ function insertMediaIntoEditor(
     // not a user-facing case worth localizing.
     return
   }
-  MEDIA_INSERT_HANDLERS[item.type](editor, item.url, item.alt)
+  if (item.type === 'image') {
+    // Only the image handler uses alt/dimensions. `handleSelect` always passes
+    // a real `name` for image rows; the `?? item.url` is a defensive last
+    // resort so `resolveInsertAlt` always receives a defined `name` and never
+    // returns an empty alt — even if a caller omits it.
+    MEDIA_INSERT_HANDLERS.image(editor, {
+      src: item.url,
+      alt: resolveInsertAlt({ name: item.name ?? item.url, alt_text: item.alt_text }),
+      width: item.width,
+      height: item.height,
+    })
+    return
+  }
+  // Embed/video types ignore alt/dimensions entirely.
+  MEDIA_INSERT_HANDLERS[item.type](editor, { src: item.url, alt: '' })
 }
 
 // --- Embed Tab (YouTube/Vimeo URL only) ---
@@ -251,10 +288,6 @@ function LibraryTab({
 }) {
   const [typeFilter, setTypeFilter] = useState<MediaType | undefined>(undefined)
   const [folderFilter, setFolderFilter] = useState<string | null | undefined>(undefined)
-  // Optional alt text applied to images inserted from the library. Kept simple:
-  // a single shared input — the user types a description, then clicks the image
-  // to insert it with that alt. Empty alt is allowed (insert is never blocked).
-  const [altText, setAltText] = useState('')
   const [uploadProgress, setUploadProgress] = useState<number | null>(null)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [isDragOver, setIsDragOver] = useState(false)
@@ -341,13 +374,17 @@ function LibraryTab({
 
   function handleSelect(item: MediaItemListItem) {
     if (!editor) return
-    const trimmedAlt = altText.trim()
+    // Alt is reused from the media item (set once in the Media Library), with the
+    // filename as fallback — no per-insert alt input. width/height (if stored)
+    // reserve layout space to prevent CLS.
     insertMediaIntoEditor(editor, {
       type: item.type as MediaType,
       url: item.url,
-      alt: trimmedAlt || undefined,
+      name: item.name,
+      alt_text: item.alt_text,
+      width: item.width,
+      height: item.height,
     })
-    setAltText('')
     onInserted()
   }
 
@@ -387,22 +424,6 @@ function LibraryTab({
       {uploadError && <p className="text-xs text-destructive" role="alert">{uploadError}</p>}
 
       {middleSlot}
-
-      {/* Optional alt text — applied to images inserted from the grid below.
-          Encouraged (help text) but never required: empty alt still inserts. */}
-      <div className="space-y-1">
-        <Label htmlFor="media-alt-text">{messages.media.altTextLabel}</Label>
-        <Input
-          id="media-alt-text"
-          value={altText}
-          onChange={(e) => setAltText(e.target.value)}
-          placeholder={messages.media.altTextPlaceholder}
-          aria-describedby="media-alt-text-help"
-        />
-        <p id="media-alt-text-help" className="text-xs text-muted-foreground">
-          {messages.media.altTextHelp}
-        </p>
-      </div>
 
       <div className="flex items-center gap-2">
         {folders && folders.length > 0 && (

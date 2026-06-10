@@ -544,6 +544,7 @@ export type Database = {
       }
       media_items: {
         Row: {
+          alt_text: string | null
           created_at: string
           folder_id: string | null
           height: number | null
@@ -560,6 +561,7 @@ export type Database = {
           width: number | null
         }
         Insert: {
+          alt_text?: string | null
           created_at?: string
           folder_id?: string | null
           height?: number | null
@@ -576,6 +578,7 @@ export type Database = {
           width?: number | null
         }
         Update: {
+          alt_text?: string | null
           created_at?: string
           folder_id?: string | null
           height?: number | null

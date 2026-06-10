@@ -1,5 +1,6 @@
 
 
+import { useState } from 'react'
 import { Image } from '@unpic/react'
 import {
   Button,
@@ -8,8 +9,10 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  Input,
+  Label,
 } from '@agency/ui'
-import { FileText, Download } from 'lucide-react'
+import { FileText, Download, Loader2 } from 'lucide-react'
 import type { MediaItem, MediaType } from '../types'
 import { extractVideoId, formatBytes, buildEmbedUrl } from '../utils'
 import { messages } from '@/lib/messages'
@@ -18,6 +21,10 @@ type MediaPreviewDialogProps = {
   item: MediaItem | null
   open: boolean
   onClose: () => void
+  /** Persist the library-level alt text for the current (image) item. */
+  onSaveAlt?: (altText: string) => void
+  isSavingAlt?: boolean
+  altSaveError?: string | null
 }
 
 function formatDate(dateString: string | null): string | null {
@@ -150,7 +157,72 @@ function PreviewContent({ item }: { item: MediaItem }) {
   return null
 }
 
-export function MediaPreviewDialog({ item, open, onClose }: MediaPreviewDialogProps) {
+/**
+ * Library-level alt text editor for an image item. Alt is set ONCE here and
+ * reused across all insert paths (`alt_text || name` fallback on insert). Only
+ * rendered for image items — non-image media (video, embeds, audio, documents)
+ * don't carry alt text on the public site.
+ *
+ * Keyed by item id at the call site so it re-initializes when switching items.
+ */
+function AltTextForm({
+  item,
+  onSaveAlt,
+  isSaving,
+  saveError,
+}: {
+  item: MediaItem
+  onSaveAlt: (altText: string) => void
+  isSaving: boolean
+  saveError: string | null
+}) {
+  const [value, setValue] = useState(item.alt_text ?? '')
+  const isDirty = value.trim() !== (item.alt_text ?? '').trim()
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    onSaveAlt(value)
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-1 border-t border-border pt-4">
+      <Label htmlFor="media-alt-text">{messages.media.altTextLabel}</Label>
+      <div className="flex items-start gap-2">
+        <div className="flex-1">
+          <Input
+            id="media-alt-text"
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            placeholder={messages.media.altTextPlaceholder}
+            maxLength={300}
+            aria-describedby="media-alt-text-help"
+          />
+        </div>
+        <Button type="submit" disabled={isSaving || !isDirty}>
+          {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />}
+          {messages.common.save}
+        </Button>
+      </div>
+      <p id="media-alt-text-help" className="text-xs text-muted-foreground">
+        {messages.media.altTextHelp}
+      </p>
+      {saveError && (
+        <p className="text-xs text-destructive" role="alert">
+          {saveError}
+        </p>
+      )}
+    </form>
+  )
+}
+
+export function MediaPreviewDialog({
+  item,
+  open,
+  onClose,
+  onSaveAlt,
+  isSavingAlt = false,
+  altSaveError = null,
+}: MediaPreviewDialogProps) {
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-3xl">
@@ -185,6 +257,18 @@ export function MediaPreviewDialog({ item, open, onClose }: MediaPreviewDialogPr
                 </span>
               )}
             </div>
+
+            {/* Alt text editor — image items only (alt is meaningless for video/
+                embed/audio/document on the public site). */}
+            {item.type === 'image' && onSaveAlt && (
+              <AltTextForm
+                key={item.id}
+                item={item}
+                onSaveAlt={onSaveAlt}
+                isSaving={isSavingAlt}
+                saveError={altSaveError}
+              />
+            )}
           </div>
         )}
       </DialogContent>

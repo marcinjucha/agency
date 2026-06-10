@@ -95,7 +95,7 @@ export const getMediaItemsFn = createServerFn({ method: 'POST' })
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const baseQuery = (supabase as any)
       .from('media_items')
-      .select('id, name, type, url, mime_type, size_bytes, thumbnail_url, created_at, folder_id, is_downloadable')
+      .select('id, name, type, url, mime_type, size_bytes, thumbnail_url, created_at, folder_id, is_downloadable, alt_text, width, height')
       .order('created_at', { ascending: false })
 
     const query = applyMediaItemFilters(baseQuery, filters)
@@ -244,7 +244,7 @@ export const updateMediaItemFn = createServerFn({ method: 'POST' })
     }
 
     const result = await requireAuthContext().andThen((auth) =>
-      patchMediaItem(auth, input.id, { name: parsed.data.name })
+      patchMediaItem(auth, input.id, buildMediaItemPatch(parsed.data))
     )
 
     return result.match(
@@ -367,6 +367,24 @@ function insertMediaItem(
       }),
     dbError
   )
+}
+
+/**
+ * Build the media-item UPDATE patch from validated form data.
+ *
+ * `alt_text` is included only when the caller actually sent the key — a
+ * rename-only update (no `alt_text` key) must NOT blank an existing alt, while
+ * an explicit `null` (the user cleared the field) DOES clear it. The `in` check
+ * preserves that undefined-vs-null distinction (Zod `.nullable().optional()`).
+ */
+export function buildMediaItemPatch(
+  data: ReturnType<typeof updateMediaItemSchema.parse>
+): Record<string, unknown> {
+  const patch: Record<string, unknown> = { name: data.name }
+  if ('alt_text' in data) {
+    patch.alt_text = data.alt_text ?? null
+  }
+  return patch
 }
 
 function patchMediaItem(

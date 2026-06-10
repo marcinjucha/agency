@@ -25,6 +25,16 @@ const imageDoc = {
   content: [{ type: 'image', attrs: { src: 'https://example.com/x.png' } }],
 } as const
 
+const imageWithDimensionsDoc = {
+  type: 'doc',
+  content: [
+    {
+      type: 'image',
+      attrs: { src: 'https://example.com/x.png', alt: 'opis', width: 800, height: 600 },
+    },
+  ],
+} as const
+
 const linkDoc = {
   type: 'doc',
   content: [
@@ -65,6 +75,23 @@ describe('base Image extension — loading hints in generated html_body', () => 
 
     expect(html).toContain('loading="lazy"')
     expect(html).toContain('decoding="async"')
+  })
+})
+
+describe('base Image extension — width/height attributes (CLS reservation)', () => {
+  it('renders width + height on the <img> when present (prevents CLS)', () => {
+    const html = generateHtmlFromContent(imageWithDimensionsDoc, baseExtensions)
+
+    expect(html).toContain('width="800"')
+    expect(html).toContain('height="600"')
+    expect(html).toContain('alt="opis"')
+  })
+
+  it('omits width/height when absent (existing content parses unchanged)', () => {
+    const html = generateHtmlFromContent(imageDoc, baseExtensions)
+
+    expect(html).not.toContain('width=')
+    expect(html).not.toContain('height=')
   })
 })
 
