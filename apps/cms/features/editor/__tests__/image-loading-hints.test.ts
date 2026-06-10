@@ -25,6 +25,22 @@ const imageDoc = {
   content: [{ type: 'image', attrs: { src: 'https://example.com/x.png' } }],
 } as const
 
+const linkDoc = {
+  type: 'doc',
+  content: [
+    {
+      type: 'paragraph',
+      content: [
+        {
+          type: 'text',
+          text: 'external',
+          marks: [{ type: 'link', attrs: { href: 'https://example.com/page' } }],
+        },
+      ],
+    },
+  ],
+} as const
+
 describe('base Image extension — loading hints in generated html_body', () => {
   it('emits loading="lazy" and decoding="async" on generated <img> (base extensions)', () => {
     const html = generateHtmlFromContent(imageDoc, baseExtensions)
@@ -49,5 +65,23 @@ describe('base Image extension — loading hints in generated html_body', () => 
 
     expect(html).toContain('loading="lazy"')
     expect(html).toContain('decoding="async"')
+  })
+})
+
+describe('base Link extension — rel/target hardening in generated html_body', () => {
+  it('emits rel="noopener noreferrer" and target="_blank" on generated <a> (base extensions)', () => {
+    const html = generateHtmlFromContent(linkDoc, baseExtensions)
+
+    expect(html).toContain('<a')
+    expect(html).toContain('href="https://example.com/page"')
+    expect(html).toContain('rel="noopener noreferrer"')
+    expect(html).toContain('target="_blank"')
+  })
+
+  it('inherits link hardening through blog editorExtensions (built on baseExtensions)', () => {
+    const html = generateHtmlFromContent(linkDoc, editorExtensions)
+
+    expect(html).toContain('rel="noopener noreferrer"')
+    expect(html).toContain('target="_blank"')
   })
 })

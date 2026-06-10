@@ -14,7 +14,11 @@ export const baseExtensions = [
   StarterKit.configure({
     heading: { levels: [1, 2, 3] },
   }),
-  Link.configure({ openOnClick: false }),
+  // new tab + rel=noopener on all content links (closes reverse-tabnabbing)
+  Link.configure({
+    openOnClick: false,
+    HTMLAttributes: { rel: 'noopener noreferrer', target: '_blank' },
+  }),
   Image.configure({ HTMLAttributes: { loading: 'lazy', decoding: 'async' } }),
   Underline,
   TextAlign.configure({ types: ['heading', 'paragraph'] }),

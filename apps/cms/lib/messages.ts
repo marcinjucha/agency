@@ -354,6 +354,11 @@ export const messages = {
     uploadToAdd: 'Przeciągnij pliki powyżej, aby dodać nowe media.',
     dragOrClickUpload: 'Przeciągnij lub kliknij aby przesłać',
     uploadDone: 'Gotowe',
+    // Alt text (optional) for images inserted into the editor body — improves
+    // a11y (WCAG) + SEO on the public site.
+    altTextLabel: 'Tekst alternatywny (opis obrazka)',
+    altTextPlaceholder: 'np. Zespół Halo Efekt podczas warsztatu',
+    altTextHelp: 'Opcjonalny, ale zalecany — opisuje obrazek czytnikom ekranu i wyszukiwarkom.',
     // Folders
     folders: 'Foldery',
     createFolder: 'Nowy folder',

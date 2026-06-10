@@ -8,6 +8,7 @@ import {
   DialogTitle,
   Button,
   Input,
+  Label,
   Progress,
   Select,
   SelectContent,
@@ -78,8 +79,18 @@ const INLINE_INSERTABLE_TYPES = [
 ] as const
 type InlineInsertableType = (typeof INLINE_INSERTABLE_TYPES)[number]
 
-const MEDIA_INSERT_HANDLERS: Record<InlineInsertableType, (editor: Editor, url: string) => void> = {
-  image: (editor, url) => editor.chain().focus().setImage({ src: url }).run(),
+// Only the image handler consumes `alt` — video/youtube/etc. ignore it. Passing
+// an alt threads it onto the generated public `<img>` for a11y (WCAG) + SEO.
+const MEDIA_INSERT_HANDLERS: Record<
+  InlineInsertableType,
+  (editor: Editor, url: string, alt?: string) => void
+> = {
+  image: (editor, url, alt) =>
+    editor
+      .chain()
+      .focus()
+      .setImage(alt ? { src: url, alt } : { src: url })
+      .run(),
   video: (editor, url) => editor.chain().focus().setVideo({ src: url }).run(),
   youtube: (editor, url) => editor.chain().focus().setYouTube({ src: url }).run(),
   vimeo: (editor, url) => editor.chain().focus().setVimeo({ src: url }).run(),
@@ -95,7 +106,7 @@ function isInlineInsertableType(type: MediaType): type is InlineInsertableType {
 
 function insertMediaIntoEditor(
   editor: Editor,
-  item: { type: MediaType; url: string }
+  item: { type: MediaType; url: string; alt?: string }
 ) {
   if (!isInlineInsertableType(item.type)) {
     // Defense in depth: the grid is already filtered to inline-insertable
@@ -103,7 +114,7 @@ function insertMediaIntoEditor(
     // not a user-facing case worth localizing.
     return
   }
-  MEDIA_INSERT_HANDLERS[item.type](editor, item.url)
+  MEDIA_INSERT_HANDLERS[item.type](editor, item.url, item.alt)
 }
 
 // --- Embed Tab (YouTube/Vimeo URL only) ---
@@ -240,6 +251,10 @@ function LibraryTab({
 }) {
   const [typeFilter, setTypeFilter] = useState<MediaType | undefined>(undefined)
   const [folderFilter, setFolderFilter] = useState<string | null | undefined>(undefined)
+  // Optional alt text applied to images inserted from the library. Kept simple:
+  // a single shared input — the user types a description, then clicks the image
+  // to insert it with that alt. Empty alt is allowed (insert is never blocked).
+  const [altText, setAltText] = useState('')
   const [uploadProgress, setUploadProgress] = useState<number | null>(null)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [isDragOver, setIsDragOver] = useState(false)
@@ -326,7 +341,13 @@ function LibraryTab({
 
   function handleSelect(item: MediaItemListItem) {
     if (!editor) return
-    insertMediaIntoEditor(editor, { type: item.type as MediaType, url: item.url })
+    const trimmedAlt = altText.trim()
+    insertMediaIntoEditor(editor, {
+      type: item.type as MediaType,
+      url: item.url,
+      alt: trimmedAlt || undefined,
+    })
+    setAltText('')
     onInserted()
   }
 
@@ -366,6 +387,22 @@ function LibraryTab({
       {uploadError && <p className="text-xs text-destructive" role="alert">{uploadError}</p>}
 
       {middleSlot}
+
+      {/* Optional alt text — applied to images inserted from the grid below.
+          Encouraged (help text) but never required: empty alt still inserts. */}
+      <div className="space-y-1">
+        <Label htmlFor="media-alt-text">{messages.media.altTextLabel}</Label>
+        <Input
+          id="media-alt-text"
+          value={altText}
+          onChange={(e) => setAltText(e.target.value)}
+          placeholder={messages.media.altTextPlaceholder}
+          aria-describedby="media-alt-text-help"
+        />
+        <p id="media-alt-text-help" className="text-xs text-muted-foreground">
+          {messages.media.altTextHelp}
+        </p>
+      </div>
 
       <div className="flex items-center gap-2">
         {folders && folders.length > 0 && (
