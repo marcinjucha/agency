@@ -1,7 +1,6 @@
 project:
   name: "Halo Efekt"
   type: monorepo
-  clickup_list_ids: "Email:901217856226, Workflow Engine:901217856227, Intake:901217856228, Blog & Media:901217856229, Tech:901217856230"
   tech_stack: "Turborepo, Next.js 16 (App Router), React 19, Tailwind CSS 4, shadcn/ui, Supabase (PostgreSQL 17 + RLS), TanStack Query 5, React Hook Form 7, Zod 3, n8n (self-hosted), Resend, AWS S3, Google Calendar API"
 
 architecture:

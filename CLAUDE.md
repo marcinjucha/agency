@@ -188,7 +188,7 @@ This monorepo contains two Notion projects with separate PROJECT_SPEC files:
 
 ## Notion Integration
 
-**This project uses the Notion Agency Database as the primary task tracker (reverted from ClickUp 2026-05-12).**
+**This project uses the Notion Agency Database as the primary task tracker.**
 
 - **Projects collection:** `collection://29284f14-76e0-802f-a1de-000b357345a9` (database `29284f14-76e0-8065-ae11-ebe3685f4c02`)
 - **Tasks collection:** `collection://29284f14-76e0-8062-a18d-000bfce0cf23` (database `29284f14-76e0-8012-8708-f1c5d3a78386`)
@@ -217,8 +217,6 @@ This monorepo contains two Notion projects with separate PROJECT_SPEC files:
 **Priority values:** `🔴 Urgent` | `🟠 High` | `🟡 Medium` | `🟢 Low`.
 
 **XL features:** Create separate tasks per iteration with a shared slug prefix (e.g. `booking-flow: iter 1 ...`, `booking-flow: iter 2 ...`) for easy filtering. Single-task-with-checklist for S/M tasks.
-
-**Task tracking history:** Project used ClickUp from 2026-05-09 to 2026-05-12, then migrated back to Notion Agency Database. ClickUp references in older memory/docs are historical only — `ag-clickup-patterns` skill has been deleted; do NOT create new tasks in ClickUp.
 
 ---
 
