@@ -14,6 +14,7 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as AdminWorkflowsIndexRouteImport } from './routes/admin/workflows/index'
+import { Route as AdminVentureIndexRouteImport } from './routes/admin/venture/index'
 import { Route as AdminUsersIndexRouteImport } from './routes/admin/users/index'
 import { Route as AdminTenantsIndexRouteImport } from './routes/admin/tenants/index'
 import { Route as AdminSurveysIndexRouteImport } from './routes/admin/surveys/index'
@@ -42,11 +43,14 @@ import { Route as AdminDocforgeLicensesRouteImport } from './routes/admin/docfor
 import { Route as AdminBlogNewRouteImport } from './routes/admin/blog/new'
 import { Route as AdminBlogPostIdRouteImport } from './routes/admin/blog/$postId'
 import { Route as AdminWorkflowsExecutionsIndexRouteImport } from './routes/admin/workflows/executions/index'
+import { Route as AdminVentureClientsIndexRouteImport } from './routes/admin/venture/clients/index'
 import { Route as AdminShopProductsIndexRouteImport } from './routes/admin/shop/products/index'
 import { Route as AdminShopMarketplaceIndexRouteImport } from './routes/admin/shop/marketplace/index'
 import { Route as ApiVentureCampaignsSlugRouteImport } from './routes/api/venture/campaigns/$slug'
 import { Route as ApiMarketplaceMarketplaceCallbackRouteImport } from './routes/api/marketplace/$marketplace/callback'
 import { Route as AdminWorkflowsExecutionsExecutionIdRouteImport } from './routes/admin/workflows/executions/$executionId'
+import { Route as AdminVentureCampaignsNewRouteImport } from './routes/admin/venture/campaigns/new'
+import { Route as AdminVentureCampaignsIdRouteImport } from './routes/admin/venture/campaigns/$id'
 import { Route as AdminShopProductsNewRouteImport } from './routes/admin/shop/products/new'
 import { Route as AdminShopProductsProductIdRouteImport } from './routes/admin/shop/products/$productId'
 import { Route as AdminShopMarketplaceImportRouteImport } from './routes/admin/shop/marketplace/import'
@@ -74,6 +78,11 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
 const AdminWorkflowsIndexRoute = AdminWorkflowsIndexRouteImport.update({
   id: '/workflows/',
   path: '/workflows/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminVentureIndexRoute = AdminVentureIndexRouteImport.update({
+  id: '/venture/',
+  path: '/venture/',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminUsersIndexRoute = AdminUsersIndexRouteImport.update({
@@ -220,6 +229,12 @@ const AdminWorkflowsExecutionsIndexRoute =
     path: '/workflows/executions/',
     getParentRoute: () => AdminRoute,
   } as any)
+const AdminVentureClientsIndexRoute =
+  AdminVentureClientsIndexRouteImport.update({
+    id: '/venture/clients/',
+    path: '/venture/clients/',
+    getParentRoute: () => AdminRoute,
+  } as any)
 const AdminShopProductsIndexRoute = AdminShopProductsIndexRouteImport.update({
   id: '/shop/products/',
   path: '/shop/products/',
@@ -248,6 +263,17 @@ const AdminWorkflowsExecutionsExecutionIdRoute =
     path: '/workflows/executions/$executionId',
     getParentRoute: () => AdminRoute,
   } as any)
+const AdminVentureCampaignsNewRoute =
+  AdminVentureCampaignsNewRouteImport.update({
+    id: '/venture/campaigns/new',
+    path: '/venture/campaigns/new',
+    getParentRoute: () => AdminRoute,
+  } as any)
+const AdminVentureCampaignsIdRoute = AdminVentureCampaignsIdRouteImport.update({
+  id: '/venture/campaigns/$id',
+  path: '/venture/campaigns/$id',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminShopProductsNewRoute = AdminShopProductsNewRouteImport.update({
   id: '/shop/products/new',
   path: '/shop/products/new',
@@ -298,15 +324,19 @@ export interface FileRoutesByFullPath {
   '/admin/surveys/': typeof AdminSurveysIndexRoute
   '/admin/tenants/': typeof AdminTenantsIndexRoute
   '/admin/users/': typeof AdminUsersIndexRoute
+  '/admin/venture/': typeof AdminVentureIndexRoute
   '/admin/workflows/': typeof AdminWorkflowsIndexRoute
   '/admin/shop/marketplace/import': typeof AdminShopMarketplaceImportRoute
   '/admin/shop/products/$productId': typeof AdminShopProductsProductIdRoute
   '/admin/shop/products/new': typeof AdminShopProductsNewRoute
+  '/admin/venture/campaigns/$id': typeof AdminVentureCampaignsIdRoute
+  '/admin/venture/campaigns/new': typeof AdminVentureCampaignsNewRoute
   '/admin/workflows/executions/$executionId': typeof AdminWorkflowsExecutionsExecutionIdRoute
   '/api/marketplace/$marketplace/callback': typeof ApiMarketplaceMarketplaceCallbackRoute
   '/api/venture/campaigns/$slug': typeof ApiVentureCampaignsSlugRoute
   '/admin/shop/marketplace/': typeof AdminShopMarketplaceIndexRoute
   '/admin/shop/products/': typeof AdminShopProductsIndexRoute
+  '/admin/venture/clients/': typeof AdminVentureClientsIndexRoute
   '/admin/workflows/executions/': typeof AdminWorkflowsExecutionsIndexRoute
 }
 export interface FileRoutesByTo {
@@ -340,15 +370,19 @@ export interface FileRoutesByTo {
   '/admin/surveys': typeof AdminSurveysIndexRoute
   '/admin/tenants': typeof AdminTenantsIndexRoute
   '/admin/users': typeof AdminUsersIndexRoute
+  '/admin/venture': typeof AdminVentureIndexRoute
   '/admin/workflows': typeof AdminWorkflowsIndexRoute
   '/admin/shop/marketplace/import': typeof AdminShopMarketplaceImportRoute
   '/admin/shop/products/$productId': typeof AdminShopProductsProductIdRoute
   '/admin/shop/products/new': typeof AdminShopProductsNewRoute
+  '/admin/venture/campaigns/$id': typeof AdminVentureCampaignsIdRoute
+  '/admin/venture/campaigns/new': typeof AdminVentureCampaignsNewRoute
   '/admin/workflows/executions/$executionId': typeof AdminWorkflowsExecutionsExecutionIdRoute
   '/api/marketplace/$marketplace/callback': typeof ApiMarketplaceMarketplaceCallbackRoute
   '/api/venture/campaigns/$slug': typeof ApiVentureCampaignsSlugRoute
   '/admin/shop/marketplace': typeof AdminShopMarketplaceIndexRoute
   '/admin/shop/products': typeof AdminShopProductsIndexRoute
+  '/admin/venture/clients': typeof AdminVentureClientsIndexRoute
   '/admin/workflows/executions': typeof AdminWorkflowsExecutionsIndexRoute
 }
 export interface FileRoutesById {
@@ -384,15 +418,19 @@ export interface FileRoutesById {
   '/admin/surveys/': typeof AdminSurveysIndexRoute
   '/admin/tenants/': typeof AdminTenantsIndexRoute
   '/admin/users/': typeof AdminUsersIndexRoute
+  '/admin/venture/': typeof AdminVentureIndexRoute
   '/admin/workflows/': typeof AdminWorkflowsIndexRoute
   '/admin/shop/marketplace/import': typeof AdminShopMarketplaceImportRoute
   '/admin/shop/products/$productId': typeof AdminShopProductsProductIdRoute
   '/admin/shop/products/new': typeof AdminShopProductsNewRoute
+  '/admin/venture/campaigns/$id': typeof AdminVentureCampaignsIdRoute
+  '/admin/venture/campaigns/new': typeof AdminVentureCampaignsNewRoute
   '/admin/workflows/executions/$executionId': typeof AdminWorkflowsExecutionsExecutionIdRoute
   '/api/marketplace/$marketplace/callback': typeof ApiMarketplaceMarketplaceCallbackRoute
   '/api/venture/campaigns/$slug': typeof ApiVentureCampaignsSlugRoute
   '/admin/shop/marketplace/': typeof AdminShopMarketplaceIndexRoute
   '/admin/shop/products/': typeof AdminShopProductsIndexRoute
+  '/admin/venture/clients/': typeof AdminVentureClientsIndexRoute
   '/admin/workflows/executions/': typeof AdminWorkflowsExecutionsIndexRoute
 }
 export interface FileRouteTypes {
@@ -429,15 +467,19 @@ export interface FileRouteTypes {
     | '/admin/surveys/'
     | '/admin/tenants/'
     | '/admin/users/'
+    | '/admin/venture/'
     | '/admin/workflows/'
     | '/admin/shop/marketplace/import'
     | '/admin/shop/products/$productId'
     | '/admin/shop/products/new'
+    | '/admin/venture/campaigns/$id'
+    | '/admin/venture/campaigns/new'
     | '/admin/workflows/executions/$executionId'
     | '/api/marketplace/$marketplace/callback'
     | '/api/venture/campaigns/$slug'
     | '/admin/shop/marketplace/'
     | '/admin/shop/products/'
+    | '/admin/venture/clients/'
     | '/admin/workflows/executions/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -471,15 +513,19 @@ export interface FileRouteTypes {
     | '/admin/surveys'
     | '/admin/tenants'
     | '/admin/users'
+    | '/admin/venture'
     | '/admin/workflows'
     | '/admin/shop/marketplace/import'
     | '/admin/shop/products/$productId'
     | '/admin/shop/products/new'
+    | '/admin/venture/campaigns/$id'
+    | '/admin/venture/campaigns/new'
     | '/admin/workflows/executions/$executionId'
     | '/api/marketplace/$marketplace/callback'
     | '/api/venture/campaigns/$slug'
     | '/admin/shop/marketplace'
     | '/admin/shop/products'
+    | '/admin/venture/clients'
     | '/admin/workflows/executions'
   id:
     | '__root__'
@@ -514,15 +560,19 @@ export interface FileRouteTypes {
     | '/admin/surveys/'
     | '/admin/tenants/'
     | '/admin/users/'
+    | '/admin/venture/'
     | '/admin/workflows/'
     | '/admin/shop/marketplace/import'
     | '/admin/shop/products/$productId'
     | '/admin/shop/products/new'
+    | '/admin/venture/campaigns/$id'
+    | '/admin/venture/campaigns/new'
     | '/admin/workflows/executions/$executionId'
     | '/api/marketplace/$marketplace/callback'
     | '/api/venture/campaigns/$slug'
     | '/admin/shop/marketplace/'
     | '/admin/shop/products/'
+    | '/admin/venture/clients/'
     | '/admin/workflows/executions/'
   fileRoutesById: FileRoutesById
 }
@@ -571,6 +621,13 @@ declare module '@tanstack/react-router' {
       path: '/workflows'
       fullPath: '/admin/workflows/'
       preLoaderRoute: typeof AdminWorkflowsIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/venture/': {
+      id: '/admin/venture/'
+      path: '/venture'
+      fullPath: '/admin/venture/'
+      preLoaderRoute: typeof AdminVentureIndexRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/users/': {
@@ -769,6 +826,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminWorkflowsExecutionsIndexRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/venture/clients/': {
+      id: '/admin/venture/clients/'
+      path: '/venture/clients'
+      fullPath: '/admin/venture/clients/'
+      preLoaderRoute: typeof AdminVentureClientsIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/shop/products/': {
       id: '/admin/shop/products/'
       path: '/shop/products'
@@ -802,6 +866,20 @@ declare module '@tanstack/react-router' {
       path: '/workflows/executions/$executionId'
       fullPath: '/admin/workflows/executions/$executionId'
       preLoaderRoute: typeof AdminWorkflowsExecutionsExecutionIdRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/venture/campaigns/new': {
+      id: '/admin/venture/campaigns/new'
+      path: '/venture/campaigns/new'
+      fullPath: '/admin/venture/campaigns/new'
+      preLoaderRoute: typeof AdminVentureCampaignsNewRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/venture/campaigns/$id': {
+      id: '/admin/venture/campaigns/$id'
+      path: '/venture/campaigns/$id'
+      fullPath: '/admin/venture/campaigns/$id'
+      preLoaderRoute: typeof AdminVentureCampaignsIdRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/shop/products/new': {
@@ -855,13 +933,17 @@ interface AdminRouteChildren {
   AdminSurveysIndexRoute: typeof AdminSurveysIndexRoute
   AdminTenantsIndexRoute: typeof AdminTenantsIndexRoute
   AdminUsersIndexRoute: typeof AdminUsersIndexRoute
+  AdminVentureIndexRoute: typeof AdminVentureIndexRoute
   AdminWorkflowsIndexRoute: typeof AdminWorkflowsIndexRoute
   AdminShopMarketplaceImportRoute: typeof AdminShopMarketplaceImportRoute
   AdminShopProductsProductIdRoute: typeof AdminShopProductsProductIdRoute
   AdminShopProductsNewRoute: typeof AdminShopProductsNewRoute
+  AdminVentureCampaignsIdRoute: typeof AdminVentureCampaignsIdRoute
+  AdminVentureCampaignsNewRoute: typeof AdminVentureCampaignsNewRoute
   AdminWorkflowsExecutionsExecutionIdRoute: typeof AdminWorkflowsExecutionsExecutionIdRoute
   AdminShopMarketplaceIndexRoute: typeof AdminShopMarketplaceIndexRoute
   AdminShopProductsIndexRoute: typeof AdminShopProductsIndexRoute
+  AdminVentureClientsIndexRoute: typeof AdminVentureClientsIndexRoute
   AdminWorkflowsExecutionsIndexRoute: typeof AdminWorkflowsExecutionsIndexRoute
 }
 
@@ -892,14 +974,18 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminSurveysIndexRoute: AdminSurveysIndexRoute,
   AdminTenantsIndexRoute: AdminTenantsIndexRoute,
   AdminUsersIndexRoute: AdminUsersIndexRoute,
+  AdminVentureIndexRoute: AdminVentureIndexRoute,
   AdminWorkflowsIndexRoute: AdminWorkflowsIndexRoute,
   AdminShopMarketplaceImportRoute: AdminShopMarketplaceImportRoute,
   AdminShopProductsProductIdRoute: AdminShopProductsProductIdRoute,
   AdminShopProductsNewRoute: AdminShopProductsNewRoute,
+  AdminVentureCampaignsIdRoute: AdminVentureCampaignsIdRoute,
+  AdminVentureCampaignsNewRoute: AdminVentureCampaignsNewRoute,
   AdminWorkflowsExecutionsExecutionIdRoute:
     AdminWorkflowsExecutionsExecutionIdRoute,
   AdminShopMarketplaceIndexRoute: AdminShopMarketplaceIndexRoute,
   AdminShopProductsIndexRoute: AdminShopProductsIndexRoute,
+  AdminVentureClientsIndexRoute: AdminVentureClientsIndexRoute,
   AdminWorkflowsExecutionsIndexRoute: AdminWorkflowsExecutionsIndexRoute,
 }
 

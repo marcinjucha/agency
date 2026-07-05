@@ -16,6 +16,7 @@ import {
   Store,
   Zap,
   History,
+  Gift,
   Users,
   Shield,
   Building2,
@@ -78,6 +79,14 @@ const menuGroups: MenuGroup[] = [
       { href: routes.admin.shopProducts, label: messages.nav.shopProducts, icon: ShoppingBag },
       { href: routes.admin.shopCategories, label: messages.nav.shopCategories, icon: Tags },
       { href: routes.admin.shopMarketplace, label: messages.nav.shopMarketplace, icon: Store },
+    ],
+  },
+  {
+    label: messages.nav.groupVenture,
+    requiredPermissions: ['bonus_funnel.campaigns', 'bonus_funnel.clients'],
+    items: [
+      { href: routes.admin.venture, label: messages.nav.ventureCampaigns, icon: Gift },
+      { href: routes.admin.ventureClients, label: messages.nav.ventureClients, icon: Users },
     ],
   },
   {

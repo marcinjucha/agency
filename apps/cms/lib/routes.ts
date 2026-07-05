@@ -46,6 +46,12 @@ export const routes = {
     shopMarketplaceConnection: (id: string) => `/admin/shop/marketplace/${id}`,
     shopMarketplaceImport: '/admin/shop/marketplace/import',
 
+    // Venture bonus-funnel
+    venture: '/admin/venture',
+    ventureCampaignNew: '/admin/venture/campaigns/new',
+    ventureCampaign: (id: string) => `/admin/venture/campaigns/${id}`,
+    ventureClients: '/admin/venture/clients',
+
     // Automation
     workflows: '/admin/workflows',
     workflowNew: '/admin/workflows/new',

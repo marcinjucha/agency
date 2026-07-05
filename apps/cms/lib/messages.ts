@@ -39,6 +39,124 @@ export const messages = {
     viewList: 'Widok listy',
   },
 
+  venture: {
+    // Bonus-funnel admin CRUD — generic, client-safe DB error strings.
+    // Raw Supabase/Postgres errors (constraint names, RLS policy text) are
+    // logged via console.error but never returned to the client.
+    slugTaken: 'Ten slug jest już zajęty',
+    operationFailed: 'Nie udało się wykonać operacji',
+
+    // --- Campaign list ---
+    campaignsTitle: 'Kampanie',
+    newCampaign: 'Nowa kampania',
+    noCampaigns: 'Brak kampanii',
+    noCampaignsDescription: 'Zacznij od utworzenia pierwszej kampanii bonusowej.',
+    loadCampaignsFailed: 'Nie udało się wczytać kampanii',
+    filterByClient: 'Filtruj wg klienta',
+    allClients: 'Wszyscy klienci',
+    unassignedClient: 'Bez klienta',
+    noBonusesCount: 'Brak bonusów',
+    bonusesCount: (n: number) =>
+      `${n} ${n === 1 ? 'bonus' : n >= 2 && n <= 4 ? 'bonusy' : 'bonusów'}`,
+
+    // --- Campaign editor ---
+    editCampaign: 'Edytuj kampanię',
+    backToCampaigns: 'Powrót do kampanii',
+    campaignNotFound: 'Nie znaleziono kampanii',
+    campaignNotFoundDescription: 'Kampania mogła zostać usunięta lub nie masz do niej dostępu.',
+    createCampaignFailed: 'Nie udało się utworzyć kampanii',
+    updateCampaignFailed: 'Nie udało się zapisać kampanii',
+    deleteCampaignFailed: 'Nie udało się usunąć kampanii',
+    deleteCampaignConfirmTitle: 'Usunąć kampanię?',
+    deleteCampaignConfirmDescription: (name: string) =>
+      `Kampania „${name}” zostanie trwale usunięta wraz z bonusami. Tej operacji nie można cofnąć.`,
+    formValidationError: 'Popraw błędy w formularzu',
+    clientLabel: 'Klient',
+    clientFixedHint: 'Klienta ustala się przy tworzeniu kampanii — nie można go później zmienić.',
+    slugLabel: 'Slug',
+    slugPlaceholder: 'nazwa-kampanii',
+    displayNameLabel: 'Nazwa wyświetlana',
+    displayNamePlaceholder: 'Publiczny tytuł kampanii',
+
+    // Brand editor
+    brandTitle: 'Wygląd (brand)',
+    brandHelp:
+      'Brand jest publiczny (widoczny na stronie) — nie wpisuj tu danych wrażliwych',
+    brandPrimaryLabel: 'Kolor główny',
+    brandAccentLabel: 'Kolor akcentu',
+    brandBgLabel: 'Kolor tła',
+    brandLogoUrlLabel: 'URL logo',
+    brandFontLabel: 'Font',
+    brandColorPlaceholder: '#1a1a1a',
+    brandLogoUrlPlaceholder: 'https://...',
+    brandFontPlaceholder: 'Inter, sans-serif',
+
+    // ESP
+    espTitle: 'Dostawca e-mail (ESP)',
+    espProviderLabel: 'Dostawca',
+    espProviderPlaceholder: 'beehiiv',
+    espAudienceRefLabel: 'beehiiv publication_id',
+    espAudienceRefPlaceholder: 'pub_...',
+    espTagLaunchLabel: 'Tag startowy',
+    espTagLaunchPlaceholder: 'launch-notify',
+
+    // Publish/status
+    publishedLabel: 'Opublikowana',
+    statusTitle: 'Status',
+
+    // --- Bonuses ---
+    bonusesTitle: 'Bonusy',
+    addBonus: 'Dodaj bonus',
+    noBonuses: 'Brak bonusów',
+    noBonusesDescription: 'Dodaj pierwszy bonus do tej kampanii.',
+    saveCampaignFirst: 'Zapisz kampanię, aby dodać bonusy.',
+    loadBonusesFailed: 'Nie udało się wczytać bonusów',
+    createBonusFailed: 'Nie udało się dodać bonusu',
+    updateBonusFailed: 'Nie udało się zapisać bonusu',
+    deleteBonusFailed: 'Nie udało się usunąć bonusu',
+    reorderBonusesFailed: 'Nie udało się zmienić kolejności',
+    deleteBonusConfirmTitle: 'Usunąć bonus?',
+    deleteBonusConfirmDescription: (title: string) =>
+      `Bonus „${title}” zostanie trwale usunięty. Tej operacji nie można cofnąć.`,
+    bonusTitleLabel: 'Tytuł',
+    bonusTitlePlaceholder: 'Nazwa bonusu',
+    bonusDescriptionLabel: 'Opis',
+    bonusDescriptionPlaceholder: 'Krótki opis bonusu (opcjonalnie)',
+    bonusTypeLabel: 'Typ',
+    bonusTypeLink: 'Link',
+    bonusTypeFile: 'Plik',
+    bonusUrlLabel: 'URL',
+    bonusUrlPlaceholder: 'https://...',
+    bonusAssetLabel: 'Plik (zasób z biblioteki)',
+    selectAsset: 'Wybierz plik z biblioteki',
+    changeAsset: 'Zmień plik',
+    removeAsset: 'Usuń plik',
+    noAssetSelected: 'Nie wybrano pliku',
+    moveUp: 'Przenieś w górę',
+    moveDown: 'Przenieś w dół',
+
+    // --- Clients ---
+    clientsTitle: 'Klienci',
+    newClient: 'Nowy klient',
+    noClients: 'Brak klientów',
+    noClientsDescription: 'Dodaj pierwszego klienta, aby przypisać do niego kampanie.',
+    loadClientsFailed: 'Nie udało się wczytać klientów',
+    createClientFailed: 'Nie udało się dodać klienta',
+    updateClientFailed: 'Nie udało się zapisać klienta',
+    deleteClientFailed: 'Nie udało się usunąć klienta',
+    deleteClientConfirmTitle: 'Usunąć klienta?',
+    deleteClientConfirmDescription: (name: string) =>
+      `Klient „${name}” zostanie trwale usunięty. Tej operacji nie można cofnąć.`,
+    clientNameLabel: 'Nazwa',
+    clientNamePlaceholder: 'Nazwa klienta',
+    clientSlugLabel: 'Slug',
+    selectClient: 'Wybierz klienta',
+    searchClient: 'Szukaj klienta…',
+    noClientResults: 'Brak wyników',
+    createClientInline: '+ Nowy klient',
+    newClientPlaceholder: 'Nazwa klienta',
+  },
+
   surveys: {
     createFailed: 'Nie udało się stworzyć ankiety',
     updateFailed: 'Nie udało się zaktualizować ankiety',
@@ -875,6 +993,9 @@ export const messages = {
     groupIntake: 'Intake',
     groupContent: 'Treść',
     groupShop: 'Sklep',
+    groupVenture: 'Bonus Funnel',
+    ventureCampaigns: 'Kampanie',
+    ventureClients: 'Klienci',
     groupAutomation: 'Automatyzacja',
     workflows: 'Workflow',
     workflowExecutions: 'Historia',
