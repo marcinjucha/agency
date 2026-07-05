@@ -385,6 +385,9 @@ Required in Vercel Dashboard:
 - `N8N_WORKFLOW_ORCHESTRATOR_URL` (server only — n8n Orchestrator webhook)
 - `ORCHESTRATOR_WEBHOOK_SECRET` (server only — Bearer token for CMS -> n8n auth)
 - `HOST_URL` (server only)
+- `BEEHIIV_API_KEY` (server only — venture bonus funnel ESP; single global Bearer key, `features/venture/esp/beehiiv.server.ts`)
+- `TALLY_WEBHOOK_SECRET` (server only — venture lead ingest webhook signature, `POST /api/venture/leads`; added iter 3)
+- `RESEND_API_KEY` (server only — venture transactional bonus email; beehiiv free has no Automations, so CMS sends the bonus mail; added iter 3)
 
 See `.env.local.example` for full list.
 
