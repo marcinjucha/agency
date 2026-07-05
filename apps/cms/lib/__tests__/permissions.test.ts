@@ -9,6 +9,7 @@ import {
   validateParentKeys,
   getRouteFeature,
   expandPermissionKeys,
+  PARENT_KEYS,
   type PermissionKey,
   type ParentKey,
 } from '../permissions'
@@ -40,6 +41,10 @@ describe('hasPermission', () => {
 
   it('returns false when child key does NOT grant parent', () => {
     expect(hasPermission('shop', ['shop.products'])).toBe(false)
+  })
+
+  it('bonus_funnel parent grants a bonus_funnel child (prefix match)', () => {
+    expect(hasPermission('bonus_funnel.clients', ['bonus_funnel'])).toBe(true)
   })
 })
 
@@ -174,6 +179,11 @@ describe('validateParentKeys', () => {
     const result = validateParentKeys([42, null, 'shop'])
     expect(result).toEqual(['shop'])
   })
+
+  it('keeps bonus_funnel as a valid parent key', () => {
+    const result = validateParentKeys(['bonus_funnel', 'surveys'])
+    expect(result).toEqual(['bonus_funnel', 'surveys'])
+  })
 })
 
 // ---------------------------------------------------------------------------
@@ -226,5 +236,28 @@ describe('expandPermissionKeys', () => {
   it('keeps key with no children as-is', () => {
     const result = expandPermissionKeys(['dashboard'])
     expect(result).toEqual(['dashboard'])
+  })
+
+  it('expands bonus_funnel to include all three children', () => {
+    const result = expandPermissionKeys(['bonus_funnel'])
+    expect(result).toEqual(
+      expect.arrayContaining([
+        'bonus_funnel',
+        'bonus_funnel.clients',
+        'bonus_funnel.campaigns',
+        'bonus_funnel.bonuses',
+      ]),
+    )
+    expect(result).toHaveLength(4)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// PARENT_KEYS
+// ---------------------------------------------------------------------------
+
+describe('PARENT_KEYS', () => {
+  it('includes bonus_funnel as a top-level parent key', () => {
+    expect(PARENT_KEYS).toContain('bonus_funnel')
   })
 })

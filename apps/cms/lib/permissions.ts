@@ -39,6 +39,14 @@ const PERMISSION_GROUPS = {
     key: 'workflows',
     children: ['workflows.executions', 'workflows.execute'] as const,
   },
+  bonus_funnel: {
+    key: 'bonus_funnel',
+    children: [
+      'bonus_funnel.clients',
+      'bonus_funnel.campaigns',
+      'bonus_funnel.bonuses',
+    ] as const,
+  },
   system: {
     key: 'system',
     children: [
