@@ -44,6 +44,7 @@ import { Route as AdminBlogPostIdRouteImport } from './routes/admin/blog/$postId
 import { Route as AdminWorkflowsExecutionsIndexRouteImport } from './routes/admin/workflows/executions/index'
 import { Route as AdminShopProductsIndexRouteImport } from './routes/admin/shop/products/index'
 import { Route as AdminShopMarketplaceIndexRouteImport } from './routes/admin/shop/marketplace/index'
+import { Route as ApiVentureCampaignsSlugRouteImport } from './routes/api/venture/campaigns/$slug'
 import { Route as ApiMarketplaceMarketplaceCallbackRouteImport } from './routes/api/marketplace/$marketplace/callback'
 import { Route as AdminWorkflowsExecutionsExecutionIdRouteImport } from './routes/admin/workflows/executions/$executionId'
 import { Route as AdminShopProductsNewRouteImport } from './routes/admin/shop/products/new'
@@ -230,6 +231,11 @@ const AdminShopMarketplaceIndexRoute =
     path: '/shop/marketplace/',
     getParentRoute: () => AdminRoute,
   } as any)
+const ApiVentureCampaignsSlugRoute = ApiVentureCampaignsSlugRouteImport.update({
+  id: '/api/venture/campaigns/$slug',
+  path: '/api/venture/campaigns/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiMarketplaceMarketplaceCallbackRoute =
   ApiMarketplaceMarketplaceCallbackRouteImport.update({
     id: '/api/marketplace/$marketplace/callback',
@@ -298,6 +304,7 @@ export interface FileRoutesByFullPath {
   '/admin/shop/products/new': typeof AdminShopProductsNewRoute
   '/admin/workflows/executions/$executionId': typeof AdminWorkflowsExecutionsExecutionIdRoute
   '/api/marketplace/$marketplace/callback': typeof ApiMarketplaceMarketplaceCallbackRoute
+  '/api/venture/campaigns/$slug': typeof ApiVentureCampaignsSlugRoute
   '/admin/shop/marketplace/': typeof AdminShopMarketplaceIndexRoute
   '/admin/shop/products/': typeof AdminShopProductsIndexRoute
   '/admin/workflows/executions/': typeof AdminWorkflowsExecutionsIndexRoute
@@ -339,6 +346,7 @@ export interface FileRoutesByTo {
   '/admin/shop/products/new': typeof AdminShopProductsNewRoute
   '/admin/workflows/executions/$executionId': typeof AdminWorkflowsExecutionsExecutionIdRoute
   '/api/marketplace/$marketplace/callback': typeof ApiMarketplaceMarketplaceCallbackRoute
+  '/api/venture/campaigns/$slug': typeof ApiVentureCampaignsSlugRoute
   '/admin/shop/marketplace': typeof AdminShopMarketplaceIndexRoute
   '/admin/shop/products': typeof AdminShopProductsIndexRoute
   '/admin/workflows/executions': typeof AdminWorkflowsExecutionsIndexRoute
@@ -382,6 +390,7 @@ export interface FileRoutesById {
   '/admin/shop/products/new': typeof AdminShopProductsNewRoute
   '/admin/workflows/executions/$executionId': typeof AdminWorkflowsExecutionsExecutionIdRoute
   '/api/marketplace/$marketplace/callback': typeof ApiMarketplaceMarketplaceCallbackRoute
+  '/api/venture/campaigns/$slug': typeof ApiVentureCampaignsSlugRoute
   '/admin/shop/marketplace/': typeof AdminShopMarketplaceIndexRoute
   '/admin/shop/products/': typeof AdminShopProductsIndexRoute
   '/admin/workflows/executions/': typeof AdminWorkflowsExecutionsIndexRoute
@@ -426,6 +435,7 @@ export interface FileRouteTypes {
     | '/admin/shop/products/new'
     | '/admin/workflows/executions/$executionId'
     | '/api/marketplace/$marketplace/callback'
+    | '/api/venture/campaigns/$slug'
     | '/admin/shop/marketplace/'
     | '/admin/shop/products/'
     | '/admin/workflows/executions/'
@@ -467,6 +477,7 @@ export interface FileRouteTypes {
     | '/admin/shop/products/new'
     | '/admin/workflows/executions/$executionId'
     | '/api/marketplace/$marketplace/callback'
+    | '/api/venture/campaigns/$slug'
     | '/admin/shop/marketplace'
     | '/admin/shop/products'
     | '/admin/workflows/executions'
@@ -509,6 +520,7 @@ export interface FileRouteTypes {
     | '/admin/shop/products/new'
     | '/admin/workflows/executions/$executionId'
     | '/api/marketplace/$marketplace/callback'
+    | '/api/venture/campaigns/$slug'
     | '/admin/shop/marketplace/'
     | '/admin/shop/products/'
     | '/admin/workflows/executions/'
@@ -521,6 +533,7 @@ export interface RootRouteChildren {
   ApiCalendarCallbackRoute: typeof ApiCalendarCallbackRoute
   ApiWorkflowsTriggerRoute: typeof ApiWorkflowsTriggerRoute
   ApiMarketplaceMarketplaceCallbackRoute: typeof ApiMarketplaceMarketplaceCallbackRoute
+  ApiVentureCampaignsSlugRoute: typeof ApiVentureCampaignsSlugRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -770,6 +783,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminShopMarketplaceIndexRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/api/venture/campaigns/$slug': {
+      id: '/api/venture/campaigns/$slug'
+      path: '/api/venture/campaigns/$slug'
+      fullPath: '/api/venture/campaigns/$slug'
+      preLoaderRoute: typeof ApiVentureCampaignsSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/marketplace/$marketplace/callback': {
       id: '/api/marketplace/$marketplace/callback'
       path: '/api/marketplace/$marketplace/callback'
@@ -893,6 +913,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiWorkflowsTriggerRoute: ApiWorkflowsTriggerRoute,
   ApiMarketplaceMarketplaceCallbackRoute:
     ApiMarketplaceMarketplaceCallbackRoute,
+  ApiVentureCampaignsSlugRoute: ApiVentureCampaignsSlugRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
