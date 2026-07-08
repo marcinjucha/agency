@@ -28,6 +28,7 @@ import { Route as AdminIntakeIndexRouteImport } from './routes/admin/intake/inde
 import { Route as AdminEmailTemplatesIndexRouteImport } from './routes/admin/email-templates/index'
 import { Route as AdminBlogIndexRouteImport } from './routes/admin/blog/index'
 import { Route as ApiWorkflowsTriggerRouteImport } from './routes/api/workflows/trigger'
+import { Route as ApiVentureLeadsRouteImport } from './routes/api/venture/leads'
 import { Route as ApiCalendarCallbackRouteImport } from './routes/api/calendar/callback'
 import { Route as AdminWorkflowsWorkflowIdRouteImport } from './routes/admin/workflows/$workflowId'
 import { Route as AdminTenantsNewRouteImport } from './routes/admin/tenants/new'
@@ -149,6 +150,11 @@ const AdminBlogIndexRoute = AdminBlogIndexRouteImport.update({
 const ApiWorkflowsTriggerRoute = ApiWorkflowsTriggerRouteImport.update({
   id: '/api/workflows/trigger',
   path: '/api/workflows/trigger',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiVentureLeadsRoute = ApiVentureLeadsRouteImport.update({
+  id: '/api/venture/leads',
+  path: '/api/venture/leads',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiCalendarCallbackRoute = ApiCalendarCallbackRouteImport.update({
@@ -311,6 +317,7 @@ export interface FileRoutesByFullPath {
   '/admin/tenants/new': typeof AdminTenantsNewRoute
   '/admin/workflows/$workflowId': typeof AdminWorkflowsWorkflowIdRoute
   '/api/calendar/callback': typeof ApiCalendarCallbackRoute
+  '/api/venture/leads': typeof ApiVentureLeadsRoute
   '/api/workflows/trigger': typeof ApiWorkflowsTriggerRoute
   '/admin/blog/': typeof AdminBlogIndexRoute
   '/admin/email-templates/': typeof AdminEmailTemplatesIndexRoute
@@ -357,6 +364,7 @@ export interface FileRoutesByTo {
   '/admin/tenants/new': typeof AdminTenantsNewRoute
   '/admin/workflows/$workflowId': typeof AdminWorkflowsWorkflowIdRoute
   '/api/calendar/callback': typeof ApiCalendarCallbackRoute
+  '/api/venture/leads': typeof ApiVentureLeadsRoute
   '/api/workflows/trigger': typeof ApiWorkflowsTriggerRoute
   '/admin/blog': typeof AdminBlogIndexRoute
   '/admin/email-templates': typeof AdminEmailTemplatesIndexRoute
@@ -405,6 +413,7 @@ export interface FileRoutesById {
   '/admin/tenants/new': typeof AdminTenantsNewRoute
   '/admin/workflows/$workflowId': typeof AdminWorkflowsWorkflowIdRoute
   '/api/calendar/callback': typeof ApiCalendarCallbackRoute
+  '/api/venture/leads': typeof ApiVentureLeadsRoute
   '/api/workflows/trigger': typeof ApiWorkflowsTriggerRoute
   '/admin/blog/': typeof AdminBlogIndexRoute
   '/admin/email-templates/': typeof AdminEmailTemplatesIndexRoute
@@ -454,6 +463,7 @@ export interface FileRouteTypes {
     | '/admin/tenants/new'
     | '/admin/workflows/$workflowId'
     | '/api/calendar/callback'
+    | '/api/venture/leads'
     | '/api/workflows/trigger'
     | '/admin/blog/'
     | '/admin/email-templates/'
@@ -500,6 +510,7 @@ export interface FileRouteTypes {
     | '/admin/tenants/new'
     | '/admin/workflows/$workflowId'
     | '/api/calendar/callback'
+    | '/api/venture/leads'
     | '/api/workflows/trigger'
     | '/admin/blog'
     | '/admin/email-templates'
@@ -547,6 +558,7 @@ export interface FileRouteTypes {
     | '/admin/tenants/new'
     | '/admin/workflows/$workflowId'
     | '/api/calendar/callback'
+    | '/api/venture/leads'
     | '/api/workflows/trigger'
     | '/admin/blog/'
     | '/admin/email-templates/'
@@ -581,6 +593,7 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRouteWithChildren
   LoginRoute: typeof LoginRoute
   ApiCalendarCallbackRoute: typeof ApiCalendarCallbackRoute
+  ApiVentureLeadsRoute: typeof ApiVentureLeadsRoute
   ApiWorkflowsTriggerRoute: typeof ApiWorkflowsTriggerRoute
   ApiMarketplaceMarketplaceCallbackRoute: typeof ApiMarketplaceMarketplaceCallbackRoute
   ApiVentureCampaignsSlugRoute: typeof ApiVentureCampaignsSlugRoute
@@ -719,6 +732,13 @@ declare module '@tanstack/react-router' {
       path: '/api/workflows/trigger'
       fullPath: '/api/workflows/trigger'
       preLoaderRoute: typeof ApiWorkflowsTriggerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/venture/leads': {
+      id: '/api/venture/leads'
+      path: '/api/venture/leads'
+      fullPath: '/api/venture/leads'
+      preLoaderRoute: typeof ApiVentureLeadsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/calendar/callback': {
@@ -996,6 +1016,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRouteWithChildren,
   LoginRoute: LoginRoute,
   ApiCalendarCallbackRoute: ApiCalendarCallbackRoute,
+  ApiVentureLeadsRoute: ApiVentureLeadsRoute,
   ApiWorkflowsTriggerRoute: ApiWorkflowsTriggerRoute,
   ApiMarketplaceMarketplaceCallbackRoute:
     ApiMarketplaceMarketplaceCallbackRoute,
