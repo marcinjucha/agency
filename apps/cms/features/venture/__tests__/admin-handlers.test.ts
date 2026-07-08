@@ -23,6 +23,7 @@ import {
   createClientHandler,
   deleteCampaignHandler,
   listBonusesHandler,
+  listCampaignsHandler,
   listClientsHandler,
   reorderBonusesHandler,
   updateCampaignHandler,
@@ -362,5 +363,73 @@ describe('update schema id-drop protection', () => {
 
   it('updateCampaignSchema accepts an empty partial (no fields required)', () => {
     expect(updateCampaignSchema.safeParse({}).success).toBe(true)
+  })
+})
+
+// ===========================================================================
+// Secret never selected by the authenticated client (defense-in-depth).
+// SELECT on so_campaigns.tally_webhook_secret is revoked from `authenticated`
+// at the DB layer, so every admin campaign read/write must project an EXPLICIT
+// column list that omits it (a bare select('*') would hit "permission denied
+// for column tally_webhook_secret"). These lock that invariant against drift.
+// ===========================================================================
+
+describe('admin campaign selects never include the plaintext secret', () => {
+  const selectArgs = (chain: { select: { mock: { calls: unknown[][] } } }): string[] =>
+    chain.select.mock.calls.map((c) => String(c[0] ?? ''))
+
+  it('listCampaigns projects explicit columns without tally_webhook_secret', async () => {
+    const { chains } = setupAuth({
+      so_clients: { data: [{ id: 'c1' }], error: null },
+      so_campaigns: { data: [], error: null },
+    })
+
+    await listCampaignsHandler()
+
+    const args = selectArgs(chains.so_campaigns)
+    expect(args.length).toBeGreaterThan(0)
+    for (const a of args) {
+      expect(a).not.toBe('*')
+      expect(a).not.toContain('tally_webhook_secret')
+    }
+    expect(args.some((a) => a.includes('has_webhook_secret'))).toBe(true)
+  })
+
+  it('createCampaign returns an explicit projection without tally_webhook_secret', async () => {
+    const { chains } = setupAuth({
+      so_clients: { data: { id: 'c1' }, error: null },
+      so_campaigns: { data: { id: 'camp-1', client_id: 'c1', slug: 'launch' }, error: null },
+    })
+
+    await createCampaignHandler({
+      client_id: 'c1',
+      slug: 'launch',
+      esp_provider: 'beehiiv',
+      esp_tag_launch: 'launch-notify',
+      published: false,
+    })
+
+    for (const a of selectArgs(chains.so_campaigns)) {
+      expect(a).not.toBe('*')
+      expect(a).not.toContain('tally_webhook_secret')
+    }
+    expect(selectArgs(chains.so_campaigns).some((a) => a.includes('has_webhook_secret'))).toBe(true)
+  })
+
+  it('updateCampaign returns an explicit projection without tally_webhook_secret', async () => {
+    const { chains } = setupAuth({
+      so_campaigns: { data: { client_id: 'c1', id: 'camp-1' }, error: null },
+      so_clients: { data: { id: 'c1' }, error: null },
+    })
+
+    await updateCampaignHandler('camp-1', { slug: 'renamed' })
+
+    // Includes the ownership-check select('client_id') AND the result projection —
+    // NEITHER may reference the secret.
+    for (const a of selectArgs(chains.so_campaigns)) {
+      expect(a).not.toBe('*')
+      expect(a).not.toContain('tally_webhook_secret')
+    }
+    expect(selectArgs(chains.so_campaigns).some((a) => a.includes('has_webhook_secret'))).toBe(true)
   })
 })

@@ -4,17 +4,19 @@ import crypto from 'node:crypto'
 // Venture bonus-funnel — Tally webhook signature verification (iter 3).
 //
 // Verified Tally contract (docs 2026-07-08): header `Tally-Signature`, algo
-// HMAC-SHA256 over the RAW request body string, digest base64, secret from
-// `TALLY_WEBHOOK_SECRET`. Verify BEFORE JSON.parse and compare with
+// HMAC-SHA256 over the RAW request body string, digest base64. The secret is now
+// PER-CAMPAIGN (so_campaigns.tally_webhook_secret) and passed IN as a parameter —
+// this module reads no env. Verify BEFORE JSON.parse and compare with
 // crypto.timingSafeEqual (guarding equal length first — timingSafeEqual throws
 // on length mismatch).
 //
 // Server-only (`node:crypto`) — hence the `.server.ts` suffix.
 // ---------------------------------------------------------------------------
 
-// Discriminated result so the route can map reasons to distinct HTTP statuses:
-//   missing_secret   → 500 (misconfiguration, log + generic error)
-//   missing_signature / invalid_signature → 401 { error: 'invalid_signature' }
+// Discriminated result. The route collapses EVERY invalid case to a uniform 401
+// { error: 'invalid_signature' } (no config/enumeration oracle). The route guards
+// a null/empty per-campaign secret itself, so `missing_secret` is defensive only:
+//   missing_secret / missing_signature / invalid_signature → 401 at the route.
 export type SignatureCheck =
   | { valid: true }
   | {

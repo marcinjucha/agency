@@ -5,7 +5,7 @@ import {
 } from '@/lib/server-auth.server'
 import { hasPermission, type PermissionKey } from '@/lib/permissions'
 import { messages } from '@/lib/messages'
-import type { Bonus, Campaign, Client } from './types'
+import type { AdminCampaign, Bonus, Client } from './types'
 import type {
   CreateBonusInput,
   CreateCampaignInput,
@@ -260,9 +260,21 @@ export function deleteClientHandler(id: string): Promise<VoidResult> {
 // Campaigns
 // ===========================================================================
 
+// Explicit column projection for ALL admin campaign reads/writes. Deliberately
+// EXCLUDES the plaintext `tally_webhook_secret`: SELECT on that column is revoked
+// from the `authenticated` role at the DB layer, so the authenticated (cookie)
+// client used here would get "permission denied for column tally_webhook_secret"
+// on a `select('*')` — the strip must happen at the SELECT, not in JS. Existence
+// is exposed via the generated column `has_webhook_secret` (tally_webhook_secret
+// IS NOT NULL), which the authenticated role CAN read. Bare `.select()` after
+// insert/update defaults to '*' → also uses this list. The route/webhook verify
+// path (ingest.server.ts) reads the real secret via a separate select.
+const ADMIN_CAMPAIGN_COLUMNS =
+  'id, client_id, slug, display_name, brand, esp_provider, esp_audience_ref, esp_tag_launch, published, created_at, updated_at, has_webhook_secret'
+
 export function listCampaignsHandler(
   clientId?: string,
-): Promise<MutationResult<Campaign[]>> {
+): Promise<MutationResult<AdminCampaign[]>> {
   return toMutation(
     gated(PERM.campaigns, (auth) =>
       // Resolve the tenant's client ids first, then scope campaigns to them.
@@ -274,15 +286,15 @@ export function listCampaignsHandler(
             ? [clientId]
             : []
           : ids
-        if (scoped.length === 0) return ok<Campaign[], string>([])
+        if (scoped.length === 0) return ok<AdminCampaign[], string>([])
         return ResultAsync.fromPromise(
           tbl(auth, 'so_campaigns')
-            .select('*')
+            .select(ADMIN_CAMPAIGN_COLUMNS)
             .in('client_id', scoped)
             .order('created_at', { ascending: false }),
           dbError,
         ).andThen((res) => {
-          const r = res as { data: Campaign[] | null; error: DbErrorShape }
+          const r = res as { data: AdminCampaign[] | null; error: DbErrorShape }
           if (r.error) return err(mapDbError(r.error, 'listCampaigns'))
           return ok(r.data ?? [])
         })
@@ -293,15 +305,18 @@ export function listCampaignsHandler(
 
 export function createCampaignHandler(
   input: CreateCampaignInput,
-): Promise<MutationResult<Campaign>> {
+): Promise<MutationResult<AdminCampaign>> {
   return toMutation(
     gated(PERM.campaigns, (auth) =>
       // Verify the parent client belongs to the tenant BEFORE inserting.
       assertClientOwned(auth, input.client_id).andThen(() =>
         ResultAsync.fromPromise(
-          tbl(auth, 'so_campaigns').insert(buildCampaignInsert(input)).select().single(),
+          tbl(auth, 'so_campaigns')
+            .insert(buildCampaignInsert(input))
+            .select(ADMIN_CAMPAIGN_COLUMNS)
+            .single(),
           dbError,
-        ).andThen(fromSupabaseSafe<Campaign>('createCampaign')),
+        ).andThen(fromSupabaseSafe<AdminCampaign>('createCampaign')),
       ),
     ),
   )
@@ -310,7 +325,7 @@ export function createCampaignHandler(
 export function updateCampaignHandler(
   id: string,
   input: UpdateCampaignInput,
-): Promise<MutationResult<Campaign>> {
+): Promise<MutationResult<AdminCampaign>> {
   return toMutation(
     gated(PERM.campaigns, (auth) =>
       assertCampaignOwned(auth, id).andThen(() =>
@@ -318,10 +333,10 @@ export function updateCampaignHandler(
           tbl(auth, 'so_campaigns')
             .update(buildCampaignPatch(input))
             .eq('id', id)
-            .select()
+            .select(ADMIN_CAMPAIGN_COLUMNS)
             .single(),
           dbError,
-        ).andThen(fromSupabaseSafe<Campaign>('updateCampaign')),
+        ).andThen(fromSupabaseSafe<AdminCampaign>('updateCampaign')),
       ),
     ),
   )
@@ -507,6 +522,7 @@ function buildCampaignInsert(input: CreateCampaignInput): Record<string, unknown
     esp_provider: input.esp_provider,
     esp_audience_ref: input.esp_audience_ref ?? null,
     esp_tag_launch: input.esp_tag_launch,
+    tally_webhook_secret: input.tally_webhook_secret ?? null,
     published: input.published,
   }
 }
@@ -519,6 +535,10 @@ function buildCampaignPatch(input: UpdateCampaignInput): Record<string, unknown>
   if (input.esp_provider !== undefined) patch.esp_provider = input.esp_provider
   if (input.esp_audience_ref !== undefined) patch.esp_audience_ref = input.esp_audience_ref
   if (input.esp_tag_launch !== undefined) patch.esp_tag_launch = input.esp_tag_launch
+  // Absent = leave the existing secret untouched (the editor omits the key on a
+  // rotate-skip). A present value rotates it.
+  if (input.tally_webhook_secret !== undefined)
+    patch.tally_webhook_secret = input.tally_webhook_secret
   if (input.published !== undefined) patch.published = input.published
   return patch
 }

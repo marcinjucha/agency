@@ -12,6 +12,15 @@ export type Client = Tables<'so_clients'>
 export type Campaign = Tables<'so_campaigns'>
 export type Bonus = Tables<'so_bonuses'>
 
+// What the ADMIN CRUD layer returns to the CMS client. The plaintext
+// `tally_webhook_secret` is a defense-in-depth invariant: it is read server-side
+// (route verifies the Tally signature) but MUST NEVER be serialized to the
+// browser (SSR payload / JS props). Strip it and expose only a derived boolean
+// so the editor can show "secret already set" without ever shipping the value.
+export type AdminCampaign = Omit<Tables<'so_campaigns'>, 'tally_webhook_secret'> & {
+  has_webhook_secret: boolean
+}
+
 // Single source of truth for the fixed DB CHECK on so_bonuses.type. Derived
 // union — NOT a hand-maintained string union (features/CLAUDE.md, ag-coding).
 export const BONUS_TYPES = ['link', 'file'] as const

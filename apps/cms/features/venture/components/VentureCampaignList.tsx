@@ -20,7 +20,7 @@ import { queryKeys } from '@/lib/query-keys'
 import { routes } from '@/lib/routes'
 import { messages } from '@/lib/messages'
 import { listCampaignsFn, listClientsFn } from '../admin'
-import type { Campaign, Client } from '../types'
+import type { AdminCampaign, Client } from '../types'
 
 const ALL_CLIENTS = '__all__'
 
@@ -153,7 +153,7 @@ export function VentureCampaignList() {
 
 // --- Card ---
 
-function CampaignCard({ campaign, clientLabel }: { campaign: Campaign; clientLabel: string }) {
+function CampaignCard({ campaign, clientLabel }: { campaign: AdminCampaign; clientLabel: string }) {
   return (
     <Link
       to={routes.admin.ventureCampaign(campaign.id)}
@@ -186,8 +186,8 @@ function CampaignCard({ campaign, clientLabel }: { campaign: Campaign; clientLab
 
 // --- Grouping ---
 
-function groupByClient(campaigns: Campaign[]): { clientId: string | null; items: Campaign[] }[] {
-  const groups = new Map<string | null, Campaign[]>()
+function groupByClient(campaigns: AdminCampaign[]): { clientId: string | null; items: AdminCampaign[] }[] {
+  const groups = new Map<string | null, AdminCampaign[]>()
   for (const campaign of campaigns) {
     const key = campaign.client_id ?? null
     const existing = groups.get(key)

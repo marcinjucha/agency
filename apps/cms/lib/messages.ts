@@ -102,6 +102,12 @@ export const messages = {
     espTagLaunchLabel: 'Tag startowy',
     espTagLaunchPlaceholder: 'launch-notify',
 
+    // Per-campaign Tally webhook signing secret. Masked input — entered by an
+    // authenticated operator; leaving it blank on edit keeps the current value.
+    tallySecretLabel: 'Sekret webhooka Tally',
+    tallySecretHelp:
+      'Signing secret z ekranu webhooka Tally. Zostaw puste, aby nie zmieniać.',
+
     // Publish/status
     publishedLabel: 'Opublikowana',
     statusTitle: 'Status',

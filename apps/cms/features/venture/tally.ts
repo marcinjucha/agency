@@ -18,8 +18,9 @@ import { ok, err, type Result } from 'neverthrow'
 // (CALCULATED_FIELDS, PAYMENT, MATRIX, FILE_UPLOAD, SIGNATURE, RATING, …) — it
 // iterates and picks only the fields it needs, ignoring the rest.
 //
-// `campaign` slug + an email are REQUIRED to route + own the lead; everything
-// else is best-effort.
+// email + submissionId are REQUIRED (submissionId keys idempotency, email owns
+// the lead); everything else is best-effort. The campaign is NO LONGER read from
+// the body — the route resolves it from the URL slug ($slug) before this runs.
 // ---------------------------------------------------------------------------
 
 export interface TallyField {
@@ -43,7 +44,6 @@ export interface TallyWebhookPayload {
 
 /** Flat lead shape consumed by the ingest orchestrator. */
 export interface MappedLead {
-  campaignSlug: string
   email: string
   name: string | null
   source: string | null
@@ -59,17 +59,14 @@ export interface MappedLead {
 // union from an `as const` map (project rule: no hand-maintained string unions).
 export const TALLY_MAP_ERRORS = {
   badPayload: 'bad_payload',
-  missingCampaign: 'missing_campaign',
   missingEmail: 'missing_email',
   missingSubmissionId: 'missing_submission_id',
 } as const
 export type TallyMapError =
   (typeof TALLY_MAP_ERRORS)[keyof typeof TALLY_MAP_ERRORS]
 
-// Hidden-field labels that route OUR leads. Marcin configures these as the
-// `label` of a HIDDEN_FIELDS question in Kacper's Tally form. The sample fixture
-// shows `utm_campaign` as an illustration — ours is exactly `campaign`.
-const CAMPAIGN_FIELD_LABEL = 'campaign'
+// Hidden-field label for the optional attribution source. Marcin configures this
+// as the `label` of a HIDDEN_FIELDS question in Kacper's Tally form.
 const SOURCE_FIELD_LABEL = 'source'
 
 // [do potwierdzenia] The exact label/key of the consent checkbox in Kacper's
@@ -226,9 +223,6 @@ export function mapTallyPayload(
 
   const fields = payload.data?.fields ?? []
 
-  const campaignSlug = asString(findHiddenField(fields, CAMPAIGN_FIELD_LABEL)?.value)
-  if (!campaignSlug) return err(TALLY_MAP_ERRORS.missingCampaign)
-
   const email = asString(findEmailField(fields)?.value)
   if (!email) return err(TALLY_MAP_ERRORS.missingEmail)
 
@@ -241,5 +235,5 @@ export function mapTallyPayload(
   const name = asString(findNameField(fields)?.value)
   const consentLaunch = extractConsent(fields)
 
-  return ok({ campaignSlug, email, name, source, consentLaunch, submissionId })
+  return ok({ email, name, source, consentLaunch, submissionId })
 }

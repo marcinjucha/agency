@@ -61,6 +61,11 @@ export const createCampaignSchema = z.object({
   esp_provider: z.string().min(1).default('beehiiv'),
   esp_audience_ref: z.string().nullable().optional(),
   esp_tag_launch: z.string().min(1).default('launch-notify'),
+  // Per-campaign Tally webhook signing secret (so_campaigns.tally_webhook_secret).
+  // Trimmed + non-empty WHEN present; nullable/optional so the UI can omit it
+  // (leave untouched on edit) or send null (create with no secret yet). The
+  // editor never submits an empty string — it maps blank → null / absent.
+  tally_webhook_secret: z.string().trim().min(1).nullable().optional(),
   published: z.boolean().default(false),
 })
 

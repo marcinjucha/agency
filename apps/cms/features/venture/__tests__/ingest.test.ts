@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 // Isolate the orchestrator from @react-email rendering — the real builder is
 // covered in bonus-email.test.ts. Here we only assert send-vs-not.
@@ -6,13 +6,12 @@ vi.mock('../mail/bonus-email', () => ({
   buildBonusEmail: vi.fn(async () => ({ subject: 'Subj', html: '<p>html</p>' })),
 }))
 
-import { ingestLead, type IngestDeps } from '../ingest.server'
+import { ingestLead, ingestOutcomeStatus, type IngestDeps } from '../ingest.server'
 import { EspApiError } from '../esp/http.server'
 import type { EspProvider } from '../esp/types'
 import type { MappedLead } from '../tally'
 
 const LEAD: MappedLead = {
-  campaignSlug: 'kacper',
   email: 'jan@example.com',
   name: 'Jan',
   source: 'youtube',
@@ -20,15 +19,18 @@ const LEAD: MappedLead = {
   submissionId: 'sub_1',
 }
 
+// The campaign is now resolved by the route and INJECTED into ingestLead —
+// tally_webhook_secret is carried on the row (route reads it; ingest ignores it).
 const CAMPAIGN = {
   id: 'campaign-1',
+  tally_webhook_secret: 'whsec_test',
   esp_provider: 'beehiiv',
   esp_audience_ref: 'pub_123',
   esp_tag_launch: 'launch-notify',
   display_name: 'Kacper Launch',
 }
 
-type Result = { data: unknown; error: { message: string } | null }
+type Result = { data: unknown; error: { message: string; code?: string } | null }
 
 // A per-table Supabase mock. so_leads carries 3 distinct ops disambiguated by
 // which entry method is called first (select / insert / update).
@@ -120,7 +122,7 @@ describe('ingestLead', () => {
     const sendEmail = vi.fn(async () => undefined)
     const deps = makeDeps(supabase, provider, sendEmail)
 
-    const outcome = await ingestLead(LEAD, deps)
+    const outcome = await ingestLead(deps, CAMPAIGN, LEAD)
 
     expect(outcome).toEqual({
       status: 'ingested',
@@ -149,26 +151,50 @@ describe('ingestLead', () => {
     })
   })
 
-  it('returns unknown_campaign and writes NO lead when the slug does not resolve', async () => {
-    const supabase = makeSupabase({ campaign: { data: null, error: null } })
-    const deps = makeDeps(supabase, makeProvider())
-
-    const outcome = await ingestLead(LEAD, deps)
-
-    expect(outcome).toEqual({ status: 'unknown_campaign' })
-    expect(supabase.leadsBuilder.insert).not.toHaveBeenCalled()
-  })
-
-  it('is idempotent — existing tally_submission_id → no insert, no ESP, no send', async () => {
+  it('is idempotent — existing (campaign_id, tally_submission_id) → no insert, no ESP, no send', async () => {
     const supabase = makeSupabase({ duplicate: { data: { id: 'lead-existing' }, error: null } })
     const provider = makeProvider()
     const sendEmail = vi.fn(async () => undefined)
     const deps = makeDeps(supabase, provider, sendEmail)
 
-    const outcome = await ingestLead(LEAD, deps)
+    const outcome = await ingestLead(deps, CAMPAIGN, LEAD)
 
     expect(outcome).toEqual({ status: 'duplicate', leadId: 'lead-existing' })
     expect(supabase.leadsBuilder.insert).not.toHaveBeenCalled()
+    expect(provider.upsertContact).not.toHaveBeenCalled()
+    expect(sendEmail).not.toHaveBeenCalled()
+  })
+
+  it('insert 23505 unique_violation (concurrent/retry winner) → duplicate, no ESP, no email (route 200)', async () => {
+    const supabase = makeSupabase({
+      insert: { data: null, error: { message: 'duplicate key value', code: '23505' } },
+    })
+    const provider = makeProvider()
+    const sendEmail = vi.fn(async () => undefined)
+    const deps = makeDeps(supabase, provider, sendEmail)
+
+    const outcome = await ingestLead(deps, CAMPAIGN, LEAD)
+
+    // Benign — the winning concurrent/retried insert owns ESP + email.
+    expect(outcome).toEqual({ status: 'duplicate', leadId: null })
+    expect(supabase.leadsBuilder.insert).toHaveBeenCalledTimes(1)
+    expect(provider.upsertContact).not.toHaveBeenCalled()
+    expect(sendEmail).not.toHaveBeenCalled()
+  })
+
+  it('insert non-23505 error (transient) → insert_error, no ESP, no email (route 500 → Tally retries)', async () => {
+    const supabase = makeSupabase({
+      insert: { data: null, error: { message: 'connection reset by peer', code: '08006' } },
+    })
+    const provider = makeProvider()
+    const sendEmail = vi.fn(async () => undefined)
+    const deps = makeDeps(supabase, provider, sendEmail)
+
+    const outcome = await ingestLead(deps, CAMPAIGN, LEAD)
+
+    // The lead was NOT written by anyone — must be retryable, side-effects skipped.
+    expect(outcome).toEqual({ status: 'insert_error' })
+    expect(supabase.leadsBuilder.insert).toHaveBeenCalledTimes(1)
     expect(provider.upsertContact).not.toHaveBeenCalled()
     expect(sendEmail).not.toHaveBeenCalled()
   })
@@ -183,7 +209,7 @@ describe('ingestLead', () => {
     })
     const deps = makeDeps(supabase, provider, vi.fn(async () => undefined))
 
-    const outcome = await ingestLead(LEAD, deps)
+    const outcome = await ingestLead(deps, CAMPAIGN, LEAD)
 
     expect(outcome.status).toBe('ingested')
     expect(outcome).toMatchObject({ espSynced: false, emailSent: true })
@@ -207,7 +233,7 @@ describe('ingestLead', () => {
     const provider = makeProvider()
     const deps = makeDeps(supabase, provider, vi.fn(async () => undefined))
 
-    const outcome = await ingestLead({ ...LEAD, consentLaunch: false }, deps)
+    const outcome = await ingestLead(deps, CAMPAIGN, { ...LEAD, consentLaunch: false })
 
     expect(outcome.status).toBe('ingested')
     expect(provider.upsertContact).toHaveBeenCalledTimes(1)
@@ -224,24 +250,38 @@ describe('ingestLead', () => {
     })
     const deps = makeDeps(supabase, provider, sendEmail)
 
-    const outcome = await ingestLead(LEAD, deps)
+    const outcome = await ingestLead(deps, CAMPAIGN, LEAD)
 
     expect(outcome).toMatchObject({ status: 'ingested', espSynced: true, emailSent: false })
   })
 
   it('skips ESP sync (but keeps the lead) when the provider is unregistered', async () => {
-    const supabase = makeSupabase({
-      campaign: {
-        data: { ...CAMPAIGN, esp_provider: 'mailchimp' },
-        error: null,
-      },
-    })
+    const supabase = makeSupabase({})
     const provider = makeProvider()
     const deps = makeDeps(supabase, provider, vi.fn(async () => undefined))
 
-    const outcome = await ingestLead(LEAD, deps)
+    const outcome = await ingestLead(deps, { ...CAMPAIGN, esp_provider: 'mailchimp' }, LEAD)
 
     expect(outcome).toMatchObject({ status: 'ingested', espSynced: false })
     expect(provider.upsertContact).not.toHaveBeenCalled()
+  })
+})
+
+// Pure status→HTTP mapping (the route's testable seam) — asserts the corrected
+// contract without any TanStack route scaffolding.
+describe('ingestOutcomeStatus', () => {
+  it('maps ingested → 200', () => {
+    expect(
+      ingestOutcomeStatus({ status: 'ingested', leadId: 'lead-1', espSynced: true, emailSent: true }),
+    ).toBe(200)
+  })
+
+  it('maps duplicate → 200 (winner already persisted)', () => {
+    expect(ingestOutcomeStatus({ status: 'duplicate', leadId: 'lead-existing' })).toBe(200)
+    expect(ingestOutcomeStatus({ status: 'duplicate', leadId: null })).toBe(200)
+  })
+
+  it('maps insert_error → 500 (genuine write failure → Tally retries)', () => {
+    expect(ingestOutcomeStatus({ status: 'insert_error' })).toBe(500)
   })
 })

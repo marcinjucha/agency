@@ -28,7 +28,7 @@ import { routes } from '@/lib/routes'
 import { queryKeys } from '@/lib/query-keys'
 import { generateSlug } from '@/lib/utils/slug'
 import { createCampaignSchema, type CreateCampaignInput } from '../validation'
-import type { Campaign, CampaignBrand } from '../types'
+import type { AdminCampaign, CampaignBrand } from '../types'
 import { createCampaignFn, updateCampaignFn, deleteCampaignFn } from '../admin'
 import { VentureClientSelect } from './VentureClientSelect'
 import { CampaignBrandEditor } from './CampaignBrandEditor'
@@ -37,7 +37,7 @@ import { VentureBonusManager } from './VentureBonusManager'
 type SaveState = 'idle' | 'saving' | 'saved' | 'error'
 
 interface VentureCampaignEditorProps {
-  campaign?: Campaign
+  campaign?: AdminCampaign
 }
 
 export function VentureCampaignEditor({ campaign }: VentureCampaignEditorProps) {
@@ -77,9 +77,14 @@ export function VentureCampaignEditor({ campaign }: VentureCampaignEditorProps) 
       esp_provider: campaign?.esp_provider ?? 'beehiiv',
       esp_audience_ref: campaign?.esp_audience_ref ?? '',
       esp_tag_launch: campaign?.esp_tag_launch ?? 'launch-notify',
+      // Never prefill the real secret into the form — blank means "leave as-is"
+      // on edit; typing a value rotates it.
+      tally_webhook_secret: '',
       published: campaign?.published ?? false,
     },
   })
+
+  const secretAlreadySet = isEditing && !!campaign?.has_webhook_secret
 
   const watchDisplayName = watch('display_name')
   const watchSlug = watch('slug')
@@ -104,6 +109,9 @@ export function VentureCampaignEditor({ campaign }: VentureCampaignEditorProps) 
     setErrorMessage(null)
 
     const published = publishOverride ?? data.published
+    // Blank secret input never reaches the wire as '': on edit an untyped secret
+    // is OMITTED (leave untouched); on create it becomes null (no secret yet).
+    const secretInput = data.tally_webhook_secret?.trim() || null
     const result = isEditing
       ? await updateCampaignFn({
           data: {
@@ -115,11 +123,15 @@ export function VentureCampaignEditor({ campaign }: VentureCampaignEditorProps) 
               esp_provider: data.esp_provider,
               esp_audience_ref: data.esp_audience_ref ?? null,
               esp_tag_launch: data.esp_tag_launch,
+              // Only rotate when the operator actually typed a new secret.
+              ...(secretInput ? { tally_webhook_secret: secretInput } : {}),
               published,
             },
           },
         })
-      : await createCampaignFn({ data: { ...data, published } })
+      : await createCampaignFn({
+          data: { ...data, tally_webhook_secret: secretInput, published },
+        })
 
     if (result?.success) {
       setSaveState('saved')
@@ -352,6 +364,30 @@ export function VentureCampaignEditor({ campaign }: VentureCampaignEditorProps) 
                     />
                     {errors.esp_tag_launch && (
                       <p className="text-xs text-destructive">{errors.esp_tag_launch.message}</p>
+                    )}
+                  </div>
+
+                  {/* Per-campaign Tally webhook secret — masked; entered by an
+                      authenticated operator. Not prefilled: blank = leave as-is. */}
+                  <div className="space-y-1.5">
+                    <Label htmlFor="tally-webhook-secret" className="text-sm font-medium">
+                      {messages.venture.tallySecretLabel}
+                    </Label>
+                    <Input
+                      id="tally-webhook-secret"
+                      type="password"
+                      autoComplete="off"
+                      {...register('tally_webhook_secret')}
+                      placeholder={secretAlreadySet ? '••••••••' : ''}
+                      className="font-mono text-sm"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      {messages.venture.tallySecretHelp}
+                    </p>
+                    {errors.tally_webhook_secret && (
+                      <p className="text-xs text-destructive">
+                        {errors.tally_webhook_secret.message}
+                      </p>
                     )}
                   </div>
                 </div>

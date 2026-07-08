@@ -386,7 +386,7 @@ Required in Vercel Dashboard:
 - `ORCHESTRATOR_WEBHOOK_SECRET` (server only — Bearer token for CMS -> n8n auth)
 - `HOST_URL` (server only)
 - `BEEHIIV_API_KEY` (server only — venture bonus funnel ESP; single global Bearer key, `features/venture/esp/beehiiv.server.ts`)
-- `TALLY_WEBHOOK_SECRET` (server only — venture lead ingest webhook signature, `POST /api/venture/leads`; added iter 3)
+- (Tally lead-ingest webhook signature is verified with a PER-CAMPAIGN secret `so_campaigns.tally_webhook_secret` set in the CMS campaign editor — `POST /api/venture/leads/$slug`. No global `TALLY_WEBHOOK_SECRET` env var.)
 - `RESEND_API_KEY` (server only — venture transactional bonus email; beehiiv free has no Automations, so CMS sends the bonus mail; added iter 3)
 - `RESEND_FROM_EMAIL` (server only — verified sender address for the venture transactional bonus email; `features/venture/mail/resend.server.ts`; added iter 3)
 - `VENTURE_LANDING_ORIGIN` (server only — CORS allowed origin echoed by the PUBLIC `GET /api/venture/campaigns/:slug` read endpoint; the venture landing lives on a different origin (VPS) than this CMS (Vercel). Optional — falls back to `*` when unset, acceptable because the payload is public non-credentialed metadata (brand + bonus links); added iter 4)
