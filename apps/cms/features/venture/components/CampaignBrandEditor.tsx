@@ -1,18 +1,23 @@
-import type { UseFormRegister } from 'react-hook-form'
+import type { UseFormRegister, UseFormSetValue, UseFormWatch } from 'react-hook-form'
 import { CollapsibleCard, Input, Label } from '@agency/ui'
 import { Info } from 'lucide-react'
 import { messages } from '@/lib/messages'
 import type { CreateCampaignInput } from '../validation'
+import { LogoMediaField } from './LogoMediaField'
 
-// Brand token editor (so_campaigns.brand JSONB). Plain text inputs — brand is
-// PUBLIC (rendered on the landing), hence the sensitive-data warning. No native
-// OS color picker inside the form (ag-design-patterns: no native chooser in Radix).
+// Brand token editor (so_campaigns.brand JSONB). Color/font stay plain text inputs
+// — brand is PUBLIC (rendered on the landing), hence the sensitive-data warning.
+// No native OS color picker inside the form (ag-design-patterns: no native chooser
+// in Radix). The logo is picked from the media library (LogoMediaField) instead of
+// a raw URL input, so it needs controlled read/write via watch + setValue.
 
 interface CampaignBrandEditorProps {
   register: UseFormRegister<CreateCampaignInput>
+  watch: UseFormWatch<CreateCampaignInput>
+  setValue: UseFormSetValue<CreateCampaignInput>
 }
 
-export function CampaignBrandEditor({ register }: CampaignBrandEditorProps) {
+export function CampaignBrandEditor({ register, watch, setValue }: CampaignBrandEditorProps) {
   return (
     <CollapsibleCard title={messages.venture.brandTitle} defaultOpen>
       <div className="space-y-4">
@@ -42,11 +47,9 @@ export function CampaignBrandEditor({ register }: CampaignBrandEditorProps) {
           />
         </div>
 
-        <BrandField
-          id="brand-logo-url"
-          label={messages.venture.brandLogoUrlLabel}
-          placeholder={messages.venture.brandLogoUrlPlaceholder}
-          {...register('brand.logo_url')}
+        <LogoMediaField
+          value={watch('brand.logo_url') ?? null}
+          onChange={(url) => setValue('brand.logo_url', url ?? '', { shouldDirty: true })}
         />
 
         <BrandField

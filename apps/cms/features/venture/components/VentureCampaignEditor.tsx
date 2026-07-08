@@ -303,7 +303,7 @@ export function VentureCampaignEditor({ campaign }: VentureCampaignEditorProps) 
               </div>
 
               {/* Brand */}
-              <CampaignBrandEditor register={register} />
+              <CampaignBrandEditor register={register} watch={watch} setValue={setValue} />
 
               {/* Bonuses */}
               <VentureBonusManager campaignId={campaign?.id ?? null} />
