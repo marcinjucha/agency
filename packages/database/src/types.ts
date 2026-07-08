@@ -1224,9 +1224,11 @@ export type Database = {
           esp_audience_ref: string | null
           esp_provider: string
           esp_tag_launch: string
+          has_webhook_secret: boolean
           id: string
           published: boolean
           slug: string
+          tally_webhook_secret: string | null
           updated_at: string
         }
         Insert: {
@@ -1240,6 +1242,7 @@ export type Database = {
           id?: string
           published?: boolean
           slug: string
+          tally_webhook_secret?: string | null
           updated_at?: string
         }
         Update: {
@@ -1253,6 +1256,7 @@ export type Database = {
           id?: string
           published?: boolean
           slug?: string
+          tally_webhook_secret?: string | null
           updated_at?: string
         }
         Relationships: [
