@@ -6,7 +6,7 @@ import { BONUS_TYPES } from './types'
 // Venture bonus-funnel — ADMIN CRUD validation (iter 5a).
 //
 // Schemas are consumed ONLY through the function-form inputValidator in
-// admin.server.ts: `.inputValidator((v) => schema.parse(v))`. Never pass a raw
+// admin.ts: `.inputValidator((v) => schema.parse(v))`. Never pass a raw
 // schema to inputValidator — createServerFn does not call .parse() on a raw
 // schema object, so the handler would see unvalidated input (features/CLAUDE.md).
 //

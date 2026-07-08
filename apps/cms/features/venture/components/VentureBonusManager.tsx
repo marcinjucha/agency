@@ -37,7 +37,7 @@ import {
   updateBonusFn,
   deleteBonusFn,
   reorderBonusesFn,
-} from '../admin.server'
+} from '../admin'
 import { BonusMediaField } from './BonusMediaField'
 
 // Inline bonuses management embedded in the campaign editor. Bonuses require a

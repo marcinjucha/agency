@@ -96,7 +96,7 @@ export const queryKeys = {
   },
 
   /**
-   * @source listClientsFn, listCampaignsFn, listBonusesFn (features/venture/admin.server.ts)
+   * @source listClientsFn, listCampaignsFn, listBonusesFn (features/venture/admin.ts)
    * @usedBy VentureClientList + VentureClientSelect (clients), VentureCampaignList + VentureCampaignEditor
    *   (campaigns), VentureBonusManager (bonuses)
    * @invalidatedBy all venture mutations invalidate at the ROOT key `venture.all`

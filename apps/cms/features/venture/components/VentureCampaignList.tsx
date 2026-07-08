@@ -19,7 +19,7 @@ import { Gift, Plus } from 'lucide-react'
 import { queryKeys } from '@/lib/query-keys'
 import { routes } from '@/lib/routes'
 import { messages } from '@/lib/messages'
-import { listCampaignsFn, listClientsFn } from '../admin.server'
+import { listCampaignsFn, listClientsFn } from '../admin'
 import type { Campaign, Client } from '../types'
 
 const ALL_CLIENTS = '__all__'

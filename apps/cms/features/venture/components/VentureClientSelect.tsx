@@ -19,7 +19,7 @@ import { Check, ChevronsUpDown, Plus, Loader2 } from 'lucide-react'
 import { queryKeys } from '@/lib/query-keys'
 import { messages } from '@/lib/messages'
 import { generateSlug } from '@/lib/utils/slug'
-import { listClientsFn, createClientFn } from '../admin.server'
+import { listClientsFn, createClientFn } from '../admin'
 
 // Combobox with inline create — mirrors ShopCategorySelect. Selecting a client
 // (so_clients) or creating a new one without leaving the campaign editor.

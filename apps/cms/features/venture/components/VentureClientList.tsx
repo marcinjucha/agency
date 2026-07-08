@@ -25,7 +25,7 @@ import {
   createClientFn,
   updateClientFn,
   deleteClientFn,
-} from '../admin.server'
+} from '../admin'
 import type { Client } from '../types'
 
 // Inline CRUD (name + slug) — mirrors shop-categories CategoryManager list view.

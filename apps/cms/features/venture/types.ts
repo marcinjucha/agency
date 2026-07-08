@@ -4,7 +4,7 @@ import type { Tables } from '@agency/database'
 // Admin (authenticated) row types + domain constants (iter 5a).
 //
 // Reuse the generated Supabase row types — never redefine table shapes locally
-// (features/CLAUDE.md). The admin CRUD layer (admin.server.ts) is tenant-scoped
+// (features/CLAUDE.md). The admin CRUD layer (admin.ts) is tenant-scoped
 // and permission-gated; these are the shapes it returns to the CMS UI.
 // ---------------------------------------------------------------------------
 

@@ -5,7 +5,7 @@ import { FileX } from 'lucide-react'
 import { buildCmsHead } from '@/lib/head'
 import { messages } from '@/lib/messages'
 import { queryKeys } from '@/lib/query-keys'
-import { listCampaignsFn } from '@/features/venture/admin.server'
+import { listCampaignsFn } from '@/features/venture/admin'
 import { VentureCampaignEditor } from '@/features/venture/components/VentureCampaignEditor'
 
 export const Route = createFileRoute('/admin/venture/campaigns/$id')({
