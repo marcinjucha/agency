@@ -2,14 +2,17 @@ import type { UseFormRegister, UseFormSetValue, UseFormWatch } from 'react-hook-
 import { CollapsibleCard, Input, Label } from '@agency/ui'
 import { Info } from 'lucide-react'
 import { messages } from '@/lib/messages'
+import { ColorPicker } from '@/components/ui/color-picker'
 import type { CreateCampaignInput } from '../validation'
 import { LogoMediaField } from './LogoMediaField'
 
-// Brand token editor (so_campaigns.brand JSONB). Color/font stay plain text inputs
-// — brand is PUBLIC (rendered on the landing), hence the sensitive-data warning.
-// No native OS color picker inside the form (ag-design-patterns: no native chooser
-// in Radix). The logo is picked from the media library (LogoMediaField) instead of
-// a raw URL input, so it needs controlled read/write via watch + setValue.
+// Brand token editor (so_campaigns.brand JSONB). Colors use the shared inline
+// ColorPicker (react-colorful HexColorPicker in a Popover — no native OS chooser,
+// so it satisfies ag-design-patterns: no native chooser in Radix). Font stays a
+// plain text input. Brand is PUBLIC (rendered on the landing), hence the
+// sensitive-data warning. The logo is picked from the media library
+// (LogoMediaField) instead of a raw URL input, so it needs controlled read/write
+// via watch + setValue — colors are wired the same controlled way.
 
 interface CampaignBrandEditorProps {
   register: UseFormRegister<CreateCampaignInput>
@@ -27,24 +30,39 @@ export function CampaignBrandEditor({ register, watch, setValue }: CampaignBrand
         </p>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <BrandField
-            id="brand-primary"
-            label={messages.venture.brandPrimaryLabel}
-            placeholder={messages.venture.brandColorPlaceholder}
-            {...register('brand.primary')}
-          />
-          <BrandField
-            id="brand-accent"
-            label={messages.venture.brandAccentLabel}
-            placeholder={messages.venture.brandColorPlaceholder}
-            {...register('brand.accent')}
-          />
-          <BrandField
-            id="brand-bg"
-            label={messages.venture.brandBgLabel}
-            placeholder={messages.venture.brandColorPlaceholder}
-            {...register('brand.bg')}
-          />
+          <div className="space-y-1.5">
+            <Label htmlFor="brand-primary" className="text-sm font-medium">
+              {messages.venture.brandPrimaryLabel}
+            </Label>
+            <ColorPicker
+              id="brand-primary"
+              label={messages.venture.brandPrimaryLabel}
+              value={watch('brand.primary') ?? ''}
+              onChange={(hex) => setValue('brand.primary', hex, { shouldDirty: true })}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="brand-accent" className="text-sm font-medium">
+              {messages.venture.brandAccentLabel}
+            </Label>
+            <ColorPicker
+              id="brand-accent"
+              label={messages.venture.brandAccentLabel}
+              value={watch('brand.accent') ?? ''}
+              onChange={(hex) => setValue('brand.accent', hex, { shouldDirty: true })}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="brand-bg" className="text-sm font-medium">
+              {messages.venture.brandBgLabel}
+            </Label>
+            <ColorPicker
+              id="brand-bg"
+              label={messages.venture.brandBgLabel}
+              value={watch('brand.bg') ?? ''}
+              onChange={(hex) => setValue('brand.bg', hex, { shouldDirty: true })}
+            />
+          </div>
         </div>
 
         <LogoMediaField
