@@ -2,12 +2,16 @@ import { createFileRoute } from '@tanstack/react-router'
 import { getPublishedCampaignBySlug } from '@/features/venture/server'
 
 // ---------------------------------------------------------------------------
-// GET /api/venture/campaigns/:slug   (+ OPTIONS preflight)
+// GET /api/venture/campaigns/:client/:slug   (+ OPTIONS preflight)
 //
 // PUBLIC, unauthenticated read consumed by the venture landing front on the VPS
 // (a different origin than this CMS on Vercel). Returns the campaign brand +
 // published bonuses (spec §7). server.handlers.GET strips the handler from the
 // client bundle and lets us return a direct HTTP Response.
+//
+// Client-scoped slugs: campaign slugs are unique per client (so_campaigns
+// UNIQUE(client_id, slug)), not globally — the URL now carries BOTH the
+// client slug and the campaign slug.
 //
 // Client choice: ANON Supabase client (publishable key) — RLS + column GRANT
 // enforce published-only rows and hide esp_* columns. NOT service-role.
@@ -16,11 +20,12 @@ import { getPublishedCampaignBySlug } from '@/features/venture/server'
 // Access-Control-Allow-Origin. Data is public + non-credentialed (brand + links),
 // so echoing VENTURE_LANDING_ORIGIN (fallback '*') is acceptable.
 //
-// `$slug` route param is parsed from the URL pathname — server.handlers does not
-// surface route params directly (mirrors api/marketplace/$marketplace/callback).
+// `$client`/`$slug` route params are parsed from the URL pathname —
+// server.handlers does not surface route params directly (mirrors
+// api/marketplace/$marketplace/callback).
 // ---------------------------------------------------------------------------
 
-const SLUG_PATH_REGEX = /^\/api\/venture\/campaigns\/([^/]+)\/?$/
+const SLUG_PATH_REGEX = /^\/api\/venture\/campaigns\/([^/]+)\/([^/]+)\/?$/
 
 // Campaigns change rarely — let the edge cache the public payload.
 const CACHE_CONTROL = 'public, s-maxage=300, stale-while-revalidate=600'
@@ -45,7 +50,7 @@ const notFound = () =>
     headers: jsonHeaders(),
   })
 
-export const Route = createFileRoute('/api/venture/campaigns/$slug')({
+export const Route = createFileRoute('/api/venture/campaigns/$client/$slug')({
   component: () => null,
   server: {
     handlers: {
@@ -56,11 +61,12 @@ export const Route = createFileRoute('/api/venture/campaigns/$slug')({
       GET: async ({ request }) => {
         const url = new URL(request.url)
         const match = url.pathname.match(SLUG_PATH_REGEX)
-        const slug = match?.[1] ? decodeURIComponent(match[1]) : ''
+        const clientSlug = match?.[1] ? decodeURIComponent(match[1]) : ''
+        const slug = match?.[2] ? decodeURIComponent(match[2]) : ''
 
-        if (!slug) return notFound()
+        if (!clientSlug || !slug) return notFound()
 
-        const result = await getPublishedCampaignBySlug(slug)
+        const result = await getPublishedCampaignBySlug(clientSlug, slug)
 
         return result.match(
           (campaign) => {

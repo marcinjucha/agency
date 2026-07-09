@@ -14,21 +14,28 @@ import {
 import { sendEmailViaResend } from '@/features/venture/mail/resend.server'
 
 // ---------------------------------------------------------------------------
-// POST /api/venture/leads/$slug — Tally lead-ingest webhook (spec §7, iter 3).
+// POST /api/venture/leads/$client/$slug — Tally lead-ingest webhook (spec §7,
+// iter 3 + client-scoped-slug pivot).
 //
 // Per-campaign webhook secret + slug-in-URL model: the campaign slug travels in
 // the URL PATH (not a hidden Tally field), and each campaign carries its own
 // so_campaigns.tally_webhook_secret. This module reads NO env for the secret.
 //
+// Client-scoped slugs: campaign slugs are unique per client (so_campaigns
+// UNIQUE(client_id, slug)), not globally — the URL now carries BOTH the
+// client slug and the campaign slug. resolveCampaign resolves the client
+// first, then the campaign scoped to that client's id.
+//
 // server.handlers.POST strips this from the client bundle and lets us return a
 // direct HTTP Response. Server-to-server webhook (Tally → CMS) — NO CORS.
 //
 // Flow (resolve → verify → map → ingest):
-//   1. parse $slug from the URL path
-//   2. resolve the campaign by slug on the service client (BEFORE the body — we
-//      need its secret to verify)
+//   1. parse $client/$slug from the URL path
+//   2. resolve the campaign by client slug + campaign slug on the service
+//      client (BEFORE the body — we need its secret to verify)
 //   3. campaign missing OR secret null/empty → 401 invalid_signature (UNIFORM —
-//      no "no such campaign" vs "not configured" vs "bad signature" oracle)
+//      no "no such client" vs "no such campaign" vs "not configured" vs "bad
+//      signature" oracle)
 //   4. verify HMAC over the RAW body with THAT campaign's secret → 401 on invalid
 //   5. parse + map body → missing email/submissionId → 400 bad_request
 //   6. ingest (idempotent on campaign_id + submission id):
@@ -45,11 +52,12 @@ import { sendEmailViaResend } from '@/features/venture/mail/resend.server'
 //
 // No secret / provider error body ever leaks into the response.
 //
-// `$slug` route param is parsed from the URL pathname — server.handlers does not
-// surface route params directly (mirrors api/venture/campaigns/$slug.ts).
+// `$client`/`$slug` route params are parsed from the URL pathname —
+// server.handlers does not surface route params directly (mirrors
+// api/venture/campaigns/$client/$slug.ts).
 // ---------------------------------------------------------------------------
 
-const SLUG_PATH_REGEX = /^\/api\/venture\/leads\/([^/]+)\/?$/
+const SLUG_PATH_REGEX = /^\/api\/venture\/leads\/([^/]+)\/([^/]+)\/?$/
 
 function json(body: unknown, status: number): Response {
   return new Response(JSON.stringify(body), {
@@ -58,13 +66,17 @@ function json(body: unknown, status: number): Response {
   })
 }
 
-// Uniform rejection — collapses "unknown campaign", "no secret configured" and
-// "bad signature" into one indistinguishable response (no enumeration oracle).
+// Uniform rejection — collapses "unknown client", "unknown campaign", "no
+// secret configured" and "bad signature" into one indistinguishable response
+// (no enumeration oracle).
 const invalidSignature = (): Response => json({ error: 'invalid_signature' }, 401)
 
-function parseSlug(request: Request): string {
+function parseClientAndSlug(request: Request): { clientSlug: string; slug: string } {
   const match = new URL(request.url).pathname.match(SLUG_PATH_REGEX)
-  return match?.[1] ? decodeURIComponent(match[1]) : ''
+  return {
+    clientSlug: match?.[1] ? decodeURIComponent(match[1]) : '',
+    slug: match?.[2] ? decodeURIComponent(match[2]) : '',
+  }
 }
 
 // Wire the real ingest dependencies over an existing service client (the route
@@ -81,19 +93,24 @@ function buildIngestDeps(supabase: IngestDeps['supabase']): IngestDeps {
   }
 }
 
-export const Route = createFileRoute('/api/venture/leads/$slug')({
+export const Route = createFileRoute('/api/venture/leads/$client/$slug')({
   component: () => null,
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const slug = parseSlug(request)
-        if (!slug) return invalidSignature()
+        const { clientSlug, slug } = parseClientAndSlug(request)
+        if (!clientSlug || !slug) return invalidSignature()
 
         // Resolve the campaign FIRST — we need its per-campaign secret to verify.
         const supabase = createServiceClient()
-        const campaign: CampaignRow | null = await resolveCampaign(supabase, slug)
+        const campaign: CampaignRow | null = await resolveCampaign(
+          supabase,
+          clientSlug,
+          slug,
+        )
 
-        // Unknown campaign OR no secret configured → same 401 as a bad signature.
+        // Unknown client, unknown campaign, OR no secret configured → same
+        // 401 as a bad signature.
         const secret = campaign?.tally_webhook_secret
         if (!campaign || !secret) return invalidSignature()
 

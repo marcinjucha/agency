@@ -178,6 +178,20 @@ export function VentureCampaignEditor({ campaign }: VentureCampaignEditorProps) 
     error: messages.common.saveError,
   }
 
+  // ⌘S / Ctrl+S keyboard shortcut — mirrors the neutral Save button (never the
+  // publishOverride variants, so the shortcut preserves current publish state).
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault()
+        void handleSubmit((data) => onSave(data), onFormError)()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [handleSubmit])
+
   return (
     <div className="flex min-h-screen flex-col bg-muted/30">
       {/* ---- TOP BAR ---- */}

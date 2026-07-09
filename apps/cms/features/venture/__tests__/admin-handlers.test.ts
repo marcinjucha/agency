@@ -302,13 +302,13 @@ describe('db-error mapping (no raw error leak)', () => {
     consoleSpy.mockRestore()
   })
 
-  it('createCampaign maps a 23505 (global slug) to the friendly slug message', async () => {
+  it('createCampaign maps a 23505 (slug taken for this client) to the friendly slug message', async () => {
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     setupAuth({
       so_clients: { data: { id: 'c1' }, error: null }, // parent owned → proceeds to insert
       so_campaigns: {
         data: null,
-        error: { code: '23505', message: 'duplicate key value ... so_campaigns_slug_key' },
+        error: { code: '23505', message: 'duplicate key value ... so_campaigns_client_id_slug_key' },
       },
     })
 

@@ -8,11 +8,12 @@ import type { SendEmailInput } from './mail/resend.server'
 // ---------------------------------------------------------------------------
 // Venture bonus-funnel — lead ingest orchestrator (iter 3).
 //
-// Called by POST /api/venture/leads/$slug AFTER the route has resolved the
-// campaign (by URL slug), verified the signature with that campaign's secret, and
-// mapped the payload. Runs on the SERVICE-role client (anon cannot write leads by
-// design). Dependencies (supabase, ESP provider lookup, mail sender) are INJECTED
-// so the orchestrator is unit-testable with mocks — the route wires the real deps.
+// Called by POST /api/venture/leads/$client/$slug AFTER the route has resolved
+// the campaign (by URL client slug + campaign slug), verified the signature
+// with that campaign's secret, and mapped the payload. Runs on the
+// SERVICE-role client (anon cannot write leads by design). Dependencies
+// (supabase, ESP provider lookup, mail sender) are INJECTED so the
+// orchestrator is unit-testable with mocks — the route wires the real deps.
 //
 // The route owns campaign resolution (it needs the secret to verify) and passes
 // the resolved campaign IN — `resolveCampaign` is exported for that use.
@@ -88,19 +89,47 @@ export type CampaignRow = {
 }
 
 /**
- * Resolve a campaign by its public slug on the service client. Exported so the
- * route can call it FIRST (it needs `tally_webhook_secret` to verify the
- * signature), then pass the resolved row into `ingestLead`.
+ * Resolve a client's internal id by its public slug. Campaign slugs are now
+ * scoped per client (so_campaigns UNIQUE(client_id, slug)), so resolving the
+ * campaign requires resolving its owning client first.
+ */
+async function resolveClientId(
+  supabase: ServiceClient,
+  clientSlug: string,
+): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('so_clients')
+    .select('id')
+    .eq('slug', clientSlug)
+    .maybeSingle()
+  if (error) {
+    console.error('[venture-ingest] client lookup failed:', error.message)
+    return null
+  }
+  return (data as { id: string } | null)?.id ?? null
+}
+
+/**
+ * Resolve a campaign by its public client slug + campaign slug on the service
+ * client. Exported so the route can call it FIRST (it needs
+ * `tally_webhook_secret` to verify the signature), then pass the resolved row
+ * into `ingestLead`. Unknown client OR unknown campaign both resolve to
+ * `null` — the route maps that to the same uniform 401 as a bad signature.
  */
 export async function resolveCampaign(
   supabase: ServiceClient,
+  clientSlug: string,
   slug: string,
 ): Promise<CampaignRow | null> {
+  const clientId = await resolveClientId(supabase, clientSlug)
+  if (!clientId) return null
+
   const { data, error } = await supabase
     .from('so_campaigns')
     .select(
       'id, tally_webhook_secret, esp_provider, esp_audience_ref, esp_tag_launch, display_name',
     )
+    .eq('client_id', clientId)
     .eq('slug', slug)
     .maybeSingle()
   if (error) {

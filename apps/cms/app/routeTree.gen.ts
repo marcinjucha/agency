@@ -46,8 +46,6 @@ import { Route as AdminWorkflowsExecutionsIndexRouteImport } from './routes/admi
 import { Route as AdminVentureClientsIndexRouteImport } from './routes/admin/venture/clients/index'
 import { Route as AdminShopProductsIndexRouteImport } from './routes/admin/shop/products/index'
 import { Route as AdminShopMarketplaceIndexRouteImport } from './routes/admin/shop/marketplace/index'
-import { Route as ApiVentureLeadsSlugRouteImport } from './routes/api/venture/leads/$slug'
-import { Route as ApiVentureCampaignsSlugRouteImport } from './routes/api/venture/campaigns/$slug'
 import { Route as ApiMarketplaceMarketplaceCallbackRouteImport } from './routes/api/marketplace/$marketplace/callback'
 import { Route as AdminWorkflowsExecutionsExecutionIdRouteImport } from './routes/admin/workflows/executions/$executionId'
 import { Route as AdminVentureCampaignsNewRouteImport } from './routes/admin/venture/campaigns/new'
@@ -55,6 +53,8 @@ import { Route as AdminVentureCampaignsIdRouteImport } from './routes/admin/vent
 import { Route as AdminShopProductsNewRouteImport } from './routes/admin/shop/products/new'
 import { Route as AdminShopProductsProductIdRouteImport } from './routes/admin/shop/products/$productId'
 import { Route as AdminShopMarketplaceImportRouteImport } from './routes/admin/shop/marketplace/import'
+import { Route as ApiVentureLeadsClientSlugRouteImport } from './routes/api/venture/leads/$client/$slug'
+import { Route as ApiVentureCampaignsClientSlugRouteImport } from './routes/api/venture/campaigns/$client/$slug'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -247,16 +247,6 @@ const AdminShopMarketplaceIndexRoute =
     path: '/shop/marketplace/',
     getParentRoute: () => AdminRoute,
   } as any)
-const ApiVentureLeadsSlugRoute = ApiVentureLeadsSlugRouteImport.update({
-  id: '/api/venture/leads/$slug',
-  path: '/api/venture/leads/$slug',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiVentureCampaignsSlugRoute = ApiVentureCampaignsSlugRouteImport.update({
-  id: '/api/venture/campaigns/$slug',
-  path: '/api/venture/campaigns/$slug',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ApiMarketplaceMarketplaceCallbackRoute =
   ApiMarketplaceMarketplaceCallbackRouteImport.update({
     id: '/api/marketplace/$marketplace/callback',
@@ -296,6 +286,18 @@ const AdminShopMarketplaceImportRoute =
     id: '/shop/marketplace/import',
     path: '/shop/marketplace/import',
     getParentRoute: () => AdminRoute,
+  } as any)
+const ApiVentureLeadsClientSlugRoute =
+  ApiVentureLeadsClientSlugRouteImport.update({
+    id: '/api/venture/leads/$client/$slug',
+    path: '/api/venture/leads/$client/$slug',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiVentureCampaignsClientSlugRoute =
+  ApiVentureCampaignsClientSlugRouteImport.update({
+    id: '/api/venture/campaigns/$client/$slug',
+    path: '/api/venture/campaigns/$client/$slug',
+    getParentRoute: () => rootRouteImport,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -339,12 +341,12 @@ export interface FileRoutesByFullPath {
   '/admin/venture/campaigns/new': typeof AdminVentureCampaignsNewRoute
   '/admin/workflows/executions/$executionId': typeof AdminWorkflowsExecutionsExecutionIdRoute
   '/api/marketplace/$marketplace/callback': typeof ApiMarketplaceMarketplaceCallbackRoute
-  '/api/venture/campaigns/$slug': typeof ApiVentureCampaignsSlugRoute
-  '/api/venture/leads/$slug': typeof ApiVentureLeadsSlugRoute
   '/admin/shop/marketplace/': typeof AdminShopMarketplaceIndexRoute
   '/admin/shop/products/': typeof AdminShopProductsIndexRoute
   '/admin/venture/clients/': typeof AdminVentureClientsIndexRoute
   '/admin/workflows/executions/': typeof AdminWorkflowsExecutionsIndexRoute
+  '/api/venture/campaigns/$client/$slug': typeof ApiVentureCampaignsClientSlugRoute
+  '/api/venture/leads/$client/$slug': typeof ApiVentureLeadsClientSlugRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -386,12 +388,12 @@ export interface FileRoutesByTo {
   '/admin/venture/campaigns/new': typeof AdminVentureCampaignsNewRoute
   '/admin/workflows/executions/$executionId': typeof AdminWorkflowsExecutionsExecutionIdRoute
   '/api/marketplace/$marketplace/callback': typeof ApiMarketplaceMarketplaceCallbackRoute
-  '/api/venture/campaigns/$slug': typeof ApiVentureCampaignsSlugRoute
-  '/api/venture/leads/$slug': typeof ApiVentureLeadsSlugRoute
   '/admin/shop/marketplace': typeof AdminShopMarketplaceIndexRoute
   '/admin/shop/products': typeof AdminShopProductsIndexRoute
   '/admin/venture/clients': typeof AdminVentureClientsIndexRoute
   '/admin/workflows/executions': typeof AdminWorkflowsExecutionsIndexRoute
+  '/api/venture/campaigns/$client/$slug': typeof ApiVentureCampaignsClientSlugRoute
+  '/api/venture/leads/$client/$slug': typeof ApiVentureLeadsClientSlugRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -435,12 +437,12 @@ export interface FileRoutesById {
   '/admin/venture/campaigns/new': typeof AdminVentureCampaignsNewRoute
   '/admin/workflows/executions/$executionId': typeof AdminWorkflowsExecutionsExecutionIdRoute
   '/api/marketplace/$marketplace/callback': typeof ApiMarketplaceMarketplaceCallbackRoute
-  '/api/venture/campaigns/$slug': typeof ApiVentureCampaignsSlugRoute
-  '/api/venture/leads/$slug': typeof ApiVentureLeadsSlugRoute
   '/admin/shop/marketplace/': typeof AdminShopMarketplaceIndexRoute
   '/admin/shop/products/': typeof AdminShopProductsIndexRoute
   '/admin/venture/clients/': typeof AdminVentureClientsIndexRoute
   '/admin/workflows/executions/': typeof AdminWorkflowsExecutionsIndexRoute
+  '/api/venture/campaigns/$client/$slug': typeof ApiVentureCampaignsClientSlugRoute
+  '/api/venture/leads/$client/$slug': typeof ApiVentureLeadsClientSlugRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -485,12 +487,12 @@ export interface FileRouteTypes {
     | '/admin/venture/campaigns/new'
     | '/admin/workflows/executions/$executionId'
     | '/api/marketplace/$marketplace/callback'
-    | '/api/venture/campaigns/$slug'
-    | '/api/venture/leads/$slug'
     | '/admin/shop/marketplace/'
     | '/admin/shop/products/'
     | '/admin/venture/clients/'
     | '/admin/workflows/executions/'
+    | '/api/venture/campaigns/$client/$slug'
+    | '/api/venture/leads/$client/$slug'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -532,12 +534,12 @@ export interface FileRouteTypes {
     | '/admin/venture/campaigns/new'
     | '/admin/workflows/executions/$executionId'
     | '/api/marketplace/$marketplace/callback'
-    | '/api/venture/campaigns/$slug'
-    | '/api/venture/leads/$slug'
     | '/admin/shop/marketplace'
     | '/admin/shop/products'
     | '/admin/venture/clients'
     | '/admin/workflows/executions'
+    | '/api/venture/campaigns/$client/$slug'
+    | '/api/venture/leads/$client/$slug'
   id:
     | '__root__'
     | '/'
@@ -580,12 +582,12 @@ export interface FileRouteTypes {
     | '/admin/venture/campaigns/new'
     | '/admin/workflows/executions/$executionId'
     | '/api/marketplace/$marketplace/callback'
-    | '/api/venture/campaigns/$slug'
-    | '/api/venture/leads/$slug'
     | '/admin/shop/marketplace/'
     | '/admin/shop/products/'
     | '/admin/venture/clients/'
     | '/admin/workflows/executions/'
+    | '/api/venture/campaigns/$client/$slug'
+    | '/api/venture/leads/$client/$slug'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -595,8 +597,8 @@ export interface RootRouteChildren {
   ApiCalendarCallbackRoute: typeof ApiCalendarCallbackRoute
   ApiWorkflowsTriggerRoute: typeof ApiWorkflowsTriggerRoute
   ApiMarketplaceMarketplaceCallbackRoute: typeof ApiMarketplaceMarketplaceCallbackRoute
-  ApiVentureCampaignsSlugRoute: typeof ApiVentureCampaignsSlugRoute
-  ApiVentureLeadsSlugRoute: typeof ApiVentureLeadsSlugRoute
+  ApiVentureCampaignsClientSlugRoute: typeof ApiVentureCampaignsClientSlugRoute
+  ApiVentureLeadsClientSlugRoute: typeof ApiVentureLeadsClientSlugRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -860,20 +862,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminShopMarketplaceIndexRouteImport
       parentRoute: typeof AdminRoute
     }
-    '/api/venture/leads/$slug': {
-      id: '/api/venture/leads/$slug'
-      path: '/api/venture/leads/$slug'
-      fullPath: '/api/venture/leads/$slug'
-      preLoaderRoute: typeof ApiVentureLeadsSlugRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/venture/campaigns/$slug': {
-      id: '/api/venture/campaigns/$slug'
-      path: '/api/venture/campaigns/$slug'
-      fullPath: '/api/venture/campaigns/$slug'
-      preLoaderRoute: typeof ApiVentureCampaignsSlugRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/api/marketplace/$marketplace/callback': {
       id: '/api/marketplace/$marketplace/callback'
       path: '/api/marketplace/$marketplace/callback'
@@ -922,6 +910,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/shop/marketplace/import'
       preLoaderRoute: typeof AdminShopMarketplaceImportRouteImport
       parentRoute: typeof AdminRoute
+    }
+    '/api/venture/leads/$client/$slug': {
+      id: '/api/venture/leads/$client/$slug'
+      path: '/api/venture/leads/$client/$slug'
+      fullPath: '/api/venture/leads/$client/$slug'
+      preLoaderRoute: typeof ApiVentureLeadsClientSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/venture/campaigns/$client/$slug': {
+      id: '/api/venture/campaigns/$client/$slug'
+      path: '/api/venture/campaigns/$client/$slug'
+      fullPath: '/api/venture/campaigns/$client/$slug'
+      preLoaderRoute: typeof ApiVentureCampaignsClientSlugRouteImport
+      parentRoute: typeof rootRouteImport
     }
   }
 }
@@ -1019,8 +1021,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiWorkflowsTriggerRoute: ApiWorkflowsTriggerRoute,
   ApiMarketplaceMarketplaceCallbackRoute:
     ApiMarketplaceMarketplaceCallbackRoute,
-  ApiVentureCampaignsSlugRoute: ApiVentureCampaignsSlugRoute,
-  ApiVentureLeadsSlugRoute: ApiVentureLeadsSlugRoute,
+  ApiVentureCampaignsClientSlugRoute: ApiVentureCampaignsClientSlugRoute,
+  ApiVentureLeadsClientSlugRoute: ApiVentureLeadsClientSlugRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

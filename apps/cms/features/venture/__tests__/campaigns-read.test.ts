@@ -19,6 +19,15 @@ interface QueryResult {
   error: { message: string } | null
 }
 
+function makeClientBuilder(result: QueryResult) {
+  const builder = {
+    select: vi.fn(() => builder),
+    eq: vi.fn(() => builder),
+    maybeSingle: vi.fn(() => Promise.resolve(result)),
+  }
+  return builder
+}
+
 function makeCampaignBuilder(result: QueryResult) {
   const builder = {
     select: vi.fn(() => builder),
@@ -37,16 +46,25 @@ function makeBonusesBuilder(result: QueryResult) {
   return builder
 }
 
-function setupClient(opts: { campaign: QueryResult; bonuses?: QueryResult }) {
+function setupClient(opts: {
+  client?: QueryResult
+  campaign: QueryResult
+  bonuses?: QueryResult
+}) {
+  const clientBuilder = makeClientBuilder(
+    opts.client ?? { data: { id: 'client-1' }, error: null },
+  )
   const campaignBuilder = makeCampaignBuilder(opts.campaign)
   const bonusesBuilder = makeBonusesBuilder(
     opts.bonuses ?? { data: [], error: null },
   )
-  const from = vi.fn((table: string) =>
-    table === 'so_campaigns' ? campaignBuilder : bonusesBuilder,
-  )
+  const from = vi.fn((table: string) => {
+    if (table === 'so_clients') return clientBuilder
+    if (table === 'so_campaigns') return campaignBuilder
+    return bonusesBuilder
+  })
   ;(createAnonServerClient as Mock).mockReturnValue({ from })
-  return { from, campaignBuilder, bonusesBuilder }
+  return { from, clientBuilder, campaignBuilder, bonusesBuilder }
 }
 
 const BRAND = {
@@ -60,10 +78,11 @@ const BRAND = {
 describe('getPublishedCampaignBySlug', () => {
   it('returns the contract shape for a published campaign with bonuses sorted by the DB', async () => {
     const mock = setupClient({
+      client: { data: { id: 'client-1' }, error: null },
       campaign: {
         data: {
           id: 'campaign-1',
-          slug: 'kacper',
+          slug: 'warsztaty',
           display_name: 'Kacper Launch',
           brand: BRAND,
         },
@@ -78,11 +97,11 @@ describe('getPublishedCampaignBySlug', () => {
       },
     })
 
-    const result = await getPublishedCampaignBySlug('kacper')
+    const result = await getPublishedCampaignBySlug('przystan-inwestorow', 'warsztaty')
 
     expect(result.isOk()).toBe(true)
     expect(result._unsafeUnwrap()).toEqual({
-      slug: 'kacper',
+      slug: 'warsztaty',
       display_name: 'Kacper Launch',
       brand: BRAND,
       bonuses: [
@@ -90,6 +109,12 @@ describe('getPublishedCampaignBySlug', () => {
         { title: 'Bonus 2', description: 'second', type: 'file', url: 'https://b' },
       ],
     })
+
+    // Client resolved by slug first.
+    expect(mock.clientBuilder.eq).toHaveBeenCalledWith('slug', 'przystan-inwestorow')
+    // Campaign scoped to that client's id + its own slug.
+    expect(mock.campaignBuilder.eq).toHaveBeenCalledWith('client_id', 'client-1')
+    expect(mock.campaignBuilder.eq).toHaveBeenCalledWith('slug', 'warsztaty')
 
     // Sorting is delegated to the DB (index-backed), not done in JS.
     expect(mock.bonusesBuilder.order).toHaveBeenCalledWith('sort_order', {
@@ -109,7 +134,7 @@ describe('getPublishedCampaignBySlug', () => {
       bonuses: { data: [], error: null },
     })
 
-    const result = await getPublishedCampaignBySlug('empty')
+    const result = await getPublishedCampaignBySlug('przystan-inwestorow', 'empty')
 
     expect(result._unsafeUnwrap()).toEqual({
       slug: 'empty',
@@ -119,10 +144,24 @@ describe('getPublishedCampaignBySlug', () => {
     })
   })
 
-  it('returns null (→ 404) when no row is visible to anon (missing OR unpublished)', async () => {
+  it('returns null (→ 404) when the client slug does not resolve — never queries the campaign', async () => {
+    const mock = setupClient({
+      client: { data: null, error: null },
+      campaign: { data: null, error: null },
+    })
+
+    const result = await getPublishedCampaignBySlug('does-not-exist', 'warsztaty')
+
+    expect(result.isOk()).toBe(true)
+    expect(result._unsafeUnwrap()).toBeNull()
+    expect(mock.campaignBuilder.select).not.toHaveBeenCalled()
+    expect(mock.bonusesBuilder.order).not.toHaveBeenCalled()
+  })
+
+  it('returns null (→ 404) when no campaign row is visible to anon (missing OR unpublished)', async () => {
     const mock = setupClient({ campaign: { data: null, error: null } })
 
-    const result = await getPublishedCampaignBySlug('does-not-exist')
+    const result = await getPublishedCampaignBySlug('przystan-inwestorow', 'does-not-exist')
 
     expect(result.isOk()).toBe(true)
     expect(result._unsafeUnwrap()).toBeNull()
@@ -130,12 +169,44 @@ describe('getPublishedCampaignBySlug', () => {
     expect(mock.bonusesBuilder.order).not.toHaveBeenCalled()
   })
 
+  it('client isolation: a slug that exists under a DIFFERENT client → null, never leaks the other client campaign', async () => {
+    // "warsztaty" exists, but scoped to client-2 — this client resolves to
+    // client-1, so the (client_id, slug) filter must miss and return null.
+    // The campaign builder's maybeSingle mock simulates the DB-level filter
+    // returning nothing for this client's id.
+    const mock = setupClient({
+      client: { data: { id: 'client-1' }, error: null },
+      campaign: { data: null, error: null },
+    })
+
+    const result = await getPublishedCampaignBySlug('przystan-inwestorow', 'warsztaty')
+
+    expect(result.isOk()).toBe(true)
+    expect(result._unsafeUnwrap()).toBeNull()
+    // Proves the campaign lookup was scoped to THIS client's id, not global.
+    expect(mock.campaignBuilder.eq).toHaveBeenCalledWith('client_id', 'client-1')
+    expect(mock.bonusesBuilder.order).not.toHaveBeenCalled()
+  })
+
   it('propagates a genuine DB error as err (→ 500), not null', async () => {
     setupClient({
+      client: { data: { id: 'client-1' }, error: null },
       campaign: { data: null, error: { message: 'connection reset' } },
     })
 
-    const result = await getPublishedCampaignBySlug('kacper')
+    const result = await getPublishedCampaignBySlug('przystan-inwestorow', 'warsztaty')
+
+    expect(result.isErr()).toBe(true)
+    expect(result._unsafeUnwrapErr()).toBe('connection reset')
+  })
+
+  it('propagates a genuine DB error from the client lookup as err (→ 500)', async () => {
+    setupClient({
+      client: { data: null, error: { message: 'connection reset' } },
+      campaign: { data: null, error: null },
+    })
+
+    const result = await getPublishedCampaignBySlug('przystan-inwestorow', 'warsztaty')
 
     expect(result.isErr()).toBe(true)
     expect(result._unsafeUnwrapErr()).toBe('connection reset')
@@ -143,14 +214,15 @@ describe('getPublishedCampaignBySlug', () => {
 
   it('NEVER selects lead / esp_* columns — only the public-safe projections', async () => {
     const mock = setupClient({
+      client: { data: { id: 'client-1' }, error: null },
       campaign: {
-        data: { id: 'c1', slug: 'kacper', display_name: 'K', brand: BRAND },
+        data: { id: 'c1', slug: 'warsztaty', display_name: 'K', brand: BRAND },
         error: null,
       },
       bonuses: { data: [], error: null },
     })
 
-    await getPublishedCampaignBySlug('kacper')
+    await getPublishedCampaignBySlug('przystan-inwestorow', 'warsztaty')
 
     // Exact column lists requested.
     expect(mock.campaignBuilder.select).toHaveBeenCalledWith(CAMPAIGN_PUBLIC_COLUMNS)
@@ -170,10 +242,8 @@ describe('getPublishedCampaignBySlug', () => {
       .join(' ')
     expect(allSelectArgs).not.toMatch(/esp_/)
     expect(allSelectArgs).not.toMatch(/lead/)
-    expect(allSelectArgs).not.toMatch(/client_id/)
 
     // Guard the exported constants directly too.
     expect(CAMPAIGN_PUBLIC_COLUMNS).not.toMatch(/esp_/)
-    expect(CAMPAIGN_PUBLIC_COLUMNS).not.toMatch(/client_id/)
   })
 })

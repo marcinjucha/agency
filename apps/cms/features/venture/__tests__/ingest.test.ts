@@ -6,7 +6,12 @@ vi.mock('../mail/bonus-email', () => ({
   buildBonusEmail: vi.fn(async () => ({ subject: 'Subj', html: '<p>html</p>' })),
 }))
 
-import { ingestLead, ingestOutcomeStatus, type IngestDeps } from '../ingest.server'
+import {
+  ingestLead,
+  ingestOutcomeStatus,
+  resolveCampaign,
+  type IngestDeps,
+} from '../ingest.server'
 import { EspApiError } from '../esp/http.server'
 import type { EspProvider } from '../esp/types'
 import type { MappedLead } from '../tally'
@@ -35,11 +40,20 @@ type Result = { data: unknown; error: { message: string; code?: string } | null 
 // A per-table Supabase mock. so_leads carries 3 distinct ops disambiguated by
 // which entry method is called first (select / insert / update).
 function makeSupabase(cfg: {
+  client?: Result
   campaign?: Result
   duplicate?: Result
   insert?: Result
   bonuses?: Result
 }) {
+  const clientBuilder = {
+    select: vi.fn(() => clientBuilder),
+    eq: vi.fn(() => clientBuilder),
+    maybeSingle: vi.fn(() =>
+      Promise.resolve(cfg.client ?? { data: { id: 'client-1' }, error: null }),
+    ),
+  }
+
   const campaignBuilder = {
     select: vi.fn(() => campaignBuilder),
     eq: vi.fn(() => campaignBuilder),
@@ -72,6 +86,8 @@ function makeSupabase(cfg: {
 
   const from = vi.fn((table: string) => {
     switch (table) {
+      case 'so_clients':
+        return clientBuilder
       case 'so_campaigns':
         return campaignBuilder
       case 'so_leads':
@@ -85,7 +101,15 @@ function makeSupabase(cfg: {
     }
   })
 
-  return { from, campaignBuilder, leadsBuilder, leadsUpdateChain, bonusesBuilder, syncLogInsert }
+  return {
+    from,
+    clientBuilder,
+    campaignBuilder,
+    leadsBuilder,
+    leadsUpdateChain,
+    bonusesBuilder,
+    syncLogInsert,
+  }
 }
 
 function makeProvider(overrides?: Partial<EspProvider>): EspProvider {
@@ -264,6 +288,61 @@ describe('ingestLead', () => {
 
     expect(outcome).toMatchObject({ status: 'ingested', espSynced: false })
     expect(provider.upsertContact).not.toHaveBeenCalled()
+  })
+})
+
+// resolveCampaign now resolves client-scoped slugs — the client is resolved
+// first, then the campaign is looked up scoped to that client's id.
+describe('resolveCampaign', () => {
+  it('resolves the client by slug, then the campaign scoped to that client id + campaign slug', async () => {
+    const supabase = makeSupabase({})
+
+    const result = await resolveCampaign(
+      supabase as unknown as Parameters<typeof resolveCampaign>[0],
+      'przystan-inwestorow',
+      'warsztaty',
+    )
+
+    expect(result).toEqual(CAMPAIGN)
+    expect(supabase.clientBuilder.eq).toHaveBeenCalledWith('slug', 'przystan-inwestorow')
+    expect(supabase.campaignBuilder.eq).toHaveBeenCalledWith('client_id', 'client-1')
+    expect(supabase.campaignBuilder.eq).toHaveBeenCalledWith('slug', 'warsztaty')
+  })
+
+  it('returns null when the client slug does not resolve — never queries so_campaigns', async () => {
+    const supabase = makeSupabase({ client: { data: null, error: null } })
+
+    const result = await resolveCampaign(
+      supabase as unknown as Parameters<typeof resolveCampaign>[0],
+      'unknown-client',
+      'warsztaty',
+    )
+
+    expect(result).toBeNull()
+    expect(supabase.campaignBuilder.select).not.toHaveBeenCalled()
+  })
+
+  // Regression test for the client-scoped-slug pivot: a campaign slug that is
+  // known to exist, but under a DIFFERENT client than the one resolved here,
+  // must NOT resolve. This is the isolation guarantee the whole pivot exists
+  // to provide — a slug collision across clients must never cross-resolve.
+  it('client isolation: a known campaign slug belonging to ANOTHER client → null (never cross-resolves)', async () => {
+    const supabase = makeSupabase({
+      client: { data: { id: 'client-1' }, error: null },
+      // Simulates the DB-level (client_id, slug) filter finding nothing for
+      // client-1, even though "warsztaty" exists under some other client.
+      campaign: { data: null, error: null },
+    })
+
+    const result = await resolveCampaign(
+      supabase as unknown as Parameters<typeof resolveCampaign>[0],
+      'przystan-inwestorow',
+      'warsztaty',
+    )
+
+    expect(result).toBeNull()
+    // Proves the campaign lookup was scoped to THIS client's id.
+    expect(supabase.campaignBuilder.eq).toHaveBeenCalledWith('client_id', 'client-1')
   })
 })
 
