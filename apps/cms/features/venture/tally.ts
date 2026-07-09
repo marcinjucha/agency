@@ -18,9 +18,12 @@ import { ok, err, type Result } from 'neverthrow'
 // (CALCULATED_FIELDS, PAYMENT, MATRIX, FILE_UPLOAD, SIGNATURE, RATING, …) — it
 // iterates and picks only the fields it needs, ignoring the rest.
 //
-// email + submissionId are REQUIRED (submissionId keys idempotency, email owns
-// the lead); everything else is best-effort. The campaign is NO LONGER read from
-// the body — the route resolves it from the URL slug ($slug) before this runs.
+// Only submissionId is REQUIRED (it keys idempotency). email is now OPTIONAL —
+// user decided 2026-07-09: capturing the lead still has value even without an
+// email to contact them; ESP-sync and the bonus email are already tolerant of
+// missing dependencies (they skip, the lead is kept). The campaign is NO LONGER
+// read from the body — the route resolves it from the URL slug ($slug) before
+// this runs.
 // ---------------------------------------------------------------------------
 
 export interface TallyField {
@@ -44,7 +47,9 @@ export interface TallyWebhookPayload {
 
 /** Flat lead shape consumed by the ingest orchestrator. */
 export interface MappedLead {
-  email: string
+  // Optional — user decided 2026-07-09 that a lead with no email is still
+  // worth capturing. syncToEsp/sendBonusEmail guard on null and skip.
+  email: string | null
   name: string | null
   source: string | null
   consentLaunch: boolean
@@ -59,7 +64,6 @@ export interface MappedLead {
 // union from an `as const` map (project rule: no hand-maintained string unions).
 export const TALLY_MAP_ERRORS = {
   badPayload: 'bad_payload',
-  missingEmail: 'missing_email',
   missingSubmissionId: 'missing_submission_id',
 } as const
 export type TallyMapError =
@@ -229,8 +233,9 @@ export function mapTallyPayload(
 
   const fields = payload.data?.fields ?? []
 
+  // Optional — missing/unparseable email no longer blocks ingest (see file
+  // header). null flows into MappedLead; downstream ESP-sync/email skip it.
   const email = asString(findEmailField(fields)?.value)
-  if (!email) return err(TALLY_MAP_ERRORS.missingEmail)
 
   // Idempotency dedup keys on submissionId; a missing/empty one would let a
   // resend re-insert (DB UNIQUE allows multiple NULLs) → reject as bad_request.

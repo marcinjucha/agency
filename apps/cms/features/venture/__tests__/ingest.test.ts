@@ -279,6 +279,32 @@ describe('ingestLead', () => {
     expect(outcome).toMatchObject({ status: 'ingested', espSynced: true, emailSent: false })
   })
 
+  it('email optional — null email → lead inserted, ESP sync + bonus email skipped, providers never called', async () => {
+    const supabase = makeSupabase({})
+    const provider = makeProvider()
+    const getProvider = vi.fn(() => provider)
+    const sendEmail = vi.fn(async () => undefined)
+    const deps: IngestDeps = {
+      supabase: supabase as unknown as IngestDeps['supabase'],
+      getProvider,
+      isProviderRegistered: (id: string): id is 'beehiiv' => id === 'beehiiv',
+      sendEmail,
+    }
+
+    const outcome = await ingestLead(deps, CAMPAIGN, { ...LEAD, email: null })
+
+    expect(outcome).toEqual({
+      status: 'ingested',
+      leadId: 'lead-1',
+      espSynced: false,
+      emailSent: false,
+    })
+    expect(supabase.leadsBuilder.insert).toHaveBeenCalledTimes(1)
+    expect(getProvider).not.toHaveBeenCalled()
+    expect(provider.upsertContact).not.toHaveBeenCalled()
+    expect(sendEmail).not.toHaveBeenCalled()
+  })
+
   it('skips ESP sync (but keeps the lead) when the provider is unregistered', async () => {
     const supabase = makeSupabase({})
     const provider = makeProvider()

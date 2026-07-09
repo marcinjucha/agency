@@ -265,6 +265,10 @@ async function syncToEsp(
   leadId: string,
   mapped: MappedLead,
 ): Promise<boolean> {
+  if (!mapped.email) {
+    console.warn('[venture-ingest] lead has no email — skipping ESP sync (lead kept)')
+    return false
+  }
   if (!deps.isProviderRegistered(campaign.esp_provider)) {
     console.warn(
       `[venture-ingest] unknown ESP provider "${campaign.esp_provider}" — skipping sync (lead kept)`,
@@ -355,6 +359,12 @@ async function sendBonusEmail(
   campaign: CampaignRow,
   mapped: MappedLead,
 ): Promise<boolean> {
+  // Guard BEFORE any work — deps.sendEmail's `to` is typed as a non-null
+  // string; never pass null. Nowhere to send the bonus without an email.
+  if (!mapped.email) {
+    console.warn('[venture-ingest] lead has no email — skipping bonus email (lead kept)')
+    return false
+  }
   try {
     const bonuses = await fetchPublishedBonuses(deps.supabase, campaign.id)
     const { subject, html } = await buildBonusEmail({

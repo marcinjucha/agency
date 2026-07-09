@@ -166,9 +166,12 @@ describe('mapTallyPayload — synthetic fields', () => {
     expect(lead.source).toBeNull()
   })
 
-  it('errors with missing_email when no email field can be found', () => {
+  it('email is optional — no email field found → ok with email: null (does NOT reject)', () => {
+    // User decided 2026-07-09: a missing email must not block ingest; the lead
+    // is still captured, only ESP-sync/bonus email are skipped downstream.
     const result = mapTallyPayload(payload([NAME_FIELD]))
-    expect(result._unsafeUnwrapErr()).toBe(TALLY_MAP_ERRORS.missingEmail)
+    expect(result.isOk()).toBe(true)
+    expect(result._unsafeUnwrap()).toMatchObject({ email: null, name: 'Jan' })
   })
 
   it('errors with bad_payload for a non-FORM_RESPONSE shape', () => {

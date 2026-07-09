@@ -1347,7 +1347,7 @@ export type Database = {
           campaign_id: string
           consent_launch: boolean
           created_at: string
-          email: string
+          email: string | null
           esp_synced: boolean
           id: string
           legal_basis_bonus: string
@@ -1359,7 +1359,7 @@ export type Database = {
           campaign_id: string
           consent_launch?: boolean
           created_at?: string
-          email: string
+          email?: string | null
           esp_synced?: boolean
           id?: string
           legal_basis_bonus?: string
@@ -1371,7 +1371,7 @@ export type Database = {
           campaign_id?: string
           consent_launch?: boolean
           created_at?: string
-          email?: string
+          email?: string | null
           esp_synced?: boolean
           id?: string
           legal_basis_bonus?: string
