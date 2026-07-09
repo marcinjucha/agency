@@ -103,17 +103,43 @@ export type CampaignRow = {
 // Row shape fetched from so_clients — id + the plaintext mail-provider config.
 type ClientRow = { id: string } & ClientMailConfig
 
+// Resolve outcome — discriminated on `kind` (as-const single source of truth,
+// same convention as INSERT_RESULT_KINDS below). `db_error` MUST be
+// distinguished from `not_found`: a transient DB error during resolve is NOT
+// "campaign doesn't exist" — conflating them made a genuine DB hiccup collapse
+// to the route's 401 path, which Tally does NOT retry, silently dropping a
+// validly-signed lead forever. `not_found` stays mapped to 401 (uniform with
+// the existing no-secret-configured branch); `db_error` must propagate to a
+// retryable 500 instead.
+const RESOLVE_RESULT_KINDS = {
+  found: 'found',
+  notFound: 'not_found',
+  dbError: 'db_error',
+} as const
+
+type ResolveClientResult =
+  | { kind: typeof RESOLVE_RESULT_KINDS.found; row: ClientRow }
+  | { kind: typeof RESOLVE_RESULT_KINDS.notFound }
+  | { kind: typeof RESOLVE_RESULT_KINDS.dbError }
+
+export type ResolveCampaignResult =
+  | { kind: typeof RESOLVE_RESULT_KINDS.found; campaign: CampaignRow }
+  | { kind: typeof RESOLVE_RESULT_KINDS.notFound }
+  | { kind: typeof RESOLVE_RESULT_KINDS.dbError }
+
 /**
  * Resolve a client's internal id + mail-provider config by its public slug.
  * Campaign slugs are scoped per client (so_campaigns UNIQUE(client_id, slug)),
  * so resolving the campaign requires resolving its owning client first —
  * fetched here in one query since sendBonusEmail needs the client's mail
- * config regardless.
+ * config regardless. Three-way result: `found` (row), `not_found` (no row,
+ * no error — genuinely unknown client), `db_error` (query failed — transient,
+ * MUST NOT be treated as "unknown client" by the caller).
  */
 async function resolveClientRow(
   supabase: ServiceClient,
   clientSlug: string,
-): Promise<ClientRow | null> {
+): Promise<ResolveClientResult> {
   const { data, error } = await supabase
     .from('so_clients')
     .select(
@@ -123,25 +149,40 @@ async function resolveClientRow(
     .maybeSingle()
   if (error) {
     console.error('[venture-ingest] client lookup failed:', error.message)
-    return null
+    return { kind: RESOLVE_RESULT_KINDS.dbError }
   }
-  return (data as ClientRow | null) ?? null
+  if (!data) return { kind: RESOLVE_RESULT_KINDS.notFound }
+  return { kind: RESOLVE_RESULT_KINDS.found, row: data as ClientRow }
 }
 
 /**
  * Resolve a campaign by its public client slug + campaign slug on the service
  * client. Exported so the route can call it FIRST (it needs
  * `tally_webhook_secret` to verify the signature), then pass the resolved row
- * into `ingestLead`. Unknown client OR unknown campaign both resolve to
- * `null` — the route maps that to the same uniform 401 as a bad signature.
+ * into `ingestLead`. Three-way result:
+ *   - `found`     — campaign resolved (client + campaign rows both exist)
+ *   - `not_found` — client OR campaign genuinely doesn't exist (no query
+ *                   error) — the route maps this to the same uniform 401 as
+ *                   a bad signature / missing secret (no enumeration oracle)
+ *   - `db_error`  — a query failed (transient/unknown) — MUST propagate as
+ *                   `db_error` all the way to the route, which maps it to a
+ *                   retryable 500 so Tally does NOT silently lose the lead
+ * A `db_error` from the client lookup is propagated immediately — it must
+ * NOT collapse into `not_found` just because there's no campaign row to show.
  */
 export async function resolveCampaign(
   supabase: ServiceClient,
   clientSlug: string,
   slug: string,
-): Promise<CampaignRow | null> {
-  const clientRow = await resolveClientRow(supabase, clientSlug)
-  if (!clientRow) return null
+): Promise<ResolveCampaignResult> {
+  const clientResult = await resolveClientRow(supabase, clientSlug)
+  if (clientResult.kind === RESOLVE_RESULT_KINDS.dbError) {
+    return { kind: RESOLVE_RESULT_KINDS.dbError }
+  }
+  if (clientResult.kind === RESOLVE_RESULT_KINDS.notFound) {
+    return { kind: RESOLVE_RESULT_KINDS.notFound }
+  }
+  const clientRow = clientResult.row
 
   const { data, error } = await supabase
     .from('so_campaigns')
@@ -153,9 +194,9 @@ export async function resolveCampaign(
     .maybeSingle()
   if (error) {
     console.error('[venture-ingest] campaign lookup failed:', error.message)
-    return null
+    return { kind: RESOLVE_RESULT_KINDS.dbError }
   }
-  if (!data) return null
+  if (!data) return { kind: RESOLVE_RESULT_KINDS.notFound }
 
   const {
     mail_provider,
@@ -166,14 +207,17 @@ export async function resolveCampaign(
     sender_name,
   } = clientRow
   return {
-    ...(data as Omit<CampaignRow, 'clientMail'>),
-    clientMail: {
-      mail_provider,
-      resend_api_key,
-      resend_from_email,
-      gmail_address,
-      gmail_app_password,
-      sender_name,
+    kind: RESOLVE_RESULT_KINDS.found,
+    campaign: {
+      ...(data as Omit<CampaignRow, 'clientMail'>),
+      clientMail: {
+        mail_provider,
+        resend_api_key,
+        resend_from_email,
+        gmail_address,
+        gmail_app_password,
+        sender_name,
+      },
     },
   }
 }

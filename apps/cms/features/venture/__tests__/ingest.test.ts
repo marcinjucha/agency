@@ -395,13 +395,13 @@ describe('resolveCampaign', () => {
       'warsztaty',
     )
 
-    expect(result).toEqual(CAMPAIGN)
+    expect(result).toEqual({ kind: 'found', campaign: CAMPAIGN })
     expect(supabase.clientBuilder.eq).toHaveBeenCalledWith('slug', 'przystan-inwestorow')
     expect(supabase.campaignBuilder.eq).toHaveBeenCalledWith('client_id', 'client-1')
     expect(supabase.campaignBuilder.eq).toHaveBeenCalledWith('slug', 'warsztaty')
   })
 
-  it('returns null when the client slug does not resolve — never queries so_campaigns', async () => {
+  it('returns not_found when the client slug does not resolve (no error) — never queries so_campaigns', async () => {
     const supabase = makeSupabase({ client: { data: null, error: null } })
 
     const result = await resolveCampaign(
@@ -410,7 +410,7 @@ describe('resolveCampaign', () => {
       'warsztaty',
     )
 
-    expect(result).toBeNull()
+    expect(result).toEqual({ kind: 'not_found' })
     expect(supabase.campaignBuilder.select).not.toHaveBeenCalled()
   })
 
@@ -418,7 +418,7 @@ describe('resolveCampaign', () => {
   // known to exist, but under a DIFFERENT client than the one resolved here,
   // must NOT resolve. This is the isolation guarantee the whole pivot exists
   // to provide — a slug collision across clients must never cross-resolve.
-  it('client isolation: a known campaign slug belonging to ANOTHER client → null (never cross-resolves)', async () => {
+  it('client isolation: a known campaign slug belonging to ANOTHER client → not_found (never cross-resolves)', async () => {
     const supabase = makeSupabase({
       client: { data: { id: 'client-1' }, error: null },
       // Simulates the DB-level (client_id, slug) filter finding nothing for
@@ -432,9 +432,38 @@ describe('resolveCampaign', () => {
       'warsztaty',
     )
 
-    expect(result).toBeNull()
+    expect(result).toEqual({ kind: 'not_found' })
     // Proves the campaign lookup was scoped to THIS client's id.
     expect(supabase.campaignBuilder.eq).toHaveBeenCalledWith('client_id', 'client-1')
+  })
+
+  it('db_error: client lookup query fails → db_error, never queries so_campaigns (must NOT collapse to not_found)', async () => {
+    const supabase = makeSupabase({
+      client: { data: null, error: { message: 'connection reset' } },
+    })
+
+    const result = await resolveCampaign(
+      supabase as unknown as Parameters<typeof resolveCampaign>[0],
+      'przystan-inwestorow',
+      'warsztaty',
+    )
+
+    expect(result).toEqual({ kind: 'db_error' })
+    expect(supabase.campaignBuilder.select).not.toHaveBeenCalled()
+  })
+
+  it('db_error: campaign lookup query fails (client resolves fine) → db_error', async () => {
+    const supabase = makeSupabase({
+      campaign: { data: null, error: { message: 'statement timeout' } },
+    })
+
+    const result = await resolveCampaign(
+      supabase as unknown as Parameters<typeof resolveCampaign>[0],
+      'przystan-inwestorow',
+      'warsztaty',
+    )
+
+    expect(result).toEqual({ kind: 'db_error' })
   })
 })
 

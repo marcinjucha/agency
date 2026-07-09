@@ -8,7 +8,6 @@ import {
   ingestLead,
   ingestOutcomeStatus,
   resolveCampaign,
-  type CampaignRow,
   type IngestDeps,
 } from '@/features/venture/ingest.server'
 
@@ -113,18 +112,35 @@ export const Route = createFileRoute('/api/venture/leads/$client/$slug')({
 
         // Resolve the campaign FIRST — we need its per-campaign secret to verify.
         const supabase = createServiceClient()
-        const campaign: CampaignRow | null = await resolveCampaign(
-          supabase,
-          clientSlug,
-          slug,
-        )
+        const resolveResult = await resolveCampaign(supabase, clientSlug, slug)
+
+        // A transient DB error during resolve is NOT "unknown campaign" — it
+        // must be retryable (500), not collapsed into the uniform 401 (Tally
+        // does not retry 401s, so conflating the two would silently drop a
+        // validly-signed lead forever on a mere connection blip).
+        if (resolveResult.kind === 'db_error') {
+          console.error('[venture-ingest] rejected: db error resolving client/campaign', {
+            clientSlug,
+            slug,
+          })
+          return json({ error: 'internal_error' }, 500)
+        }
 
         // Unknown client, unknown campaign, OR no secret configured → same
-        // 401 as a bad signature.
-        const secret = campaign?.tally_webhook_secret
-        if (!campaign || !secret) {
+        // 401 as a bad signature (no enumeration oracle).
+        if (resolveResult.kind === 'not_found') {
+          console.warn('[venture-ingest] rejected: unknown client/campaign', {
+            clientSlug,
+            slug,
+          })
+          return invalidSignature()
+        }
+
+        const campaign = resolveResult.campaign
+        const secret = campaign.tally_webhook_secret
+        if (!secret) {
           console.warn(
-            '[venture-ingest] rejected: unknown client/campaign or no webhook secret configured',
+            '[venture-ingest] rejected: no webhook secret configured',
             { clientSlug, slug },
           )
           return invalidSignature()
