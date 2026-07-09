@@ -99,7 +99,16 @@ export const Route = createFileRoute('/api/venture/leads/$client/$slug')({
     handlers: {
       POST: async ({ request }) => {
         const { clientSlug, slug } = parseClientAndSlug(request)
-        if (!clientSlug || !slug) return invalidSignature()
+        if (!clientSlug || !slug) {
+          // Server-log only — never surfaced in the HTTP response, so
+          // distinguishing the reason here does not create an enumeration
+          // oracle for the caller (that oracle is about response content).
+          console.warn(
+            '[venture-ingest] rejected: malformed request (missing clientSlug/slug in URL)',
+            { clientSlug, slug },
+          )
+          return invalidSignature()
+        }
 
         // Resolve the campaign FIRST — we need its per-campaign secret to verify.
         const supabase = createServiceClient()
@@ -112,13 +121,25 @@ export const Route = createFileRoute('/api/venture/leads/$client/$slug')({
         // Unknown client, unknown campaign, OR no secret configured → same
         // 401 as a bad signature.
         const secret = campaign?.tally_webhook_secret
-        if (!campaign || !secret) return invalidSignature()
+        if (!campaign || !secret) {
+          console.warn(
+            '[venture-ingest] rejected: unknown client/campaign or no webhook secret configured',
+            { clientSlug, slug },
+          )
+          return invalidSignature()
+        }
 
         // Verify HMAC over the RAW body BEFORE parsing (do not re-serialize).
         const rawBody = await request.text()
         const signature = request.headers.get('Tally-Signature')
         const check = verifyTallySignature(rawBody, signature, secret)
-        if (!check.valid) return invalidSignature()
+        if (!check.valid) {
+          console.warn('[venture-ingest] rejected: invalid HMAC signature', {
+            clientSlug,
+            slug,
+          })
+          return invalidSignature()
+        }
 
         let parsed: unknown
         try {
@@ -147,6 +168,22 @@ export const Route = createFileRoute('/api/venture/leads/$client/$slug')({
           if (httpStatus !== 200) {
             console.warn('[venture-ingest] lead not persisted (retryable):', outcome.status)
             return json({ error: 'ingest_failed' }, httpStatus)
+          }
+          if (outcome.status === 'ingested') {
+            console.log('[venture-ingest] lead ingested:', {
+              clientSlug,
+              slug,
+              status: outcome.status,
+              leadId: outcome.leadId,
+              espSynced: outcome.espSynced,
+              emailSent: outcome.emailSent,
+            })
+          } else {
+            console.log('[venture-ingest] lead ingest outcome:', {
+              clientSlug,
+              slug,
+              status: outcome.status,
+            })
           }
           return json({ ok: true }, 200)
         } catch (error) {
