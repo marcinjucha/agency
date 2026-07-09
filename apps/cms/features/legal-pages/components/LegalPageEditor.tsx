@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useQueryClient } from '@tanstack/react-query'
@@ -111,6 +111,19 @@ export function LegalPageEditor({ legalPage, updateFn }: LegalPageEditorProps) {
     setDeleteState('error')
     setDeleteError(result.error || messages.legalPages.deleteError)
   }
+
+  // ⌘S / Ctrl+S keyboard shortcut — same neutral save as the "Zapisz" button
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault()
+        void handleSubmit(onSubmit)()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">

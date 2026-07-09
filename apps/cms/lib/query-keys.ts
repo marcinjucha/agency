@@ -96,6 +96,24 @@ export const queryKeys = {
   },
 
   /**
+   * @source listClientsFn, listCampaignsFn, listBonusesFn (features/venture/admin.ts)
+   * @usedBy VentureClientList + VentureClientSelect (clients), VentureCampaignList + VentureCampaignEditor
+   *   (campaigns), VentureBonusManager (bonuses)
+   * @invalidatedBy all venture mutations invalidate at the ROOT key `venture.all`
+   *   (exact-key invalidation silently fails — ag-design-patterns). Clients, campaigns
+   *   and bonuses share one root so a nested write refreshes every dependent list.
+   */
+  venture: {
+    all: ['venture'] as const,
+    clients: ['venture', 'clients'] as const,
+    campaigns: (clientId?: string) =>
+      clientId
+        ? (['venture', 'campaigns', clientId] as const)
+        : (['venture', 'campaigns'] as const),
+    bonuses: (campaignId: string) => ['venture', 'bonuses', campaignId] as const,
+  },
+
+  /**
    * @source getWorkflowsFn, getWorkflowDetailFn, getWorkflowEmailTemplatesFn, getWorkflowSurveysFn (features/workflows/server.ts)
    * @usedBy WorkflowList (list), WorkflowEditor (detail), ExecutionList (list),
    *   SendEmailConfigPanel (emailTemplates), TriggerConfigPanel (surveys), TestModePanel (ad-hoc key)

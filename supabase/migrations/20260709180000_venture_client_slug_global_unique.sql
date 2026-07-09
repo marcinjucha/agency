@@ -1,0 +1,59 @@
+-- ==========================================
+-- Venture Bonus Funnel — client slug uniqueness: add GLOBAL UNIQUE(slug)
+-- ==========================================
+-- Purpose:
+--   Add a GLOBAL UNIQUE constraint on so_clients.slug, in ADDITION to the existing
+--   per-tenant UNIQUE(tenant_id, slug) from 20260705120000 (which is kept — it is still
+--   correct and harmless alongside the stricter global one).
+--
+-- WHY:
+--   The public venture endpoints resolve a client by slug ALONE, with no tenant context in
+--   the URL — this is intentional: the public path is `/api/venture/{campaigns,leads}/{client_slug}/{campaign_slug}`
+--   and deliberately does NOT carry a third tenant segment. Handlers do
+--   `.eq('slug', clientSlug).maybeSingle()` (apps/cms/features/venture/ingest.server.ts
+--   resolveClientRow, apps/cms/features/venture/server.ts fetchClientId). With only the
+--   per-tenant UNIQUE(tenant_id, slug), a second tenant could create a client with the same
+--   slug; `.maybeSingle()` would then hit >1 rows and return a multi-row error (PGRST116) ->
+--   the resolve fails (401/500) instead of returning the correct client. It never silently
+--   cross-tenant mis-routes, but it IS fragile once the feature scales to a second tenant.
+--   so_clients.slug represents the CREATOR'S BRAND/company (e.g. "przystan-inwestorow"), so
+--   global uniqueness is architecturally sound: two different creators sharing an identical
+--   brand name is a rare, deliberate collision.
+--
+--   CONTRAST with so_campaigns.slug (20260709141553), which was deliberately moved the OTHER
+--   direction — from GLOBAL UNIQUE to per-client UNIQUE(client_id, slug). Campaign slugs are
+--   generic ("warsztaty") and WOULD collide between creators; client slugs are brand-specific
+--   and should not. Different table, different case, opposite decision.
+--
+-- Data check (staging, before adding the constraint):
+--   SELECT slug, COUNT(*) FROM so_clients GROUP BY slug HAVING COUNT(*) > 1;
+--   -- Verified 2026-07-09: 0 collision rows on staging (single client: "przystan-inwestorow").
+--   -- If this ever returns rows, ADD CONSTRAINT below fails — resolve the duplicate slugs first.
+--
+-- Idempotent by construction (see supabase/CLAUDE.md): DROP ... IF EXISTS before ADD so the
+-- file can be re-run against a partially-applied state without erroring.
+
+-- ==========================================
+-- Global UNIQUE(slug)
+-- ==========================================
+ALTER TABLE so_clients DROP CONSTRAINT IF EXISTS so_clients_slug_key;
+ALTER TABLE so_clients ADD CONSTRAINT so_clients_slug_key UNIQUE (slug);
+
+-- The existing per-tenant UNIQUE(tenant_id, slug) (so_clients_tenant_id_slug_key from
+-- 20260705120000) is intentionally KEPT. It is now redundant-but-harmless: any pair unique on
+-- (slug) is trivially unique on (tenant_id, slug). Left in place rather than dropped because
+-- other code/tooling may reference it, and keeping both carries no correctness or write-path
+-- cost (a duplicate slug is rejected by the global constraint first).
+
+-- ==========================================
+-- VERIFICATION (runnable)
+-- ==========================================
+--   SELECT conname, pg_get_constraintdef(oid) FROM pg_constraint
+--     WHERE conrelid = 'so_clients'::regclass AND contype = 'u';
+--     -- expect BOTH: so_clients_slug_key = UNIQUE (slug)
+--     --              so_clients_tenant_id_slug_key = UNIQUE (tenant_id, slug)
+--
+-- Cross-tenant duplicate slug now rejected (fictional second tenant):
+--   INSERT INTO so_clients (tenant_id, slug, name)
+--     VALUES ('00000000-0000-0000-0000-000000000001', 'przystan-inwestorow', 'Dup');
+--     -- expect ERROR: duplicate key value violates unique constraint "so_clients_slug_key"

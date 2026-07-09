@@ -1158,6 +1158,261 @@ export type Database = {
           },
         ]
       }
+      so_bonuses: {
+        Row: {
+          campaign_id: string
+          created_at: string
+          description: string | null
+          id: string
+          media_asset_id: string | null
+          published: boolean
+          sort_order: number
+          title: string | null
+          type: string | null
+          updated_at: string
+          url: string | null
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          media_asset_id?: string | null
+          published?: boolean
+          sort_order?: number
+          title?: string | null
+          type?: string | null
+          updated_at?: string
+          url?: string | null
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          media_asset_id?: string | null
+          published?: boolean
+          sort_order?: number
+          title?: string | null
+          type?: string | null
+          updated_at?: string
+          url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "so_bonuses_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "so_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "so_bonuses_media_asset_id_fkey"
+            columns: ["media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      so_campaigns: {
+        Row: {
+          brand: Json | null
+          client_id: string
+          created_at: string
+          display_name: string | null
+          esp_audience_ref: string | null
+          esp_provider: string
+          esp_tag_launch: string
+          has_webhook_secret: boolean
+          id: string
+          published: boolean
+          slug: string
+          tally_webhook_secret: string | null
+          updated_at: string
+        }
+        Insert: {
+          brand?: Json | null
+          client_id: string
+          created_at?: string
+          display_name?: string | null
+          esp_audience_ref?: string | null
+          esp_provider?: string
+          esp_tag_launch?: string
+          id?: string
+          published?: boolean
+          slug: string
+          tally_webhook_secret?: string | null
+          updated_at?: string
+        }
+        Update: {
+          brand?: Json | null
+          client_id?: string
+          created_at?: string
+          display_name?: string | null
+          esp_audience_ref?: string | null
+          esp_provider?: string
+          esp_tag_launch?: string
+          id?: string
+          published?: boolean
+          slug?: string
+          tally_webhook_secret?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "so_campaigns_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "so_clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      so_clients: {
+        Row: {
+          created_at: string
+          gmail_address: string | null
+          gmail_app_password: string | null
+          has_gmail_app_password: boolean | null
+          has_resend_api_key: boolean | null
+          id: string
+          mail_provider: string
+          name: string
+          resend_api_key: string | null
+          resend_from_email: string | null
+          sender_name: string | null
+          slug: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          gmail_address?: string | null
+          gmail_app_password?: string | null
+          has_gmail_app_password?: boolean | null
+          has_resend_api_key?: boolean | null
+          id?: string
+          mail_provider?: string
+          name: string
+          resend_api_key?: string | null
+          resend_from_email?: string | null
+          sender_name?: string | null
+          slug: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          gmail_address?: string | null
+          gmail_app_password?: string | null
+          has_gmail_app_password?: boolean | null
+          has_resend_api_key?: boolean | null
+          id?: string
+          mail_provider?: string
+          name?: string
+          resend_api_key?: string | null
+          resend_from_email?: string | null
+          sender_name?: string | null
+          slug?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "so_clients_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      so_esp_sync_log: {
+        Row: {
+          action: string | null
+          error: string | null
+          id: string
+          lead_id: string
+          provider: string | null
+          status: string | null
+          synced_at: string
+        }
+        Insert: {
+          action?: string | null
+          error?: string | null
+          id?: string
+          lead_id: string
+          provider?: string | null
+          status?: string | null
+          synced_at?: string
+        }
+        Update: {
+          action?: string | null
+          error?: string | null
+          id?: string
+          lead_id?: string
+          provider?: string | null
+          status?: string | null
+          synced_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "so_esp_sync_log_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "so_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      so_leads: {
+        Row: {
+          campaign_id: string
+          consent_launch: boolean
+          created_at: string
+          email: string | null
+          esp_synced: boolean
+          id: string
+          legal_basis_bonus: string
+          name: string | null
+          source: string | null
+          tally_submission_id: string | null
+        }
+        Insert: {
+          campaign_id: string
+          consent_launch?: boolean
+          created_at?: string
+          email?: string | null
+          esp_synced?: boolean
+          id?: string
+          legal_basis_bonus?: string
+          name?: string | null
+          source?: string | null
+          tally_submission_id?: string | null
+        }
+        Update: {
+          campaign_id?: string
+          consent_launch?: boolean
+          created_at?: string
+          email?: string | null
+          esp_synced?: boolean
+          id?: string
+          legal_basis_bonus?: string
+          name?: string | null
+          source?: string | null
+          tally_submission_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "so_leads_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "so_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       survey_links: {
         Row: {
           booking_workflow_id: string | null

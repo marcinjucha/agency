@@ -251,6 +251,19 @@ export function BlogPostEditor({ blogPost, createFn, updateFn, deleteFn, onSucce
     handleSubmit((data) => onSave(data, false))()
   }
 
+  // ⌘S / Ctrl+S keyboard shortcut — same neutral save as the "Zapisz" button (never publishOverride)
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault()
+        void handleSubmit((data) => onSave(data))()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   function handleDateSelect(date: Date | undefined) {
     if (!date) return
     setScheduledDate(date)

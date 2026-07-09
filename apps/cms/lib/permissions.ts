@@ -39,6 +39,14 @@ const PERMISSION_GROUPS = {
     key: 'workflows',
     children: ['workflows.executions', 'workflows.execute'] as const,
   },
+  bonus_funnel: {
+    key: 'bonus_funnel',
+    children: [
+      'bonus_funnel.clients',
+      'bonus_funnel.campaigns',
+      'bonus_funnel.bonuses',
+    ] as const,
+  },
   system: {
     key: 'system',
     children: [
@@ -175,6 +183,10 @@ export const ROUTE_PERMISSION_MAP: Record<string, PermissionKey> = {
   '/admin/shop/products': 'shop.products',
   '/admin/shop/categories': 'shop.categories',
   '/admin/shop/marketplace': 'shop.marketplace',
+  // Venture bonus-funnel. Clients route matches first (longer prefix wins), so
+  // the campaigns/editor routes fall through to the parent `/admin/venture`.
+  '/admin/venture/clients': 'bonus_funnel.clients',
+  '/admin/venture': 'bonus_funnel.campaigns',
   '/admin/workflows': 'workflows',
   '/admin/email-templates': 'system.email_templates',
   '/admin/settings': 'system.settings',
@@ -233,6 +245,8 @@ export const ROUTE_FEATURE_MAP: Record<string, ParentKey> = {
   '/admin/shop/products': 'shop',
   '/admin/shop/categories': 'shop',
   '/admin/shop/marketplace': 'shop',
+  '/admin/venture/clients': 'bonus_funnel',
+  '/admin/venture': 'bonus_funnel',
   '/admin/workflows': 'workflows',
   '/admin/email-templates': 'system',
   '/admin/settings': 'system',

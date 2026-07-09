@@ -316,6 +316,8 @@ Only for admin operations that bypass RLS. Use `createServiceClient()` from `lib
 - **High-impact changes** (workflow editor, survey builder, landing page editor) → explicit Save/Publish button. Accidental changes can break live features.
 - **Low-impact fields** (internal notes, Kanban reorder) → autosave with debounce (1s) + status indicator (saving/saved/error).
 
+**⌘S / Ctrl+S keyboard shortcut — default on every explicit-save editor.** Any component with an explicit Save button (form-based or block-based) should also bind `⌘S`/`Ctrl+S` via `window.addEventListener('keydown', ...)` + `e.preventDefault()`, calling the same save handler as the button (never a `publishOverride` variant — the shortcut preserves current publish state, it doesn't toggle it). Pattern established in `WorkflowEditor.tsx` + `EmailTemplateEditor.tsx`; rolled out to campaign/blog/shop-product/landing/legal-page/survey editors (2026-07-09, user request — "wszędzie gdzie masz edycję/zapis"). New editors should include this from the start rather than as a follow-up.
+
 **Rich interactive UIs preferred:** When feature complexity warrants it, use professional interactive libraries (reactflow for workflow builder, @dnd-kit for Kanban) over simple form-based config. User values perceived professionalism of UI.
 
 **Editor layout:** All editors (blog, shop, landing, survey, email) use `max-w-[1400px] mx-auto` centered grid. Prose-heavy editors (blog, shop product, legal pages) cap the editor column at `max-w-4xl` (896px) so authors see the same line breaks that render publicly. Sidebar 420px.
@@ -385,6 +387,11 @@ Required in Vercel Dashboard:
 - `N8N_WORKFLOW_ORCHESTRATOR_URL` (server only — n8n Orchestrator webhook)
 - `ORCHESTRATOR_WEBHOOK_SECRET` (server only — Bearer token for CMS -> n8n auth)
 - `HOST_URL` (server only)
+- `BEEHIIV_API_KEY` (server only — venture bonus funnel ESP; single global Bearer key, `features/venture/esp/beehiiv.server.ts`)
+- (Tally lead-ingest webhook signature is verified with a PER-CAMPAIGN secret `so_campaigns.tally_webhook_secret` set in the CMS campaign editor — `POST /api/venture/leads/$slug`. No global `TALLY_WEBHOOK_SECRET` env var.)
+- `RESEND_API_KEY` (server only — venture transactional bonus email; beehiiv free has no Automations, so CMS sends the bonus mail; added iter 3)
+- `RESEND_FROM_EMAIL` (server only — verified sender address for the venture transactional bonus email; `features/venture/mail/resend.server.ts`; added iter 3)
+- `VENTURE_LANDING_ORIGIN` (server only — CORS allowed origin echoed by the PUBLIC `GET /api/venture/campaigns/:slug` read endpoint; the venture landing lives on a different origin (VPS) than this CMS (Vercel). Optional — falls back to `*` when unset, acceptable because the payload is public non-credentialed metadata (brand + bonus links); added iter 4)
 
 See `.env.local.example` for full list.
 
