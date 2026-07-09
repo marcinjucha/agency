@@ -36,20 +36,32 @@ export const createClientSchema = z.object({
   // Secrets: trimmed + non-empty WHEN present; nullable/optional so the editor
   // can omit them (leave untouched on edit, same masked-field pattern as
   // so_campaigns.tally_webhook_secret) or send null (clear / not set yet).
-  resend_api_key: z.string().trim().min(1).nullable().optional(),
+  // `.or(z.literal(''))` is REQUIRED on all four: `.optional()` accepts ONLY
+  // `undefined` and `.nullable()` accepts ONLY `null` — neither matches an
+  // empty string `''`, which is a different value-type entirely. RHF always
+  // submits `''` for an untouched text input (never `undefined`), so without
+  // this a field the user deliberately left blank (e.g. "Resend własny" when
+  // the client uses Gmail) fails `.min(1)`/`.email()` — surfacing as an
+  // invisible error, since the field's section is conditionally hidden for
+  // the inactive provider. Downstream (`onSave` in VentureClientEditor.tsx,
+  // `buildClientPatch` in admin-handlers.server.ts) already converts '' to
+  // null/omission correctly — this was purely a Zod-schema gap.
+  resend_api_key: z.string().trim().min(1).nullable().optional().or(z.literal('')),
   resend_from_email: z
     .string()
     .trim()
     .email(messages.validation.invalidEmail)
     .nullable()
-    .optional(),
+    .optional()
+    .or(z.literal('')),
   gmail_address: z
     .string()
     .trim()
     .email(messages.validation.invalidEmail)
     .nullable()
-    .optional(),
-  gmail_app_password: z.string().trim().min(1).nullable().optional(),
+    .optional()
+    .or(z.literal('')),
+  gmail_app_password: z.string().trim().min(1).nullable().optional().or(z.literal('')),
 })
 
 // `.partial()` on a schema WITHOUT ids — the row id travels in the input
