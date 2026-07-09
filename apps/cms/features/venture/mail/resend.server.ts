@@ -18,6 +18,7 @@
 //     their own Resend account (`resend_own`).
 // ---------------------------------------------------------------------------
 
+import { formatFromHeader } from './format-from'
 import type { MailSender, MailSenderInput } from './types'
 
 const RESEND_ENDPOINT = 'https://api.resend.com/emails'
@@ -100,8 +101,7 @@ export function createResendMailSender(config: {
   // (existing behavior) when unset/blank.
   fromName?: string | null
 }): MailSender {
-  const trimmedFromName = config.fromName?.trim()
-  const from = trimmedFromName ? `"${trimmedFromName}" <${config.from}>` : config.from
+  const from = formatFromHeader(config.fromName, config.from)
   return {
     send: (input: MailSenderInput) => sendResendEmail({ apiKey: config.apiKey, from, ...input }),
   }

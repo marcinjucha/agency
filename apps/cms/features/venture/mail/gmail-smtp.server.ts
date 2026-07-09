@@ -13,6 +13,7 @@
 // ---------------------------------------------------------------------------
 
 import nodemailer from 'nodemailer'
+import { formatFromHeader } from './format-from'
 import type { MailSender, MailSenderInput } from './types'
 
 const SMTP_TIMEOUT_MS = 10_000
@@ -35,10 +36,7 @@ export function createGmailSmtpSender(config: {
     socketTimeout: SMTP_TIMEOUT_MS,
   })
 
-  const trimmedSenderName = config.senderName?.trim()
-  const from = trimmedSenderName
-    ? `"${trimmedSenderName}" <${config.address}>`
-    : config.address
+  const from = formatFromHeader(config.senderName, config.address)
 
   return {
     async send(input: MailSenderInput): Promise<void> {
