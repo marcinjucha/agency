@@ -110,6 +110,22 @@ export function RoleEditor({ open, onOpenChange, role, enabledFeatures, tenantId
     onOpenChange(false)
   }
 
+  // ⌘S / Ctrl+S keyboard shortcut — same save as the submit button, only while dialog is open
+  useEffect(() => {
+    if (!open) return
+    function onKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault()
+        if (isValid && !mutation.isPending) {
+          handleSubmit((data) => mutation.mutate(data))()
+        }
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, isValid, mutation.isPending])
+
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto">

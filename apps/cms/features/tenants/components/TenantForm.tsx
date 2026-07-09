@@ -112,6 +112,21 @@ export function TenantForm({ tenantId }: TenantFormProps) {
     },
   })
 
+  // ⌘S / Ctrl+S keyboard shortcut — same save as the submit button
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault()
+        if (isValid && !mutation.isPending) {
+          handleSubmit((data) => mutation.mutate(data))()
+        }
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isValid, mutation.isPending])
+
   // --- Loading / Error states for edit mode ---
 
   if (isEditing && isLoading) return <TenantFormSkeleton />

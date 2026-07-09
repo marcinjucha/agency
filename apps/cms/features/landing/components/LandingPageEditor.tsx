@@ -37,11 +37,8 @@ export function LandingPageEditor({ page, isLoading, error, saveFn }: LandingPag
     if (page) reset({ cta_url: page.cta_url ?? '' })
   }, [page, reset])
 
-  if (isLoading) return <EditorSkeleton />
-  if (error) return <EditorError />
-  if (!page) return <EditorEmpty />
-
   const onSubmit = handleSubmit(async (values) => {
+    if (!page) return
     setSaveState('saving')
     setServerError(null)
     try {
@@ -59,6 +56,23 @@ export function LandingPageEditor({ page, isLoading, error, saveFn }: LandingPag
       setTimeout(() => setSaveState('idle'), 2500)
     }
   })
+
+  // ⌘S / Ctrl+S keyboard shortcut — same save as the submit button
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault()
+        void onSubmit()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  if (isLoading) return <EditorSkeleton />
+  if (error) return <EditorError />
+  if (!page) return <EditorEmpty />
 
   return (
     <div className="mx-auto max-w-lg">

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate, Link } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { createSurveyFn } from '../server'
@@ -16,8 +16,8 @@ export function NewSurveyForm() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const submitForm = async () => {
+    if (loading || !title.trim()) return
     setLoading(true)
     setError(null)
 
@@ -31,6 +31,24 @@ export function NewSurveyForm() {
       setLoading(false)
     }
   }
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    void submitForm()
+  }
+
+  // ⌘S / Ctrl+S keyboard shortcut — same save as the "Utwórz ankietę" submit button
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault()
+        void submitForm()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [title, description, loading])
 
   return (
     <div>

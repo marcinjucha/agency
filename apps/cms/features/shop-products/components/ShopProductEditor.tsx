@@ -221,6 +221,19 @@ export function ShopProductEditor({ product, createFn, updateFn, deleteFn }: Sho
     handleSubmit((data) => onSave(data, false), onFormError)()
   }
 
+  // ⌘S / Ctrl+S keyboard shortcut — same neutral save as the "Zapisz" button (never publishOverride)
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault()
+        void handleSubmit((data) => onSave(data), onFormError)()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   // --- Delete ---
 
   async function handleDelete() {

@@ -316,6 +316,8 @@ Only for admin operations that bypass RLS. Use `createServiceClient()` from `lib
 - **High-impact changes** (workflow editor, survey builder, landing page editor) → explicit Save/Publish button. Accidental changes can break live features.
 - **Low-impact fields** (internal notes, Kanban reorder) → autosave with debounce (1s) + status indicator (saving/saved/error).
 
+**⌘S / Ctrl+S keyboard shortcut — default on every explicit-save editor.** Any component with an explicit Save button (form-based or block-based) should also bind `⌘S`/`Ctrl+S` via `window.addEventListener('keydown', ...)` + `e.preventDefault()`, calling the same save handler as the button (never a `publishOverride` variant — the shortcut preserves current publish state, it doesn't toggle it). Pattern established in `WorkflowEditor.tsx` + `EmailTemplateEditor.tsx`; rolled out to campaign/blog/shop-product/landing/legal-page/survey editors (2026-07-09, user request — "wszędzie gdzie masz edycję/zapis"). New editors should include this from the start rather than as a follow-up.
+
 **Rich interactive UIs preferred:** When feature complexity warrants it, use professional interactive libraries (reactflow for workflow builder, @dnd-kit for Kanban) over simple form-based config. User values perceived professionalism of UI.
 
 **Editor layout:** All editors (blog, shop, landing, survey, email) use `max-w-[1400px] mx-auto` centered grid. Prose-heavy editors (blog, shop product, legal pages) cap the editor column at `max-w-4xl` (896px) so authors see the same line breaks that render publicly. Sidebar 420px.
