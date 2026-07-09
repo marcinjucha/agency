@@ -183,7 +183,7 @@ export const messages = {
     gmailAddressPlaceholder: 'nazwa@gmail.com',
     gmailAppPasswordLabel: 'Hasło aplikacji Gmail',
     gmailAppPasswordHelp:
-      '16-znakowe hasło aplikacji Google, wygenerowane w ustawieniach konta. Zostaw puste, aby nie zmieniać.',
+      '16-znakowe hasło aplikacji Google, wygenerowane w ustawieniach konta. Zostaw puste, aby nie zmieniać. (możesz wkleić ze spacjami, usuniemy je automatycznie)',
   },
 
   surveys: {

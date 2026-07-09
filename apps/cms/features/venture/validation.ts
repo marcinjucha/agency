@@ -61,7 +61,20 @@ export const createClientSchema = z.object({
     .nullable()
     .optional()
     .or(z.literal('')),
-  gmail_app_password: z.string().trim().min(1).nullable().optional().or(z.literal('')),
+  // Google displays a Gmail App Password in 4 space-separated blocks of 4
+  // chars (e.g. `qcfn tnzx owzt irfg`) for readability, but the real secret
+  // used for SMTP auth is 16 chars with NO spaces. We normalize on our side
+  // (strip ALL whitespace, not just leading/trailing) rather than relying on
+  // Google SMTP's tolerance for spaces in the password — `.trim()` alone only
+  // strips the edges, leaving internal spaces intact if pasted verbatim.
+  gmail_app_password: z
+    .string()
+    .trim()
+    .min(1)
+    .transform((v) => v.replace(/\s+/g, ''))
+    .nullable()
+    .optional()
+    .or(z.literal('')),
 })
 
 // `.partial()` on a schema WITHOUT ids — the row id travels in the input

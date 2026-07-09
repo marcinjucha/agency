@@ -77,3 +77,43 @@ describe('createClientSchema — blank secret/email fields', () => {
     expect(result.success).toBe(true)
   })
 })
+
+// Regression test (2026-07-09): Google displays a Gmail App Password in 4
+// space-separated blocks of 4 chars (e.g. `qcfn tnzx owzt irfg`) for
+// readability, but the real SMTP secret is 16 chars with NO spaces. A user
+// pasted the value WITH spaces straight from Google's UI. `.trim()` alone
+// only strips leading/trailing whitespace, not internal spaces — this pins
+// the fix that strips ALL whitespace via `.transform()`.
+describe('createClientSchema — gmail_app_password whitespace normalization', () => {
+  const basePayload = {
+    name: 'Kacper',
+    slug: 'kacper',
+    mail_provider: 'gmail_smtp' as const,
+    gmail_address: 'test@gmail.com',
+  }
+
+  it('strips ALL internal whitespace from a Gmail App Password pasted with spaces', () => {
+    const result = createClientSchema.safeParse({
+      ...basePayload,
+      gmail_app_password: 'qcfn tnzx owzt irfg',
+    })
+
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.gmail_app_password).toBe('qcfntnzxowztirfg')
+      expect(result.data.gmail_app_password).toHaveLength(16)
+    }
+  })
+
+  it('still passes an empty string through unchanged (the "leave untouched" sentinel)', () => {
+    const result = createClientSchema.safeParse({
+      ...basePayload,
+      gmail_app_password: '',
+    })
+
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.gmail_app_password).toBe('')
+    }
+  })
+})
