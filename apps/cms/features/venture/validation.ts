@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { messages } from '@/lib/messages'
-import { BONUS_TYPES } from './types'
+import { BONUS_TYPES, MAIL_PROVIDERS } from './types'
 
 // ---------------------------------------------------------------------------
 // Venture bonus-funnel — ADMIN CRUD validation (iter 5a).
@@ -28,6 +28,28 @@ export const createClientSchema = z.object({
   name: z.string().min(1, messages.validation.nameRequired),
   // Per-tenant unique (DB: UNIQUE(tenant_id, slug)).
   slug: slugSchema,
+  // Mail credentials live on the CLIENT (shared across its campaigns), not the
+  // campaign — a mailbox is one account reused by every campaign for that
+  // client. Fixed DB CHECK (so_clients.mail_provider) — derived union, not a
+  // hand-maintained string union (features/CLAUDE.md, ag-coding).
+  mail_provider: z.enum(MAIL_PROVIDERS).default('resend_shared'),
+  // Secrets: trimmed + non-empty WHEN present; nullable/optional so the editor
+  // can omit them (leave untouched on edit, same masked-field pattern as
+  // so_campaigns.tally_webhook_secret) or send null (clear / not set yet).
+  resend_api_key: z.string().trim().min(1).nullable().optional(),
+  resend_from_email: z
+    .string()
+    .trim()
+    .email(messages.validation.invalidEmail)
+    .nullable()
+    .optional(),
+  gmail_address: z
+    .string()
+    .trim()
+    .email(messages.validation.invalidEmail)
+    .nullable()
+    .optional(),
+  gmail_app_password: z.string().trim().min(1).nullable().optional(),
 })
 
 // `.partial()` on a schema WITHOUT ids — the row id travels in the input

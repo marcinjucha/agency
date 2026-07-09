@@ -26,6 +26,27 @@ export type AdminCampaign = Omit<Tables<'so_campaigns'>, 'tally_webhook_secret'>
 export const BONUS_TYPES = ['link', 'file'] as const
 export type BonusType = (typeof BONUS_TYPES)[number]
 
+// Single source of truth for the fixed DB CHECK on so_clients.mail_provider.
+// Derived union — NOT a hand-maintained string union (features/CLAUDE.md).
+// 'resend_shared' = agency-shared Resend key (default); 'resend_own' = client's
+// own Resend API key; 'gmail_smtp' = client's Gmail App Password.
+export const MAIL_PROVIDERS = ['resend_shared', 'resend_own', 'gmail_smtp'] as const
+export type MailProvider = (typeof MAIL_PROVIDERS)[number]
+
+// What the ADMIN CRUD layer returns to the CMS client for so_clients. Same
+// defense-in-depth invariant as AdminCampaign: the plaintext secret columns
+// (`resend_api_key`, `gmail_app_password`) are read server-side only (mail
+// sender resolution) but MUST NEVER be serialized to the browser. Strip them
+// and expose only derived booleans so the editor can show "secret already
+// set" without ever shipping the value.
+export type AdminClient = Omit<
+  Tables<'so_clients'>,
+  'resend_api_key' | 'gmail_app_password'
+> & {
+  has_resend_api_key: boolean
+  has_gmail_app_password: boolean
+}
+
 // Public (unauthenticated) contract shapes for the venture bonus-funnel landing.
 // The landing front on the VPS consumes GET /api/venture/campaigns/:slug and reads
 // these exact fields — keep them in sync with the endpoint response (spec §7).

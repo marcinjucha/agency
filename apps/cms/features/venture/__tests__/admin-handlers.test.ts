@@ -27,6 +27,7 @@ import {
   listClientsHandler,
   reorderBonusesHandler,
   updateCampaignHandler,
+  updateClientHandler,
 } from '../admin-handlers.server'
 import {
   updateCampaignSchema,
@@ -431,5 +432,74 @@ describe('admin campaign selects never include the plaintext secret', () => {
       expect(a).not.toContain('tally_webhook_secret')
     }
     expect(selectArgs(chains.so_campaigns).some((a) => a.includes('has_webhook_secret'))).toBe(true)
+  })
+})
+
+// ===========================================================================
+// Client mail secrets never selected by the authenticated client (mirrors the
+// tally_webhook_secret defense-in-depth above). SELECT on
+// so_clients.resend_api_key / gmail_app_password is revoked from
+// `authenticated` at the DB layer, so every admin client read/write must
+// project an EXPLICIT column list that omits them.
+// ===========================================================================
+
+describe('admin client selects never include the plaintext mail secrets', () => {
+  const selectArgs = (chain: { select: { mock: { calls: unknown[][] } } }): string[] =>
+    chain.select.mock.calls.map((c) => String(c[0] ?? ''))
+
+  // Column-exact check — a naive substring `.toContain('resend_api_key')`
+  // would also match the SAFE generated column `has_resend_api_key`. Split
+  // each projection into individual column names and assert none is the
+  // plaintext secret column exactly.
+  const columns = (projection: string): string[] => projection.split(',').map((c) => c.trim())
+
+  it('listClients projects explicit columns without resend_api_key/gmail_app_password', async () => {
+    const { chains } = setupAuth({
+      so_clients: { data: [], error: null },
+    })
+
+    await listClientsHandler()
+
+    const args = selectArgs(chains.so_clients)
+    expect(args.length).toBeGreaterThan(0)
+    for (const a of args) {
+      expect(a).not.toBe('*')
+      expect(columns(a)).not.toContain('resend_api_key')
+      expect(columns(a)).not.toContain('gmail_app_password')
+    }
+    expect(args.some((a) => a.includes('has_resend_api_key'))).toBe(true)
+    expect(args.some((a) => a.includes('has_gmail_app_password'))).toBe(true)
+  })
+
+  it('createClient returns an explicit projection without the plaintext mail secrets', async () => {
+    const { chains } = setupAuth({
+      so_clients: { data: { id: 'c1', name: 'Kacper', slug: 'kacper' }, error: null },
+    })
+
+    await createClientHandler({ name: 'Kacper', slug: 'kacper' })
+
+    for (const a of selectArgs(chains.so_clients)) {
+      expect(a).not.toBe('*')
+      expect(columns(a)).not.toContain('resend_api_key')
+      expect(columns(a)).not.toContain('gmail_app_password')
+    }
+    expect(selectArgs(chains.so_clients).some((a) => a.includes('has_resend_api_key'))).toBe(true)
+  })
+
+  it('updateClient returns an explicit projection without the plaintext mail secrets', async () => {
+    const { chains } = setupAuth({
+      so_clients: { data: { id: 'c1', name: 'Kacper', slug: 'kacper' }, error: null },
+    })
+
+    await updateClientHandler('c1', { name: 'Kacper Renamed' })
+
+    for (const a of selectArgs(chains.so_clients)) {
+      expect(a).not.toBe('*')
+      expect(columns(a)).not.toContain('resend_api_key')
+      expect(columns(a)).not.toContain('gmail_app_password')
+    }
+    expect(selectArgs(chains.so_clients).some((a) => a.includes('has_gmail_app_password'))).toBe(
+      true,
+    )
   })
 })

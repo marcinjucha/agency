@@ -50,8 +50,13 @@ export const listClientsFn = createServerFn({ method: 'POST' }).handler(() =>
   listClientsHandler(),
 )
 
+// z.input (not z.infer) — createClientSchema has defaulted fields
+// (mail_provider). z.input keeps those OPTIONAL at the call site (e.g. the
+// inline name+slug quick-create in VentureClientList/VentureClientSelect);
+// .parse() still fills the default at runtime, and the handler receives the
+// fully-populated z.infer output type.
 export const createClientFn = createServerFn({ method: 'POST' })
-  .inputValidator((v: z.infer<typeof createClientSchema>) => createClientSchema.parse(v))
+  .inputValidator((v: z.input<typeof createClientSchema>) => createClientSchema.parse(v))
   .handler(({ data }) => createClientHandler(data))
 
 export const updateClientFn = createServerFn({ method: 'POST' })

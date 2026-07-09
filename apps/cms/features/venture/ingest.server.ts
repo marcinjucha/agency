@@ -3,7 +3,8 @@ import { EspApiError } from './esp/http.server'
 import type { EspProvider, EspProviderId } from './esp/types'
 import type { MappedLead } from './tally'
 import { buildBonusEmail } from './mail/bonus-email'
-import type { SendEmailInput } from './mail/resend.server'
+import { resolveMailSender, type ClientMailConfig } from './mail/resolve.server'
+import type { MailSender } from './mail/types'
 
 // ---------------------------------------------------------------------------
 // Venture bonus-funnel — lead ingest orchestrator (iter 3).
@@ -45,7 +46,13 @@ export interface IngestDeps {
   supabase: ServiceClient
   getProvider: (id: EspProviderId) => EspProvider
   isProviderRegistered: (id: string) => id is EspProviderId
-  sendEmail: (input: SendEmailInput) => Promise<void>
+  // Optional injection seam for tests — production callers omit this and get
+  // the real `resolveMailSender` (picks the sender from the campaign's client
+  // mail config: shared Resend / client's own Resend / client's Gmail SMTP,
+  // with safe fallback to the shared Resend account on incomplete config).
+  // Kept separate from a plain `sendEmail` hook so `sendBonusEmail` can pick
+  // the RIGHT sender per client rather than always the agency-shared one.
+  resolveMailSender?: (client: ClientMailConfig) => MailSender
 }
 
 // Discriminated outcome. `ingested` + `duplicate` map to HTTP 200 at the route
@@ -79,6 +86,10 @@ type EspSyncAction = (typeof ESP_SYNC_ACTIONS)[keyof typeof ESP_SYNC_ACTIONS]
 // Row shape the route resolves by slug and passes into ingestLead. Includes
 // `tally_webhook_secret` because the ROUTE (not ingest) reads it to verify the
 // signature — ingest ignores it, but sharing one row shape avoids a second query.
+// `clientMail` carries the campaign's OWNING CLIENT's plaintext mail-provider
+// config (fetched alongside the client id lookup — this is a SERVICE-role
+// query, so it bypasses RLS and may read the plaintext secrets; this and the
+// admin editor are the only two places in the codebase that need them).
 export type CampaignRow = {
   id: string
   tally_webhook_secret: string | null
@@ -86,27 +97,35 @@ export type CampaignRow = {
   esp_audience_ref: string | null
   esp_tag_launch: string
   display_name: string | null
+  clientMail: ClientMailConfig
 }
 
+// Row shape fetched from so_clients — id + the plaintext mail-provider config.
+type ClientRow = { id: string } & ClientMailConfig
+
 /**
- * Resolve a client's internal id by its public slug. Campaign slugs are now
- * scoped per client (so_campaigns UNIQUE(client_id, slug)), so resolving the
- * campaign requires resolving its owning client first.
+ * Resolve a client's internal id + mail-provider config by its public slug.
+ * Campaign slugs are scoped per client (so_campaigns UNIQUE(client_id, slug)),
+ * so resolving the campaign requires resolving its owning client first —
+ * fetched here in one query since sendBonusEmail needs the client's mail
+ * config regardless.
  */
-async function resolveClientId(
+async function resolveClientRow(
   supabase: ServiceClient,
   clientSlug: string,
-): Promise<string | null> {
+): Promise<ClientRow | null> {
   const { data, error } = await supabase
     .from('so_clients')
-    .select('id')
+    .select(
+      'id, mail_provider, resend_api_key, resend_from_email, gmail_address, gmail_app_password',
+    )
     .eq('slug', clientSlug)
     .maybeSingle()
   if (error) {
     console.error('[venture-ingest] client lookup failed:', error.message)
     return null
   }
-  return (data as { id: string } | null)?.id ?? null
+  return (data as ClientRow | null) ?? null
 }
 
 /**
@@ -121,22 +140,29 @@ export async function resolveCampaign(
   clientSlug: string,
   slug: string,
 ): Promise<CampaignRow | null> {
-  const clientId = await resolveClientId(supabase, clientSlug)
-  if (!clientId) return null
+  const clientRow = await resolveClientRow(supabase, clientSlug)
+  if (!clientRow) return null
 
   const { data, error } = await supabase
     .from('so_campaigns')
     .select(
       'id, tally_webhook_secret, esp_provider, esp_audience_ref, esp_tag_launch, display_name',
     )
-    .eq('client_id', clientId)
+    .eq('client_id', clientRow.id)
     .eq('slug', slug)
     .maybeSingle()
   if (error) {
     console.error('[venture-ingest] campaign lookup failed:', error.message)
     return null
   }
-  return (data as CampaignRow | null) ?? null
+  if (!data) return null
+
+  const { mail_provider, resend_api_key, resend_from_email, gmail_address, gmail_app_password } =
+    clientRow
+  return {
+    ...(data as Omit<CampaignRow, 'clientMail'>),
+    clientMail: { mail_provider, resend_api_key, resend_from_email, gmail_address, gmail_app_password },
+  }
 }
 
 // Idempotency is scoped per campaign: the DB UNIQUE is (campaign_id,
@@ -359,8 +385,9 @@ async function sendBonusEmail(
   campaign: CampaignRow,
   mapped: MappedLead,
 ): Promise<boolean> {
-  // Guard BEFORE any work — deps.sendEmail's `to` is typed as a non-null
-  // string; never pass null. Nowhere to send the bonus without an email.
+  // Guard BEFORE any work — the sender's `to` is typed as a non-null string;
+  // never pass null. Nowhere to send the bonus without an email. This guard
+  // runs regardless of which mail provider the client is configured for.
   if (!mapped.email) {
     console.warn('[venture-ingest] lead has no email — skipping bonus email (lead kept)')
     return false
@@ -371,7 +398,9 @@ async function sendBonusEmail(
       campaignDisplayName: campaign.display_name,
       bonuses,
     })
-    await deps.sendEmail({ to: mapped.email, subject, html })
+    const resolveSender = deps.resolveMailSender ?? resolveMailSender
+    const sender = resolveSender(campaign.clientMail)
+    await sender.send({ to: mapped.email, subject, html })
     return true
   } catch (error) {
     console.error(

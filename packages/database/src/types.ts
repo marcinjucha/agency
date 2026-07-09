@@ -1272,24 +1272,45 @@ export type Database = {
       so_clients: {
         Row: {
           created_at: string
+          gmail_address: string | null
+          gmail_app_password: string | null
+          has_gmail_app_password: boolean | null
+          has_resend_api_key: boolean | null
           id: string
+          mail_provider: string
           name: string
+          resend_api_key: string | null
+          resend_from_email: string | null
           slug: string
           tenant_id: string
           updated_at: string
         }
         Insert: {
           created_at?: string
+          gmail_address?: string | null
+          gmail_app_password?: string | null
+          has_gmail_app_password?: boolean | null
+          has_resend_api_key?: boolean | null
           id?: string
+          mail_provider?: string
           name: string
+          resend_api_key?: string | null
+          resend_from_email?: string | null
           slug: string
           tenant_id: string
           updated_at?: string
         }
         Update: {
           created_at?: string
+          gmail_address?: string | null
+          gmail_app_password?: string | null
+          has_gmail_app_password?: boolean | null
+          has_resend_api_key?: boolean | null
           id?: string
+          mail_provider?: string
           name?: string
+          resend_api_key?: string | null
+          resend_from_email?: string | null
           slug?: string
           tenant_id?: string
           updated_at?: string

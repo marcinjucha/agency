@@ -5,7 +5,7 @@ import {
 } from '@/lib/server-auth.server'
 import { hasPermission, type PermissionKey } from '@/lib/permissions'
 import { messages } from '@/lib/messages'
-import type { AdminCampaign, Bonus, Client } from './types'
+import type { AdminCampaign, AdminClient, Bonus } from './types'
 import type {
   CreateBonusInput,
   CreateCampaignInput,
@@ -191,17 +191,31 @@ function assertBonusOwned(
 // Clients
 // ===========================================================================
 
-export function listClientsHandler(): Promise<MutationResult<Client[]>> {
+// Explicit column projection for ALL admin client reads/writes. Deliberately
+// EXCLUDES the plaintext `resend_api_key`/`gmail_app_password`: SELECT on those
+// columns is revoked from the `authenticated` role at the DB layer (same
+// REVOKE+GRANT hardening as so_campaigns.tally_webhook_secret — see
+// ADMIN_CAMPAIGN_COLUMNS above), so a bare `select('*')` here would hit
+// "permission denied for column". Existence is exposed via the generated
+// columns `has_resend_api_key` / `has_gmail_app_password`, which the
+// authenticated role CAN read. Bare `.select()` after insert/update defaults
+// to '*' → also uses this list. The mail-sender resolution path (MailSender /
+// resolveMailSender, features/venture/mail/) reads the real secrets via a
+// separate select on the service-role or auth-context client.
+const ADMIN_CLIENT_COLUMNS =
+  'id, tenant_id, name, slug, mail_provider, resend_from_email, gmail_address, created_at, updated_at, has_resend_api_key, has_gmail_app_password'
+
+export function listClientsHandler(): Promise<MutationResult<AdminClient[]>> {
   return toMutation(
     gated(PERM.clients, (auth) =>
       ResultAsync.fromPromise(
         tbl(auth, 'so_clients')
-          .select('*')
+          .select(ADMIN_CLIENT_COLUMNS)
           .eq('tenant_id', auth.tenantId)
           .order('name', { ascending: true }),
         dbError,
       ).andThen((res) => {
-        const r = res as { data: Client[] | null; error: DbErrorShape }
+        const r = res as { data: AdminClient[] | null; error: DbErrorShape }
         if (r.error) return err(mapDbError(r.error, 'listClients'))
         return ok(r.data ?? [])
       }),
@@ -211,16 +225,25 @@ export function listClientsHandler(): Promise<MutationResult<Client[]>> {
 
 export function createClientHandler(
   input: CreateClientInput,
-): Promise<MutationResult<Client>> {
+): Promise<MutationResult<AdminClient>> {
   return toMutation(
     gated(PERM.clients, (auth) =>
       ResultAsync.fromPromise(
         tbl(auth, 'so_clients')
-          .insert({ name: input.name, slug: input.slug, tenant_id: auth.tenantId })
-          .select()
+          .insert({
+            name: input.name,
+            slug: input.slug,
+            tenant_id: auth.tenantId,
+            mail_provider: input.mail_provider ?? 'resend_shared',
+            resend_api_key: input.resend_api_key ?? null,
+            resend_from_email: input.resend_from_email ?? null,
+            gmail_address: input.gmail_address ?? null,
+            gmail_app_password: input.gmail_app_password ?? null,
+          })
+          .select(ADMIN_CLIENT_COLUMNS)
           .single(),
         dbError,
-      ).andThen(fromSupabaseSafe<Client>('createClient')),
+      ).andThen(fromSupabaseSafe<AdminClient>('createClient')),
     ),
   )
 }
@@ -228,7 +251,7 @@ export function createClientHandler(
 export function updateClientHandler(
   id: string,
   input: UpdateClientInput,
-): Promise<MutationResult<Client>> {
+): Promise<MutationResult<AdminClient>> {
   return toMutation(
     gated(PERM.clients, (auth) =>
       ResultAsync.fromPromise(
@@ -237,10 +260,10 @@ export function updateClientHandler(
           // Double scope: id AND tenant_id — a foreign id updates zero rows.
           .eq('id', id)
           .eq('tenant_id', auth.tenantId)
-          .select()
+          .select(ADMIN_CLIENT_COLUMNS)
           .single(),
         dbError,
-      ).andThen(fromSupabaseSafe<Client>('updateClient')),
+      ).andThen(fromSupabaseSafe<AdminClient>('updateClient')),
     ),
   )
 }
@@ -510,6 +533,15 @@ function buildClientPatch(input: UpdateClientInput): Record<string, unknown> {
   const patch: Record<string, unknown> = {}
   if (input.name !== undefined) patch.name = input.name
   if (input.slug !== undefined) patch.slug = input.slug
+  if (input.mail_provider !== undefined) patch.mail_provider = input.mail_provider
+  if (input.resend_from_email !== undefined) patch.resend_from_email = input.resend_from_email
+  if (input.gmail_address !== undefined) patch.gmail_address = input.gmail_address
+  // Absent = leave the existing secret untouched (the editor omits the key on
+  // a rotate-skip, same pattern as so_campaigns.tally_webhook_secret in
+  // buildCampaignPatch above). A present value rotates it.
+  if (input.resend_api_key !== undefined) patch.resend_api_key = input.resend_api_key
+  if (input.gmail_app_password !== undefined)
+    patch.gmail_app_password = input.gmail_app_password
   return patch
 }
 

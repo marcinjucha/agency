@@ -6,6 +6,16 @@ vi.mock('../mail/bonus-email', () => ({
   buildBonusEmail: vi.fn(async () => ({ subject: 'Subj', html: '<p>html</p>' })),
 }))
 
+// Isolate the real `resolveMailSender` path (used by the new gmail_smtp test
+// below, exercising resolveMailSender for real rather than injecting a fake)
+// from actual SMTP — nodemailer construction is covered in
+// gmail-smtp.server.test.ts. The spy lets us assert the real provider-routing
+// path actually invoked it with the right args.
+const gmailSendSpy = vi.fn(async () => undefined)
+vi.mock('../mail/gmail-smtp.server', () => ({
+  createGmailSmtpSender: vi.fn(() => ({ send: gmailSendSpy })),
+}))
+
 import {
   ingestLead,
   ingestOutcomeStatus,
@@ -26,6 +36,8 @@ const LEAD: MappedLead = {
 
 // The campaign is now resolved by the route and INJECTED into ingestLead —
 // tally_webhook_secret is carried on the row (route reads it; ingest ignores it).
+// clientMail defaults to 'resend_shared' — resolveMailSender maps that (and
+// any unrecognized provider) to the agency-shared Resend sender.
 const CAMPAIGN = {
   id: 'campaign-1',
   tally_webhook_secret: 'whsec_test',
@@ -33,6 +45,13 @@ const CAMPAIGN = {
   esp_audience_ref: 'pub_123',
   esp_tag_launch: 'launch-notify',
   display_name: 'Kacper Launch',
+  clientMail: {
+    mail_provider: 'resend_shared',
+    resend_api_key: null,
+    resend_from_email: null,
+    gmail_address: null,
+    gmail_app_password: null,
+  },
 }
 
 type Result = { data: unknown; error: { message: string; code?: string } | null }
@@ -50,7 +69,9 @@ function makeSupabase(cfg: {
     select: vi.fn(() => clientBuilder),
     eq: vi.fn(() => clientBuilder),
     maybeSingle: vi.fn(() =>
-      Promise.resolve(cfg.client ?? { data: { id: 'client-1' }, error: null }),
+      Promise.resolve(
+        cfg.client ?? { data: { id: 'client-1', ...CAMPAIGN.clientMail }, error: null },
+      ),
     ),
   }
 
@@ -122,16 +143,23 @@ function makeProvider(overrides?: Partial<EspProvider>): EspProvider {
   }
 }
 
+// Fake mail sender — tests assert against `sender.send` instead of a bare
+// `sendEmail` fn now that ingest resolves the sender via
+// `resolveMailSender(campaign.clientMail)`.
+function makeMailSender(send = vi.fn(async () => undefined)) {
+  return { send }
+}
+
 function makeDeps(
   supabase: ReturnType<typeof makeSupabase>,
   provider: EspProvider,
-  sendEmail = vi.fn(async () => undefined),
+  sender: ReturnType<typeof makeMailSender> = makeMailSender(),
 ): IngestDeps {
   return {
     supabase: supabase as unknown as IngestDeps['supabase'],
     getProvider: () => provider,
     isProviderRegistered: (id: string): id is 'beehiiv' => id === 'beehiiv',
-    sendEmail,
+    resolveMailSender: () => sender,
   }
 }
 
@@ -143,8 +171,8 @@ describe('ingestLead', () => {
   it('inserts the lead, syncs to the ESP, tags on consent, sends the email (happy path)', async () => {
     const supabase = makeSupabase({})
     const provider = makeProvider()
-    const sendEmail = vi.fn(async () => undefined)
-    const deps = makeDeps(supabase, provider, sendEmail)
+    const sender = makeMailSender()
+    const deps = makeDeps(supabase, provider, sender)
 
     const outcome = await ingestLead(deps, CAMPAIGN, LEAD)
 
@@ -168,7 +196,7 @@ describe('ingestLead', () => {
     })
     // esp_synced flipped to true.
     expect(supabase.leadsBuilder.update).toHaveBeenCalledWith({ esp_synced: true })
-    expect(sendEmail).toHaveBeenCalledWith({
+    expect(sender.send).toHaveBeenCalledWith({
       to: 'jan@example.com',
       subject: 'Subj',
       html: '<p>html</p>',
@@ -178,15 +206,15 @@ describe('ingestLead', () => {
   it('is idempotent — existing (campaign_id, tally_submission_id) → no insert, no ESP, no send', async () => {
     const supabase = makeSupabase({ duplicate: { data: { id: 'lead-existing' }, error: null } })
     const provider = makeProvider()
-    const sendEmail = vi.fn(async () => undefined)
-    const deps = makeDeps(supabase, provider, sendEmail)
+    const sender = makeMailSender()
+    const deps = makeDeps(supabase, provider, sender)
 
     const outcome = await ingestLead(deps, CAMPAIGN, LEAD)
 
     expect(outcome).toEqual({ status: 'duplicate', leadId: 'lead-existing' })
     expect(supabase.leadsBuilder.insert).not.toHaveBeenCalled()
     expect(provider.upsertContact).not.toHaveBeenCalled()
-    expect(sendEmail).not.toHaveBeenCalled()
+    expect(sender.send).not.toHaveBeenCalled()
   })
 
   it('insert 23505 unique_violation (concurrent/retry winner) → duplicate, no ESP, no email (route 200)', async () => {
@@ -194,8 +222,8 @@ describe('ingestLead', () => {
       insert: { data: null, error: { message: 'duplicate key value', code: '23505' } },
     })
     const provider = makeProvider()
-    const sendEmail = vi.fn(async () => undefined)
-    const deps = makeDeps(supabase, provider, sendEmail)
+    const sender = makeMailSender()
+    const deps = makeDeps(supabase, provider, sender)
 
     const outcome = await ingestLead(deps, CAMPAIGN, LEAD)
 
@@ -203,7 +231,7 @@ describe('ingestLead', () => {
     expect(outcome).toEqual({ status: 'duplicate', leadId: null })
     expect(supabase.leadsBuilder.insert).toHaveBeenCalledTimes(1)
     expect(provider.upsertContact).not.toHaveBeenCalled()
-    expect(sendEmail).not.toHaveBeenCalled()
+    expect(sender.send).not.toHaveBeenCalled()
   })
 
   it('insert non-23505 error (transient) → insert_error, no ESP, no email (route 500 → Tally retries)', async () => {
@@ -211,8 +239,8 @@ describe('ingestLead', () => {
       insert: { data: null, error: { message: 'connection reset by peer', code: '08006' } },
     })
     const provider = makeProvider()
-    const sendEmail = vi.fn(async () => undefined)
-    const deps = makeDeps(supabase, provider, sendEmail)
+    const sender = makeMailSender()
+    const deps = makeDeps(supabase, provider, sender)
 
     const outcome = await ingestLead(deps, CAMPAIGN, LEAD)
 
@@ -220,7 +248,7 @@ describe('ingestLead', () => {
     expect(outcome).toEqual({ status: 'insert_error' })
     expect(supabase.leadsBuilder.insert).toHaveBeenCalledTimes(1)
     expect(provider.upsertContact).not.toHaveBeenCalled()
-    expect(sendEmail).not.toHaveBeenCalled()
+    expect(sender.send).not.toHaveBeenCalled()
   })
 
   it('no-lead-drop: ESP upsert throws → lead kept, esp_synced=false, error logged, outcome still ingested', async () => {
@@ -231,7 +259,7 @@ describe('ingestLead', () => {
         throw new EspApiError(500, 'Server Error', { secret: 'do-not-log-this-body' })
       }),
     })
-    const deps = makeDeps(supabase, provider, vi.fn(async () => undefined))
+    const deps = makeDeps(supabase, provider, makeMailSender())
 
     const outcome = await ingestLead(deps, CAMPAIGN, LEAD)
 
@@ -255,7 +283,7 @@ describe('ingestLead', () => {
   it('consent gating: tag() is NOT called when consent_launch is false', async () => {
     const supabase = makeSupabase({})
     const provider = makeProvider()
-    const deps = makeDeps(supabase, provider, vi.fn(async () => undefined))
+    const deps = makeDeps(supabase, provider, makeMailSender())
 
     const outcome = await ingestLead(deps, CAMPAIGN, { ...LEAD, consentLaunch: false })
 
@@ -269,10 +297,12 @@ describe('ingestLead', () => {
   it('email send failure does not throw out of the orchestrator', async () => {
     const supabase = makeSupabase({})
     const provider = makeProvider()
-    const sendEmail = vi.fn(async () => {
-      throw new Error('resend down')
-    })
-    const deps = makeDeps(supabase, provider, sendEmail)
+    const sender = makeMailSender(
+      vi.fn(async () => {
+        throw new Error('resend down')
+      }),
+    )
+    const deps = makeDeps(supabase, provider, sender)
 
     const outcome = await ingestLead(deps, CAMPAIGN, LEAD)
 
@@ -283,12 +313,13 @@ describe('ingestLead', () => {
     const supabase = makeSupabase({})
     const provider = makeProvider()
     const getProvider = vi.fn(() => provider)
-    const sendEmail = vi.fn(async () => undefined)
+    const sender = makeMailSender()
+    const resolveMailSenderSpy = vi.fn(() => sender)
     const deps: IngestDeps = {
       supabase: supabase as unknown as IngestDeps['supabase'],
       getProvider,
       isProviderRegistered: (id: string): id is 'beehiiv' => id === 'beehiiv',
-      sendEmail,
+      resolveMailSender: resolveMailSenderSpy,
     }
 
     const outcome = await ingestLead(deps, CAMPAIGN, { ...LEAD, email: null })
@@ -302,18 +333,51 @@ describe('ingestLead', () => {
     expect(supabase.leadsBuilder.insert).toHaveBeenCalledTimes(1)
     expect(getProvider).not.toHaveBeenCalled()
     expect(provider.upsertContact).not.toHaveBeenCalled()
-    expect(sendEmail).not.toHaveBeenCalled()
+    // Guard runs BEFORE mail-sender resolution — no email means no sender lookup.
+    expect(resolveMailSenderSpy).not.toHaveBeenCalled()
+    expect(sender.send).not.toHaveBeenCalled()
   })
 
   it('skips ESP sync (but keeps the lead) when the provider is unregistered', async () => {
     const supabase = makeSupabase({})
     const provider = makeProvider()
-    const deps = makeDeps(supabase, provider, vi.fn(async () => undefined))
+    const deps = makeDeps(supabase, provider, makeMailSender())
 
     const outcome = await ingestLead(deps, { ...CAMPAIGN, esp_provider: 'mailchimp' }, LEAD)
 
     expect(outcome).toMatchObject({ status: 'ingested', espSynced: false })
     expect(provider.upsertContact).not.toHaveBeenCalled()
+  })
+
+  it('routes the bonus email through the campaign clientMail provider (gmail_smtp) via the REAL resolveMailSender — no deps.resolveMailSender injected', async () => {
+    const supabase = makeSupabase({})
+    const provider = makeProvider()
+    // Deliberately do NOT set deps.resolveMailSender — exercises the default
+    // (real `resolveMailSender`) fallback in sendBonusEmail.
+    const deps: IngestDeps = {
+      supabase: supabase as unknown as IngestDeps['supabase'],
+      getProvider: () => provider,
+      isProviderRegistered: (id: string): id is 'beehiiv' => id === 'beehiiv',
+    }
+    const gmailCampaign = {
+      ...CAMPAIGN,
+      clientMail: {
+        mail_provider: 'gmail_smtp',
+        resend_api_key: null,
+        resend_from_email: null,
+        gmail_address: 'client@gmail.com',
+        gmail_app_password: 'app-password-16-chars',
+      },
+    }
+
+    const outcome = await ingestLead(deps, gmailCampaign, LEAD)
+
+    expect(outcome).toMatchObject({ status: 'ingested', emailSent: true })
+    expect(gmailSendSpy).toHaveBeenCalledWith({
+      to: 'jan@example.com',
+      subject: 'Subj',
+      html: '<p>html</p>',
+    })
   })
 })
 

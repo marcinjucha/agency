@@ -48,6 +48,7 @@ import { Route as AdminShopProductsIndexRouteImport } from './routes/admin/shop/
 import { Route as AdminShopMarketplaceIndexRouteImport } from './routes/admin/shop/marketplace/index'
 import { Route as ApiMarketplaceMarketplaceCallbackRouteImport } from './routes/api/marketplace/$marketplace/callback'
 import { Route as AdminWorkflowsExecutionsExecutionIdRouteImport } from './routes/admin/workflows/executions/$executionId'
+import { Route as AdminVentureClientsIdRouteImport } from './routes/admin/venture/clients/$id'
 import { Route as AdminVentureCampaignsNewRouteImport } from './routes/admin/venture/campaigns/new'
 import { Route as AdminVentureCampaignsIdRouteImport } from './routes/admin/venture/campaigns/$id'
 import { Route as AdminShopProductsNewRouteImport } from './routes/admin/shop/products/new'
@@ -259,6 +260,11 @@ const AdminWorkflowsExecutionsExecutionIdRoute =
     path: '/workflows/executions/$executionId',
     getParentRoute: () => AdminRoute,
   } as any)
+const AdminVentureClientsIdRoute = AdminVentureClientsIdRouteImport.update({
+  id: '/venture/clients/$id',
+  path: '/venture/clients/$id',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminVentureCampaignsNewRoute =
   AdminVentureCampaignsNewRouteImport.update({
     id: '/venture/campaigns/new',
@@ -339,6 +345,7 @@ export interface FileRoutesByFullPath {
   '/admin/shop/products/new': typeof AdminShopProductsNewRoute
   '/admin/venture/campaigns/$id': typeof AdminVentureCampaignsIdRoute
   '/admin/venture/campaigns/new': typeof AdminVentureCampaignsNewRoute
+  '/admin/venture/clients/$id': typeof AdminVentureClientsIdRoute
   '/admin/workflows/executions/$executionId': typeof AdminWorkflowsExecutionsExecutionIdRoute
   '/api/marketplace/$marketplace/callback': typeof ApiMarketplaceMarketplaceCallbackRoute
   '/admin/shop/marketplace/': typeof AdminShopMarketplaceIndexRoute
@@ -386,6 +393,7 @@ export interface FileRoutesByTo {
   '/admin/shop/products/new': typeof AdminShopProductsNewRoute
   '/admin/venture/campaigns/$id': typeof AdminVentureCampaignsIdRoute
   '/admin/venture/campaigns/new': typeof AdminVentureCampaignsNewRoute
+  '/admin/venture/clients/$id': typeof AdminVentureClientsIdRoute
   '/admin/workflows/executions/$executionId': typeof AdminWorkflowsExecutionsExecutionIdRoute
   '/api/marketplace/$marketplace/callback': typeof ApiMarketplaceMarketplaceCallbackRoute
   '/admin/shop/marketplace': typeof AdminShopMarketplaceIndexRoute
@@ -435,6 +443,7 @@ export interface FileRoutesById {
   '/admin/shop/products/new': typeof AdminShopProductsNewRoute
   '/admin/venture/campaigns/$id': typeof AdminVentureCampaignsIdRoute
   '/admin/venture/campaigns/new': typeof AdminVentureCampaignsNewRoute
+  '/admin/venture/clients/$id': typeof AdminVentureClientsIdRoute
   '/admin/workflows/executions/$executionId': typeof AdminWorkflowsExecutionsExecutionIdRoute
   '/api/marketplace/$marketplace/callback': typeof ApiMarketplaceMarketplaceCallbackRoute
   '/admin/shop/marketplace/': typeof AdminShopMarketplaceIndexRoute
@@ -485,6 +494,7 @@ export interface FileRouteTypes {
     | '/admin/shop/products/new'
     | '/admin/venture/campaigns/$id'
     | '/admin/venture/campaigns/new'
+    | '/admin/venture/clients/$id'
     | '/admin/workflows/executions/$executionId'
     | '/api/marketplace/$marketplace/callback'
     | '/admin/shop/marketplace/'
@@ -532,6 +542,7 @@ export interface FileRouteTypes {
     | '/admin/shop/products/new'
     | '/admin/venture/campaigns/$id'
     | '/admin/venture/campaigns/new'
+    | '/admin/venture/clients/$id'
     | '/admin/workflows/executions/$executionId'
     | '/api/marketplace/$marketplace/callback'
     | '/admin/shop/marketplace'
@@ -580,6 +591,7 @@ export interface FileRouteTypes {
     | '/admin/shop/products/new'
     | '/admin/venture/campaigns/$id'
     | '/admin/venture/campaigns/new'
+    | '/admin/venture/clients/$id'
     | '/admin/workflows/executions/$executionId'
     | '/api/marketplace/$marketplace/callback'
     | '/admin/shop/marketplace/'
@@ -876,6 +888,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminWorkflowsExecutionsExecutionIdRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/venture/clients/$id': {
+      id: '/admin/venture/clients/$id'
+      path: '/venture/clients/$id'
+      fullPath: '/admin/venture/clients/$id'
+      preLoaderRoute: typeof AdminVentureClientsIdRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/venture/campaigns/new': {
       id: '/admin/venture/campaigns/new'
       path: '/venture/campaigns/new'
@@ -962,6 +981,7 @@ interface AdminRouteChildren {
   AdminShopProductsNewRoute: typeof AdminShopProductsNewRoute
   AdminVentureCampaignsIdRoute: typeof AdminVentureCampaignsIdRoute
   AdminVentureCampaignsNewRoute: typeof AdminVentureCampaignsNewRoute
+  AdminVentureClientsIdRoute: typeof AdminVentureClientsIdRoute
   AdminWorkflowsExecutionsExecutionIdRoute: typeof AdminWorkflowsExecutionsExecutionIdRoute
   AdminShopMarketplaceIndexRoute: typeof AdminShopMarketplaceIndexRoute
   AdminShopProductsIndexRoute: typeof AdminShopProductsIndexRoute
@@ -1003,6 +1023,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminShopProductsNewRoute: AdminShopProductsNewRoute,
   AdminVentureCampaignsIdRoute: AdminVentureCampaignsIdRoute,
   AdminVentureCampaignsNewRoute: AdminVentureCampaignsNewRoute,
+  AdminVentureClientsIdRoute: AdminVentureClientsIdRoute,
   AdminWorkflowsExecutionsExecutionIdRoute:
     AdminWorkflowsExecutionsExecutionIdRoute,
   AdminShopMarketplaceIndexRoute: AdminShopMarketplaceIndexRoute,

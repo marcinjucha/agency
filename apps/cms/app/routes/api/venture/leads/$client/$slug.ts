@@ -11,7 +11,6 @@ import {
   type CampaignRow,
   type IngestDeps,
 } from '@/features/venture/ingest.server'
-import { sendEmailViaResend } from '@/features/venture/mail/resend.server'
 
 // ---------------------------------------------------------------------------
 // POST /api/venture/leads/$client/$slug — Tally lead-ingest webhook (spec §7,
@@ -82,14 +81,16 @@ function parseClientAndSlug(request: Request): { clientSlug: string; slug: strin
 // Wire the real ingest dependencies over an existing service client (the route
 // already created one to resolve the campaign). Kept here (not in the
 // orchestrator) so the orchestrator stays pure/testable and this is the single
-// composition root.
+// composition root. `resolveMailSender` is intentionally OMITTED here —
+// ingest.server.ts defaults to the real `resolveMailSender` (per-client
+// provider selection) when the caller doesn't inject one; only tests inject a
+// fake.
 function buildIngestDeps(supabase: IngestDeps['supabase']): IngestDeps {
   return {
     supabase,
     getProvider: getEspProvider,
     isProviderRegistered: (id: string): id is EspProviderId =>
       isEspProviderRegistered(id as EspProviderId),
-    sendEmail: sendEmailViaResend,
   }
 }
 

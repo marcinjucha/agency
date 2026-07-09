@@ -163,6 +163,27 @@ export const messages = {
     noClientResults: 'Brak wyników',
     createClientInline: '+ Nowy klient',
     newClientPlaceholder: 'Nazwa klienta',
+
+    // --- Client details/settings page (mail credentials) ---
+    clientDetails: 'Szczegóły klienta',
+    editClient: 'Edytuj klienta',
+    clientNotFound: 'Nie znaleziono klienta',
+    clientNotFoundDescription: 'Klient mógł zostać usunięty lub nie masz do niego dostępu.',
+    backToClients: 'Powrót do klientów',
+    mailProviderTitle: 'Dostawca maila',
+    mailProviderLabel: 'Dostawca',
+    mailProviderResendShared: 'Agencyjny Resend (domyślny)',
+    mailProviderResendOwn: 'Własny Resend',
+    mailProviderGmail: 'Gmail (App Password)',
+    resendFromEmailLabel: 'Adres nadawcy (Resend)',
+    resendFromEmailPlaceholder: 'kontakt@klient.pl',
+    resendApiKeyLabel: 'Klucz API Resend',
+    resendApiKeyHelp: 'Zostaw puste, aby nie zmieniać.',
+    gmailAddressLabel: 'Adres Gmail',
+    gmailAddressPlaceholder: 'nazwa@gmail.com',
+    gmailAppPasswordLabel: 'Hasło aplikacji Gmail',
+    gmailAppPasswordHelp:
+      '16-znakowe hasło aplikacji Google, wygenerowane w ustawieniach konta. Zostaw puste, aby nie zmieniać.',
   },
 
   surveys: {

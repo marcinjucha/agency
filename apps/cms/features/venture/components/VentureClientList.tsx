@@ -16,9 +16,11 @@ import {
   AlertDialogAction,
   AlertDialogCancel,
 } from '@agency/ui'
-import { Users, Plus, Pencil, Trash2, Check, X } from 'lucide-react'
+import { Link } from '@tanstack/react-router'
+import { Users, Plus, Pencil, Trash2, Check, X, Settings } from 'lucide-react'
 import { queryKeys } from '@/lib/query-keys'
 import { messages } from '@/lib/messages'
+import { routes } from '@/lib/routes'
 import { generateSlug } from '@/lib/utils/slug'
 import {
   listClientsFn,
@@ -26,7 +28,7 @@ import {
   updateClientFn,
   deleteClientFn,
 } from '../admin'
-import type { Client } from '../types'
+import type { AdminClient } from '../types'
 
 // Inline CRUD (name + slug) — mirrors shop-categories CategoryManager list view.
 
@@ -110,7 +112,7 @@ export function VentureClientList() {
     setEditing({ type: 'new' })
   }
 
-  function startEdit(client: Client) {
+  function startEdit(client: AdminClient) {
     setFormData({ name: client.name, slug: client.slug })
     setAutoSlug(false)
     setEditing({ type: 'edit', id: client.id })
@@ -198,7 +200,7 @@ export function VentureClientList() {
           <div className="hidden sm:flex items-center gap-4 px-4 py-2.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">
             <div className="flex-1">{messages.venture.clientNameLabel}</div>
             <div className="w-48">{messages.venture.clientSlugLabel}</div>
-            <div className="w-20" />
+            <div className="w-28" />
           </div>
 
           {editing.type === 'new' && (
@@ -325,7 +327,7 @@ function ClientReadonlyRow({
   isDeleting,
   isEditingOther,
 }: {
-  client: Client
+  client: AdminClient
   onEdit: () => void
   onDelete: () => void
   isDeleting: boolean
@@ -340,7 +342,19 @@ function ClientReadonlyRow({
       <div className="hidden w-48 sm:block">
         <p className="truncate font-mono text-xs text-muted-foreground">{client.slug}</p>
       </div>
-      <div className="flex w-20 flex-shrink-0 items-center justify-end gap-1">
+      <div className="flex w-28 flex-shrink-0 items-center justify-end gap-1">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+          asChild
+          disabled={isEditingOther}
+          aria-label={messages.venture.clientDetails}
+        >
+          <Link to={routes.admin.ventureClient(client.id)}>
+            <Settings className="h-4 w-4" />
+          </Link>
+        </Button>
         <Button
           variant="ghost"
           size="sm"
