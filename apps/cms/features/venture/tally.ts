@@ -69,12 +69,12 @@ export type TallyMapError =
 // as the `label` of a HIDDEN_FIELDS question in Kacper's Tally form.
 const SOURCE_FIELD_LABEL = 'source'
 
-// [do potwierdzenia] The exact label/key of the consent checkbox in Kacper's
-// Tally form is NOT yet fixed (Marcin sets it). We first try to match a
-// CHECKBOXES aggregate whose label contains this constant; if none matches we
-// fall back to "the single CHECKBOXES aggregate that isn't campaign/source"
-// (campaign/source are HIDDEN_FIELDS, so any CHECKBOXES question is a consent
-// candidate). Confirm the real label before E2E (iter 6/7) and set it here.
+// CONFIRMED 2026-07-09 by real Tally webhook payload: Marcin added the label
+// "Zgoda RODO" to the single CHECKBOXES question in Kacper's form
+// (question_qO9vR2). `labelOrKeyContains(f, 'zgoda')` below already matches
+// this label via the main (non-fallback) path, so `CONSENT_FIELD_LABEL`
+// itself does NOT need to change — it stays as a universal keyword match
+// (works for an English "consent" label too), tested alongside 'zgoda'.
 const CONSENT_FIELD_LABEL = 'consent'
 
 const TYPE_EMAIL = 'INPUT_EMAIL'
@@ -169,20 +169,26 @@ function findNameField(fields: TallyField[]): TallyField | undefined {
  * The consent AGGREGATE row: a CHECKBOXES field whose value is the array of
  * selected option ids. Per-option boolean rows (`type: CHECKBOXES`, value
  * boolean) are intentionally excluded via the Array.isArray guard.
+ *
+ * Fallback safety: the "single CHECKBOXES aggregate" fallback is ONLY applied
+ * when there is EXACTLY ONE aggregate candidate (campaign/source are
+ * HIDDEN_FIELDS, never CHECKBOXES, so a single-aggregate form has no other
+ * candidate). When there are 2+ aggregates and NONE match the label keyword,
+ * we deliberately return undefined instead of guessing `aggregates[0]` — a
+ * false-positive RODO consent (treating an unrelated checkbox as consent) is
+ * worse than a false negative (treating an actual consent as not given).
  */
 function findConsentAggregate(fields: TallyField[]): TallyField | undefined {
   const aggregates = fields.filter(
     (f) => typeIs(f, TYPE_CHECKBOXES) && Array.isArray(f.value),
   )
-  return (
-    aggregates.find(
-      (f) =>
-        labelOrKeyContains(f, CONSENT_FIELD_LABEL) || labelOrKeyContains(f, 'zgoda'),
-    ) ??
-    // Fallback: the single CHECKBOXES question in the form (campaign/source are
-    // HIDDEN_FIELDS, never CHECKBOXES) is treated as the consent checkbox.
-    aggregates[0]
+  const labelMatch = aggregates.find(
+    (f) =>
+      labelOrKeyContains(f, CONSENT_FIELD_LABEL) || labelOrKeyContains(f, 'zgoda'),
   )
+  if (labelMatch) return labelMatch
+  // Unambiguous fallback: exactly one candidate, safe to assume it's consent.
+  return aggregates.length === 1 ? aggregates[0] : undefined
 }
 
 /**

@@ -119,6 +119,47 @@ describe('mapTallyPayload — synthetic fields', () => {
     expect(result._unsafeUnwrap().consentLaunch).toBe(false)
   })
 
+  it('consent = true via the single-aggregate fallback when its label matches neither "consent" nor "zgoda"', () => {
+    // Exactly ONE CHECKBOXES aggregate in the form — unambiguous, safe to
+    // fall back to it even though its label doesn't mention consent/zgoda.
+    const result = mapTallyPayload(
+      payload([
+        EMAIL_FIELD,
+        {
+          key: 'question_newsletter',
+          label: 'Chcę otrzymywać newsletter',
+          type: 'CHECKBOXES',
+          value: ['opt-1'],
+        },
+      ]),
+    )
+    expect(result._unsafeUnwrap().consentLaunch).toBe(true)
+  })
+
+  it('consent = false (does NOT guess) when there are 2+ CHECKBOXES aggregates and none match the label keyword', () => {
+    // Two ambiguous candidates, neither labeled consent/zgoda — a wrong guess
+    // here would fabricate a false-positive RODO consent, which is worse than
+    // a false negative. Must return false, not aggregates[0].
+    const result = mapTallyPayload(
+      payload([
+        EMAIL_FIELD,
+        {
+          key: 'question_newsletter',
+          label: 'Chcę otrzymywać newsletter',
+          type: 'CHECKBOXES',
+          value: ['opt-1'],
+        },
+        {
+          key: 'question_topics',
+          label: 'Interesujące tematy',
+          type: 'CHECKBOXES',
+          value: ['opt-2'],
+        },
+      ]),
+    )
+    expect(result._unsafeUnwrap().consentLaunch).toBe(false)
+  })
+
   it('leaves optional name + source null when absent', () => {
     const lead = mapTallyPayload(payload([EMAIL_FIELD]))._unsafeUnwrap()
     expect(lead.name).toBeNull()
@@ -179,5 +220,40 @@ describe('mapTallyPayload — real Tally fixture', () => {
     // No INPUT_TEXT labelled name, no `source` hidden field.
     expect(lead.name).toBeNull()
     expect(lead.source).toBeNull()
+  })
+})
+
+describe('mapTallyPayload — real Kacper payload, "Zgoda RODO" label (confirmed 2026-07-09)', () => {
+  it('matches the consent checkbox by its confirmed real label and returns consentLaunch: true', () => {
+    // Verbatim shape from the real Tally webhook after Marcin added the
+    // "Zgoda RODO" label to question_qO9vR2 in Kacper's form.
+    const OPT = 'b0d1e613-7110-40e7-b959-b6e2536d5d7c'
+    const result = mapTallyPayload(
+      payload([
+        EMAIL_FIELD,
+        {
+          key: 'question_qO9vR2',
+          label: 'Zgoda RODO',
+          type: 'CHECKBOXES',
+          value: [OPT],
+          options: [
+            {
+              id: OPT,
+              text: 'Chcę dostać e-mail z powiadomieniem, kiedy kurs wystartuje. Mogę wypisać się w każdej chwili.',
+            },
+          ],
+        },
+        {
+          key: `question_qO9vR2_${OPT}`,
+          label:
+            'Zgoda RODO (Chcę dostać e-mail z powiadomieniem, kiedy kurs wystartuje. Mogę wypisać się w każdej chwili.)',
+          type: 'CHECKBOXES',
+          value: true,
+        },
+      ]),
+    )
+
+    expect(result.isOk()).toBe(true)
+    expect(result._unsafeUnwrap().consentLaunch).toBe(true)
   })
 })
