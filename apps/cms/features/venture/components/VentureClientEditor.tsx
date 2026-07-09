@@ -71,6 +71,7 @@ export function VentureClientEditor({ client }: VentureClientEditorProps) {
       resend_api_key: '',
       gmail_address: client.gmail_address ?? '',
       gmail_app_password: '',
+      sender_name: client.sender_name ?? '',
     },
   })
 
@@ -96,6 +97,7 @@ export function VentureClientEditor({ client }: VentureClientEditorProps) {
           mail_provider: data.mail_provider,
           resend_from_email: data.resend_from_email?.trim() || null,
           gmail_address: data.gmail_address?.trim() || null,
+          sender_name: data.sender_name?.trim() || null,
           // Only rotate when the operator actually typed a new secret.
           ...(resendApiKeyInput ? { resend_api_key: resendApiKeyInput } : {}),
           ...(gmailAppPasswordInput ? { gmail_app_password: gmailAppPasswordInput } : {}),
@@ -234,6 +236,24 @@ export function VentureClientEditor({ client }: VentureClientEditorProps) {
               {/* Mail provider */}
               <CollapsibleCard title={messages.venture.mailProviderTitle} defaultOpen>
                 <div className="space-y-5">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="sender-name" className="text-sm font-medium">
+                      {messages.venture.senderNameLabel}
+                    </Label>
+                    <Input
+                      id="sender-name"
+                      {...register('sender_name')}
+                      placeholder={messages.venture.senderNamePlaceholder}
+                      className="text-sm"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      {messages.venture.senderNameHelp}
+                    </p>
+                    {errors.sender_name && (
+                      <p className="text-xs text-destructive">{errors.sender_name.message}</p>
+                    )}
+                  </div>
+
                   <div className="space-y-1.5">
                     <Label htmlFor="mail-provider" className="text-sm font-medium">
                       {messages.venture.mailProviderLabel}

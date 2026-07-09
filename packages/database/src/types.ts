@@ -1281,6 +1281,7 @@ export type Database = {
           name: string
           resend_api_key: string | null
           resend_from_email: string | null
+          sender_name: string | null
           slug: string
           tenant_id: string
           updated_at: string
@@ -1296,6 +1297,7 @@ export type Database = {
           name: string
           resend_api_key?: string | null
           resend_from_email?: string | null
+          sender_name?: string | null
           slug: string
           tenant_id: string
           updated_at?: string
@@ -1311,6 +1313,7 @@ export type Database = {
           name?: string
           resend_api_key?: string | null
           resend_from_email?: string | null
+          sender_name?: string | null
           slug?: string
           tenant_id?: string
           updated_at?: string

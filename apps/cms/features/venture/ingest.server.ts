@@ -117,7 +117,7 @@ async function resolveClientRow(
   const { data, error } = await supabase
     .from('so_clients')
     .select(
-      'id, mail_provider, resend_api_key, resend_from_email, gmail_address, gmail_app_password',
+      'id, mail_provider, resend_api_key, resend_from_email, gmail_address, gmail_app_password, sender_name',
     )
     .eq('slug', clientSlug)
     .maybeSingle()
@@ -157,11 +157,24 @@ export async function resolveCampaign(
   }
   if (!data) return null
 
-  const { mail_provider, resend_api_key, resend_from_email, gmail_address, gmail_app_password } =
-    clientRow
+  const {
+    mail_provider,
+    resend_api_key,
+    resend_from_email,
+    gmail_address,
+    gmail_app_password,
+    sender_name,
+  } = clientRow
   return {
     ...(data as Omit<CampaignRow, 'clientMail'>),
-    clientMail: { mail_provider, resend_api_key, resend_from_email, gmail_address, gmail_app_password },
+    clientMail: {
+      mail_provider,
+      resend_api_key,
+      resend_from_email,
+      gmail_address,
+      gmail_app_password,
+      sender_name,
+    },
   }
 }
 

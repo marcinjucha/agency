@@ -26,6 +26,11 @@ export interface ClientMailConfig {
   resend_from_email: string | null
   gmail_address: string | null
   gmail_app_password: string | null
+  // Friendly "From" display name (client's brand, e.g. "Przystań Inwestorów").
+  // NOT a secret — plain nullable column. Applied to Gmail SMTP and the
+  // client's own Resend account; the agency-shared Resend sender does NOT
+  // receive it (separate concern, out of scope here).
+  sender_name: string | null
 }
 
 const SHARED_RESEND_SENDER: MailSender = { send: sendEmailViaResend }
@@ -40,6 +45,7 @@ export function resolveMailSender(client: ClientMailConfig): MailSender {
       return createResendMailSender({
         apiKey: client.resend_api_key,
         from: client.resend_from_email,
+        fromName: client.sender_name,
       })
     }
     console.warn(
@@ -53,6 +59,7 @@ export function resolveMailSender(client: ClientMailConfig): MailSender {
       return createGmailSmtpSender({
         address: client.gmail_address,
         appPassword: client.gmail_app_password,
+        senderName: client.sender_name,
       })
     }
     console.warn(

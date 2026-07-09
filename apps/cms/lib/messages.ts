@@ -171,6 +171,10 @@ export const messages = {
     clientNotFoundDescription: 'Klient mógł zostać usunięty lub nie masz do niego dostępu.',
     backToClients: 'Powrót do klientów',
     mailProviderTitle: 'Dostawca maila',
+    senderNameLabel: 'Nazwa nadawcy',
+    senderNamePlaceholder: 'Przystań Inwestorów',
+    senderNameHelp:
+      'Przyjazna etykieta widoczna w polu "Od" u odbiorcy zamiast gołego adresu e-mail.',
     mailProviderLabel: 'Dostawca',
     mailProviderResendShared: 'Agencyjny Resend (domyślny)',
     mailProviderResendOwn: 'Własny Resend',

@@ -51,6 +51,7 @@ const CAMPAIGN = {
     resend_from_email: null,
     gmail_address: null,
     gmail_app_password: null,
+    sender_name: null,
   },
 }
 
@@ -367,6 +368,7 @@ describe('ingestLead', () => {
         resend_from_email: null,
         gmail_address: 'client@gmail.com',
         gmail_app_password: 'app-password-16-chars',
+        sender_name: null,
       },
     }
 

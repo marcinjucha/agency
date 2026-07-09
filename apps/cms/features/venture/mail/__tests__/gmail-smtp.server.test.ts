@@ -47,6 +47,45 @@ describe('createGmailSmtpSender', () => {
     })
   })
 
+  it('formats from as "Name" <email> when senderName is set', async () => {
+    sendMailMock.mockResolvedValue({ messageId: 'abc' })
+
+    const sender = createGmailSmtpSender({
+      address: 'mjucha92@gmail.com',
+      appPassword: 'abcd efgh ijkl mnop',
+      senderName: 'Przystań Inwestorów',
+    })
+
+    await sender.send({
+      to: 'lead@example.com',
+      subject: 'Twoje bonusy',
+      html: '<p>Hello</p>',
+    })
+
+    expect(sendMailMock).toHaveBeenCalledWith({
+      from: '"Przystań Inwestorów" <mjucha92@gmail.com>',
+      to: 'lead@example.com',
+      subject: 'Twoje bonusy',
+      html: '<p>Hello</p>',
+    })
+  })
+
+  it('falls back to the bare address when senderName is absent or blank', async () => {
+    sendMailMock.mockResolvedValue({ messageId: 'abc' })
+
+    const sender = createGmailSmtpSender({
+      address: 'client@gmail.com',
+      appPassword: 'abcd efgh ijkl mnop',
+      senderName: '   ',
+    })
+
+    await sender.send({ to: 'lead@example.com', subject: 'x', html: '<p>x</p>' })
+
+    expect(sendMailMock).toHaveBeenCalledWith(
+      expect.objectContaining({ from: 'client@gmail.com' }),
+    )
+  })
+
   it('propagates errors from sendMail instead of swallowing them', async () => {
     sendMailMock.mockRejectedValue(new Error('SMTP auth failed'))
 

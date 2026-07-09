@@ -75,6 +75,11 @@ export const createClientSchema = z.object({
     .nullable()
     .optional()
     .or(z.literal('')),
+  // Friendly "From" display name (client's brand, e.g. "Przystań Inwestorów").
+  // NOT a secret — plain text field, applies regardless of mail_provider.
+  // `.or(z.literal(''))` from day one (see comment above re: RHF always
+  // submitting '' for an untouched text input).
+  sender_name: z.string().trim().nullable().optional().or(z.literal('')),
 })
 
 // `.partial()` on a schema WITHOUT ids — the row id travels in the input

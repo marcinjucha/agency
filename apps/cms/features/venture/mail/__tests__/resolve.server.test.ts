@@ -23,6 +23,7 @@ function baseConfig(overrides: Partial<ClientMailConfig> = {}): ClientMailConfig
     resend_from_email: null,
     gmail_address: null,
     gmail_app_password: null,
+    sender_name: null,
     ...overrides,
   }
 }
@@ -62,6 +63,7 @@ describe('resolveMailSender', () => {
     expect(createResendMailSenderMock).toHaveBeenCalledWith({
       apiKey: 'key-123',
       from: 'bonus@client.com',
+      fromName: null,
     })
     expect(sender).toBe(RESEND_OWN_SENDER)
   })
@@ -92,6 +94,7 @@ describe('resolveMailSender', () => {
     expect(createGmailSmtpSenderMock).toHaveBeenCalledWith({
       address: 'client@gmail.com',
       appPassword: 'abcd efgh ijkl mnop',
+      senderName: null,
     })
     expect(sender).toBe(GMAIL_SENDER)
   })

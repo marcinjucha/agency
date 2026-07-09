@@ -203,7 +203,7 @@ function assertBonusOwned(
 // resolveMailSender, features/venture/mail/) reads the real secrets via a
 // separate select on the service-role or auth-context client.
 const ADMIN_CLIENT_COLUMNS =
-  'id, tenant_id, name, slug, mail_provider, resend_from_email, gmail_address, created_at, updated_at, has_resend_api_key, has_gmail_app_password'
+  'id, tenant_id, name, slug, mail_provider, resend_from_email, gmail_address, sender_name, created_at, updated_at, has_resend_api_key, has_gmail_app_password'
 
 export function listClientsHandler(): Promise<MutationResult<AdminClient[]>> {
   return toMutation(
@@ -239,6 +239,7 @@ export function createClientHandler(
             resend_from_email: input.resend_from_email ?? null,
             gmail_address: input.gmail_address ?? null,
             gmail_app_password: input.gmail_app_password ?? null,
+            sender_name: input.sender_name ?? null,
           })
           .select(ADMIN_CLIENT_COLUMNS)
           .single(),
@@ -536,6 +537,7 @@ function buildClientPatch(input: UpdateClientInput): Record<string, unknown> {
   if (input.mail_provider !== undefined) patch.mail_provider = input.mail_provider
   if (input.resend_from_email !== undefined) patch.resend_from_email = input.resend_from_email
   if (input.gmail_address !== undefined) patch.gmail_address = input.gmail_address
+  if (input.sender_name !== undefined) patch.sender_name = input.sender_name
   // Absent = leave the existing secret untouched (the editor omits the key on
   // a rotate-skip, same pattern as so_campaigns.tally_webhook_secret in
   // buildCampaignPatch above). A present value rotates it.

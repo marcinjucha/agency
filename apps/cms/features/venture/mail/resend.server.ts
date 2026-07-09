@@ -91,8 +91,18 @@ export async function sendEmailViaResend(input: SendEmailInput): Promise<void> {
 }
 
 /** Build a MailSender backed by an explicit (client-owned) Resend config. */
-export function createResendMailSender(config: { apiKey: string; from: string }): MailSender {
+export function createResendMailSender(config: {
+  apiKey: string
+  from: string
+  // Optional friendly "From" display name (client's brand). When set (after
+  // trim), formatted as the standard RFC 5322 `"Name" <email>` — Resend's
+  // API `from` field accepts this format. Falls back to the bare address
+  // (existing behavior) when unset/blank.
+  fromName?: string | null
+}): MailSender {
+  const trimmedFromName = config.fromName?.trim()
+  const from = trimmedFromName ? `"${trimmedFromName}" <${config.from}>` : config.from
   return {
-    send: (input: MailSenderInput) => sendResendEmail({ ...config, ...input }),
+    send: (input: MailSenderInput) => sendResendEmail({ apiKey: config.apiKey, from, ...input }),
   }
 }

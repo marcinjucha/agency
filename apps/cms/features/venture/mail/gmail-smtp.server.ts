@@ -20,6 +20,11 @@ const SMTP_TIMEOUT_MS = 10_000
 export function createGmailSmtpSender(config: {
   address: string
   appPassword: string
+  // Optional friendly "From" display name (client's brand). When set (after
+  // trim), formatted as the standard RFC 5322 `"Name" <email>` — nodemailer
+  // parses this correctly. Falls back to the bare address (existing
+  // behavior) when unset/blank.
+  senderName?: string | null
 }): MailSender {
   const transporter = nodemailer.createTransport({
     host: 'smtp.gmail.com',
@@ -30,10 +35,15 @@ export function createGmailSmtpSender(config: {
     socketTimeout: SMTP_TIMEOUT_MS,
   })
 
+  const trimmedSenderName = config.senderName?.trim()
+  const from = trimmedSenderName
+    ? `"${trimmedSenderName}" <${config.address}>`
+    : config.address
+
   return {
     async send(input: MailSenderInput): Promise<void> {
       await transporter.sendMail({
-        from: config.address,
+        from,
         to: input.to,
         subject: input.subject,
         html: input.html,
