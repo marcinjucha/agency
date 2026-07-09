@@ -1836,9 +1836,34 @@ export const messages = {
     changePasswordFailed: 'Nie udało się zmienić hasła',
     cannotChangeOwnPassword: 'Nie możesz zmienić własnego hasła tutaj',
     cannotChangeHigherRankPassword: 'Nie możesz zmienić hasła użytkownikowi o wyższej lub równej roli',
+    cannotChangeHigherRankRole: 'Nie możesz zmienić roli użytkownikowi o wyższej lub równej roli',
     selectTenant: 'Wybierz organizację',
     tenantLabel: 'Organizacja',
     tenantDescription: 'Utwórz użytkownika w wybranej organizacji',
+    // --- Per-user client access (venture bonus-funnel scoping, iter 3b) ---
+    clientAccess: 'Dostęp do klientów',
+    allClientsAccess: 'Wszyscy klienci',
+    selectedClientsAccess: 'Wybrani klienci',
+    clientAccessAllOptionHint: 'Pełny dostęp do wszystkich klientów w organizacji.',
+    clientAccessSelectedOptionHint: 'Dostęp ograniczony tylko do wybranych klientów.',
+    clientAccessGroupLabel: 'Wybierz poziom dostępu do klientów',
+    superAdminAlwaysAllClients:
+      'Super admin zawsze ma dostęp do wszystkich klientów — nie można ograniczyć jego dostępu.',
+    allClientsAccessHint: 'Ma dostęp do wszystkich klientów w organizacji.',
+    assignClientsDescription:
+      'Wybierz klientów, do których ten użytkownik będzie miał dostęp. Zobaczy tylko zaznaczonych klientów i ich kampanie.',
+    noClientsToAssign: 'Brak klientów',
+    noClientsToAssignDescription: 'Najpierw dodaj klienta w sekcji Bonus funnel.',
+    loadAssignmentsFailed: 'Nie udało się wczytać dostępu do klientów',
+    saveAssignmentsFailed: 'Nie udało się zapisać dostępu do klientów',
+    clientsCount: (n: number) =>
+      `${n} ${
+        n === 1
+          ? 'klient'
+          : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20)
+            ? 'klienci'
+            : 'klientów'
+      }`,
   },
 
   roles: {

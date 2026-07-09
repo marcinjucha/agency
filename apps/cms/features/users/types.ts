@@ -5,6 +5,8 @@
  * each user's assigned role in the current tenant.
  */
 
+import type { ClientAccess } from '@/features/venture/utils/client-access'
+
 export type UserWithRole = {
   id: string
   email: string
@@ -37,10 +39,14 @@ export type CreateUserInput = {
   roleId: string
   /** Super admin only — create user in a specific tenant instead of own. */
   tenantId?: string
+  /** Client-access tier → users.role. Defaults to 'selected' (least privilege). */
+  clientAccess?: ClientAccess
 }
 
 export type UpdateUserInput = {
   userId: string
   fullName?: string
   roleId?: string
+  /** Client-access tier → users.role ('all'→admin, 'selected'→member; owner preserved). */
+  clientAccess?: ClientAccess
 }

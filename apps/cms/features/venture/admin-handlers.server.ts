@@ -1,10 +1,20 @@
-import { err, ok, Result, ResultAsync } from 'neverthrow'
-import {
-  requireAuthContextFull,
-  type AuthContextFull,
-} from '@/lib/server-auth.server'
-import { hasPermission, type PermissionKey } from '@/lib/permissions'
+import { err, errAsync, ok, ResultAsync } from 'neverthrow'
+import { isUnscopedActor, type AuthContextFull } from '@/lib/server-auth.server'
+import type { PermissionKey } from '@/lib/permissions'
 import { messages } from '@/lib/messages'
+import {
+  type DbErrorShape,
+  type MutationResult,
+  type VoidResult,
+  dbError,
+  fromSupabaseSafe,
+  fromSupabaseVoidSafe,
+  gated,
+  mapDbError,
+  tbl,
+  toMutation,
+  toVoid,
+} from './handler-base.server'
 import type { AdminCampaign, AdminClient, Bonus } from './types'
 import type {
   CreateBonusInput,
@@ -42,87 +52,6 @@ const PERM = {
   campaigns: 'bonus_funnel.campaigns',
   bonuses: 'bonus_funnel.bonuses',
 } as const satisfies Record<string, PermissionKey>
-
-type MutationResult<T> = { success: boolean; data?: T; error?: string }
-type VoidResult = { success: boolean; error?: string }
-
-// Raw Supabase/Postgres error shape (has `code` at runtime — `message` at type level).
-type DbErrorShape = { message?: string; code?: string } | null
-
-/**
- * Translate a raw Supabase/Postgres error into a generic, client-safe, localized
- * message. The RAW error (constraint/schema names, RLS policy text like
- * "new row violates row-level security policy …") is logged for developers via
- * console.error and NEVER returned to the client. 23505 (unique_violation) →
- * friendly slug message. Mirrors features/email/server.ts (23505 handling).
- */
-function mapDbError(error: DbErrorShape, context: string): string {
-  // Developer-facing, English — full raw error preserved for debugging.
-  console.error(`[venture] ${context} failed:`, error)
-  if (error?.code === '23505') return messages.venture.slugTaken
-  return messages.venture.operationFailed
-}
-
-// Reject handler for ResultAsync.fromPromise (thrown/network errors — Supabase
-// resolves with `{ error }` rather than throwing, so this is the rare path).
-// Never surfaces the raw thrown message to the client.
-const dbError = (e: unknown): string => {
-  console.error('[venture] unexpected DB error:', e)
-  return messages.venture.operationFailed
-}
-
-/**
- * Local, error-mapping variant of `fromSupabase` — routes the raw DB error
- * through mapDbError instead of leaking `res.error.message` to the client.
- * (The shared @/lib/result-helpers versions propagate the raw string.)
- */
-const fromSupabaseSafe =
-  <T>(context: string) =>
-  (response: unknown): Result<T, string> => {
-    const res = response as { data: T | null; error: DbErrorShape }
-    if (res.error) return err(mapDbError(res.error, context))
-    if (!res.data) return err(messages.venture.operationFailed)
-    return ok(res.data)
-  }
-
-/** Local, error-mapping variant of `fromSupabaseVoid` (delete/void mutations). */
-const fromSupabaseVoidSafe =
-  (context: string) =>
-  (response: unknown): Result<undefined, string> => {
-    const res = response as { error: DbErrorShape }
-    if (res.error) return err(mapDbError(res.error, context))
-    return ok(undefined)
-  }
-
-// so_* insert/update types resolve to `never` in this Supabase JS version
-// (same incompatibility documented in shop-categories). Route table access
-// through an untyped accessor; reads stay correct at runtime.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const tbl = (auth: AuthContextFull, name: string) => (auth.supabase as any).from(name)
-
-/** Gate a handler on a bonus_funnel.* permission, then run the body. */
-function gated<T>(
-  permission: PermissionKey,
-  body: (auth: AuthContextFull) => ResultAsync<T, string>,
-): ResultAsync<T, string> {
-  return requireAuthContextFull().andThen((auth) =>
-    hasPermission(permission, auth.permissions)
-      ? body(auth)
-      : err<T, string>(messages.common.noPermission),
-  )
-}
-
-const toMutation = <T>(r: ResultAsync<T, string>): Promise<MutationResult<T>> =>
-  r.match(
-    (data) => ({ success: true as const, data }),
-    (error) => ({ success: false as const, error }),
-  )
-
-const toVoid = (r: ResultAsync<unknown, string>): Promise<VoidResult> =>
-  r.match(
-    () => ({ success: true as const }),
-    (error) => ({ success: false as const, error }),
-  )
 
 // ---------------------------------------------------------------------------
 // Parent-ownership verification (FK chain → so_clients.tenant_id)
@@ -228,23 +157,29 @@ export function createClientHandler(
 ): Promise<MutationResult<AdminClient>> {
   return toMutation(
     gated(PERM.clients, (auth) =>
-      ResultAsync.fromPromise(
-        tbl(auth, 'so_clients')
-          .insert({
-            name: input.name,
-            slug: input.slug,
-            tenant_id: auth.tenantId,
-            mail_provider: input.mail_provider ?? 'resend_shared',
-            resend_api_key: input.resend_api_key ?? null,
-            resend_from_email: input.resend_from_email ?? null,
-            gmail_address: input.gmail_address ?? null,
-            gmail_app_password: input.gmail_app_password ?? null,
-            sender_name: input.sender_name ?? null,
-          })
-          .select(ADMIN_CLIENT_COLUMNS)
-          .single(),
-        dbError,
-      ).andThen(fromSupabaseSafe<AdminClient>('createClient')),
+      // Defense-in-depth over the so_clients INSERT WITH CHECK gate in
+      // 20260709120000: client creation is UNSCOPED-only. A scoped member's DB
+      // insert would fail with an opaque RLS error — reject it cleanly here
+      // first with the standard no-permission message.
+      isUnscopedActor(auth)
+        ? ResultAsync.fromPromise(
+            tbl(auth, 'so_clients')
+              .insert({
+                name: input.name,
+                slug: input.slug,
+                tenant_id: auth.tenantId,
+                mail_provider: input.mail_provider ?? 'resend_shared',
+                resend_api_key: input.resend_api_key ?? null,
+                resend_from_email: input.resend_from_email ?? null,
+                gmail_address: input.gmail_address ?? null,
+                gmail_app_password: input.gmail_app_password ?? null,
+                sender_name: input.sender_name ?? null,
+              })
+              .select(ADMIN_CLIENT_COLUMNS)
+              .single(),
+            dbError,
+          ).andThen(fromSupabaseSafe<AdminClient>('createClient'))
+        : errAsync<AdminClient, string>(messages.common.noPermission),
     ),
   )
 }
@@ -272,10 +207,19 @@ export function updateClientHandler(
 export function deleteClientHandler(id: string): Promise<VoidResult> {
   return toVoid(
     gated(PERM.clients, (auth) =>
-      ResultAsync.fromPromise(
-        tbl(auth, 'so_clients').delete().eq('id', id).eq('tenant_id', auth.tenantId),
-        dbError,
-      ).andThen(fromSupabaseVoidSafe('deleteClient')),
+      // Defense-in-depth over the so_clients DELETE gate in 20260709120000:
+      // client deletion is UNSCOPED-only (cascades to campaigns/bonuses/leads →
+      // admin-only). An assigned scoped member may VIEW + UPDATE their client
+      // (they enter the sensitive config) but must NOT delete it — reject cleanly
+      // here BEFORE any DB call, mirroring createClientHandler. A scoped member's
+      // DELETE would otherwise fail with an opaque RLS "0 rows" instead of a clear
+      // no-permission message.
+      isUnscopedActor(auth)
+        ? ResultAsync.fromPromise(
+            tbl(auth, 'so_clients').delete().eq('id', id).eq('tenant_id', auth.tenantId),
+            dbError,
+          ).andThen(fromSupabaseVoidSafe('deleteClient'))
+        : errAsync<undefined, string>(messages.common.noPermission),
     ),
   )
 }

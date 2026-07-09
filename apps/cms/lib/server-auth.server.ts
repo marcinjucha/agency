@@ -6,6 +6,7 @@ import {
   type PermissionKey,
 } from '@/lib/permissions'
 import { createServerClient } from '@/lib/supabase/server-start.server'
+import { UNSCOPED_ROLE_SET } from '@/lib/roles'
 
 /** Supabase client type from TanStack Start — re-exported for feature files. */
 export type StartClient = ReturnType<typeof createServerClient>
@@ -30,8 +31,36 @@ export type AuthContextFull = AuthContext & {
   permissions: PermissionKey[]
 }
 
-/** Roles that receive all permissions without per-key check. */
-const FULL_ACCESS_ROLES = new Set(['owner', 'admin'])
+/**
+ * Roles that receive all permissions without per-key check (the "unscoped"
+ * actors). Aliases the canonical set in `lib/roles.ts` — the SINGLE source of
+ * truth shared with the client-safe mirror UNSCOPED_ROLE_NAMES in
+ * features/venture/utils/client-access.ts. Kept in PARITY with the SQL role list
+ * ('owner','admin') in supabase/migrations/20260709120000_venture_scoped_access.sql
+ * — both can_access_so_client() and the so_clients INSERT WITH CHECK gate on the
+ * same two role names. Add a third unscoped role in `lib/roles.ts` (once); the
+ * SQL/TS duplication with the migration is unavoidable (no shared runtime between
+ * the RLS layer and the app layer) but the two TS copies are now unified.
+ */
+export const FULL_ACCESS_ROLES = UNSCOPED_ROLE_SET
+
+/**
+ * True for the UNSCOPED actors (super_admin, or a FULL_ACCESS_ROLES role —
+ * owner/admin). A scoped member (role='member', not super_admin) returns false.
+ *
+ * Single source of the unscoped-actor predicate: consumed by getAuthFull (to
+ * grant ALL_PERMISSION_KEYS) AND by the venture admin handlers (to gate
+ * client create/delete). Mirrors the SQL role gate in
+ * 20260709120000_venture_scoped_access.sql — never re-hardcode ['owner','admin']
+ * at the call sites. Takes only the two fields it needs so getAuthFull can call
+ * it BEFORE the full AuthContextFull (with permissions) exists.
+ */
+export function isUnscopedActor(actor: {
+  isSuperAdmin: boolean
+  roleName: string | null
+}): boolean {
+  return actor.isSuperAdmin || FULL_ACCESS_ROLES.has(actor.roleName ?? '')
+}
 
 // ---------------------------------------------------------------------------
 // Core helpers
@@ -86,7 +115,7 @@ export async function getAuthFull(): Promise<AuthContextFull | null> {
   const roleName = (userData.role as string) ?? null
 
   let permissions: PermissionKey[]
-  if (isSuperAdmin || FULL_ACCESS_ROLES.has(roleName ?? '')) {
+  if (isUnscopedActor({ isSuperAdmin, roleName })) {
     permissions = [...ALL_PERMISSION_KEYS] as PermissionKey[]
   } else {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

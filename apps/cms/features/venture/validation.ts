@@ -184,6 +184,22 @@ export const listCampaignsInputSchema = z.object({
 })
 export const listBonusesInputSchema = z.object({ campaign_id: z.string().uuid() })
 
+// --- Per-user client assignments (iter 3a) --------------------------------
+// REPLACE-SET wire input: userId + the FULL desired set of client ids. The
+// handler diffs against the current set (add/remove), verifies the target user
+// and EVERY clientId belong to the caller's tenant, and rejects the whole op if
+// any is cross-tenant. An empty clientIds array clears all assignments.
+// Consumed ONLY through the function-form inputValidator in assignments.ts
+// (`.inputValidator((v) => schema.parse(v))`) — a raw schema silently skips
+// validation (features/CLAUDE.md).
+
+export const setUserClientAssignmentsSchema = z.object({
+  userId: z.string().uuid(),
+  clientIds: z.array(z.string().uuid()),
+})
+
+export const listAssignmentsInputSchema = z.object({ userId: z.string().uuid() })
+
 // --- Inferred types -------------------------------------------------------
 
 export type CreateClientInput = z.infer<typeof createClientSchema>
@@ -193,3 +209,6 @@ export type UpdateCampaignInput = z.infer<typeof updateCampaignSchema>
 export type CreateBonusInput = z.infer<typeof createBonusSchema>
 export type UpdateBonusInput = z.infer<typeof updateBonusSchema>
 export type ReorderBonusesInput = z.infer<typeof reorderBonusesSchema>
+export type SetUserClientAssignmentsInput = z.infer<
+  typeof setUserClientAssignmentsSchema
+>

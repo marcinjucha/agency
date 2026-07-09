@@ -25,6 +25,8 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  RadioGroup,
+  RadioGroupItem,
 } from '@agency/ui'
 import { Eye, EyeOff } from 'lucide-react'
 
@@ -35,9 +37,11 @@ interface AddUserDialogProps {
 
 export function AddUserDialog({ open, onOpenChange }: AddUserDialogProps) {
   const queryClient = useQueryClient()
-  const { isSuperAdmin } = usePermissions()
+  const { isSuperAdmin, enabledFeatures } = usePermissions()
   const { selectedTenantId } = useTenantScope()
   const [showPassword, setShowPassword] = useState(false)
+  // Only surface the client-access tier where the venture bonus-funnel is on.
+  const ventureEnabled = enabledFeatures.includes('bonus_funnel')
 
   // Roles are scoped to the currently selected tenant (from URL scope bar)
   const { data: roles } = useQuery({
@@ -55,10 +59,19 @@ export function AddUserDialog({ open, onOpenChange }: AddUserDialogProps) {
   } = useForm<CreateUserFormData>({
     resolver: zodResolver(createUserSchema),
     mode: 'onChange',
-    defaultValues: { email: '', password: '', fullName: '', roleId: '' },
+    // clientAccess defaults to the least-privilege 'selected' (schema default),
+    // matching the create-time principle of granting the narrowest scope.
+    defaultValues: {
+      email: '',
+      password: '',
+      fullName: '',
+      roleId: '',
+      clientAccess: 'selected',
+    },
   })
 
   const selectedRoleId = watch('roleId')
+  const clientAccess = watch('clientAccess')
 
   const mutation = useMutation({
     mutationFn: async (data: CreateUserFormData) => {
@@ -187,6 +200,45 @@ export function AddUserDialog({ open, onOpenChange }: AddUserDialogProps) {
               </p>
             )}
           </div>
+
+          {/* Client Access — venture bonus-funnel scoping tier (only when on).
+              Create-time picks the TIER only; per-client assignment happens in
+              the editor after creation. Defaults to 'selected' (least privilege). */}
+          {ventureEnabled && (
+            <div className="space-y-3">
+              <Label id="add-user-client-access-label">{messages.users.clientAccess}</Label>
+              <RadioGroup
+                value={clientAccess}
+                onValueChange={(value) =>
+                  setValue('clientAccess', value as CreateUserFormData['clientAccess'], {
+                    shouldValidate: true,
+                  })
+                }
+                aria-label={messages.users.clientAccessGroupLabel}
+              >
+                <div className="flex items-center gap-3 rounded-md border border-border bg-muted/20 px-3 py-2 transition-colors has-[[data-state=checked]]:border-primary/50 has-[[data-state=checked]]:bg-primary/5">
+                  <RadioGroupItem value="all" id="add-user-client-access-all" />
+                  <Label htmlFor="add-user-client-access-all" className="cursor-pointer font-normal">
+                    {messages.users.allClientsAccess}
+                  </Label>
+                </div>
+                <div className="flex items-center gap-3 rounded-md border border-border bg-muted/20 px-3 py-2 transition-colors has-[[data-state=checked]]:border-primary/50 has-[[data-state=checked]]:bg-primary/5">
+                  <RadioGroupItem value="selected" id="add-user-client-access-selected" />
+                  <Label
+                    htmlFor="add-user-client-access-selected"
+                    className="cursor-pointer font-normal"
+                  >
+                    {messages.users.selectedClientsAccess}
+                  </Label>
+                </div>
+              </RadioGroup>
+              <p className="text-xs text-muted-foreground">
+                {clientAccess === 'all'
+                  ? messages.users.clientAccessAllOptionHint
+                  : messages.users.clientAccessSelectedOptionHint}
+              </p>
+            </div>
+          )}
 
           {/* Error display */}
           {mutation.error && (

@@ -1,7 +1,7 @@
 
 
 import { useState, useEffect } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '@/lib/query-keys'
@@ -10,6 +10,17 @@ import { updateUserFn, toggleSuperAdminFn, changeUserPasswordFn, getTenantRolesF
 import { updateUserSchema, type UpdateUserFormData } from '../validation'
 import type { UserWithRole } from '../types'
 import { messages } from '@/lib/messages'
+import {
+  getUserClientAssignmentsFn,
+  setUserClientAssignmentsFn,
+} from '@/features/venture/assignments'
+import {
+  deriveClientAccess,
+  showClientPicker,
+  type ClientAccess,
+} from '@/features/venture/utils/client-access'
+import { ClientAssignmentPicker } from '@/features/venture/components/ClientAssignmentPicker'
+import { ClientAccessBadge } from './ClientAccessBadge'
 import {
   Button,
   Dialog,
@@ -26,8 +37,22 @@ import {
   SelectTrigger,
   SelectValue,
   Switch,
+  RadioGroup,
+  RadioGroupItem,
+  LoadingState,
+  ErrorState,
 } from '@agency/ui'
-import { Eye, EyeOff } from 'lucide-react'
+import { Eye, EyeOff, Globe } from 'lucide-react'
+
+/**
+ * Form values extend the user-update schema with `clientIds` — the per-user
+ * venture client assignments. `clientIds` is NOT part of updateUserSchema (it is
+ * saved via a SEPARATE server fn, setUserClientAssignmentsFn), so it is stripped
+ * from the zod-resolved submit payload and read back with getValues at save time.
+ * It is managed by a `Controller` (never `register` — register keeps only the
+ * last value for an array; ag-design-patterns).
+ */
+type EditUserFormValues = UpdateUserFormData & { clientIds: string[] }
 
 interface EditUserDialogProps {
   user: UserWithRole | null
@@ -37,10 +62,22 @@ interface EditUserDialogProps {
 
 export function EditUserDialog({ user, open, onOpenChange }: EditUserDialogProps) {
   const queryClient = useQueryClient()
-  const { isSuperAdmin: currentUserIsSuperAdmin, userId: currentUserId } = usePermissions()
+  const {
+    isSuperAdmin: currentUserIsSuperAdmin,
+    userId: currentUserId,
+    enabledFeatures,
+  } = usePermissions()
+  // Only surface client-access UI where the venture bonus-funnel feature is on.
+  const ventureEnabled = enabledFeatures.includes('bonus_funnel')
   const [superAdminToggling, setSuperAdminToggling] = useState(false)
   const [superAdminError, setSuperAdminError] = useState<string | null>(null)
   const [localIsSuperAdmin, setLocalIsSuperAdmin] = useState(user?.is_super_admin ?? false)
+  // Client-access tier as reactive LOCAL state (not RHF): it drives the picker
+  // gate live and is merged into the update payload at submit. Kept out of the
+  // RHF `values` object on purpose — `values` re-syncs (and would clobber this)
+  // whenever the assignedClientIds query resolves. Prefilled from the loaded
+  // user's authoritative scope via deriveClientAccess in the sync effect below.
+  const [clientAccess, setClientAccess] = useState<ClientAccess>('selected')
   const [showPasswordForm, setShowPasswordForm] = useState(false)
   const [newPassword, setNewPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -50,11 +87,21 @@ export function EditUserDialog({ user, open, onOpenChange }: EditUserDialogProps
   // Sync local state when dialog opens with different user
   useEffect(() => {
     setLocalIsSuperAdmin(user?.is_super_admin ?? false)
+    // Prefill the client-access toggle from the loaded user's authoritative
+    // scope (users.role + is_super_admin) — owner/admin/super_admin → 'all'.
+    setClientAccess(
+      deriveClientAccess({
+        isSuperAdmin: user?.is_super_admin ?? false,
+        role: user?.role ?? null,
+      }),
+    )
     setShowPasswordForm(false)
     setNewPassword('')
     setShowPassword(false)
     setPasswordResult(null)
-  }, [user?.id, user?.is_super_admin])
+    // user?.role is read by deriveClientAccess above → must be a dep (exhaustive-deps),
+    // otherwise the toggle prefill goes stale when only the coarse role changes.
+  }, [user?.id, user?.is_super_admin, user?.role])
 
   // Use edited user's tenant for role query (user may belong to different tenant)
   const editTenantId = user?.tenant?.id ?? undefined
@@ -64,14 +111,37 @@ export function EditUserDialog({ user, open, onOpenChange }: EditUserDialogProps
     queryFn: () => getTenantRolesFn({ data: { tenantId: editTenantId } }),
   })
 
+  // Current per-user client assignments — pre-fills the picker. Enabled only for
+  // an existing user when the venture feature is on (no role dependency, so this
+  // never creates a values↔query cycle). Keyed under the venture root so an
+  // assignment save (invalidating venture.all) refreshes it.
+  const {
+    data: assignedClientIds,
+    isLoading: assignmentsLoading,
+    error: assignmentsError,
+    refetch: refetchAssignments,
+  } = useQuery({
+    queryKey: queryKeys.venture.assignments(user?.id ?? ''),
+    queryFn: async () => {
+      const result = await getUserClientAssignmentsFn({ data: { userId: user!.id } })
+      if (!result?.success) {
+        throw new Error(result?.error ?? messages.users.loadAssignmentsFailed)
+      }
+      return result.data ?? []
+    },
+    enabled: !!user?.id && ventureEnabled,
+  })
+
   const {
     register,
     handleSubmit,
     setValue,
     watch,
     reset,
+    control,
+    getValues,
     formState: { errors, isValid },
-  } = useForm<UpdateUserFormData>({
+  } = useForm<EditUserFormValues>({
     resolver: zodResolver(updateUserSchema),
     mode: 'onChange',
     values: user
@@ -79,22 +149,62 @@ export function EditUserDialog({ user, open, onOpenChange }: EditUserDialogProps
           userId: user.id,
           fullName: user.full_name ?? '',
           roleId: user.tenant_role?.id ?? '',
+          // Stable array ref from React Query — RHF deep-compares `values`, so a
+          // refetch returning equal content won't clobber in-progress edits.
+          clientIds: assignedClientIds ?? [],
         }
       : undefined,
   })
 
   const selectedRoleId = watch('roleId')
 
+  // Scoped vs unscoped is now driven LIVE by the client-access toggle (iter-3c
+  // UI), not the loaded user.role. A super admin is always unscoped, so the
+  // toggle is forced to 'all' and disabled for them (super_admin can't be
+  // scoped). owner/admin/super_admin → the picker is replaced by an info note.
+  const effectiveClientAccess: ClientAccess = localIsSuperAdmin ? 'all' : clientAccess
+  const clientPickerVisible = showClientPicker(effectiveClientAccess, localIsSuperAdmin)
+
   const mutation = useMutation({
-    mutationFn: async (data: UpdateUserFormData) => {
-      const result = await updateUserFn({ data })
+    mutationFn: async (formData: EditUserFormValues) => {
+      const { clientIds, ...userData } = formData
+      // userData carries clientAccess (merged at submit) → updateUser writes the
+      // coarse users.role ('all'→admin, 'selected'→member; a seeded owner is
+      // preserved server-side). Without this the users.role write never happens
+      // and an admin keeps seeing zero clients — the gap this iteration closes.
+      const result = await updateUserFn({ data: userData })
       if (!result.success) throw new Error(result.error)
+      if (ventureEnabled && user) {
+        if (clientPickerVisible) {
+          // Scoped tier — persist the picker selection.
+          const assignResult = await setUserClientAssignmentsFn({
+            data: { userId: user.id, clientIds },
+          })
+          if (!assignResult.success) {
+            throw new Error(assignResult.error ?? messages.users.saveAssignmentsFailed)
+          }
+        } else if ((assignedClientIds?.length ?? 0) > 0) {
+          // Switched to unscoped ('all' / super_admin) while stale per-client
+          // rows exist — clear them (empty set = delete-only diff). RLS ignores
+          // them for an unscoped user, but clearing avoids surprise access if
+          // the user is later switched back to 'selected'.
+          const clearResult = await setUserClientAssignmentsFn({
+            data: { userId: user.id, clientIds: [] },
+          })
+          if (!clearResult.success) {
+            throw new Error(clearResult.error ?? messages.users.saveAssignmentsFailed)
+          }
+        }
+      }
       return result
     },
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: queryKeys.users.all }),
         queryClient.invalidateQueries({ queryKey: queryKeys.roles.all }),
+        // Root-key — exact-key invalidation silently fails (ag-design-patterns).
+        // Refreshes every access badge + the picker count under venture.*.
+        queryClient.invalidateQueries({ queryKey: queryKeys.venture.all }),
       ])
       reset()
       onOpenChange(false)
@@ -151,10 +261,27 @@ export function EditUserDialog({ user, open, onOpenChange }: EditUserDialogProps
           <DialogDescription>
             {user?.email}
           </DialogDescription>
+          {ventureEnabled && user && (
+            <div className="pt-1">
+              <ClientAccessBadge
+                userId={user.id}
+                isSuperAdmin={localIsSuperAdmin}
+                roleName={user.role}
+              />
+            </div>
+          )}
         </DialogHeader>
 
         <form
-          onSubmit={handleSubmit((data) => mutation.mutate(data))}
+          onSubmit={handleSubmit((data) =>
+            mutation.mutate({
+              ...data,
+              clientIds: getValues('clientIds'),
+              // clientAccess lives in local state (see above) — merge it so
+              // updateUser writes users.role. Super admins are always 'all'.
+              clientAccess: effectiveClientAccess,
+            }),
+          )}
           className="space-y-5"
         >
           {/* Full Name */}
@@ -197,6 +324,90 @@ export function EditUserDialog({ user, open, onOpenChange }: EditUserDialogProps
               </p>
             )}
           </div>
+
+          {/* Client Access — venture bonus-funnel scoping (only when feature on) */}
+          {ventureEnabled && (
+            <>
+              <div className="border-t border-border" />
+              <div className="space-y-3">
+                <Label id="edit-user-client-access-label">{messages.users.clientAccess}</Label>
+
+                <RadioGroup
+                  value={effectiveClientAccess}
+                  onValueChange={(value) => setClientAccess(value as ClientAccess)}
+                  disabled={localIsSuperAdmin}
+                  aria-label={messages.users.clientAccessGroupLabel}
+                >
+                  <div className="flex items-center gap-3 rounded-md border border-border bg-muted/20 px-3 py-2 transition-colors has-[[data-state=checked]]:border-primary/50 has-[[data-state=checked]]:bg-primary/5">
+                    <RadioGroupItem value="all" id="edit-user-client-access-all" />
+                    <Label
+                      htmlFor="edit-user-client-access-all"
+                      className="cursor-pointer font-normal"
+                    >
+                      {messages.users.allClientsAccess}
+                    </Label>
+                  </div>
+                  <div className="flex items-center gap-3 rounded-md border border-border bg-muted/20 px-3 py-2 transition-colors has-[[data-state=checked]]:border-primary/50 has-[[data-state=checked]]:bg-primary/5">
+                    <RadioGroupItem value="selected" id="edit-user-client-access-selected" />
+                    <Label
+                      htmlFor="edit-user-client-access-selected"
+                      className="cursor-pointer font-normal"
+                    >
+                      {messages.users.selectedClientsAccess}
+                    </Label>
+                  </div>
+                </RadioGroup>
+
+                {localIsSuperAdmin && (
+                  <p className="text-xs text-muted-foreground">
+                    {messages.users.superAdminAlwaysAllClients}
+                  </p>
+                )}
+
+                {!clientPickerVisible ? (
+                  <div className="flex items-center gap-2 rounded-md border border-border bg-muted/30 px-3 py-2">
+                    <Globe className="h-4 w-4 shrink-0 text-emerald-400" />
+                    <p className="text-sm text-muted-foreground">
+                      {messages.users.allClientsAccessHint}
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-xs text-muted-foreground">
+                      {messages.users.assignClientsDescription}
+                    </p>
+                    {assignmentsError ? (
+                      <ErrorState
+                        variant="inline"
+                        title={messages.users.loadAssignmentsFailed}
+                        message={
+                          assignmentsError instanceof Error
+                            ? assignmentsError.message
+                            : messages.common.errorOccurred
+                        }
+                        onRetry={() => refetchAssignments()}
+                      />
+                    ) : assignmentsLoading ? (
+                      <LoadingState variant="skeleton-list" />
+                    ) : (
+                      <Controller
+                        control={control}
+                        name="clientIds"
+                        render={({ field }) => (
+                          <ClientAssignmentPicker
+                            value={field.value ?? []}
+                            onChange={field.onChange}
+                            disabled={mutation.isPending}
+                            labelId="edit-user-client-access-label"
+                          />
+                        )}
+                      />
+                    )}
+                  </>
+                )}
+              </div>
+            </>
+          )}
 
           {/* Change Password */}
           <div className="border-t border-border" />

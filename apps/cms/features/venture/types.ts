@@ -12,6 +12,24 @@ export type Client = Tables<'so_clients'>
 export type Campaign = Tables<'so_campaigns'>
 export type Bonus = Tables<'so_bonuses'>
 
+// Row-level per-user client scoping map (migration 20260709120000). One row =
+// one (user_id, client_id) grant; managed by the admin assignment editor
+// (assignment-handlers.server.ts). Binding is PER-USER, not role-based.
+//
+// Narrowed explicit shape (NOT `Tables<'so_client_assignments'>`) — this is the
+// exact, frozen iter-1 DB contract (SECTION 1 of the migration). We do NOT use
+// the generated `Tables<...>` helper here because `@agency/database` resolves via
+// the SHARED pnpm node_modules to the MAIN checkout, whose generated types.ts
+// predates this branch's iter-1 table (worktree gotcha — memory.md "pnpm worktree
+// + main share node_modules"). The worktree's own types.ts DOES define the table;
+// once main's types are regenerated this can become `Tables<'so_client_assignments'>`.
+export type ClientAssignment = {
+  id: string
+  user_id: string
+  client_id: string
+  created_at: string
+}
+
 // What the ADMIN CRUD layer returns to the CMS client. The plaintext
 // `tally_webhook_secret` is a defense-in-depth invariant: it is read server-side
 // (route verifies the Tally signature) but MUST NEVER be serialized to the
