@@ -40,6 +40,7 @@ import { TenantScopeBar } from '@/features/tenants/components/TenantScopeBar'
 import { useTenantScope } from '@/features/tenants/hooks/use-tenant-scope'
 import { AddUserDialog } from './AddUserDialog'
 import { EditUserDialog } from './EditUserDialog'
+import { ClientAccessBadge } from './ClientAccessBadge'
 
 // --- Role badge color mapping (consistent with Status Badge Colors in design system) ---
 
@@ -56,7 +57,9 @@ function getRoleBadgeClassName(role: string | null): string {
 
 export function UserList() {
   const queryClient = useQueryClient()
-  const { isSuperAdmin: viewerIsSuperAdmin } = usePermissions()
+  const { isSuperAdmin: viewerIsSuperAdmin, enabledFeatures } = usePermissions()
+  // Client-access column only where the venture bonus-funnel feature is enabled.
+  const ventureEnabled = enabledFeatures.includes('bonus_funnel')
   const { selectedTenantId } = useTenantScope()
   const [addDialogOpen, setAddDialogOpen] = useState(false)
   const [editingUser, setEditingUser] = useState<UserWithRole | null>(null)
@@ -164,6 +167,9 @@ export function UserList() {
                   <TableHead className="text-xs font-medium uppercase tracking-wider whitespace-nowrap hidden md:table-cell">{messages.users.tenant}</TableHead>
                 )}
                 <TableHead className="text-xs font-medium uppercase tracking-wider whitespace-nowrap">{messages.users.role}</TableHead>
+                {ventureEnabled && (
+                  <TableHead className="text-xs font-medium uppercase tracking-wider whitespace-nowrap hidden lg:table-cell">{messages.users.clientAccess}</TableHead>
+                )}
                 <TableHead className="text-xs font-medium uppercase tracking-wider whitespace-nowrap hidden lg:table-cell">{messages.users.createdAt}</TableHead>
                 <TableHead />
               </TableRow>
@@ -178,6 +184,7 @@ export function UserList() {
                   isDeleting={deletingUserId === user.id}
                   isCurrentUser={currentUserId === user.id}
                   viewerIsSuperAdmin={viewerIsSuperAdmin}
+                  ventureEnabled={ventureEnabled}
                 />
               ))}
             </TableBody>
@@ -205,6 +212,7 @@ function UserRow({
   isDeleting,
   isCurrentUser,
   viewerIsSuperAdmin,
+  ventureEnabled,
 }: {
   user: UserWithRole
   onEdit: () => void
@@ -212,6 +220,7 @@ function UserRow({
   isDeleting: boolean
   isCurrentUser: boolean
   viewerIsSuperAdmin: boolean
+  ventureEnabled: boolean
 }) {
   const formattedDate = new Date(user.created_at).toLocaleDateString('pl-PL', {
     day: 'numeric',
@@ -265,6 +274,17 @@ function UserRow({
           {roleName ?? '\u2014'}
         </Badge>
       </TableCell>
+
+      {/* Client access — venture bonus-funnel scoping */}
+      {ventureEnabled && (
+        <TableCell className="hidden lg:table-cell whitespace-nowrap">
+          <ClientAccessBadge
+            userId={user.id}
+            isSuperAdmin={user.is_super_admin}
+            roleName={user.role}
+          />
+        </TableCell>
+      )}
 
       {/* Created */}
       <TableCell className="hidden lg:table-cell whitespace-nowrap">

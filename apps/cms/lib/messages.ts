@@ -108,6 +108,20 @@ export const messages = {
     tallySecretHelp:
       'Signing secret z ekranu webhooka Tally. Zostaw puste, aby nie zmieniać.',
 
+    // --- Lead source (provider selection + publish gate) ---
+    leadSourceTitle: 'Źródło leadów',
+    leadSourceProviderLabel: 'Dostawca źródła leadów',
+    leadSourceTallyLabel: 'Tally',
+    // Draft option in the provider select — no source selected yet.
+    leadSourceNoneOption: 'Brak / szkic',
+    // Muted hint shown when no provider is selected (nothing to configure).
+    leadSourceConfigHint: 'Wybierz źródło leadów, aby skonfigurować.',
+    // Server-enforced publish gate: a campaign can be published only with a
+    // lead source selected AND its required config satisfied.
+    publishRequiresLeadSource: 'Aby opublikować kampanię, wybierz źródło leadów.',
+    publishRequiresLeadSourceConfig:
+      'Aby opublikować kampanię, uzupełnij wymaganą konfigurację źródła leadów (dla Tally: sekret webhooka).',
+
     // Publish/status
     publishedLabel: 'Opublikowana',
     statusTitle: 'Status',
@@ -1836,9 +1850,34 @@ export const messages = {
     changePasswordFailed: 'Nie udało się zmienić hasła',
     cannotChangeOwnPassword: 'Nie możesz zmienić własnego hasła tutaj',
     cannotChangeHigherRankPassword: 'Nie możesz zmienić hasła użytkownikowi o wyższej lub równej roli',
+    cannotChangeHigherRankRole: 'Nie możesz zmienić roli użytkownikowi o wyższej lub równej roli',
     selectTenant: 'Wybierz organizację',
     tenantLabel: 'Organizacja',
     tenantDescription: 'Utwórz użytkownika w wybranej organizacji',
+    // --- Per-user client access (venture bonus-funnel scoping, iter 3b) ---
+    clientAccess: 'Dostęp do klientów',
+    allClientsAccess: 'Wszyscy klienci',
+    selectedClientsAccess: 'Wybrani klienci',
+    clientAccessAllOptionHint: 'Pełny dostęp do wszystkich klientów w organizacji.',
+    clientAccessSelectedOptionHint: 'Dostęp ograniczony tylko do wybranych klientów.',
+    clientAccessGroupLabel: 'Wybierz poziom dostępu do klientów',
+    superAdminAlwaysAllClients:
+      'Super admin zawsze ma dostęp do wszystkich klientów — nie można ograniczyć jego dostępu.',
+    allClientsAccessHint: 'Ma dostęp do wszystkich klientów w organizacji.',
+    assignClientsDescription:
+      'Wybierz klientów, do których ten użytkownik będzie miał dostęp. Zobaczy tylko zaznaczonych klientów i ich kampanie.',
+    noClientsToAssign: 'Brak klientów',
+    noClientsToAssignDescription: 'Najpierw dodaj klienta w sekcji Bonus funnel.',
+    loadAssignmentsFailed: 'Nie udało się wczytać dostępu do klientów',
+    saveAssignmentsFailed: 'Nie udało się zapisać dostępu do klientów',
+    clientsCount: (n: number) =>
+      `${n} ${
+        n === 1
+          ? 'klient'
+          : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20)
+            ? 'klienci'
+            : 'klientów'
+      }`,
   },
 
   roles: {
@@ -1894,6 +1933,10 @@ export const messages = {
     workflows: 'Automatyzacja',
     'workflows.executions': 'Wykonania',
     'workflows.execute': 'Uruchamiaj workflow',
+    bonus_funnel: 'Lejek bonusowy',
+    'bonus_funnel.clients': 'Klienci',
+    'bonus_funnel.campaigns': 'Kampanie',
+    'bonus_funnel.bonuses': 'Bonusy',
     system: 'System',
     management: 'Zarządzanie',
     'system.email_templates': 'Szablony email',
@@ -2201,6 +2244,7 @@ export const messages = {
     slugFormat: 'Slug może zawierać tylko małe litery, cyfry i myślniki',
     nameRequired: 'Nazwa jest wymagana',
     typeRequired: 'Typ jest wymagany',
+    leadSourceInvalid: 'Nieprawidłowe źródło leadów',
     invalidUrl: 'Nieprawidłowy URL',
     invalidYouTubeUrl: 'Nieprawidłowy URL YouTube',
     invalidVimeoUrl: 'Nieprawidłowy URL Vimeo',

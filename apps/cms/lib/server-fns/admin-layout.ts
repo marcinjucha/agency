@@ -1,6 +1,7 @@
 import { createServerFn } from '@tanstack/react-start'
 import { createServerClient } from '@/lib/supabase/server-start.server'
 import { ALL_PERMISSION_KEYS, validatePermissionKeys, type PermissionKey } from '@/lib/permissions'
+import { UNSCOPED_ROLE_SET } from '@/lib/roles'
 import type { Tenant } from '@/features/tenants/types'
 
 export type AdminLayoutData = {
@@ -46,8 +47,7 @@ export const getAdminLayoutDataFn = createServerFn({ method: 'POST' }).handler(
     const legacyRole: string | null = userData.role ?? null
     const tenantName = await fetchTenantName(tenantId, supabase)
 
-    const FULL_ACCESS_ROLES = new Set(['owner', 'admin'])
-    if (isSuperAdmin || (legacyRole && FULL_ACCESS_ROLES.has(legacyRole))) {
+    if (isSuperAdmin || (legacyRole && UNSCOPED_ROLE_SET.has(legacyRole))) {
       const [enabledFeatures, tenants] = await Promise.all([
         fetchEnabledFeatures(tenantId, supabase),
         isSuperAdmin ? fetchAllTenants(supabase) : Promise.resolve<Tenant[]>([]),
@@ -125,8 +125,7 @@ async function fetchUserPermissions(
     (rp: { permission_key: string }) => rp.permission_key,
   )
 
-  const FULL_ACCESS_ROLES = new Set(['owner', 'admin'])
-  if (FULL_ACCESS_ROLES.has(roleName)) {
+  if (UNSCOPED_ROLE_SET.has(roleName)) {
     return { permissions: [...ALL_PERMISSION_KEYS], roleName }
   }
 

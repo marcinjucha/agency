@@ -1,11 +1,26 @@
-import { err, ok, Result, ResultAsync } from 'neverthrow'
-import {
-  requireAuthContextFull,
-  type AuthContextFull,
-} from '@/lib/server-auth.server'
-import { hasPermission, type PermissionKey } from '@/lib/permissions'
+import { err, errAsync, ok, okAsync, ResultAsync, type Result } from 'neverthrow'
+import { isUnscopedActor, type AuthContextFull } from '@/lib/server-auth.server'
+import type { PermissionKey } from '@/lib/permissions'
 import { messages } from '@/lib/messages'
+import {
+  type DbErrorShape,
+  type MutationResult,
+  type VoidResult,
+  dbError,
+  fromSupabaseSafe,
+  fromSupabaseVoidSafe,
+  gated,
+  mapDbError,
+  resolveEffectiveTenantId,
+  tbl,
+  toMutation,
+  toVoid,
+} from './handler-base.server'
 import type { AdminCampaign, AdminClient, Bonus } from './types'
+import {
+  evaluatePublishGate,
+  sanitizeLeadSourceConfig,
+} from './lead-sources/specs'
 import type {
   CreateBonusInput,
   CreateCampaignInput,
@@ -42,87 +57,6 @@ const PERM = {
   campaigns: 'bonus_funnel.campaigns',
   bonuses: 'bonus_funnel.bonuses',
 } as const satisfies Record<string, PermissionKey>
-
-type MutationResult<T> = { success: boolean; data?: T; error?: string }
-type VoidResult = { success: boolean; error?: string }
-
-// Raw Supabase/Postgres error shape (has `code` at runtime — `message` at type level).
-type DbErrorShape = { message?: string; code?: string } | null
-
-/**
- * Translate a raw Supabase/Postgres error into a generic, client-safe, localized
- * message. The RAW error (constraint/schema names, RLS policy text like
- * "new row violates row-level security policy …") is logged for developers via
- * console.error and NEVER returned to the client. 23505 (unique_violation) →
- * friendly slug message. Mirrors features/email/server.ts (23505 handling).
- */
-function mapDbError(error: DbErrorShape, context: string): string {
-  // Developer-facing, English — full raw error preserved for debugging.
-  console.error(`[venture] ${context} failed:`, error)
-  if (error?.code === '23505') return messages.venture.slugTaken
-  return messages.venture.operationFailed
-}
-
-// Reject handler for ResultAsync.fromPromise (thrown/network errors — Supabase
-// resolves with `{ error }` rather than throwing, so this is the rare path).
-// Never surfaces the raw thrown message to the client.
-const dbError = (e: unknown): string => {
-  console.error('[venture] unexpected DB error:', e)
-  return messages.venture.operationFailed
-}
-
-/**
- * Local, error-mapping variant of `fromSupabase` — routes the raw DB error
- * through mapDbError instead of leaking `res.error.message` to the client.
- * (The shared @/lib/result-helpers versions propagate the raw string.)
- */
-const fromSupabaseSafe =
-  <T>(context: string) =>
-  (response: unknown): Result<T, string> => {
-    const res = response as { data: T | null; error: DbErrorShape }
-    if (res.error) return err(mapDbError(res.error, context))
-    if (!res.data) return err(messages.venture.operationFailed)
-    return ok(res.data)
-  }
-
-/** Local, error-mapping variant of `fromSupabaseVoid` (delete/void mutations). */
-const fromSupabaseVoidSafe =
-  (context: string) =>
-  (response: unknown): Result<undefined, string> => {
-    const res = response as { error: DbErrorShape }
-    if (res.error) return err(mapDbError(res.error, context))
-    return ok(undefined)
-  }
-
-// so_* insert/update types resolve to `never` in this Supabase JS version
-// (same incompatibility documented in shop-categories). Route table access
-// through an untyped accessor; reads stay correct at runtime.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const tbl = (auth: AuthContextFull, name: string) => (auth.supabase as any).from(name)
-
-/** Gate a handler on a bonus_funnel.* permission, then run the body. */
-function gated<T>(
-  permission: PermissionKey,
-  body: (auth: AuthContextFull) => ResultAsync<T, string>,
-): ResultAsync<T, string> {
-  return requireAuthContextFull().andThen((auth) =>
-    hasPermission(permission, auth.permissions)
-      ? body(auth)
-      : err<T, string>(messages.common.noPermission),
-  )
-}
-
-const toMutation = <T>(r: ResultAsync<T, string>): Promise<MutationResult<T>> =>
-  r.match(
-    (data) => ({ success: true as const, data }),
-    (error) => ({ success: false as const, error }),
-  )
-
-const toVoid = (r: ResultAsync<unknown, string>): Promise<VoidResult> =>
-  r.match(
-    () => ({ success: true as const }),
-    (error) => ({ success: false as const, error }),
-  )
 
 // ---------------------------------------------------------------------------
 // Parent-ownership verification (FK chain → so_clients.tenant_id)
@@ -205,13 +139,22 @@ function assertBonusOwned(
 const ADMIN_CLIENT_COLUMNS =
   'id, tenant_id, name, slug, mail_provider, resend_from_email, gmail_address, sender_name, created_at, updated_at, has_resend_api_key, has_gmail_app_password'
 
-export function listClientsHandler(): Promise<MutationResult<AdminClient[]>> {
+/**
+ * List the tenant's venture clients. `tenantId` is honored ONLY for a super_admin
+ * (the CMS Scope Bar — listing another organization's clients while editing one
+ * of its users); a non-super caller is pinned to their own tenant by
+ * resolveEffectiveTenantId, so passing tenantId=<other> can never read another
+ * tenant's client list.
+ */
+export function listClientsHandler(
+  tenantId?: string,
+): Promise<MutationResult<AdminClient[]>> {
   return toMutation(
     gated(PERM.clients, (auth) =>
       ResultAsync.fromPromise(
         tbl(auth, 'so_clients')
           .select(ADMIN_CLIENT_COLUMNS)
-          .eq('tenant_id', auth.tenantId)
+          .eq('tenant_id', resolveEffectiveTenantId(auth, tenantId))
           .order('name', { ascending: true }),
         dbError,
       ).andThen((res) => {
@@ -228,23 +171,29 @@ export function createClientHandler(
 ): Promise<MutationResult<AdminClient>> {
   return toMutation(
     gated(PERM.clients, (auth) =>
-      ResultAsync.fromPromise(
-        tbl(auth, 'so_clients')
-          .insert({
-            name: input.name,
-            slug: input.slug,
-            tenant_id: auth.tenantId,
-            mail_provider: input.mail_provider ?? 'resend_shared',
-            resend_api_key: input.resend_api_key ?? null,
-            resend_from_email: input.resend_from_email ?? null,
-            gmail_address: input.gmail_address ?? null,
-            gmail_app_password: input.gmail_app_password ?? null,
-            sender_name: input.sender_name ?? null,
-          })
-          .select(ADMIN_CLIENT_COLUMNS)
-          .single(),
-        dbError,
-      ).andThen(fromSupabaseSafe<AdminClient>('createClient')),
+      // Defense-in-depth over the so_clients INSERT WITH CHECK gate in
+      // 20260709120000: client creation is UNSCOPED-only. A scoped member's DB
+      // insert would fail with an opaque RLS error — reject it cleanly here
+      // first with the standard no-permission message.
+      isUnscopedActor(auth)
+        ? ResultAsync.fromPromise(
+            tbl(auth, 'so_clients')
+              .insert({
+                name: input.name,
+                slug: input.slug,
+                tenant_id: auth.tenantId,
+                mail_provider: input.mail_provider ?? 'resend_shared',
+                resend_api_key: input.resend_api_key ?? null,
+                resend_from_email: input.resend_from_email ?? null,
+                gmail_address: input.gmail_address ?? null,
+                gmail_app_password: input.gmail_app_password ?? null,
+                sender_name: input.sender_name ?? null,
+              })
+              .select(ADMIN_CLIENT_COLUMNS)
+              .single(),
+            dbError,
+          ).andThen(fromSupabaseSafe<AdminClient>('createClient'))
+        : errAsync<AdminClient, string>(messages.common.noPermission),
     ),
   )
 }
@@ -272,10 +221,19 @@ export function updateClientHandler(
 export function deleteClientHandler(id: string): Promise<VoidResult> {
   return toVoid(
     gated(PERM.clients, (auth) =>
-      ResultAsync.fromPromise(
-        tbl(auth, 'so_clients').delete().eq('id', id).eq('tenant_id', auth.tenantId),
-        dbError,
-      ).andThen(fromSupabaseVoidSafe('deleteClient')),
+      // Defense-in-depth over the so_clients DELETE gate in 20260709120000:
+      // client deletion is UNSCOPED-only (cascades to campaigns/bonuses/leads →
+      // admin-only). An assigned scoped member may VIEW + UPDATE their client
+      // (they enter the sensitive config) but must NOT delete it — reject cleanly
+      // here BEFORE any DB call, mirroring createClientHandler. A scoped member's
+      // DELETE would otherwise fail with an opaque RLS "0 rows" instead of a clear
+      // no-permission message.
+      isUnscopedActor(auth)
+        ? ResultAsync.fromPromise(
+            tbl(auth, 'so_clients').delete().eq('id', id).eq('tenant_id', auth.tenantId),
+            dbError,
+          ).andThen(fromSupabaseVoidSafe('deleteClient'))
+        : errAsync<undefined, string>(messages.common.noPermission),
     ),
   )
 }
@@ -294,7 +252,64 @@ export function deleteClientHandler(id: string): Promise<VoidResult> {
 // insert/update defaults to '*' → also uses this list. The route/webhook verify
 // path (ingest.server.ts) reads the real secret via a separate select.
 const ADMIN_CAMPAIGN_COLUMNS =
-  'id, client_id, slug, display_name, brand, esp_provider, esp_audience_ref, esp_tag_launch, published, created_at, updated_at, has_webhook_secret'
+  'id, client_id, slug, display_name, brand, esp_provider, esp_audience_ref, esp_tag_launch, published, created_at, updated_at, has_webhook_secret, lead_source_provider, lead_source_config'
+
+// ---------------------------------------------------------------------------
+// Publish gate (iter 2b backend). A campaign may go published=true ONLY when a
+// lead-source provider is selected AND its required config is satisfied (for
+// Tally: the webhook secret must be set). A draft (published=false/omitted) may
+// have a NULL provider + incomplete config. The rule itself lives in the
+// client-safe `evaluatePublishGate` (single source of truth — the editor gates
+// the button with the same fn); the handlers enforce it server-side (defense).
+// ---------------------------------------------------------------------------
+
+function publishGateMessage(reason: 'no_provider' | 'incomplete_config'): string {
+  return reason === 'no_provider'
+    ? messages.venture.publishRequiresLeadSource
+    : messages.venture.publishRequiresLeadSourceConfig
+}
+
+/**
+ * Current lead-source + publish state of an EXISTING campaign. `published` is
+ * included so an update that OMITS `published` can be re-gated against the
+ * RESULTING published state (an already-published campaign whose lead source is
+ * being cleared must not silently become invalid). The plaintext
+ * tally_webhook_secret is NEVER selected — only the generated
+ * has_webhook_secret boolean (same defense-in-depth as ADMIN_CAMPAIGN_COLUMNS).
+ */
+interface CampaignPublishState {
+  lead_source_provider: string | null
+  lead_source_config: Record<string, unknown> | null
+  has_webhook_secret: boolean
+  published: boolean
+}
+
+/**
+ * Fetch the current publish state for an EXISTING campaign — needed on an UPDATE
+ * that must re-gate the resulting state (publish toggle or lead-source change)
+ * OR sanitize a config-only edit against the current provider. Projects an
+ * EXPLICIT column list that EXCLUDES the plaintext tally_webhook_secret.
+ */
+function fetchCampaignPublishState(
+  auth: AuthContextFull,
+  id: string,
+): ResultAsync<CampaignPublishState, string> {
+  return ResultAsync.fromPromise(
+    tbl(auth, 'so_campaigns')
+      .select('lead_source_provider, lead_source_config, has_webhook_secret, published')
+      .eq('id', id)
+      .maybeSingle(),
+    dbError,
+  ).andThen((res) => {
+    const r = res as {
+      data: CampaignPublishState | null
+      error: DbErrorShape
+    }
+    if (r.error) return err(mapDbError(r.error, 'fetchCampaignPublishState'))
+    if (!r.data) return err(messages.common.noPermission)
+    return ok(r.data)
+  })
+}
 
 export function listCampaignsHandler(
   clientId?: string,
@@ -333,15 +348,20 @@ export function createCampaignHandler(
   return toMutation(
     gated(PERM.campaigns, (auth) =>
       // Verify the parent client belongs to the tenant BEFORE inserting.
-      assertClientOwned(auth, input.client_id).andThen(() =>
-        ResultAsync.fromPromise(
-          tbl(auth, 'so_campaigns')
-            .insert(buildCampaignInsert(input))
-            .select(ADMIN_CAMPAIGN_COLUMNS)
-            .single(),
-          dbError,
-        ).andThen(fromSupabaseSafe<AdminCampaign>('createCampaign')),
-      ),
+      assertClientOwned(auth, input.client_id)
+        // Publish gate: to CREATE already-published, a provider + its required
+        // config must be set. A draft (published=false/omitted) skips the gate.
+        // On create, all state comes from the input — no DB read needed.
+        .andThen(() => createCampaignPublishGate(input))
+        .andThen(() =>
+          ResultAsync.fromPromise(
+            tbl(auth, 'so_campaigns')
+              .insert(buildCampaignInsert(input))
+              .select(ADMIN_CAMPAIGN_COLUMNS)
+              .single(),
+            dbError,
+          ).andThen(fromSupabaseSafe<AdminCampaign>('createCampaign')),
+        ),
     ),
   )
 }
@@ -352,16 +372,29 @@ export function updateCampaignHandler(
 ): Promise<MutationResult<AdminCampaign>> {
   return toMutation(
     gated(PERM.campaigns, (auth) =>
-      assertCampaignOwned(auth, id).andThen(() =>
-        ResultAsync.fromPromise(
-          tbl(auth, 'so_campaigns')
-            .update(buildCampaignPatch(input))
-            .eq('id', id)
-            .select(ADMIN_CAMPAIGN_COLUMNS)
-            .single(),
-          dbError,
-        ).andThen(fromSupabaseSafe<AdminCampaign>('updateCampaign')),
-      ),
+      assertCampaignOwned(auth, id)
+        // Read the current row ONCE when the update could either (a) change the
+        // resulting publish validity or (b) need the current provider to
+        // sanitize a config-only edit. Otherwise `null` (no DB read).
+        .andThen(() => fetchCurrentForUpdate(auth, id, input))
+        .andThen((current) =>
+          // Publish gate over the RESULTING state (input merged over `current`):
+          // if the row will be published, its provider + config must satisfy the
+          // provider's publish requirements. Drafts pass.
+          enforceUpdatePublishGate(input, current).asyncAndThen(() =>
+            ResultAsync.fromPromise(
+              tbl(auth, 'so_campaigns')
+                // Config ALWAYS sanitized against the effective provider (input
+                // when present, else the current DB provider) — the raw wire
+                // object never reaches the JSONB column.
+                .update(buildCampaignPatch(input, effectiveLeadSourceProvider(input, current)))
+                .eq('id', id)
+                .select(ADMIN_CAMPAIGN_COLUMNS)
+                .single(),
+              dbError,
+            ).andThen(fromSupabaseSafe<AdminCampaign>('updateCampaign')),
+          ),
+        ),
     ),
   )
 }
@@ -547,6 +580,108 @@ function buildClientPatch(input: UpdateClientInput): Record<string, unknown> {
   return patch
 }
 
+// Publish gate for CREATE — all state comes from the input (no existing row).
+// Only fires when the create asks for published=true; a draft passes through.
+function createCampaignPublishGate(
+  input: CreateCampaignInput,
+): ResultAsync<undefined, string> {
+  if (input.published !== true) return okAsync(undefined)
+  const gate = evaluatePublishGate({
+    provider: input.lead_source_provider,
+    hasSecret: !!input.tally_webhook_secret,
+    config: (input.lead_source_config ?? {}) as Record<string, unknown>,
+  })
+  return gate.ok ? okAsync(undefined) : errAsync(publishGateMessage(gate.reason))
+}
+
+// True when the update writes any lead-source field (provider / secret / config).
+function touchesLeadSource(input: UpdateCampaignInput): boolean {
+  return (
+    input.lead_source_provider !== undefined ||
+    input.tally_webhook_secret !== undefined ||
+    input.lead_source_config !== undefined
+  )
+}
+
+// Whether this update could invalidate the publish gate. An explicit draft save
+// (published=false) never can. When `published` is omitted, only a lead-source
+// change can — a published campaign whose provider/secret/config is altered must
+// be re-gated against its (still-published) resulting state.
+function touchesPublishValidity(input: UpdateCampaignInput): boolean {
+  if (input.published === false) return false
+  if (input.published === true) return true
+  return touchesLeadSource(input)
+}
+
+// Whether the current DB row must be read before writing: to re-gate the
+// resulting publish state, OR to sanitize a config-only edit (config present but
+// provider omitted) against the current provider.
+function updateNeedsCurrentRow(input: UpdateCampaignInput): boolean {
+  return (
+    touchesPublishValidity(input) ||
+    (input.lead_source_config !== undefined && input.lead_source_provider === undefined)
+  )
+}
+
+function fetchCurrentForUpdate(
+  auth: AuthContextFull,
+  id: string,
+  input: UpdateCampaignInput,
+): ResultAsync<CampaignPublishState | null, string> {
+  return updateNeedsCurrentRow(input)
+    ? fetchCampaignPublishState(auth, id).map((state) => state as CampaignPublishState | null)
+    : okAsync(null)
+}
+
+// The provider the config is sanitized against: the input provider when the
+// update sets one, otherwise the current DB provider (config-only edit). A
+// null/unknown provider → sanitizeLeadSourceConfig strips to {}.
+function effectiveLeadSourceProvider(
+  input: UpdateCampaignInput,
+  current: CampaignPublishState | null,
+): string | null | undefined {
+  if (input.lead_source_provider !== undefined) return input.lead_source_provider
+  return current?.lead_source_provider ?? null
+}
+
+// Publish gate for UPDATE — the resulting state is the input merged over the
+// current DB row. Rejects only when the row WILL be published (published=true,
+// or published omitted while the DB row is already published) AND the merged
+// provider/secret/config fails the provider's publish requirements. Drafts pass.
+// `current` is null only when no lead-source/publish field is affected → nothing
+// to gate.
+function enforceUpdatePublishGate(
+  input: UpdateCampaignInput,
+  current: CampaignPublishState | null,
+): Result<undefined, string> {
+  if (!current || !touchesPublishValidity(input)) return ok(undefined)
+  const willBePublished =
+    input.published === true || (input.published === undefined && current.published)
+  if (!willBePublished) return ok(undefined)
+  const provider =
+    input.lead_source_provider !== undefined
+      ? input.lead_source_provider
+      : current.lead_source_provider
+  // Distinguish undefined (field omitted → keep the existing secret) from an
+  // explicit null/'' (operator clearing it → resulting state has NO secret).
+  // Falling back to has_webhook_secret on an explicit clear would let a campaign
+  // publish with a secret it just removed → every ingest 401s.
+  const hasSecret =
+    input.tally_webhook_secret === undefined
+      ? current.has_webhook_secret
+      : !!input.tally_webhook_secret
+  const config =
+    (input.lead_source_config !== undefined
+      ? input.lead_source_config
+      : current.lead_source_config) ?? {}
+  const gate = evaluatePublishGate({
+    provider,
+    hasSecret,
+    config: config as Record<string, unknown>,
+  })
+  return gate.ok ? ok(undefined) : err(publishGateMessage(gate.reason))
+}
+
 function buildCampaignInsert(input: CreateCampaignInput): Record<string, unknown> {
   return {
     client_id: input.client_id,
@@ -556,12 +691,24 @@ function buildCampaignInsert(input: CreateCampaignInput): Record<string, unknown
     esp_provider: input.esp_provider,
     esp_audience_ref: input.esp_audience_ref ?? null,
     esp_tag_launch: input.esp_tag_launch,
+    // SECRET config field → its OWN column (never lead_source_config JSONB).
     tally_webhook_secret: input.tally_webhook_secret ?? null,
+    // Provider selection. NULL = draft (no lead source yet).
+    lead_source_provider: input.lead_source_provider ?? null,
+    // NON-SECRET config → JSONB, stripped to the provider's non-secret shape so
+    // a secret can never leak into it (secrets live in dedicated columns).
+    lead_source_config: sanitizeLeadSourceConfig(
+      input.lead_source_provider,
+      input.lead_source_config,
+    ),
     published: input.published,
   }
 }
 
-function buildCampaignPatch(input: UpdateCampaignInput): Record<string, unknown> {
+function buildCampaignPatch(
+  input: UpdateCampaignInput,
+  effectiveProvider: string | null | undefined,
+): Record<string, unknown> {
   const patch: Record<string, unknown> = {}
   if (input.slug !== undefined) patch.slug = input.slug
   if (input.display_name !== undefined) patch.display_name = input.display_name
@@ -570,9 +717,22 @@ function buildCampaignPatch(input: UpdateCampaignInput): Record<string, unknown>
   if (input.esp_audience_ref !== undefined) patch.esp_audience_ref = input.esp_audience_ref
   if (input.esp_tag_launch !== undefined) patch.esp_tag_launch = input.esp_tag_launch
   // Absent = leave the existing secret untouched (the editor omits the key on a
-  // rotate-skip). A present value rotates it.
+  // rotate-skip). A present value rotates it. SECRET → dedicated column only.
   if (input.tally_webhook_secret !== undefined)
     patch.tally_webhook_secret = input.tally_webhook_secret
+  if (input.lead_source_provider !== undefined)
+    patch.lead_source_provider = input.lead_source_provider
+  // NON-SECRET config → JSONB, ALWAYS sanitized against the EFFECTIVE provider
+  // (input provider when present, else the current DB provider on a config-only
+  // edit). Never write the raw wire object — a smuggled `secret` would otherwise
+  // land in this authenticated-readable column. A null/unknown effective
+  // provider → {} (sanitizeLeadSourceConfig strips everything).
+  if (input.lead_source_config !== undefined) {
+    patch.lead_source_config = sanitizeLeadSourceConfig(
+      effectiveProvider,
+      input.lead_source_config,
+    )
+  }
   if (input.published !== undefined) patch.published = input.published
   return patch
 }

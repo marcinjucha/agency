@@ -1226,6 +1226,8 @@ export type Database = {
           esp_tag_launch: string
           has_webhook_secret: boolean
           id: string
+          lead_source_config: Json
+          lead_source_provider: string | null
           published: boolean
           slug: string
           tally_webhook_secret: string | null
@@ -1240,6 +1242,8 @@ export type Database = {
           esp_provider?: string
           esp_tag_launch?: string
           id?: string
+          lead_source_config?: Json
+          lead_source_provider?: string | null
           published?: boolean
           slug: string
           tally_webhook_secret?: string | null
@@ -1254,6 +1258,8 @@ export type Database = {
           esp_provider?: string
           esp_tag_launch?: string
           id?: string
+          lead_source_config?: Json
+          lead_source_provider?: string | null
           published?: boolean
           slug?: string
           tally_webhook_secret?: string | null
@@ -1265,6 +1271,42 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "so_clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      so_client_assignments: {
+        Row: {
+          client_id: string
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "so_client_assignments_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "so_clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "so_client_assignments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -2125,6 +2167,7 @@ export type Database = {
       }
     }
     Functions: {
+      can_access_so_client: { Args: { p_client_id: string }; Returns: boolean }
       current_user_role: { Args: never; Returns: string }
       current_user_tenant_id: { Args: never; Returns: string }
       get_encryption_key: { Args: never; Returns: string }

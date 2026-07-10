@@ -1,4 +1,8 @@
 import { ok, err, type Result } from 'neverthrow'
+// MappedLead now lives in the provider-neutral lead-sources contract so every
+// lead source returns the identical shape. Re-exported below for existing
+// `from './tally'` importers.
+import type { MappedLead } from './lead-sources/types'
 
 // ---------------------------------------------------------------------------
 // Venture bonus-funnel — Tally FORM_RESPONSE payload mapper (iter 3).
@@ -45,19 +49,10 @@ export interface TallyWebhookPayload {
   }
 }
 
-/** Flat lead shape consumed by the ingest orchestrator. */
-export interface MappedLead {
-  // Optional — user decided 2026-07-09 that a lead with no email is still
-  // worth capturing. syncToEsp/sendBonusEmail guard on null and skip.
-  email: string | null
-  name: string | null
-  source: string | null
-  consentLaunch: boolean
-  // Always a non-empty string — the mapper rejects a missing/empty submissionId
-  // (idempotency dedup relies on it; the DB UNIQUE allows multiple NULLs, so a
-  // null-submissionId resend would re-insert).
-  submissionId: string
-}
+// MappedLead moved to ./lead-sources/types (provider-neutral contract).
+// Re-exported so existing `import { MappedLead } from './tally'` consumers keep
+// working without churn.
+export type { MappedLead }
 
 // Machine-facing reason codes (never surfaced to the caller verbatim — the route
 // collapses every mapper failure to a 400 `bad_request`). Kept as a derived

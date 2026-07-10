@@ -111,6 +111,10 @@ export const queryKeys = {
         ? (['venture', 'campaigns', clientId] as const)
         : (['venture', 'campaigns'] as const),
     bonuses: (campaignId: string) => ['venture', 'bonuses', campaignId] as const,
+    // Per-user client assignments (iter 3a). Keyed by target user so the
+    // assignment editor pre-fills the right set; still nested under the venture
+    // root so a mutation that invalidates `venture.all` also refreshes it.
+    assignments: (userId: string) => ['venture', 'assignments', userId] as const,
   },
 
   /**

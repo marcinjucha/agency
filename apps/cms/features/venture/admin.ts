@@ -7,6 +7,7 @@ import {
   idInputSchema,
   listBonusesInputSchema,
   listCampaignsInputSchema,
+  listClientsInputSchema,
   reorderBonusesSchema,
   updateBonusInputSchema,
   updateCampaignInputSchema,
@@ -46,9 +47,15 @@ import {
 
 // --- Clients --------------------------------------------------------------
 
-export const listClientsFn = createServerFn({ method: 'POST' }).handler(() =>
-  listClientsHandler(),
-)
+// Optional super_admin Scope Bar target (the EDITED user's tenant). The schema
+// is `.optional()` on the object, so `listClientsFn()` with NO args stays valid
+// (data === undefined → own tenant). Only a super_admin's tenantId is honored;
+// resolveEffectiveTenantId pins a non-super caller to their own tenant.
+export const listClientsFn = createServerFn({ method: 'POST' })
+  .inputValidator((v: z.infer<typeof listClientsInputSchema>) =>
+    listClientsInputSchema.parse(v),
+  )
+  .handler(({ data }) => listClientsHandler(data?.tenantId))
 
 // z.input (not z.infer) — createClientSchema has defaulted fields
 // (mail_provider). z.input keeps those OPTIONAL at the call site (e.g. the
