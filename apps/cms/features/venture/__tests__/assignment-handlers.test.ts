@@ -37,6 +37,7 @@ import {
 const mockRequireAuth = requireAuthContextFull as ReturnType<typeof vi.fn>
 
 const TENANT = 'tenant-1'
+const OTHER_TENANT = 'tenant-2'
 const TARGET_USER = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
 const USERS_PERM = ['system.users']
 
@@ -195,6 +196,123 @@ describe('target-user tenant verification', () => {
     expect(result.success).toBe(true)
     expect(result.data).toEqual(['c1', 'c2'])
     expect(chains.so_client_assignments.eq).toHaveBeenCalledWith('user_id', TARGET_USER)
+  })
+})
+
+// ===========================================================================
+// Super-admin cross-tenant Scope Bar edit (effectiveTenantId threading).
+// A super_admin editing a user in ANOTHER tenant passes an explicit tenantId;
+// the read path scopes to THAT tenant. A NON-super caller's tenantId param is
+// IGNORED and forced to auth.tenantId (no cross-tenant read exploit).
+// ===========================================================================
+
+describe('effective-tenant threading (super_admin Scope Bar edit)', () => {
+  it('super_admin + tenantId=<other>: assertUserInTenant scopes to the OTHER tenant and returns its assignments', async () => {
+    const { chains } = setupAuth(
+      {
+        users: userInTenant,
+        so_client_assignments: { data: [{ client_id: 'c1' }], error: null },
+      },
+      USERS_PERM,
+      { roleName: 'member', isSuperAdmin: true },
+    )
+
+    const result = await listAssignmentsForUserHandler(TARGET_USER, OTHER_TENANT)
+
+    expect(result.success).toBe(true)
+    expect(result.data).toEqual(['c1'])
+    // The user existence check is scoped to the PROVIDED tenant, not the caller's.
+    expect(chains.users.eq).toHaveBeenCalledWith('tenant_id', OTHER_TENANT)
+    expect(chains.users.eq).not.toHaveBeenCalledWith('tenant_id', TENANT)
+  })
+
+  it('NON-super caller + tenantId=<other>: param IGNORED, scoped to auth.tenantId (no cross-tenant read)', async () => {
+    // KEY SECURITY TEST: an owner (unscoped but NOT super) must not be able to
+    // read another tenant's assignment map by passing tenantId=<other>.
+    const { chains } = setupAuth(
+      {
+        users: userInTenant,
+        so_client_assignments: { data: [{ client_id: 'c1' }], error: null },
+      },
+      USERS_PERM,
+      { roleName: 'owner', isSuperAdmin: false },
+    )
+
+    const result = await listAssignmentsForUserHandler(TARGET_USER, OTHER_TENANT)
+
+    expect(result.success).toBe(true)
+    // Forced to the caller's own tenant — the OTHER tenant is never queried.
+    expect(chains.users.eq).toHaveBeenCalledWith('tenant_id', TENANT)
+    expect(chains.users.eq).not.toHaveBeenCalledWith('tenant_id', OTHER_TENANT)
+  })
+
+  it('super_admin + tenantId=<other>: set scopes assertClientsOwned to the OTHER tenant', async () => {
+    const { chains } = setupAuth(
+      {
+        users: userInTenant,
+        so_clients: { data: [{ id: 'c1' }], error: null },
+        so_client_assignments: { data: [], error: null },
+      },
+      USERS_PERM,
+      { roleName: 'member', isSuperAdmin: true },
+    )
+
+    const result = await setUserClientAssignmentsHandler(TARGET_USER, ['c1'], OTHER_TENANT)
+
+    expect(result.success).toBe(true)
+    expect(chains.users.eq).toHaveBeenCalledWith('tenant_id', OTHER_TENANT)
+    expect(chains.so_clients.eq).toHaveBeenCalledWith('tenant_id', OTHER_TENANT)
+    expect(chains.so_client_assignments.upsert).toHaveBeenCalled()
+  })
+
+  it('NON-super caller + tenantId=<other>: set IGNORES the param, scopes writes to auth.tenantId', async () => {
+    const { chains } = setupAuth(
+      {
+        users: userInTenant,
+        so_clients: { data: [{ id: 'c1' }], error: null },
+        so_client_assignments: { data: [], error: null },
+      },
+      USERS_PERM,
+      { roleName: 'owner', isSuperAdmin: false },
+    )
+
+    const result = await setUserClientAssignmentsHandler(TARGET_USER, ['c1'], OTHER_TENANT)
+
+    expect(result.success).toBe(true)
+    expect(chains.users.eq).toHaveBeenCalledWith('tenant_id', TENANT)
+    expect(chains.so_clients.eq).toHaveBeenCalledWith('tenant_id', TENANT)
+    expect(chains.users.eq).not.toHaveBeenCalledWith('tenant_id', OTHER_TENANT)
+    expect(chains.so_clients.eq).not.toHaveBeenCalledWith('tenant_id', OTHER_TENANT)
+  })
+
+  it('own-tenant edit (tenantId=own) behaves identically to omitting it', async () => {
+    const { chains } = setupAuth({
+      users: userInTenant,
+      so_client_assignments: { data: [{ client_id: 'c1' }], error: null },
+    })
+
+    const result = await listAssignmentsForUserHandler(TARGET_USER, TENANT)
+
+    expect(result.success).toBe(true)
+    expect(result.data).toEqual(['c1'])
+    expect(chains.users.eq).toHaveBeenCalledWith('tenant_id', TENANT)
+  })
+
+  it('empty target org (super_admin cross-tenant): user exists there, assignments empty → clean (no error)', async () => {
+    const { chains } = setupAuth(
+      {
+        users: userInTenant,
+        so_client_assignments: { data: [], error: null },
+      },
+      USERS_PERM,
+      { roleName: 'member', isSuperAdmin: true },
+    )
+
+    const result = await listAssignmentsForUserHandler(TARGET_USER, OTHER_TENANT)
+
+    expect(result.success).toBe(true)
+    expect(result.data).toEqual([])
+    expect(chains.users.eq).toHaveBeenCalledWith('tenant_id', OTHER_TENANT)
   })
 })
 

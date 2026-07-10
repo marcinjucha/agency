@@ -108,6 +108,20 @@ export const messages = {
     tallySecretHelp:
       'Signing secret z ekranu webhooka Tally. Zostaw puste, aby nie zmieniać.',
 
+    // --- Lead source (provider selection + publish gate) ---
+    leadSourceTitle: 'Źródło leadów',
+    leadSourceProviderLabel: 'Dostawca źródła leadów',
+    leadSourceTallyLabel: 'Tally',
+    // Draft option in the provider select — no source selected yet.
+    leadSourceNoneOption: 'Brak / szkic',
+    // Muted hint shown when no provider is selected (nothing to configure).
+    leadSourceConfigHint: 'Wybierz źródło leadów, aby skonfigurować.',
+    // Server-enforced publish gate: a campaign can be published only with a
+    // lead source selected AND its required config satisfied.
+    publishRequiresLeadSource: 'Aby opublikować kampanię, wybierz źródło leadów.',
+    publishRequiresLeadSourceConfig:
+      'Aby opublikować kampanię, uzupełnij wymaganą konfigurację źródła leadów (dla Tally: sekret webhooka).',
+
     // Publish/status
     publishedLabel: 'Opublikowana',
     statusTitle: 'Status',
@@ -1919,6 +1933,10 @@ export const messages = {
     workflows: 'Automatyzacja',
     'workflows.executions': 'Wykonania',
     'workflows.execute': 'Uruchamiaj workflow',
+    bonus_funnel: 'Lejek bonusowy',
+    'bonus_funnel.clients': 'Klienci',
+    'bonus_funnel.campaigns': 'Kampanie',
+    'bonus_funnel.bonuses': 'Bonusy',
     system: 'System',
     management: 'Zarządzanie',
     'system.email_templates': 'Szablony email',
@@ -2226,6 +2244,7 @@ export const messages = {
     slugFormat: 'Slug może zawierać tylko małe litery, cyfry i myślniki',
     nameRequired: 'Nazwa jest wymagana',
     typeRequired: 'Typ jest wymagany',
+    leadSourceInvalid: 'Nieprawidłowe źródło leadów',
     invalidUrl: 'Nieprawidłowy URL',
     invalidYouTubeUrl: 'Nieprawidłowy URL YouTube',
     invalidVimeoUrl: 'Nieprawidłowy URL Vimeo',

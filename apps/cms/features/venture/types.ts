@@ -1,4 +1,4 @@
-import type { Tables } from '@agency/database'
+import type { Tables, Json } from '@agency/database'
 
 // ---------------------------------------------------------------------------
 // Admin (authenticated) row types + domain constants (iter 5a).
@@ -37,6 +37,13 @@ export type ClientAssignment = {
 // so the editor can show "secret already set" without ever shipping the value.
 export type AdminCampaign = Omit<Tables<'so_campaigns'>, 'tally_webhook_secret'> & {
   has_webhook_secret: boolean
+  // Explicit until MAIN's generated types.ts is regenerated with iter-2a's
+  // lead-source columns. Worktree gotcha (see ClientAssignment above): the shared
+  // pnpm node_modules resolves `@agency/database` to the MAIN checkout, whose
+  // types.ts predates these columns — the worktree's own types.ts DOES define
+  // them. Drop this augmentation once main is regenerated.
+  lead_source_provider: string | null
+  lead_source_config: Json
 }
 
 // Single source of truth for the fixed DB CHECK on so_bonuses.type. Derived

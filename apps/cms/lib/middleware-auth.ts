@@ -15,6 +15,7 @@ import {
   validatePermissionKeys,
   type PermissionKey,
 } from '@/lib/permissions'
+import { UNSCOPED_ROLE_SET } from '@/lib/roles'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 export type MiddlewareUser = {
@@ -25,8 +26,12 @@ export type MiddlewareUser = {
   permissions: PermissionKey[]
 }
 
-/** Roles that receive all permissions (mirrors auth.ts FULL_ACCESS_ROLES). */
-const FULL_ACCESS_ROLES = new Set(['owner', 'admin'])
+/**
+ * Roles that receive all permissions (mirrors auth.ts FULL_ACCESS_ROLES).
+ * Aliases the canonical unscoped-role set in `lib/roles.ts` (single source of
+ * truth) — never re-hardcode `['owner','admin']` here.
+ */
+const FULL_ACCESS_ROLES = UNSCOPED_ROLE_SET
 
 /**
  * Fetch user data + permissions in middleware context.

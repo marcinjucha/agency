@@ -30,12 +30,12 @@ export const getUserClientAssignmentsFn = createServerFn({ method: 'POST' })
   .inputValidator((v: z.infer<typeof listAssignmentsInputSchema>) =>
     listAssignmentsInputSchema.parse(v),
   )
-  .handler(({ data }) => listAssignmentsForUserHandler(data.userId))
+  .handler(({ data }) => listAssignmentsForUserHandler(data.userId, data.tenantId))
 
 export const setUserClientAssignmentsFn = createServerFn({ method: 'POST' })
   .inputValidator((v: z.infer<typeof setUserClientAssignmentsSchema>) =>
     setUserClientAssignmentsSchema.parse(v),
   )
   .handler(({ data }) =>
-    setUserClientAssignmentsHandler(data.userId, data.clientIds),
+    setUserClientAssignmentsHandler(data.userId, data.clientIds, data.tenantId),
   )

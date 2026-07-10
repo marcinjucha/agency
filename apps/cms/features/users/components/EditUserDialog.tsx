@@ -123,7 +123,12 @@ export function EditUserDialog({ user, open, onOpenChange }: EditUserDialogProps
   } = useQuery({
     queryKey: queryKeys.venture.assignments(user?.id ?? ''),
     queryFn: async () => {
-      const result = await getUserClientAssignmentsFn({ data: { userId: user!.id } })
+      // Thread the EDITED user's tenant (editTenantId) so a super_admin editing a
+      // user in another org reads THAT org's assignment map. Honored server-side
+      // only for a super_admin; ignored (own tenant) for everyone else.
+      const result = await getUserClientAssignmentsFn({
+        data: { userId: user!.id, tenantId: editTenantId },
+      })
       if (!result?.success) {
         throw new Error(result?.error ?? messages.users.loadAssignmentsFailed)
       }
@@ -176,9 +181,11 @@ export function EditUserDialog({ user, open, onOpenChange }: EditUserDialogProps
       if (!result.success) throw new Error(result.error)
       if (ventureEnabled && user) {
         if (clientPickerVisible) {
-          // Scoped tier — persist the picker selection.
+          // Scoped tier — persist the picker selection. tenantId threads the
+          // edited user's org so a super_admin can save cross-tenant (honored
+          // server-side for super_admin only; own tenant for everyone else).
           const assignResult = await setUserClientAssignmentsFn({
-            data: { userId: user.id, clientIds },
+            data: { userId: user.id, clientIds, tenantId: editTenantId },
           })
           if (!assignResult.success) {
             throw new Error(assignResult.error ?? messages.users.saveAssignmentsFailed)
@@ -189,7 +196,7 @@ export function EditUserDialog({ user, open, onOpenChange }: EditUserDialogProps
           // them for an unscoped user, but clearing avoids surprise access if
           // the user is later switched back to 'selected'.
           const clearResult = await setUserClientAssignmentsFn({
-            data: { userId: user.id, clientIds: [] },
+            data: { userId: user.id, clientIds: [], tenantId: editTenantId },
           })
           if (!clearResult.success) {
             throw new Error(clearResult.error ?? messages.users.saveAssignmentsFailed)
@@ -399,6 +406,7 @@ export function EditUserDialog({ user, open, onOpenChange }: EditUserDialogProps
                             onChange={field.onChange}
                             disabled={mutation.isPending}
                             labelId="edit-user-client-access-label"
+                            tenantId={editTenantId}
                           />
                         )}
                       />

@@ -1226,6 +1226,8 @@ export type Database = {
           esp_tag_launch: string
           has_webhook_secret: boolean
           id: string
+          lead_source_config: Json
+          lead_source_provider: string | null
           published: boolean
           slug: string
           tally_webhook_secret: string | null
@@ -1240,6 +1242,8 @@ export type Database = {
           esp_provider?: string
           esp_tag_launch?: string
           id?: string
+          lead_source_config?: Json
+          lead_source_provider?: string | null
           published?: boolean
           slug: string
           tally_webhook_secret?: string | null
@@ -1254,6 +1258,8 @@ export type Database = {
           esp_provider?: string
           esp_tag_launch?: string
           id?: string
+          lead_source_config?: Json
+          lead_source_provider?: string | null
           published?: boolean
           slug?: string
           tally_webhook_secret?: string | null

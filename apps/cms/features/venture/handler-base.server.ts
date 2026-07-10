@@ -101,6 +101,28 @@ export function gated<T>(
   )
 }
 
+/**
+ * Resolve the tenant a handler must scope its reads/writes to.
+ *
+ * SECURITY INVARIANT: a super_admin (the CMS Scope Bar cross-tenant edit) may
+ * pass an explicit `tenantId` to operate on ANOTHER tenant — the intended
+ * behaviour when editing a user who belongs to a different organization. A
+ * NON-super caller's `tenantId` param is IGNORED and forced to `auth.tenantId`,
+ * so a regular tenant admin can never pass `tenantId=<other>` to read/write
+ * another tenant's clients or assignment map (cross-tenant read exploit). When
+ * `tenantId` is omitted, the caller's own tenant is used for everyone.
+ *
+ * Mirrors the users feature's `assertSameTenant` super_admin exemption, but as a
+ * value (the tenant to scope to) rather than a boolean assertion — the same
+ * source of truth (`auth.isSuperAdmin`) gates both.
+ */
+export function resolveEffectiveTenantId(
+  auth: AuthContextFull,
+  tenantId?: string,
+): string {
+  return auth.isSuperAdmin ? tenantId ?? auth.tenantId : auth.tenantId
+}
+
 /** Adapt a value-producing ResultAsync to the plain MutationResult contract. */
 export const toMutation = <T>(r: ResultAsync<T, string>): Promise<MutationResult<T>> =>
   r.match(

@@ -1,7 +1,7 @@
 import type { createServiceClient } from '@/lib/supabase/service'
 import { EspApiError } from './esp/http.server'
 import type { EspProvider, EspProviderId } from './esp/types'
-import type { MappedLead } from './tally'
+import type { MappedLead } from './lead-sources/types'
 import { buildBonusEmail } from './mail/bonus-email'
 import { resolveMailSender, type ClientMailConfig } from './mail/resolve.server'
 import type { MailSender } from './mail/types'
@@ -98,6 +98,11 @@ export type CampaignRow = {
   esp_tag_launch: string
   display_name: string | null
   clientMail: ClientMailConfig
+  // iter 2: SELECTED from so_campaigns. The route resolves the pluggable
+  // lead-source provider from this value via `resolveLeadSource` (NULL → draft →
+  // 401; unregistered → 401; registered → verify + parse). Nullable: a draft
+  // campaign has no provider yet.
+  lead_source_provider: string | null
 }
 
 // Row shape fetched from so_clients — id + the plaintext mail-provider config.
@@ -187,7 +192,11 @@ export async function resolveCampaign(
   const { data, error } = await supabase
     .from('so_campaigns')
     .select(
-      'id, tally_webhook_secret, esp_provider, esp_audience_ref, esp_tag_launch, display_name',
+      // iter 2: lead_source_provider is now selected — the route resolves the
+      // pluggable provider from it (NULL → draft → 401; unknown → 401). This is
+      // the SERVICE-role verify path, so the plaintext secret column IS read
+      // here (it is not exposed to the authenticated/admin layer).
+      'id, tally_webhook_secret, esp_provider, esp_audience_ref, esp_tag_launch, display_name, lead_source_provider',
     )
     .eq('client_id', clientRow.id)
     .eq('slug', slug)
@@ -209,7 +218,13 @@ export async function resolveCampaign(
   return {
     kind: RESOLVE_RESULT_KINDS.found,
     campaign: {
-      ...(data as Omit<CampaignRow, 'clientMail'>),
+      // `as unknown as` (not a plain cast): the worktree shares node_modules with
+      // the MAIN checkout, whose generated @agency/database types.ts predates the
+      // iter-2a `lead_source_provider` column — so the literal `.select(...)`
+      // string above infers a SelectQueryError here. Runtime (staging/prod) has
+      // the column. Same worktree types-divergence pattern as ClientAssignment in
+      // features/venture/types.ts; removable once main's types are regenerated.
+      ...(data as unknown as Omit<CampaignRow, 'clientMail'>),
       clientMail: {
         mail_provider,
         resend_api_key,

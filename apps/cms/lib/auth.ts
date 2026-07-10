@@ -6,6 +6,7 @@ import {
   validatePermissionKeys,
   type PermissionKey,
 } from '@/lib/permissions'
+import { UNSCOPED_ROLE_SET } from '@/lib/roles'
 
 type SupabaseServerClient = ReturnType<typeof createServerClient>
 
@@ -27,8 +28,12 @@ export function isAuthError(result: AuthResult): result is AuthError {
   return 'error' in result
 }
 
-/** Roles that receive all permissions (no per-key check needed). */
-const FULL_ACCESS_ROLES = new Set(['owner', 'admin'])
+/**
+ * Roles that receive all permissions (no per-key check needed).
+ * Aliases the canonical unscoped-role set in `lib/roles.ts` (single source of
+ * truth) — never re-hardcode `['owner','admin']` here.
+ */
+const FULL_ACCESS_ROLES = UNSCOPED_ROLE_SET
 
 /**
  * Authenticate current user and fetch their tenant_id, role, and permissions.

@@ -24,7 +24,7 @@ import {
 } from '../ingest.server'
 import { EspApiError } from '../esp/http.server'
 import type { EspProvider } from '../esp/types'
-import type { MappedLead } from '../tally'
+import type { MappedLead } from '../lead-sources/types'
 
 const LEAD: MappedLead = {
   email: 'jan@example.com',

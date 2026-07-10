@@ -346,6 +346,15 @@ function updateUserFields(
       return errAsync<void, string>(messages.common.noPermission)
     }
 
+    // The tenant the edit LANDS in. For a non-super caller assertSameTenant above
+    // guarantees target.tenant_id === auth.tenantId (behavior-identical). For a
+    // super_admin editing a cross-tenant user it MUST be the TARGET's tenant: the
+    // user_roles (tenant_role) row is keyed on (user_id, tenant_id) and getAuthFull
+    // reads it by the target's tenant — keying the upsert on auth.tenantId would
+    // write the row under the super_admin's OWN tenant and the role change would
+    // silently no-op.
+    const editTenantId = target.tenant_id
+
     // Coarse users.role that this save would write (null = no write): skipped for
     // a super_admin target (LOW-1) and for an 'owner' (nextRoleOnUpdate → null,
     // preserved). Computed ONCE here and reused for the write below so
@@ -403,7 +412,7 @@ function updateUserFields(
             .upsert(
               {
                 user_id: parsed.userId,
-                tenant_id: auth.tenantId,
+                tenant_id: editTenantId,
                 role_id: parsed.roleId,
               },
               { onConflict: 'user_id,tenant_id' },

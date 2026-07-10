@@ -1,6 +1,10 @@
 import { z } from 'zod'
 import { messages } from '@/lib/messages'
 import { BONUS_TYPES, MAIL_PROVIDERS } from './types'
+// Client-safe registry-membership guard (NO server import — validation.ts is
+// bundled into the client via admin.ts / the campaign editor). See its docstring
+// for why this is `z.string().refine(...)` and NEVER `z.enum` on a registry.
+import { isLeadSourceId } from './lead-sources/types'
 
 // ---------------------------------------------------------------------------
 // Venture bonus-funnel — ADMIN CRUD validation (iter 5a).
@@ -115,9 +119,36 @@ export const createCampaignSchema = z.object({
   esp_tag_launch: z.string().min(1).default('launch-notify'),
   // Per-campaign Tally webhook signing secret (so_campaigns.tally_webhook_secret).
   // Trimmed + non-empty WHEN present; nullable/optional so the UI can omit it
-  // (leave untouched on edit) or send null (create with no secret yet). The
-  // editor never submits an empty string — it maps blank → null / absent.
-  tally_webhook_secret: z.string().trim().min(1).nullable().optional(),
+  // (leave untouched on edit) or send null (create with no secret yet).
+  // `.or(z.literal(''))` is REQUIRED for the SAME reason as the client secret
+  // fields above: RHF submits '' (never undefined) for an untouched masked
+  // input, and the secret field is CONDITIONALLY HIDDEN when the campaign is a
+  // draft (no lead-source provider selected). Without this, a fresh draft save
+  // fails `.min(1)` on the blank secret — surfacing as the invisible "Popraw
+  // błędy w formularzu" banner with no field to attach the error to
+  // (regression 2026-07-10). `onSave` in VentureCampaignEditor already maps
+  // blank → null / omission, so '' never reaches the wire — this was purely a
+  // Zod-schema gap, identical to createClientSchema's secret fields.
+  // NOTE: this is the SECRET config field — it persists to its OWN column, never
+  // into lead_source_config (see lead-sources/specs.ts storage split).
+  tally_webhook_secret: z.string().trim().min(1).nullable().optional().or(z.literal('')),
+  // Pluggable lead-source provider (so_campaigns.lead_source_provider). NULL =
+  // DRAFT (no source selected yet — a valid save state). Wire boundary is
+  // `z.string().refine(isLeadSourceId)`, NEVER `z.enum(...)` on the registry —
+  // z.enum throws synchronously in the inputValidator (features/CLAUDE.md trap).
+  // nullable/optional so a draft can omit or clear it. The PUBLISH requirement
+  // (provider set + config satisfied) is enforced server-side in the handler,
+  // not here — Zod can't see the DB secret state on a rotate-skip update.
+  lead_source_provider: z
+    .string()
+    .refine(isLeadSourceId, messages.validation.leadSourceInvalid)
+    .nullable()
+    .optional(),
+  // NON-SECRET provider config (so_campaigns.lead_source_config JSONB). Generic
+  // object at the wire boundary; the handler strips it to the provider's
+  // non-secret shape (sanitizeLeadSourceConfig) before writing — secret fields
+  // are excluded (they go to the dedicated column). NOT NULL DEFAULT '{}' in DB.
+  lead_source_config: z.record(z.string(), z.unknown()).nullable().optional(),
   published: z.boolean().default(false),
 })
 
@@ -193,12 +224,27 @@ export const listBonusesInputSchema = z.object({ campaign_id: z.string().uuid() 
 // (`.inputValidator((v) => schema.parse(v))`) — a raw schema silently skips
 // validation (features/CLAUDE.md).
 
+// `tenantId` is the OPTIONAL super_admin Scope Bar target (the EDITED user's
+// tenant). It is honored ONLY for a super_admin server-side (resolveEffectiveTenantId
+// forces a non-super caller to their own tenant — the param is validated but
+// ignored for them). Absent = the caller's own tenant.
 export const setUserClientAssignmentsSchema = z.object({
   userId: z.string().uuid(),
   clientIds: z.array(z.string().uuid()),
+  tenantId: z.string().uuid().optional(),
 })
 
-export const listAssignmentsInputSchema = z.object({ userId: z.string().uuid() })
+export const listAssignmentsInputSchema = z.object({
+  userId: z.string().uuid(),
+  tenantId: z.string().uuid().optional(),
+})
+
+// Optional super_admin Scope Bar target for the client list (same semantics as
+// above). `.optional()` on the OBJECT so `listClientsFn()` with NO argument stays
+// valid (data === undefined → own tenant) — the 4 existing call sites pass nothing.
+export const listClientsInputSchema = z
+  .object({ tenantId: z.string().uuid().optional() })
+  .optional()
 
 // --- Inferred types -------------------------------------------------------
 

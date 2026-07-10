@@ -2,8 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { createServiceClient } from '@/lib/supabase/service'
 import { getEspProvider, isEspProviderRegistered } from '@/features/venture/esp/index.server'
 import type { EspProviderId } from '@/features/venture/esp/types'
-import { verifyTallySignature } from '@/features/venture/tally-signature.server'
-import { mapTallyPayload } from '@/features/venture/tally'
+import { resolveLeadSource } from '@/features/venture/lead-sources/index.server'
 import {
   ingestLead,
   ingestOutcomeStatus,
@@ -27,6 +26,15 @@ import {
 // server.handlers.POST strips this from the client bundle and lets us return a
 // direct HTTP Response. Server-to-server webhook (Tally → CMS) — NO CORS.
 //
+// Lead source is PLUGGABLE via the lead-sources registry (iter 2): each campaign
+// DECLARES its provider in so_campaigns.lead_source_provider, and the route
+// delegates verify + parse to the resolved LeadSourceProvider (Tally today).
+// resolveLeadSource(campaign.lead_source_provider) maps a NULL/absent provider (a
+// DRAFT campaign — nothing to ingest) AND any unregistered value → null → uniform
+// 401 (NO tally-fallback). A registered provider → verify + parse. Adding a
+// provider = one ./types id + one *.server.ts + one registry registration; this
+// route is unchanged.
+//
 // Flow (resolve → verify → map → ingest):
 //   1. parse $client/$slug from the URL path
 //   2. resolve the campaign by client slug + campaign slug on the service
@@ -34,8 +42,9 @@ import {
 //   3. campaign missing OR secret null/empty → 401 invalid_signature (UNIFORM —
 //      no "no such client" vs "no such campaign" vs "not configured" vs "bad
 //      signature" oracle)
-//   4. verify HMAC over the RAW body with THAT campaign's secret → 401 on invalid
-//   5. parse + map body → missing email/submissionId → 400 bad_request
+//   4. resolve the lead-source provider, then provider.verify over the RAW body
+//      with THAT campaign's secret → 401 on invalid
+//   5. provider.parse the body → missing submissionId → 400 bad_request
 //   6. ingest (idempotent on campaign_id + submission id):
 //        - ingested / duplicate → 200 { ok: true } (lead persisted, by us or a
 //          concurrent winner; ESP/mail failures stay 200 — no-lead-drop, and 200
@@ -137,6 +146,24 @@ export const Route = createFileRoute('/api/venture/leads/$client/$slug')({
         }
 
         const campaign = resolveResult.campaign
+
+        // Resolve the campaign's lead-source provider from the DB column
+        // (iter 2). `resolveLeadSource` NEVER throws — it maps both a NULL/absent
+        // provider (a DRAFT campaign with no lead source → nothing to ingest)
+        // AND an unregistered/unknown non-null value to `null` → uniform 401
+        // (no throw, no enumeration oracle). This is the iter-1 LOW fix: the old
+        // `getLeadSource(toLeadSourceId(...))` was called outside try/catch and
+        // could throw on an unknown id; the tally-fallback would also have
+        // wrongly resolved a genuine draft (NULL) to 'tally'.
+        const provider = resolveLeadSource(campaign.lead_source_provider)
+        if (!provider) {
+          console.warn(
+            '[venture-ingest] rejected: no/unknown lead-source provider (draft or unregistered)',
+            { clientSlug, slug },
+          )
+          return invalidSignature()
+        }
+
         const secret = campaign.tally_webhook_secret
         if (!secret) {
           console.warn(
@@ -146,12 +173,12 @@ export const Route = createFileRoute('/api/venture/leads/$client/$slug')({
           return invalidSignature()
         }
 
-        // Verify HMAC over the RAW body BEFORE parsing (do not re-serialize).
+        // Verify over the RAW body BEFORE parsing (do not re-serialize). The
+        // provider reads its own signature header internally (header-agnostic).
         const rawBody = await request.text()
-        const signature = request.headers.get('Tally-Signature')
-        const check = verifyTallySignature(rawBody, signature, secret)
+        const check = provider.verify({ rawBody, headers: request.headers, secret })
         if (!check.valid) {
-          console.warn('[venture-ingest] rejected: invalid HMAC signature', {
+          console.warn('[venture-ingest] rejected: invalid signature', {
             clientSlug,
             slug,
           })
@@ -165,7 +192,7 @@ export const Route = createFileRoute('/api/venture/leads/$client/$slug')({
           return json({ error: 'bad_request' }, 400)
         }
 
-        const mapped = mapTallyPayload(parsed)
+        const mapped = provider.parse(parsed)
         if (mapped.isErr()) {
           console.warn('[venture-ingest] unmappable Tally payload:', mapped.error)
           return json({ error: 'bad_request' }, 400)

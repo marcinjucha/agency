@@ -22,6 +22,11 @@ import {
   AlertDialogDescription,
   AlertDialogAction,
   AlertDialogCancel,
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
 } from '@agency/ui'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
@@ -30,9 +35,24 @@ import { generateSlug } from '@/lib/utils/slug'
 import { createCampaignSchema, type CreateCampaignInput } from '../validation'
 import type { AdminCampaign, CampaignBrand } from '../types'
 import { createCampaignFn, updateCampaignFn, deleteCampaignFn } from '../admin'
+import { LEAD_SOURCE_IDS } from '../lead-sources/types'
+import { getLeadSourceSpec } from '../lead-sources/specs'
+import { evaluateEditorPublishGate } from '../utils/lead-source-publish-gate'
+import { resolveMessageKey } from '../utils/resolve-message-key'
 import { VentureClientSelect } from './VentureClientSelect'
 import { CampaignBrandEditor } from './CampaignBrandEditor'
 import { VentureBonusManager } from './VentureBonusManager'
+import { LeadSourceConfigFields } from './LeadSourceConfigFields'
+
+// Sentinel Select value for the "draft / no source" option — shadcn Select
+// requires a non-empty string value, so null is represented by this token and
+// mapped back to null in the save payload.
+const LEAD_SOURCE_NONE = '__none__'
+// Resolve each provider's display label via its client-safe spec labelKey.
+const LEAD_SOURCE_OPTIONS = Object.values(LEAD_SOURCE_IDS).map((id) => ({
+  id,
+  labelKey: getLeadSourceSpec(id).labelKey,
+}))
 
 type SaveState = 'idle' | 'saving' | 'saved' | 'error'
 
@@ -80,6 +100,15 @@ export function VentureCampaignEditor({ campaign }: VentureCampaignEditorProps) 
       // Never prefill the real secret into the form — blank means "leave as-is"
       // on edit; typing a value rotates it.
       tally_webhook_secret: '',
+      // NULL = draft (no lead source). New campaigns default to draft. Cast: the
+      // DB/AdminCampaign column is a plain `string | null`, while the RHF field
+      // type is the refined LeadSourceId union — a persisted value is always a
+      // registered id (or null), so the widening cast is safe.
+      lead_source_provider: (campaign?.lead_source_provider ??
+        null) as CreateCampaignInput['lead_source_provider'],
+      // Non-secret provider config (JSONB). Secret fields never live here.
+      lead_source_config:
+        (campaign?.lead_source_config as Record<string, unknown> | null) ?? {},
       published: campaign?.published ?? false,
     },
   })
@@ -89,6 +118,25 @@ export function VentureCampaignEditor({ campaign }: VentureCampaignEditorProps) 
   const watchDisplayName = watch('display_name')
   const watchSlug = watch('slug')
   const watchPublished = watch('published')
+  const watchLeadSourceProvider = watch('lead_source_provider')
+  const watchLeadSourceConfig = watch('lead_source_config')
+  const watchSecretInput = watch('tally_webhook_secret')
+
+  // UI mirror of the server publish gate — drives Publish-button enablement +
+  // the inline hint. The server remains the source of truth (backstop).
+  const publishGate = evaluateEditorPublishGate({
+    provider: watchLeadSourceProvider,
+    secretAlreadySet,
+    secretInput: watchSecretInput,
+    config: watchLeadSourceConfig ?? {},
+  })
+  const canPublish = publishGate.ok
+  const publishGateHint =
+    publishGate.ok === false
+      ? publishGate.reason === 'no_provider'
+        ? messages.venture.publishRequiresLeadSource
+        : messages.venture.publishRequiresLeadSourceConfig
+      : null
 
   // Auto-generate slug from display name (create mode only, until manually edited).
   useEffect(() => {
@@ -125,6 +173,10 @@ export function VentureCampaignEditor({ campaign }: VentureCampaignEditorProps) 
               esp_tag_launch: data.esp_tag_launch,
               // Only rotate when the operator actually typed a new secret.
               ...(secretInput ? { tally_webhook_secret: secretInput } : {}),
+              // Lead-source provider (NULL = draft). Non-secret config → JSONB;
+              // the handler strips it to the provider's non-secret shape.
+              lead_source_provider: data.lead_source_provider ?? null,
+              lead_source_config: data.lead_source_config ?? {},
               published,
             },
           },
@@ -226,15 +278,19 @@ export function VentureCampaignEditor({ campaign }: VentureCampaignEditorProps) 
             )}
 
             {watchPublished ? (
+              // Already published: the primary Save keeps published=true, so it
+              // must honor the publish gate (server backstops it regardless).
               <Button
                 size="sm"
                 onClick={handleSubmit((data) => onSave(data), onFormError)}
-                disabled={saveState === 'saving'}
+                disabled={saveState === 'saving' || !canPublish}
+                title={publishGateHint ?? undefined}
               >
                 {saveLabel[saveState]}
               </Button>
             ) : (
               <>
+                {/* Draft save is ALWAYS allowed — no provider required. */}
                 <Button
                   variant="outline"
                   size="sm"
@@ -246,7 +302,8 @@ export function VentureCampaignEditor({ campaign }: VentureCampaignEditorProps) 
                 <Button
                   size="sm"
                   onClick={handleSubmit((data) => onSave(data, true), onFormError)}
-                  disabled={saveState === 'saving'}
+                  disabled={saveState === 'saving' || !canPublish}
+                  title={publishGateHint ?? undefined}
                   className="bg-primary text-primary-foreground hover:bg-primary/90"
                 >
                   {messages.common.publish}
@@ -380,30 +437,72 @@ export function VentureCampaignEditor({ campaign }: VentureCampaignEditorProps) 
                       <p className="text-xs text-destructive">{errors.esp_tag_launch.message}</p>
                     )}
                   </div>
+                </div>
+              </CollapsibleCard>
 
-                  {/* Per-campaign Tally webhook secret — masked; entered by an
-                      authenticated operator. Not prefilled: blank = leave as-is. */}
+              {/* Lead source — provider select + DYNAMIC per-provider config.
+                  Replaces the old hardcoded Tally-secret field: the secret is
+                  now rendered by the generic LeadSourceConfigFields from the
+                  provider's configFields descriptor. */}
+              <CollapsibleCard title={messages.venture.leadSourceTitle} defaultOpen>
+                <div className="space-y-5">
                   <div className="space-y-1.5">
-                    <Label htmlFor="tally-webhook-secret" className="text-sm font-medium">
-                      {messages.venture.tallySecretLabel}
+                    <Label htmlFor="lead-source-provider" className="text-sm font-medium">
+                      {messages.venture.leadSourceProviderLabel}
                     </Label>
-                    <Input
-                      id="tally-webhook-secret"
-                      type="password"
-                      autoComplete="off"
-                      {...register('tally_webhook_secret')}
-                      placeholder={secretAlreadySet ? '••••••••' : ''}
-                      className="font-mono text-sm"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      {messages.venture.tallySecretHelp}
-                    </p>
-                    {errors.tally_webhook_secret && (
+                    <Select
+                      value={watchLeadSourceProvider ?? LEAD_SOURCE_NONE}
+                      onValueChange={(v) =>
+                        setValue(
+                          'lead_source_provider',
+                          v === LEAD_SOURCE_NONE
+                            ? null
+                            : (v as CreateCampaignInput['lead_source_provider']),
+                          { shouldDirty: true },
+                        )
+                      }
+                    >
+                      <SelectTrigger id="lead-source-provider" className="text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={LEAD_SOURCE_NONE}>
+                          {messages.venture.leadSourceNoneOption}
+                        </SelectItem>
+                        {LEAD_SOURCE_OPTIONS.map((option) => (
+                          <SelectItem key={option.id} value={option.id}>
+                            {resolveMessageKey(option.labelKey)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {errors.lead_source_provider && (
                       <p className="text-xs text-destructive">
-                        {errors.tally_webhook_secret.message}
+                        {errors.lead_source_provider.message}
                       </p>
                     )}
                   </div>
+
+                  {watchLeadSourceProvider ? (
+                    <LeadSourceConfigFields
+                      provider={watchLeadSourceProvider}
+                      register={register}
+                      watch={watch}
+                      setValue={setValue}
+                      errors={errors}
+                      secretAlreadySet={secretAlreadySet}
+                    />
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      {messages.venture.leadSourceConfigHint}
+                    </p>
+                  )}
+
+                  {publishGateHint && (
+                    <p role="status" className="text-xs text-muted-foreground">
+                      {publishGateHint}
+                    </p>
+                  )}
                 </div>
               </CollapsibleCard>
 

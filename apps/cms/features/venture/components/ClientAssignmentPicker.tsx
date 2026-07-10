@@ -34,6 +34,14 @@ interface ClientAssignmentPickerProps {
   disabled?: boolean
   /** DOM id of the group label, wired to aria-labelledby for the checkbox group. */
   labelId?: string
+  /**
+   * Super_admin Scope Bar target — the EDITED user's tenant. When editing a user
+   * in ANOTHER organization, the picker must list THAT org's clients, not the
+   * super_admin's own. Honored server-side only for a super_admin; omitted =
+   * caller's own tenant. Also scopes the cache key so cross-tenant edits don't
+   * collide (still under the venture root → venture.all invalidation refreshes it).
+   */
+  tenantId?: string
 }
 
 export function ClientAssignmentPicker({
@@ -41,6 +49,7 @@ export function ClientAssignmentPicker({
   onChange,
   disabled = false,
   labelId,
+  tenantId,
 }: ClientAssignmentPickerProps) {
   const {
     data: clients,
@@ -48,9 +57,11 @@ export function ClientAssignmentPicker({
     error,
     refetch,
   } = useQuery({
-    queryKey: queryKeys.venture.clients,
+    queryKey: [...queryKeys.venture.clients, tenantId ?? 'self'],
     queryFn: async () => {
-      const result = await listClientsFn()
+      const result = await listClientsFn(
+        tenantId ? { data: { tenantId } } : undefined,
+      )
       if (!result?.success) {
         throw new Error(result?.error ?? messages.venture.loadClientsFailed)
       }

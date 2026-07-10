@@ -46,8 +46,9 @@ ALTER TABLE so_client_assignments ENABLE ROW LEVEL SECURITY;
 -- SELF-SCOPING: the helper itself gates on cl.tenant_id = current_user_tenant_id(); callers
 --   MUST NOT rely on a separate tenant conjunct for correctness (they keep theirs for
 --   defence-in-depth, but this function is safe on its own).
--- Role list ('owner','admin') MUST stay in parity with FULL_ACCESS_ROLES in
---   apps/cms/lib/server-auth.server.ts (new Set(['owner','admin'])).
+-- Role list ('owner','admin') MUST stay in parity with the canonical unscoped-role
+--   set UNSCOPED_ROLES in apps/cms/lib/roles.ts (['owner','admin']); server-auth's
+--   FULL_ACCESS_ROLES and client-access.ts's UNSCOPED_ROLE_NAMES both alias it.
 CREATE OR REPLACE FUNCTION public.can_access_so_client(p_client_id uuid)
 RETURNS boolean
 LANGUAGE sql
@@ -80,7 +81,7 @@ $$;
 GRANT EXECUTE ON FUNCTION public.can_access_so_client(uuid) TO authenticated;
 
 COMMENT ON FUNCTION public.can_access_so_client(uuid) IS
-  'Row-level per-user client scoping for the venture bonus-funnel. super_admin short-circuits TRUE (unscoped cross-tenant, by design). Otherwise self-scoping: false unless the client tenant matches the caller tenant; then true for owner/admin, or when an explicit so_client_assignments row exists for auth.uid(). SECURITY DEFINER (bypasses RLS -> no recursion). Role list must match FULL_ACCESS_ROLES in apps/cms/lib/server-auth.server.ts.';
+  'Row-level per-user client scoping for the venture bonus-funnel. super_admin short-circuits TRUE (unscoped cross-tenant, by design). Otherwise self-scoping: false unless the client tenant matches the caller tenant; then true for owner/admin, or when an explicit so_client_assignments row exists for auth.uid(). SECURITY DEFINER (bypasses RLS -> no recursion). Role list must match the canonical UNSCOPED_ROLES in apps/cms/lib/roles.ts (aliased by server-auth FULL_ACCESS_ROLES + client-access UNSCOPED_ROLE_NAMES).';
 
 -- ==========================================
 -- SECTION 2b: so_client_in_current_tenant() — tenant-scope predicate for assignment policies

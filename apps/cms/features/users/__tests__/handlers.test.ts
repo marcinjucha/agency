@@ -303,6 +303,53 @@ describe('SEC-3: role-rank guard', () => {
 })
 
 // ===========================================================================
+// FIX 5 — the tenant_role (user_roles) upsert lands under the TARGET user's
+// tenant, not the caller's. A super_admin editing a cross-tenant user's role
+// otherwise wrote user_roles under the super_admin's OWN tenant → getAuthFull
+// reads by the target's tenant → the change silently no-ops.
+// ===========================================================================
+
+describe('FIX 5: tenant_role upsert targets the TARGET tenant', () => {
+  it('super_admin editing a cross-tenant user writes user_roles under the TARGET tenant', async () => {
+    setAuth({ roleName: 'member', isSuperAdmin: true, tenantId: TENANT })
+    const { chains } = setService({
+      users: {
+        data: { is_super_admin: false, role: 'member', tenant_id: OTHER_TENANT },
+        error: null,
+      },
+    })
+
+    const result = await updateUserHandler({ userId: TARGET, roleId: ROLE_ID })
+
+    expect(result.success).toBe(true)
+    // The upsert must key on OTHER_TENANT (the target's tenant), NOT TENANT
+    // (the super_admin's own tenant) — otherwise getAuthFull never sees it.
+    expect(chains.user_roles.upsert).toHaveBeenCalledWith(
+      { user_id: TARGET, tenant_id: OTHER_TENANT, role_id: ROLE_ID },
+      { onConflict: 'user_id,tenant_id' },
+    )
+  })
+
+  it('non-super caller writes user_roles under their own (== target) tenant', async () => {
+    setAuth({ roleName: 'admin', tenantId: TENANT })
+    const { chains } = setService({
+      users: {
+        data: { is_super_admin: false, role: 'member', tenant_id: TENANT },
+        error: null,
+      },
+    })
+
+    const result = await updateUserHandler({ userId: TARGET, roleId: ROLE_ID })
+
+    expect(result.success).toBe(true)
+    expect(chains.user_roles.upsert).toHaveBeenCalledWith(
+      { user_id: TARGET, tenant_id: TENANT, role_id: ROLE_ID },
+      { onConflict: 'user_id,tenant_id' },
+    )
+  })
+})
+
+// ===========================================================================
 // LOW-1 — a super_admin target's coarse role is never bumped
 // ===========================================================================
 

@@ -48,6 +48,7 @@ import {
 const mockRequireAuth = requireAuthContextFull as ReturnType<typeof vi.fn>
 
 const TENANT = 'tenant-1'
+const OTHER_TENANT = 'tenant-2'
 const ALL_PERMS = ['bonus_funnel.clients', 'bonus_funnel.campaigns', 'bonus_funnel.bonuses']
 
 /**
@@ -147,6 +148,34 @@ describe('tenant scoping', () => {
     await listClientsHandler()
 
     expect(chains.so_clients.eq).toHaveBeenCalledWith('tenant_id', TENANT)
+  })
+
+  it('listClients (super_admin) scopes to a PROVIDED other tenant (Scope Bar client list)', async () => {
+    const { chains } = setupAuth(
+      { so_clients: { data: [], error: null } },
+      ALL_PERMS,
+      { roleName: 'member', isSuperAdmin: true },
+    )
+
+    await listClientsHandler(OTHER_TENANT)
+
+    expect(chains.so_clients.eq).toHaveBeenCalledWith('tenant_id', OTHER_TENANT)
+    expect(chains.so_clients.eq).not.toHaveBeenCalledWith('tenant_id', TENANT)
+  })
+
+  it('listClients (NON-super) IGNORES a provided tenantId, forced to auth.tenantId (no cross-tenant read)', async () => {
+    // KEY SECURITY TEST: a regular admin passing tenantId=<other> must NOT read
+    // another tenant's client list.
+    const { chains } = setupAuth(
+      { so_clients: { data: [], error: null } },
+      ALL_PERMS,
+      { roleName: 'admin', isSuperAdmin: false },
+    )
+
+    await listClientsHandler(OTHER_TENANT)
+
+    expect(chains.so_clients.eq).toHaveBeenCalledWith('tenant_id', TENANT)
+    expect(chains.so_clients.eq).not.toHaveBeenCalledWith('tenant_id', OTHER_TENANT)
   })
 
   it('createClient injects tenant_id from auth, never from input', async () => {
@@ -538,6 +567,275 @@ describe('db-error mapping (no raw error leak)', () => {
     expect(result.error).toBe(messages.venture.operationFailed)
     expect(result.error).not.toContain('row-level security')
     consoleSpy.mockRestore()
+  })
+})
+
+// ===========================================================================
+// Publish gate (iter 2b): a campaign can go published=true ONLY with a
+// lead-source provider selected AND its required config satisfied (Tally →
+// webhook secret set). A draft (published=false/omitted) allows NULL provider +
+// incomplete config. Enforced server-side in create/update handlers (defense).
+// ===========================================================================
+
+describe('publish gate — createCampaign', () => {
+  it('rejects publish=true without a lead_source_provider (draft cannot be published)', async () => {
+    const { chains } = setupAuth({ so_clients: { data: { id: 'c1' }, error: null } })
+
+    const result = await createCampaignHandler({
+      client_id: 'c1',
+      slug: 'launch',
+      esp_provider: 'beehiiv',
+      esp_tag_launch: 'launch-notify',
+      published: true,
+    })
+
+    expect(result.success).toBe(false)
+    expect(result.error).toBe(messages.venture.publishRequiresLeadSource)
+    // Rejected BEFORE the insert.
+    expect(chains.so_campaigns).toBeUndefined()
+  })
+
+  it('rejects publish=true with provider=tally but NO webhook secret', async () => {
+    const { chains } = setupAuth({ so_clients: { data: { id: 'c1' }, error: null } })
+
+    const result = await createCampaignHandler({
+      client_id: 'c1',
+      slug: 'launch',
+      esp_provider: 'beehiiv',
+      esp_tag_launch: 'launch-notify',
+      lead_source_provider: 'tally',
+      published: true,
+    })
+
+    expect(result.success).toBe(false)
+    expect(result.error).toBe(messages.venture.publishRequiresLeadSourceConfig)
+    expect(chains.so_campaigns).toBeUndefined()
+  })
+
+  it('allows saving as a DRAFT without a provider (published=false)', async () => {
+    const campaignRow = { id: 'camp-1', client_id: 'c1', slug: 'launch' }
+    const { chains } = setupAuth({
+      so_clients: { data: { id: 'c1' }, error: null },
+      so_campaigns: { data: campaignRow, error: null },
+    })
+
+    const result = await createCampaignHandler({
+      client_id: 'c1',
+      slug: 'launch',
+      esp_provider: 'beehiiv',
+      esp_tag_launch: 'launch-notify',
+      published: false,
+    })
+
+    expect(result.success).toBe(true)
+    expect(chains.so_campaigns.insert).toHaveBeenCalled()
+    // Draft insert carries a NULL provider + empty non-secret config.
+    expect(chains.so_campaigns.insert).toHaveBeenCalledWith(
+      expect.objectContaining({ lead_source_provider: null, lead_source_config: {} }),
+    )
+  })
+
+  it('allows publish=true with provider=tally AND a webhook secret', async () => {
+    const campaignRow = { id: 'camp-1', client_id: 'c1', slug: 'launch' }
+    const { chains } = setupAuth({
+      so_clients: { data: { id: 'c1' }, error: null },
+      so_campaigns: { data: campaignRow, error: null },
+    })
+
+    const result = await createCampaignHandler({
+      client_id: 'c1',
+      slug: 'launch',
+      esp_provider: 'beehiiv',
+      esp_tag_launch: 'launch-notify',
+      lead_source_provider: 'tally',
+      tally_webhook_secret: 'whsec_live',
+      published: true,
+    })
+
+    expect(result.success).toBe(true)
+    expect(chains.so_campaigns.insert).toHaveBeenCalled()
+    // The SECRET persists to its dedicated column, NEVER into lead_source_config.
+    expect(chains.so_campaigns.insert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tally_webhook_secret: 'whsec_live',
+        lead_source_provider: 'tally',
+        lead_source_config: {},
+      }),
+    )
+  })
+})
+
+describe('publish gate — updateCampaign', () => {
+  it('rejects publish=true when neither the request nor the DB row has a secret', async () => {
+    // so_campaigns finalValue serves BOTH assertCampaignOwned (client_id) and
+    // fetchCampaignPublishState (provider/config/has_webhook_secret).
+    const { chains } = setupAuth({
+      so_campaigns: {
+        data: {
+          client_id: 'c1',
+          lead_source_provider: 'tally',
+          lead_source_config: {},
+          has_webhook_secret: false,
+        },
+        error: null,
+      },
+      so_clients: { data: { id: 'c1' }, error: null },
+    })
+
+    const result = await updateCampaignHandler('camp-1', { published: true })
+
+    expect(result.success).toBe(false)
+    expect(result.error).toBe(messages.venture.publishRequiresLeadSourceConfig)
+    expect(chains.so_campaigns.update).not.toHaveBeenCalled()
+  })
+
+  it('allows publish=true when the DB row already has the secret (rotate-skip)', async () => {
+    const { chains } = setupAuth({
+      so_campaigns: {
+        data: {
+          id: 'camp-1',
+          client_id: 'c1',
+          lead_source_provider: 'tally',
+          lead_source_config: {},
+          has_webhook_secret: true,
+        },
+        error: null,
+      },
+      so_clients: { data: { id: 'c1' }, error: null },
+    })
+
+    const result = await updateCampaignHandler('camp-1', { published: true })
+
+    expect(result.success).toBe(true)
+    expect(chains.so_campaigns.update).toHaveBeenCalled()
+  })
+
+  it('rejects publish=true when the request EXPLICITLY clears the secret (null), even though the DB row had one', async () => {
+    // Regression (SEC-3 / clear-secret edge): a falsy check treated null the
+    // same as "field omitted" → fell back to the DB has_webhook_secret → gate
+    // passed → campaign publishes while the patch writes secret=null → all
+    // ingest 401s. The gate must see the RESULTING (cleared) secret state.
+    const { chains } = setupAuth({
+      so_campaigns: {
+        data: {
+          id: 'camp-1',
+          client_id: 'c1',
+          lead_source_provider: 'tally',
+          lead_source_config: {},
+          has_webhook_secret: true, // DB HAS a secret…
+          published: false,
+        },
+        error: null,
+      },
+      so_clients: { data: { id: 'c1' }, error: null },
+    })
+
+    const result = await updateCampaignHandler('camp-1', {
+      published: true,
+      tally_webhook_secret: null, // …but this update clears it
+    })
+
+    expect(result.success).toBe(false)
+    expect(result.error).toBe(messages.venture.publishRequiresLeadSourceConfig)
+    expect(chains.so_campaigns.update).not.toHaveBeenCalled()
+  })
+
+  it('re-gates an ALREADY-published campaign when the provider is cleared with published OMITTED', async () => {
+    // SEC-3 drift: an update that clears the provider (null) while OMITTING
+    // published on a row that is ALREADY published must be re-gated over the
+    // RESULTING (still-published) state — not skipped just because published
+    // wasn't in the payload.
+    const { chains } = setupAuth({
+      so_campaigns: {
+        data: {
+          id: 'camp-1',
+          client_id: 'c1',
+          lead_source_provider: 'tally',
+          lead_source_config: {},
+          has_webhook_secret: true,
+          published: true, // already published
+        },
+        error: null,
+      },
+      so_clients: { data: { id: 'c1' }, error: null },
+    })
+
+    const result = await updateCampaignHandler('camp-1', {
+      lead_source_provider: null, // clears the provider; published omitted
+    })
+
+    expect(result.success).toBe(false)
+    expect(result.error).toBe(messages.venture.publishRequiresLeadSource)
+    expect(chains.so_campaigns.update).not.toHaveBeenCalled()
+  })
+
+  it('allows a DRAFT update (published=false) to clear the provider to null (no DB read, no gate)', async () => {
+    const { chains } = setupAuth({
+      so_campaigns: {
+        data: {
+          id: 'camp-1',
+          client_id: 'c1',
+          lead_source_provider: 'tally',
+          lead_source_config: {},
+          has_webhook_secret: true,
+          published: true,
+        },
+        error: null,
+      },
+      so_clients: { data: { id: 'c1' }, error: null },
+    })
+
+    const result = await updateCampaignHandler('camp-1', {
+      published: false,
+      lead_source_provider: null,
+    })
+
+    expect(result.success).toBe(true)
+    expect(chains.so_campaigns.update).toHaveBeenCalledWith(
+      expect.objectContaining({ published: false, lead_source_provider: null }),
+    )
+  })
+})
+
+// ===========================================================================
+// Config sanitization on ALL write paths (SEC-1): lead_source_config JSONB is
+// in the authenticated SELECT allow-list, so a smuggled secret must NEVER reach
+// it. CREATE + the provider-present UPDATE branch already sanitized; this locks
+// the config-ONLY update branch (provider omitted) — it must sanitize against
+// the EFFECTIVE (current DB) provider, never write the raw wire object.
+// ===========================================================================
+
+describe('lead_source_config sanitization on config-only update', () => {
+  it('strips a smuggled secret from a config-only update (sanitized against the DB provider)', async () => {
+    const { chains } = setupAuth({
+      so_campaigns: {
+        data: {
+          id: 'camp-1',
+          client_id: 'c1',
+          lead_source_provider: 'tally', // effective provider resolved from DB
+          lead_source_config: {},
+          has_webhook_secret: true,
+          published: false,
+        },
+        error: null,
+      },
+      so_clients: { data: { id: 'c1' }, error: null },
+    })
+
+    const result = await updateCampaignHandler('camp-1', {
+      // provider OMITTED → config-only branch. Smuggled secret + junk key.
+      lead_source_config: { secret: 'whsec_leaked', foo: 'bar' },
+    })
+
+    expect(result.success).toBe(true)
+    // Tally's configSchema is z.object({}) → strips ALL keys → {}. The smuggled
+    // secret never reaches the authenticated-readable JSONB column.
+    expect(chains.so_campaigns.update).toHaveBeenCalledWith(
+      expect.objectContaining({ lead_source_config: {} }),
+    )
+    const patch = chains.so_campaigns.update.mock.calls[0][0] as Record<string, unknown>
+    expect(patch.lead_source_config).not.toHaveProperty('secret')
+    expect(patch.lead_source_config).not.toHaveProperty('foo')
   })
 })
 

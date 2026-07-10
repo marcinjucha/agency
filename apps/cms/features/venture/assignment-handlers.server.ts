@@ -9,6 +9,7 @@ import {
   dbError,
   fromSupabaseVoidSafe,
   gated,
+  resolveEffectiveTenantId,
   tbl,
   toMutation,
   toVoid,
@@ -51,20 +52,25 @@ const PERM_USERS: PermissionKey = 'system.users'
 // ---------------------------------------------------------------------------
 
 /**
- * Resolve that the target user belongs to the caller's tenant, or a forbidden
- * error. Prevents leaking the existence of another tenant's user's assignment
- * map (RLS would also filter, but this is a clean app-layer error + defense in
- * depth). Missing OR foreign-tenant → indistinguishable, both forbidden.
+ * Resolve that the target user belongs to `tenantId` (the EFFECTIVE tenant — the
+ * caller's own, or a super_admin's Scope Bar target), or a forbidden error.
+ * Prevents leaking the existence of another tenant's user's assignment map (RLS
+ * would also filter, but this is a clean app-layer error + defense in depth).
+ * Missing OR foreign-tenant → indistinguishable, both forbidden. A super_admin
+ * legitimately asserts against the provided tenant (mirrors assertSameTenant's
+ * super_admin exemption); a non-super caller's tenant is pinned upstream by
+ * resolveEffectiveTenantId, so this can never be used cross-tenant by them.
  */
 function assertUserInTenant(
   auth: AuthContextFull,
   userId: string,
+  tenantId: string,
 ): ResultAsync<undefined, string> {
   return ResultAsync.fromPromise(
     tbl(auth, 'users')
       .select('id')
       .eq('id', userId)
-      .eq('tenant_id', auth.tenantId)
+      .eq('tenant_id', tenantId)
       .maybeSingle(),
     dbError,
   ).andThen((res) => {
@@ -79,21 +85,22 @@ function assertUserInTenant(
 }
 
 /**
- * Verify that EVERY clientId belongs to the caller's tenant. One batched query
- * (mirrors assertBonusesInCampaign in admin-handlers): if the count of tenant
- * clients matching the requested ids differs from the requested count, at least
- * one id is missing or cross-tenant → reject the WHOLE op (no partial write).
- * An empty list is trivially satisfied (nothing to verify).
+ * Verify that EVERY clientId belongs to `tenantId` (the EFFECTIVE tenant). One
+ * batched query (mirrors assertBonusesInCampaign in admin-handlers): if the count
+ * of tenant clients matching the requested ids differs from the requested count,
+ * at least one id is missing or cross-tenant → reject the WHOLE op (no partial
+ * write). An empty list is trivially satisfied (nothing to verify).
  */
 function assertClientsOwned(
   auth: AuthContextFull,
   clientIds: string[],
+  tenantId: string,
 ): ResultAsync<undefined, string> {
   if (clientIds.length === 0) return okResult()
   return ResultAsync.fromPromise(
     tbl(auth, 'so_clients')
       .select('id')
-      .eq('tenant_id', auth.tenantId)
+      .eq('tenant_id', tenantId)
       .in('id', clientIds),
     dbError,
   ).andThen((res) => {
@@ -136,15 +143,23 @@ function currentClientIds(
 /**
  * Return the client ids currently assigned to a user (for pre-filling the
  * assignment editor). Gated on 'system.users'; the target user is verified to
- * belong to the caller's tenant BEFORE any assignment row is read.
+ * belong to the EFFECTIVE tenant BEFORE any assignment row is read.
+ *
+ * `tenantId` is honored ONLY for a super_admin (Scope Bar edit of a user in
+ * another tenant); a non-super caller is pinned to their own tenant by
+ * resolveEffectiveTenantId (no cross-tenant read).
  */
 export function listAssignmentsForUserHandler(
   userId: string,
+  tenantId?: string,
 ): Promise<MutationResult<string[]>> {
   return toMutation(
-    gated(PERM_USERS, (auth) =>
-      assertUserInTenant(auth, userId).andThen(() => currentClientIds(auth, userId)),
-    ),
+    gated(PERM_USERS, (auth) => {
+      const effectiveTenantId = resolveEffectiveTenantId(auth, tenantId)
+      return assertUserInTenant(auth, userId, effectiveTenantId).andThen(() =>
+        currentClientIds(auth, userId),
+      )
+    }),
   )
 }
 
@@ -155,24 +170,32 @@ export function listAssignmentsForUserHandler(
  *
  * Gated on 'system.users' AND an unscoped actor (owner/admin/super_admin) — a
  * scoped member must not manage assignments. Before any write: (a) the target
- * user must belong to the caller's tenant; (b) EVERY clientId must belong to the
- * caller's tenant — a single cross-tenant id rejects the whole op (no partial
+ * user must belong to the EFFECTIVE tenant; (b) EVERY clientId must belong to the
+ * EFFECTIVE tenant — a single cross-tenant id rejects the whole op (no partial
  * application). Empty clientIds clears all current assignments.
+ *
+ * `tenantId` is honored ONLY for a super_admin (Scope Bar cross-tenant save),
+ * pinned to auth.tenantId for everyone else — the write-authz model is unchanged
+ * (still owner/admin/super_admin gated via isUnscopedActor). A non-super unscoped
+ * actor (owner/admin) therefore can only ever save within their own tenant.
  */
 export function setUserClientAssignmentsHandler(
   userId: string,
   clientIds: string[],
+  tenantId?: string,
 ): Promise<VoidResult> {
   const desired = desiredSet(clientIds)
   return toVoid(
-    gated(PERM_USERS, (auth) =>
-      isUnscopedActor(auth)
-        ? assertUserInTenant(auth, userId)
-            .andThen(() => assertClientsOwned(auth, desired))
-            .andThen(() => currentClientIds(auth, userId))
-            .andThen((current) => applyAssignmentDiff(auth, userId, current, desired))
-        : errAsync<undefined, string>(messages.common.noPermission),
-    ),
+    gated(PERM_USERS, (auth) => {
+      if (!isUnscopedActor(auth)) {
+        return errAsync<undefined, string>(messages.common.noPermission)
+      }
+      const effectiveTenantId = resolveEffectiveTenantId(auth, tenantId)
+      return assertUserInTenant(auth, userId, effectiveTenantId)
+        .andThen(() => assertClientsOwned(auth, desired, effectiveTenantId))
+        .andThen(() => currentClientIds(auth, userId))
+        .andThen((current) => applyAssignmentDiff(auth, userId, current, desired))
+    }),
   )
 }
 
