@@ -138,6 +138,15 @@ describe('PermissionPicker', () => {
       expect(page.isChildVisible('Blog')).toBe(true)
       expect(page.isChildVisible('Produkty')).toBe(true)
       expect(page.isChildVisible('Użytkownicy')).toBe(true)
+      expect(page.isChildVisible('Licencje DocForge')).toBe(true)
+    })
+
+    it('renders the DocForge licenses checkbox under the System card', () => {
+      const page = PermissionPickerPage.render({
+        enabledFeatures: ['system.docforge_licenses', 'dashboard'] as PermissionKey[],
+      })
+
+      expect(page.getVisibleChildren('System')).toEqual(['Licencje DocForge'])
     })
 
     it('always shows dashboard (alwaysGranted) with all children', () => {
@@ -157,10 +166,11 @@ describe('PermissionPicker', () => {
       expect(page.isGroupVisible('System')).toBe(true)
       expect(page.isGroupVisible('Zarządzanie')).toBe(true)
 
-      // System card has email_templates + settings
+      // System card has email_templates + settings + docforge_licenses
       expect(page.getVisibleChildren('System')).toEqual([
         'Szablony email',
         'Ustawienia',
+        'Licencje DocForge',
       ])
 
       // Zarządzanie card has users + roles + tenants

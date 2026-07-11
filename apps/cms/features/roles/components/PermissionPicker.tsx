@@ -40,7 +40,11 @@ function buildDisplayGroups(): DisplayGroup[] {
       groups.push({
         label: messages.permissions.system,
         parentKey: 'system',
-        children: ['system.email_templates', 'system.settings'] as const,
+        children: [
+          'system.email_templates',
+          'system.settings',
+          'system.docforge_licenses',
+        ] as const,
         alwaysGranted: false,
       })
       groups.push({

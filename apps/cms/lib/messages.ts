@@ -1944,6 +1944,7 @@ export const messages = {
     'system.users': 'Użytkownicy',
     'system.roles': 'Role',
     'system.tenants': 'Organizacje',
+    'system.docforge_licenses': 'Licencje DocForge',
     alwaysGranted: 'Zawsze przyznane',
   } as Record<string, string>,
 
