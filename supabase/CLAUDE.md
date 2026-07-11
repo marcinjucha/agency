@@ -155,10 +155,11 @@ supabase migration new add_feature_name
 
 # Edit the file in supabase/migrations/
 
-# Apply locally
+# Apply locally (replays all migrations through the CLI — never psql)
 supabase db reset
 
-# Apply to production
+# Apply to staging FIRST (default), then prod only on explicit "merge to prod"
+# — see "Staging & Production" for the link/push/relink sequence
 supabase db push
 ```
 
@@ -180,6 +181,18 @@ Format: `YYYYMMDDHHMMSS_description.sql`
 **Why defensive column adds:** Local databases are long-lived and shared across worktrees + main checkout. A previous session may have already applied a column change via ad-hoc psql or partial migration. Assuming a clean slate breaks the next migration run.
 
 **How to apply:** Every column-add migration must use `ADD COLUMN IF NOT EXISTS` and backfill defaults with `UPDATE ... WHERE col IS NULL` rather than relying on table-creation defaults. Never assume the column doesn't already exist.
+
+### ❌ NEVER apply migrations via `docker exec ... psql` (user rule "nie uzywaj db dockera", AAA-T-232)
+
+Never run `docker exec -i supabase_db_<dir> psql ... < <migration>.sql` + a manual `INSERT INTO supabase_migrations.schema_migrations` to register it.
+
+**Why:** the local Docker DB container is keyed off the MAIN checkout directory name (`supabase_db_legal-mind`), which makes the workflow fragile across worktrees, leaves the local DB hand-edited and divergent from migration history, and bypasses migration bookkeeping — `supabase migration list` becomes a lie until `migration repair` runs. Never bypass the Supabase migration CLI by going straight to the Docker container, regardless of how convenient it seems.
+
+**How to apply instead (in order of preference):**
+1. **Trust staging/prod as source of truth** — `supabase link --project-ref <id>` + `supabase migration list --linked` to verify state, then `supabase db push` to apply remaining migrations through the proper system.
+2. **Local schema sync** — `supabase db pull` (mirror remote schema) or `supabase db reset` (replay all migrations from scratch through the CLI, not psql).
+3. **Type regeneration** — `supabase gen types typescript --linked` (against remote) over `--local` when possible.
+4. **If a prior session already did inline psql DDL** and `db push` now fails with "column does not exist" → `supabase migration repair --status applied <version>` to register it WITHOUT re-running its SQL (see Troubleshooting). Never reach for `docker exec psql` as the fix.
 
 ## TypeScript Types
 
@@ -217,7 +230,23 @@ supabase status
 # Update .env.local with local credentials
 ```
 
-## Production (Supabase Cloud)
+## Staging & Production (Supabase Cloud)
+
+**Two projects — staging `mqabjtxtywsmehzijmko` vs prod `zsrpdslhnuwmzewwoexr`.** `apps/*/.env.local` points at STAGING → local dev + visual verification run against staging data. `supabase link` targets are explicit project-refs.
+
+**Staging-first DB workflow:**
+```
+supabase link --project-ref mqabjtxtywsmehzijmko   # staging
+supabase db push                                    # apply → verify
+# ONLY after user says "merge to prod":
+supabase link --project-ref zsrpdslhnuwmzewwoexr    # prod
+supabase db push
+supabase link --project-ref mqabjtxtywsmehzijmko    # relink back to staging
+```
+
+**Why:** prevents accidentally pushing migrations to prod when the intent was staging. The `link` target is **sticky across commands** — always re-verify which project is linked (`supabase migration list --linked`) before every `db push`.
+
+### Production project
 
 **Project:** zsrpdslhnuwmzewwoexr
 **URL:** https://zsrpdslhnuwmzewwoexr.supabase.co
@@ -303,7 +332,7 @@ Already enabled in migration: `CREATE EXTENSION IF NOT EXISTS "pgcrypto";`
 
 **Why:** The local Supabase Docker container is named `supabase_db_<main-dir-name>`. From a worktree, the CLI looks for a container named after the worktree directory and can't find it.
 
-**How to apply:** From a worktree, run migrations via `docker exec -i supabase_db_<main-dir> psql -U postgres -d postgres < <migration>` and regenerate types from the main checkout (`pnpm db:types` from the main directory).
+**How to apply:** Do NOT reach for `docker exec ... psql` against the local container — it is forbidden (see "NEVER apply migrations via `docker exec ... psql`" above). Instead, apply migrations against the **linked staging remote** (`supabase link --project-ref mqabjtxtywsmehzijmko` + `supabase db push`) and regenerate types with `supabase gen types typescript --linked`. If you need local schema, run `supabase db pull` / `supabase db reset` from the main checkout.
 
 ## Gotchas (Supabase JS / PostgREST Limitations)
 

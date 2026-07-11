@@ -369,6 +369,8 @@ React Compiler enabled via `babel-plugin-react-compiler` in `vite.config.ts`.
 
 **vitest.setup.ts mocks:** `@tanstack/react-router` (useNavigate, useSearch, useLocation, Link) + Supabase browser client. No Next.js mocks needed.
 
+**Run cms vitest from `apps/cms`, not the monorepo root** — the `@/` path alias lives in `apps/cms/vitest.config.ts`. Always `(cd apps/cms && npx vitest run features/<x>)`. **WHY:** a raw `npx vitest run features/<x>` from the repo ROOT fails to resolve `@/...` imports, so that test file silently FAILS TO LOAD while the run still reports the remaining tests as "passed" — the count silently drops (e.g. 70→49) and it looks like a regression that isn't one. (The `npm run test --workspace=apps/cms` script above is safe — the workspace flag runs vitest inside `apps/cms`; only raw root-level `npx vitest` is the trap.)
+
 ## Deployment
 
 Auto-deploys to Vercel on push to `main`:
