@@ -215,6 +215,19 @@ export const queryKeys = {
   },
 
   /**
+   * @source listThemesFn, getThemeFn (features/themes/server.ts)
+   * @usedBy ThemeLibrary (all), ThemeEditor (detail — via route loader/query)
+   * @invalidatedBy ThemeEditor (create/update), ThemeCard (duplicate/delete)
+   *   All theme mutations invalidate at the ROOT key `themes.all` — exact-key
+   *   invalidation silently fails (ag-design-patterns). Usage counts also live
+   *   under this root so a create/delete refreshes the "used by N" lines.
+   */
+  themes: {
+    all: ['themes'] as const,
+    detail: (id: string) => ['themes', 'detail', id] as const,
+  },
+
+  /**
    * @source getEmailTemplatesFn, getEmailTemplateFn (features/email/server.ts)
    * @usedBy TODO: nie znaleziono użycia via queryKeys.email — email templates loaded via route loaders
    * @invalidatedBy TODO: nie znaleziono użycia via queryKeys.email
@@ -223,6 +236,9 @@ export const queryKeys = {
     all: ['email-templates'] as const,
     templates: ['email-templates', 'list'] as const,
     template: (type: string) => ['email-templates', 'detail', type] as const,
+    // Resolved tenant theme map — powers the block editor's theme-token swatches
+    // (getResolvedEmailThemeFn / useResolvedEmailTheme).
+    resolvedTheme: ['email-templates', 'resolved-theme'] as const,
   },
 
   /**

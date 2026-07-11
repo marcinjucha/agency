@@ -9,6 +9,7 @@ import type {
 import { messages } from '@/lib/messages'
 import { ColorPicker } from '@/components/ui/color-picker'
 import { SegmentedControl } from './SegmentedControl'
+import { ThemeTokenSelect } from './ThemeTokenSelect'
 
 /**
  * BorderSection — minimalny edytor obramowania i tła.
@@ -46,8 +47,51 @@ export function BorderSection({ value, defaults, onChange }: BorderSectionProps)
     onChange(merged)
   }
 
-  const hasBorderColor = typeof value.borderColor === 'string' && value.borderColor.length > 0
-  const hasBg = typeof value.backgroundColor === 'string' && value.backgroundColor.length > 0
+  // Token vs raw hex are mutually exclusive per colour slot (see TypographySection).
+  // `tokenKey`/`rawKey` name the paired fields so both border + background reuse
+  // the same clear logic.
+  function selectToken(
+    tokenKey: 'borderColorToken' | 'backgroundColorToken',
+    rawKey: 'borderColor' | 'backgroundColor',
+    token: string | undefined,
+  ) {
+    const merged: Partial<BlockBorder> = { ...value }
+    if (token === undefined) {
+      delete merged[tokenKey]
+    } else {
+      merged[tokenKey] = token
+      delete merged[rawKey]
+    }
+    onChange(merged)
+  }
+
+  function setCustomColor(
+    rawKey: 'borderColor' | 'backgroundColor',
+    tokenKey: 'borderColorToken' | 'backgroundColorToken',
+    hex: string,
+  ) {
+    const merged: Partial<BlockBorder> = { ...value, [rawKey]: hex }
+    delete merged[tokenKey]
+    onChange(merged)
+  }
+
+  // Reset clears BOTH the raw hex AND the token for that slot (no border / no bg).
+  function clearColor(
+    rawKey: 'borderColor' | 'backgroundColor',
+    tokenKey: 'borderColorToken' | 'backgroundColorToken',
+  ) {
+    const merged: Partial<BlockBorder> = { ...value }
+    delete merged[rawKey]
+    delete merged[tokenKey]
+    onChange(merged)
+  }
+
+  const hasBorderColor =
+    (typeof value.borderColor === 'string' && value.borderColor.length > 0) ||
+    Boolean(value.borderColorToken)
+  const hasBg =
+    (typeof value.backgroundColor === 'string' && value.backgroundColor.length > 0) ||
+    Boolean(value.backgroundColorToken)
 
   const activeRadius = (value.borderRadius ?? defaults.borderRadius ?? 'none') as BorderRadiusKey
 
@@ -71,19 +115,26 @@ export function BorderSection({ value, defaults, onChange }: BorderSectionProps)
               variant="ghost"
               size="icon"
               className="h-6 w-6"
-              onClick={() => update('borderColor', undefined)}
+              onClick={() => clearColor('borderColor', 'borderColorToken')}
               aria-label={messages.email.inspectorBorderColorReset}
             >
               <RotateCcw className="h-3 w-3" />
             </Button>
           ) : null}
         </div>
-        <ColorPicker
-          id={borderColorId}
-          label={messages.email.inspectorBorderColor}
-          value={value.borderColor ?? ''}
-          onChange={(next) => update('borderColor', next)}
+        <ThemeTokenSelect
+          label={messages.email.inspectorColorSourceToken}
+          value={value.borderColorToken}
+          onChange={(token) => selectToken('borderColorToken', 'borderColor', token)}
         />
+        {value.borderColorToken ? null : (
+          <ColorPicker
+            id={borderColorId}
+            label={messages.email.inspectorBorderColor}
+            value={value.borderColor ?? ''}
+            onChange={(next) => setCustomColor('borderColor', 'borderColorToken', next)}
+          />
+        )}
       </div>
 
       <SegmentedControl<BorderRadiusKey>
@@ -104,19 +155,26 @@ export function BorderSection({ value, defaults, onChange }: BorderSectionProps)
               variant="ghost"
               size="icon"
               className="h-6 w-6"
-              onClick={() => update('backgroundColor', undefined)}
+              onClick={() => clearColor('backgroundColor', 'backgroundColorToken')}
               aria-label={messages.email.inspectorBorderBackgroundColorReset}
             >
               <RotateCcw className="h-3 w-3" />
             </Button>
           ) : null}
         </div>
-        <ColorPicker
-          id={bgColorId}
-          label={messages.email.inspectorBorderBackgroundColor}
-          value={value.backgroundColor ?? ''}
-          onChange={(next) => update('backgroundColor', next)}
+        <ThemeTokenSelect
+          label={messages.email.inspectorColorSourceToken}
+          value={value.backgroundColorToken}
+          onChange={(token) => selectToken('backgroundColorToken', 'backgroundColor', token)}
         />
+        {value.backgroundColorToken ? null : (
+          <ColorPicker
+            id={bgColorId}
+            label={messages.email.inspectorBorderBackgroundColor}
+            value={value.backgroundColor ?? ''}
+            onChange={(next) => setCustomColor('backgroundColor', 'backgroundColorToken', next)}
+          />
+        )}
       </div>
     </div>
   )

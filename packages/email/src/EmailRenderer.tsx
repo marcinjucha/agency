@@ -17,9 +17,16 @@ import type {
   BlockStyleCommon,
   BorderableBlockType,
 } from './blocks/block-interfaces'
+import {
+  type ThemeColorMap,
+  BLOCK_TEXT_COLOR_TOKEN,
+  BLOCK_BACKGROUND_COLOR_TOKEN,
+  resolveThemedColor,
+} from './theme'
 
 interface EmailTemplateProps {
   blocks: Block[]
+  theme?: ThemeColorMap
 }
 
 /**
@@ -54,14 +61,26 @@ const TYPOGRAPHIC_BLOCK_TYPES: ReadonlySet<BlockType> = new Set([
  * size/weight/line-height/letter-spacing) NIE są konfigurowalne — żyją w
  * hardcoded stylach inline poszczególnych komponentów bloku.
  */
-export function computeTypographyStyle(block: Block): React.CSSProperties {
+export function computeTypographyStyle(
+  block: Block,
+  theme?: ThemeColorMap,
+): React.CSSProperties {
   if (!TYPOGRAPHIC_BLOCK_TYPES.has(block.type as BlockType)) return {}
 
-  const defaults = DEFAULT_BLOCK_TYPOGRAPHY[block.type as 'header' | 'heading' | 'text' | 'cta' | 'footer']
+  const blockType = block.type as 'header' | 'heading' | 'text' | 'cta' | 'footer'
+  const defaults = DEFAULT_BLOCK_TYPOGRAPHY[blockType]
   const overrides = block as Partial<BlockTypography>
 
   const textAlign = overrides.textAlign ?? defaults.textAlign
-  const textColor = overrides.textColor ?? defaults.textColor
+  // Ladder (a) token ref → (b) raw hex → (c) themed default → (d) hardcoded.
+  // With no theme this collapses to `overrides.textColor ?? defaults.textColor`.
+  const textColor = resolveThemedColor({
+    theme,
+    tokenRef: overrides.textColorToken,
+    rawHex: overrides.textColor,
+    defaultToken: BLOCK_TEXT_COLOR_TOKEN[block.type as BlockType],
+    fallback: defaults.textColor,
+  })
 
   return {
     textAlign,
@@ -78,7 +97,10 @@ export function computeTypographyStyle(block: Block): React.CSSProperties {
  *
  * Dla bloków NIE-borderowalnych (divider/spacer) zwraca pusty obiekt.
  */
-export function computeBorderStyle(block: Block): React.CSSProperties {
+export function computeBorderStyle(
+  block: Block,
+  theme?: ThemeColorMap,
+): React.CSSProperties {
   if (!isBorderableBlockType(block.type)) return {}
 
   const blockType = block.type as BorderableBlockType
@@ -87,11 +109,18 @@ export function computeBorderStyle(block: Block): React.CSSProperties {
 
   const style: React.CSSProperties = {}
 
-  // 1px solid border when borderColor is set; otherwise no border drawn.
-  if (overrides.borderColor) {
+  // Border has NO themed default token (no canonical border token) — ladder is
+  // (a) token ref → (b) raw hex only. With no theme: `overrides.borderColor`.
+  const borderColor = resolveThemedColor({
+    theme,
+    tokenRef: overrides.borderColorToken,
+    rawHex: overrides.borderColor,
+  })
+  // 1px solid border when a border color resolves; otherwise no border drawn.
+  if (borderColor) {
     style.borderWidth = '1px'
     style.borderStyle = 'solid'
-    style.borderColor = overrides.borderColor
+    style.borderColor = borderColor
   }
 
   const radius = overrides.borderRadius ?? defaults.borderRadius
@@ -99,8 +128,17 @@ export function computeBorderStyle(block: Block): React.CSSProperties {
     style.borderRadius = `${BORDER_RADIUS_PX[radius]}px`
   }
 
-  if (overrides.backgroundColor) {
-    style.backgroundColor = overrides.backgroundColor
+  // Background ladder: (a) token ref → (b) raw hex → (c) themed default
+  // (header→headerBackground, cta→accent only) → (d) none. With no theme this
+  // is `overrides.backgroundColor` — byte-identical to before.
+  const backgroundColor = resolveThemedColor({
+    theme,
+    tokenRef: overrides.backgroundColorToken,
+    rawHex: overrides.backgroundColor,
+    defaultToken: BLOCK_BACKGROUND_COLOR_TOKEN[block.type as BlockType],
+  })
+  if (backgroundColor) {
+    style.backgroundColor = backgroundColor
   }
 
   return style
@@ -134,7 +172,7 @@ const BORDER_ON_CHILD_TYPES: ReadonlySet<BlockType> = new Set<BlockType>([
   'header',
 ])
 
-export function renderBlock(block: Block, paddingBottom?: number) {
+export function renderBlock(block: Block, paddingBottom?: number, theme?: ThemeColorMap) {
   const entry = BLOCK_REGISTRY[block.type as BlockType]
   if (!entry) {
     console.warn(`[EmailRenderer] Nieznany typ bloku: "${block.type}" — blok pominięty`)
@@ -144,15 +182,19 @@ export function renderBlock(block: Block, paddingBottom?: number) {
     block: Block
     style?: React.CSSProperties
     border?: React.CSSProperties
+    theme?: ThemeColorMap
   }) => React.ReactElement | null
-  const typographyStyle = computeTypographyStyle(block)
-  const borderStyle = computeBorderStyle(block)
+  const typographyStyle = computeTypographyStyle(block, theme)
+  const borderStyle = computeBorderStyle(block, theme)
   const childOwnsBorder = BORDER_ON_CHILD_TYPES.has(block.type as BlockType)
   const rendered = (
+    // `theme` is forwarded so container blocks (ColumnsBlock) can thread it into
+    // their recursive renderBlock calls; leaf components simply ignore the prop.
     <Component
       block={block}
       style={typographyStyle}
       border={childOwnsBorder ? borderStyle : undefined}
+      theme={theme}
     />
   )
   const hasMarginBottom = paddingBottom !== undefined && paddingBottom > 0
@@ -186,7 +228,7 @@ export function renderBlock(block: Block, paddingBottom?: number) {
   return <React.Fragment key={blockKey}>{bordered}</React.Fragment>
 }
 
-function EmailTemplate({ blocks }: EmailTemplateProps) {
+function EmailTemplate({ blocks, theme }: EmailTemplateProps) {
   return (
     <Html lang="pl">
       <Head />
@@ -211,7 +253,7 @@ function EmailTemplate({ blocks }: EmailTemplateProps) {
           {blocks.map((block, index) => {
             const isLast = index === blocks.length - 1
             const marginBottom = isLast ? 0 : resolveBlockMarginBottom(block)
-            return renderBlock(block, marginBottom)
+            return renderBlock(block, marginBottom, theme)
           })}
         </Container>
       </Body>
@@ -221,7 +263,15 @@ function EmailTemplate({ blocks }: EmailTemplateProps) {
 
 /**
  * Render email blocks to HTML string.
+ *
+ * `theme` is OPTIONAL and ADDITIVE — a plain token-key → literal-hex map the
+ * caller (the CMS app) resolves and passes in. When omitted, every color slot
+ * falls straight through to raw hex / hardcoded default, producing output
+ * byte-identical to the pre-theming renderer.
  */
-export async function renderEmailBlocks(blocks: Block[]): Promise<string> {
-  return render(<EmailTemplate blocks={blocks} />)
+export async function renderEmailBlocks(
+  blocks: Block[],
+  theme?: ThemeColorMap,
+): Promise<string> {
+  return render(<EmailTemplate blocks={blocks} theme={theme} />)
 }

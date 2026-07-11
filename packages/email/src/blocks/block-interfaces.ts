@@ -42,6 +42,13 @@ export interface BlockTypography {
   textAlign?: 'left' | 'center' | 'right'
   /** Hex z prefiksem # (np. '#334155'). */
   textColor?: string
+  /**
+   * ADDITIVE (client-theming): opcjonalna REFERENCJA do tokenu motywu (np.
+   * 'primary'). Gdy ustawiony I renderer dostał `theme` z tym kluczem →
+   * wygrywa nad `textColor`. Optional, żeby stare rekordy/bloki były nietknięte.
+   * Rozwiązywany fail-open: nieprawidłowy hex w mapie motywu = pominięty.
+   */
+  textColorToken?: string
 }
 
 /**
@@ -60,6 +67,14 @@ export interface BlockBorder {
   borderColor?: string
   borderRadius?: BorderRadiusToken
   backgroundColor?: string
+  /**
+   * ADDITIVE (client-theming): opcjonalne REFERENCJE do tokenów motywu, obok
+   * surowych pól hex powyżej. Gdy ustawione I renderer dostał `theme` z danym
+   * kluczem → wygrywają nad surowym hex. Optional = stare rekordy nietknięte.
+   * Fail-open: nieprawidłowa wartość tokenu w mapie motywu = pominięta.
+   */
+  borderColorToken?: string
+  backgroundColorToken?: string
 }
 
 /**

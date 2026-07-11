@@ -39,6 +39,92 @@ export const messages = {
     viewList: 'Widok listy',
   },
 
+  // Motywy — biblioteka motywów marki + edytor (Theme Manager, iter D3a).
+  themes: {
+    // Biblioteka
+    title: 'Motywy',
+    subtitle: 'Motywy marki wielokrotnego użytku — kolory, logo i czcionka e-maili klientów.',
+    newTheme: 'Nowy motyw',
+    usedByClients: (n: number) =>
+      `Używany przez: ${n} ${n === 1 ? 'klienta' : 'klientów'}`,
+    unused: 'Nieprzypisany',
+    actionsLabel: 'Akcje motywu',
+    edit: 'Edytuj',
+    duplicate: 'Duplikuj',
+    delete: 'Usuń',
+    // Stany
+    loadFailed: 'Nie udało się wczytać motywów',
+    emptyTitle: 'Brak motywów',
+    emptyDescription:
+      'Utwórz pierwszy motyw, aby nadać markę e-mailom i stronom klientów.',
+    notFound: 'Nie znaleziono motywu',
+    notFoundDescription: 'Ten motyw nie istnieje lub został usunięty.',
+    // Usuwanie
+    deleteConfirmTitle: 'Usunąć motyw?',
+    deleteConfirmDescription: (name: string) =>
+      `Czy na pewno chcesz usunąć motyw „${name}"? Tej operacji nie można cofnąć.`,
+    deleteBlockedTitle: 'Nie można usunąć motywu',
+    deleteBlockedDescription: (n: number) =>
+      `Motyw używany w ${n} ${n === 1 ? 'miejscu' : 'miejscach'} (klienci lub kampanie) — najpierw zmień ich motyw.`,
+    deleteFailed: 'Nie udało się usunąć motywu',
+    duplicateFailed: 'Nie udało się zduplikować motywu',
+    // Edytor
+    newThemeTitle: 'Nowy motyw',
+    editThemeTitle: 'Edytuj motyw',
+    nameLabel: 'Nazwa motywu',
+    namePlaceholder: 'np. Kacper — Granatowy',
+    fontFamilyLabel: 'Czcionka',
+    fontFamilyPlaceholder: 'np. Inter, Arial, sans-serif',
+    tokensTitle: 'Kolory motywu',
+    groupBrand: 'Marka',
+    groupSurface: 'Tło i tekst',
+    groupHeaderFooter: 'Nagłówek i stopka',
+    groupAssets: 'Logo i czcionka',
+    // Podgląd
+    previewTitle: 'Podgląd',
+    previewEmailTab: 'Podgląd e-mail',
+    previewWebTab: 'Podgląd strony',
+    previewWebSoon: 'Wkrótce',
+    swatchGridTitle: 'Tokeny (rozwiązane)',
+    mockEmailHeading: 'Twój bonus czeka!',
+    mockEmailBody:
+      'Dziękujemy za zapisanie się. Kliknij poniżej, aby odebrać przygotowane materiały.',
+    mockEmailCta: 'Odbierz bonus',
+    mockEmailFooter: '© Halo Efekt — wiadomość wygenerowana automatycznie.',
+    logoAlt: 'Logo motywu',
+    // Odznaka kontrastu (WCAG) — alternatywa tekstowa dla podglądu nagłówka
+    contrastLabel: 'Kontrast nagłówka',
+    contrastPass: (ratio: string) => `AA ${ratio}:1 ✓`,
+    contrastCorrected: (ratio: string) =>
+      `Nagłówek skorygowany — AA ${ratio}:1`,
+    // Zapis
+    createFailed: 'Nie udało się utworzyć motywu',
+    updateFailed: 'Nie udało się zapisać motywu',
+    nameTaken: 'Motyw o tej nazwie już istnieje',
+    formValidationError: 'Popraw błędy w formularzu',
+    // Assignment picker (iter D3b) — reused in the tenant + client editors.
+    picker: {
+      clientCardTitle: 'Motyw',
+      orgCardTitle: 'Motyw organizacji',
+      orgCardDescription:
+        'Bazowy motyw organizacji. Klienci mogą go dziedziczyć lub nadpisać własnym.',
+      radioGroupLabel: 'Wybór motywu',
+      inheritOption: (from: string) => `Dziedziczy z ${from}`,
+      ownOption: 'Własny motyw',
+      selectPlaceholder: 'Wybierz motyw',
+      searchPlaceholder: 'Szukaj motywu…',
+      noResults: 'Brak wyników',
+      newTheme: 'Nowy motyw',
+      effectiveLabel: 'Efektywny motyw',
+      defaultThemeName: 'Domyślny (Halo Efekt)',
+      orgThemeName: 'motyw organizacji',
+      // Campaign tier: what a campaign inherits FROM (used as inheritedFromLabel).
+      clientInheritLabel: 'klienta',
+      emptyHint: 'Brak motywów — utwórz w sekcji Motywy',
+      loading: 'Ładowanie motywów…',
+    },
+  },
+
   venture: {
     // Bonus-funnel admin CRUD — generic, client-safe DB error strings.
     // Raw Supabase/Postgres errors (constraint names, RLS policy text) are
@@ -92,6 +178,24 @@ export const messages = {
     selectLogo: 'Wybierz logo z biblioteki',
     changeLogo: 'Zmień logo',
     removeLogo: 'Usuń logo',
+
+    // Campaign appearance card ("Wygląd kampanii") — the 3-way theme wrapper
+    // (CampaignThemeCard). Mode 1 inherits the client theme, mode 2 picks a
+    // library theme, mode 3 is the freeform brand editor above.
+    campaignThemeTitle: 'Wygląd kampanii',
+    // Card-level public banner (hoisted from the brand editor) — mode-agnostic,
+    // because a library theme is just as public as a freeform brand.
+    campaignThemePublicBanner:
+      'Wygląd kampanii jest publiczny — kolory i logo widać na stronie prezentu.',
+    campaignThemeModeGroupLabel: 'Tryb wyglądu kampanii',
+    campaignThemeModeInherit: 'Dziedziczy z klienta',
+    campaignThemeModeLibrary: 'Wybierz z biblioteki',
+    campaignThemeModeOwn: 'Własny wygląd',
+    campaignThemeInheritHint: 'Kampania użyje motywu przypisanego do klienta.',
+    // Best-effort preview note (inherit mode): the authoritative 3-tier resolve
+    // happens server-side; the card only previews the campaign layer.
+    campaignThemePreviewNote:
+      'Podgląd poglądowy — ostateczny motyw jest rozwiązywany po stronie serwera.',
 
     // ESP
     espTitle: 'Dostawca e-mail (ESP)',
@@ -836,6 +940,21 @@ export const messages = {
     inspectorBorderRadiusPill: 'Pigułka',
     inspectorBorderBackgroundColor: 'Kolor tła',
     inspectorBorderBackgroundColorReset: 'Wyczyść kolor tła',
+    // Inspector — kolor z motywu (theme token) vs własny hex (iter C client-theming)
+    inspectorColorSourceToken: 'Kolor z motywu',
+    inspectorColorSourceCustom: 'Własny kolor',
+    // Etykiety 9 tokenów motywu (THEME_COLOR_TOKEN_KEYS)
+    themeTokenLabels: {
+      primary: 'Podstawowy',
+      primaryText: 'Tekst na podstawowym',
+      accent: 'Akcent',
+      background: 'Tło',
+      text: 'Tekst',
+      mutedText: 'Tekst przygaszony',
+      headerBackground: 'Tło nagłówka',
+      headerText: 'Tekst nagłówka',
+      footerText: 'Tekst stopki',
+    },
     // CTA width controls
     inspectorCtaWidth: 'Szerokość',
     inspectorCtaWidthAuto: 'Auto',
@@ -1031,6 +1150,7 @@ export const messages = {
     appointments: 'Wizyty',
     intake: 'Intake hub',
     calendar: 'Kalendarz',
+    themes: 'Motywy',
     emailTemplates: 'Szablony email',
     landingPage: 'Strona główna',
     blog: 'Blog',

@@ -56,6 +56,13 @@ export const blockTypographyShape = {
     .string()
     .regex(/^#[0-9a-fA-F]{6}$/, 'Nieprawidłowy kolor hex (wymagany format #rrggbb)')
     .optional(),
+  // ADDITIVE (client-theming, iter C): optional REFERENCE to a theme token
+  // (e.g. 'primary'). MUST be declared here — Zod `z.object` strips unknown keys
+  // on parse, so without this the editor-set token would be silently dropped by
+  // the inputValidator before it ever reaches the DB. `z.string()` (NOT a
+  // z.enum of token keys) at the wire boundary — the token set is extensible and
+  // the editor already constrains the choices; the renderer resolves fail-open.
+  textColorToken: z.string().optional(),
 } as const
 
 // BlockBorder — minimalny mixin obramowania.
@@ -72,6 +79,11 @@ export const blockBorderShape = {
     .string()
     .regex(/^#[0-9a-fA-F]{6}$/, 'Nieprawidłowy kolor hex (wymagany format #rrggbb)')
     .optional(),
+  // ADDITIVE (client-theming, iter C): optional REFERENCES to theme tokens
+  // alongside the raw hex fields above. MUST be declared here or Zod strips them
+  // on parse (see textColorToken note). `z.string()` at the wire boundary.
+  borderColorToken: z.string().optional(),
+  backgroundColorToken: z.string().optional(),
 } as const
 
 // Phase 3 (AAA-T-221, design review fix P0-1) — `textColor` is single-sourced

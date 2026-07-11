@@ -1,4 +1,5 @@
 import { renderEmailBlocks, type Block } from '@agency/email'
+import type { ResolvedTheme } from '@/lib/theme'
 
 // ---------------------------------------------------------------------------
 // Venture bonus-funnel — transactional bonus email builder (iter 3).
@@ -24,6 +25,11 @@ export interface BonusEmailBonus {
 export interface BonusEmailInput {
   campaignDisplayName: string | null
   bonuses: BonusEmailBonus[]
+  // Fully-resolved brand theme (client override backfilled over tenant/default by
+  // `resolveClientTheme`). REQUIRED — the caller always resolves one (the resolver
+  // never returns null; a missing/invalid theme degrades to HALO_EFEKT_DEFAULT).
+  // Kept as a pure input so `buildBonusEmailBlocks` stays synchronous + I/O-free.
+  theme: ResolvedTheme
 }
 
 export interface BonusEmail {
@@ -64,6 +70,17 @@ export function buildBonusEmailSubject(input: BonusEmailInput): string {
 export function buildBonusEmailBlocks(input: BonusEmailInput): Block[] {
   const brand = input.campaignDisplayName?.trim() || FALLBACK_BRAND
   const bonuses = deliverableBonuses(input.bonuses)
+  const { theme } = input
+
+  // Theme tokens flow as INLINE LITERAL HEX (never var()/hsl() — email clients
+  // don't resolve them). Five live surfaces map 1:1 to resolved tokens: header
+  // bg/text, heading (via textColor — see below), body text, footer.
+  // NOTE: body-text, footer AND the heading previously carried no color the
+  // renderer honoured (heading set the inert `color` field; text/footer set
+  // nothing) and inherited DEFAULT_BLOCK_TYPOGRAPHY (heading '#0f172a',
+  // text '#334155', footer '#94a3b8'). Setting the token explicitly is
+  // byte-identical when it equals that inherited default — HALO_EFEKT_DEFAULT
+  // matches all three — enforced by the regression test.
 
   const bonusListHtml =
     bonuses.length > 0
@@ -80,8 +97,8 @@ export function buildBonusEmailBlocks(input: BonusEmailInput): Block[] {
       id: 'bonus-header',
       type: 'header',
       companyName: brand,
-      backgroundColor: '#1a1a2e',
-      textColor: '#ffffff',
+      backgroundColor: theme.headerBackground,
+      textColor: theme.headerText,
     },
     {
       id: 'bonus-heading',
@@ -89,7 +106,14 @@ export function buildBonusEmailBlocks(input: BonusEmailInput): Block[] {
       // TODO(OQ-5): final PL copy from Marcin
       text: 'Twoje bonusy są gotowe',
       level: 'h2',
-      color: '#1a1a2e',
+      // `textColor` is what the renderer actually applies (computeTypographyStyle
+      // reads `overrides.textColor ?? DEFAULT_BLOCK_TYPOGRAPHY.heading.textColor`);
+      // the legacy `color` field is inert (never wins) but stays because
+      // HeadingBlock types it as required. Both = theme.primary so the client's
+      // brand colour reaches the heading. Byte-identical HELD: HALO_EFEKT_DEFAULT
+      // .primary === '#0f172a' === the heading typography default it replaces.
+      color: theme.primary,
+      textColor: theme.primary,
     },
     {
       id: 'bonus-intro',
@@ -97,11 +121,13 @@ export function buildBonusEmailBlocks(input: BonusEmailInput): Block[] {
       // TODO(OQ-5): value-not-sales intro — final PL copy from Marcin
       content:
         '<p>Dziękujemy! Poniżej znajdziesz materiały, które dla Ciebie przygotowaliśmy.</p>',
+      textColor: theme.text,
     },
     {
       id: 'bonus-list',
       type: 'text',
       content: bonusListHtml,
+      textColor: theme.text,
     },
     {
       id: 'bonus-inbox-note',
@@ -109,11 +135,13 @@ export function buildBonusEmailBlocks(input: BonusEmailInput): Block[] {
       // TODO(OQ-5): final PL copy from Marcin
       content:
         '<p>Sprawdź swoją skrzynkę — wkrótce odezwiemy się z informacją o starcie.</p>',
+      textColor: theme.text,
     },
     {
       id: 'bonus-footer',
       type: 'footer',
       text: `Wiadomość wysłana automatycznie przez ${brand}. Prosimy nie odpowiadać na ten email.`,
+      textColor: theme.footerText,
     },
   ]
 }

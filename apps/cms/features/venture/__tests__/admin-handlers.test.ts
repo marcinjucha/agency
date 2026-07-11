@@ -840,6 +840,314 @@ describe('lead_source_config sanitization on config-only update', () => {
 })
 
 // ===========================================================================
+// Theme assignment (iter D3b): so_clients.theme_id round-trips through the
+// create insert and the update patch. NULL = inherit the org theme; a uuid =
+// own theme. buildClientPatch must send it only when PRESENT (absent = leave
+// untouched) — asserted here via updateClientHandler (buildClientPatch is
+// private, same as buildCampaignPatch's coverage).
+// ===========================================================================
+
+describe('client theme_id assignment', () => {
+  const THEME_ID = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
+  const clientRow = { id: 'c1', name: 'Kacper', slug: 'kacper', tenant_id: TENANT }
+
+  it('createClient round-trips theme_id (own theme)', async () => {
+    // theme_id is now ownership-verified → so_themes must resolve under the tenant.
+    const { chains } = setupAuth(
+      { so_clients: { data: clientRow, error: null }, so_themes: { data: { id: THEME_ID }, error: null } },
+      ALL_PERMS,
+      OWNER,
+    )
+
+    const result = await createClientHandler({ name: 'Kacper', slug: 'kacper', theme_id: THEME_ID })
+
+    expect(result.success).toBe(true)
+    expect(chains.so_clients.insert).toHaveBeenCalledWith(
+      expect.objectContaining({ theme_id: THEME_ID }),
+    )
+  })
+
+  it('createClient defaults theme_id to null when omitted (inherit org theme)', async () => {
+    const { chains } = setupAuth({ so_clients: { data: clientRow, error: null } }, ALL_PERMS, OWNER)
+
+    await createClientHandler({ name: 'Kacper', slug: 'kacper' })
+
+    expect(chains.so_clients.insert).toHaveBeenCalledWith(
+      expect.objectContaining({ theme_id: null }),
+    )
+  })
+
+  it('updateClient patch INCLUDES theme_id when a uuid is provided', async () => {
+    // theme_id is now ownership-verified → so_themes must resolve under the tenant.
+    const { chains } = setupAuth({
+      so_clients: { data: clientRow, error: null },
+      so_themes: { data: { id: THEME_ID }, error: null },
+    })
+
+    const result = await updateClientHandler('c1', { theme_id: THEME_ID })
+
+    expect(result.success).toBe(true)
+    expect(chains.so_clients.update).toHaveBeenCalledWith(
+      expect.objectContaining({ theme_id: THEME_ID }),
+    )
+  })
+
+  it('updateClient patch INCLUDES theme_id: null when explicitly cleared (inherit)', async () => {
+    const { chains } = setupAuth({ so_clients: { data: clientRow, error: null } })
+
+    await updateClientHandler('c1', { theme_id: null })
+
+    expect(chains.so_clients.update).toHaveBeenCalledWith(
+      expect.objectContaining({ theme_id: null }),
+    )
+  })
+
+  it('updateClient patch OMITS theme_id when undefined (leave untouched)', async () => {
+    const { chains } = setupAuth({ so_clients: { data: clientRow, error: null } })
+
+    await updateClientHandler('c1', { name: 'Renamed' })
+
+    const patch = chains.so_clients.update.mock.calls[0][0] as Record<string, unknown>
+    expect(patch).not.toHaveProperty('theme_id')
+  })
+
+  it('ADMIN client selects include theme_id (so reads return the assignment)', async () => {
+    const { chains } = setupAuth({ so_clients: { data: [], error: null } })
+
+    await listClientsHandler()
+
+    const args = chains.so_clients.select.mock.calls.map((c) => String(c[0] ?? ''))
+    expect(args.some((a) => a.split(',').map((x) => x.trim()).includes('theme_id'))).toBe(true)
+  })
+})
+
+// ===========================================================================
+// Cross-tenant theme_id write guard (P2): the so_clients.theme_id FK accepts
+// ANY tenant's so_themes.id and RLS governs reads not writes — and the bonus
+// email path reads so_themes via the SERVICE-ROLE client (bypasses RLS). So a
+// client pointed at another tenant's theme would render that tenant's tokens/
+// logo. Every non-null theme_id write is verified to belong to the caller's
+// tenant BEFORE persisting; a mismatch is rejected (never silently nulled).
+// NULL theme_id ("inherit") is always allowed and skips the lookup.
+// ===========================================================================
+
+describe('theme_id ownership on client writes (cross-tenant guard)', () => {
+  const THEME_ID = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
+  const clientRow = { id: 'c1', name: 'Kacper', slug: 'kacper', tenant_id: TENANT }
+
+  it('createClient rejects a theme_id NOT owned by the tenant', async () => {
+    // so_themes scoped by tenant_id → a foreign/absent theme returns null.
+    const { chains } = setupAuth(
+      { so_clients: { data: clientRow, error: null }, so_themes: { data: null, error: null } },
+      ALL_PERMS,
+      OWNER,
+    )
+
+    const result = await createClientHandler({ name: 'Kacper', slug: 'kacper', theme_id: THEME_ID })
+
+    expect(result.success).toBe(false)
+    expect(result.error).toBe(messages.common.noPermission)
+    expect(chains.so_themes.eq).toHaveBeenCalledWith('tenant_id', TENANT)
+    // Rejected BEFORE the insert — so_clients never touched.
+    expect(chains.so_clients).toBeUndefined()
+  })
+
+  it('createClient persists when the theme_id belongs to the tenant', async () => {
+    const { chains } = setupAuth(
+      { so_clients: { data: clientRow, error: null }, so_themes: { data: { id: THEME_ID }, error: null } },
+      ALL_PERMS,
+      OWNER,
+    )
+
+    const result = await createClientHandler({ name: 'Kacper', slug: 'kacper', theme_id: THEME_ID })
+
+    expect(result.success).toBe(true)
+    expect(chains.so_clients.insert).toHaveBeenCalledWith(
+      expect.objectContaining({ theme_id: THEME_ID }),
+    )
+  })
+
+  it('createClient skips the ownership lookup when theme_id is null (inherit)', async () => {
+    const { chains } = setupAuth({ so_clients: { data: clientRow, error: null } }, ALL_PERMS, OWNER)
+
+    const result = await createClientHandler({ name: 'Kacper', slug: 'kacper' })
+
+    expect(result.success).toBe(true)
+    expect(chains.so_themes).toBeUndefined() // no theme lookup for null
+    expect(chains.so_clients.insert).toHaveBeenCalled()
+  })
+
+  it('updateClient rejects a theme_id NOT owned by the tenant', async () => {
+    const { chains } = setupAuth({
+      so_clients: { data: clientRow, error: null },
+      so_themes: { data: null, error: null },
+    })
+
+    const result = await updateClientHandler('c1', { theme_id: THEME_ID })
+
+    expect(result.success).toBe(false)
+    expect(result.error).toBe(messages.common.noPermission)
+    expect(chains.so_themes.eq).toHaveBeenCalledWith('tenant_id', TENANT)
+    // Rejected BEFORE the update — so_clients never touched.
+    expect(chains.so_clients).toBeUndefined()
+  })
+
+  it('updateClient persists when the theme_id belongs to the tenant', async () => {
+    const { chains } = setupAuth({
+      so_clients: { data: clientRow, error: null },
+      so_themes: { data: { id: THEME_ID }, error: null },
+    })
+
+    const result = await updateClientHandler('c1', { theme_id: THEME_ID })
+
+    expect(result.success).toBe(true)
+    expect(chains.so_clients.update).toHaveBeenCalledWith(
+      expect.objectContaining({ theme_id: THEME_ID }),
+    )
+  })
+
+  it('updateClient skips the ownership lookup when theme_id is cleared to null', async () => {
+    const { chains } = setupAuth({ so_clients: { data: clientRow, error: null } })
+
+    const result = await updateClientHandler('c1', { theme_id: null })
+
+    expect(result.success).toBe(true)
+    expect(chains.so_themes).toBeUndefined() // no theme lookup for null
+    expect(chains.so_clients.update).toHaveBeenCalledWith(
+      expect.objectContaining({ theme_id: null }),
+    )
+  })
+})
+
+// ===========================================================================
+// Cross-tenant theme_id write guard on CAMPAIGNS (iter E2): identical rationale
+// to the client guard above — so_campaigns.theme_id accepts ANY tenant's
+// so_themes.id, RLS governs reads not writes, and the bonus-email path reads
+// so_themes via the SERVICE-ROLE client (bypasses RLS). A campaign pointed at
+// another tenant's theme would render that tenant's tokens/logo. Every non-null
+// campaign theme_id write is verified to belong to the caller's tenant BEFORE
+// persisting; NULL ("inherit from client, then tenant") skips the lookup.
+// ===========================================================================
+
+describe('theme_id ownership on campaign writes (cross-tenant guard)', () => {
+  const THEME_ID = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
+  const campaignRow = { id: 'camp-1', client_id: 'c1', slug: 'launch' }
+
+  it('createCampaign rejects a theme_id NOT owned by the tenant', async () => {
+    const { chains } = setupAuth({
+      so_clients: { data: { id: 'c1' }, error: null }, // parent client owned
+      so_themes: { data: null, error: null }, // foreign/absent theme → rejected
+    })
+
+    const result = await createCampaignHandler({
+      client_id: 'c1',
+      slug: 'launch',
+      esp_provider: 'beehiiv',
+      esp_tag_launch: 'launch-notify',
+      theme_id: THEME_ID,
+      published: false,
+    })
+
+    expect(result.success).toBe(false)
+    expect(result.error).toBe(messages.common.noPermission)
+    expect(chains.so_themes.eq).toHaveBeenCalledWith('tenant_id', TENANT)
+    // Rejected BEFORE the insert — so_campaigns never touched.
+    expect(chains.so_campaigns).toBeUndefined()
+  })
+
+  it('createCampaign persists when the theme_id belongs to the tenant', async () => {
+    const { chains } = setupAuth({
+      so_clients: { data: { id: 'c1' }, error: null },
+      so_themes: { data: { id: THEME_ID }, error: null },
+      so_campaigns: { data: campaignRow, error: null },
+    })
+
+    const result = await createCampaignHandler({
+      client_id: 'c1',
+      slug: 'launch',
+      esp_provider: 'beehiiv',
+      esp_tag_launch: 'launch-notify',
+      theme_id: THEME_ID,
+      published: false,
+    })
+
+    expect(result.success).toBe(true)
+    expect(chains.so_campaigns.insert).toHaveBeenCalledWith(
+      expect.objectContaining({ theme_id: THEME_ID }),
+    )
+  })
+
+  it('createCampaign skips the ownership lookup when theme_id is omitted (inherit)', async () => {
+    const { chains } = setupAuth({
+      so_clients: { data: { id: 'c1' }, error: null },
+      so_campaigns: { data: campaignRow, error: null },
+    })
+
+    const result = await createCampaignHandler({
+      client_id: 'c1',
+      slug: 'launch',
+      esp_provider: 'beehiiv',
+      esp_tag_launch: 'launch-notify',
+      published: false,
+    })
+
+    expect(result.success).toBe(true)
+    expect(chains.so_themes).toBeUndefined() // no theme lookup for null/omitted
+    // Insert still carries theme_id: null (inherit).
+    expect(chains.so_campaigns.insert).toHaveBeenCalledWith(
+      expect.objectContaining({ theme_id: null }),
+    )
+  })
+
+  it('updateCampaign rejects a theme_id NOT owned by the tenant', async () => {
+    const { chains } = setupAuth({
+      // so_campaigns serves assertCampaignOwned (client_id walk).
+      so_campaigns: { data: { client_id: 'c1' }, error: null },
+      so_clients: { data: { id: 'c1' }, error: null },
+      so_themes: { data: null, error: null }, // foreign theme → rejected
+    })
+
+    const result = await updateCampaignHandler('camp-1', { theme_id: THEME_ID })
+
+    expect(result.success).toBe(false)
+    expect(result.error).toBe(messages.common.noPermission)
+    expect(chains.so_themes.eq).toHaveBeenCalledWith('tenant_id', TENANT)
+    // Rejected BEFORE the update.
+    expect(chains.so_campaigns.update).not.toHaveBeenCalled()
+  })
+
+  it('updateCampaign persists when the theme_id belongs to the tenant', async () => {
+    const { chains } = setupAuth({
+      so_campaigns: { data: { id: 'camp-1', client_id: 'c1' }, error: null },
+      so_clients: { data: { id: 'c1' }, error: null },
+      so_themes: { data: { id: THEME_ID }, error: null },
+    })
+
+    const result = await updateCampaignHandler('camp-1', { theme_id: THEME_ID })
+
+    expect(result.success).toBe(true)
+    expect(chains.so_campaigns.update).toHaveBeenCalledWith(
+      expect.objectContaining({ theme_id: THEME_ID }),
+    )
+  })
+
+  it('updateCampaign skips the ownership lookup when theme_id is cleared to null', async () => {
+    const { chains } = setupAuth({
+      so_campaigns: { data: { id: 'camp-1', client_id: 'c1' }, error: null },
+      so_clients: { data: { id: 'c1' }, error: null },
+    })
+
+    const result = await updateCampaignHandler('camp-1', { theme_id: null })
+
+    expect(result.success).toBe(true)
+    expect(chains.so_themes).toBeUndefined() // no theme lookup for null
+    expect(chains.so_campaigns.update).toHaveBeenCalledWith(
+      expect.objectContaining({ theme_id: null }),
+    )
+  })
+})
+
+// ===========================================================================
 // Update schemas never drop required ids (features/CLAUDE.md gotcha)
 // ===========================================================================
 

@@ -61,7 +61,10 @@ type BlockTypeKey =
  */
 type TypographicBlockType = 'header' | 'heading' | 'text' | 'cta' | 'footer'
 
-export type TypographyDefaults = Required<BlockTypography>
+// Token-reference fields (textColorToken) are ADDITIVE overrides — a default
+// block carries a literal color, never a token — so they are excluded from the
+// defaults' required shape.
+export type TypographyDefaults = Required<Omit<BlockTypography, 'textColorToken'>>
 
 export const DEFAULT_BLOCK_TYPOGRAPHY: Record<TypographicBlockType, TypographyDefaults> = {
   header: { textAlign: 'left', textColor: '#0f172a' },

@@ -83,6 +83,37 @@ function assertClientOwned(
   })
 }
 
+/**
+ * Verify a theme belongs to the tenant BEFORE it is persisted onto a client.
+ * NULL theme_id ("inherit the organization theme") is always allowed and skips
+ * the check. A non-null id is rejected (standard no-permission) when it does NOT
+ * resolve under the caller's tenant — the FK alone accepts ANY tenant's
+ * so_themes.id, RLS governs reads not writes, and the bonus-email path reads
+ * so_themes via the SERVICE-ROLE client (bypasses RLS), so a client pointed at
+ * another tenant's theme would render that tenant's tokens/logo. Reject the
+ * write (never silently null it), mirroring assertClientOwned.
+ */
+function assertThemeOwnedIfPresent(
+  auth: AuthContextFull,
+  themeId: string | null | undefined,
+): ResultAsync<undefined, string> {
+  if (!themeId) return okAsync(undefined)
+  return ResultAsync.fromPromise(
+    tbl(auth, 'so_themes')
+      .select('id')
+      .eq('id', themeId)
+      .eq('tenant_id', auth.tenantId)
+      .maybeSingle(),
+    dbError,
+  ).andThen((res) => {
+    const r = res as { data: { id: string } | null; error: DbErrorShape }
+    if (r.error) return err(mapDbError(r.error, 'assertThemeOwned'))
+    // Missing OR belongs to another tenant → indistinguishable, both forbidden.
+    if (!r.data) return err(messages.common.noPermission)
+    return ok(undefined)
+  })
+}
+
 /** Verify a campaign belongs to the tenant by walking campaign → client. */
 function assertCampaignOwned(
   auth: AuthContextFull,
@@ -137,7 +168,7 @@ function assertBonusOwned(
 // resolveMailSender, features/venture/mail/) reads the real secrets via a
 // separate select on the service-role or auth-context client.
 const ADMIN_CLIENT_COLUMNS =
-  'id, tenant_id, name, slug, mail_provider, resend_from_email, gmail_address, sender_name, created_at, updated_at, has_resend_api_key, has_gmail_app_password'
+  'id, tenant_id, name, slug, mail_provider, resend_from_email, gmail_address, sender_name, theme_id, created_at, updated_at, has_resend_api_key, has_gmail_app_password'
 
 /**
  * List the tenant's venture clients. `tenantId` is honored ONLY for a super_admin
@@ -176,23 +207,29 @@ export function createClientHandler(
       // insert would fail with an opaque RLS error — reject it cleanly here
       // first with the standard no-permission message.
       isUnscopedActor(auth)
-        ? ResultAsync.fromPromise(
-            tbl(auth, 'so_clients')
-              .insert({
-                name: input.name,
-                slug: input.slug,
-                tenant_id: auth.tenantId,
-                mail_provider: input.mail_provider ?? 'resend_shared',
-                resend_api_key: input.resend_api_key ?? null,
-                resend_from_email: input.resend_from_email ?? null,
-                gmail_address: input.gmail_address ?? null,
-                gmail_app_password: input.gmail_app_password ?? null,
-                sender_name: input.sender_name ?? null,
-              })
-              .select(ADMIN_CLIENT_COLUMNS)
-              .single(),
-            dbError,
-          ).andThen(fromSupabaseSafe<AdminClient>('createClient'))
+        ? // A non-null theme_id must belong to the caller's tenant (cross-tenant
+          // theme write guard) BEFORE the insert.
+          assertThemeOwnedIfPresent(auth, input.theme_id).andThen(() =>
+            ResultAsync.fromPromise(
+              tbl(auth, 'so_clients')
+                .insert({
+                  name: input.name,
+                  slug: input.slug,
+                  tenant_id: auth.tenantId,
+                  mail_provider: input.mail_provider ?? 'resend_shared',
+                  resend_api_key: input.resend_api_key ?? null,
+                  resend_from_email: input.resend_from_email ?? null,
+                  gmail_address: input.gmail_address ?? null,
+                  gmail_app_password: input.gmail_app_password ?? null,
+                  sender_name: input.sender_name ?? null,
+                  // NULL = inherit the organization's theme (design § Assignment UX).
+                  theme_id: input.theme_id ?? null,
+                })
+                .select(ADMIN_CLIENT_COLUMNS)
+                .single(),
+              dbError,
+            ).andThen(fromSupabaseSafe<AdminClient>('createClient')),
+          )
         : errAsync<AdminClient, string>(messages.common.noPermission),
     ),
   )
@@ -204,16 +241,20 @@ export function updateClientHandler(
 ): Promise<MutationResult<AdminClient>> {
   return toMutation(
     gated(PERM.clients, (auth) =>
-      ResultAsync.fromPromise(
-        tbl(auth, 'so_clients')
-          .update(buildClientPatch(input))
-          // Double scope: id AND tenant_id — a foreign id updates zero rows.
-          .eq('id', id)
-          .eq('tenant_id', auth.tenantId)
-          .select(ADMIN_CLIENT_COLUMNS)
-          .single(),
-        dbError,
-      ).andThen(fromSupabaseSafe<AdminClient>('updateClient')),
+      // A non-null theme_id must belong to the caller's tenant (cross-tenant
+      // theme write guard) BEFORE the update. Null/absent skips the check.
+      assertThemeOwnedIfPresent(auth, input.theme_id).andThen(() =>
+        ResultAsync.fromPromise(
+          tbl(auth, 'so_clients')
+            .update(buildClientPatch(input))
+            // Double scope: id AND tenant_id — a foreign id updates zero rows.
+            .eq('id', id)
+            .eq('tenant_id', auth.tenantId)
+            .select(ADMIN_CLIENT_COLUMNS)
+            .single(),
+          dbError,
+        ).andThen(fromSupabaseSafe<AdminClient>('updateClient')),
+      ),
     ),
   )
 }
@@ -252,7 +293,7 @@ export function deleteClientHandler(id: string): Promise<VoidResult> {
 // insert/update defaults to '*' → also uses this list. The route/webhook verify
 // path (ingest.server.ts) reads the real secret via a separate select.
 const ADMIN_CAMPAIGN_COLUMNS =
-  'id, client_id, slug, display_name, brand, esp_provider, esp_audience_ref, esp_tag_launch, published, created_at, updated_at, has_webhook_secret, lead_source_provider, lead_source_config'
+  'id, client_id, slug, display_name, brand, theme_id, esp_provider, esp_audience_ref, esp_tag_launch, published, created_at, updated_at, has_webhook_secret, lead_source_provider, lead_source_config'
 
 // ---------------------------------------------------------------------------
 // Publish gate (iter 2b backend). A campaign may go published=true ONLY when a
@@ -349,6 +390,9 @@ export function createCampaignHandler(
     gated(PERM.campaigns, (auth) =>
       // Verify the parent client belongs to the tenant BEFORE inserting.
       assertClientOwned(auth, input.client_id)
+        // A non-null theme_id must belong to the caller's tenant (cross-tenant
+        // theme write guard, same as the client theme) BEFORE the insert.
+        .andThen(() => assertThemeOwnedIfPresent(auth, input.theme_id))
         // Publish gate: to CREATE already-published, a provider + its required
         // config must be set. A draft (published=false/omitted) skips the gate.
         // On create, all state comes from the input — no DB read needed.
@@ -373,6 +417,9 @@ export function updateCampaignHandler(
   return toMutation(
     gated(PERM.campaigns, (auth) =>
       assertCampaignOwned(auth, id)
+        // A non-null theme_id must belong to the caller's tenant (cross-tenant
+        // theme write guard) BEFORE the update. Null/absent skips the check.
+        .andThen(() => assertThemeOwnedIfPresent(auth, input.theme_id))
         // Read the current row ONCE when the update could either (a) change the
         // resulting publish validity or (b) need the current provider to
         // sanitize a config-only edit. Otherwise `null` (no DB read).
@@ -577,6 +624,8 @@ function buildClientPatch(input: UpdateClientInput): Record<string, unknown> {
   if (input.resend_api_key !== undefined) patch.resend_api_key = input.resend_api_key
   if (input.gmail_app_password !== undefined)
     patch.gmail_app_password = input.gmail_app_password
+  // Present = reassign (uuid) or clear to inherit (null); absent = leave untouched.
+  if (input.theme_id !== undefined) patch.theme_id = input.theme_id
   return patch
 }
 
@@ -688,6 +737,8 @@ function buildCampaignInsert(input: CreateCampaignInput): Record<string, unknown
     slug: input.slug,
     display_name: input.display_name ?? null,
     brand: input.brand ?? null,
+    // NULL = inherit from the client, then the tenant (design § Campaign tier).
+    theme_id: input.theme_id ?? null,
     esp_provider: input.esp_provider,
     esp_audience_ref: input.esp_audience_ref ?? null,
     esp_tag_launch: input.esp_tag_launch,
@@ -713,6 +764,8 @@ function buildCampaignPatch(
   if (input.slug !== undefined) patch.slug = input.slug
   if (input.display_name !== undefined) patch.display_name = input.display_name
   if (input.brand !== undefined) patch.brand = input.brand
+  // Present = reassign (uuid) or clear to inherit (null); absent = leave untouched.
+  if (input.theme_id !== undefined) patch.theme_id = input.theme_id
   if (input.esp_provider !== undefined) patch.esp_provider = input.esp_provider
   if (input.esp_audience_ref !== undefined) patch.esp_audience_ref = input.esp_audience_ref
   if (input.esp_tag_launch !== undefined) patch.esp_tag_launch = input.esp_tag_launch

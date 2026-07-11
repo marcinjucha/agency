@@ -62,6 +62,9 @@ export const routes = {
     execution: (id: string) => `/admin/workflows/executions/${id}`,
 
     // System
+    themes: '/admin/themes',
+    themeNew: '/admin/themes/new',
+    theme: (id: string) => `/admin/themes/${id}`,
     emailTemplates: '/admin/email-templates',
     emailTemplate: (type: string) => `/admin/email-templates/${type}`,
     settings: '/admin/settings',

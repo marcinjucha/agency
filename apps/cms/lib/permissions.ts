@@ -47,6 +47,10 @@ const PERMISSION_GROUPS = {
       'bonus_funnel.bonuses',
     ] as const,
   },
+  design: {
+    key: 'design',
+    children: ['design.themes'] as const,
+  },
   system: {
     key: 'system',
     children: [
@@ -188,6 +192,7 @@ export const ROUTE_PERMISSION_MAP: Record<string, PermissionKey> = {
   '/admin/venture/clients': 'bonus_funnel.clients',
   '/admin/venture': 'bonus_funnel.campaigns',
   '/admin/workflows': 'workflows',
+  '/admin/themes': 'design.themes',
   '/admin/email-templates': 'system.email_templates',
   '/admin/settings': 'system.settings',
   '/admin/users': 'system.users',
@@ -248,6 +253,7 @@ export const ROUTE_FEATURE_MAP: Record<string, ParentKey> = {
   '/admin/venture/clients': 'bonus_funnel',
   '/admin/venture': 'bonus_funnel',
   '/admin/workflows': 'workflows',
+  '/admin/themes': 'design',
   '/admin/email-templates': 'system',
   '/admin/settings': 'system',
   '/admin/users': 'system',

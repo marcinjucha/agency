@@ -40,7 +40,7 @@ import { getLeadSourceSpec } from '../lead-sources/specs'
 import { evaluateEditorPublishGate } from '../utils/lead-source-publish-gate'
 import { resolveMessageKey } from '../utils/resolve-message-key'
 import { VentureClientSelect } from './VentureClientSelect'
-import { CampaignBrandEditor } from './CampaignBrandEditor'
+import { CampaignThemeCard } from './CampaignThemeCard'
 import { VentureBonusManager } from './VentureBonusManager'
 import { LeadSourceConfigFields } from './LeadSourceConfigFields'
 
@@ -94,6 +94,11 @@ export function VentureCampaignEditor({ campaign }: VentureCampaignEditorProps) 
         logo_url: brand?.logo_url ?? '',
         font: brand?.font ?? '',
       },
+      // Assigned named theme (so_campaigns.theme_id). NULL = inherit the client
+      // theme (design § Campaign tier); a uuid = a library theme. The freeform
+      // `brand` above is the third, mutually-exclusive tier — CampaignThemeCard
+      // keeps exactly one of {theme_id, brand} populated per its 3-way mode.
+      theme_id: campaign?.theme_id ?? null,
       esp_provider: campaign?.esp_provider ?? 'beehiiv',
       esp_audience_ref: campaign?.esp_audience_ref ?? '',
       esp_tag_launch: campaign?.esp_tag_launch ?? 'launch-notify',
@@ -168,6 +173,8 @@ export function VentureCampaignEditor({ campaign }: VentureCampaignEditorProps) 
               slug: data.slug,
               display_name: data.display_name ?? null,
               brand: data.brand ?? null,
+              // null = inherit the client theme, a uuid = a library theme.
+              theme_id: data.theme_id ?? null,
               esp_provider: data.esp_provider,
               esp_audience_ref: data.esp_audience_ref ?? null,
               esp_tag_launch: data.esp_tag_launch,
@@ -330,7 +337,7 @@ export function VentureCampaignEditor({ campaign }: VentureCampaignEditorProps) 
       <div className="w-full flex-1 px-4 py-6 sm:px-6">
         <div className="mx-auto max-w-[1400px]">
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_420px]">
-            {/* LEFT — campaign core + brand + bonuses */}
+            {/* LEFT — campaign core + bonuses */}
             <div className="flex max-w-4xl flex-col gap-6">
               {/* Client */}
               <div className="space-y-1.5">
@@ -385,15 +392,15 @@ export function VentureCampaignEditor({ campaign }: VentureCampaignEditorProps) 
                 {errors.slug && <p className="text-xs text-destructive">{errors.slug.message}</p>}
               </div>
 
-              {/* Brand */}
-              <CampaignBrandEditor register={register} watch={watch} setValue={setValue} />
-
               {/* Bonuses */}
               <VentureBonusManager campaignId={campaign?.id ?? null} />
             </div>
 
-            {/* RIGHT — ESP + status + delete */}
+            {/* RIGHT — appearance + ESP + status + delete */}
             <div className="flex flex-col gap-6">
+              {/* Wygląd kampanii — 3-way theme (inherit / library / own brand) */}
+              <CampaignThemeCard register={register} watch={watch} setValue={setValue} />
+
               <CollapsibleCard title={messages.venture.espTitle} defaultOpen>
                 <div className="space-y-5">
                   <div className="space-y-1.5">

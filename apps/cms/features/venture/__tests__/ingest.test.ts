@@ -5,6 +5,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 vi.mock('../mail/bonus-email', () => ({
   buildBonusEmail: vi.fn(async () => ({ subject: 'Subj', html: '<p>html</p>' })),
 }))
+import { buildBonusEmail } from '../mail/bonus-email'
 
 // Isolate the real `resolveMailSender` path (used by the new gmail_smtp test
 // below, exercising resolveMailSender for real rather than injecting a fake)
@@ -45,6 +46,7 @@ const CAMPAIGN = {
   esp_audience_ref: 'pub_123',
   esp_tag_launch: 'launch-notify',
   display_name: 'Kacper Launch',
+  lead_source_provider: null,
   clientMail: {
     mail_provider: 'resend_shared',
     resend_api_key: null,
@@ -53,6 +55,32 @@ const CAMPAIGN = {
     gmail_app_password: null,
     sender_name: null,
   },
+  // client-theming: named-theme FK + inline fallback attached by resolveCampaign.
+  // client* = so_clients own brand; tenant* = agency fallback (iter D2);
+  // campaign* = per-launch tier (iter E2). All null here → fetchThemeTokens
+  // returns {} for all three → resolveClientTheme falls to the neutral default.
+  clientThemeId: null,
+  clientTheme: null,
+  tenantThemeId: null,
+  tenantTheme: null,
+  campaignThemeId: null,
+  campaignBrand: null,
+}
+
+// The raw so_campaigns SELECT row (DB column names) that resolveCampaign maps
+// into the domain CampaignRow above. `theme_id`/`brand` are the DB columns that
+// become `campaignThemeId`/`campaignBrand`. Used as the campaign-query default so
+// resolveCampaign's DB→domain mapping is exercised faithfully.
+const CAMPAIGN_DB_ROW = {
+  id: 'campaign-1',
+  tally_webhook_secret: 'whsec_test',
+  esp_provider: 'beehiiv',
+  esp_audience_ref: 'pub_123',
+  esp_tag_launch: 'launch-notify',
+  display_name: 'Kacper Launch',
+  lead_source_provider: null,
+  theme_id: null,
+  brand: null,
 }
 
 type Result = { data: unknown; error: { message: string; code?: string } | null }
@@ -62,24 +90,53 @@ type Result = { data: unknown; error: { message: string; code?: string } | null 
 function makeSupabase(cfg: {
   client?: Result
   campaign?: Result
+  tenant?: Result
   duplicate?: Result
   insert?: Result
   bonuses?: Result
+  themeRow?: Result
 }) {
   const clientBuilder = {
     select: vi.fn(() => clientBuilder),
     eq: vi.fn(() => clientBuilder),
     maybeSingle: vi.fn(() =>
       Promise.resolve(
-        cfg.client ?? { data: { id: 'client-1', ...CAMPAIGN.clientMail }, error: null },
+        cfg.client ?? {
+          data: {
+            id: 'client-1',
+            tenant_id: 'tenant-1',
+            theme_id: null,
+            theme: null,
+            ...CAMPAIGN.clientMail,
+          },
+          error: null,
+        },
       ),
     ),
+  }
+
+  // tenants(theme_id, theme) lookup — resolveCampaign fetches the agency-brand
+  // fallback by client.tenant_id after the campaign is confirmed to exist.
+  const tenantBuilder = {
+    select: vi.fn(() => tenantBuilder),
+    eq: vi.fn(() => tenantBuilder),
+    maybeSingle: vi.fn(() =>
+      Promise.resolve(cfg.tenant ?? { data: { theme_id: null, theme: null }, error: null }),
+    ),
+  }
+
+  // so_themes(tokens) lookup — fetchThemeTokens resolves a named-theme FK to its
+  // tokens blob. Only queried when a *ThemeId is non-null.
+  const themesBuilder = {
+    select: vi.fn(() => themesBuilder),
+    eq: vi.fn(() => themesBuilder),
+    maybeSingle: vi.fn(() => Promise.resolve(cfg.themeRow ?? { data: null, error: null })),
   }
 
   const campaignBuilder = {
     select: vi.fn(() => campaignBuilder),
     eq: vi.fn(() => campaignBuilder),
-    maybeSingle: vi.fn(() => Promise.resolve(cfg.campaign ?? { data: CAMPAIGN, error: null })),
+    maybeSingle: vi.fn(() => Promise.resolve(cfg.campaign ?? { data: CAMPAIGN_DB_ROW, error: null })),
   }
 
   const leadsSelectChain = {
@@ -112,10 +169,14 @@ function makeSupabase(cfg: {
         return clientBuilder
       case 'so_campaigns':
         return campaignBuilder
+      case 'tenants':
+        return tenantBuilder
       case 'so_leads':
         return leadsBuilder
       case 'so_bonuses':
         return bonusesBuilder
+      case 'so_themes':
+        return themesBuilder
       case 'so_esp_sync_log':
         return syncLogBuilder
       default:
@@ -127,6 +188,8 @@ function makeSupabase(cfg: {
     from,
     clientBuilder,
     campaignBuilder,
+    tenantBuilder,
+    themesBuilder,
     leadsBuilder,
     leadsUpdateChain,
     bonusesBuilder,
@@ -380,6 +443,177 @@ describe('ingestLead', () => {
       subject: 'Subj',
       html: '<p>html</p>',
     })
+  })
+
+  it('resolves the client theme override and feeds it to the bonus email builder', async () => {
+    const supabase = makeSupabase({})
+    const provider = makeProvider()
+    const deps = makeDeps(supabase, provider, makeMailSender())
+    // Client override wins over tenant (null) + neutral default. headerBackground
+    // is dark / headerText light so the WCAG contrast guard keeps them as-is.
+    const themedCampaign = {
+      ...CAMPAIGN,
+      clientTheme: {
+        primary: '#123456',
+        headerBackground: '#101820',
+        headerText: '#fefefe',
+      },
+      tenantTheme: null,
+    }
+
+    const outcome = await ingestLead(deps, themedCampaign, LEAD)
+
+    expect(outcome).toMatchObject({ status: 'ingested', emailSent: true })
+    // The RESOLVED theme (client override backfilled by the default) reaches the
+    // builder — proving the client+tenant themes were fed through resolveClientTheme.
+    expect(buildBonusEmail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        theme: expect.objectContaining({
+          primary: '#123456',
+          headerBackground: '#101820',
+          headerText: '#fefefe',
+          // Untouched tokens backfill from HALO_EFEKT_DEFAULT.
+          text: '#334155',
+          footerText: '#94a3b8',
+        }),
+      }),
+    )
+  })
+
+  it('resolves the client theme via theme_id (named-theme library) from so_themes', async () => {
+    const supabase = makeSupabase({
+      themeRow: {
+        data: {
+          tokens: { primary: '#123456', headerBackground: '#101820', headerText: '#fefefe' },
+        },
+        error: null,
+      },
+    })
+    const provider = makeProvider()
+    const deps = makeDeps(supabase, provider, makeMailSender())
+    // Client carries a named-theme FK (theme_id) and NO inline theme — the tokens
+    // come from so_themes, not the inline JSONB.
+    const themedCampaign = {
+      ...CAMPAIGN,
+      clientThemeId: 'theme-1',
+      clientTheme: null,
+      tenantThemeId: null,
+      tenantTheme: null,
+    }
+
+    const outcome = await ingestLead(deps, themedCampaign, LEAD)
+
+    expect(outcome).toMatchObject({ status: 'ingested', emailSent: true })
+    // so_themes was queried by the FK id.
+    expect(supabase.themesBuilder.eq).toHaveBeenCalledWith('id', 'theme-1')
+    // The tokens from so_themes reach the builder (backfilled by the default).
+    expect(buildBonusEmail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        theme: expect.objectContaining({
+          primary: '#123456',
+          headerBackground: '#101820',
+          headerText: '#fefefe',
+          text: '#334155',
+        }),
+      }),
+    )
+  })
+
+  it('campaign tier: a campaign theme_id (named library) wins over the client override', async () => {
+    const supabase = makeSupabase({
+      themeRow: {
+        data: { tokens: { primary: '#0d1b2a', headerBackground: '#101820', headerText: '#fefefe' } },
+        error: null,
+      },
+    })
+    const provider = makeProvider()
+    const deps = makeDeps(supabase, provider, makeMailSender())
+    // Campaign carries a named-theme FK; the client has its own inline override.
+    // The campaign tier is most-specific → its tokens win.
+    const themedCampaign = {
+      ...CAMPAIGN,
+      campaignThemeId: 'campaign-theme-1',
+      campaignBrand: null,
+      clientTheme: { primary: '#999999' },
+      tenantTheme: null,
+    }
+
+    const outcome = await ingestLead(deps, themedCampaign, LEAD)
+
+    expect(outcome).toMatchObject({ status: 'ingested', emailSent: true })
+    expect(supabase.themesBuilder.eq).toHaveBeenCalledWith('id', 'campaign-theme-1')
+    expect(buildBonusEmail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        theme: expect.objectContaining({
+          primary: '#0d1b2a', // campaign named-theme wins, NOT the client's #999999
+          headerBackground: '#101820',
+          headerText: '#fefefe',
+          text: '#334155', // untouched → default backfill
+        }),
+      }),
+    )
+  })
+
+  it('campaign tier: a brand-only campaign (no theme_id) colours the email via brandToThemeTokens', async () => {
+    const supabase = makeSupabase({})
+    const provider = makeProvider()
+    const deps = makeDeps(supabase, provider, makeMailSender())
+    // Legacy campaign brand blob, NO named-theme FK. brandToThemeTokens adapts it
+    // (bg→background) and it becomes the campaign source (wins over client/tenant).
+    const brandCampaign = {
+      ...CAMPAIGN,
+      campaignThemeId: null,
+      campaignBrand: { primary: '#123456', bg: '#0a0a0a' },
+      clientTheme: { primary: '#999999' },
+      tenantTheme: null,
+    }
+
+    const outcome = await ingestLead(deps, brandCampaign, LEAD)
+
+    expect(outcome).toMatchObject({ status: 'ingested', emailSent: true })
+    // theme_id null everywhere → so_themes never queried; the brand adapter is
+    // the only campaign source.
+    expect(supabase.themesBuilder.select).not.toHaveBeenCalled()
+    expect(buildBonusEmail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        theme: expect.objectContaining({
+          primary: '#123456', // from the adapted campaign brand, wins over client
+          background: '#0a0a0a', // bg → background remap
+        }),
+      }),
+    )
+  })
+
+  it('byte-identical: campaign theme_id NULL + brand NULL → client/tenant resolution unchanged', async () => {
+    const supabase = makeSupabase({})
+    const provider = makeProvider()
+    const deps = makeDeps(supabase, provider, makeMailSender())
+    // No campaign tier at all — a client override is present. The result must be
+    // exactly the pre-campaign-tier (D2) client-over-tenant resolution.
+    const noCampaignTheme = {
+      ...CAMPAIGN,
+      campaignThemeId: null,
+      campaignBrand: null,
+      clientTheme: { primary: '#123456', headerBackground: '#101820', headerText: '#fefefe' },
+      tenantTheme: null,
+    }
+
+    const outcome = await ingestLead(deps, noCampaignTheme, LEAD)
+
+    expect(outcome).toMatchObject({ status: 'ingested', emailSent: true })
+    // Campaign tier inert → so_themes never queried (no FK on any tier).
+    expect(supabase.themesBuilder.select).not.toHaveBeenCalled()
+    expect(buildBonusEmail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        theme: expect.objectContaining({
+          primary: '#123456',
+          headerBackground: '#101820',
+          headerText: '#fefefe',
+          text: '#334155',
+          footerText: '#94a3b8',
+        }),
+      }),
+    )
   })
 })
 

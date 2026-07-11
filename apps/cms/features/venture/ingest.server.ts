@@ -1,3 +1,4 @@
+import type { Json } from '@agency/database'
 import type { createServiceClient } from '@/lib/supabase/service'
 import { EspApiError } from './esp/http.server'
 import type { EspProvider, EspProviderId } from './esp/types'
@@ -5,6 +6,8 @@ import type { MappedLead } from './lead-sources/types'
 import { buildBonusEmail } from './mail/bonus-email'
 import { resolveMailSender, type ClientMailConfig } from './mail/resolve.server'
 import type { MailSender } from './mail/types'
+import { brandToThemeTokens, resolveClientTheme } from '@/lib/theme'
+import { fetchThemeTokens } from '@/lib/theme/fetch.server'
 
 // ---------------------------------------------------------------------------
 // Venture bonus-funnel — lead ingest orchestrator (iter 3).
@@ -103,10 +106,38 @@ export type CampaignRow = {
   // 401; unregistered → 401; registered → verify + parse). Nullable: a draft
   // campaign has no provider yet.
   lead_source_provider: string | null
+  // client-theming (iter D2): each brand is now a named-theme FK (`*ThemeId`)
+  // with the inline `*Theme` JSONB kept as the transition fallback. Attached by
+  // `resolveCampaign` (deferred-resolution pattern, same as `clientMail`);
+  // `sendBonusEmail` turns each (id, inline) pair into `ThemeTokens` via
+  // `fetchThemeTokens` and resolves client-over-tenant via `resolveClientTheme`.
+  // `client*` = the campaign's OWNING CLIENT's own brand (so_clients.theme_id /
+  // .theme); `tenant*` = the AGENCY brand (tenants.theme_id / .theme, the neutral
+  // fallback). All nullable — an unset FK falls to its inline blob, then default.
+  clientThemeId: string | null
+  clientTheme: Json | null
+  tenantThemeId: string | null
+  tenantTheme: Json | null
+  // campaign-theme tier (iter E2): the per-launch brand — highest specificity,
+  // wins over client + tenant when it carries any override. `campaignThemeId` is
+  // the named-theme FK (so_campaigns.theme_id); `campaignBrand` is the legacy
+  // `so_campaigns.brand` JSONB kept as the inline fallback (adapted through
+  // `brandToThemeTokens` in sendBonusEmail). Both nullable — a campaign with
+  // theme_id NULL + brand NULL yields {} → falls to client/tenant (byte-identical
+  // to the pre-campaign-tier render).
+  campaignThemeId: string | null
+  campaignBrand: Json | null
 }
 
-// Row shape fetched from so_clients — id + the plaintext mail-provider config.
-type ClientRow = { id: string } & ClientMailConfig
+// Row shape fetched from so_clients — id + tenant_id + the theme FK + inline
+// theme JSONB + the plaintext mail-provider config. `tenant_id` drives the
+// tenant-theme lookup; `theme_id`/`theme` are the client's own brand override.
+type ClientRow = {
+  id: string
+  tenant_id: string
+  theme_id: string | null
+  theme: Json | null
+} & ClientMailConfig
 
 // Resolve outcome — discriminated on `kind` (as-const single source of truth,
 // same convention as INSERT_RESULT_KINDS below). `db_error` MUST be
@@ -148,7 +179,7 @@ async function resolveClientRow(
   const { data, error } = await supabase
     .from('so_clients')
     .select(
-      'id, mail_provider, resend_api_key, resend_from_email, gmail_address, gmail_app_password, sender_name',
+      'id, tenant_id, theme_id, theme, mail_provider, resend_api_key, resend_from_email, gmail_address, gmail_app_password, sender_name',
     )
     .eq('slug', clientSlug)
     .maybeSingle()
@@ -157,7 +188,32 @@ async function resolveClientRow(
     return { kind: RESOLVE_RESULT_KINDS.dbError }
   }
   if (!data) return { kind: RESOLVE_RESULT_KINDS.notFound }
-  return { kind: RESOLVE_RESULT_KINDS.found, row: data as ClientRow }
+  return { kind: RESOLVE_RESULT_KINDS.found, row: data as unknown as ClientRow }
+}
+
+/**
+ * Fetch a tenant's brand theme reference on the service client: the named-theme
+ * FK (`theme_id`) + the inline `theme` JSONB transition fallback. Never throws —
+ * a lookup failure degrades to `{ themeId: null, inline: null }`, which
+ * `fetchThemeTokens` treats as "no theme" so the resolver falls to the neutral
+ * Halo Efekt default (same no-drop safety net as the rest of the ingest path —
+ * a missing brand never blocks a send).
+ */
+async function fetchTenantTheme(
+  supabase: ServiceClient,
+  tenantId: string,
+): Promise<{ themeId: string | null; inline: Json | null }> {
+  const { data, error } = await supabase
+    .from('tenants')
+    .select('theme_id, theme')
+    .eq('id', tenantId)
+    .maybeSingle()
+  if (error) {
+    console.error('[venture-ingest] tenant theme lookup failed:', error.message)
+    return { themeId: null, inline: null }
+  }
+  const row = data as { theme_id: string | null; theme: Json | null } | null
+  return { themeId: row?.theme_id ?? null, inline: row?.theme ?? null }
 }
 
 /**
@@ -195,8 +251,9 @@ export async function resolveCampaign(
       // iter 2: lead_source_provider is now selected — the route resolves the
       // pluggable provider from it (NULL → draft → 401; unknown → 401). This is
       // the SERVICE-role verify path, so the plaintext secret column IS read
-      // here (it is not exposed to the authenticated/admin layer).
-      'id, tally_webhook_secret, esp_provider, esp_audience_ref, esp_tag_launch, display_name, lead_source_provider',
+      // here (it is not exposed to the authenticated/admin layer). iter E2:
+      // theme_id + brand are the campaign-theme tier (FK + inline fallback).
+      'id, tally_webhook_secret, esp_provider, esp_audience_ref, esp_tag_launch, display_name, lead_source_provider, theme_id, brand',
     )
     .eq('client_id', clientRow.id)
     .eq('slug', slug)
@@ -207,6 +264,11 @@ export async function resolveCampaign(
   }
   if (!data) return { kind: RESOLVE_RESULT_KINDS.notFound }
 
+  // Tenant (agency) theme is the neutral fallback under the client's own brand.
+  // Fetched only once the campaign is confirmed to exist — never throws.
+  const tenantTheme = await fetchTenantTheme(supabase, clientRow.tenant_id)
+
+
   const {
     mail_provider,
     resend_api_key,
@@ -215,16 +277,31 @@ export async function resolveCampaign(
     gmail_app_password,
     sender_name,
   } = clientRow
+
+  // `as unknown as` (not a plain cast): the worktree shares node_modules with the
+  // MAIN checkout, whose generated @agency/database types.ts predates the iter-2a
+  // `lead_source_provider` + iter-E1 `theme_id` columns — so the literal
+  // `.select(...)` string above infers a SelectQueryError here. Runtime
+  // (staging/prod) has the columns. Same worktree types-divergence pattern as
+  // ClientAssignment in features/venture/types.ts; removable once main's types
+  // are regenerated. The DB row uses column names `theme_id`/`brand`; they are
+  // remapped to the domain `campaignThemeId`/`campaignBrand` below (destructured
+  // out of the spread so no stray column names land on the domain row).
+  const { theme_id, brand, ...campaignRow } = data as unknown as Omit<
+    CampaignRow,
+    | 'clientMail'
+    | 'clientThemeId'
+    | 'clientTheme'
+    | 'tenantThemeId'
+    | 'tenantTheme'
+    | 'campaignThemeId'
+    | 'campaignBrand'
+  > & { theme_id: string | null; brand: Json | null }
+
   return {
     kind: RESOLVE_RESULT_KINDS.found,
     campaign: {
-      // `as unknown as` (not a plain cast): the worktree shares node_modules with
-      // the MAIN checkout, whose generated @agency/database types.ts predates the
-      // iter-2a `lead_source_provider` column — so the literal `.select(...)`
-      // string above infers a SelectQueryError here. Runtime (staging/prod) has
-      // the column. Same worktree types-divergence pattern as ClientAssignment in
-      // features/venture/types.ts; removable once main's types are regenerated.
-      ...(data as unknown as Omit<CampaignRow, 'clientMail'>),
+      ...campaignRow,
       clientMail: {
         mail_provider,
         resend_api_key,
@@ -233,6 +310,15 @@ export async function resolveCampaign(
         gmail_app_password,
         sender_name,
       },
+      // Named-theme FK + inline fallback — resolved in sendBonusEmail via
+      // fetchThemeTokens + resolveClientTheme. `client*`/`tenant*` come from
+      // so_clients / tenants; `campaign*` is the campaign row's own theme tier.
+      clientThemeId: clientRow.theme_id,
+      clientTheme: clientRow.theme,
+      tenantThemeId: tenantTheme.themeId,
+      tenantTheme: tenantTheme.inline,
+      campaignThemeId: theme_id,
+      campaignBrand: brand,
     },
   }
 }
@@ -466,9 +552,27 @@ async function sendBonusEmail(
   }
   try {
     const bonuses = await fetchPublishedBonuses(deps.supabase, campaign.id)
+    // Resolve each tier's tokens from its named-theme FK (falling back to the
+    // inline JSONB), then resolve campaign-over-client-over-tenant with the
+    // neutral default backfilling any absent token. fetchThemeTokens never throws
+    // → {} on any failure, so a bad/missing theme degrades to the default (never
+    // blocks send). The campaign tier's inline fallback is the legacy `brand`
+    // JSONB adapted via brandToThemeTokens; a campaign with theme_id NULL + brand
+    // NULL yields {} → falls to client/tenant exactly as before the campaign tier.
+    const [tenantTheme, clientTheme, campaignTheme] = await Promise.all([
+      fetchThemeTokens(deps.supabase, campaign.tenantThemeId, campaign.tenantTheme),
+      fetchThemeTokens(deps.supabase, campaign.clientThemeId, campaign.clientTheme),
+      fetchThemeTokens(
+        deps.supabase,
+        campaign.campaignThemeId,
+        brandToThemeTokens(campaign.campaignBrand) as unknown as Json,
+      ),
+    ])
+    const theme = resolveClientTheme({ tenantTheme, clientTheme, campaignTheme })
     const { subject, html } = await buildBonusEmail({
       campaignDisplayName: campaign.display_name,
       bonuses,
+      theme,
     })
     const resolveSender = deps.resolveMailSender ?? resolveMailSender
     const sender = resolveSender(campaign.clientMail)

@@ -7,7 +7,8 @@ import {
   templateSlugSchema,
 } from '@/features/email/validation'
 import { renderEmailBlocks, DEFAULT_BLOCKS } from './render.server'
-import type { Block } from '@agency/email'
+import { resolveTenantThemeMap } from './utils/resolve-tenant-theme.server'
+import type { Block, ThemeColorMap } from '@agency/email'
 import type { Tables } from '@agency/database'
 import { messages } from '@/lib/messages'
 import { z } from 'zod'
@@ -84,9 +85,14 @@ const renderEmailPreviewSchema = z.object({ blocks: updateEmailTemplateSchema.sh
 export const renderEmailPreviewFn = createServerFn({ method: 'POST' })
   .inputValidator((input: z.infer<typeof renderEmailPreviewSchema>) => renderEmailPreviewSchema.parse(input))
   .handler(async ({ data: { blocks } }): Promise<{ html: string }> => {
-    const result = await requireAuthContext().andThen(() =>
+    const result = await requireAuthContext().andThen(({ supabase, tenantId }) =>
       ResultAsync.fromPromise(
-        renderEmailBlocks(blocks as Block[]),
+        (async () => {
+          // Bake the SAME resolved theme map used at save into the preview HTML,
+          // so preview colours match the stored html_body byte-for-byte.
+          const theme = await resolveTenantThemeMap(supabase, tenantId)
+          return renderEmailBlocks(blocks as Block[], theme)
+        })(),
         (e) => (e instanceof Error ? e.message : messages.common.unknownError)
       )
     )
@@ -98,6 +104,25 @@ export const renderEmailPreviewFn = createServerFn({ method: 'POST' })
       }
     )
   })
+
+/**
+ * Resolved theme map for the CURRENT tenant — powers the editor's theme-token
+ * swatches (ThemeTokenSelect). Same map the preview + save render paths use.
+ * Never-fail: resolveTenantThemeMap already degrades to HALO_EFEKT_DEFAULT, so
+ * this always returns a full 9-token map (the `.match` err arm is unreachable).
+ */
+export const getResolvedEmailThemeFn = createServerFn({ method: 'POST' }).handler(
+  async (): Promise<ThemeColorMap> => {
+    const result = await requireAuthContext().andThen(({ supabase, tenantId }) =>
+      ResultAsync.fromPromise(resolveTenantThemeMap(supabase, tenantId), dbError)
+    )
+
+    return result.match(
+      (theme) => theme,
+      () => ({}),
+    )
+  }
+)
 
 // ---------------------------------------------------------------------------
 // Server Functions — Queries
@@ -239,7 +264,10 @@ function saveTemplate(
 ): ResultAsync<undefined, string> {
   return ResultAsync.fromPromise(
     (async () => {
-      const html_body = await renderEmailBlocks(blocks)
+      // Bake tenant theme colours into html_body at save — n8n reads this stored
+      // HTML, so it MUST use the same resolved map as the live preview.
+      const theme = await resolveTenantThemeMap(auth.supabase, auth.tenantId)
+      const html_body = await renderEmailBlocks(blocks, theme)
 
       // AAA-T-221 (2026-05-15): persist EXACTLY the user-managed list — no
       // server-side auto-merge with detected `{{key}}` tokens from content.
@@ -295,7 +323,8 @@ function insertTemplate(
   return ResultAsync.fromPromise(
     (async () => {
       const defaultSubject = 'Temat wiadomości — {{firstName}}'
-      const html_body = await renderEmailBlocks(DEFAULT_BLOCKS)
+      const theme = await resolveTenantThemeMap(auth.supabase, auth.tenantId)
+      const html_body = await renderEmailBlocks(DEFAULT_BLOCKS, theme)
 
       // AAA-T-221 (2026-05-15): no auto-seed. User decides which variables
       // to register via the Zmienne tab — empty list at creation time, opt-in

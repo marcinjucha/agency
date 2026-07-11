@@ -5,6 +5,7 @@ import type { BlockTypography, TypographyDefaults } from '@agency/email'
 import { messages } from '@/lib/messages'
 import { ColorPicker } from '@/components/ui/color-picker'
 import { SegmentedControl } from './SegmentedControl'
+import { ThemeTokenSelect } from './ThemeTokenSelect'
 
 /**
  * TypographySection — minimalny edytor tekstu w bloku.
@@ -34,6 +35,27 @@ export function TypographySection({ value, defaults, onChange }: TypographySecti
     } else {
       merged[key] = next
     }
+    onChange(merged)
+  }
+
+  // Token and raw hex are mutually exclusive: picking a token clears the raw
+  // textColor; picking a custom hex clears the token. The renderer's ladder
+  // (token ref → raw hex → default) would honour token first anyway, but
+  // clearing keeps the stored block unambiguous + the UI in sync.
+  function selectToken(token: string | undefined) {
+    const merged: Partial<BlockTypography> = { ...value }
+    if (token === undefined) {
+      delete merged.textColorToken
+    } else {
+      merged.textColorToken = token
+      delete merged.textColor
+    }
+    onChange(merged)
+  }
+
+  function setCustomColor(hex: string) {
+    const merged: Partial<BlockTypography> = { ...value, textColor: hex }
+    delete merged.textColorToken
     onChange(merged)
   }
 
@@ -67,17 +89,25 @@ export function TypographySection({ value, defaults, onChange }: TypographySecti
         onChange={(next) => update('textAlign', next)}
       />
 
-      <div className="space-y-1">
-        <Label htmlFor={textColorId} className="text-xs font-medium text-muted-foreground">
-          {messages.email.inspectorTypographyTextColor}
-        </Label>
-        <ColorPicker
-          id={textColorId}
-          label={messages.email.inspectorTypographyTextColor}
-          value={activeTextColor}
-          onChange={(next) => update('textColor', next)}
-        />
-      </div>
+      <ThemeTokenSelect
+        label={messages.email.inspectorColorSourceToken}
+        value={value.textColorToken}
+        onChange={selectToken}
+      />
+
+      {value.textColorToken ? null : (
+        <div className="space-y-1">
+          <Label htmlFor={textColorId} className="text-xs font-medium text-muted-foreground">
+            {messages.email.inspectorTypographyTextColor}
+          </Label>
+          <ColorPicker
+            id={textColorId}
+            label={messages.email.inspectorTypographyTextColor}
+            value={activeTextColor}
+            onChange={setCustomColor}
+          />
+        </div>
+      )}
     </div>
   )
 }

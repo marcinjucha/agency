@@ -26,3 +26,11 @@ export {
   isBorderableBlockType,
 } from './blocks/defaults'
 export type { TypographyDefaults } from './blocks/defaults'
+export type { ThemeColorMap } from './theme'
+export {
+  BLOCK_TEXT_COLOR_TOKEN,
+  BLOCK_BACKGROUND_COLOR_TOKEN,
+  isRenderableHex,
+  themedColor,
+  resolveThemedColor,
+} from './theme'

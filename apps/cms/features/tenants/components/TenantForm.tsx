@@ -11,12 +11,14 @@ import { SUBSCRIPTION_STATUSES, type TenantFormData } from '../types'
 import { getTenantFn, createTenantFn, updateTenantFn } from '../server'
 import type { PermissionKey } from '@/lib/permissions'
 import { FeatureFlagSelector } from './FeatureFlagSelector'
+import { ThemePicker } from '@/features/themes/components/ThemePicker'
 import {
   Button,
   Card,
   CardContent,
   CardHeader,
   CardTitle,
+  CollapsibleCard,
   Input,
   Label,
   Select,
@@ -73,6 +75,7 @@ export function TenantForm({ tenantId }: TenantFormProps) {
       email: '',
       domain: '',
       subscription_status: 'trial',
+      theme_id: null,
       enabled_features: ['dashboard'],
     },
   })
@@ -85,6 +88,7 @@ export function TenantForm({ tenantId }: TenantFormProps) {
         email: tenant.email,
         domain: tenant.domain ?? '',
         subscription_status: tenant.subscription_status,
+        theme_id: tenant.theme_id ?? null,
         enabled_features: tenant.enabled_features,
       })
     }
@@ -97,6 +101,7 @@ export function TenantForm({ tenantId }: TenantFormProps) {
         email: data.email,
         domain: data.domain || null,
         subscription_status: data.subscription_status,
+        theme_id: data.theme_id ?? null,
         enabled_features: data.enabled_features as PermissionKey[],
       }
       const result = isEditing
@@ -274,6 +279,26 @@ export function TenantForm({ tenantId }: TenantFormProps) {
             )}
           </CardContent>
         </Card>
+
+        {/* Organization base theme */}
+        <CollapsibleCard title={messages.themes.picker.orgCardTitle} defaultOpen>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              {messages.themes.picker.orgCardDescription}
+            </p>
+            <Controller
+              name="theme_id"
+              control={control}
+              render={({ field }) => (
+                <ThemePicker
+                  level="org"
+                  value={field.value ?? null}
+                  onChange={field.onChange}
+                />
+              )}
+            />
+          </div>
+        </CollapsibleCard>
 
         {/* Mutation error */}
         {mutation.error && (

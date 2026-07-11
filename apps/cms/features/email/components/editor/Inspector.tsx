@@ -395,6 +395,7 @@ function TypographySectionWrapper({ selected, onUpdateBlock }: TypographySection
   const current: Partial<BlockTypography> = {
     textAlign: (selected as Partial<BlockTypography>).textAlign,
     textColor: (selected as Partial<BlockTypography>).textColor,
+    textColorToken: (selected as Partial<BlockTypography>).textColorToken,
   }
 
   return (
@@ -420,6 +421,8 @@ function BorderSectionWrapper({ selected, onUpdateBlock }: BorderSectionWrapperP
     borderColor: (selected as Partial<BlockBorder>).borderColor,
     borderRadius: (selected as Partial<BlockBorder>).borderRadius,
     backgroundColor: (selected as Partial<BlockBorder>).backgroundColor,
+    borderColorToken: (selected as Partial<BlockBorder>).borderColorToken,
+    backgroundColorToken: (selected as Partial<BlockBorder>).backgroundColorToken,
   }
 
   return (

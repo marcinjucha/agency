@@ -1,4 +1,5 @@
 import type { Tables, Json } from '@agency/database'
+import type { ResolvedTheme } from '@/lib/theme'
 
 // ---------------------------------------------------------------------------
 // Admin (authenticated) row types + domain constants (iter 5a).
@@ -70,6 +71,13 @@ export type AdminClient = Omit<
 > & {
   has_resend_api_key: boolean
   has_gmail_app_password: boolean
+  // Assigned named theme FK (so_clients.theme_id → so_themes; iter D3b). Explicit
+  // until MAIN's generated types.ts is regenerated with the theme_id column —
+  // same worktree gotcha as AdminCampaign.lead_source_provider above (the shared
+  // pnpm node_modules resolves `@agency/database` to the MAIN checkout, whose
+  // types.ts predates this column; the worktree's own types.ts DOES define it).
+  // Intersecting an identical `string | null` is a no-op once main is regenerated.
+  theme_id: string | null
 }
 
 // Public (unauthenticated) contract shapes for the venture bonus-funnel landing.
@@ -97,6 +105,13 @@ export interface PublicBonus {
 export interface PublicCampaign {
   slug: string
   display_name: string | null
+  // `theme` (iter E3) is the SERVER-side RESOLVED 3-tier theme (campaign →
+  // client → tenant → Halo default): the fully-backfilled `ResolvedTheme` the
+  // landing renders. `brand` is DERIVED from `theme` (inverse BRAND_TO_THEME) and
+  // kept as an ADDITIVE dual-write — the currently-deployed landing reads
+  // `brand.logo_url`/`brand.primary`, so removing it would break prod. New
+  // landing code should prefer `theme`; `brand` is the transition surface.
+  theme: ResolvedTheme
   brand: CampaignBrand
   bonuses: PublicBonus[]
 }

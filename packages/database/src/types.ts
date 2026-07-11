@@ -7,6 +7,11 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.5"
+  }
   graphql_public: {
     Tables: {
       [_ in never]: never
@@ -549,6 +554,7 @@ export type Database = {
           folder_id: string | null
           height: number | null
           id: string
+          is_downloadable: boolean
           mime_type: string | null
           name: string
           s3_key: string | null
@@ -566,6 +572,7 @@ export type Database = {
           folder_id?: string | null
           height?: number | null
           id?: string
+          is_downloadable?: boolean
           mime_type?: string | null
           name: string
           s3_key?: string | null
@@ -583,6 +590,7 @@ export type Database = {
           folder_id?: string | null
           height?: number | null
           id?: string
+          is_downloadable?: boolean
           mime_type?: string | null
           name?: string
           s3_key?: string | null
@@ -1224,13 +1232,14 @@ export type Database = {
           esp_audience_ref: string | null
           esp_provider: string
           esp_tag_launch: string
-          has_webhook_secret: boolean
+          has_webhook_secret: boolean | null
           id: string
           lead_source_config: Json
           lead_source_provider: string | null
           published: boolean
           slug: string
           tally_webhook_secret: string | null
+          theme_id: string | null
           updated_at: string
         }
         Insert: {
@@ -1241,12 +1250,14 @@ export type Database = {
           esp_audience_ref?: string | null
           esp_provider?: string
           esp_tag_launch?: string
+          has_webhook_secret?: boolean | null
           id?: string
           lead_source_config?: Json
           lead_source_provider?: string | null
           published?: boolean
           slug: string
           tally_webhook_secret?: string | null
+          theme_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -1257,12 +1268,14 @@ export type Database = {
           esp_audience_ref?: string | null
           esp_provider?: string
           esp_tag_launch?: string
+          has_webhook_secret?: boolean | null
           id?: string
           lead_source_config?: Json
           lead_source_provider?: string | null
           published?: boolean
           slug?: string
           tally_webhook_secret?: string | null
+          theme_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -1271,6 +1284,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "so_clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "so_campaigns_theme_id_fkey"
+            columns: ["theme_id"]
+            isOneToOne: false
+            referencedRelation: "so_themes"
             referencedColumns: ["id"]
           },
         ]
@@ -1326,6 +1346,8 @@ export type Database = {
           sender_name: string | null
           slug: string
           tenant_id: string
+          theme: Json | null
+          theme_id: string | null
           updated_at: string
         }
         Insert: {
@@ -1342,6 +1364,8 @@ export type Database = {
           sender_name?: string | null
           slug: string
           tenant_id: string
+          theme?: Json | null
+          theme_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -1358,6 +1382,8 @@ export type Database = {
           sender_name?: string | null
           slug?: string
           tenant_id?: string
+          theme?: Json | null
+          theme_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -1366,6 +1392,13 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "so_clients_theme_id_fkey"
+            columns: ["theme_id"]
+            isOneToOne: false
+            referencedRelation: "so_themes"
             referencedColumns: ["id"]
           },
         ]
@@ -1451,6 +1484,41 @@ export type Database = {
             columns: ["campaign_id"]
             isOneToOne: false
             referencedRelation: "so_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      so_themes: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          tenant_id: string
+          tokens: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          tenant_id: string
+          tokens?: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          tenant_id?: string
+          tokens?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "so_themes_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]
@@ -1669,6 +1737,8 @@ export type Database = {
           id: string
           name: string
           subscription_status: string | null
+          theme: Json | null
+          theme_id: string | null
           updated_at: string | null
         }
         Insert: {
@@ -1679,6 +1749,8 @@ export type Database = {
           id?: string
           name: string
           subscription_status?: string | null
+          theme?: Json | null
+          theme_id?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -1689,9 +1761,19 @@ export type Database = {
           id?: string
           name?: string
           subscription_status?: string | null
+          theme?: Json | null
+          theme_id?: string | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "tenants_theme_id_fkey"
+            columns: ["theme_id"]
+            isOneToOne: false
+            referencedRelation: "so_themes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
@@ -2168,6 +2250,7 @@ export type Database = {
     }
     Functions: {
       can_access_so_client: { Args: { p_client_id: string }; Returns: boolean }
+      current_user_has_permission: { Args: { p_key: string }; Returns: boolean }
       current_user_role: { Args: never; Returns: string }
       current_user_tenant_id: { Args: never; Returns: string }
       get_encryption_key: { Args: never; Returns: string }
@@ -2176,6 +2259,10 @@ export type Database = {
         Returns: undefined
       }
       is_super_admin: { Args: never; Returns: boolean }
+      so_client_in_current_tenant: {
+        Args: { p_client_id: string }
+        Returns: boolean
+      }
       update_calendar_credentials: {
         Args: { p_connection_id: string; p_credentials_json: string }
         Returns: undefined
@@ -2323,101 +2410,6 @@ export type Database = {
         }
         Relationships: []
       }
-      iceberg_namespaces: {
-        Row: {
-          bucket_name: string
-          catalog_id: string
-          created_at: string
-          id: string
-          metadata: Json
-          name: string
-          updated_at: string
-        }
-        Insert: {
-          bucket_name: string
-          catalog_id: string
-          created_at?: string
-          id?: string
-          metadata?: Json
-          name: string
-          updated_at?: string
-        }
-        Update: {
-          bucket_name?: string
-          catalog_id?: string
-          created_at?: string
-          id?: string
-          metadata?: Json
-          name?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "iceberg_namespaces_catalog_id_fkey"
-            columns: ["catalog_id"]
-            isOneToOne: false
-            referencedRelation: "buckets_analytics"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      iceberg_tables: {
-        Row: {
-          bucket_name: string
-          catalog_id: string
-          created_at: string
-          id: string
-          location: string
-          name: string
-          namespace_id: string
-          remote_table_id: string | null
-          shard_id: string | null
-          shard_key: string | null
-          updated_at: string
-        }
-        Insert: {
-          bucket_name: string
-          catalog_id: string
-          created_at?: string
-          id?: string
-          location: string
-          name: string
-          namespace_id: string
-          remote_table_id?: string | null
-          shard_id?: string | null
-          shard_key?: string | null
-          updated_at?: string
-        }
-        Update: {
-          bucket_name?: string
-          catalog_id?: string
-          created_at?: string
-          id?: string
-          location?: string
-          name?: string
-          namespace_id?: string
-          remote_table_id?: string | null
-          shard_id?: string | null
-          shard_key?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "iceberg_tables_catalog_id_fkey"
-            columns: ["catalog_id"]
-            isOneToOne: false
-            referencedRelation: "buckets_analytics"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "iceberg_tables_namespace_id_fkey"
-            columns: ["namespace_id"]
-            isOneToOne: false
-            referencedRelation: "iceberg_namespaces"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       migrations: {
         Row: {
           executed_at: string | null
@@ -2499,6 +2491,7 @@ export type Database = {
           id: string
           in_progress_size: number
           key: string
+          metadata: Json | null
           owner_id: string | null
           upload_signature: string
           user_metadata: Json | null
@@ -2510,6 +2503,7 @@ export type Database = {
           id: string
           in_progress_size?: number
           key: string
+          metadata?: Json | null
           owner_id?: string | null
           upload_signature: string
           user_metadata?: Json | null
@@ -2521,6 +2515,7 @@ export type Database = {
           id?: string
           in_progress_size?: number
           key?: string
+          metadata?: Json | null
           owner_id?: string | null
           upload_signature?: string
           user_metadata?: Json | null
@@ -2639,6 +2634,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      allow_any_operation: {
+        Args: { expected_operations: string[] }
+        Returns: boolean
+      }
+      allow_only_operation: {
+        Args: { expected_operation: string }
+        Returns: boolean
+      }
       can_insert_object: {
         Args: { bucketid: string; metadata: Json; name: string; owner: string }
         Returns: undefined
@@ -2646,6 +2649,10 @@ export type Database = {
       extension: { Args: { name: string }; Returns: string }
       filename: { Args: { name: string }; Returns: string }
       foldername: { Args: { name: string }; Returns: string[] }
+      get_common_prefix: {
+        Args: { p_delimiter: string; p_key: string; p_prefix: string }
+        Returns: string
+      }
       get_size_by_bucket: {
         Args: never
         Returns: {
@@ -2670,59 +2677,86 @@ export type Database = {
       }
       list_objects_with_delimiter: {
         Args: {
-          bucket_id: string
+          _bucket_id: string
           delimiter_param: string
           max_keys?: number
           next_token?: string
           prefix_param: string
+          sort_order?: string
           start_after?: string
         }
         Returns: {
+          created_at: string
           id: string
+          last_accessed_at: string
           metadata: Json
           name: string
           updated_at: string
         }[]
       }
       operation: { Args: never; Returns: string }
-      search:
-        | {
-            Args: {
-              bucketname: string
-              levels?: number
-              limits?: number
-              offsets?: number
-              prefix: string
-            }
-            Returns: {
-              created_at: string
-              id: string
-              last_accessed_at: string
-              metadata: Json
-              name: string
-              updated_at: string
-            }[]
-          }
-        | {
-            Args: {
-              bucketname: string
-              levels?: number
-              limits?: number
-              offsets?: number
-              prefix: string
-              search?: string
-              sortcolumn?: string
-              sortorder?: string
-            }
-            Returns: {
-              created_at: string
-              id: string
-              last_accessed_at: string
-              metadata: Json
-              name: string
-              updated_at: string
-            }[]
-          }
+      search: {
+        Args: {
+          bucketname: string
+          levels?: number
+          limits?: number
+          offsets?: number
+          prefix: string
+          search?: string
+          sortcolumn?: string
+          sortorder?: string
+        }
+        Returns: {
+          created_at: string
+          id: string
+          last_accessed_at: string
+          metadata: Json
+          name: string
+          updated_at: string
+        }[]
+      }
+      search_by_timestamp: {
+        Args: {
+          p_bucket_id: string
+          p_level: number
+          p_limit: number
+          p_prefix: string
+          p_sort_column: string
+          p_sort_column_after: string
+          p_sort_order: string
+          p_start_after: string
+        }
+        Returns: {
+          created_at: string
+          id: string
+          key: string
+          last_accessed_at: string
+          metadata: Json
+          name: string
+          updated_at: string
+        }[]
+      }
+      search_v2: {
+        Args: {
+          bucket_name: string
+          levels?: number
+          limits?: number
+          prefix: string
+          sort_column?: string
+          sort_column_after?: string
+          sort_order?: string
+          start_after?: string
+        }
+        Returns: {
+          created_at: string
+          id: string
+          key: string
+          last_accessed_at: string
+          metadata: Json
+          name: string
+          updated_at: string
+        }[]
+      }
     }
     Enums: {
       buckettype: "STANDARD" | "ANALYTICS" | "VECTOR"
@@ -2865,4 +2899,3 @@ export const Constants = {
     },
   },
 } as const
-
