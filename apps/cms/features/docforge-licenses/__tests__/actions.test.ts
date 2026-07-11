@@ -12,9 +12,15 @@ import { makeLicense } from './fixtures'
 
 // --- Mocks ---
 
-vi.mock('@/lib/server-auth.server', () => ({
-  requireAuthContextFull: vi.fn(),
-}))
+// Partial mock: stub requireAuthContextFull, keep the real hasPermission so the
+// guard's actual prefix-match logic is exercised (super_admin resolves to ALL keys).
+vi.mock('@/lib/server-auth.server', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/server-auth.server')>()
+  return {
+    ...actual,
+    requireAuthContextFull: vi.fn(),
+  }
+})
 
 const mockServiceClient: Record<string, any> = {}
 
@@ -35,7 +41,9 @@ const mockRequireAuth = requireAuthContextFull as ReturnType<typeof vi.fn>
 
 // --- Helpers ---
 
-function makeAuth(overrides: Partial<{ isSuperAdmin: boolean }> = {}) {
+function makeAuth(
+  overrides: Partial<{ isSuperAdmin: boolean; permissions: string[] }> = {},
+) {
   return {
     supabase: {},
     userId: 'user-1',
@@ -43,8 +51,18 @@ function makeAuth(overrides: Partial<{ isSuperAdmin: boolean }> = {}) {
     tenantName: 'Test',
     isSuperAdmin: overrides.isSuperAdmin ?? true,
     roleName: 'admin',
-    permissions: ['system.docforge_licenses'],
+    permissions: overrides.permissions ?? ['system.docforge_licenses'],
   }
+}
+
+/** Scoped member: NOT super_admin, granted only the docforge licenses key. */
+function makeMemberWithPermission() {
+  return makeAuth({ isSuperAdmin: false, permissions: ['system.docforge_licenses'] })
+}
+
+/** Scoped member with no relevant permissions. */
+function makeMemberWithoutPermission() {
+  return makeAuth({ isSuperAdmin: false, permissions: [] })
 }
 
 let fromCalls: ReturnType<typeof mockChain>[] = []
@@ -92,8 +110,8 @@ describe('createLicenseHandler', () => {
     }
   })
 
-  it('rejects non-super-admin', async () => {
-    mockRequireAuth.mockReturnValue(okAsync(makeAuth({ isSuperAdmin: false })))
+  it('rejects member without the permission', async () => {
+    mockRequireAuth.mockReturnValue(okAsync(makeMemberWithoutPermission()))
 
     const result = await createLicenseHandler(validData)
 
@@ -101,6 +119,28 @@ describe('createLicenseHandler', () => {
     if (!result.success) {
       expect(result.error).toBe(messages.common.noPermission)
     }
+  })
+
+  it('allows a member granted system.docforge_licenses (not super_admin)', async () => {
+    mockRequireAuth.mockReturnValue(okAsync(makeMemberWithPermission()))
+
+    const licenseRow = { id: 'lic-new', ...validData, is_active: true, created_at: '2026-04-08T10:00:00Z' }
+    setupServiceFrom(mockChain({ data: licenseRow, error: null }))
+
+    const result = await createLicenseHandler(validData)
+
+    expect(result.success).toBe(true)
+  })
+
+  it('allows super_admin (ALL permission keys)', async () => {
+    mockRequireAuth.mockReturnValue(okAsync(makeAuth({ isSuperAdmin: true })))
+
+    const licenseRow = { id: 'lic-new', ...validData, is_active: true, created_at: '2026-04-08T10:00:00Z' }
+    setupServiceFrom(mockChain({ data: licenseRow, error: null }))
+
+    const result = await createLicenseHandler(validData)
+
+    expect(result.success).toBe(true)
   })
 })
 
@@ -126,8 +166,8 @@ describe('updateLicenseHandler', () => {
     }
   })
 
-  it('rejects non-super-admin', async () => {
-    mockRequireAuth.mockReturnValue(okAsync(makeAuth({ isSuperAdmin: false })))
+  it('rejects member without the permission', async () => {
+    mockRequireAuth.mockReturnValue(okAsync(makeMemberWithoutPermission()))
 
     const result = await updateLicenseHandler('lic-001', updateData)
 
@@ -154,8 +194,8 @@ describe('deleteLicenseHandler', () => {
     expect(result.success).toBe(true)
   })
 
-  it('rejects non-super-admin', async () => {
-    mockRequireAuth.mockReturnValue(okAsync(makeAuth({ isSuperAdmin: false })))
+  it('rejects member without the permission', async () => {
+    mockRequireAuth.mockReturnValue(okAsync(makeMemberWithoutPermission()))
 
     const result = await deleteLicenseHandler('lic-001')
 
@@ -218,8 +258,8 @@ describe('deactivateActivationHandler', () => {
     expect(result.success).toBe(true)
   })
 
-  it('rejects non-super-admin', async () => {
-    mockRequireAuth.mockReturnValue(okAsync(makeAuth({ isSuperAdmin: false })))
+  it('rejects member without the permission', async () => {
+    mockRequireAuth.mockReturnValue(okAsync(makeMemberWithoutPermission()))
 
     const result = await deactivateActivationHandler('act-001')
 
