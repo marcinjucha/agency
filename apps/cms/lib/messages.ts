@@ -909,6 +909,12 @@ export const messages = {
     inspectorTemplateKeyLabel: 'Klucz (slug)',
     inspectorTemplateKeyReadonly: 'readonly',
     inspectorActionsLabel: 'Akcje',
+    // Per-template theme picker (Phase 1, email client-theming). Whole-template
+    // scope → lives in the Email settings tab, not per-block.
+    inspectorTemplateThemeLabel: 'Motyw szablonu',
+    // Shown instead of the picker when the user lacks `design.themes` — the theme
+    // silently inherits the organisation default (server gate stays authoritative).
+    inspectorTemplateThemeInheritReadonly: 'Motyw: dziedziczy z organizacji',
     // Subject variable picker
     canvasInsertVariable: 'Wstaw zmienną',
     canvasNoVariables: 'Brak zmiennych. Wpisz {{key}} w treści szablonu.',
@@ -943,6 +949,9 @@ export const messages = {
     // Inspector — kolor z motywu (theme token) vs własny hex (iter C client-theming)
     inspectorColorSourceToken: 'Kolor z motywu',
     inspectorColorSourceCustom: 'Własny kolor',
+    // Coexistence hint under a per-block theme-token select: reminds the operator
+    // that the palette is owned by the template theme (picked in the Email tab).
+    inspectorThemeTokenSourceHint: 'Kolory pochodzą z motywu szablonu (zakładka Email)',
     // Etykiety 9 tokenów motywu (THEME_COLOR_TOKEN_KEYS)
     themeTokenLabels: {
       primary: 'Podstawowy',

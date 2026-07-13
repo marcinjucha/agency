@@ -14,6 +14,8 @@ import type {
   MarginBottomPreset,
 } from '@agency/email'
 import { messages } from '@/lib/messages'
+import { usePermissions } from '@/contexts/permissions-context'
+import { ThemePicker } from '@/features/themes/components/ThemePicker'
 import { CMS_BLOCK_REGISTRY } from '../../block-registry'
 import { VariablesEditor } from '../VariablesEditor'
 import { useInspectorSectionState } from '../../hooks/use-inspector-section-state'
@@ -53,6 +55,8 @@ export interface InspectorProps {
   onDuplicateBlock: (id: string) => void
   label: string
   setLabel: (v: string) => void
+  themeId: string | null
+  setThemeId: (id: string | null) => void
   userEditedVariables: TemplateVariable[]
   setUserEditedVariables: (vars: TemplateVariable[]) => void
   detectedKeys: string[]
@@ -74,6 +78,8 @@ export function Inspector({
   onDuplicateBlock,
   label,
   setLabel,
+  themeId,
+  setThemeId,
   userEditedVariables,
   setUserEditedVariables,
   detectedKeys,
@@ -125,6 +131,8 @@ export function Inspector({
           <SettingsTab
             label={label}
             setLabel={setLabel}
+            themeId={themeId}
+            setThemeId={setThemeId}
             templateType={templateType}
             onDelete={onDelete}
           />
@@ -570,11 +578,22 @@ function VariablesTab({ userEditedVariables, setUserEditedVariables, detectedKey
 interface SettingsTabProps {
   label: string
   setLabel: (v: string) => void
+  themeId: string | null
+  setThemeId: (id: string | null) => void
   templateType: string
   onDelete: () => void
 }
 
-function SettingsTab({ label, setLabel, templateType, onDelete }: SettingsTabProps) {
+function SettingsTab({ label, setLabel, themeId, setThemeId, templateType, onDelete }: SettingsTabProps) {
+  // `design.themes` unlocks the theme library; Phase 1 requires only
+  // `system.email_templates`. WITHOUT design.themes, mounting ThemePicker would
+  // fire the hard-gated `listThemesFn` → thrown query swallowed to `themes=[]` →
+  // a misleading "Brak motywów — + Nowy motyw" empty state linking to a route the
+  // user cannot open. So we render a read-only inherit chip instead. Client check
+  // is UX-only; the server gate on the theme CRUD fns stays authoritative.
+  const { hasPermission } = usePermissions()
+  const canPickTheme = hasPermission('design.themes')
+
   return (
     <>
       <div className="flex items-center gap-2 border-b border-border/60 px-3 py-2.5 shrink-0">
@@ -605,6 +624,28 @@ function SettingsTab({ label, setLabel, templateType, onDelete }: SettingsTabPro
               {messages.email.inspectorTemplateKeyReadonly}
             </span>
           </div>
+        </InspectorField>
+
+        {/* Whole-template theme scope — sits above the actions/delete divider.
+            Reuses the venture ThemePicker at client tier (its inherit-vs-own radio
+            is exactly the tenant-default-vs-override choice here). */}
+        <InspectorField label={messages.email.inspectorTemplateThemeLabel}>
+          {canPickTheme ? (
+            <ThemePicker
+              level="client"
+              inheritedFromLabel={messages.themes.picker.orgThemeName}
+              value={themeId}
+              onChange={setThemeId}
+              id="inspector-template-theme"
+            />
+          ) : (
+            <div
+              className="flex items-center gap-2 rounded-md border border-border/60 bg-muted/30 px-3 py-1.5 text-xs text-muted-foreground"
+              role="note"
+            >
+              {messages.email.inspectorTemplateThemeInheritReadonly}
+            </div>
+          )}
         </InspectorField>
 
         <div className="pt-2 border-t border-border/60">

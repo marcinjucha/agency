@@ -9,7 +9,7 @@ import {
 } from '@agency/ui'
 import { THEME_COLOR_TOKEN_KEYS, type ThemeColorTokenKey } from '@/lib/theme'
 import { messages } from '@/lib/messages'
-import { useResolvedEmailTheme } from '../../../hooks/use-resolved-email-theme'
+import { useEmailThemeMap } from '../../../contexts/email-theme-context'
 
 /**
  * ThemeTokenSelect — pick a THEME TOKEN instead of a raw hex for a colour slot.
@@ -34,7 +34,7 @@ export interface ThemeTokenSelectProps {
 
 export function ThemeTokenSelect({ value, onChange, label }: ThemeTokenSelectProps) {
   const selectId = useId()
-  const theme = useResolvedEmailTheme()
+  const theme = useEmailThemeMap()
   const current = value ?? CUSTOM_VALUE
 
   return (
@@ -67,6 +67,13 @@ export function ThemeTokenSelect({ value, onChange, label }: ThemeTokenSelectPro
           ))}
         </SelectContent>
       </Select>
+      {/* Coexistence hint: only while a THEME TOKEN is in use (not a custom hex),
+          so the note appears exactly when the palette is theme-sourced. */}
+      {value !== undefined ? (
+        <p className="text-[11px] leading-snug text-muted-foreground/70">
+          {messages.email.inspectorThemeTokenSourceHint}
+        </p>
+      ) : null}
     </div>
   )
 }

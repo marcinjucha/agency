@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, Fragment } from 'react'
 import { Eye, Monitor, Smartphone, ChevronUp, ChevronDown, Copy, Trash2, Plus, Mail } from 'lucide-react'
 import { renderBlock, resolveBlockMarginBottom } from '@agency/email'
 import { CMS_BLOCK_REGISTRY } from '../../block-registry'
+import { useEmailThemeMap } from '../../contexts/email-theme-context'
 import { messages } from '@/lib/messages'
 import type { Block, BlockType } from '../../types'
 import { AddBlockPopover } from './AddBlockPopover'
@@ -511,7 +512,10 @@ function CanvasBlockRenderer({ block, isLast }: { block: Block; isLast: boolean 
   // (marginBottom preset) as the rendered email HTML. Last block gets 0 to
   // avoid trailing whitespace.
   const paddingBottom = isLast ? 0 : resolveBlockMarginBottom(block)
-  const rendered = renderBlock(block, paddingBottom)
+  // The resolved theme map (from the picked theme_id) recolours token-based
+  // block colours live — same map the server bakes into html_body at save.
+  const theme = useEmailThemeMap()
+  const rendered = renderBlock(block, paddingBottom, theme)
   if (!rendered) {
     return (
       <div className="py-4 px-6 text-xs text-muted-foreground italic text-center">
