@@ -1,4 +1,4 @@
-import { renderEmailBlocks, type Block } from '@agency/email'
+import { renderEmailBlocks, escapeHtml, type Block } from '@agency/email'
 import type { ResolvedTheme } from '@/lib/theme'
 
 // ---------------------------------------------------------------------------
@@ -39,15 +39,6 @@ export interface BonusEmail {
 
 const FALLBACK_BRAND = 'Halo Efekt'
 const BONUS_LINK_LABEL = 'Zrób kopię' // TODO(OQ-5): final PL copy
-
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;')
-}
 
 /** Only bonuses with a usable link can be delivered. */
 function deliverableBonuses(bonuses: BonusEmailBonus[]): Array<{ title: string; url: string }> {

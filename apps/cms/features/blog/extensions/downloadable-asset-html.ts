@@ -32,6 +32,7 @@
  * extension's parseHTML hook recognize this node when re-loading saved HTML.
  */
 
+import { escapeHtml } from '@agency/email'
 import { getAssetTypeIconSvg, getDownloadIconSvg } from './downloadable-asset-icons'
 import { formatFileSize } from '@/lib/utils/file-size'
 
@@ -133,17 +134,11 @@ export function deriveTypeLabel(name: string, mimeType: string, assetType: Downl
 // requires the explicit `import { formatFileSize }` at the top.
 export { formatFileSize }
 
-// HTML escaping — every interpolated attr/value goes through this.
-// Output goes verbatim into html_body; an un-escaped quote in a filename or
-// URL would break the surrounding attribute.
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;')
-}
+// HTML escaping — every interpolated attr/value goes through the shared
+// `escapeHtml` from @agency/email (promoted from this file's byte-identical
+// local copy; 5 replacements, order & < > " '). Output goes verbatim into
+// html_body; an un-escaped quote in a filename or URL would break the
+// surrounding attribute.
 
 // --- Inline style fragments (kept as constants so the same tokens render
 //     identically in editor preview and final HTML) ---

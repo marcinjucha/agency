@@ -1,5 +1,6 @@
 export * from './blocks/types'
 export * from './EmailRenderer'
+export { escapeHtml, substituteTokens, safeUrlValue } from './substitute'
 export { BLOCK_REGISTRY } from './blocks/registry'
 export type { BlockRegistryEntry } from './blocks/registry'
 export type {
