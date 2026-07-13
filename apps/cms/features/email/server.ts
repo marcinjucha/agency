@@ -1,13 +1,14 @@
 import { createServerFn } from '@tanstack/react-start'
-import { ResultAsync } from 'neverthrow'
+import { err, ok, okAsync, ResultAsync } from 'neverthrow'
 import { fromSupabaseVoid } from '@/lib/result-helpers'
 import {
   updateEmailTemplateSchema,
   createEmailTemplateSchema,
   templateSlugSchema,
+  themeIdFieldSchema,
 } from '@/features/email/validation'
 import { renderEmailBlocks, DEFAULT_BLOCKS } from './render.server'
-import { resolveTenantThemeMap } from './utils/resolve-tenant-theme.server'
+import { resolveEmailThemeMap } from './utils/resolve-tenant-theme.server'
 import type { Block, ThemeColorMap } from '@agency/email'
 import type { Tables } from '@agency/database'
 import { messages } from '@/lib/messages'
@@ -42,6 +43,41 @@ const deleteEmailTemplateInputSchema = z.object({ type: emailTemplateTypeSchema 
 // ---------------------------------------------------------------------------
 
 const dbError = (e: unknown) => (e instanceof Error ? e.message : messages.common.unknownError)
+
+/**
+ * Verify a per-template `theme_id` belongs to the caller's tenant BEFORE it is
+ * persisted onto an `email_templates` row. NULL ("inherit the tenant theme") is
+ * always allowed and skips the check. A non-null id that does NOT resolve under
+ * the caller's tenant is REJECTED (standard no-permission) — never silently
+ * nulled. WHY: the FK alone accepts ANY tenant's `so_themes.id`, and the n8n
+ * mail path resolves the template theme server-side (service-role reads bypass
+ * RLS), so a template pointed at another tenant's theme would bake that tenant's
+ * tokens/logo into the sent email. Mirrors `assertThemeOwnedIfPresent` in
+ * features/venture/admin-handlers.server.ts — this is the same cross-tenant
+ * theme-leak bug class, on the email surface.
+ */
+export function assertThemeOwnedIfPresent(
+  auth: AuthContext,
+  themeId: string | null | undefined,
+): ResultAsync<undefined, string> {
+  if (!themeId) return okAsync(undefined)
+  return ResultAsync.fromPromise(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (auth.supabase as any)
+      .from('so_themes')
+      .select('id')
+      .eq('id', themeId)
+      .eq('tenant_id', auth.tenantId)
+      .maybeSingle(),
+    dbError,
+  ).andThen((res) => {
+    const r = res as { data: { id: string } | null; error: unknown }
+    if (r.error) return err(dbError(r.error))
+    // Missing OR belongs to another tenant → indistinguishable, both forbidden.
+    if (!r.data) return err(messages.common.noPermission)
+    return ok(undefined)
+  })
+}
 
 function toEmailTemplate(raw: unknown): EmailTemplate {
   const row = raw as Tables<'email_templates'>
@@ -80,17 +116,26 @@ export function parseTemplateVariables(raw: unknown): TemplateVariable[] {
 // Server Functions — Preview
 // ---------------------------------------------------------------------------
 
-const renderEmailPreviewSchema = z.object({ blocks: updateEmailTemplateSchema.shape.blocks })
+// `themeId` (optional) lets the preview reflect the theme currently PICKED in
+// the editor before it is saved — null/absent = the tenant default.
+const renderEmailPreviewSchema = z.object({
+  blocks: updateEmailTemplateSchema.shape.blocks,
+  themeId: themeIdFieldSchema,
+})
 
 export const renderEmailPreviewFn = createServerFn({ method: 'POST' })
   .inputValidator((input: z.infer<typeof renderEmailPreviewSchema>) => renderEmailPreviewSchema.parse(input))
-  .handler(async ({ data: { blocks } }): Promise<{ html: string }> => {
+  .handler(async ({ data: { blocks, themeId } }): Promise<{ html: string }> => {
     const result = await requireAuthContext().andThen(({ supabase, tenantId }) =>
       ResultAsync.fromPromise(
         (async () => {
           // Bake the SAME resolved theme map used at save into the preview HTML,
-          // so preview colours match the stored html_body byte-for-byte.
-          const theme = await resolveTenantThemeMap(supabase, tenantId)
+          // so preview colours match the stored html_body byte-for-byte. Honour
+          // the picked (unsaved) theme so the preview updates live.
+          const theme = await resolveEmailThemeMap(supabase, {
+            tenantId,
+            templateThemeId: themeId ?? null,
+          })
           return renderEmailBlocks(blocks as Block[], theme)
         })(),
         (e) => (e instanceof Error ? e.message : messages.common.unknownError)
@@ -105,24 +150,36 @@ export const renderEmailPreviewFn = createServerFn({ method: 'POST' })
     )
   })
 
+const getResolvedEmailThemeInputSchema = z.object({ themeId: themeIdFieldSchema })
+
 /**
- * Resolved theme map for the CURRENT tenant — powers the editor's theme-token
- * swatches (ThemeTokenSelect). Same map the preview + save render paths use.
- * Never-fail: resolveTenantThemeMap already degrades to HALO_EFEKT_DEFAULT, so
- * this always returns a full 9-token map (the `.match` err arm is unreachable).
+ * Resolved theme map for the current tenant / picked template theme — powers the
+ * editor's theme-token swatches (ThemeTokenSelect). Same map the preview + save
+ * render paths use. Optional `themeId` reflects the theme picked in the editor
+ * (null/absent = tenant default). Never-fail: resolveEmailThemeMap already
+ * degrades to HALO_EFEKT_DEFAULT, so this always returns a full 9-token map (the
+ * `.match` err arm is unreachable).
  */
-export const getResolvedEmailThemeFn = createServerFn({ method: 'POST' }).handler(
-  async (): Promise<ThemeColorMap> => {
+export const getResolvedEmailThemeFn = createServerFn({ method: 'POST' })
+  // Tolerate a no-arg call (`getResolvedEmailThemeFn()`) — the existing swatch
+  // hook invokes it without input; coalesce undefined → {} so `themeId` stays
+  // optional rather than tripping the object-required parse.
+  .inputValidator((input: z.infer<typeof getResolvedEmailThemeInputSchema> | undefined) =>
+    getResolvedEmailThemeInputSchema.parse(input ?? {})
+  )
+  .handler(async ({ data }): Promise<ThemeColorMap> => {
     const result = await requireAuthContext().andThen(({ supabase, tenantId }) =>
-      ResultAsync.fromPromise(resolveTenantThemeMap(supabase, tenantId), dbError)
+      ResultAsync.fromPromise(
+        resolveEmailThemeMap(supabase, { tenantId, templateThemeId: data?.themeId ?? null }),
+        dbError
+      )
     )
 
     return result.match(
       (theme) => theme,
       () => ({}),
     )
-  }
-)
+  })
 
 // ---------------------------------------------------------------------------
 // Server Functions — Queries
@@ -186,6 +243,7 @@ export const updateEmailTemplateFn = createServerFn({ method: 'POST' })
         input.type,
         input.data.subject,
         input.data.blocks,
+        input.data.theme_id ?? null,
         input.data.template_variables as TemplateVariable[] | undefined,
         input.data.label
       )
@@ -201,8 +259,9 @@ export const resetEmailTemplateToDefaultFn = createServerFn({ method: 'POST' })
   .inputValidator((input: z.infer<typeof resetEmailTemplateInputSchema>) => resetEmailTemplateInputSchema.parse(input))
   .handler(async ({ data }): Promise<{ success: boolean; error?: string }> => {
     const defaultSubject = 'Dziękujemy za wypełnienie formularza - {{surveyTitle}}'
+    // Reset also clears any per-template theme → back to inheriting the tenant.
     const result = await requireAuthContext().andThen((auth) =>
-      saveTemplate(auth, data.type, defaultSubject, DEFAULT_BLOCKS)
+      saveTemplate(auth, data.type, defaultSubject, DEFAULT_BLOCKS, null)
     )
 
     return result.match(
@@ -259,15 +318,24 @@ function saveTemplate(
   type: EmailTemplateType,
   subject: string,
   blocks: Block[],
+  themeId: string | null,
   userEditedVariables?: TemplateVariable[],
   label?: string
 ): ResultAsync<undefined, string> {
-  return ResultAsync.fromPromise(
-    (async () => {
-      // Bake tenant theme colours into html_body at save — n8n reads this stored
-      // HTML, so it MUST use the same resolved map as the live preview.
-      const theme = await resolveTenantThemeMap(auth.supabase, auth.tenantId)
-      const html_body = await renderEmailBlocks(blocks, theme)
+  // SECURITY: reject a foreign-tenant theme_id BEFORE any render/persist — the
+  // ownership gate mirrors the venture cross-tenant theme-leak guard. NULL skips.
+  return assertThemeOwnedIfPresent(auth, themeId).andThen(() =>
+    ResultAsync.fromPromise(
+      (async () => {
+        // Bake the effective theme colours into html_body at save — n8n reads this
+        // stored HTML, so it MUST use the same resolved map as the live preview.
+        // The template's own theme wins over the tenant default (id-selection in
+        // resolveEmailThemeMap).
+        const theme = await resolveEmailThemeMap(auth.supabase, {
+          tenantId: auth.tenantId,
+          templateThemeId: themeId,
+        })
+        const html_body = await renderEmailBlocks(blocks, theme)
 
       // AAA-T-221 (2026-05-15): persist EXACTLY the user-managed list — no
       // server-side auto-merge with detected `{{key}}` tokens from content.
@@ -293,6 +361,9 @@ function saveTemplate(
       // saveTemplate is only called from update / reset paths (both run against
       // existing rows), so NOT NULL on label is never violated here — new rows
       // go through `insertTemplate` which always passes label.
+      // `theme_id` is ALWAYS persisted (unlike `label`) — the editor sends the
+      // picker state on every save (null = inherit tenant), so we never risk
+      // wiping it, and reset explicitly passes null to clear an override.
       const templatePayload = {
         tenant_id: auth.tenantId,
         type,
@@ -300,6 +371,7 @@ function saveTemplate(
         blocks,
         html_body,
         template_variables,
+        theme_id: themeId,
         is_active: true,
         updated_at: new Date().toISOString(),
         ...(label !== undefined ? { label } : {}),
@@ -311,8 +383,9 @@ function saveTemplate(
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         : (auth.supabase as any).from('email_templates').insert(templatePayload)
     })(),
-    dbError
-  ).andThen(fromSupabaseVoid())
+      dbError
+    ).andThen(fromSupabaseVoid())
+  )
 }
 
 function insertTemplate(
@@ -323,7 +396,12 @@ function insertTemplate(
   return ResultAsync.fromPromise(
     (async () => {
       const defaultSubject = 'Temat wiadomości — {{firstName}}'
-      const theme = await resolveTenantThemeMap(auth.supabase, auth.tenantId)
+      // New templates inherit the tenant theme (theme_id null) — resolve with a
+      // null override so html_body bakes the tenant-default colours.
+      const theme = await resolveEmailThemeMap(auth.supabase, {
+        tenantId: auth.tenantId,
+        templateThemeId: null,
+      })
       const html_body = await renderEmailBlocks(DEFAULT_BLOCKS, theme)
 
       // AAA-T-221 (2026-05-15): no auto-seed. User decides which variables
@@ -337,6 +415,7 @@ function insertTemplate(
         blocks: DEFAULT_BLOCKS,
         html_body,
         template_variables: [],
+        theme_id: null,
         is_active: true,
       }
 

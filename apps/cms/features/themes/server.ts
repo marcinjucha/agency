@@ -114,6 +114,27 @@ async function countCampaignUsageByTheme(
   return counts
 }
 
+/**
+ * Count how many of the tenant's email templates reference each theme_id
+ * (reverse FK). `email_templates` HAS a `tenant_id` column, so this scopes by it
+ * directly (unlike `so_campaigns`).
+ */
+async function countEmailTemplateUsageByTheme(
+  supabase: ThemesDbClient,
+  tenantId: string,
+): Promise<Map<string, number>> {
+  const counts = new Map<string, number>()
+  const { data, error } = await supabase
+    .from('email_templates')
+    .select('theme_id')
+    .eq('tenant_id', tenantId)
+  if (error || !data) return counts
+  for (const row of data as { theme_id: string | null }[]) {
+    if (row.theme_id) counts.set(row.theme_id, (counts.get(row.theme_id) ?? 0) + 1)
+  }
+  return counts
+}
+
 // ---------------------------------------------------------------------------
 // Pure handlers (supabase injected — unit-tested directly)
 // ---------------------------------------------------------------------------
@@ -133,18 +154,20 @@ export async function listThemes(
   const themes = ((data ?? []) as Record<string, unknown>[]).map(toTheme)
   if (themes.length === 0) return []
 
-  const [clientCounts, campaignCounts] = await Promise.all([
+  const [clientCounts, campaignCounts, emailTemplateCounts] = await Promise.all([
     countClientUsageByTheme(supabase, tenantId),
     countCampaignUsageByTheme(
       supabase,
       themes.map((theme) => theme.id),
     ),
+    countEmailTemplateUsageByTheme(supabase, tenantId),
   ])
   return themes.map((theme) => ({
     ...theme,
     usedBy: {
       clients: clientCounts.get(theme.id) ?? 0,
       campaigns: campaignCounts.get(theme.id) ?? 0,
+      emailTemplates: emailTemplateCounts.get(theme.id) ?? 0,
     },
   }))
 }
@@ -213,15 +236,18 @@ export async function getThemeReferences(
   tenantId: string,
   id: string,
 ): Promise<ThemeReferences> {
-  const [clientsRes, tenantsRes, campaignsRes] = await Promise.all([
+  const [clientsRes, tenantsRes, campaignsRes, emailTemplatesRes] = await Promise.all([
     supabase.from('so_clients').select('id').eq('tenant_id', tenantId).eq('theme_id', id),
     supabase.from('tenants').select('id').eq('theme_id', id),
     supabase.from('so_campaigns').select('id').eq('theme_id', id),
+    // email_templates HAS tenant_id → scope by it (tenant-safe, defense-in-depth).
+    supabase.from('email_templates').select('id').eq('tenant_id', tenantId).eq('theme_id', id),
   ])
   const clients = ((clientsRes as { data: unknown[] | null }).data ?? []).length
   const tenants = ((tenantsRes as { data: unknown[] | null }).data ?? []).length
   const campaigns = ((campaignsRes as { data: unknown[] | null }).data ?? []).length
-  return { clients, tenants, campaigns }
+  const emailTemplates = ((emailTemplatesRes as { data: unknown[] | null }).data ?? []).length
+  return { clients, tenants, campaigns, emailTemplates }
 }
 
 /** Delete a theme — refused (with the dependents listed) while it is still referenced. */
@@ -231,7 +257,7 @@ export async function deleteTheme(
   id: string,
 ): Promise<DeleteThemeResult> {
   const refs = await getThemeReferences(supabase, tenantId, id)
-  if (refs.clients + refs.tenants + refs.campaigns > 0) {
+  if (refs.clients + refs.tenants + refs.campaigns + refs.emailTemplates > 0) {
     return { success: false, error: 'themeInUse', usedBy: refs }
   }
   const { error } = await supabase
@@ -305,20 +331,26 @@ export async function getThemeUsage(
   tenantId: string,
   id?: string,
 ): Promise<ThemeUsage> {
-  if (!id) return { clients: 0, campaigns: 0 }
-  const [clientsRes, campaignsRes] = await Promise.all([
+  if (!id) return { clients: 0, campaigns: 0, emailTemplates: 0 }
+  const [clientsRes, campaignsRes, emailTemplatesRes] = await Promise.all([
     supabase.from('so_clients').select('id').eq('tenant_id', tenantId).eq('theme_id', id),
     // No tenant_id on so_campaigns — filter by theme_id only (tenant-safe, see
     // getThemeReferences / countCampaignUsageByTheme).
     supabase.from('so_campaigns').select('id').eq('theme_id', id),
+    // email_templates HAS tenant_id → scope by it.
+    supabase.from('email_templates').select('id').eq('tenant_id', tenantId).eq('theme_id', id),
   ])
   const clientsErr = (clientsRes as { error: unknown }).error
   const campaignsErr = (campaignsRes as { error: unknown }).error
+  const emailTemplatesErr = (emailTemplatesRes as { error: unknown }).error
   const clients = clientsErr ? 0 : (((clientsRes as { data: unknown[] | null }).data ?? []).length)
   const campaigns = campaignsErr
     ? 0
     : ((campaignsRes as { data: unknown[] | null }).data ?? []).length
-  return { clients, campaigns }
+  const emailTemplates = emailTemplatesErr
+    ? 0
+    : ((emailTemplatesRes as { data: unknown[] | null }).data ?? []).length
+  return { clients, campaigns, emailTemplates }
 }
 
 // ---------------------------------------------------------------------------

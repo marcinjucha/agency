@@ -437,6 +437,7 @@ export type Database = {
           subject: string
           template_variables: Json
           tenant_id: string
+          theme_id: string | null
           type: string
           updated_at: string
         }
@@ -451,6 +452,7 @@ export type Database = {
           subject?: string
           template_variables?: Json
           tenant_id: string
+          theme_id?: string | null
           type: string
           updated_at?: string
         }
@@ -465,6 +467,7 @@ export type Database = {
           subject?: string
           template_variables?: Json
           tenant_id?: string
+          theme_id?: string | null
           type?: string
           updated_at?: string
         }
@@ -474,6 +477,13 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_templates_theme_id_fkey"
+            columns: ["theme_id"]
+            isOneToOne: false
+            referencedRelation: "so_themes"
             referencedColumns: ["id"]
           },
         ]

@@ -55,6 +55,7 @@ interface Cfg {
   clients?: Res // so_clients .select().eq()[.eq()]   (usage OR references)
   tenants?: Res // tenants .select('id').eq('theme_id')
   campaigns?: Res // so_campaigns .select().eq('theme_id') OR .in('theme_id')
+  emailTemplates?: Res // email_templates .select().eq('tenant_id').eq('theme_id') OR .eq('tenant_id')
 }
 
 function makeClient(cfg: Cfg) {
@@ -108,6 +109,13 @@ function makeClient(cfg: Cfg) {
   }
   const campaignsBuilder = { select: vi.fn(() => campaignsChain) }
 
+  const emailTemplatesChain = {
+    eq: vi.fn(() => emailTemplatesChain),
+    then: (resolve: (v: unknown) => unknown) =>
+      Promise.resolve(cfg.emailTemplates ?? { data: [], error: null }).then(resolve),
+  }
+  const emailTemplatesBuilder = { select: vi.fn(() => emailTemplatesChain) }
+
   const from = vi.fn((table: string) => {
     switch (table) {
       case 'so_themes':
@@ -118,6 +126,8 @@ function makeClient(cfg: Cfg) {
         return tenantsBuilder
       case 'so_campaigns':
         return campaignsBuilder
+      case 'email_templates':
+        return emailTemplatesBuilder
       default:
         throw new Error(`unexpected table ${table}`)
     }
@@ -134,6 +144,8 @@ function makeClient(cfg: Cfg) {
     tenantsBuilder,
     campaignsBuilder,
     campaignsChain,
+    emailTemplatesBuilder,
+    emailTemplatesChain,
   }
 }
 
@@ -203,11 +215,19 @@ describe('listThemes', () => {
         data: [{ theme_id: 't1' }, { theme_id: 't2' }, { theme_id: 't2' }],
         error: null,
       },
+      // one email template on t1, none on t2
+      emailTemplates: { data: [{ theme_id: 't1' }], error: null },
     })
     const result = await listThemes(supabase as never, TENANT)
     expect(result).toHaveLength(2)
-    expect(result[0]).toMatchObject({ id: 't1', usedBy: { clients: 2, campaigns: 1 } })
-    expect(result[1]).toMatchObject({ id: 't2', usedBy: { clients: 0, campaigns: 2 } })
+    expect(result[0]).toMatchObject({
+      id: 't1',
+      usedBy: { clients: 2, campaigns: 1, emailTemplates: 1 },
+    })
+    expect(result[1]).toMatchObject({
+      id: 't2',
+      usedBy: { clients: 0, campaigns: 2, emailTemplates: 0 },
+    })
     // Campaigns scoped by the tenant's theme ids (no tenant_id column on so_campaigns).
     expect(supabase.campaignsBuilder.select).toHaveBeenCalledWith('theme_id')
   })
@@ -218,6 +238,7 @@ describe('listThemes', () => {
     expect(result).toEqual([])
     expect(supabase.clientsBuilder.select).not.toHaveBeenCalled()
     expect(supabase.campaignsBuilder.select).not.toHaveBeenCalled()
+    expect(supabase.emailTemplatesBuilder.select).not.toHaveBeenCalled()
   })
 })
 
@@ -231,7 +252,7 @@ describe('deleteTheme (delete guard)', () => {
     expect(result).toEqual({
       success: false,
       error: 'themeInUse',
-      usedBy: { clients: 1, tenants: 1, campaigns: 0 },
+      usedBy: { clients: 1, tenants: 1, campaigns: 0, emailTemplates: 0 },
     })
     // Guard blocks BEFORE any delete call.
     expect(supabase.themesBuilder.delete).not.toHaveBeenCalled()
@@ -247,7 +268,26 @@ describe('deleteTheme (delete guard)', () => {
     expect(result).toEqual({
       success: false,
       error: 'themeInUse',
-      usedBy: { clients: 0, tenants: 0, campaigns: 1 },
+      usedBy: { clients: 0, tenants: 0, campaigns: 1, emailTemplates: 0 },
+    })
+    expect(supabase.themesBuilder.delete).not.toHaveBeenCalled()
+  })
+
+  // DEFECT #1 regression — a theme in use by an email template MUST block delete.
+  // Before the fix getThemeReferences never counted email_templates, so this
+  // path returned `{ success: true }` and silently nulled the template's theme.
+  it('blocks deletion when ONLY an email template references it', async () => {
+    const supabase = makeClient({
+      clients: { data: [], error: null },
+      tenants: { data: [], error: null },
+      campaigns: { data: [], error: null },
+      emailTemplates: { data: [{ id: 'tmpl-1' }], error: null }, // sole dependent
+    })
+    const result = await deleteTheme(supabase as never, TENANT, 't1')
+    expect(result).toEqual({
+      success: false,
+      error: 'themeInUse',
+      usedBy: { clients: 0, tenants: 0, campaigns: 0, emailTemplates: 1 },
     })
     expect(supabase.themesBuilder.delete).not.toHaveBeenCalled()
   })
@@ -268,15 +308,32 @@ describe('deleteTheme (delete guard)', () => {
 })
 
 describe('getThemeReferences', () => {
-  it('counts clients, tenants, AND campaigns referencing the theme', async () => {
+  it('counts clients, tenants, campaigns, AND email templates referencing the theme', async () => {
     const supabase = makeClient({
       clients: { data: [{ id: 'c1' }, { id: 'c2' }], error: null },
       tenants: { data: [{ id: TENANT }], error: null },
       campaigns: { data: [{ id: 'camp-1' }, { id: 'camp-2' }, { id: 'camp-3' }], error: null },
+      emailTemplates: { data: [{ id: 'tmpl-1' }, { id: 'tmpl-2' }], error: null },
     })
     const refs = await getThemeReferences(supabase as never, TENANT, 't1')
-    expect(refs).toEqual({ clients: 2, tenants: 1, campaigns: 3 })
+    expect(refs).toEqual({ clients: 2, tenants: 1, campaigns: 3, emailTemplates: 2 })
     expect(supabase.campaignsChain.eq).toHaveBeenCalledWith('theme_id', 't1')
+    expect(supabase.emailTemplatesChain.eq).toHaveBeenCalledWith('theme_id', 't1')
+    expect(supabase.emailTemplatesChain.eq).toHaveBeenCalledWith('tenant_id', TENANT)
+  })
+
+  // DEFECT #1 (failing-first): a theme referenced ONLY by an email template must
+  // report a non-zero emailTemplates count. Pinned separately from the combined
+  // test above so a regression is unambiguous.
+  it('returns a non-zero email-template count when a template references the theme', async () => {
+    const supabase = makeClient({
+      clients: { data: [], error: null },
+      tenants: { data: [], error: null },
+      campaigns: { data: [], error: null },
+      emailTemplates: { data: [{ id: 'tmpl-1' }], error: null },
+    })
+    const refs = await getThemeReferences(supabase as never, TENANT, 't1')
+    expect(refs.emailTemplates).toBe(1)
   })
 })
 
@@ -321,22 +378,25 @@ describe('uniqueCopyName (pure)', () => {
 })
 
 describe('getThemeUsage', () => {
-  it('counts clients AND campaigns for a given theme id', async () => {
+  it('counts clients, campaigns AND email templates for a given theme id', async () => {
     const supabase = makeClient({
       clients: { data: [{ id: 'c1' }, { id: 'c2' }], error: null },
       campaigns: { data: [{ id: 'camp-1' }], error: null },
+      emailTemplates: { data: [{ id: 'tmpl-1' }, { id: 'tmpl-2' }, { id: 'tmpl-3' }], error: null },
     })
     const usage = await getThemeUsage(supabase as never, TENANT, 't1')
-    expect(usage).toEqual({ clients: 2, campaigns: 1 })
+    expect(usage).toEqual({ clients: 2, campaigns: 1, emailTemplates: 3 })
     expect(supabase.campaignsChain.eq).toHaveBeenCalledWith('theme_id', 't1')
+    expect(supabase.emailTemplatesChain.eq).toHaveBeenCalledWith('theme_id', 't1')
   })
 
   it('returns zero counts without a query when no id is given', async () => {
     const supabase = makeClient({})
     const usage = await getThemeUsage(supabase as never, TENANT, undefined)
-    expect(usage).toEqual({ clients: 0, campaigns: 0 })
+    expect(usage).toEqual({ clients: 0, campaigns: 0, emailTemplates: 0 })
     expect(supabase.clientsBuilder.select).not.toHaveBeenCalled()
     expect(supabase.campaignsBuilder.select).not.toHaveBeenCalled()
+    expect(supabase.emailTemplatesBuilder.select).not.toHaveBeenCalled()
   })
 })
 

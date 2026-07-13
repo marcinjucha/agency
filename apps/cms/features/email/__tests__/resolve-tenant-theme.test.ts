@@ -8,7 +8,10 @@ import { describe, it, expect, vi } from 'vitest'
 import { renderEmailBlocks } from '../../../../../packages/email/src/EmailRenderer'
 import type { Block } from '@agency/email'
 import { HALO_EFEKT_DEFAULT } from '@/lib/theme'
-import { resolveTenantThemeMap } from '../utils/resolve-tenant-theme.server'
+import {
+  resolveEmailThemeMap,
+  resolveTenantThemeMap,
+} from '../utils/resolve-tenant-theme.server'
 import type { StartClient } from '@/lib/server-auth.server'
 
 // ---------------------------------------------------------------------------
@@ -58,6 +61,91 @@ describe('resolveTenantThemeMap', () => {
     // parseThemeTokens rejects non-hex → token unset → backfilled from default.
     expect(map.primary).toBe(HALO_EFEKT_DEFAULT.primary)
     expect(map.primary).not.toContain('var(')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// resolveEmailThemeMap — per-template override precedence over the tenant theme.
+//
+// Two tables: `tenants` (theme_id, theme) then `so_themes` (tokens) when an
+// effective theme_id resolves. Precedence lives in id-selection:
+//   effectiveThemeId = templateThemeId ?? tenantRow.theme_id
+// A template theme_id suppresses the inline `tenants.theme` fallback.
+// ---------------------------------------------------------------------------
+
+type Res = { data: unknown; error: unknown }
+
+function mockDb(cfg: { tenant?: Res; theme?: Res }): StartClient {
+  const tenantChain = {
+    maybeSingle: vi.fn(() => Promise.resolve(cfg.tenant ?? { data: null, error: null })),
+  }
+  const themeChain = {
+    maybeSingle: vi.fn(() => Promise.resolve(cfg.theme ?? { data: null, error: null })),
+  }
+  const from = vi.fn((table: string) => {
+    if (table === 'tenants') return { select: () => ({ eq: () => tenantChain }) }
+    if (table === 'so_themes') return { select: () => ({ eq: () => themeChain }) }
+    throw new Error(`unexpected table ${table}`)
+  })
+  return { from } as unknown as StartClient
+}
+
+describe('resolveEmailThemeMap', () => {
+  it('uses the TEMPLATE theme (so_themes.tokens) when templateThemeId is set — wins over tenant', async () => {
+    const supabase = mockDb({
+      // tenant carries its OWN theme — must be ignored when a template theme is set.
+      tenant: { data: { theme_id: 'tenant-theme', theme: { primary: '#00ff00' } }, error: null },
+      theme: { data: { tokens: { primary: '#123456' } }, error: null },
+    })
+    const map = await resolveEmailThemeMap(supabase, {
+      tenantId: 'tenant-1',
+      templateThemeId: 'tmpl-theme',
+    })
+    expect(map.primary).toBe('#123456')
+    expect(map.primary).not.toBe('#00ff00')
+  })
+
+  it('falls back to the TENANT theme when templateThemeId is null', async () => {
+    const supabase = mockDb({
+      tenant: { data: { theme_id: null, theme: { primary: '#aa0000' } }, error: null },
+    })
+    const map = await resolveEmailThemeMap(supabase, {
+      tenantId: 'tenant-1',
+      templateThemeId: null,
+    })
+    expect(map.primary).toBe('#aa0000')
+  })
+
+  it('is BYTE-IDENTICAL to resolveTenantThemeMap when both are null and tenant has no theme', async () => {
+    const supabase = mockDb({ tenant: { data: null, error: null } })
+    const viaEmail = await resolveEmailThemeMap(supabase, {
+      tenantId: 'tenant-1',
+      templateThemeId: null,
+    })
+    const viaTenant = await resolveTenantThemeMap(
+      mockDb({ tenant: { data: null, error: null } }),
+      'tenant-1',
+    )
+    // Both degrade to the neutral Halo Efekt default — pins the client-theming
+    // guarantee that the tenant-default path is unchanged by the new seam.
+    expect(viaEmail).toEqual(viaTenant)
+    expect(viaEmail.primary).toBe(HALO_EFEKT_DEFAULT.primary)
+    expect(viaEmail.text).toBe(HALO_EFEKT_DEFAULT.text)
+  })
+
+  it('does NOT fall back to the tenant inline theme when a named template theme is missing', async () => {
+    const supabase = mockDb({
+      // tenant has an inline theme, but a template theme_id is set → inline is suppressed.
+      tenant: { data: { theme_id: null, theme: { primary: '#aa0000' } }, error: null },
+      // named theme row not found → parseThemeTokens(null) → default backfill.
+      theme: { data: null, error: null },
+    })
+    const map = await resolveEmailThemeMap(supabase, {
+      tenantId: 'tenant-1',
+      templateThemeId: 'tmpl-theme',
+    })
+    expect(map.primary).toBe(HALO_EFEKT_DEFAULT.primary)
+    expect(map.primary).not.toBe('#aa0000')
   })
 })
 
