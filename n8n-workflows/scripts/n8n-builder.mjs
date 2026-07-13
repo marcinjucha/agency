@@ -245,6 +245,7 @@ function findFreePosition(nodes) {
 const INLINE_HELPERS = {
   'claude-response': 'claude-response.js',
   'env-supabase-preamble': 'env-supabase-preamble.js',
+  'escape-html': 'escape-html.js',
   'expression-evaluator': 'expression-evaluator.js',
   'get-nested-value': 'get-nested-value.js',
   'resolve-variables': 'resolve-variables.js',
@@ -354,6 +355,7 @@ const HELPER_SIGNATURES = {
   'supabase-crud': /function\s+(supabaseGet|supabasePatch)\b/,
   'env-supabase-preamble': /const\s+SUPABASE_URL\s*=\s*\$env\.SUPABASE_URL/,
   'get-nested-value': /function\s+getNestedValue\b/,
+  'escape-html': /function\s+escapeHtml\b/,
   'expression-evaluator': /function\s+(coerceNumeric|escapeRegex|parseExpression|resolveField|compare)\b/,
   'resolve-variables': /function\s+resolveVariables\b/,
   'claude-response': /function\s+(extractTextContent|stripCodeFences)\b/,
