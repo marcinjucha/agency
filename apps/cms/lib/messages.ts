@@ -2057,6 +2057,8 @@ export const messages = {
     'bonus_funnel.clients': 'Klienci',
     'bonus_funnel.campaigns': 'Kampanie',
     'bonus_funnel.bonuses': 'Bonusy',
+    design: 'Wygląd',
+    'design.themes': 'Motywy',
     system: 'System',
     management: 'Zarządzanie',
     'system.email_templates': 'Szablony email',
@@ -2064,6 +2066,7 @@ export const messages = {
     'system.users': 'Użytkownicy',
     'system.roles': 'Role',
     'system.tenants': 'Organizacje',
+    'system.docforge_licenses': 'Licencje DocForge',
     alwaysGranted: 'Zawsze przyznane',
   } as Record<string, string>,
 
