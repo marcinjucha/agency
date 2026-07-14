@@ -19,6 +19,11 @@ import { ThemePicker } from '@/features/themes/components/ThemePicker'
 import { CMS_BLOCK_REGISTRY } from '../../block-registry'
 import { VariablesEditor } from '../VariablesEditor'
 import { useInspectorSectionState } from '../../hooks/use-inspector-section-state'
+import {
+  applySectionPatch,
+  TYPOGRAPHY_SECTION_KEYS,
+  BORDER_SECTION_KEYS,
+} from '../../utils/apply-section-patch'
 import { TypographySection } from './controls/TypographySection'
 import { BorderSection } from './controls/BorderSection'
 import { SegmentedControl } from './controls/SegmentedControl'
@@ -419,7 +424,12 @@ function TypographySectionWrapper({ selected, onUpdateBlock }: TypographySection
     <TypographySection
       value={current}
       defaults={defaults}
-      onChange={(next) => onUpdateBlock({ ...selected, ...next } as Block)}
+      // applySectionPatch (nie spread): klucz USUNIĘTY w sekcji (delete merged[key])
+      // nie istnieje w `next` — spread zachowywałby starą wartość z bloku i token
+      // koloru byłby nieusuwalny. Helper usuwa klucze sekcji, potem nakłada patch.
+      onChange={(next) =>
+        onUpdateBlock(applySectionPatch(selected, TYPOGRAPHY_SECTION_KEYS, next))
+      }
     />
   )
 }
@@ -447,7 +457,10 @@ function BorderSectionWrapper({ selected, onUpdateBlock }: BorderSectionWrapperP
       blockType={blockType}
       value={current}
       defaults={defaults}
-      onChange={(next) => onUpdateBlock({ ...selected, ...next } as Block)}
+      // applySectionPatch (nie spread) — patrz komentarz w TypographySectionWrapper.
+      onChange={(next) =>
+        onUpdateBlock(applySectionPatch(selected, BORDER_SECTION_KEYS, next))
+      }
     />
   )
 }
