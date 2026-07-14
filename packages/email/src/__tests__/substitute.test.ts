@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { escapeHtml, substituteTokens, safeUrlValue } from '../substitute'
+import { escapeHtml, substituteTokens, substitutePlain, safeUrlValue } from '../substitute'
 
 // ---------------------------------------------------------------------------
 // GOLDEN PARITY FIXTURE.
@@ -56,11 +56,38 @@ const SUBSTITUTE_CASES: SubCase[] = [
     values: { a: 'X' },
     expected: 'X-{{b}}-X',
   },
+  {
+    // Dotted key: the `[\w.]` grammar MUST match `{{a.b}}` and resolve it from a
+    // flat record keyed 'a.b'. Guards the TS↔n8n divergence — before the n8n
+    // substituteBindingsHtml regex was aligned to `[\w.]`, n8n left `{{a.b}}`
+    // literal while TS substituted it. Keep in sync with escape-parity.test.mjs.
+    name: 'dotted key matches the dot grammar and resolves (TS↔n8n parity)',
+    html: 'x {{a.b}} y',
+    values: { 'a.b': 'Z' },
+    expected: 'x Z y',
+  },
 ]
 
 describe('substituteTokens (golden parity fixture)', () => {
   it.each(SUBSTITUTE_CASES)('$name', ({ html, values, expected }) => {
     expect(substituteTokens(html, values)).toBe(expected)
+  })
+})
+
+describe('substitutePlain (plaintext primitive — subject context, NO escaping)', () => {
+  it('resolves tokens WITHOUT HTML-escaping (a subject is not an HTML context)', () => {
+    // substituteTokens would double-encode these; substitutePlain must not.
+    expect(substitutePlain(`{{brand}}`, { brand: `Ala's & "Co"` })).toBe(`Ala's & "Co"`)
+  })
+
+  it('shares the token grammar with substituteTokens (leave-literal + trim + dotted key)', () => {
+    expect(substitutePlain('Hi {{ name }}', { name: 'Ada' })).toBe('Hi Ada')
+    expect(substitutePlain('Hello {{missing}}!', {})).toBe('Hello {{missing}}!')
+    expect(substitutePlain('x {{a.b}} y', { 'a.b': 'Z' })).toBe('x Z y')
+  })
+
+  it('is single-pass — a resolved value containing {{x}} is NOT re-substituted', () => {
+    expect(substitutePlain('{{outer}}', { outer: '{{x}}', x: 'LEAKED' })).toBe('{{x}}')
   })
 })
 

@@ -161,16 +161,13 @@ const getResolvedEmailThemeInputSchema = z.object({ themeId: themeIdFieldSchema 
  * `.match` err arm is unreachable).
  */
 export const getResolvedEmailThemeFn = createServerFn({ method: 'POST' })
-  // Tolerate a no-arg call (`getResolvedEmailThemeFn()`) — the existing swatch
-  // hook invokes it without input; coalesce undefined → {} so `themeId` stays
-  // optional rather than tripping the object-required parse.
-  .inputValidator((input: z.infer<typeof getResolvedEmailThemeInputSchema> | undefined) =>
-    getResolvedEmailThemeInputSchema.parse(input ?? {})
+  .inputValidator((input: z.infer<typeof getResolvedEmailThemeInputSchema>) =>
+    getResolvedEmailThemeInputSchema.parse(input)
   )
   .handler(async ({ data }): Promise<ThemeColorMap> => {
     const result = await requireAuthContext().andThen(({ supabase, tenantId }) =>
       ResultAsync.fromPromise(
-        resolveEmailThemeMap(supabase, { tenantId, templateThemeId: data?.themeId ?? null }),
+        resolveEmailThemeMap(supabase, { tenantId, templateThemeId: data.themeId ?? null }),
         dbError
       )
     )
@@ -243,7 +240,11 @@ export const updateEmailTemplateFn = createServerFn({ method: 'POST' })
         input.type,
         input.data.subject,
         input.data.blocks,
-        input.data.theme_id ?? null,
+        // Pass `theme_id` THROUGH untouched: `undefined` (field absent) tells
+        // saveTemplate to PRESERVE the stored theme; explicit `null` clears it to
+        // inherit the tenant; a string sets it. Do NOT coalesce `?? null` here —
+        // that would erase a per-template theme on any payload omitting the field.
+        input.data.theme_id,
         input.data.template_variables as TemplateVariable[] | undefined,
         input.data.label
       )
@@ -313,27 +314,47 @@ export const deleteEmailTemplateFn = createServerFn({ method: 'POST' })
 // DB helpers
 // ---------------------------------------------------------------------------
 
-function saveTemplate(
+export function saveTemplate(
   auth: AuthContext,
   type: EmailTemplateType,
   subject: string,
   blocks: Block[],
-  themeId: string | null,
+  // `undefined` = field absent → PRESERVE the stored theme_id; `null` = clear to
+  // inherit the tenant; a string = set that per-template theme.
+  themeId: string | null | undefined,
   userEditedVariables?: TemplateVariable[],
   label?: string
 ): ResultAsync<undefined, string> {
   // SECURITY: reject a foreign-tenant theme_id BEFORE any render/persist — the
-  // ownership gate mirrors the venture cross-tenant theme-leak guard. NULL skips.
+  // ownership gate mirrors the venture cross-tenant theme-leak guard. NULL and
+  // undefined both skip (undefined preserves the already-validated stored id).
   return assertThemeOwnedIfPresent(auth, themeId).andThen(() =>
     ResultAsync.fromPromise(
       (async () => {
+        // Fetch the existing row FIRST — it decides update-vs-insert AND, when the
+        // caller omitted `theme_id` (undefined), supplies the value to preserve.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data: existing } = await (auth.supabase as any)
+          .from('email_templates')
+          .select('id, theme_id')
+          .eq('tenant_id', auth.tenantId)
+          .eq('type', type)
+          .maybeSingle()
+
+        // theme_id semantics: `undefined` (field absent) PRESERVES the stored
+        // theme; explicit `null` clears to inherit the tenant; a string sets it.
+        // Distinguishing undefined from null is REQUIRED — coalescing `?? null`
+        // silently wipes a per-template theme on any save that omits the field.
+        const effectiveThemeId =
+          themeId === undefined ? ((existing?.theme_id as string | null) ?? null) : themeId
+
         // Bake the effective theme colours into html_body at save — n8n reads this
         // stored HTML, so it MUST use the same resolved map as the live preview.
         // The template's own theme wins over the tenant default (id-selection in
         // resolveEmailThemeMap).
         const theme = await resolveEmailThemeMap(auth.supabase, {
           tenantId: auth.tenantId,
-          templateThemeId: themeId,
+          templateThemeId: effectiveThemeId,
         })
         const html_body = await renderEmailBlocks(blocks, theme)
 
@@ -347,23 +368,11 @@ function saveTemplate(
       // entirely by the user.
       const template_variables = userEditedVariables ?? []
 
-      // Check if template already exists
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: existing } = await (auth.supabase as any)
-        .from('email_templates')
-        .select('id')
-        .eq('tenant_id', auth.tenantId)
-        .eq('type', type)
-        .maybeSingle()
-
       // `label` is included only when explicitly provided. Otherwise an update
       // without label would overwrite the stored value with undefined.
       // saveTemplate is only called from update / reset paths (both run against
       // existing rows), so NOT NULL on label is never violated here — new rows
       // go through `insertTemplate` which always passes label.
-      // `theme_id` is ALWAYS persisted (unlike `label`) — the editor sends the
-      // picker state on every save (null = inherit tenant), so we never risk
-      // wiping it, and reset explicitly passes null to clear an override.
       const templatePayload = {
         tenant_id: auth.tenantId,
         type,
@@ -371,7 +380,7 @@ function saveTemplate(
         blocks,
         html_body,
         template_variables,
-        theme_id: themeId,
+        theme_id: effectiveThemeId,
         is_active: true,
         updated_at: new Date().toISOString(),
         ...(label !== undefined ? { label } : {}),

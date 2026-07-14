@@ -65,7 +65,7 @@ export const messages = {
       `Czy na pewno chcesz usunąć motyw „${name}"? Tej operacji nie można cofnąć.`,
     deleteBlockedTitle: 'Nie można usunąć motywu',
     deleteBlockedDescription: (n: number) =>
-      `Motyw używany w ${n} ${n === 1 ? 'miejscu' : 'miejscach'} (klienci lub kampanie) — najpierw zmień ich motyw.`,
+      `Motyw używany w ${n} ${n === 1 ? 'miejscu' : 'miejscach'} (klienci, kampanie lub szablony e-maili) — najpierw zmień ich motyw.`,
     deleteFailed: 'Nie udało się usunąć motywu',
     duplicateFailed: 'Nie udało się zduplikować motywu',
     // Edytor

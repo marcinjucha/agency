@@ -30,33 +30,66 @@ export function escapeHtml(value: string): string {
 }
 
 /**
- * Substitute `{{token}}` placeholders in baked HTML with per-recipient values.
+ * The single `{{token}}` grammar shared by BOTH `substituteTokens` (HTML) and
+ * `substitutePlain` (subject / plaintext) — ONE regex source so the two paths
+ * cannot drift. Mirrors n8n's canonical `resolveVariables`
+ * (`n8n-workflows/scripts/evaluators/resolve-variables.js`) and the n8n Send
+ * Email handler's `substituteBindingsHtml` — all four MUST accept the same key
+ * grammar, including dotted keys (`{{a.b}}`), so app-sent == n8n-sent. The
+ * `escape-parity` golden fixture guards the dotted-key case against silent
+ * divergence.
  *
- * Mirrors n8n's canonical `resolveVariables`
- * (`n8n-workflows/scripts/evaluators/resolve-variables.js`) EXACTLY so that an
- * app-sent render is byte-identical to an n8n-sent render during the
- * transition:
- *   - regex `/\{\{(\s*[\w.]+\s*)\}\}/g` — the key may be padded with whitespace
- *   - the key is trimmed before lookup
+ *   - key may be padded with whitespace; it is trimmed before lookup
+ *   - `[\w.]` accepts dotted keys; a dotted key simply won't be found in a flat
+ *     record and is left literal — the correct, safe behavior
  *   - a MISSING key is left LITERAL (`{{key}}`) — never blanked — so a
- *     mis-binding is detectable and both send paths agree
+ *     mis-binding is detectable and every send path agrees
  *
- * SINGLE `.replace` pass, escape-FIRST: the resolved value is HTML-escaped
- * inside the callback, so a value that itself contains `{{x}}` is emitted as
- * inert text and never re-substituted. HTML-escaping is MANDATORY and
- * non-optional — this function is for HTML-body context only. Do NOT use it for
- * email subjects (subjects are plaintext; escaping them double-encodes).
- *
- * `values` is a flat `Record<string, string>`. The `[\w.]` regex is a superset
- * that also accepts dotted keys; a dotted key simply won't be found in a flat
- * record and is left literal — which is the correct, safe behavior.
+ * `.replace` with a global regex resets `lastIndex` per call, so sharing this
+ * module-level constant across functions is stateless and safe.
  */
-export function substituteTokens(html: string, values: Record<string, string>): string {
-  return html.replace(/\{\{(\s*[\w.]+\s*)\}\}/g, (_match, rawKey: string) => {
+const TOKEN_PATTERN = /\{\{(\s*[\w.]+\s*)\}\}/g
+
+/**
+ * Core single-pass substitution. `transform` is applied to each resolved value
+ * (HTML-escape for the body, identity for plaintext). SINGLE `.replace` pass:
+ * a value that itself contains `{{x}}` is emitted via `transform` and never
+ * re-substituted (no second pass).
+ */
+function substituteWith(
+  text: string,
+  values: Record<string, string>,
+  transform: (value: string) => string,
+): string {
+  return text.replace(TOKEN_PATTERN, (_match, rawKey: string) => {
     const key = rawKey.trim()
     const value = values[key]
-    return value !== undefined && value !== null ? escapeHtml(value) : `{{${key}}}`
+    return value !== undefined && value !== null ? transform(value) : `{{${key}}}`
   })
+}
+
+/**
+ * Substitute `{{token}}` placeholders in baked HTML with per-recipient values.
+ *
+ * escape-FIRST: the resolved value is HTML-escaped inside the callback, so a
+ * value that itself contains `{{x}}` is emitted as inert text and never
+ * re-substituted. HTML-escaping is MANDATORY and non-optional — this function
+ * is for HTML-body context only. Do NOT use it for email subjects (subjects are
+ * plaintext; escaping them double-encodes — use `substitutePlain`).
+ */
+export function substituteTokens(html: string, values: Record<string, string>): string {
+  return substituteWith(html, values, escapeHtml)
+}
+
+/**
+ * Substitute `{{token}}` placeholders in PLAINTEXT (email subjects) — same
+ * grammar + leave-literal semantics as `substituteTokens`, but NO HTML escaping
+ * (a subject is not an HTML context; escaping it would double-encode). Shares
+ * `TOKEN_PATTERN` with `substituteTokens` so the subject and body paths cannot
+ * drift on the token grammar.
+ */
+export function substitutePlain(text: string, values: Record<string, string>): string {
+  return substituteWith(text, values, (value) => value)
 }
 
 const SAFE_URL_SCHEMES = new Set(['http:', 'https:', 'mailto:'])

@@ -132,6 +132,45 @@ describe('byte-identical regression (load-bearing AC)', () => {
   })
 })
 
+describe('brand with an apostrophe — SEMANTIC equivalence, NOT byte-identical', () => {
+  // The byte-identical AC holds only for special-char-free copy. A brand with a
+  // `'` is escaped by BOTH paths (no raw quote leaks that could break an
+  // attribute) but in a DIFFERENT entity FORM: the hybrid path substitutes via
+  // escapeHtml (`'` → `&#39;`), the hardcoded builder emits the brand through
+  // React JSX (`'` → `&#x27;`). Assert equivalence, not byte equality.
+  const BRAND_WITH_APOS = "Ala's Launch"
+
+  it('both paths escape the apostrophe (no raw quote), differing only in entity form', async () => {
+    const legacyHtml = await renderEmailBlocks(
+      buildBonusEmailBlocks({
+        campaignDisplayName: BRAND_WITH_APOS,
+        bonuses: BONUSES,
+        theme: HALO_EFEKT_DEFAULT,
+      }),
+    )
+    const { html: hybridHtml } = await buildBonusEmailFromTemplateHtml({
+      templateBlocks: SEED_BONUS_TEMPLATE_BLOCKS,
+      subjectTemplate: SUBJECT_TEMPLATE,
+      bonuses: BONUSES,
+      theme: HALO_EFEKT_DEFAULT,
+      values: { companyName: BRAND_WITH_APOS },
+    })
+
+    // Neither path leaks the raw brand (raw `'` would be an injection risk in an
+    // attribute context).
+    expect(legacyHtml).not.toContain(BRAND_WITH_APOS)
+    expect(hybridHtml).not.toContain(BRAND_WITH_APOS)
+
+    // Both escape the apostrophe (either valid entity form is accepted).
+    expect(legacyHtml).toMatch(/Ala(&#x27;|&#39;)s Launch/)
+    expect(hybridHtml).toMatch(/Ala(&#x27;|&#39;)s Launch/)
+
+    // They are NOT byte-identical here — this is exactly why the byte-identical
+    // regression is scoped to the special-char-free seed copy.
+    expect(hybridHtml).not.toBe(legacyHtml)
+  })
+})
+
 describe('dynamic bonus list — 0 / 1 / many (no cap, empty fallback preserved)', () => {
   async function renderWith(bonuses: Array<{ title: string | null; url: string | null }>) {
     const { html } = await buildBonusEmailFromTemplateHtml({

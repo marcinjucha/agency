@@ -72,6 +72,16 @@ const GOLDEN_CASES = [
     values: { a: 'X' },
     expected: 'X-{{b}}-X',
   },
+  {
+    // Dotted key: guards that n8n's substituteBindingsHtml regex accepts the dot
+    // grammar (`[\w.]`) exactly like the TS substituteTokens primitive. Before
+    // alignment, n8n's `[\w]` regex left `{{a.b}}` literal while TS resolved it.
+    // Keep in sync with packages/email/src/__tests__/substitute.test.ts.
+    name: 'dotted key matches the dot grammar and resolves (TS↔n8n parity)',
+    html: 'x {{a.b}} y',
+    values: { 'a.b': 'Z' },
+    expected: 'x Z y',
+  },
 ];
 
 // ---------------------------------------------------------------------------

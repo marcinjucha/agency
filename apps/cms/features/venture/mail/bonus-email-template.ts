@@ -1,4 +1,4 @@
-import { renderEmailBlocks, substituteTokens, type Block } from '@agency/email'
+import { renderEmailBlocks, substituteTokens, substitutePlain, type Block } from '@agency/email'
 import type { ResolvedTheme } from '@/lib/theme'
 import {
   buildBonusListBlock,
@@ -126,18 +126,15 @@ export function buildBonusEmailFromTemplate(input: BonusTemplateInput): Block[] 
 }
 
 /**
- * Plaintext `{{token}}` substitution for the SUBJECT. Deliberately NOT
- * `substituteTokens` (which HTML-escapes for body context and would double-encode
- * a plaintext subject — see docs Layer 4). Missing key left literal, mirroring
- * the body path.
+ * Plaintext `{{token}}` substitution for the SUBJECT. Delegates to the shared
+ * `substitutePlain` primitive (@agency/email) — deliberately NOT
+ * `substituteTokens` (which HTML-escapes for body context and would
+ * double-encode a plaintext subject — see docs Layer 4). `substitutePlain`
+ * shares its `{{token}}` regex with `substituteTokens`, so the subject and body
+ * paths cannot drift on the token grammar. Missing key left literal.
  */
 function substituteSubject(subject: string, values: BonusTemplateValues): string {
-  const record = values as unknown as Record<string, string>
-  return subject.replace(/\{\{(\s*[\w.]+\s*)\}\}/g, (_match, rawKey: string) => {
-    const key = rawKey.trim()
-    const value = record[key]
-    return value !== undefined && value !== null ? value : `{{${key}}}`
-  })
+  return substitutePlain(subject, values as unknown as Record<string, string>)
 }
 
 export interface BonusTemplateRenderInput extends BonusTemplateInput {
@@ -149,6 +146,15 @@ export interface BonusTemplateRenderInput extends BonusTemplateInput {
  * Build subject + rendered HTML from the stored template. Renders the themed,
  * list-spliced blocks, then substitutes copy `{{tokens}}` on the HTML
  * (escape-first, n8n-parity). Subject uses plaintext substitution.
+ *
+ * BYTE-IDENTICAL scope (regression guard): the hybrid render equals the
+ * hardcoded builder BYTE-FOR-BYTE only for the seeded static copy, whose brand
+ * fixture ("Kacper Launch") has no ' or ". A runtime brand containing ' or " is
+ * substituted HERE via `substituteTokens` (escapeHtml → `'`=`&#39;`) whereas the
+ * hardcoded builder emits the brand through React JSX (`'`=`&#x27;`). Both ESCAPE
+ * the quote (semantically equivalent — no raw quote can break an attribute), but
+ * the entity FORM differs, so those cases are asserted for semantic equivalence,
+ * not byte equality.
  */
 export async function buildBonusEmailFromTemplateHtml(
   input: BonusTemplateRenderInput,

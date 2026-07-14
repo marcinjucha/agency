@@ -49,9 +49,14 @@ export function ThemeCard({ theme }: ThemeCardProps) {
   const [blockedCount, setBlockedCount] = useState<number | null>(null)
 
   const usedByClients = theme.usedBy.clients
-  // Total known dependents from the list (clients + campaigns). The tenant-default
-  // reference is only known server-side, so the server guard remains the backstop.
-  const usedByCount = theme.usedBy.clients + theme.usedBy.campaigns
+  // Total known dependents from the list (clients + campaigns + email templates).
+  // The tenant-default reference is only known server-side, so the server guard
+  // remains the backstop. emailTemplates MUST be included — the server delete
+  // guard blocks on it too, so omitting it opened the confirm dialog (count 0),
+  // the user confirmed, the server refused, and the blocked dialog said "0
+  // miejscach" — a contradictory dead-end.
+  const usedByCount =
+    theme.usedBy.clients + theme.usedBy.campaigns + theme.usedBy.emailTemplates
 
   const duplicateMutation = useMutation({
     mutationFn: async () => {
@@ -81,7 +86,10 @@ export function ThemeCard({ theme }: ThemeCardProps) {
       // excluded by an `=== 'themeInUse'` check alone).
       if (result && !result.success && 'usedBy' in result) {
         setBlockedCount(
-          result.usedBy.clients + result.usedBy.tenants + result.usedBy.campaigns,
+          result.usedBy.clients +
+            result.usedBy.tenants +
+            result.usedBy.campaigns +
+            result.usedBy.emailTemplates,
         )
       }
     },
