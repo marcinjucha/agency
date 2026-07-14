@@ -4,7 +4,6 @@ import {
   createBonusSchema,
   createCampaignSchema,
   createClientSchema,
-  createVentureTemplateSchema,
   idInputSchema,
   listBonusesInputSchema,
   listCampaignsInputSchema,
@@ -19,15 +18,14 @@ import {
   createBonusHandler,
   createCampaignHandler,
   createClientHandler,
-  createVentureTemplateHandler,
   deleteBonusHandler,
   deleteCampaignHandler,
   deleteClientHandler,
   getCampaignEffectiveSendHandler,
   listBonusesHandler,
+  listBonusTemplatesHandler,
   listCampaignsHandler,
   listClientsHandler,
-  listVentureTemplatesHandler,
   reorderBonusesHandler,
   selectTemplateForCampaignHandler,
   updateBonusHandler,
@@ -116,22 +114,15 @@ export const getCampaignEffectiveSendFn = createServerFn({ method: 'POST' })
   )
   .handler(({ data }) => getCampaignEffectiveSendHandler(data.campaignId))
 
-// --- Venture bonus email templates (Phase 4, increment 2) -----------------
+// --- Bonus-capable email templates (Phase 4, model B) ---------------------
 
-// List the tenant's venture_bonus templates for the campaign dropdown. Gated in
-// the handler (bonus_funnel.campaigns) — the route map does NOT protect
-// createServerFn (project Authz gotcha). No input.
-export const listVentureTemplatesFn = createServerFn({ method: 'POST' }).handler(() =>
-  listVentureTemplatesHandler(),
+// List the tenant's BONUS-CAPABLE templates (blocks contain the {{bonus_list}}
+// marker) for the campaign dropdown. Gated in the handler (bonus_funnel.campaigns)
+// — the route map does NOT protect createServerFn (project Authz gotcha). No input.
+// Creation/edit/delete of templates uses the existing generic email-templates CRUD.
+export const listBonusTemplatesFn = createServerFn({ method: 'POST' }).handler(() =>
+  listBonusTemplatesHandler(),
 )
-
-// Create a new venture_bonus library template. Gated in the handler on
-// system.email_templates (TEMPLATE authority). Function-form inputValidator.
-export const createVentureTemplateFn = createServerFn({ method: 'POST' })
-  .inputValidator((v: z.infer<typeof createVentureTemplateSchema>) =>
-    createVentureTemplateSchema.parse(v),
-  )
-  .handler(({ data }) => createVentureTemplateHandler(data))
 
 // Assign (or clear) a campaign's explicit venture_bonus template. Gated in the
 // handler on bonus_funnel.campaigns + F5 cross-tenant forged-id guard. templateId

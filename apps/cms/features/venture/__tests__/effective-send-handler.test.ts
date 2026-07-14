@@ -217,8 +217,9 @@ describe('getCampaignEffectiveSendHandler — template presence', () => {
 // ===========================================================================
 // DRIFT-GUARD (INV-4, one-rule): resolvedTemplateId MUST match the id
 // fetchBonusTemplate (ingest.server.ts) would pick for the SAME campaign —
-// campaign.email_template_id if it resolves to a valid tenant venture_bonus row,
-// else the tenant DEFAULT (is_default), else null. The card must not drift from
+// campaign.email_template_id if it resolves to a valid tenant-owned row (ANY
+// type, model B), else the tenant DEFAULT (venture_bonus singleton slug), else
+// null. The card must not drift from
 // the send path. (email_templates is a single mock chain per table, so each
 // scenario exercises exactly ONE resolution read tier — by-id OR default.)
 // ===========================================================================

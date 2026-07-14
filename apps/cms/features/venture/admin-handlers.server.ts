@@ -29,17 +29,12 @@ import type {
   CreateBonusInput,
   CreateCampaignInput,
   CreateClientInput,
-  CreateVentureTemplateInput,
   ReorderBonusesInput,
   UpdateBonusInput,
   UpdateCampaignInput,
   UpdateClientInput,
 } from './validation'
-import {
-  VENTURE_BONUS_DEFAULT_BLOCKS,
-  VENTURE_BONUS_DEFAULT_SUBJECT,
-  VENTURE_BONUS_DEFAULT_TEMPLATE_VARIABLES,
-} from './mail/venture-bonus-default-template'
+import { BONUS_LIST_MARKER } from './mail/bonus-email-template'
 
 // ---------------------------------------------------------------------------
 // Venture bonus-funnel — ADMIN CRUD handlers (iter 5a). AUTHENTICATED layer.
@@ -67,12 +62,6 @@ const PERM = {
   campaigns: 'bonus_funnel.campaigns',
   bonuses: 'bonus_funnel.bonuses',
 } as const satisfies Record<string, PermissionKey>
-
-// TEMPLATE-authorship authority — creating a venture_bonus email template is
-// email-template management, gated on `system.email_templates` (NOT the campaign
-// key). Do NOT fork authority: assigning a template to a campaign is a campaign
-// edit (PERM.campaigns); authoring the template row is email-template management.
-const TEMPLATE_PERM: PermissionKey = 'system.email_templates'
 
 // ---------------------------------------------------------------------------
 // Parent-ownership verification (FK chain → so_clients.tenant_id)
@@ -491,8 +480,8 @@ export interface CampaignEffectiveSend extends EffectiveSender {
   templateExists: boolean
   // The template the send would ACTUALLY use, resolved by the SAME precedence as
   // the n8n-free CMS send path (fetchBonusTemplate / resolveVentureBonusTemplateId,
-  // INV-4): campaign.email_template_id if it resolves to a valid tenant
-  // venture_bonus row, else the tenant DEFAULT (is_default), else null (→ the
+  // INV-4): campaign.email_template_id if it resolves to a valid tenant-owned
+  // row, else the tenant DEFAULT (venture_bonus singleton slug), else null (→ the
   // hardcoded builder, "wbudowany szablon"). The card MUST NOT drift from ingest.
   resolvedTemplateId: string | null
   resolvedTemplateName: string | null
@@ -582,9 +571,10 @@ interface VentureTemplateChoice {
 }
 
 /**
- * Read a specific venture_bonus template by id, SCOPED to the caller's tenant
- * (F5 parity with ingest's F3 — the id must resolve under this tenant + type or
- * it is treated as absent). Null when not found.
+ * Read the campaign's EXPLICITLY-assigned template by id, SCOPED to the caller's
+ * tenant (F5 parity with ingest's F3 — the id must resolve under this tenant or
+ * it is treated as absent). Model B: a campaign may assign ANY tenant-owned
+ * template by id, so this read does NOT filter on `type`. Null when not found.
  */
 function readVentureTemplateChoiceById(
   auth: AuthContextFull,
@@ -595,7 +585,6 @@ function readVentureTemplateChoiceById(
       .select('id, label')
       .eq('id', templateId)
       .eq('tenant_id', auth.tenantId)
-      .eq('type', BONUS_TEMPLATE_TYPE)
       .maybeSingle(),
     dbError,
   ).andThen((res) => {
@@ -605,7 +594,10 @@ function readVentureTemplateChoiceById(
   })
 }
 
-/** Read the tenant's DEFAULT venture_bonus template (is_default = true), or null. */
+/**
+ * Read the tenant's DEFAULT bonus template — the `venture_bonus` SINGLETON slug
+ * row (model B: the unique-per-tenant slug IS the tenant default), or null.
+ */
 function readDefaultVentureTemplateChoice(
   auth: AuthContextFull,
 ): ResultAsync<VentureTemplateChoice | null, string> {
@@ -613,7 +605,6 @@ function readDefaultVentureTemplateChoice(
     tbl(auth, 'email_templates')
       .select('id, label')
       .eq('type', BONUS_TEMPLATE_TYPE)
-      .eq('is_default', true)
       .eq('tenant_id', auth.tenantId)
       .maybeSingle(),
     dbError,
@@ -627,7 +618,7 @@ function readDefaultVentureTemplateChoice(
 /**
  * Resolve the template a send would ACTUALLY use, mirroring ingest's
  * fetchBonusTemplate precedence (INV-4, one-rule): the campaign's explicitly
- * assigned template (if it resolves under the tenant + type) wins, else the
+ * assigned template (if it resolves under the tenant, ANY type) wins, else the
  * tenant DEFAULT, else null. Short-circuiting tiered read — the by-id read runs
  * only when a template is assigned; the default read only when by-id yields
  * nothing. This is the READ-ONLY card mirror of the send-path decision so the
@@ -691,48 +682,73 @@ export function getCampaignEffectiveSendHandler(
 }
 
 // ===========================================================================
-// Venture bonus email templates (Phase 4, increment 2)
+// Bonus-capable email templates (Phase 4, model B)
 //
-// The template-library surface: list the tenant's venture_bonus templates for
-// the campaign dropdown, create a new one (TEMPLATE authority), and assign/clear
-// a campaign's explicit template (campaign edit authority + F5 cross-tenant
-// forged-id guard).
+// The template-selection surface: list the tenant's BONUS-CAPABLE templates for
+// the campaign dropdown and assign/clear a campaign's explicit template (campaign
+// edit authority + F5 cross-tenant forged-id guard). Creation/edit/delete of
+// templates uses the EXISTING generic email-templates CRUD — no venture-specific
+// create path exists (model B).
 // ===========================================================================
 
-/** One venture_bonus template option for the campaign dropdown / library list. */
-export interface VentureTemplateOption {
+/** One bonus-capable template option for the campaign dropdown. */
+export interface BonusTemplateOption {
   id: string
   label: string
-  isDefault: boolean
 }
 
 /**
- * List the caller-tenant's venture_bonus templates for the dropdown — default
- * first, then by label. Gated on `bonus_funnel.campaigns` (the reader is the
- * campaign editor; the route map does NOT gate createServerFn). Tenant-scoped
- * via the RLS/cookie client + explicit tenant_id filter.
+ * A template is "bonus-capable" when its `blocks` is an array containing a `text`
+ * block whose trimmed `content` equals the structural `{{bonus_list}}` marker —
+ * the same predicate the send-path splicer (`isMarkerBlock`) uses. The marker
+ * constant is imported from the builder so this check cannot drift from it.
  */
-export function listVentureTemplatesHandler(): Promise<
-  MutationResult<VentureTemplateOption[]>
+function hasBonusListMarker(blocks: unknown): boolean {
+  if (!Array.isArray(blocks)) return false
+  return blocks.some((b) => {
+    const block = b as { type?: unknown; content?: unknown }
+    return (
+      block.type === 'text' &&
+      typeof block.content === 'string' &&
+      block.content.trim() === BONUS_LIST_MARKER
+    )
+  })
+}
+
+/**
+ * List the caller-tenant's BONUS-CAPABLE templates for the campaign dropdown
+ * (model B: a campaign may select ANY template that carries the `{{bonus_list}}`
+ * marker, not only the `venture_bonus` slug). Fetches the tenant's templates and
+ * filters IN JS on the marker predicate (a JSONB array-contains that PostgREST
+ * cannot express as a static eq filter). Gated on `bonus_funnel.campaigns` (the
+ * reader is the campaign editor; the route map does NOT gate createServerFn).
+ * Tenant-scoped via the RLS/cookie client + explicit tenant_id filter.
+ */
+export function listBonusTemplatesHandler(): Promise<
+  MutationResult<BonusTemplateOption[]>
 > {
   return toMutation(
     gated(PERM.campaigns, (auth) =>
       ResultAsync.fromPromise(
         tbl(auth, 'email_templates')
-          .select('id, label, is_default')
-          .eq('tenant_id', auth.tenantId)
-          .eq('type', BONUS_TEMPLATE_TYPE)
-          .order('is_default', { ascending: false })
-          .order('label'),
+          .select('id, label, type, blocks')
+          .eq('tenant_id', auth.tenantId),
         dbError,
       ).andThen((res) => {
         const r = res as {
-          data: Array<{ id: string; label: string; is_default: boolean }> | null
+          data: Array<{
+            id: string
+            label: string | null
+            type: string
+            blocks: unknown
+          }> | null
           error: DbErrorShape
         }
-        if (r.error) return err(mapDbError(r.error, 'listVentureTemplates'))
+        if (r.error) return err(mapDbError(r.error, 'listBonusTemplates'))
         return ok(
-          (r.data ?? []).map((t) => ({ id: t.id, label: t.label, isDefault: t.is_default })),
+          (r.data ?? [])
+            .filter((t) => hasBonusListMarker(t.blocks))
+            .map((t) => ({ id: t.id, label: t.label ?? t.type })),
         )
       }),
     ),
@@ -740,49 +756,13 @@ export function listVentureTemplatesHandler(): Promise<
 }
 
 /**
- * Create a new venture_bonus library template. Gated on `system.email_templates`
- * — TEMPLATE-authorship authority, NOT the campaign key (do not fork authority).
- * tenant_id/type/blocks/subject/is_default are server-set (only the label is
- * user-supplied); the seeded blocks include the `{{bonus_list}}` structural
- * marker + `{{companyName}}` copy so a fresh template renders correctly on the
- * venture send path. Plain INSERT — the (tenant_id, type) uniqueness moved to a
- * PARTIAL index (is_default only), which cannot be an ON CONFLICT arbiter.
- * Returns the new id.
- */
-export function createVentureTemplateHandler(
-  input: CreateVentureTemplateInput,
-): Promise<MutationResult<{ id: string }>> {
-  return toMutation(
-    gated(TEMPLATE_PERM, (auth) =>
-      ResultAsync.fromPromise(
-        tbl(auth, 'email_templates')
-          .insert({
-            tenant_id: auth.tenantId,
-            type: BONUS_TEMPLATE_TYPE,
-            label: input.label,
-            subject: VENTURE_BONUS_DEFAULT_SUBJECT,
-            blocks: VENTURE_BONUS_DEFAULT_BLOCKS,
-            template_variables: VENTURE_BONUS_DEFAULT_TEMPLATE_VARIABLES,
-            // A newly-created library template is NEVER the default — the default
-            // is a distinct, deliberately-promoted row (partial-unique index).
-            is_default: false,
-            is_active: true,
-          })
-          .select('id')
-          .single(),
-        dbError,
-      ).andThen(fromSupabaseSafe<{ id: string }>('createVentureTemplate')),
-    ),
-  )
-}
-
-/**
- * Verify a venture_bonus template belongs to the caller's tenant BEFORE it is
- * assigned to a campaign (F5). NULL templateId ("clear → use default") is always
- * allowed and skips the check. A non-null id that does NOT resolve under the
- * caller's tenant + type is REJECTED (standard no-permission) — never silently
- * nulled — so a forged/cross-tenant id can never be assigned. Mirrors
- * assertThemeOwnedIfPresent.
+ * Verify a template belongs to the caller's tenant BEFORE it is assigned to a
+ * campaign (F5). NULL templateId ("clear → use default") is always allowed and
+ * skips the check. Model B: a campaign may assign ANY tenant-owned template — the
+ * check is tenant-ownership ONLY (no `type` constraint); bonus-capability is a UI
+ * warning, not a hard gate. A non-null id that does NOT resolve under the caller's
+ * tenant is REJECTED (standard no-permission) — never silently nulled — so a
+ * forged/cross-tenant id can never be assigned. Mirrors assertThemeOwnedIfPresent.
  */
 function assertVentureTemplateOwnedIfPresent(
   auth: AuthContextFull,
@@ -794,13 +774,12 @@ function assertVentureTemplateOwnedIfPresent(
       .select('id')
       .eq('id', templateId)
       .eq('tenant_id', auth.tenantId)
-      .eq('type', BONUS_TEMPLATE_TYPE)
       .maybeSingle(),
     dbError,
   ).andThen((res) => {
     const r = res as { data: { id: string } | null; error: DbErrorShape }
     if (r.error) return err(mapDbError(r.error, 'assertVentureTemplateOwned'))
-    // Missing OR another tenant's OR wrong type → indistinguishable, all forbidden.
+    // Missing OR another tenant's → indistinguishable, both forbidden.
     if (!r.data) return err(messages.common.noPermission)
     return ok(undefined)
   })
@@ -812,8 +791,9 @@ function assertVentureTemplateOwnedIfPresent(
  *   (a) assertCampaignOwned — the campaign must belong to the caller's tenant
  *       (walks campaign → client → tenant; so_campaigns has NO tenant_id column,
  *       so this FK-chain walk IS the tenant scope);
- *   (b) a non-null templateId is verified owned under the caller's tenant + type
- *       (rejected, NOT silently nulled, when foreign/absent);
+ *   (b) a non-null templateId is verified owned under the caller's tenant (ANY
+ *       type — model B allows any template) — rejected, NOT silently nulled,
+ *       when foreign/absent;
  *   (c) then UPDATE so_campaigns.email_template_id scoped by campaign id.
  * A cross-tenant forged campaign id OR template id is therefore impossible to
  * assign — independent of the send path's own F3 guard. NULL clears → the send

@@ -227,16 +227,11 @@ export const listCampaignsInputSchema = z.object({
 })
 export const listBonusesInputSchema = z.object({ campaign_id: z.string().uuid() })
 
-// --- Venture bonus email templates (Phase 4, increment 2) -----------------
-// The template library dropdown/create/select surface. Consumed ONLY through
-// the function-form inputValidator in admin.ts (`.inputValidator((v) =>
-// schema.parse(v))`) — a raw schema silently skips validation (features/CLAUDE.md).
-
-// Create a new venture_bonus library template. Only the human-readable label is
-// user-supplied; tenant_id/type/blocks/subject/is_default are set server-side.
-export const createVentureTemplateSchema = z.object({
-  label: z.string().trim().min(1, messages.validation.nameRequired),
-})
+// --- Bonus-capable email templates (Phase 4, model B) ---------------------
+// The template select surface. Consumed ONLY through the function-form
+// inputValidator in admin.ts (`.inputValidator((v) => schema.parse(v))`) — a raw
+// schema silently skips validation (features/CLAUDE.md). Template CREATION uses
+// the existing generic email-templates CRUD — no venture-specific create schema.
 
 // Assign (or clear) a campaign's explicit venture_bonus template. `templateId`
 // nullable: null CLEARS the assignment → the send falls back to the tenant
@@ -288,7 +283,6 @@ export type UpdateCampaignInput = z.infer<typeof updateCampaignSchema>
 export type CreateBonusInput = z.infer<typeof createBonusSchema>
 export type UpdateBonusInput = z.infer<typeof updateBonusSchema>
 export type ReorderBonusesInput = z.infer<typeof reorderBonusesSchema>
-export type CreateVentureTemplateInput = z.infer<typeof createVentureTemplateSchema>
 export type SelectTemplateForCampaignInput = z.infer<
   typeof selectTemplateForCampaignSchema
 >

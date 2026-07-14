@@ -569,10 +569,13 @@ function coerceBonusTemplateRow(data: unknown): BonusTemplateRow | null {
 }
 
 /**
- * Read a specific `venture_bonus` template by id, SCOPED to the tenant (F3 —
- * the tenant id comes from the campaign ROW, never the payload, so the
- * service-role read cannot surface another tenant's content). NEVER throws — any
- * query/thrown error degrades to null so the caller falls to the next tier.
+ * Read the campaign's EXPLICITLY-selected template by id, SCOPED to the tenant
+ * (F3 — the tenant id comes from the campaign ROW, never the payload, so the
+ * service-role read cannot surface another tenant's content). Model B: a campaign
+ * may select ANY tenant-owned template by id (NOT only the `venture_bonus` slug),
+ * so this read does NOT filter on `type` — the id + tenant scope is the whole
+ * guard. NEVER throws — any query/thrown error degrades to null so the caller
+ * falls to the next tier.
  */
 async function readBonusTemplateById(
   supabase: ServiceClient,
@@ -585,7 +588,6 @@ async function readBonusTemplateById(
       .select('blocks, subject')
       .eq('id', templateId)
       .eq('tenant_id', tenantId)
-      .eq('type', BONUS_TEMPLATE_TYPE)
       .maybeSingle()
     if (error) return null
     return coerceBonusTemplateRow(data)
@@ -599,8 +601,9 @@ async function readBonusTemplateById(
 }
 
 /**
- * Read the tenant's DEFAULT `venture_bonus` template (is_default = true). The
- * migration's partial-unique index guarantees ≤1 default per (tenant, type), so
+ * Read the tenant's DEFAULT bonus template — the `venture_bonus` SINGLETON slug
+ * row (model B: `venture_bonus` is a unique-per-tenant slug = the tenant default,
+ * NOT an is_default flag). The UNIQUE(tenant_id, type) guarantees ≤1 such row, so
  * `maybeSingle` is safe. NEVER throws — degrades to null (no-drop → hardcoded
  * builder).
  */
@@ -613,7 +616,6 @@ async function readDefaultBonusTemplate(
       .from('email_templates')
       .select('blocks, subject')
       .eq('type', BONUS_TEMPLATE_TYPE)
-      .eq('is_default', true)
       .eq('tenant_id', tenantId)
       .maybeSingle()
     if (error) return null
@@ -632,8 +634,8 @@ async function readDefaultBonusTemplate(
  * precedence (see `resolveVentureBonusTemplateId`): the campaign's EXPLICITLY
  * assigned template wins, else the tenant's DEFAULT, else null. Implemented as a
  * short-circuiting tiered read (the default's id isn't known until queried):
- *   1. `campaignTemplateId` set + a usable row found (tenant + type match) → use it
- *   2. otherwise the tenant's is_default row, if usable
+ *   1. `campaignTemplateId` set + a usable row found (tenant match, ANY type) → use it
+ *   2. otherwise the tenant's `venture_bonus` singleton slug row, if usable
  *   3. otherwise null → caller uses the hardcoded builder (INV-1 NO-DROP)
  * Every read is wrapped to degrade to the next tier — NEVER throws upward, so a
  * missing/unreadable/malformed template silently falls back with no lead-send

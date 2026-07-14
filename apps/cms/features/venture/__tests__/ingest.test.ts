@@ -616,11 +616,11 @@ describe('ingestLead', () => {
   })
 
   // ---------------------------------------------------------------------------
-  // Phase 4 (increment 1): SEND-PATH template resolution by campaign assignment.
-  // INV-4 precedence: campaign.email_template_id (by-id) → tenant default
-  // (is_default) → hardcoded builder. INV-1 no-drop asserted throughout: the
-  // lead is always ingested + an email is always attempted. F3: the by-id read
-  // is tenant-scoped (id + tenant_id + type).
+  // Phase 4 (model B): SEND-PATH template resolution by campaign assignment.
+  // INV-4 precedence: campaign.email_template_id (by-id, ANY type) → tenant
+  // default (venture_bonus singleton slug) → hardcoded builder. INV-1 no-drop
+  // asserted throughout: the lead is always ingested + an email is always
+  // attempted. F3: the by-id read is tenant-scoped (id + tenant_id, no type).
   // ---------------------------------------------------------------------------
   it('Phase 4: campaign.email_template_id set + row exists → that template rendered (by-id only, default read short-circuited)', async () => {
     const supabase = makeSupabase({
@@ -642,10 +642,11 @@ describe('ingestLead', () => {
     expect(outcome).toMatchObject({ status: 'ingested', emailSent: true })
     expect(buildBonusEmailFromTemplateHtml).toHaveBeenCalledTimes(1)
     expect(buildBonusEmail).not.toHaveBeenCalled()
-    // F3: the by-id read is scoped to id + the campaign-row tenant + the venture slug.
+    // F3: the by-id read is scoped to id + the campaign-row tenant (model B: ANY type).
     expect(supabase.emailTemplatesBuilder.eq).toHaveBeenCalledWith('id', 'tmpl-assigned')
     expect(supabase.emailTemplatesBuilder.eq).toHaveBeenCalledWith('tenant_id', 'tenant-1')
-    expect(supabase.emailTemplatesBuilder.eq).toHaveBeenCalledWith('type', 'venture_bonus')
+    // Model B: the by-id read does NOT constrain the type — any owned template resolves.
+    expect(supabase.emailTemplatesBuilder.eq).not.toHaveBeenCalledWith('type', 'venture_bonus')
     // Only the by-id read fired — a found assignment short-circuits the default read.
     expect(supabase.emailTemplatesBuilder.maybeSingle).toHaveBeenCalledTimes(1)
   })
@@ -669,10 +670,11 @@ describe('ingestLead', () => {
     const outcome = await ingestLead(deps, { ...CAMPAIGN, email_template_id: 'tmpl-missing' }, LEAD)
 
     expect(outcome).toMatchObject({ status: 'ingested', emailSent: true })
-    // Two reads: by-id (miss) then the tenant default (hit).
+    // Two reads: by-id (miss) then the tenant default venture_bonus singleton (hit).
     expect(supabase.emailTemplatesBuilder.maybeSingle).toHaveBeenCalledTimes(2)
     expect(supabase.emailTemplatesBuilder.eq).toHaveBeenCalledWith('id', 'tmpl-missing')
-    expect(supabase.emailTemplatesBuilder.eq).toHaveBeenCalledWith('is_default', true)
+    // Default tier reads the venture_bonus singleton slug (no is_default flag in model B).
+    expect(supabase.emailTemplatesBuilder.eq).toHaveBeenCalledWith('type', 'venture_bonus')
     expect(buildBonusEmailFromTemplateHtml).toHaveBeenCalledTimes(1)
     expect(buildBonusEmail).not.toHaveBeenCalled()
   })
