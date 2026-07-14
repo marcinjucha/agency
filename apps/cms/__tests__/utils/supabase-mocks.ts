@@ -5,7 +5,7 @@ import { vi } from 'vitest'
  * and terminal methods resolve to the given value.
  *
  * Supports: .select(), .insert(), .update(), .delete(), .upsert(),
- * .eq(), .in(), .limit(), .order(), .range(), .single(), .maybeSingle(),
+ * .eq(), .neq(), .in(), .limit(), .order(), .range(), .single(), .maybeSingle(),
  * .rpc(), .then(), .catch()
  */
 export function mockChain(finalValue: unknown) {
@@ -16,6 +16,7 @@ export function mockChain(finalValue: unknown) {
   chain.delete = vi.fn().mockReturnValue(chain)
   chain.upsert = vi.fn().mockReturnValue(chain)
   chain.eq = vi.fn().mockReturnValue(chain)
+  chain.neq = vi.fn().mockReturnValue(chain)
   chain.in = vi.fn().mockReturnValue(chain)
   chain.limit = vi.fn().mockReturnValue(chain)
   chain.order = vi.fn().mockReturnValue(chain)

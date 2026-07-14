@@ -1,5 +1,6 @@
 export * from './blocks/types'
 export * from './EmailRenderer'
+export { escapeHtml, substituteTokens, substitutePlain, safeUrlValue, sanitizeHtmlUrls } from './substitute'
 export { BLOCK_REGISTRY } from './blocks/registry'
 export type { BlockRegistryEntry } from './blocks/registry'
 export type {
@@ -26,3 +27,11 @@ export {
   isBorderableBlockType,
 } from './blocks/defaults'
 export type { TypographyDefaults } from './blocks/defaults'
+export type { ThemeColorMap } from './theme'
+export {
+  BLOCK_TEXT_COLOR_TOKEN,
+  BLOCK_BACKGROUND_COLOR_TOKEN,
+  isRenderableHex,
+  themedColor,
+  resolveThemedColor,
+} from './theme'

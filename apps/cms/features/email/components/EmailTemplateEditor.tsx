@@ -9,19 +9,26 @@ import { Inspector } from './editor/Inspector'
 import { DeleteTemplateDialog } from './DeleteTemplateDialog'
 import { DEFAULT_BLOCKS } from '../constants'
 import type {
+  AddBlockPick,
   Block,
-  BlockType,
   EmailTemplate,
   EmailTemplateType,
   TemplateVariable,
 } from '../types'
+import { BONUS_LIST_PICK } from '../types'
+import { VENTURE_BONUS_MARKER } from '@/lib/app-sent-variables'
 import { updateEmailTemplateFn, parseTemplateVariables } from '../server'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
 import { CMS_BLOCK_REGISTRY } from '../block-registry'
 import { extractTemplateVariableKeys } from '../utils/extract-variable-keys'
 import { validateVariableKey } from '../utils/validate-variable-key'
+import { collectUnresolvableTokens } from '../utils/resolve-variable-source'
 import { queryKeys } from '@/lib/query-keys'
+import { resolveClientTheme } from '@/lib/theme'
+import type { ThemeWithUsage } from '@/features/themes/types'
+import { useResolvedEmailTheme } from '../hooks/use-resolved-email-theme'
+import { EmailThemeProvider } from '../contexts/email-theme-context'
 
 interface EmailTemplateEditorProps {
   templateType: string
@@ -42,6 +49,9 @@ export function EmailTemplateEditor({ templateType, initialTemplate }: EmailTemp
   // Core state
   const [label, setLabel] = useState(initialTemplate?.label ?? templateType)
   const [subject, setSubject] = useState(initialTemplate?.subject ?? '')
+  // Per-template theme override — null = inherit the tenant default. Mirrors the
+  // `label` pattern (local state, hydrated from initialTemplate, sent on save).
+  const [themeId, setThemeId] = useState<string | null>(initialTemplate?.theme_id ?? null)
   const [blocks, setBlocks] = useState<Block[]>(initialTemplate?.blocks ?? DEFAULT_BLOCKS)
   const [userEditedVariables, setUserEditedVariables] = useState<TemplateVariable[]>(() =>
     parseTemplateVariables(initialTemplate?.template_variables),
@@ -56,6 +66,9 @@ export function EmailTemplateEditor({ templateType, initialTemplate }: EmailTemp
   // Save state
   const [saveState, setSaveState] = useState<SaveState>('idle')
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  // Non-blocking save-time advisory (APP-OWNED unresolvable tokens). role="status",
+  // auto-dismissed on the same timeout as saveState — NOT an error, never blocks.
+  const [saveWarning, setSaveWarning] = useState<string | null>(null)
   const [dirty, setDirty] = useState(false)
 
   // Delete dialog
@@ -66,6 +79,7 @@ export function EmailTemplateEditor({ templateType, initialTemplate }: EmailTemp
     if (initialTemplate) {
       setLabel(initialTemplate.label ?? templateType)
       setSubject(initialTemplate.subject ?? '')
+      setThemeId(initialTemplate.theme_id ?? null)
       setBlocks(initialTemplate.blocks ?? DEFAULT_BLOCKS)
       setUserEditedVariables(parseTemplateVariables(initialTemplate.template_variables))
       setDirty(false)
@@ -80,7 +94,7 @@ export function EmailTemplateEditor({ templateType, initialTemplate }: EmailTemp
       return
     }
     setDirty(true)
-  }, [label, subject, blocks, userEditedVariables])
+  }, [label, subject, themeId, blocks, userEditedVariables])
 
   // Variables model (AAA-T-221, 2026-05-15): user-managed list ONLY.
   // Previously the inspector showed an auto-merged view of detected `{{key}}`
@@ -95,19 +109,44 @@ export function EmailTemplateEditor({ templateType, initialTemplate }: EmailTemp
     validateVariableKey(v.key, i, userEditedVariables) !== null,
   )
 
+  // Content tokens that will reach the recipient LITERALLY (APP-OWNED types only —
+  // always [] for n8n/custom). Single computed set feeding two render sites: the
+  // persistent Zmienne-tab note (via Inspector) and the save-time overlay echo.
+  // Display + advisory ONLY — never blocks save (the `hasInvalidVariableKey`
+  // malformed-syntax gate is the only legitimate block).
+  const unresolvableTokens = collectUnresolvableTokens(
+    detectedKeys,
+    templateType,
+    userEditedVariables.map((v) => v.key),
+  )
+
   // ---- Block operations (passed down to OutlinePanel) ----
 
   function updateBlock(updated: Block) {
     setBlocks((prev) => prev.map((b) => (b.id === updated.id ? updated : b)))
   }
 
-  function addBlock(type: BlockType) {
-    const entry = CMS_BLOCK_REGISTRY[type]
-    if (!entry) return
-    const id = crypto.randomUUID()
-    const newBlock = { id, ...entry.defaultValue } as Block
+  // Build a new block from a pick. The BONUS_LIST_PICK sentinel is NOT a registry
+  // type — it yields a text block pre-filled with the {{bonus_list}} marker (import
+  // the constant, never hand-type it). Returns null for an unknown block type.
+  function buildBlockFromPick(pick: AddBlockPick): Block | null {
+    if (pick === BONUS_LIST_PICK) {
+      return {
+        id: crypto.randomUUID(),
+        ...CMS_BLOCK_REGISTRY.text.defaultValue,
+        content: VENTURE_BONUS_MARKER,
+      } as Block
+    }
+    const entry = CMS_BLOCK_REGISTRY[pick]
+    if (!entry) return null
+    return { id: crypto.randomUUID(), ...entry.defaultValue } as Block
+  }
+
+  function addBlock(pick: AddBlockPick) {
+    const newBlock = buildBlockFromPick(pick)
+    if (!newBlock) return
     setBlocks((prev) => [...prev, newBlock])
-    setSelectedBlockId(id)
+    setSelectedBlockId(newBlock.id)
   }
 
   function deleteBlock(id: string) {
@@ -136,17 +175,15 @@ export function EmailTemplateEditor({ templateType, initialTemplate }: EmailTemp
     })
   }
 
-  function insertBlockAt(type: BlockType, index: number) {
-    const entry = CMS_BLOCK_REGISTRY[type]
-    if (!entry) return
-    const id = crypto.randomUUID()
-    const newBlock = { id, ...entry.defaultValue } as Block
+  function insertBlockAt(pick: AddBlockPick, index: number) {
+    const newBlock = buildBlockFromPick(pick)
+    if (!newBlock) return
     setBlocks((prev) => {
       const next = prev.slice()
       next.splice(index, 0, newBlock)
       return next
     })
-    setSelectedBlockId(id)
+    setSelectedBlockId(newBlock.id)
   }
 
   function moveBlock(id: string, dir: -1 | 1) {
@@ -161,12 +198,38 @@ export function EmailTemplateEditor({ templateType, initialTemplate }: EmailTemp
     if (e.target === e.currentTarget) setSelectedBlockId(null)
   }
 
+  // ---- Theme pick (optimistic recolour) ----
+
+  // Resolved theme map for the PICKED theme_id — recolours the live Canvas +
+  // per-block token swatches. Keyed by themeId, so it refetches on pick; the
+  // seed below makes the recolour INSTANT for a named theme (no round-trip).
+  const resolvedTheme = useResolvedEmailTheme(themeId)
+
+  function handleThemeChange(nextId: string | null) {
+    setThemeId(nextId)
+    // Optimistic: seed the resolved-theme cache for the new key from the theme's
+    // own tokens (already in the ThemePicker's `themes.all` cache) so swatches +
+    // Canvas recolour immediately. Server stays source of truth at save. For
+    // inherit (null) we can't resolve the tenant default client-side — the query
+    // fetches it (brief delay, acceptable).
+    if (!nextId) return
+    const themes = queryClient.getQueryData<ThemeWithUsage[]>(queryKeys.themes.all)
+    const picked = themes?.find((theme) => theme.id === nextId)
+    if (!picked) return
+    // Mirror the SERVER email path exactly (resolveEmailThemeMap →
+    // resolveClientTheme with the theme as tenantTheme) so optimistic colours
+    // match the saved html_body.
+    const map = { ...resolveClientTheme({ tenantTheme: picked.tokens, clientTheme: null }) }
+    queryClient.setQueryData([...queryKeys.email.resolvedTheme, nextId], map)
+  }
+
   // ---- Save ----
 
   async function handleSave() {
     if (saveState === 'saving' || hasInvalidVariableKey) return
     setSaveState('saving')
     setErrorMessage(null)
+    setSaveWarning(null)
 
     const cleanedVariables = userEditedVariables.filter((v) => v.key.trim().length > 0)
 
@@ -174,12 +237,18 @@ export function EmailTemplateEditor({ templateType, initialTemplate }: EmailTemp
       const result = await updateEmailTemplateFn({
         data: {
           type: templateType as EmailTemplateType,
-          data: { subject, blocks, template_variables: cleanedVariables, label },
+          data: { subject, blocks, template_variables: cleanedVariables, label, theme_id: themeId },
         },
       })
       if (result && result.success) {
         setSaveState('saved')
         setDirty(false)
+        // Non-blocking echo of the unresolvable-token advisory (save succeeded).
+        if (unresolvableTokens.length > 0) {
+          setSaveWarning(
+            `${messages.email.unresolvableSaveWarning} ${unresolvableTokens.map((t) => `{{${t}}}`).join(', ')}`,
+          )
+        }
         void queryClient.invalidateQueries({ queryKey: queryKeys.email.all })
         void queryClient.invalidateQueries({ queryKey: queryKeys.workflows.all })
       } else {
@@ -190,7 +259,10 @@ export function EmailTemplateEditor({ templateType, initialTemplate }: EmailTemp
       setSaveState('error')
       setErrorMessage(err instanceof Error ? err.message : messages.common.unknownError)
     } finally {
-      setTimeout(() => setSaveState('idle'), 2500)
+      setTimeout(() => {
+        setSaveState('idle')
+        setSaveWarning(null)
+      }, 2500)
     }
   }
 
@@ -219,11 +291,12 @@ export function EmailTemplateEditor({ templateType, initialTemplate }: EmailTemp
     return () => window.removeEventListener('keydown', onKey)
     // handleSave + deleteBlock read state via closure; re-run on dependencies.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [saveState, hasInvalidVariableKey, label, subject, blocks, userEditedVariables, selectedBlockId])
+  }, [saveState, hasInvalidVariableKey, label, subject, themeId, blocks, userEditedVariables, selectedBlockId])
 
   // ---- Render ----
 
   return (
+    <EmailThemeProvider theme={resolvedTheme}>
     <div className="absolute inset-0 grid grid-rows-[52px_1fr] grid-cols-[280px_1fr_360px] bg-background">
       {/* Topbar — spans all 3 columns */}
       <header className="col-span-3 z-10 flex items-center gap-3 border-b border-border bg-background px-4">
@@ -301,6 +374,7 @@ export function EmailTemplateEditor({ templateType, initialTemplate }: EmailTemp
         setViewport={setViewport}
         onBackdropClick={onCanvasBackdropClick}
         detectedKeys={detectedKeys}
+        templateType={templateType}
       />
 
       {/* Inspector (right) */}
@@ -312,10 +386,13 @@ export function EmailTemplateEditor({ templateType, initialTemplate }: EmailTemp
         onDuplicateBlock={duplicateBlock}
         label={label}
         setLabel={setLabel}
+        themeId={themeId}
+        setThemeId={handleThemeChange}
         userEditedVariables={userEditedVariables}
         setUserEditedVariables={setUserEditedVariables}
         detectedKeys={detectedKeys}
         templateType={templateType}
+        unresolvableTokens={unresolvableTokens}
         onDelete={() => setDeleteOpen(true)}
       />
 
@@ -328,6 +405,15 @@ export function EmailTemplateEditor({ templateType, initialTemplate }: EmailTemp
         </div>
       )}
 
+      {!errorMessage && saveWarning && (
+        <div
+          role="status"
+          className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-2 text-sm text-amber-700 dark:text-amber-300 shadow-md"
+        >
+          {saveWarning}
+        </div>
+      )}
+
       <DeleteTemplateDialog
         template={initialTemplate}
         open={deleteOpen}
@@ -335,6 +421,7 @@ export function EmailTemplateEditor({ templateType, initialTemplate }: EmailTemp
         onDeleted={() => navigate({ to: routes.admin.emailTemplates })}
       />
     </div>
+    </EmailThemeProvider>
   )
 }
 

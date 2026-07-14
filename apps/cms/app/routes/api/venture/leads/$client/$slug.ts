@@ -108,13 +108,20 @@ export const Route = createFileRoute('/api/venture/leads/$client/$slug')({
     handlers: {
       POST: async ({ request }) => {
         const { clientSlug, slug } = parseClientAndSlug(request)
+        // Diagnostic trace only (prefix `[venture-webhook]`) — NONE of these logs
+        // change the HTTP response; they exist so Vercel logs disambiguate the
+        // deliberately-uniform 401. Only SAFE discriminators are ever logged:
+        // path params (already in the URL), resolution outcomes, secret
+        // PRESENCE/length (never its value), the provider id, and the signature
+        // HEADER presence + verify RESULT (never the header value, the secret, or
+        // the computed HMAC).
         if (!clientSlug || !slug) {
           // Server-log only — never surfaced in the HTTP response, so
           // distinguishing the reason here does not create an enumeration
           // oracle for the caller (that oracle is about response content).
-          console.warn(
-            '[venture-ingest] rejected: malformed request (missing clientSlug/slug in URL)',
-            { clientSlug, slug },
+          console.error(
+            '[venture-webhook] rejected: malformed URL (missing client/slug) -> 401',
+            { client: clientSlug, slug },
           )
           return invalidSignature()
         }
@@ -128,18 +135,22 @@ export const Route = createFileRoute('/api/venture/leads/$client/$slug')({
         // does not retry 401s, so conflating the two would silently drop a
         // validly-signed lead forever on a mere connection blip).
         if (resolveResult.kind === 'db_error') {
-          console.error('[venture-ingest] rejected: db error resolving client/campaign', {
-            clientSlug,
+          // resolveCampaign already logged WHICH lookup failed (client vs
+          // campaign); this records the route's mapping to a retryable 500.
+          console.error('[venture-webhook] rejected: db_error resolving campaign -> 500', {
+            client: clientSlug,
             slug,
           })
           return json({ error: 'internal_error' }, 500)
         }
 
         // Unknown client, unknown campaign, OR no secret configured → same
-        // 401 as a bad signature (no enumeration oracle).
+        // 401 as a bad signature (no enumeration oracle). resolveCampaign logs
+        // the client-vs-campaign discriminator; the route sees only the uniform
+        // not_found (that distinction never reaches the response).
         if (resolveResult.kind === 'not_found') {
-          console.warn('[venture-ingest] rejected: unknown client/campaign', {
-            clientSlug,
+          console.error('[venture-webhook] rejected: campaign not_found -> 401', {
+            client: clientSlug,
             slug,
           })
           return invalidSignature()
@@ -157,30 +168,39 @@ export const Route = createFileRoute('/api/venture/leads/$client/$slug')({
         // wrongly resolved a genuine draft (NULL) to 'tally'.
         const provider = resolveLeadSource(campaign.lead_source_provider)
         if (!provider) {
-          console.warn(
-            '[venture-ingest] rejected: no/unknown lead-source provider (draft or unregistered)',
-            { clientSlug, slug },
+          console.error(
+            '[venture-webhook] rejected: unresolved lead-source provider (draft/unregistered) -> 401',
+            { client: clientSlug, slug, campaignId: campaign.id, provider: null },
           )
           return invalidSignature()
         }
-
         const secret = campaign.tally_webhook_secret
         if (!secret) {
-          console.warn(
-            '[venture-ingest] rejected: no webhook secret configured',
-            { clientSlug, slug },
+          console.error(
+            '[venture-webhook] rejected: no webhook secret configured -> 401',
+            { client: clientSlug, slug, campaignId: campaign.id, secretPresent: false },
           )
           return invalidSignature()
         }
-
         // Verify over the RAW body BEFORE parsing (do not re-serialize). The
         // provider reads its own signature header internally (header-agnostic).
         const rawBody = await request.text()
+        // Presence BOOLEAN of the Tally signature header — never its value. (The
+        // provider reads the header internally; this diagnostic mirror is for the
+        // log line only and does not affect verification.)
+        const signatureHeaderPresent = request.headers.has('Tally-Signature')
         const check = provider.verify({ rawBody, headers: request.headers, secret })
         if (!check.valid) {
-          console.warn('[venture-ingest] rejected: invalid signature', {
-            clientSlug,
+          // `check.reason` is a provider-neutral discriminator string
+          // (missing_secret | missing_signature | invalid_signature) — NOT the
+          // header value, the secret, or the computed HMAC.
+          console.error('[venture-webhook] rejected: signature verification failed -> 401', {
+            client: clientSlug,
             slug,
+            campaignId: campaign.id,
+            signatureHeaderPresent,
+            verifyResult: 'invalid',
+            reason: check.reason,
           })
           return invalidSignature()
         }
@@ -189,12 +209,24 @@ export const Route = createFileRoute('/api/venture/leads/$client/$slug')({
         try {
           parsed = JSON.parse(rawBody)
         } catch {
+          console.error('[venture-webhook] rejected: body is not valid JSON -> 400', {
+            client: clientSlug,
+            slug,
+            campaignId: campaign.id,
+          })
           return json({ error: 'bad_request' }, 400)
         }
 
         const mapped = provider.parse(parsed)
         if (mapped.isErr()) {
-          console.warn('[venture-ingest] unmappable Tally payload:', mapped.error)
+          // `mapped.error` is a static TallyMapError union string (e.g. missing
+          // submissionId) — no PII / no payload content.
+          console.error('[venture-webhook] rejected: unmappable payload -> 400', {
+            client: clientSlug,
+            slug,
+            campaignId: campaign.id,
+            reason: mapped.error,
+          })
           return json({ error: 'bad_request' }, 400)
         }
 
@@ -210,31 +242,22 @@ export const Route = createFileRoute('/api/venture/leads/$client/$slug')({
           )
           const httpStatus = ingestOutcomeStatus(outcome)
           if (httpStatus !== 200) {
-            console.warn('[venture-ingest] lead not persisted (retryable):', outcome.status)
+            console.error('[venture-webhook] rejected: lead not persisted (retryable) -> 500', {
+              client: clientSlug,
+              slug,
+              campaignId: campaign.id,
+              reason: outcome.status,
+            })
             return json({ error: 'ingest_failed' }, httpStatus)
-          }
-          if (outcome.status === 'ingested') {
-            console.log('[venture-ingest] lead ingested:', {
-              clientSlug,
-              slug,
-              status: outcome.status,
-              leadId: outcome.leadId,
-              espSynced: outcome.espSynced,
-              emailSent: outcome.emailSent,
-            })
-          } else {
-            console.log('[venture-ingest] lead ingest outcome:', {
-              clientSlug,
-              slug,
-              status: outcome.status,
-            })
           }
           return json({ ok: true }, 200)
         } catch (error) {
-          console.error(
-            '[venture-ingest] unexpected ingest error:',
-            error instanceof Error ? error.message : String(error),
-          )
+          console.error('[venture-webhook] rejected: unexpected ingest error -> 500', {
+            client: clientSlug,
+            slug,
+            campaignId: campaign.id,
+            error: error instanceof Error ? error.message : String(error),
+          })
           return json({ error: 'ingest_failed' }, 500)
         }
       },

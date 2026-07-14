@@ -84,6 +84,11 @@ export const createClientSchema = z.object({
   // `.or(z.literal(''))` from day one (see comment above re: RHF always
   // submitting '' for an untouched text input).
   sender_name: z.string().trim().nullable().optional().or(z.literal('')),
+  // Assigned named theme (so_clients.theme_id FK → so_themes). NULL = inherit
+  // the organization's theme (design § Assignment UX). `.nullable().optional()`:
+  // the editor always sends it (null to inherit, a uuid for an own theme), but a
+  // quick-create (name+slug only) omits it — Supabase FK is nullable.
+  theme_id: z.string().uuid().nullable().optional(),
 })
 
 // `.partial()` on a schema WITHOUT ids — the row id travels in the input
@@ -149,6 +154,13 @@ export const createCampaignSchema = z.object({
   // non-secret shape (sanitizeLeadSourceConfig) before writing — secret fields
   // are excluded (they go to the dedicated column). NOT NULL DEFAULT '{}' in DB.
   lead_source_config: z.record(z.string(), z.unknown()).nullable().optional(),
+  // Assigned named theme (so_campaigns.theme_id FK → so_themes) — the campaign
+  // (per-launch) theme tier. NULL = inherit from the client, then the tenant
+  // (design § Campaign tier). `.nullable().optional()`: the editor sends null to
+  // inherit or a uuid for a library theme; a quick-create / brand-only campaign
+  // omits it. A non-null value is ownership-verified in the handler
+  // (assertThemeOwnedIfPresent — cross-tenant guard, same as the client theme).
+  theme_id: z.string().uuid().nullable().optional(),
   published: z.boolean().default(false),
 })
 
@@ -215,6 +227,22 @@ export const listCampaignsInputSchema = z.object({
 })
 export const listBonusesInputSchema = z.object({ campaign_id: z.string().uuid() })
 
+// --- Bonus-capable email templates (Phase 4, model B) ---------------------
+// The template select surface. Consumed ONLY through the function-form
+// inputValidator in admin.ts (`.inputValidator((v) => schema.parse(v))`) — a raw
+// schema silently skips validation (features/CLAUDE.md). Template CREATION uses
+// the existing generic email-templates CRUD — no venture-specific create schema.
+
+// Assign (or clear) a campaign's explicit venture_bonus template. `templateId`
+// nullable: null CLEARS the assignment → the send falls back to the tenant
+// default, then the hardcoded builder (INV-4 precedence). The handler validates
+// a non-null id belongs to the caller's tenant BEFORE the write (F5 —
+// cross-tenant forged-id assign must be impossible).
+export const selectTemplateForCampaignSchema = z.object({
+  campaignId: z.string().uuid(),
+  templateId: z.string().uuid().nullable(),
+})
+
 // --- Per-user client assignments (iter 3a) --------------------------------
 // REPLACE-SET wire input: userId + the FULL desired set of client ids. The
 // handler diffs against the current set (add/remove), verifies the target user
@@ -255,6 +283,9 @@ export type UpdateCampaignInput = z.infer<typeof updateCampaignSchema>
 export type CreateBonusInput = z.infer<typeof createBonusSchema>
 export type UpdateBonusInput = z.infer<typeof updateBonusSchema>
 export type ReorderBonusesInput = z.infer<typeof reorderBonusesSchema>
+export type SelectTemplateForCampaignInput = z.infer<
+  typeof selectTemplateForCampaignSchema
+>
 export type SetUserClientAssignmentsInput = z.infer<
   typeof setUserClientAssignmentsSchema
 >

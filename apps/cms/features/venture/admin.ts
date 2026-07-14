@@ -9,6 +9,7 @@ import {
   listCampaignsInputSchema,
   listClientsInputSchema,
   reorderBonusesSchema,
+  selectTemplateForCampaignSchema,
   updateBonusInputSchema,
   updateCampaignInputSchema,
   updateClientInputSchema,
@@ -20,10 +21,13 @@ import {
   deleteBonusHandler,
   deleteCampaignHandler,
   deleteClientHandler,
+  getCampaignEffectiveSendHandler,
   listBonusesHandler,
+  listBonusTemplatesHandler,
   listCampaignsHandler,
   listClientsHandler,
   reorderBonusesHandler,
+  selectTemplateForCampaignHandler,
   updateBonusHandler,
   updateClientHandler,
   updateCampaignHandler,
@@ -97,6 +101,37 @@ export const updateCampaignFn = createServerFn({ method: 'POST' })
 export const deleteCampaignFn = createServerFn({ method: 'POST' })
   .inputValidator((v: z.infer<typeof idInputSchema>) => idInputSchema.parse(v))
   .handler(({ data }) => deleteCampaignHandler(data.id))
+
+// Read-only "Ten launch wysyła" surface — the effective sender (via the SAME
+// resolveMailSender) + bonus template presence for a campaign. Gated inside the
+// handler (bonus_funnel.campaigns) — the route map does NOT protect
+// createServerFn (project Authz gotcha).
+const campaignEffectiveSendInputSchema = z.object({ campaignId: z.string().uuid() })
+
+export const getCampaignEffectiveSendFn = createServerFn({ method: 'POST' })
+  .inputValidator((v: z.infer<typeof campaignEffectiveSendInputSchema>) =>
+    campaignEffectiveSendInputSchema.parse(v),
+  )
+  .handler(({ data }) => getCampaignEffectiveSendHandler(data.campaignId))
+
+// --- Bonus-capable email templates (Phase 4, model B) ---------------------
+
+// List the tenant's BONUS-CAPABLE templates (blocks contain the {{bonus_list}}
+// marker) for the campaign dropdown. Gated in the handler (bonus_funnel.campaigns)
+// — the route map does NOT protect createServerFn (project Authz gotcha). No input.
+// Creation/edit/delete of templates uses the existing generic email-templates CRUD.
+export const listBonusTemplatesFn = createServerFn({ method: 'POST' }).handler(() =>
+  listBonusTemplatesHandler(),
+)
+
+// Assign (or clear) a campaign's explicit venture_bonus template. Gated in the
+// handler on bonus_funnel.campaigns + F5 cross-tenant forged-id guard. templateId
+// nullable (null = clear → use default).
+export const selectTemplateForCampaignFn = createServerFn({ method: 'POST' })
+  .inputValidator((v: z.infer<typeof selectTemplateForCampaignSchema>) =>
+    selectTemplateForCampaignSchema.parse(v),
+  )
+  .handler(({ data }) => selectTemplateForCampaignHandler(data.campaignId, data.templateId))
 
 // --- Bonuses --------------------------------------------------------------
 

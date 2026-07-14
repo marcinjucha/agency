@@ -158,6 +158,40 @@ describe('PermissionPicker', () => {
     })
   })
 
+  // Regression (Bug B, 2026-07-14): the `design` (Wygląd / Motywy) group was
+  // invisible in the role editor because the Halo Efekt tenant's enabled_features
+  // never included `design` (client-theming shipped the permission + route + nav
+  // but not the feature flag). The filter itself is correct — these tests pin
+  // that the group appears IFF the flag is present.
+  describe('design (Wygląd) feature group visibility', () => {
+    it('shows the Wygląd group with the Motywy child when design is enabled', () => {
+      const page = PermissionPickerPage.render({
+        enabledFeatures: ['design', 'dashboard'] as PermissionKey[],
+      })
+
+      expect(page.isGroupVisible('Wygląd')).toBe(true)
+      expect(page.getVisibleChildren('Wygląd')).toEqual(['Motywy'])
+    })
+
+    it('shows the Wygląd group when only the design.themes child is enabled', () => {
+      const page = PermissionPickerPage.render({
+        enabledFeatures: ['design.themes', 'dashboard'] as PermissionKey[],
+      })
+
+      expect(page.isGroupVisible('Wygląd')).toBe(true)
+      expect(page.getVisibleChildren('Wygląd')).toEqual(['Motywy'])
+    })
+
+    it('hides the Wygląd group when design is absent from enabledFeatures (the pre-fix bug)', () => {
+      const page = PermissionPickerPage.render({
+        enabledFeatures: ['dashboard', 'surveys'] as PermissionKey[],
+      })
+
+      expect(page.isGroupVisible('Wygląd')).toBe(false)
+      expect(page.isChildVisible('Motywy')).toBe(false)
+    })
+  })
+
   describe('system/management display split', () => {
     it('splits system group into System and Zarządzanie display cards', () => {
       const page = PermissionPickerPage.render()

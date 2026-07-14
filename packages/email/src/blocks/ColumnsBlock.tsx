@@ -27,6 +27,7 @@ import React from 'react'
 import { Row, Column, Section } from '@react-email/components'
 import type { ColumnsBlock, NonColumnsBlock } from './block-interfaces'
 import { renderBlock } from '../EmailRenderer'
+import type { ThemeColorMap } from '../theme'
 
 // Mapowanie gap → padding-left kolumny prawej (px)
 const GAP_SIZE: Record<ColumnsBlock['gap'], string> = {
@@ -42,7 +43,13 @@ const VERTICAL_ALIGN_STYLE: Record<ColumnsBlock['verticalAlign'], React.CSSPrope
   bottom: 'bottom',
 }
 
-export function ColumnsBlockComponent({ block }: { block: ColumnsBlock }) {
+export function ColumnsBlockComponent({
+  block,
+  theme,
+}: {
+  block: ColumnsBlock
+  theme?: ThemeColorMap
+}) {
   const gap = GAP_SIZE[block.gap]
   const vAlign = VERTICAL_ALIGN_STYLE[block.verticalAlign]
 
@@ -65,7 +72,7 @@ export function ColumnsBlockComponent({ block }: { block: ColumnsBlock }) {
             ...cellContent,
           }}
         >
-          {block.leftChildren.map((child: NonColumnsBlock) => renderBlock(child))}
+          {block.leftChildren.map((child: NonColumnsBlock) => renderBlock(child, undefined, theme))}
         </Column>
         <Column
           style={{
@@ -75,7 +82,7 @@ export function ColumnsBlockComponent({ block }: { block: ColumnsBlock }) {
             ...cellContent,
           }}
         >
-          {block.rightChildren.map((child: NonColumnsBlock) => renderBlock(child))}
+          {block.rightChildren.map((child: NonColumnsBlock) => renderBlock(child, undefined, theme))}
         </Column>
       </Row>
     </Section>

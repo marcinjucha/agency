@@ -256,3 +256,114 @@ describe('EmailRenderer', () => {
     expect(html).toContain('Default text')
   })
 })
+
+// ---------------------------------------------------------------------------
+// Client-theming (ADDITIVE) — the optional `theme` map on renderEmailBlocks.
+// Load-bearing AC: no-theme output is byte-identical to today.
+// ---------------------------------------------------------------------------
+
+describe('renderEmailBlocks theme support', () => {
+  // Representative block set covering every color slot (text, bg, border, header, cta, footer).
+  const REPRESENTATIVE: Block[] = [
+    { id: 'h', type: 'header', companyName: 'ACME', textColor: '#ffffff', backgroundColor: '#1a1a2e' },
+    { id: 'hd', type: 'heading', text: 'Title', level: 'h2', color: '#1a1a2e' },
+    { id: 't', type: 'text', content: '<p>Body</p>' },
+    {
+      id: 'c',
+      type: 'cta',
+      label: 'Go',
+      url: 'https://example.com',
+      textColor: '#ffffff',
+      backgroundColor: '#1a1a2e',
+    },
+    { id: 'f', type: 'footer', text: 'Footer' },
+  ]
+
+  it('(a) no theme → byte-identical to omitting the theme argument entirely', async () => {
+    const withUndefined = await renderEmailBlocks(REPRESENTATIVE, undefined)
+    const withoutArg = await renderEmailBlocks(REPRESENTATIVE)
+    expect(withUndefined).toBe(withoutArg)
+  })
+
+  it('(b) explicit textColorToken + theme → emits the token hex', async () => {
+    const blocks: Block[] = [
+      { id: 'a', type: 'text', content: '<p>Tokened</p>', textColorToken: 'primary' },
+    ]
+    const html = await renderEmailBlocks(blocks, { primary: '#aa0000' })
+    expect(html).toContain('color:#aa0000')
+    // The default text color must NOT survive the token override.
+    expect(html).not.toContain('color:#334155')
+  })
+
+  it('(c) token ref absent from theme map → falls to raw hex → falls to default', async () => {
+    // token ref set but map has no 'primary' → rung (a) skipped; raw hex wins.
+    const withRaw: Block[] = [
+      { id: 'a', type: 'text', content: '<p>X</p>', textColorToken: 'primary', textColor: '#123456' },
+    ]
+    const rawHtml = await renderEmailBlocks(withRaw, { text: '#999999' })
+    expect(rawHtml).toContain('color:#123456')
+
+    // token ref set, no raw hex, no matching default token → hardcoded default.
+    const noRaw: Block[] = [
+      { id: 'a', type: 'text', content: '<p>X</p>', textColorToken: 'doesNotExist' },
+    ]
+    const defHtml = await renderEmailBlocks(noRaw, { primary: '#aa0000' })
+    expect(defHtml).toContain('color:#334155') // DEFAULT_BLOCK_TYPOGRAPHY.text
+  })
+
+  it('(d) invalid token value (hsl/var) in map → skipped, no var(/hsl( in output', async () => {
+    const blocks: Block[] = [
+      { id: 'a', type: 'text', content: '<p>X</p>', textColorToken: 'text' },
+    ]
+    const html = await renderEmailBlocks(blocks, { text: 'hsl(210 40% 20%)' })
+    expect(html).not.toContain('hsl(')
+    expect(html).not.toContain('var(')
+    // Falls through to the hardcoded default because the token value was invalid.
+    expect(html).toContain('color:#334155')
+  })
+
+  it('(e) themed default (rung c): no explicit color + theme → uses mapped token', async () => {
+    // Heading carries only the inert legacy `color`; with a theme, the mapped
+    // token (heading → primary) supplies the color via rung (c).
+    const blocks: Block[] = [
+      { id: 'a', type: 'heading', text: 'Themed', level: 'h2', color: '#1a1a2e' },
+    ]
+    const html = await renderEmailBlocks(blocks, { primary: '#aa0000' })
+    expect(html).toContain('color:#aa0000')
+    // The hardcoded heading default (#0f172a) must not appear.
+    expect(html).not.toContain('color:#0f172a')
+  })
+
+  it('(e) themed default for header/cta backgrounds via headerBackground/accent tokens', async () => {
+    // Header/cta WITHOUT explicit backgroundColor → rung (c) supplies the themed bg.
+    const blocks: Block[] = [
+      { id: 'h', type: 'header', companyName: 'ACME', textColor: '#ffffff' },
+      { id: 'c', type: 'cta', label: 'Go', url: '#', textColor: '#ffffff' },
+    ]
+    const html = await renderEmailBlocks(blocks, {
+      headerBackground: '#112233',
+      accent: '#445566',
+    })
+    expect(html).toContain('background-color:#112233') // header bg from headerBackground
+    expect(html).toContain('background-color:#445566') // cta bg from accent
+    // The block-component hardcoded fallback (#1a1a2e) must not leak in.
+    expect(html).not.toContain('#1a1a2e')
+  })
+
+  it('themed default with Halo-default values renders identically to no theme (byte-identical rung c)', async () => {
+    // Blocks with NO explicit colors so rung (c) is the active rung for text/heading/footer.
+    const bare: Block[] = [
+      { id: 'hd', type: 'heading', text: 'T', level: 'h2', color: '#1a1a2e' },
+      { id: 't', type: 'text', content: '<p>B</p>' },
+      { id: 'f', type: 'footer', text: 'F' },
+    ]
+    const noTheme = await renderEmailBlocks(bare)
+    // A theme whose mapped tokens equal today's hardcoded defaults.
+    const haloDefault = await renderEmailBlocks(bare, {
+      primary: '#0f172a',
+      text: '#334155',
+      footerText: '#94a3b8',
+    })
+    expect(haloDefault).toBe(noTheme)
+  })
+})

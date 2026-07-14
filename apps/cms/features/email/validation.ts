@@ -185,6 +185,11 @@ export const templateLabelSchema = z
   .min(1, messages.validation.templateLabelRequired)
   .max(100, messages.validation.templateLabelMax)
 
+// Per-template theme override. A named `so_themes` id (UUID) or null = inherit
+// the tenant default. `.nullable().optional()` — DB column is nullable and the
+// field may be absent on legacy/partial payloads.
+export const themeIdFieldSchema = z.string().uuid().nullable().optional()
+
 export const createEmailTemplateSchema = z.object({
   type: templateSlugSchema,
   label: templateLabelSchema,
@@ -197,6 +202,7 @@ export const updateEmailTemplateSchema = z.object({
   blocks: z.array(blockSchema).min(1, messages.validation.templateNeedsBlock),
   template_variables: z.array(templateVariableSchema).optional(),
   label: templateLabelSchema.optional(),
+  theme_id: themeIdFieldSchema,
 })
 
 export type UpdateEmailTemplateInput = z.infer<typeof updateEmailTemplateSchema>

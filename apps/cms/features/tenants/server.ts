@@ -1,5 +1,5 @@
 import { createServerFn } from '@tanstack/react-start'
-import { ok, err, errAsync, ResultAsync } from 'neverthrow'
+import { ok, err, errAsync, okAsync, ResultAsync } from 'neverthrow'
 import { fromSupabase, fromSupabaseVoid } from '@/lib/result-helpers'
 import { tenantSchema } from './validation'
 import type { TenantFormData, Tenant } from './types'
@@ -37,7 +37,7 @@ export const getTenantsFn = createServerFn({ method: 'POST' }).handler(async ():
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (supabase as any)
     .from('tenants')
-    .select('id, name, email, domain, subscription_status, enabled_features, created_at, updated_at')
+    .select('id, name, email, domain, subscription_status, enabled_features, theme_id, created_at, updated_at')
     .order('created_at', { ascending: false })
 
   if (error) throw new Error(error.message)
@@ -57,7 +57,7 @@ export const getTenantFn = createServerFn({ method: 'POST' })
     const { data: tenant, error } = await (supabase as any)
       .from('tenants')
       .select(
-        'id, name, email, domain, subscription_status, enabled_features, created_at, updated_at'
+        'id, name, email, domain, subscription_status, enabled_features, theme_id, created_at, updated_at'
       )
       .eq('id', data.id)
       .single()
@@ -78,11 +78,20 @@ export const createTenantFn = createServerFn({ method: 'POST' })
   .inputValidator((input: TenantFormData) => tenantSchema.parse(input))
   .handler(
     async ({ data }): Promise<{ success: boolean; data?: Tenant; error?: string }> => {
-      const result = await requireSuperAdmin().andThen((auth) =>
-        insertTenant(buildTenantPayload(data as TenantFormData)).andThen((tenant) =>
+      const result = await requireSuperAdmin().andThen(() => {
+        // A brand-new tenant owns no themes yet (themes are created per-tenant
+        // AFTER the tenant exists), so it cannot legitimately reference any
+        // theme_id. The New-Tenant form's org ThemePicker lists the CALLER's own
+        // tenant's so_themes (listThemesFn is caller-scoped) — persisting one here
+        // would point the new tenant at the super-admin's theme, rendering foreign
+        // brand/logo on its emails + landings (fetchThemeTokens bypasses RLS).
+        // Reject (mirrors updateTenantFn's ownership guard); an org theme is
+        // assigned via EDIT after creation.
+        if (data.theme_id) return errAsync(messages.common.noPermission)
+        return insertTenant(buildTenantPayload(data as TenantFormData)).andThen((tenant) =>
           seedDefaultRoles(tenant.id, data.enabled_features as PermissionKey[]).map(() => tenant)
         )
-      )
+      })
 
       return result.match(
         (created) => ({ success: true, data: created }),
@@ -103,14 +112,18 @@ export const updateTenantFn = createServerFn({ method: 'POST' })
   .handler(
     async ({ data }): Promise<{ success: boolean; data?: Tenant; error?: string }> => {
       const result = await requireSuperAdmin().andThen(() =>
-        fetchOldEnabledFeatures(data.id).andThen((oldFeatures) =>
-          updateTenantRow(data.id, buildTenantPayload(data.data as TenantFormData)).andThen(
-            (updated) =>
-              syncFeaturePermissions(
-                data.id,
-                oldFeatures,
-                data.data.enabled_features as PermissionKey[]
-              ).map(() => updated)
+        // Defense-in-depth: a non-null base theme_id must belong to the tenant
+        // being edited (cross-tenant theme write guard) BEFORE any write.
+        assertThemeOwnedByTenant(data.id, data.data.theme_id).andThen(() =>
+          fetchOldEnabledFeatures(data.id).andThen((oldFeatures) =>
+            updateTenantRow(data.id, buildTenantPayload(data.data as TenantFormData)).andThen(
+              (updated) =>
+                syncFeaturePermissions(
+                  data.id,
+                  oldFeatures,
+                  data.data.enabled_features as PermissionKey[]
+                ).map(() => updated)
+            )
           )
         )
       )
@@ -162,6 +175,39 @@ export const deleteTenantFn = createServerFn({ method: 'POST' })
 // ---------------------------------------------------------------------------
 
 const dbError = (e: unknown) => (e instanceof Error ? e.message : messages.common.unknownError)
+
+/**
+ * Verify a base theme belongs to the tenant being edited BEFORE persisting it
+ * (tenants.theme_id). NULL ("unset base → HALO_EFEKT_DEFAULT at resolution") is
+ * always allowed and skips the check. Tenant editing is super-admin, but the FK
+ * accepts ANY tenant's so_themes.id and the bonus-email path reads so_themes via
+ * the service-role client (bypasses RLS) — so a tenant pointed at another
+ * tenant's theme would render foreign tokens/logo. Reject the write with the
+ * standard no-permission message (never silently null it). Uses the service
+ * client (same as the rest of this feature — tenants bypass RLS).
+ */
+export function assertThemeOwnedByTenant(
+  tenantId: string,
+  themeId: string | null | undefined
+): ResultAsync<undefined, string> {
+  if (!themeId) return okAsync(undefined)
+  return ResultAsync.fromPromise(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (createServiceClient() as any)
+      .from('so_themes')
+      .select('id')
+      .eq('id', themeId)
+      .eq('tenant_id', tenantId)
+      .maybeSingle(),
+    dbError
+  ).andThen((res) => {
+    const r = res as { data: { id: string } | null; error: { message?: string } | null }
+    if (r.error) return err(r.error.message ?? messages.common.unknownError)
+    // Missing OR belongs to another tenant → indistinguishable, both forbidden.
+    if (!r.data) return err(messages.common.noPermission)
+    return ok(undefined)
+  })
+}
 
 function insertTenant(payload: Record<string, unknown>) {
   return ResultAsync.fromPromise(
@@ -386,12 +432,14 @@ function addPermissionsToAdminRole(service: any, tenantId: string, keys: Permiss
 // Business logic
 // ---------------------------------------------------------------------------
 
-function buildTenantPayload(parsed: TenantFormData) {
+export function buildTenantPayload(parsed: TenantFormData) {
   return {
     name: parsed.name,
     email: parsed.email,
     domain: parsed.domain ?? null,
     subscription_status: parsed.subscription_status,
     enabled_features: parsed.enabled_features,
+    // Organization base theme (null = unset → HALO_EFEKT_DEFAULT at resolution).
+    theme_id: parsed.theme_id ?? null,
   }
 }

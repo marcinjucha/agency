@@ -18,6 +18,10 @@ import {
 } from './handler-base.server'
 import type { AdminCampaign, AdminClient, Bonus } from './types'
 import {
+  describeEffectiveSender,
+  type EffectiveSender,
+} from './mail/effective-sender.server'
+import {
   evaluatePublishGate,
   sanitizeLeadSourceConfig,
 } from './lead-sources/specs'
@@ -30,6 +34,9 @@ import type {
   UpdateCampaignInput,
   UpdateClientInput,
 } from './validation'
+import { BONUS_LIST_MARKER } from './mail/bonus-email-template'
+import { resolveBonusTemplateByPrecedence } from './mail/resolve-bonus-template'
+import { isUsableTemplateBlocks } from './utils/template-blocks'
 
 // ---------------------------------------------------------------------------
 // Venture bonus-funnel — ADMIN CRUD handlers (iter 5a). AUTHENTICATED layer.
@@ -77,6 +84,37 @@ function assertClientOwned(
   ).andThen((res) => {
     const r = res as { data: { id: string } | null; error: DbErrorShape }
     if (r.error) return err(mapDbError(r.error, 'assertClientOwned'))
+    // Missing OR belongs to another tenant → indistinguishable, both forbidden.
+    if (!r.data) return err(messages.common.noPermission)
+    return ok(undefined)
+  })
+}
+
+/**
+ * Verify a theme belongs to the tenant BEFORE it is persisted onto a client.
+ * NULL theme_id ("inherit the organization theme") is always allowed and skips
+ * the check. A non-null id is rejected (standard no-permission) when it does NOT
+ * resolve under the caller's tenant — the FK alone accepts ANY tenant's
+ * so_themes.id, RLS governs reads not writes, and the bonus-email path reads
+ * so_themes via the SERVICE-ROLE client (bypasses RLS), so a client pointed at
+ * another tenant's theme would render that tenant's tokens/logo. Reject the
+ * write (never silently null it), mirroring assertClientOwned.
+ */
+function assertThemeOwnedIfPresent(
+  auth: AuthContextFull,
+  themeId: string | null | undefined,
+): ResultAsync<undefined, string> {
+  if (!themeId) return okAsync(undefined)
+  return ResultAsync.fromPromise(
+    tbl(auth, 'so_themes')
+      .select('id')
+      .eq('id', themeId)
+      .eq('tenant_id', auth.tenantId)
+      .maybeSingle(),
+    dbError,
+  ).andThen((res) => {
+    const r = res as { data: { id: string } | null; error: DbErrorShape }
+    if (r.error) return err(mapDbError(r.error, 'assertThemeOwned'))
     // Missing OR belongs to another tenant → indistinguishable, both forbidden.
     if (!r.data) return err(messages.common.noPermission)
     return ok(undefined)
@@ -137,7 +175,7 @@ function assertBonusOwned(
 // resolveMailSender, features/venture/mail/) reads the real secrets via a
 // separate select on the service-role or auth-context client.
 const ADMIN_CLIENT_COLUMNS =
-  'id, tenant_id, name, slug, mail_provider, resend_from_email, gmail_address, sender_name, created_at, updated_at, has_resend_api_key, has_gmail_app_password'
+  'id, tenant_id, name, slug, mail_provider, resend_from_email, gmail_address, sender_name, theme_id, created_at, updated_at, has_resend_api_key, has_gmail_app_password'
 
 /**
  * List the tenant's venture clients. `tenantId` is honored ONLY for a super_admin
@@ -176,23 +214,29 @@ export function createClientHandler(
       // insert would fail with an opaque RLS error — reject it cleanly here
       // first with the standard no-permission message.
       isUnscopedActor(auth)
-        ? ResultAsync.fromPromise(
-            tbl(auth, 'so_clients')
-              .insert({
-                name: input.name,
-                slug: input.slug,
-                tenant_id: auth.tenantId,
-                mail_provider: input.mail_provider ?? 'resend_shared',
-                resend_api_key: input.resend_api_key ?? null,
-                resend_from_email: input.resend_from_email ?? null,
-                gmail_address: input.gmail_address ?? null,
-                gmail_app_password: input.gmail_app_password ?? null,
-                sender_name: input.sender_name ?? null,
-              })
-              .select(ADMIN_CLIENT_COLUMNS)
-              .single(),
-            dbError,
-          ).andThen(fromSupabaseSafe<AdminClient>('createClient'))
+        ? // A non-null theme_id must belong to the caller's tenant (cross-tenant
+          // theme write guard) BEFORE the insert.
+          assertThemeOwnedIfPresent(auth, input.theme_id).andThen(() =>
+            ResultAsync.fromPromise(
+              tbl(auth, 'so_clients')
+                .insert({
+                  name: input.name,
+                  slug: input.slug,
+                  tenant_id: auth.tenantId,
+                  mail_provider: input.mail_provider ?? 'resend_shared',
+                  resend_api_key: input.resend_api_key ?? null,
+                  resend_from_email: input.resend_from_email ?? null,
+                  gmail_address: input.gmail_address ?? null,
+                  gmail_app_password: input.gmail_app_password ?? null,
+                  sender_name: input.sender_name ?? null,
+                  // NULL = inherit the organization's theme (design § Assignment UX).
+                  theme_id: input.theme_id ?? null,
+                })
+                .select(ADMIN_CLIENT_COLUMNS)
+                .single(),
+              dbError,
+            ).andThen(fromSupabaseSafe<AdminClient>('createClient')),
+          )
         : errAsync<AdminClient, string>(messages.common.noPermission),
     ),
   )
@@ -204,16 +248,20 @@ export function updateClientHandler(
 ): Promise<MutationResult<AdminClient>> {
   return toMutation(
     gated(PERM.clients, (auth) =>
-      ResultAsync.fromPromise(
-        tbl(auth, 'so_clients')
-          .update(buildClientPatch(input))
-          // Double scope: id AND tenant_id — a foreign id updates zero rows.
-          .eq('id', id)
-          .eq('tenant_id', auth.tenantId)
-          .select(ADMIN_CLIENT_COLUMNS)
-          .single(),
-        dbError,
-      ).andThen(fromSupabaseSafe<AdminClient>('updateClient')),
+      // A non-null theme_id must belong to the caller's tenant (cross-tenant
+      // theme write guard) BEFORE the update. Null/absent skips the check.
+      assertThemeOwnedIfPresent(auth, input.theme_id).andThen(() =>
+        ResultAsync.fromPromise(
+          tbl(auth, 'so_clients')
+            .update(buildClientPatch(input))
+            // Double scope: id AND tenant_id — a foreign id updates zero rows.
+            .eq('id', id)
+            .eq('tenant_id', auth.tenantId)
+            .select(ADMIN_CLIENT_COLUMNS)
+            .single(),
+          dbError,
+        ).andThen(fromSupabaseSafe<AdminClient>('updateClient')),
+      ),
     ),
   )
 }
@@ -252,7 +300,7 @@ export function deleteClientHandler(id: string): Promise<VoidResult> {
 // insert/update defaults to '*' → also uses this list. The route/webhook verify
 // path (ingest.server.ts) reads the real secret via a separate select.
 const ADMIN_CAMPAIGN_COLUMNS =
-  'id, client_id, slug, display_name, brand, esp_provider, esp_audience_ref, esp_tag_launch, published, created_at, updated_at, has_webhook_secret, lead_source_provider, lead_source_config'
+  'id, client_id, slug, display_name, brand, theme_id, email_template_id, esp_provider, esp_audience_ref, esp_tag_launch, published, created_at, updated_at, has_webhook_secret, lead_source_provider, lead_source_config'
 
 // ---------------------------------------------------------------------------
 // Publish gate (iter 2b backend). A campaign may go published=true ONLY when a
@@ -349,6 +397,9 @@ export function createCampaignHandler(
     gated(PERM.campaigns, (auth) =>
       // Verify the parent client belongs to the tenant BEFORE inserting.
       assertClientOwned(auth, input.client_id)
+        // A non-null theme_id must belong to the caller's tenant (cross-tenant
+        // theme write guard, same as the client theme) BEFORE the insert.
+        .andThen(() => assertThemeOwnedIfPresent(auth, input.theme_id))
         // Publish gate: to CREATE already-published, a provider + its required
         // config must be set. A draft (published=false/omitted) skips the gate.
         // On create, all state comes from the input — no DB read needed.
@@ -373,6 +424,9 @@ export function updateCampaignHandler(
   return toMutation(
     gated(PERM.campaigns, (auth) =>
       assertCampaignOwned(auth, id)
+        // A non-null theme_id must belong to the caller's tenant (cross-tenant
+        // theme write guard) BEFORE the update. Null/absent skips the check.
+        .andThen(() => assertThemeOwnedIfPresent(auth, input.theme_id))
         // Read the current row ONCE when the update could either (a) change the
         // resulting publish validity or (b) need the current provider to
         // sanitize a config-only edit. Otherwise `null` (no DB read).
@@ -408,6 +462,405 @@ export function deleteCampaignHandler(id: string): Promise<VoidResult> {
           dbError,
         ).andThen(fromSupabaseVoidSafe('deleteCampaign')),
       ),
+    ),
+  )
+}
+
+// ===========================================================================
+// Effective send (READ-ONLY surface — "Ten launch wysyła" card)
+// ===========================================================================
+
+// email_templates.type slug for the venture bonus email (mirrors ingest.server.ts).
+const BONUS_TEMPLATE_TYPE = 'venture_bonus'
+
+// What the campaign editor's read-only "Ten launch wysyła" card consumes. The
+// sender fields come from the SAME resolveMailSender the send path uses (via
+// describeEffectiveSender); templateType/templateExists surface the tenant's
+// editable bonus copy without exposing schema.
+export interface CampaignEffectiveSend extends EffectiveSender {
+  templateType: string
+  templateExists: boolean
+  // The template the send would ACTUALLY use, resolved by the SAME precedence as
+  // the n8n-free CMS send path (fetchBonusTemplate / resolveVentureBonusTemplateId,
+  // INV-4): campaign.email_template_id if it resolves to a valid tenant-owned
+  // row, else the tenant DEFAULT (venture_bonus singleton slug), else null (→ the
+  // hardcoded builder, "wbudowany szablon"). The card MUST NOT drift from ingest.
+  resolvedTemplateId: string | null
+  resolvedTemplateName: string | null
+  // The resolved template's `type` slug — powers the "Edytuj szablon" deep-link
+  // (routes.admin.emailTemplate(type), the type-keyed editor). Null when the send
+  // falls back to the hardcoded builder (no resolved row).
+  resolvedTemplateType: string | null
+}
+
+/**
+ * Resolve the campaign fields the effective-send card needs: the owning client
+ * id (existence hidden behind no-permission) AND the explicitly-assigned
+ * template id (Phase 4 — so_campaigns.email_template_id, NULL when none).
+ */
+function fetchCampaignForEffectiveSend(
+  auth: AuthContextFull,
+  campaignId: string,
+): ResultAsync<{ clientId: string; campaignTemplateId: string | null }, string> {
+  return ResultAsync.fromPromise(
+    tbl(auth, 'so_campaigns')
+      .select('client_id, email_template_id')
+      .eq('id', campaignId)
+      .maybeSingle(),
+    dbError,
+  ).andThen((res) => {
+    const r = res as {
+      data: { client_id: string; email_template_id: string | null } | null
+      error: DbErrorShape
+    }
+    if (r.error) return err(mapDbError(r.error, 'fetchCampaignForEffectiveSend'))
+    if (!r.data) return err(messages.common.noPermission)
+    return ok({ clientId: r.data.client_id, campaignTemplateId: r.data.email_template_id })
+  })
+}
+
+// Non-secret mail config + secret-presence booleans for a tenant-owned client.
+// NEVER selects the plaintext resend_api_key/gmail_app_password (GRANT revoked
+// for `authenticated`) — the has_* generated booleans stand in for presence.
+interface ClientMailDescribeRow {
+  mail_provider: string
+  resend_from_email: string | null
+  gmail_address: string | null
+  sender_name: string | null
+  has_resend_api_key: boolean
+  has_gmail_app_password: boolean
+}
+
+function fetchClientMailForDescribe(
+  auth: AuthContextFull,
+  clientId: string,
+): ResultAsync<ClientMailDescribeRow, string> {
+  return ResultAsync.fromPromise(
+    tbl(auth, 'so_clients')
+      .select(
+        'mail_provider, resend_from_email, gmail_address, sender_name, has_resend_api_key, has_gmail_app_password',
+      )
+      .eq('id', clientId)
+      .eq('tenant_id', auth.tenantId)
+      .maybeSingle(),
+    dbError,
+  ).andThen((res) => {
+    const r = res as { data: ClientMailDescribeRow | null; error: DbErrorShape }
+    if (r.error) return err(mapDbError(r.error, 'fetchClientMailForDescribe'))
+    if (!r.data) return err(messages.common.noPermission)
+    return ok(r.data)
+  })
+}
+
+// One read of the tenant's venture_bonus singleton, yielding BOTH facets the card
+// needs — collapsing the former fetchBonusTemplateExists + readDefaultVentureTemplateChoice
+// pair (which queried the SAME row twice).
+interface DefaultBonusTemplateRead {
+  // Whether the tenant has a venture_bonus row AT ALL (any blocks) — powers the
+  // card's "brak edytowalnej kopii" note (templateExists). A row with empty blocks
+  // still EXISTS and is editable, so presence must NOT require usable blocks
+  // (preserves the prior fetchBonusTemplateExists semantics exactly).
+  present: boolean
+  // The row as a resolvable DEFAULT-tier choice — null when the row is missing OR
+  // its blocks are unusable (mirrors ingest's coerceBonusTemplateRow degrade), so
+  // the resolved-template tier never names a template the send would skip.
+  choice: VentureTemplateChoice | null
+}
+
+/**
+ * Read the tenant's `venture_bonus` singleton default ONCE, deriving BOTH the
+ * presence flag (templateExists) AND the usable default-tier choice. Replaces the
+ * former fetchBonusTemplateExists + readDefaultVentureTemplateChoice pair — the
+ * card queried this same row twice; this collapses them into a single read ([7]).
+ */
+function readTenantDefaultBonusTemplate(
+  auth: AuthContextFull,
+): ResultAsync<DefaultBonusTemplateRead, string> {
+  return ResultAsync.fromPromise(
+    tbl(auth, 'email_templates')
+      .select('id, label, type, blocks')
+      .eq('type', BONUS_TEMPLATE_TYPE)
+      .eq('tenant_id', auth.tenantId)
+      .maybeSingle(),
+    dbError,
+  ).andThen((res) => {
+    const r = res as { data: VentureTemplateChoiceRow | null; error: DbErrorShape }
+    if (r.error) return err(mapDbError(r.error, 'readTenantDefaultBonusTemplate'))
+    const present = r.data !== null
+    const choice =
+      r.data && isUsableTemplateBlocks(r.data.blocks) ? toTemplateChoice(r.data) : null
+    return ok<DefaultBonusTemplateRead, string>({ present, choice })
+  })
+}
+
+// A venture_bonus template row for the effective-send card: enough to name it
+// (label) and identify it (id). NEVER selects blocks/secrets — the card only
+// needs to mirror WHICH template ingest would pick, not render it.
+interface VentureTemplateChoice {
+  id: string
+  label: string
+  // The type slug — needed by the effective-send card to build the type-keyed
+  // editor deep-link (routes.admin.emailTemplate(type)).
+  type: string
+}
+
+// The raw row the resolution reads select — adds `blocks` so the card can apply
+// the SAME blocks-usability degrade as ingest (`coerceBonusTemplateRow`). A row
+// whose `blocks` is non-array/empty is what the send path SKIPS, so the card must
+// treat it as ABSENT too — otherwise the card would name a template the send
+// silently falls through.
+type VentureTemplateChoiceRow = VentureTemplateChoice & { blocks: unknown }
+
+/** Trim the DB row to the card shape once blocks-usability is confirmed. */
+function toTemplateChoice(row: VentureTemplateChoiceRow): VentureTemplateChoice {
+  return { id: row.id, label: row.label, type: row.type }
+}
+
+/**
+ * Read the campaign's EXPLICITLY-assigned template by id, SCOPED to the caller's
+ * tenant (F5 parity with ingest's F3 — the id must resolve under this tenant or
+ * it is treated as absent). Model B: a campaign may assign ANY tenant-owned
+ * template by id, so this read does NOT filter on `type`. A row whose `blocks` is
+ * non-array/empty is treated as ABSENT (mirrors ingest's `coerceBonusTemplateRow`
+ * so the card can never name a template the send would skip). Null when not found
+ * OR unusable.
+ */
+function readVentureTemplateChoiceById(
+  auth: AuthContextFull,
+  templateId: string,
+): ResultAsync<VentureTemplateChoice | null, string> {
+  return ResultAsync.fromPromise(
+    tbl(auth, 'email_templates')
+      .select('id, label, type, blocks')
+      .eq('id', templateId)
+      .eq('tenant_id', auth.tenantId)
+      .maybeSingle(),
+    dbError,
+  ).andThen((res) => {
+    const r = res as { data: VentureTemplateChoiceRow | null; error: DbErrorShape }
+    if (r.error) return err(mapDbError(r.error, 'readVentureTemplateChoiceById'))
+    if (!r.data || !isUsableTemplateBlocks(r.data.blocks)) return ok(null)
+    return ok(toTemplateChoice(r.data))
+  })
+}
+
+/**
+ * Resolve the template a send would ACTUALLY use, via the SHARED
+ * `resolveBonusTemplateByPrecedence` mechanism (the SAME one ingest's
+ * `fetchBonusTemplate` calls — closes the prior parallel-copy drift, INV-4): the
+ * campaign's explicitly assigned template (if it resolves under the tenant, ANY
+ * type, AND has usable blocks) wins, else the tenant DEFAULT (if usable), else
+ * null. The by-id read runs only when a template is assigned; `readDefault` is
+ * supplied by the caller — the card passes a NO-QUERY cached reader (the tenant
+ * default was already read once for `templateExists`, see [7]), so the default
+ * row is never queried twice.
+ */
+function resolveEffectiveVentureTemplate(
+  auth: AuthContextFull,
+  campaignTemplateId: string | null,
+  readDefault: () => ResultAsync<VentureTemplateChoice | null, string>,
+): ResultAsync<VentureTemplateChoice | null, string> {
+  const readById = (): ResultAsync<VentureTemplateChoice | null, string> =>
+    campaignTemplateId
+      ? readVentureTemplateChoiceById(auth, campaignTemplateId)
+      : okAsync<VentureTemplateChoice | null, string>(null)
+  return resolveBonusTemplateByPrecedence(readById, readDefault)
+}
+
+/**
+ * Describe the effective send for a campaign — the sender a real bonus email
+ * would use (via the SAME resolveMailSender), the template slug + whether the
+ * tenant has an editable copy, AND the template the send would ACTUALLY pick
+ * (resolvedTemplateId/Name — same precedence as ingest, INV-4). Gated on
+ * `bonus_funnel.campaigns` (the route map does NOT gate createServerFn — this is
+ * the server-side gate). Tenant-scoped: the campaign → client chain is verified
+ * owned before any mail config is read.
+ */
+export function getCampaignEffectiveSendHandler(
+  campaignId: string,
+): Promise<MutationResult<CampaignEffectiveSend>> {
+  return toMutation(
+    gated(PERM.campaigns, (auth) =>
+      fetchCampaignForEffectiveSend(auth, campaignId).andThen(({ clientId, campaignTemplateId }) =>
+        assertClientOwned(auth, clientId).andThen(() =>
+          fetchClientMailForDescribe(auth, clientId).andThen((mail) =>
+            // ONE read of the tenant venture_bonus default → both templateExists
+            // (present) AND the default-tier choice reused below ([7], no 2nd query).
+            readTenantDefaultBonusTemplate(auth).andThen((def) =>
+              resolveEffectiveVentureTemplate(auth, campaignTemplateId, () =>
+                okAsync<VentureTemplateChoice | null, string>(def.choice),
+              ).map((resolved) => {
+                const sender = describeEffectiveSender({
+                  mailProvider: mail.mail_provider,
+                  resendFromEmail: mail.resend_from_email,
+                  gmailAddress: mail.gmail_address,
+                  senderName: mail.sender_name,
+                  hasResendApiKey: mail.has_resend_api_key,
+                  hasGmailAppPassword: mail.has_gmail_app_password,
+                  // Agency-shared "From" — the address a fallback send originates from.
+                  sharedFromEmail: process.env.RESEND_FROM_EMAIL ?? 'noreply@haloefekt.pl',
+                })
+                return {
+                  ...sender,
+                  templateType: BONUS_TEMPLATE_TYPE,
+                  templateExists: def.present,
+                  resolvedTemplateId: resolved?.id ?? null,
+                  resolvedTemplateName: resolved?.label ?? null,
+                  resolvedTemplateType: resolved?.type ?? null,
+                }
+              }),
+            ),
+          ),
+        ),
+      ),
+    ),
+  )
+}
+
+// ===========================================================================
+// Bonus-capable email templates (Phase 4, model B)
+//
+// The template-selection surface: list the tenant's BONUS-CAPABLE templates for
+// the campaign dropdown and assign/clear a campaign's explicit template (campaign
+// edit authority + F5 cross-tenant forged-id guard). Creation/edit/delete of
+// templates uses the EXISTING generic email-templates CRUD — no venture-specific
+// create path exists (model B).
+// ===========================================================================
+
+/** One bonus-capable template option for the campaign dropdown. */
+export interface BonusTemplateOption {
+  id: string
+  label: string
+  // The type slug — lets the picker build the type-keyed editor deep-link for the
+  // currently-selected option (routes.admin.emailTemplate(type)).
+  type: string
+}
+
+/**
+ * A template is "bonus-capable" when its `blocks` is an array containing a `text`
+ * block whose trimmed `content` equals the structural `{{bonus_list}}` marker —
+ * the same predicate the send-path splicer (`isMarkerBlock`) uses. The marker
+ * constant is imported from the builder so this check cannot drift from it.
+ */
+function hasBonusListMarker(blocks: unknown): boolean {
+  if (!Array.isArray(blocks)) return false
+  return blocks.some((b) => {
+    const block = b as { type?: unknown; content?: unknown }
+    return (
+      block.type === 'text' &&
+      typeof block.content === 'string' &&
+      block.content.trim() === BONUS_LIST_MARKER
+    )
+  })
+}
+
+/**
+ * List the caller-tenant's BONUS-CAPABLE templates for the campaign dropdown
+ * (model B: a campaign may select ANY template that carries the `{{bonus_list}}`
+ * marker, not only the `venture_bonus` slug). Fetches the tenant's templates and
+ * filters IN JS on the marker predicate (a JSONB array-contains that PostgREST
+ * cannot express as a static eq filter). Gated on `bonus_funnel.campaigns` (the
+ * reader is the campaign editor; the route map does NOT gate createServerFn).
+ * Tenant-scoped via the RLS/cookie client + explicit tenant_id filter.
+ */
+export function listBonusTemplatesHandler(): Promise<
+  MutationResult<BonusTemplateOption[]>
+> {
+  return toMutation(
+    gated(PERM.campaigns, (auth) =>
+      ResultAsync.fromPromise(
+        tbl(auth, 'email_templates')
+          .select('id, label, type, blocks')
+          .eq('tenant_id', auth.tenantId)
+          // EXCLUDE workflow_custom — it is the ONE non-unique-per-tenant type, but
+          // the picker's "Edytuj szablon" deep-link is TYPE-keyed
+          // (routes.admin.emailTemplate(type) → editor .eq('type',…).maybeSingle()),
+          // which ERRORS on multiple rows. Every remaining type is unique per
+          // tenant, so the type-keyed link is sound. (workflow_custom = n8n workflow
+          // templates, never bonus templates.)
+          .neq('type', 'workflow_custom'),
+        dbError,
+      ).andThen((res) => {
+        const r = res as {
+          data: Array<{
+            id: string
+            label: string | null
+            type: string
+            blocks: unknown
+          }> | null
+          error: DbErrorShape
+        }
+        if (r.error) return err(mapDbError(r.error, 'listBonusTemplates'))
+        return ok(
+          (r.data ?? [])
+            .filter((t) => hasBonusListMarker(t.blocks))
+            .map((t) => ({ id: t.id, label: t.label ?? t.type, type: t.type })),
+        )
+      }),
+    ),
+  )
+}
+
+/**
+ * Verify a template belongs to the caller's tenant BEFORE it is assigned to a
+ * campaign (F5). NULL templateId ("clear → use default") is always allowed and
+ * skips the check. Model B: a campaign may assign ANY tenant-owned template — the
+ * check is tenant-ownership ONLY (no `type` constraint); bonus-capability is a UI
+ * warning, not a hard gate. A non-null id that does NOT resolve under the caller's
+ * tenant is REJECTED (standard no-permission) — never silently nulled — so a
+ * forged/cross-tenant id can never be assigned. Mirrors assertThemeOwnedIfPresent.
+ */
+function assertVentureTemplateOwnedIfPresent(
+  auth: AuthContextFull,
+  templateId: string | null,
+): ResultAsync<undefined, string> {
+  if (!templateId) return okAsync(undefined)
+  return ResultAsync.fromPromise(
+    tbl(auth, 'email_templates')
+      .select('id')
+      .eq('id', templateId)
+      .eq('tenant_id', auth.tenantId)
+      .maybeSingle(),
+    dbError,
+  ).andThen((res) => {
+    const r = res as { data: { id: string } | null; error: DbErrorShape }
+    if (r.error) return err(mapDbError(r.error, 'assertVentureTemplateOwned'))
+    // Missing OR another tenant's → indistinguishable, both forbidden.
+    if (!r.data) return err(messages.common.noPermission)
+    return ok(undefined)
+  })
+}
+
+/**
+ * Assign (or clear) a campaign's explicit venture_bonus template. Gated on
+ * `bonus_funnel.campaigns` (assigning is a campaign edit). F5 defense:
+ *   (a) assertCampaignOwned — the campaign must belong to the caller's tenant
+ *       (walks campaign → client → tenant; so_campaigns has NO tenant_id column,
+ *       so this FK-chain walk IS the tenant scope);
+ *   (b) a non-null templateId is verified owned under the caller's tenant (ANY
+ *       type — model B allows any template) — rejected, NOT silently nulled,
+ *       when foreign/absent;
+ *   (c) then UPDATE so_campaigns.email_template_id scoped by campaign id.
+ * A cross-tenant forged campaign id OR template id is therefore impossible to
+ * assign — independent of the send path's own F3 guard. NULL clears → the send
+ * falls back to the tenant default, then the hardcoded builder (INV-4 / INV-1).
+ */
+export function selectTemplateForCampaignHandler(
+  campaignId: string,
+  templateId: string | null,
+): Promise<VoidResult> {
+  return toVoid(
+    gated(PERM.campaigns, (auth) =>
+      assertCampaignOwned(auth, campaignId)
+        .andThen(() => assertVentureTemplateOwnedIfPresent(auth, templateId))
+        .andThen(() =>
+          ResultAsync.fromPromise(
+            tbl(auth, 'so_campaigns')
+              .update({ email_template_id: templateId })
+              .eq('id', campaignId),
+            dbError,
+          ).andThen(fromSupabaseVoidSafe('selectTemplateForCampaign')),
+        ),
     ),
   )
 }
@@ -577,6 +1030,8 @@ function buildClientPatch(input: UpdateClientInput): Record<string, unknown> {
   if (input.resend_api_key !== undefined) patch.resend_api_key = input.resend_api_key
   if (input.gmail_app_password !== undefined)
     patch.gmail_app_password = input.gmail_app_password
+  // Present = reassign (uuid) or clear to inherit (null); absent = leave untouched.
+  if (input.theme_id !== undefined) patch.theme_id = input.theme_id
   return patch
 }
 
@@ -688,6 +1143,8 @@ function buildCampaignInsert(input: CreateCampaignInput): Record<string, unknown
     slug: input.slug,
     display_name: input.display_name ?? null,
     brand: input.brand ?? null,
+    // NULL = inherit from the client, then the tenant (design § Campaign tier).
+    theme_id: input.theme_id ?? null,
     esp_provider: input.esp_provider,
     esp_audience_ref: input.esp_audience_ref ?? null,
     esp_tag_launch: input.esp_tag_launch,
@@ -713,6 +1170,8 @@ function buildCampaignPatch(
   if (input.slug !== undefined) patch.slug = input.slug
   if (input.display_name !== undefined) patch.display_name = input.display_name
   if (input.brand !== undefined) patch.brand = input.brand
+  // Present = reassign (uuid) or clear to inherit (null); absent = leave untouched.
+  if (input.theme_id !== undefined) patch.theme_id = input.theme_id
   if (input.esp_provider !== undefined) patch.esp_provider = input.esp_provider
   if (input.esp_audience_ref !== undefined) patch.esp_audience_ref = input.esp_audience_ref
   if (input.esp_tag_launch !== undefined) patch.esp_tag_launch = input.esp_tag_launch

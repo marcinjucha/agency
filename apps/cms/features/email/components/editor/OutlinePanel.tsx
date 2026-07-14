@@ -3,14 +3,14 @@ import { GripVertical, Plus } from 'lucide-react'
 import { Button } from '@agency/ui'
 import { CMS_BLOCK_REGISTRY } from '../../block-registry'
 import { messages } from '@/lib/messages'
-import type { Block, BlockType } from '../../types'
+import type { AddBlockPick, Block } from '../../types'
 import { AddBlockPopover } from './AddBlockPopover'
 
 interface OutlinePanelProps {
   blocks: Block[]
   selectedId: string | null
   onSelect: (id: string | null) => void
-  onAdd: (type: BlockType) => void
+  onAdd: (pick: AddBlockPick) => void
   onDelete: (id: string) => void
   onDuplicate: (id: string) => void
   onReorder: (from: number, to: number) => void

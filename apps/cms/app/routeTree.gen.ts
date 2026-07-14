@@ -16,6 +16,7 @@ import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as AdminWorkflowsIndexRouteImport } from './routes/admin/workflows/index'
 import { Route as AdminVentureIndexRouteImport } from './routes/admin/venture/index'
 import { Route as AdminUsersIndexRouteImport } from './routes/admin/users/index'
+import { Route as AdminThemesIndexRouteImport } from './routes/admin/themes/index'
 import { Route as AdminTenantsIndexRouteImport } from './routes/admin/tenants/index'
 import { Route as AdminSurveysIndexRouteImport } from './routes/admin/surveys/index'
 import { Route as AdminSettingsIndexRouteImport } from './routes/admin/settings/index'
@@ -30,6 +31,8 @@ import { Route as AdminBlogIndexRouteImport } from './routes/admin/blog/index'
 import { Route as ApiWorkflowsTriggerRouteImport } from './routes/api/workflows/trigger'
 import { Route as ApiCalendarCallbackRouteImport } from './routes/api/calendar/callback'
 import { Route as AdminWorkflowsWorkflowIdRouteImport } from './routes/admin/workflows/$workflowId'
+import { Route as AdminThemesNewRouteImport } from './routes/admin/themes/new'
+import { Route as AdminThemesIdRouteImport } from './routes/admin/themes/$id'
 import { Route as AdminTenantsNewRouteImport } from './routes/admin/tenants/new'
 import { Route as AdminTenantsTenantIdRouteImport } from './routes/admin/tenants/$tenantId'
 import { Route as AdminSurveysNewRouteImport } from './routes/admin/surveys/new'
@@ -90,6 +93,11 @@ const AdminVentureIndexRoute = AdminVentureIndexRouteImport.update({
 const AdminUsersIndexRoute = AdminUsersIndexRouteImport.update({
   id: '/users/',
   path: '/users/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminThemesIndexRoute = AdminThemesIndexRouteImport.update({
+  id: '/themes/',
+  path: '/themes/',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminTenantsIndexRoute = AdminTenantsIndexRouteImport.update({
@@ -164,6 +172,16 @@ const AdminWorkflowsWorkflowIdRoute =
     path: '/workflows/$workflowId',
     getParentRoute: () => AdminRoute,
   } as any)
+const AdminThemesNewRoute = AdminThemesNewRouteImport.update({
+  id: '/themes/new',
+  path: '/themes/new',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminThemesIdRoute = AdminThemesIdRouteImport.update({
+  id: '/themes/$id',
+  path: '/themes/$id',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminTenantsNewRoute = AdminTenantsNewRouteImport.update({
   id: '/tenants/new',
   path: '/tenants/new',
@@ -323,6 +341,8 @@ export interface FileRoutesByFullPath {
   '/admin/surveys/new': typeof AdminSurveysNewRoute
   '/admin/tenants/$tenantId': typeof AdminTenantsTenantIdRoute
   '/admin/tenants/new': typeof AdminTenantsNewRoute
+  '/admin/themes/$id': typeof AdminThemesIdRoute
+  '/admin/themes/new': typeof AdminThemesNewRoute
   '/admin/workflows/$workflowId': typeof AdminWorkflowsWorkflowIdRoute
   '/api/calendar/callback': typeof ApiCalendarCallbackRoute
   '/api/workflows/trigger': typeof ApiWorkflowsTriggerRoute
@@ -337,6 +357,7 @@ export interface FileRoutesByFullPath {
   '/admin/settings/': typeof AdminSettingsIndexRoute
   '/admin/surveys/': typeof AdminSurveysIndexRoute
   '/admin/tenants/': typeof AdminTenantsIndexRoute
+  '/admin/themes/': typeof AdminThemesIndexRoute
   '/admin/users/': typeof AdminUsersIndexRoute
   '/admin/venture/': typeof AdminVentureIndexRoute
   '/admin/workflows/': typeof AdminWorkflowsIndexRoute
@@ -371,6 +392,8 @@ export interface FileRoutesByTo {
   '/admin/surveys/new': typeof AdminSurveysNewRoute
   '/admin/tenants/$tenantId': typeof AdminTenantsTenantIdRoute
   '/admin/tenants/new': typeof AdminTenantsNewRoute
+  '/admin/themes/$id': typeof AdminThemesIdRoute
+  '/admin/themes/new': typeof AdminThemesNewRoute
   '/admin/workflows/$workflowId': typeof AdminWorkflowsWorkflowIdRoute
   '/api/calendar/callback': typeof ApiCalendarCallbackRoute
   '/api/workflows/trigger': typeof ApiWorkflowsTriggerRoute
@@ -385,6 +408,7 @@ export interface FileRoutesByTo {
   '/admin/settings': typeof AdminSettingsIndexRoute
   '/admin/surveys': typeof AdminSurveysIndexRoute
   '/admin/tenants': typeof AdminTenantsIndexRoute
+  '/admin/themes': typeof AdminThemesIndexRoute
   '/admin/users': typeof AdminUsersIndexRoute
   '/admin/venture': typeof AdminVentureIndexRoute
   '/admin/workflows': typeof AdminWorkflowsIndexRoute
@@ -421,6 +445,8 @@ export interface FileRoutesById {
   '/admin/surveys/new': typeof AdminSurveysNewRoute
   '/admin/tenants/$tenantId': typeof AdminTenantsTenantIdRoute
   '/admin/tenants/new': typeof AdminTenantsNewRoute
+  '/admin/themes/$id': typeof AdminThemesIdRoute
+  '/admin/themes/new': typeof AdminThemesNewRoute
   '/admin/workflows/$workflowId': typeof AdminWorkflowsWorkflowIdRoute
   '/api/calendar/callback': typeof ApiCalendarCallbackRoute
   '/api/workflows/trigger': typeof ApiWorkflowsTriggerRoute
@@ -435,6 +461,7 @@ export interface FileRoutesById {
   '/admin/settings/': typeof AdminSettingsIndexRoute
   '/admin/surveys/': typeof AdminSurveysIndexRoute
   '/admin/tenants/': typeof AdminTenantsIndexRoute
+  '/admin/themes/': typeof AdminThemesIndexRoute
   '/admin/users/': typeof AdminUsersIndexRoute
   '/admin/venture/': typeof AdminVentureIndexRoute
   '/admin/workflows/': typeof AdminWorkflowsIndexRoute
@@ -472,6 +499,8 @@ export interface FileRouteTypes {
     | '/admin/surveys/new'
     | '/admin/tenants/$tenantId'
     | '/admin/tenants/new'
+    | '/admin/themes/$id'
+    | '/admin/themes/new'
     | '/admin/workflows/$workflowId'
     | '/api/calendar/callback'
     | '/api/workflows/trigger'
@@ -486,6 +515,7 @@ export interface FileRouteTypes {
     | '/admin/settings/'
     | '/admin/surveys/'
     | '/admin/tenants/'
+    | '/admin/themes/'
     | '/admin/users/'
     | '/admin/venture/'
     | '/admin/workflows/'
@@ -520,6 +550,8 @@ export interface FileRouteTypes {
     | '/admin/surveys/new'
     | '/admin/tenants/$tenantId'
     | '/admin/tenants/new'
+    | '/admin/themes/$id'
+    | '/admin/themes/new'
     | '/admin/workflows/$workflowId'
     | '/api/calendar/callback'
     | '/api/workflows/trigger'
@@ -534,6 +566,7 @@ export interface FileRouteTypes {
     | '/admin/settings'
     | '/admin/surveys'
     | '/admin/tenants'
+    | '/admin/themes'
     | '/admin/users'
     | '/admin/venture'
     | '/admin/workflows'
@@ -569,6 +602,8 @@ export interface FileRouteTypes {
     | '/admin/surveys/new'
     | '/admin/tenants/$tenantId'
     | '/admin/tenants/new'
+    | '/admin/themes/$id'
+    | '/admin/themes/new'
     | '/admin/workflows/$workflowId'
     | '/api/calendar/callback'
     | '/api/workflows/trigger'
@@ -583,6 +618,7 @@ export interface FileRouteTypes {
     | '/admin/settings/'
     | '/admin/surveys/'
     | '/admin/tenants/'
+    | '/admin/themes/'
     | '/admin/users/'
     | '/admin/venture/'
     | '/admin/workflows/'
@@ -662,6 +698,13 @@ declare module '@tanstack/react-router' {
       path: '/users'
       fullPath: '/admin/users/'
       preLoaderRoute: typeof AdminUsersIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/themes/': {
+      id: '/admin/themes/'
+      path: '/themes'
+      fullPath: '/admin/themes/'
+      preLoaderRoute: typeof AdminThemesIndexRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/tenants/': {
@@ -760,6 +803,20 @@ declare module '@tanstack/react-router' {
       path: '/workflows/$workflowId'
       fullPath: '/admin/workflows/$workflowId'
       preLoaderRoute: typeof AdminWorkflowsWorkflowIdRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/themes/new': {
+      id: '/admin/themes/new'
+      path: '/themes/new'
+      fullPath: '/admin/themes/new'
+      preLoaderRoute: typeof AdminThemesNewRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/themes/$id': {
+      id: '/admin/themes/$id'
+      path: '/themes/$id'
+      fullPath: '/admin/themes/$id'
+      preLoaderRoute: typeof AdminThemesIdRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/tenants/new': {
@@ -961,6 +1018,8 @@ interface AdminRouteChildren {
   AdminSurveysNewRoute: typeof AdminSurveysNewRoute
   AdminTenantsTenantIdRoute: typeof AdminTenantsTenantIdRoute
   AdminTenantsNewRoute: typeof AdminTenantsNewRoute
+  AdminThemesIdRoute: typeof AdminThemesIdRoute
+  AdminThemesNewRoute: typeof AdminThemesNewRoute
   AdminWorkflowsWorkflowIdRoute: typeof AdminWorkflowsWorkflowIdRoute
   AdminBlogIndexRoute: typeof AdminBlogIndexRoute
   AdminEmailTemplatesIndexRoute: typeof AdminEmailTemplatesIndexRoute
@@ -973,6 +1032,7 @@ interface AdminRouteChildren {
   AdminSettingsIndexRoute: typeof AdminSettingsIndexRoute
   AdminSurveysIndexRoute: typeof AdminSurveysIndexRoute
   AdminTenantsIndexRoute: typeof AdminTenantsIndexRoute
+  AdminThemesIndexRoute: typeof AdminThemesIndexRoute
   AdminUsersIndexRoute: typeof AdminUsersIndexRoute
   AdminVentureIndexRoute: typeof AdminVentureIndexRoute
   AdminWorkflowsIndexRoute: typeof AdminWorkflowsIndexRoute
@@ -1003,6 +1063,8 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminSurveysNewRoute: AdminSurveysNewRoute,
   AdminTenantsTenantIdRoute: AdminTenantsTenantIdRoute,
   AdminTenantsNewRoute: AdminTenantsNewRoute,
+  AdminThemesIdRoute: AdminThemesIdRoute,
+  AdminThemesNewRoute: AdminThemesNewRoute,
   AdminWorkflowsWorkflowIdRoute: AdminWorkflowsWorkflowIdRoute,
   AdminBlogIndexRoute: AdminBlogIndexRoute,
   AdminEmailTemplatesIndexRoute: AdminEmailTemplatesIndexRoute,
@@ -1015,6 +1077,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminSettingsIndexRoute: AdminSettingsIndexRoute,
   AdminSurveysIndexRoute: AdminSurveysIndexRoute,
   AdminTenantsIndexRoute: AdminTenantsIndexRoute,
+  AdminThemesIndexRoute: AdminThemesIndexRoute,
   AdminUsersIndexRoute: AdminUsersIndexRoute,
   AdminVentureIndexRoute: AdminVentureIndexRoute,
   AdminWorkflowsIndexRoute: AdminWorkflowsIndexRoute,

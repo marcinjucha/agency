@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -12,7 +12,7 @@ import {
 import { queryKeys } from '@/lib/query-keys'
 import { messages } from '@/lib/messages'
 import type { EmailTemplate } from '../types'
-import { deleteEmailTemplateFn } from '../server'
+import { deleteEmailTemplateFn, getEmailTemplateUsageFn } from '../server'
 
 interface DeleteTemplateDialogProps {
   template: EmailTemplate | null
@@ -31,6 +31,17 @@ export function DeleteTemplateDialog({
   onDeleted,
 }: DeleteTemplateDialogProps) {
   const queryClient = useQueryClient()
+
+  // Delete-guard: how many campaigns explicitly selected this template. The FK is
+  // ON DELETE SET NULL, so delete is SAFE (never blocked) but silently un-assigns
+  // those campaigns — the operator must be warned first. Only queried while the
+  // dialog is open for a real template.
+  const { data: usage } = useQuery({
+    queryKey: [...queryKeys.email.templates, 'usage', template?.type],
+    queryFn: () => getEmailTemplateUsageFn({ data: { type: template!.type } }),
+    enabled: open && !!template,
+  })
+  const campaignCount = usage?.campaigns ?? 0
 
   const mutation = useMutation({
     mutationFn: async (type: string) => {
@@ -72,6 +83,11 @@ export function DeleteTemplateDialog({
                 </p>
               )}
               <p>{messages.email.deleteWarning}</p>
+              {campaignCount > 0 && (
+                <p className="font-medium text-destructive">
+                  {messages.email.deleteCampaignUsageWarning(campaignCount)}
+                </p>
+              )}
             </div>
           </AlertDialogDescription>
         </AlertDialogHeader>

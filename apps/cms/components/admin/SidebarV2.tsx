@@ -21,6 +21,7 @@ import {
   Shield,
   Building2,
   KeyRound,
+  Palette,
 } from 'lucide-react'
 import { usePermissions } from '@/contexts/permissions-context'
 import { messages } from '@/lib/messages'
@@ -99,6 +100,7 @@ const menuGroups: MenuGroup[] = [
   {
     label: messages.nav.groupSystem,
     items: [
+      { href: routes.admin.themes, label: messages.nav.themes, icon: Palette },
       { href: routes.admin.emailTemplates, label: messages.nav.emailTemplates, icon: Mail },
       { href: routes.admin.settings, label: messages.nav.settings, icon: Settings },
       { href: routes.admin.docforgeLicenses, label: messages.docforgeLicenses.navLabel, icon: KeyRound },

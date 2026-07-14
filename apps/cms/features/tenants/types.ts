@@ -16,6 +16,8 @@ export type Tenant = {
   domain: string | null
   subscription_status: 'trial' | 'active' | 'cancelled'
   enabled_features: PermissionKey[]
+  /** Organization base theme FK (tenants.theme_id → so_themes; iter D3b). */
+  theme_id: string | null
   created_at: string
   updated_at: string
 }
@@ -30,6 +32,7 @@ export type TenantFormData = {
   domain?: string | null
   subscription_status: 'trial' | 'active' | 'cancelled'
   enabled_features: PermissionKey[]
+  theme_id?: string | null
 }
 
 /** Subscription status options — single source of truth for UI + validation. */

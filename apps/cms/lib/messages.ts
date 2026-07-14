@@ -39,6 +39,92 @@ export const messages = {
     viewList: 'Widok listy',
   },
 
+  // Motywy — biblioteka motywów marki + edytor (Theme Manager, iter D3a).
+  themes: {
+    // Biblioteka
+    title: 'Motywy',
+    subtitle: 'Motywy marki wielokrotnego użytku — kolory, logo i czcionka e-maili klientów.',
+    newTheme: 'Nowy motyw',
+    usedByClients: (n: number) =>
+      `Używany przez: ${n} ${n === 1 ? 'klienta' : 'klientów'}`,
+    unused: 'Nieprzypisany',
+    actionsLabel: 'Akcje motywu',
+    edit: 'Edytuj',
+    duplicate: 'Duplikuj',
+    delete: 'Usuń',
+    // Stany
+    loadFailed: 'Nie udało się wczytać motywów',
+    emptyTitle: 'Brak motywów',
+    emptyDescription:
+      'Utwórz pierwszy motyw, aby nadać markę e-mailom i stronom klientów.',
+    notFound: 'Nie znaleziono motywu',
+    notFoundDescription: 'Ten motyw nie istnieje lub został usunięty.',
+    // Usuwanie
+    deleteConfirmTitle: 'Usunąć motyw?',
+    deleteConfirmDescription: (name: string) =>
+      `Czy na pewno chcesz usunąć motyw „${name}"? Tej operacji nie można cofnąć.`,
+    deleteBlockedTitle: 'Nie można usunąć motywu',
+    deleteBlockedDescription: (n: number) =>
+      `Motyw używany w ${n} ${n === 1 ? 'miejscu' : 'miejscach'} (klienci, kampanie lub szablony e-maili) — najpierw zmień ich motyw.`,
+    deleteFailed: 'Nie udało się usunąć motywu',
+    duplicateFailed: 'Nie udało się zduplikować motywu',
+    // Edytor
+    newThemeTitle: 'Nowy motyw',
+    editThemeTitle: 'Edytuj motyw',
+    nameLabel: 'Nazwa motywu',
+    namePlaceholder: 'np. Kacper — Granatowy',
+    fontFamilyLabel: 'Czcionka',
+    fontFamilyPlaceholder: 'np. Inter, Arial, sans-serif',
+    tokensTitle: 'Kolory motywu',
+    groupBrand: 'Marka',
+    groupSurface: 'Tło i tekst',
+    groupHeaderFooter: 'Nagłówek i stopka',
+    groupAssets: 'Logo i czcionka',
+    // Podgląd
+    previewTitle: 'Podgląd',
+    previewEmailTab: 'Podgląd e-mail',
+    previewWebTab: 'Podgląd strony',
+    previewWebSoon: 'Wkrótce',
+    swatchGridTitle: 'Tokeny (rozwiązane)',
+    mockEmailHeading: 'Twój bonus czeka!',
+    mockEmailBody:
+      'Dziękujemy za zapisanie się. Kliknij poniżej, aby odebrać przygotowane materiały.',
+    mockEmailCta: 'Odbierz bonus',
+    mockEmailFooter: '© Halo Efekt — wiadomość wygenerowana automatycznie.',
+    logoAlt: 'Logo motywu',
+    // Odznaka kontrastu (WCAG) — alternatywa tekstowa dla podglądu nagłówka
+    contrastLabel: 'Kontrast nagłówka',
+    contrastPass: (ratio: string) => `AA ${ratio}:1 ✓`,
+    contrastCorrected: (ratio: string) =>
+      `Nagłówek skorygowany — AA ${ratio}:1`,
+    // Zapis
+    createFailed: 'Nie udało się utworzyć motywu',
+    updateFailed: 'Nie udało się zapisać motywu',
+    nameTaken: 'Motyw o tej nazwie już istnieje',
+    formValidationError: 'Popraw błędy w formularzu',
+    // Assignment picker (iter D3b) — reused in the tenant + client editors.
+    picker: {
+      clientCardTitle: 'Motyw',
+      orgCardTitle: 'Motyw organizacji',
+      orgCardDescription:
+        'Bazowy motyw organizacji. Klienci mogą go dziedziczyć lub nadpisać własnym.',
+      radioGroupLabel: 'Wybór motywu',
+      inheritOption: (from: string) => `Dziedziczy z ${from}`,
+      ownOption: 'Własny motyw',
+      selectPlaceholder: 'Wybierz motyw',
+      searchPlaceholder: 'Szukaj motywu…',
+      noResults: 'Brak wyników',
+      newTheme: 'Nowy motyw',
+      effectiveLabel: 'Efektywny motyw',
+      defaultThemeName: 'Domyślny (Halo Efekt)',
+      orgThemeName: 'motyw organizacji',
+      // Campaign tier: what a campaign inherits FROM (used as inheritedFromLabel).
+      clientInheritLabel: 'klienta',
+      emptyHint: 'Brak motywów — utwórz w sekcji Motywy',
+      loading: 'Ładowanie motywów…',
+    },
+  },
+
   venture: {
     // Bonus-funnel admin CRUD — generic, client-safe DB error strings.
     // Raw Supabase/Postgres errors (constraint names, RLS policy text) are
@@ -93,6 +179,24 @@ export const messages = {
     changeLogo: 'Zmień logo',
     removeLogo: 'Usuń logo',
 
+    // Campaign appearance card ("Wygląd kampanii") — the 3-way theme wrapper
+    // (CampaignThemeCard). Mode 1 inherits the client theme, mode 2 picks a
+    // library theme, mode 3 is the freeform brand editor above.
+    campaignThemeTitle: 'Wygląd kampanii',
+    // Card-level public banner (hoisted from the brand editor) — mode-agnostic,
+    // because a library theme is just as public as a freeform brand.
+    campaignThemePublicBanner:
+      'Wygląd kampanii jest publiczny — kolory i logo widać na stronie prezentu.',
+    campaignThemeModeGroupLabel: 'Tryb wyglądu kampanii',
+    campaignThemeModeInherit: 'Dziedziczy z klienta',
+    campaignThemeModeLibrary: 'Wybierz z biblioteki',
+    campaignThemeModeOwn: 'Własny wygląd',
+    campaignThemeInheritHint: 'Kampania użyje motywu przypisanego do klienta.',
+    // Best-effort preview note (inherit mode): the authoritative 3-tier resolve
+    // happens server-side; the card only previews the campaign layer.
+    campaignThemePreviewNote:
+      'Podgląd poglądowy — ostateczny motyw jest rozwiązywany po stronie serwera.',
+
     // ESP
     espTitle: 'Dostawca e-mail (ESP)',
     espProviderLabel: 'Dostawca',
@@ -121,6 +225,32 @@ export const messages = {
     publishRequiresLeadSource: 'Aby opublikować kampanię, wybierz źródło leadów.',
     publishRequiresLeadSourceConfig:
       'Aby opublikować kampanię, uzupełnij wymaganą konfigurację źródła leadów (dla Tally: sekret webhooka).',
+
+    // --- Effective send ("Ten launch wysyła" — read-only surface) ---
+    // A read-only mirror of what a bonus-email send will actually use for this
+    // campaign: the effective sender (from the SAME resolveMailSender), the
+    // appearance cross-reference, and the bonus template slug + deep-link.
+    effectiveSendTitle: 'Ten launch wysyła',
+    effectiveSendLoadFailed: 'Nie udało się wczytać informacji o wysyłce',
+    effectiveSenderRowLabel: 'Efektywny nadawca',
+    effectiveSenderSharedFallbackNote:
+      'Klient nie ma własnego nadawcy — wyśle z konta agencji (noreply@haloefekt.pl).',
+    effectiveSenderFixLink: 'Ustaw nadawcę klienta',
+    effectiveThemeRowLabel: 'Wygląd',
+    effectiveThemeCrossRef: 'Motyw ustawiasz w sekcji „Wygląd kampanii” powyżej.',
+    effectiveTemplateRowLabel: 'Szablon',
+    effectiveTemplateSends: 'wysyła szablon:',
+    effectiveTemplateEditLink: 'Otwórz edytor szablonu',
+    effectiveTemplateMissingNote:
+      'Brak własnego szablonu — użyty zostanie wbudowany układ.',
+    // Resolved template row (the template the send would ACTUALLY pick) + picker card.
+    effectiveResolvedTemplateRowLabel: 'Aktywny szablon',
+    effectiveResolvedTemplateBuiltin: 'Wbudowany układ (brak szablonu)',
+    bonusTemplateCardTitle: 'Szablon e-maila bonusowego',
+    bonusTemplateEmptyHint:
+      'Brak szablonów z listą bonusów. Dodaj blok „Lista bonusów” w edytorze e-maili.',
+    bonusTemplatePickerWarning:
+      'Wybrany szablon nie zawiera już listy bonusów — sprawdź go w edytorze.',
 
     // Publish/status
     publishedLabel: 'Opublikowana',
@@ -709,6 +839,12 @@ export const messages = {
     deleteConfirmKeyLabel: 'klucz',
     deleteWarning:
       'Workflowy używające tego klucza przestaną działać. Tej operacji nie można cofnąć.',
+    // Delete-guard warning — campaigns that explicitly selected this template via
+    // so_campaigns.email_template_id (ON DELETE SET NULL → they get un-assigned).
+    deleteCampaignUsageWarning: (n: number) =>
+      `Ten szablon jest używany przez ${n} ${
+        n === 1 ? 'kampanię' : n >= 2 && n <= 4 ? 'kampanie' : 'kampanii'
+      } — zostaną odpięte i wrócą do domyślnego szablonu.`,
     // Variables editor
     variablesSection: 'Zmienne szablonu',
     variablesSectionLabel: 'Zmienne szablonu',
@@ -728,6 +864,20 @@ export const messages = {
     variableRemove: 'Usuń zmienną',
     detectFromContent: 'Wykryj z treści',
     detectFromContentTooltip: 'Dodaj wszystkie {{klucze}} obecne w treści, których nie ma jeszcze na liście',
+    // Per-variable provenance badge (variable-discoverability slice).
+    // Derived from resolveVariableSource(key, templateType) — NOT from the
+    // stored `source` field (unreliable: manual-add and "Wykryj z treści" both
+    // write source:'manual'). Real text labels, never colour-only (a11y).
+    varSourceApp: 'z aplikacji (kampania)',
+    varSourceStructural: 'wstawiane automatycznie',
+    varSourceWorkflow: 'wypełniane przez workflow',
+    varSourceManual: 'ręcznie',
+    varSourceUnresolvable: 'nie zostanie wypełnione — trafi dosłownie',
+    // Persistent inline advisory at the top of the Zmienne tab + save-time echo.
+    // Only ever populated for APP-OWNED template types (venture_bonus) — n8n
+    // resolvability lives in workflow bindings the editor can't see.
+    unresolvableNoteTitle: 'Te zmienne nie zostaną wypełnione i trafią do maila dosłownie:',
+    unresolvableSaveWarning: 'Zapisano. Uwaga — niektóre zmienne nie zostaną wypełnione:',
     // Columns block inspector
     columnsGapLabel: 'Odstęp',
     columnsGapAriaLabel: 'Odstęp między kolumnami',
@@ -763,6 +913,15 @@ export const messages = {
     addBlock: 'Dodaj blok',
     addBlockSearch: 'Szukaj bloku…',
     addBlockClear: 'Wyczyść',
+    // Reusable EmailTemplatePicker (bind an email template to a surface).
+    templatePickerLabel: 'Szablon e-maila',
+    templatePickerDefault: 'Domyślny',
+    templatePickerEdit: 'Edytuj szablon',
+    // "Lista bonusów" affordance — inserts a text block pre-filled with the
+    // {{bonus_list}} marker (a shortcut, NOT a registry block type).
+    bonusListGroupLabel: 'SPECJALNE',
+    bonusListBlockLabel: 'Lista bonusów',
+    bonusListBlockDescription: 'Wstawia znacznik listy bonusów (generowanej przy wysyłce)',
     unsavedChanges: 'Niezapisane zmiany',
     canvasTitle: 'Podgląd na żywo',
     canvasSubjectLabel: 'Temat:',
@@ -778,7 +937,15 @@ export const messages = {
     canvasEmptyHint: 'Dodaj blok przez panel Struktura po lewej',
     canvasViewportDesktop: 'Desktop',
     canvasViewportMobile: 'Mobile',
+    // Sample-data preview toggle (display-only — never persisted). When ON, only
+    // CODE-KNOWN tokens are filled (app scalars + the structural marker); every
+    // workflow/unresolvable/custom token stays bracketed so the honest "won't be
+    // filled" signal survives.
+    canvasSampleDataToggle: 'Dane przykładowe',
+    sampleCompanyName: 'Twoja Firma',
+    sampleBonusList: 'Przykładowy bonus 1 · Przykładowy bonus 2',
     canvasBlockUnknown: 'Nieznany typ bloku',
+    bonusListCanvasChip: 'Lista bonusów — generowana automatycznie przy wysyłce',
     canvasMoveUp: 'Przesuń blok w górę',
     canvasMoveDown: 'Przesuń blok w dół',
     canvasDuplicate: 'Duplikuj blok',
@@ -791,7 +958,7 @@ export const messages = {
     // Inspector tabs (Iter 3)
     inspectorTabProperties: 'Właściwości',
     inspectorTabVariables: 'Zmienne',
-    inspectorTabSettings: 'Email',
+    inspectorTabSettings: 'Ustawienia',
     inspectorNothingSelected: 'Nic nie jest zaznaczone',
     inspectorNothingSelectedHint: 'Kliknij blok w podglądzie lub panelu Struktura',
     inspectorNoEditor: 'Brak edytora dla tego typu bloku',
@@ -805,6 +972,12 @@ export const messages = {
     inspectorTemplateKeyLabel: 'Klucz (slug)',
     inspectorTemplateKeyReadonly: 'readonly',
     inspectorActionsLabel: 'Akcje',
+    // Per-template theme picker (Phase 1, email client-theming). Whole-template
+    // scope → lives in the Email settings tab, not per-block.
+    inspectorTemplateThemeLabel: 'Motyw szablonu',
+    // Shown instead of the picker when the user lacks `design.themes` — the theme
+    // silently inherits the organisation default (server gate stays authoritative).
+    inspectorTemplateThemeInheritReadonly: 'Motyw: dziedziczy z organizacji',
     // Subject variable picker
     canvasInsertVariable: 'Wstaw zmienną',
     canvasNoVariables: 'Brak zmiennych. Wpisz {{key}} w treści szablonu.',
@@ -836,6 +1009,24 @@ export const messages = {
     inspectorBorderRadiusPill: 'Pigułka',
     inspectorBorderBackgroundColor: 'Kolor tła',
     inspectorBorderBackgroundColorReset: 'Wyczyść kolor tła',
+    // Inspector — kolor z motywu (theme token) vs własny hex (iter C client-theming)
+    inspectorColorSourceToken: 'Kolor z motywu',
+    inspectorColorSourceCustom: 'Własny kolor',
+    // Coexistence hint under a per-block theme-token select: reminds the operator
+    // that the palette is owned by the template theme (picked in the Email tab).
+    inspectorThemeTokenSourceHint: 'Kolory pochodzą z motywu szablonu (zakładka Ustawienia)',
+    // Etykiety 9 tokenów motywu (THEME_COLOR_TOKEN_KEYS)
+    themeTokenLabels: {
+      primary: 'Podstawowy',
+      primaryText: 'Tekst na podstawowym',
+      accent: 'Akcent',
+      background: 'Tło',
+      text: 'Tekst',
+      mutedText: 'Tekst przygaszony',
+      headerBackground: 'Tło nagłówka',
+      headerText: 'Tekst nagłówka',
+      footerText: 'Tekst stopki',
+    },
     // CTA width controls
     inspectorCtaWidth: 'Szerokość',
     inspectorCtaWidthAuto: 'Auto',
@@ -1031,6 +1222,7 @@ export const messages = {
     appointments: 'Wizyty',
     intake: 'Intake hub',
     calendar: 'Kalendarz',
+    themes: 'Motywy',
     emailTemplates: 'Szablony email',
     landingPage: 'Strona główna',
     blog: 'Blog',
@@ -1937,6 +2129,8 @@ export const messages = {
     'bonus_funnel.clients': 'Klienci',
     'bonus_funnel.campaigns': 'Kampanie',
     'bonus_funnel.bonuses': 'Bonusy',
+    design: 'Wygląd',
+    'design.themes': 'Motywy',
     system: 'System',
     management: 'Zarządzanie',
     'system.email_templates': 'Szablony email',

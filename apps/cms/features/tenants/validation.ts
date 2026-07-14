@@ -16,6 +16,10 @@ export const tenantSchema = z.object({
   email: z.string().email(messages.validation.invalidEmail),
   domain: z.string().nullable().optional(),
   subscription_status: z.enum(SUBSCRIPTION_STATUSES),
+  // Organization base theme (tenants.theme_id FK → so_themes; iter D3b). NULL =
+  // no base set → falls to HALO_EFEKT_DEFAULT at resolution. `.nullable().optional()`
+  // because a DB-nullable column returns null and the form may omit it.
+  theme_id: z.string().uuid().nullable().optional(),
   enabled_features: z
     .array(z.enum(ALL_PERMISSION_KEYS as [string, ...string[]]))
     .refine(

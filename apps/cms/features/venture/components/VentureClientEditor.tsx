@@ -24,6 +24,7 @@ import { queryKeys } from '@/lib/query-keys'
 import { createClientSchema, type CreateClientInput } from '../validation'
 import { MAIL_PROVIDERS, type AdminClient } from '../types'
 import { updateClientFn } from '../admin'
+import { ThemePicker } from '@/features/themes/components/ThemePicker'
 
 // Mirrors VentureCampaignEditor.tsx 1:1 (top bar, sections in cards, Save +
 // ⌘S, masked secret fields with "leave blank = don't change"). Mail
@@ -54,12 +55,15 @@ export function VentureClientEditor({ client }: VentureClientEditorProps) {
     handleSubmit,
     control,
     setValue,
+    watch,
     formState: { errors },
   } = useForm<CreateClientInput, unknown, CreateClientInput>({
     resolver: zodResolver(createClientSchema),
     defaultValues: {
       name: client.name,
       slug: client.slug,
+      // Hydrate the assigned theme (null = inherit the org theme).
+      theme_id: client.theme_id ?? null,
       // client.mail_provider is DB-generic `string` (Tables<'so_clients'>) —
       // cast to the fixed union, same pattern as bonus.type in
       // VentureBonusManager.tsx.
@@ -98,6 +102,8 @@ export function VentureClientEditor({ client }: VentureClientEditorProps) {
           resend_from_email: data.resend_from_email?.trim() || null,
           gmail_address: data.gmail_address?.trim() || null,
           sender_name: data.sender_name?.trim() || null,
+          // Always sent: null = inherit the org theme, a uuid = own theme.
+          theme_id: data.theme_id ?? null,
           // Only rotate when the operator actually typed a new secret.
           ...(resendApiKeyInput ? { resend_api_key: resendApiKeyInput } : {}),
           ...(gmailAppPasswordInput ? { gmail_app_password: gmailAppPasswordInput } : {}),
@@ -367,6 +373,18 @@ export function VentureClientEditor({ client }: VentureClientEditorProps) {
                     </>
                   )}
                 </div>
+              </CollapsibleCard>
+            </div>
+
+            {/* RIGHT — theme assignment */}
+            <div className="flex flex-col gap-6">
+              <CollapsibleCard title={messages.themes.picker.clientCardTitle} defaultOpen>
+                <ThemePicker
+                  level="client"
+                  inheritedFromLabel={messages.themes.picker.orgThemeName}
+                  value={watch('theme_id') ?? null}
+                  onChange={(id) => setValue('theme_id', id, { shouldDirty: true })}
+                />
               </CollapsibleCard>
             </div>
           </div>

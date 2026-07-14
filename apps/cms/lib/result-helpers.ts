@@ -1,31 +1,18 @@
-import { ok, err, Result, ResultAsync } from 'neverthrow'
-import { getUserWithTenant, isAuthError, requireAuth, type AuthResult, type AuthSuccess } from '@/lib/auth'
-import type { PermissionKey } from '@/lib/permissions'
+import { ok, err, Result } from 'neverthrow'
 import { messages } from '@/lib/messages'
 
-/**
- * Wraps getUserWithTenant() into ResultAsync.
- * Single auth helper for all Server Actions using neverthrow.
- */
-export const authResult = (): ResultAsync<AuthSuccess, string> =>
-  ResultAsync.fromPromise(
-    getUserWithTenant(),
-    () => messages.common.unknownError
-  ).andThen((auth: AuthResult) =>
-    isAuthError(auth) ? err(auth.error) : ok(auth)
-  )
-
-/**
- * Wraps requireAuth(permission) into ResultAsync.
- * Combines auth + permission check in one step for Server Actions.
- */
-export const requireAuthResult = (permission: PermissionKey): ResultAsync<AuthSuccess, string> =>
-  ResultAsync.fromPromise(
-    requireAuth(permission),
-    () => messages.common.unknownError,
-  ).andThen((result) =>
-    result.success ? ok(result.data) : err(result.error),
-  )
+// NOTE: keep this module PURE (client-safe). It is imported by feature `server.ts`
+// files for the Supabase/Zod result helpers below, and the createServerFn compiler
+// only strips `.handler()` bodies — helpers referenced by non-handler exports (e.g.
+// `parseTemplateVariables` in features/email/server.ts) are retained in the CLIENT
+// bundle. In dev Vite does not tree-shake, so any server-only top-level import here
+// evaluates in the browser. A pair of dead `authResult`/`requireAuthResult` wrappers
+// used to import `@/lib/auth` (→ `server-start.server` → `@tanstack/start-server-core`
+// → `node:async_hooks`), which crashed the block editor route with
+// "Cannot access node:async_hooks.AsyncLocalStorage in client code". They had zero
+// importers and were removed. Do NOT re-introduce a `@/lib/auth` (or any `*.server`)
+// import here — use `requireAuthContext()` from `@/lib/server-auth.server` INSIDE a
+// createServerFn handler instead.
 
 /**
  * Wraps Zod safeParse into Result.

@@ -111,6 +111,15 @@ export const queryKeys = {
         ? (['venture', 'campaigns', clientId] as const)
         : (['venture', 'campaigns'] as const),
     bonuses: (campaignId: string) => ['venture', 'bonuses', campaignId] as const,
+    // Read-only effective-send surface for a campaign ("Ten launch wysyła" card).
+    // Nested under the venture root so a mutation invalidating `venture.all`
+    // (e.g. editing the client's sender, or the campaign) also refreshes it.
+    effectiveSend: (campaignId: string) =>
+      ['venture', 'effective-send', campaignId] as const,
+    // Tenant-scoped list of BONUS-CAPABLE email templates for the campaign picker
+    // (no per-campaign input — filtered by the {{bonus_list}} marker). Nested under
+    // the venture root so a mutation invalidating `venture.all` also refreshes it.
+    bonusTemplates: ['venture', 'bonus-templates'] as const,
     // Per-user client assignments (iter 3a). Keyed by target user so the
     // assignment editor pre-fills the right set; still nested under the venture
     // root so a mutation that invalidates `venture.all` also refreshes it.
@@ -215,6 +224,19 @@ export const queryKeys = {
   },
 
   /**
+   * @source listThemesFn, getThemeFn (features/themes/server.ts)
+   * @usedBy ThemeLibrary (all), ThemeEditor (detail — via route loader/query)
+   * @invalidatedBy ThemeEditor (create/update), ThemeCard (duplicate/delete)
+   *   All theme mutations invalidate at the ROOT key `themes.all` — exact-key
+   *   invalidation silently fails (ag-design-patterns). Usage counts also live
+   *   under this root so a create/delete refreshes the "used by N" lines.
+   */
+  themes: {
+    all: ['themes'] as const,
+    detail: (id: string) => ['themes', 'detail', id] as const,
+  },
+
+  /**
    * @source getEmailTemplatesFn, getEmailTemplateFn (features/email/server.ts)
    * @usedBy TODO: nie znaleziono użycia via queryKeys.email — email templates loaded via route loaders
    * @invalidatedBy TODO: nie znaleziono użycia via queryKeys.email
@@ -223,6 +245,9 @@ export const queryKeys = {
     all: ['email-templates'] as const,
     templates: ['email-templates', 'list'] as const,
     template: (type: string) => ['email-templates', 'detail', type] as const,
+    // Resolved tenant theme map — powers the block editor's theme-token swatches
+    // (getResolvedEmailThemeFn / useResolvedEmailTheme).
+    resolvedTheme: ['email-templates', 'resolved-theme'] as const,
   },
 
   /**

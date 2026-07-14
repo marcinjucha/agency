@@ -1,18 +1,56 @@
-import { describe, it, expect, vi, type Mock } from 'vitest'
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest'
 
 // Mock the ANON server client — the whole point of this endpoint is that it
-// runs on anon (RLS-enforced), never service-role. We mock the client factory
-// and assert the exact column projections it is asked for.
+// runs on anon (RLS-enforced) for the ROW reads, never service-role. We mock the
+// client factory and assert the exact column projections it is asked for.
 vi.mock('@/lib/supabase/anon.server', () => ({
   createAnonServerClient: vi.fn(),
 }))
 
+// Phase B (iter E3): the theme resolve runs on the service client in a dedicated
+// module. Stub it here so this suite stays focused on the anon Phase A + the
+// PublicCampaign shaping (theme passthrough + brand derivation). The service
+// projection's secret-exclusion is covered by public-theme.test.ts.
+vi.mock('../public-theme.server', () => ({
+  resolvePublicCampaignTheme: vi.fn(),
+}))
+
 import { createAnonServerClient } from '@/lib/supabase/anon.server'
+import { resolvePublicCampaignTheme } from '../public-theme.server'
 import {
   getPublishedCampaignBySlug,
   CAMPAIGN_PUBLIC_COLUMNS,
   BONUS_PUBLIC_COLUMNS,
 } from '../server'
+
+// A fully-resolved theme the stubbed Phase B returns. `brand` in the payload is
+// DERIVED from this (inverse BRAND_TO_THEME): primary/accent 1:1, background→bg,
+// logoUrl→logo_url, fontFamily→font.
+const FIXED_THEME = {
+  primary: '#111111',
+  primaryText: '#ffffff',
+  accent: '#00e5ff',
+  background: '#ffffff',
+  text: '#222222',
+  mutedText: '#666666',
+  headerBackground: '#000000',
+  headerText: '#ffffff',
+  footerText: '#999999',
+  logoUrl: 'https://cdn.example.com/logo.png',
+  fontFamily: 'Inter',
+}
+const EXPECTED_BRAND = {
+  primary: '#111111',
+  accent: '#00e5ff',
+  bg: '#ffffff',
+  logo_url: 'https://cdn.example.com/logo.png',
+  font: 'Inter',
+}
+
+beforeEach(() => {
+  ;(resolvePublicCampaignTheme as Mock).mockReset()
+  ;(resolvePublicCampaignTheme as Mock).mockResolvedValue(FIXED_THEME)
+})
 
 interface QueryResult {
   data: unknown
@@ -103,12 +141,17 @@ describe('getPublishedCampaignBySlug', () => {
     expect(result._unsafeUnwrap()).toEqual({
       slug: 'warsztaty',
       display_name: 'Kacper Launch',
-      brand: BRAND,
+      theme: FIXED_THEME,
+      brand: EXPECTED_BRAND,
       bonuses: [
         { title: 'Bonus 1', description: 'first', type: 'link', url: 'https://a' },
         { title: 'Bonus 2', description: 'second', type: 'file', url: 'https://b' },
       ],
     })
+
+    // Phase B resolved strictly by the already-published-confirmed campaign id +
+    // owning client id — never a raw slug.
+    expect(resolvePublicCampaignTheme).toHaveBeenCalledWith('campaign-1', 'client-1')
 
     // Client resolved by slug first.
     expect(mock.clientBuilder.eq).toHaveBeenCalledWith('slug', 'przystan-inwestorow')
@@ -125,10 +168,10 @@ describe('getPublishedCampaignBySlug', () => {
     expect(mock.bonusesBuilder.eq).toHaveBeenCalledWith('published', true)
   })
 
-  it('defaults brand to {} and bonuses to [] when the campaign has none', async () => {
+  it('named-theme-only campaign (no raw brand) → brand DERIVED from theme (logo_url populated)', async () => {
     setupClient({
       campaign: {
-        data: { id: 'c2', slug: 'empty', display_name: null, brand: null },
+        data: { id: 'c2', slug: 'empty', display_name: null },
         error: null,
       },
       bonuses: { data: [], error: null },
@@ -136,11 +179,43 @@ describe('getPublishedCampaignBySlug', () => {
 
     const result = await getPublishedCampaignBySlug('przystan-inwestorow', 'empty')
 
+    // Even with an empty raw brand, brand is built from the resolved theme, so
+    // logo_url/primary are populated — the deployed landing never breaks.
     expect(result._unsafeUnwrap()).toEqual({
       slug: 'empty',
       display_name: null,
-      brand: {},
+      theme: FIXED_THEME,
+      brand: EXPECTED_BRAND,
       bonuses: [],
+    })
+  })
+
+  it('MERGE: an extra freeform brand key survives; the resolved theme still wins the 5 canonical keys', async () => {
+    // so_campaigns.brand is a LIVE public contract — the deployed landing may read
+    // freeform keys beyond the 5 canonical ones. The payload MERGES the raw brand
+    // UNDER the theme-derived brand: `primary` here is overridden by the resolved
+    // theme, but `tagline`/`secondary` pass through untouched.
+    setupClient({
+      campaign: {
+        data: {
+          id: 'c4',
+          slug: 'extra',
+          display_name: null,
+          brand: { primary: '#OLDPRIMARY', tagline: 'Zbuduj startup', secondary: '#654321' },
+        },
+        error: null,
+      },
+      bonuses: { data: [], error: null },
+    })
+
+    const result = await getPublishedCampaignBySlug('przystan-inwestorow', 'extra')
+
+    expect(result._unsafeUnwrap()?.brand).toEqual({
+      // Resolved theme WINS the 5 canonical keys (raw primary '#OLDPRIMARY' dropped).
+      ...EXPECTED_BRAND,
+      // Extra freeform keys survive the merge.
+      tagline: 'Zbuduj startup',
+      secondary: '#654321',
     })
   })
 
@@ -167,6 +242,10 @@ describe('getPublishedCampaignBySlug', () => {
     expect(result._unsafeUnwrap()).toBeNull()
     // Short-circuits — never queries bonuses when the campaign is invisible.
     expect(mock.bonusesBuilder.order).not.toHaveBeenCalled()
+    // Published-gate order (SECURITY): Phase A rejected → Phase B (the
+    // RLS-bypassing service-role theme resolve) MUST NOT run, so no unpublished
+    // campaign's theme is ever resolved/leaked.
+    expect(resolvePublicCampaignTheme).not.toHaveBeenCalled()
   })
 
   it('client isolation: a slug that exists under a DIFFERENT client → null, never leaks the other client campaign', async () => {

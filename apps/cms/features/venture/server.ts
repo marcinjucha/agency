@@ -1,6 +1,8 @@
 import { ResultAsync, ok, err } from 'neverthrow'
-import type { Tables } from '@agency/database'
+import type { Json, Tables } from '@agency/database'
 import { createAnonServerClient } from '@/lib/supabase/anon.server'
+import type { ResolvedTheme } from '@/lib/theme'
+import { resolvePublicCampaignTheme } from './public-theme.server'
 import type { CampaignBrand, PublicBonus, PublicCampaign } from './types'
 
 // ---------------------------------------------------------------------------
@@ -16,8 +18,17 @@ import type { CampaignBrand, PublicBonus, PublicCampaign } from './types'
 //     policy), and can only read (id, slug) columns (column GRANT) — name/
 //     tenant_id/timestamps are physically ungranted,
 //   - so_leads / so_esp_sync_log have NO anon policy → deny-all.
-// NEVER use the service-role client here: it bypasses RLS and would leak
-// unpublished rows + internal esp_*/client columns.
+// NEVER use the service-role client here for ROW reads: it bypasses RLS and
+// would leak unpublished rows + internal esp_*/client columns.
+//
+// SINGLE SERVICE-ROLE EXCEPTION (iter E3): `resolvePublicCampaignTheme`
+// (public-theme.server.ts) runs on the service client, but ONLY to read a
+// dedicated THEME-ONLY, NON-SECRET projection (so_campaigns.theme_id/brand,
+// so_clients.theme_id/theme/tenant_id, tenants.theme_id/theme, so_themes.tokens
+// — never resend_api_key/gmail_app_password/esp_*), and ONLY AFTER the anon
+// Phase A below has confirmed the campaign is published+visible. Do NOT extend
+// this exception to any ROW read — the service client must never fetch a
+// campaign/client/lead row for the public payload.
 //
 // Client-scoped slugs: campaign slugs are unique per client (so_campaigns
 // UNIQUE(client_id, slug)), not globally — resolving a campaign by public
@@ -29,13 +40,16 @@ import type { CampaignBrand, PublicBonus, PublicCampaign } from './types'
 // filters the query independent of the select projection (PostgREST resolves
 // WHERE-filter columns from the table, not from the selected columns) — no
 // need to add client_id to the projection just to filter by it.
+// `brand` IS in the anon projection: the public payload MERGES the raw
+// so_campaigns.brand JSONB under the theme-derived brand (see toPublicCampaign) so
+// any FREEFORM key the deployed VPS landing still reads survives, while the
+// resolved theme wins the 5 canonical keys. `brand` is anon-readable (column
+// GRANT) and non-secret. `id` is required to hand Phase B the
+// already-published-confirmed campaign id.
 export const CAMPAIGN_PUBLIC_COLUMNS = 'id, slug, display_name, brand'
 export const BONUS_PUBLIC_COLUMNS = 'title, description, type, url'
 
-type CampaignRow = Pick<
-  Tables<'so_campaigns'>,
-  'id' | 'slug' | 'display_name' | 'brand'
->
+type CampaignRow = Pick<Tables<'so_campaigns'>, 'id' | 'slug' | 'display_name' | 'brand'>
 type BonusRow = Pick<Tables<'so_bonuses'>, 'title' | 'description' | 'type' | 'url'>
 type ClientIdRow = Pick<Tables<'so_clients'>, 'id'>
 
@@ -61,9 +75,20 @@ export function getPublishedCampaignBySlug(
   return fetchClientId(supabase, clientSlug).andThen((clientId) => {
     if (!clientId) return ok<PublicCampaign | null, string>(null)
     return fetchCampaignRow(supabase, clientId, slug).andThen((campaign) => {
+      // Phase A gate: no published+visible campaign row → 404. Phase B (the
+      // service-role theme resolve) MUST NOT run before this returns non-null,
+      // else the RLS-bypassing service client would resolve themes of
+      // unpublished campaigns.
       if (!campaign) return ok<PublicCampaign | null, string>(null)
-      return fetchPublishedBonuses(supabase, campaign.id).map((bonuses) =>
-        toPublicCampaign(campaign, bonuses),
+      return fetchPublishedBonuses(supabase, campaign.id).andThen((bonuses) =>
+        // Phase B: resolve the theme ONLY for the now-confirmed published
+        // campaign, strictly by its already-verified id + owning client id.
+        // resolvePublicCampaignTheme never throws (degrades to the Halo default),
+        // so a safe promise — a theme hiccup must never turn a valid hit into a
+        // 500.
+        ResultAsync.fromSafePromise(
+          resolvePublicCampaignTheme(campaign.id, clientId),
+        ).map((theme) => toPublicCampaign(campaign, bonuses, theme)),
       )
     })
   })
@@ -146,12 +171,44 @@ function toPublicBonus(row: BonusRow): PublicBonus {
 function toPublicCampaign(
   row: CampaignRow,
   bonuses: PublicBonus[],
+  theme: ResolvedTheme,
 ): PublicCampaign {
   return {
     slug: row.slug,
     display_name: row.display_name,
-    // brand is freeform JSONB; default to {} so the landing never crashes on brand.primary.
-    brand: (row.brand ?? {}) as CampaignBrand,
+    theme,
+    // brand MERGES the raw so_campaigns.brand JSONB UNDER the theme-derived brand:
+    // the resolved theme WINS the 5 canonical keys (primary/accent/bg/logo_url/font
+    // — inverse BRAND_TO_THEME, so a named-theme-only campaign still yields a
+    // populated brand and the landing never crashes on brand.primary), while any
+    // extra FREEFORM key the deployed landing still consumes passes through
+    // untouched. so_campaigns.brand is a LIVE public contract (memory 2026-07-11) —
+    // do NOT drop freeform keys.
+    brand: { ...toRawBrand(row.brand), ...brandFromResolvedTheme(theme) } as CampaignBrand,
     bonuses,
+  }
+}
+
+// Narrow the freeform `brand` JSONB to a plain object for spreading. A null /
+// primitive / array `brand` (never the shape the landing reads) → {} so the merge
+// contributes nothing beyond the theme-derived keys.
+function toRawBrand(brand: Json | null): Record<string, unknown> {
+  return brand && typeof brand === 'object' && !Array.isArray(brand)
+    ? (brand as Record<string, unknown>)
+    : {}
+}
+
+// Inverse of BRAND_TO_THEME (lib/theme/types.ts): project the resolved theme
+// back onto the legacy CampaignBrand shape the deployed landing consumes.
+// primary/accent 1:1, background→bg, logoUrl→logo_url, fontFamily→font. The 9
+// colour tokens are always present on a ResolvedTheme; logoUrl/fontFamily are
+// optional → null when absent (the brand shape is nullable, not optional).
+function brandFromResolvedTheme(theme: ResolvedTheme): CampaignBrand {
+  return {
+    primary: theme.primary,
+    accent: theme.accent,
+    bg: theme.background,
+    logo_url: theme.logoUrl ?? null,
+    font: theme.fontFamily ?? null,
   }
 }
