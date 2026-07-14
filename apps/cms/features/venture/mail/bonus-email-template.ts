@@ -1,4 +1,4 @@
-import { renderEmailBlocks, substituteTokens, substitutePlain, type Block } from '@agency/email'
+import { renderEmailBlocks, substituteTokens, substitutePlain, sanitizeHtmlUrls, type Block } from '@agency/email'
 import type { ResolvedTheme } from '@/lib/theme'
 import {
   buildBonusListBlock,
@@ -161,7 +161,14 @@ export async function buildBonusEmailFromTemplateHtml(
 ): Promise<BonusEmail> {
   const blocks = buildBonusEmailFromTemplate(input)
   const rendered = stripResidualBonusMarker(await renderEmailBlocks(blocks))
-  const html = substituteTokens(rendered, input.values as unknown as Record<string, string>)
+  const substituted = substituteTokens(rendered, input.values as unknown as Record<string, string>)
+  // Belt-and-suspenders: scheme-guard every href/src in the FINAL HTML. The bonus
+  // LIST href already goes through `safeUrlValue` directly (`buildBonusListBlock`),
+  // but an editable copy-template block could carry a dangerous href that blind
+  // token substitution can't see — sanitize the whole rendered body. No-op (and
+  // byte-identical) when no dangerous scheme is present, which is the case for the
+  // seeded static copy → the byte-identical regression guard still holds.
+  const html = sanitizeHtmlUrls(substituted)
   const subject = substituteSubject(input.subjectTemplate, input.values)
   return { subject, html }
 }

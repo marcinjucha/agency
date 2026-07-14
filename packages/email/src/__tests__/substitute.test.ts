@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { escapeHtml, substituteTokens, substitutePlain, safeUrlValue } from '../substitute'
+import { escapeHtml, substituteTokens, substitutePlain, safeUrlValue, sanitizeHtmlUrls } from '../substitute'
 
 // ---------------------------------------------------------------------------
 // GOLDEN PARITY FIXTURE.
@@ -114,9 +114,17 @@ const SAFE_URL_CASES: UrlCase[] = [
   { name: 'mailto passes', input: 'mailto:a@b.com', expected: 'mailto:a@b.com' },
   { name: 'javascript: is neutralized', input: 'javascript:alert(1)', expected: '#' },
   { name: 'data: is neutralized', input: 'data:text/html,<script>', expected: '#' },
+  { name: 'vbscript: is neutralized', input: 'vbscript:msgbox(1)', expected: '#' },
+  { name: 'file: is neutralized', input: 'file:///etc/passwd', expected: '#' },
   { name: 'relative path passes', input: '/bonuses/1', expected: '/bonuses/1' },
   { name: 'anchor passes', input: '#section', expected: '#section' },
   { name: 'empty is neutralized', input: '   ', expected: '#' },
+  // Denylist posture (was allow-list): benign non-http schemes are ADMIN-authored
+  // deep-links and MUST pass unchanged — the old allow-list silently killed them.
+  { name: 'tel: passes (denylist, not allow-list)', input: 'tel:+48123456789', expected: 'tel:+48123456789' },
+  { name: 'ftp: passes', input: 'ftp://host/file', expected: 'ftp://host/file' },
+  { name: 's3:// passes', input: 's3://bucket/x', expected: 's3://bucket/x' },
+  { name: 'custom deep-link scheme passes', input: 'myapp://open/x', expected: 'myapp://open/x' },
   // Browser-strips-first bypass class: control chars the URL parser removes
   // BEFORE resolving the scheme. `.trim()` alone misses interior chars, so the
   // scheme test must run on a CLEANED copy (see safeUrlValue). All must
@@ -133,8 +141,36 @@ const SAFE_URL_CASES: UrlCase[] = [
   { name: 'percent-encoded javascript is returned verbatim (safe)', input: '%6aavascript:alert(1)', expected: '%6aavascript:alert(1)' },
 ]
 
-describe('safeUrlValue (scheme allow-list for href/src context)', () => {
+describe('safeUrlValue (scheme deny-list for href/src context)', () => {
   it.each(SAFE_URL_CASES)('$name', ({ input, expected }) => {
     expect(safeUrlValue(input)).toBe(expected)
+  })
+})
+
+describe('sanitizeHtmlUrls (href/src attribute scanner over final HTML)', () => {
+  it('neutralizes a javascript: href (double-quoted) to #', () => {
+    expect(sanitizeHtmlUrls('<a href="javascript:alert(1)">x</a>')).toBe('<a href="#">x</a>')
+  })
+
+  it('leaves a safe https href unchanged', () => {
+    expect(sanitizeHtmlUrls('<a href="https://ok">x</a>')).toBe('<a href="https://ok">x</a>')
+  })
+
+  it('neutralizes a data: src (single-quoted) to #', () => {
+    expect(sanitizeHtmlUrls(`<img src='data:text/html,<script>' />`)).toBe(`<img src='#' />`)
+  })
+
+  it('leaves a "javascript:" occurrence in visible text (not an attribute) alone', () => {
+    expect(sanitizeHtmlUrls('<p>type javascript: to run</p>')).toBe('<p>type javascript: to run</p>')
+  })
+
+  it('passes a benign non-http href (tel:) through unchanged', () => {
+    expect(sanitizeHtmlUrls('<a href="tel:+48123">call</a>')).toBe('<a href="tel:+48123">call</a>')
+  })
+
+  it('sanitizes multiple attributes in one string independently', () => {
+    expect(
+      sanitizeHtmlUrls('<a href="javascript:x">a</a><a href="https://ok">b</a>'),
+    ).toBe('<a href="#">a</a><a href="https://ok">b</a>')
   })
 })

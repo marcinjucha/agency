@@ -249,6 +249,7 @@ const INLINE_HELPERS = {
   'expression-evaluator': 'expression-evaluator.js',
   'get-nested-value': 'get-nested-value.js',
   'resolve-variables': 'resolve-variables.js',
+  'sanitize-html-urls': 'sanitize-html-urls.js',
   'supabase-crud': 'supabase-crud.js',
   'supabase-request': 'supabase-request.js',
 }
@@ -358,6 +359,7 @@ const HELPER_SIGNATURES = {
   'escape-html': /function\s+escapeHtml\b/,
   'expression-evaluator': /function\s+(coerceNumeric|escapeRegex|parseExpression|resolveField|compare)\b/,
   'resolve-variables': /function\s+resolveVariables\b/,
+  'sanitize-html-urls': /function\s+sanitizeHtmlUrls\b/,
   'claude-response': /function\s+(extractTextContent|stripCodeFences)\b/,
 }
 
