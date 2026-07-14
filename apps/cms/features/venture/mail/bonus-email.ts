@@ -1,4 +1,4 @@
-import { renderEmailBlocks, escapeHtml, type Block } from '@agency/email'
+import { renderEmailBlocks, escapeHtml, safeUrlValue, type Block } from '@agency/email'
 import type { ResolvedTheme } from '@/lib/theme'
 
 // ---------------------------------------------------------------------------
@@ -78,7 +78,7 @@ export function buildBonusEmailBlocks(input: BonusEmailInput): Block[] {
       ? bonuses
           .map(
             (b) =>
-              `<p><strong>${escapeHtml(b.title)}</strong> — <a href="${escapeHtml(b.url)}">${BONUS_LINK_LABEL}</a></p>`,
+              `<p><strong>${escapeHtml(b.title)}</strong> — <a href="${escapeHtml(safeUrlValue(b.url))}">${BONUS_LINK_LABEL}</a></p>`,
           )
           .join('')
       : '<p>Bonusy pojawią się wkrótce.</p>' // TODO(OQ-5)

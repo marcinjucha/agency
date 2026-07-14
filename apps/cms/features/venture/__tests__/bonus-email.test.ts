@@ -59,6 +59,17 @@ describe('buildBonusEmailBlocks (pure)', () => {
     expect(note.content.toLowerCase()).toContain('skrzynkę')
   })
 
+  it('neutralizes a javascript: scheme in a bonus url (defense against dangerous href)', () => {
+    const blocks = buildBonusEmailBlocks({
+      campaignDisplayName: 'X',
+      bonuses: [{ title: 'Malicious', url: 'javascript:alert(1)' }],
+      theme: HALO_EFEKT_DEFAULT,
+    })
+    const list = blocks.find((b) => b.id === 'bonus-list') as { content: string }
+    expect(list.content).not.toContain('javascript:')
+    expect(list.content).toContain('href="#"')
+  })
+
   it('escapes HTML in bonus titles to avoid markup injection', () => {
     const blocks = buildBonusEmailBlocks({
       campaignDisplayName: 'X',
