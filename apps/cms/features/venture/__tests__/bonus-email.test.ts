@@ -30,12 +30,12 @@ describe('buildBonusEmailSubject', () => {
 })
 
 describe('buildBonusEmailBlocks (pure)', () => {
-  it('renders each bonus as a "Zrób kopię" link with its url', () => {
+  it('renders each bonus as a "Pobierz" link with its url', () => {
     const blocks = buildBonusEmailBlocks(INPUT)
     const list = blocks.find((b) => b.id === 'bonus-list') as { content: string }
     expect(list.content).toContain('href="https://drive.example.com/notion"')
     expect(list.content).toContain('href="https://drive.example.com/pdf"')
-    expect(list.content).toContain('Zrób kopię')
+    expect(list.content).toContain('Pobierz')
     expect(list.content).toContain('Szablon Notion')
   })
 
@@ -87,7 +87,7 @@ describe('buildBonusEmail (rendered HTML)', () => {
     const { subject, html } = await buildBonusEmail(INPUT)
     expect(subject).toContain('Kacper Launch')
     expect(html).toContain('https://drive.example.com/notion')
-    expect(html).toContain('Zrób kopię')
+    expect(html).toContain('Pobierz')
   })
 })
 

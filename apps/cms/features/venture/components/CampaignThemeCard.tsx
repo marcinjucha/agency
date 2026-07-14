@@ -17,6 +17,7 @@ import { listThemesFn } from '@/features/themes/server'
 import { ThemePreview } from '@/features/themes/components/ThemePreview'
 import type { CreateCampaignInput } from '../validation'
 import { CampaignBrandEditor } from './CampaignBrandEditor'
+import { CampaignBonusEmailPreview } from './CampaignBonusEmailPreview'
 
 // ---------------------------------------------------------------------------
 // Campaign tier (iter E4) — the ONE "Wygląd kampanii" card, 3-way mode.
@@ -49,6 +50,10 @@ interface CampaignThemeCardProps {
   register: UseFormRegister<CreateCampaignInput>
   watch: UseFormWatch<CreateCampaignInput>
   setValue: UseFormSetValue<CreateCampaignInput>
+  // The persisted campaign id, or null for an unsaved/new campaign. When present,
+  // the "Podgląd e-mail" tab shows the REAL rendered send; when null, the generic
+  // token swatch mock stays (the real render needs a saved campaign to resolve).
+  campaignId?: string | null
 }
 
 /** True when the freeform brand carries at least one non-empty token. */
@@ -64,7 +69,12 @@ function initialMode(brand: CreateCampaignInput['brand'], themeId: string | null
   return 'inherit'
 }
 
-export function CampaignThemeCard({ register, watch, setValue }: CampaignThemeCardProps) {
+export function CampaignThemeCard({
+  register,
+  watch,
+  setValue,
+  campaignId,
+}: CampaignThemeCardProps) {
   const themeId = watch('theme_id') ?? null
   const brand = watch('brand')
 
@@ -178,10 +188,16 @@ export function CampaignThemeCard({ register, watch, setValue }: CampaignThemeCa
           <CampaignBrandEditor register={register} watch={watch} setValue={setValue} />
         ) : null}
 
-        {/* 3-tier resolved preview (best-effort). */}
-        <ThemePreview tokens={previewTokens} />
+        {/* Preview: the REAL rendered send (saved campaign) via the slot; else the
+            best-effort 3-tier token mock. The swatch grid + contrast badge stay. */}
+        <ThemePreview
+          tokens={previewTokens}
+          emailPreviewSlot={
+            campaignId ? <CampaignBonusEmailPreview campaignId={campaignId} /> : undefined
+          }
+        />
 
-        {mode === 'inherit' ? (
+        {mode === 'inherit' && !campaignId ? (
           <p className="text-xs text-muted-foreground">
             {messages.venture.campaignThemePreviewNote}
           </p>

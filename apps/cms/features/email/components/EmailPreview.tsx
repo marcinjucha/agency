@@ -59,7 +59,9 @@ export function EmailPreview({ blocks, className }: EmailPreviewProps) {
             srcDoc={html}
             title="Podgląd emaila"
             className="w-full h-full border-0"
-            sandbox="allow-same-origin"
+            // Fully locked (opaque origin, no scripts): static email HTML with
+            // inline styles renders the same, with no iframe privileges.
+            sandbox=""
           />
         ) : (
           <div className="flex items-center justify-center h-full text-sm text-muted-foreground">

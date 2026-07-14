@@ -400,8 +400,15 @@ export function VentureCampaignEditor({ campaign }: VentureCampaignEditorProps) 
 
             {/* RIGHT — appearance + ESP + status + delete */}
             <div className="flex flex-col gap-6">
-              {/* Wygląd kampanii — 3-way theme (inherit / library / own brand) */}
-              <CampaignThemeCard register={register} watch={watch} setValue={setValue} />
+              {/* Wygląd kampanii — 3-way theme (inherit / library / own brand).
+                  campaignId (edit-mode only) switches the "Podgląd e-mail" tab from
+                  the generic mock to the REAL rendered send. */}
+              <CampaignThemeCard
+                register={register}
+                watch={watch}
+                setValue={setValue}
+                campaignId={campaign?.id ?? null}
+              />
 
               {/* Bonus email template picker (MUTATION surface) — assigns
                   so_campaigns.email_template_id. Placed just above the read-only

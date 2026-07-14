@@ -72,7 +72,7 @@ export const messages = {
     newThemeTitle: 'Nowy motyw',
     editThemeTitle: 'Edytuj motyw',
     nameLabel: 'Nazwa motywu',
-    namePlaceholder: 'np. Kacper — Granatowy',
+    namePlaceholder: 'Nazwa motywu',
     fontFamilyLabel: 'Czcionka',
     fontFamilyPlaceholder: 'np. Inter, Arial, sans-serif',
     tokensTitle: 'Kolory motywu',
@@ -246,6 +246,11 @@ export const messages = {
     // Resolved template row (the template the send would ACTUALLY pick) + picker card.
     effectiveResolvedTemplateRowLabel: 'Aktywny szablon',
     effectiveResolvedTemplateBuiltin: 'Wbudowany układ (brak szablonu)',
+    // --- Bonus email preview ("Podgląd e-mail" tab — the REAL rendered send) ---
+    bonusEmailPreviewFrameTitle: 'Podgląd e-maila bonusowego',
+    bonusEmailPreviewLoading: 'Generowanie podglądu…',
+    bonusEmailPreviewError: 'Nie udało się wczytać podglądu e-maila',
+    bonusEmailPreviewEmpty: 'Podgląd pojawi się po zapisaniu treści kampanii.',
     bonusTemplateCardTitle: 'Szablon e-maila bonusowego',
     bonusTemplateEmptyHint:
       'Brak szablonów z listą bonusów. Dodaj blok „Lista bonusów” w edytorze e-maili.',
