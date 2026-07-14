@@ -12,10 +12,10 @@
 
 import type { ComponentType } from 'react'
 import type { LucideIcon } from 'lucide-react'
-import { Mail, AlignLeft, FileText, MousePointerClick, Minus, Heading, ImageIcon, AlignVerticalSpaceAround, Columns2 } from 'lucide-react'
+import { Mail, AlignLeft, FileText, MousePointerClick, Minus, Heading, ImageIcon, AlignVerticalSpaceAround, Columns2, LayoutPanelTop } from 'lucide-react'
 import { z } from 'zod'
 import type { Block, BlockType } from './types'
-import type { HeaderBlock, TextBlock, CtaBlock, DividerBlock, FooterBlock, HeadingBlock, ImageBlock, SpacerBlock, ColumnsBlock } from '@agency/email'
+import type { HeaderBlock, TextBlock, CtaBlock, DividerBlock, FooterBlock, HeadingBlock, ImageBlock, SpacerBlock, ColumnsBlock, SectionBlock } from '@agency/email'
 import { BLOCK_DEFAULT_VALUES } from '@agency/email'
 import type { TriggerVariable } from '@/lib/trigger-schemas'
 import { HeaderBlockEditor } from './components/blocks/HeaderBlockEditor'
@@ -27,6 +27,7 @@ import { HeadingBlockEditor } from './components/blocks/HeadingBlockEditor'
 import { ImageBlockEditor } from './components/blocks/ImageBlockEditor'
 import { SpacerBlockEditor } from './components/blocks/SpacerBlockEditor'
 import { ColumnsBlockEditor } from './components/blocks/ColumnsBlockEditor'
+import { SectionBlockEditor } from './components/blocks/SectionBlockEditor'
 
 // ---------------------------------------------------------------------------
 // Schematy Zod per-block
@@ -199,6 +200,18 @@ const columnsBlockSchema = z.object({
   ...blockBorderShape,
 })
 
+// sectionBlockSchema — children walidowane głęboko w validation.ts (rekurencja
+// z z.lazy(), jak columns). Tu schemat obejmuje tylko pola samego bloku
+// (padding preset) + luźna walidacja tablicy dzieci. Limit głębokości sekcji
+// (MAX_SECTION_DEPTH) egzekwowany w validation.ts (superRefine na blocks).
+const sectionBlockSchema = z.object({
+  type: z.literal('section'),
+  children: z.array(z.unknown()),
+  padding: z.enum(['none', 'sm', 'md', 'lg']).optional(),
+  ...blockStyleCommonShape,
+  ...blockBorderShape,
+})
+
 // ---------------------------------------------------------------------------
 // Interfejs wpisu rejestru — generic
 // ---------------------------------------------------------------------------
@@ -234,6 +247,18 @@ export interface CmsBlockRegistryEntry<T extends Block = Block> {
 
 function stripHtml(html: string): string {
   return html.replace(/<[^>]*>/g, '').trim()
+}
+
+/**
+ * Polska odmiana "blok" — pełne reguły (2-4 'bloki', ale 12-14 'bloków';
+ * 22-24 znów 'bloki'). Poprzedni skrót `total < 5` mylił się dla 22-24.
+ */
+function pluralBlocks(total: number): string {
+  if (total === 1) return 'blok'
+  const mod10 = total % 10
+  const mod100 = total % 100
+  if (mod10 >= 2 && mod10 <= 4 && !(mod100 >= 12 && mod100 <= 14)) return 'bloki'
+  return 'bloków'
 }
 
 // Typ pomocniczy: wejście konkretnego edytora (np. HeaderBlock) wymagane dla type-safety
@@ -362,11 +387,26 @@ export const CMS_BLOCK_REGISTRY: Record<BlockType, CmsBlockRegistryEntry> = {
     getSummary: (block) => {
       const c = block as ColumnsBlock
       const total = c.leftChildren.length + c.rightChildren.length
-      return `Kolumny: ${total} ${total === 1 ? 'blok' : total < 5 ? 'bloki' : 'bloków'}`
+      return `Kolumny: ${total} ${pluralBlocks(total)}`
     },
     EditorComponent: ColumnsBlockEditor as EditorComponentType,
     validationSchema: columnsBlockSchema,
     defaultValue: BLOCK_DEFAULT_VALUES.columns,
+  },
+
+  section: {
+    id: 'section',
+    label: 'Sekcja',
+    description: 'Kontener grupujący bloki — karta z tłem/ramką lub sekcja pełnej szerokości',
+    icon: LayoutPanelTop,
+    group: 'layout',
+    getSummary: (block) => {
+      const total = (block as SectionBlock).children.length
+      return `Sekcja: ${total} ${pluralBlocks(total)}`
+    },
+    EditorComponent: SectionBlockEditor as EditorComponentType,
+    validationSchema: sectionBlockSchema,
+    defaultValue: BLOCK_DEFAULT_VALUES.section,
   },
 }
 

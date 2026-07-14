@@ -8,6 +8,7 @@ import { HeadingBlockComponent } from './HeadingBlock'
 import { ImageBlockComponent } from './ImageBlock'
 import { SpacerBlockComponent } from './SpacerBlock'
 import { ColumnsBlockComponent } from './ColumnsBlock'
+import { SectionBlockComponent } from './SectionBlock'
 import { BLOCK_DEFAULT_VALUES } from './defaults'
 import type {
   HeaderBlock,
@@ -19,6 +20,7 @@ import type {
   ImageBlock,
   SpacerBlock,
   ColumnsBlock,
+  SectionBlock,
 } from './block-interfaces'
 
 /**
@@ -119,4 +121,12 @@ export const BLOCK_REGISTRY = {
     RendererComponent: ColumnsBlockComponent,
     defaultValue: BLOCK_DEFAULT_VALUES.columns,
   } satisfies BlockRegistryEntry<ColumnsBlock>,
+
+  section: {
+    id: 'section',
+    label: 'Sekcja',
+    description: 'Kontener grupujący bloki — karta z tłem/ramką lub sekcja pełnej szerokości',
+    RendererComponent: SectionBlockComponent,
+    defaultValue: BLOCK_DEFAULT_VALUES.section,
+  } satisfies BlockRegistryEntry<SectionBlock>,
 } as const

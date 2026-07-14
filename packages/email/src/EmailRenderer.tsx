@@ -165,11 +165,14 @@ export function resolveBlockMarginBottom(block: Block): number {
  *   - cta: border on the <Button> (button is the visual element users perceive)
  *   - image: borderRadius/border on <Img> (radius on wrapper doesn't clip the image)
  *   - header: header owns its own colored <Section> — pass border directly
+ *   - section: kontener aplikuje border/tło/radius na WŁASNYM <Section>
+ *     (unikamy double-wrappingu drugą tabelą wokół kontenera)
  */
 const BORDER_ON_CHILD_TYPES: ReadonlySet<BlockType> = new Set<BlockType>([
   'cta',
   'image',
   'header',
+  'section',
 ])
 
 export function renderBlock(block: Block, paddingBottom?: number, theme?: ThemeColorMap) {

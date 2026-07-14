@@ -110,6 +110,18 @@ function applyThemeToCopyBlock(block: Block, theme: ResolvedTheme): Block {
       return { ...block, textColor: theme.text }
     case 'footer':
       return { ...block, textColor: theme.footerText }
+    case 'section':
+      // Rekurencja w dzieci sekcji — kopia w karcie/sekcji ma być tematyzowana
+      // tak samo jak na najwyższym poziomie. ADDITIVE: sekcje są nowe (Iter 1),
+      // żaden istniejący szablon ich nie ma → wyjście dla istniejących szablonów
+      // bajt-w-bajt identyczne. Dzieci columns celowo NIETKNIĘTE (zachowanie
+      // sprzed sekcji — zmiana zmieniłaby dostarczane maile istniejących szablonów).
+      return {
+        ...block,
+        children: block.children.map(
+          (child) => applyThemeToCopyBlock(child, theme) as (typeof block.children)[number],
+        ),
+      }
     default:
       return block
   }
@@ -122,15 +134,45 @@ function applyThemeToCopyBlock(block: Block, theme: ResolvedTheme): Block {
  * is NEVER dropped whatever the author did to the template.
  */
 function spliceBonusList(blocks: Block[], listBlock: Block): Block[] {
-  const markerIndex = blocks.findIndex(isMarkerBlock)
-  if (markerIndex !== -1) {
-    return [...blocks.slice(0, markerIndex), listBlock, ...blocks.slice(markerIndex + 1)]
-  }
+  const { blocks: spliced, found } = spliceMarkerDeep(blocks, listBlock)
+  if (found) return spliced
   const footerIndex = blocks.findIndex((b) => b.type === 'footer')
   if (footerIndex !== -1) {
     return [...blocks.slice(0, footerIndex), listBlock, ...blocks.slice(footerIndex)]
   }
   return [...blocks, listBlock]
+}
+
+/**
+ * Podmienia PIERWSZY marker na listę (przeszukiwanie current-level-first:
+ * najpierw wszyscy bracia na danym poziomie, dopiero potem zejście w głąb) —
+ * także wewnątrz
+ * `section.children` (edytor Iter 2 pozwoli wstawić marker do sekcji-karty;
+ * detekcja capability `hasBonusListMarker` widzi go tam, więc splice też musi —
+ * inaczej karta obiecywałaby listę, a wysyłka doklejałaby ją przed stopką).
+ * Dzieci columns celowo NIE są przeszukiwane (parytet z detekcją; zachowanie
+ * sprzed sekcji bez zmian). Fallback footer/append zostaje na najwyższym poziomie.
+ */
+function spliceMarkerDeep(
+  blocks: Block[],
+  listBlock: Block,
+): { blocks: Block[]; found: boolean } {
+  const markerIndex = blocks.findIndex(isMarkerBlock)
+  if (markerIndex !== -1) {
+    return {
+      blocks: [...blocks.slice(0, markerIndex), listBlock, ...blocks.slice(markerIndex + 1)],
+      found: true,
+    }
+  }
+  let found = false
+  const next = blocks.map((block) => {
+    if (found || block.type !== 'section') return block
+    const result = spliceMarkerDeep(block.children as Block[], listBlock)
+    if (!result.found) return block
+    found = true
+    return { ...block, children: result.blocks as typeof block.children }
+  })
+  return found ? { blocks: next, found: true } : { blocks, found: false }
 }
 
 /**

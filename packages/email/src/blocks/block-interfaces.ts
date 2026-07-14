@@ -89,6 +89,7 @@ export type BorderableBlockType =
   | 'footer'
   | 'image'
   | 'columns'
+  | 'section'
 
 export type HeaderBlock = {
   id: string
@@ -195,5 +196,35 @@ export type ColumnsBlock = {
   rightChildren: NonColumnsBlock[]
   gap: 'sm' | 'md' | 'lg'
   verticalAlign: 'top' | 'middle' | 'bottom'
+} & BlockStyleCommon &
+  BlockBorder
+
+/**
+ * SectionBlock — kontener grupujący bloki (parytet z React Email <Section>).
+ *
+ * padding: JEDEN preset (nigdy per-side) — ŚWIADOME odstępstwo od modelu v2
+ * "baked padding". Kontener musi przełączać się między kartą (padded) a
+ * full-bleed (padding 'none'); baked per-type padding nie wyraziłby obu.
+ * Mapowanie presetu na px żyje w defaults.ts (SECTION_PADDING_PX).
+ *
+ * Zagnieżdżanie: sekcja-w-sekcji dozwolona do MAX_SECTION_DEPTH=2 (egzekwowane
+ * w walidacji CMS + edytorze, NIE w typach — typy pozostają rekurencyjne bez
+ * kodowania głębokości). Kolumny mogą siedzieć w sekcji; kolumny NIE mogą
+ * zawierać sekcji (NonColumnsBlock bez zmian) — brak możliwych cykli.
+ */
+export type SectionPadding = 'none' | 'sm' | 'md' | 'lg'
+
+/**
+ * Union bloków dopuszczalnych jako dzieci sekcji — lustrzane odbicie pełnego
+ * `Block` z types.ts, zdefiniowane lokalnie żeby uniknąć circular dependency
+ * (types.ts importuje registry.ts, który importuje ten plik).
+ */
+export type SectionChildBlock = NonColumnsBlock | ColumnsBlock | SectionBlock
+
+export type SectionBlock = {
+  id: string
+  type: 'section'
+  children: SectionChildBlock[]
+  padding?: SectionPadding
 } & BlockStyleCommon &
   BlockBorder

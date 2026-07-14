@@ -1045,6 +1045,11 @@ export const messages = {
     // Spacer — 4 presety
     inspectorSpacerHeightXl: 'XL',
     inspectorSpacerSizeLabel: 'Rozmiar odstępu',
+    // Sekcja (kontener) — preset paddingu + hint o dzieciach (edytor dzieci = kanwa/Struktura, Iter 2)
+    inspectorSectionPaddingLabel: 'Odstęp wewnętrzny',
+    inspectorSectionPaddingNone: 'Brak',
+    inspectorSectionChildrenHint:
+      'Bloki wewnątrz sekcji dodajesz i układasz na kanwie lub w panelu Struktura',
   },
 
   landing: {
@@ -2474,6 +2479,7 @@ export const messages = {
     templateLabelRequired: 'Nazwa szablonu jest wymagana',
     templateLabelMax: 'Nazwa szablonu może mieć maksymalnie 100 znaków',
     duplicateVariableKey: 'Zmienna o tym kluczu już istnieje',
+    sectionDepthExceeded: 'Sekcje można zagnieżdżać maksymalnie na 2 poziomach (sekcja w sekcji)',
     invalidVariableKey: 'Klucz może zawierać tylko litery, cyfry i podkreślniki',
     // Workflows
     workflowNameRequired: 'Nazwa workflow jest wymagana',

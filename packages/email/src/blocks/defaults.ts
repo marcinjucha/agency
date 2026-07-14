@@ -21,6 +21,8 @@ import type {
   ImageBlock,
   SpacerBlock,
   ColumnsBlock,
+  SectionBlock,
+  SectionPadding,
   BlockTypography,
   BlockBorder,
   BorderRadiusToken,
@@ -40,6 +42,7 @@ type AnyBlock =
   | ImageBlock
   | SpacerBlock
   | ColumnsBlock
+  | SectionBlock
 
 type BlockTypeKey =
   | 'header'
@@ -51,6 +54,7 @@ type BlockTypeKey =
   | 'image'
   | 'spacer'
   | 'columns'
+  | 'section'
 
 /**
  * Typografia per-typ bloku — defaults rzeczywiście używane przez renderer.
@@ -99,6 +103,20 @@ export const SPACER_HEIGHT_PX: Record<SpacerSize, number> = {
 }
 
 /**
+ * Section padding presets — jeden preset dla wszystkich stron (nigdy per-side).
+ *
+ * ŚWIADOME odstępstwo od modelu v2 "baked padding" (per-typ, nie-konfigurowalne):
+ * kontener musi przełączać się między kartą (padded) a full-bleed ('none') —
+ * baked padding nie wyraziłby obu ról jednym typem bloku.
+ */
+export const SECTION_PADDING_PX: Record<SectionPadding, number> = {
+  none: 0,
+  sm: 12,
+  md: 24,
+  lg: 32,
+}
+
+/**
  * Border defaults per-typ — używane przez renderer jako fallback.
  *
  * Wszystkie defaultują na borderRadius='none' i brak borderColor.
@@ -112,6 +130,8 @@ export const DEFAULT_BLOCK_BORDER: Record<BorderableBlockType, Required<Pick<Blo
   footer: { borderRadius: 'none' },
   image: { borderRadius: 'soft' },
   columns: { borderRadius: 'none' },
+  // Sekcje to zwykle karty — 'soft' jak cta/image.
+  section: { borderRadius: 'soft' },
 }
 
 /** Set of borderable block types — runtime check used by renderer. */
@@ -123,6 +143,7 @@ export const BORDERABLE_BLOCK_TYPES: ReadonlySet<BorderableBlockType> = new Set<
   'footer',
   'image',
   'columns',
+  'section',
 ])
 
 export function isBorderableBlockType(type: string): type is BorderableBlockType {
@@ -162,6 +183,7 @@ export const DEFAULT_BLOCK_MARGIN_BOTTOM_PRESET: Record<BlockTypeKey, MarginBott
   spacer: 'none',
   footer: 'none',
   columns: 'none',
+  section: 'none',
 }
 
 // Typ pomocniczy — blok bez pola `id` (id nadawane przez edytor)
@@ -177,6 +199,7 @@ export const BLOCK_DEFAULT_VALUES: {
   image: BlockWithoutId<ImageBlock>
   spacer: BlockWithoutId<SpacerBlock>
   columns: BlockWithoutId<ColumnsBlock>
+  section: BlockWithoutId<SectionBlock>
 } = {
   header: {
     type: 'header' as const,
@@ -226,6 +249,11 @@ export const BLOCK_DEFAULT_VALUES: {
     rightChildren: [],
     gap: 'md',
     verticalAlign: 'top',
+  },
+  section: {
+    type: 'section' as const,
+    children: [],
+    padding: 'md',
   },
 }
 

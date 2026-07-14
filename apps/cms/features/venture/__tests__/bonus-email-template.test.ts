@@ -82,6 +82,34 @@ describe('buildBonusEmailFromTemplate (pure)', () => {
     ])
   })
 
+  it('splices the marker and themes copy blocks INSIDE a section (nesting Iter 1)', () => {
+    const withSection: Block[] = [
+      { id: 'bonus-header', type: 'header', companyName: '{{companyName}}', textColor: '#ffffff' },
+      {
+        id: 'card',
+        type: 'section',
+        padding: 'md',
+        children: [
+          { id: 'card-text', type: 'text', content: '<p>W karcie</p>' },
+          { id: 'card-marker', type: 'text', content: BONUS_LIST_MARKER },
+        ],
+      },
+      { id: 'bonus-footer', type: 'footer', text: 'Stopka {{companyName}}' },
+    ]
+    const blocks = buildBonusEmailFromTemplate({
+      templateBlocks: withSection,
+      bonuses: BONUSES,
+      theme: HALO_EFEKT_DEFAULT,
+    })
+    const card = blocks[1] as { children: Array<{ id: string; content?: string; textColor?: string }> }
+    // Marker podmieniony NA MIEJSCU wewnątrz sekcji (nie doklejony przed stopką).
+    expect(card.children.map((c) => c.id)).toEqual(['card-text', 'bonus-list'])
+    expect(card.children[1].content).toContain('href="https://drive.example.com/notion"')
+    // Dziecko sekcji tematyzowane po roli jak na najwyższym poziomie.
+    expect(card.children[0].textColor).toBe(HALO_EFEKT_DEFAULT.text)
+    expect(blocks.map((b) => b.id)).toEqual(['bonus-header', 'card', 'bonus-footer'])
+  })
+
   it('overlays the resolved theme onto copy blocks by role', () => {
     const blocks = buildBonusEmailFromTemplate({
       templateBlocks: SEED_BONUS_TEMPLATE_BLOCKS,

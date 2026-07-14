@@ -11,6 +11,7 @@ export type {
   BorderableBlockType,
   CtaWidth,
   SpacerSize,
+  SectionPadding,
   MarginBottomPreset,
 } from './blocks/block-interfaces'
 export {
@@ -23,6 +24,7 @@ export {
   BORDER_RADIUS_PX,
   BORDER_COLOR_FALLBACK,
   SPACER_HEIGHT_PX,
+  SECTION_PADDING_PX,
   BORDERABLE_BLOCK_TYPES,
   isBorderableBlockType,
 } from './blocks/defaults'

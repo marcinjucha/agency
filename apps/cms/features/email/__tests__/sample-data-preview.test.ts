@@ -5,7 +5,7 @@
  */
 import { describe, it, expect } from 'vitest'
 import { messages } from '@/lib/messages'
-import type { HeaderBlock, TextBlock } from '../types'
+import type { HeaderBlock, TextBlock, SectionBlock } from '../types'
 import { buildSampleValues } from '../utils/sample-values'
 import { substituteBlockSampleTokens } from '../utils/substitute-block-tokens'
 
@@ -51,6 +51,19 @@ describe('substituteBlockSampleTokens', () => {
     expect(out.content).toContain(messages.email.sampleBonusList)
     // an unknown token is never fabricated — stays literal
     expect(out.content).toContain('{{mystery}}')
+  })
+
+  it('recurses into section.children (token filled inside a section)', () => {
+    const block: SectionBlock = {
+      id: 's1',
+      type: 'section',
+      children: [{ id: 't-in', type: 'text', content: '<p>{{companyName}} — {{mystery}}</p>' }],
+    }
+    const out = substituteBlockSampleTokens(block, values) as SectionBlock
+    const child = out.children[0] as TextBlock
+    expect(child.content).toContain(messages.email.sampleCompanyName)
+    expect(child.content).toContain('{{mystery}}')
+    expect(out.id).toBe('s1')
   })
 
   it('leaves ALL tokens bracketed when no sample values apply (workflow type)', () => {

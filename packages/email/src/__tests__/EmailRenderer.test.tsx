@@ -40,6 +40,55 @@ describe('EmailRenderer', () => {
     expect(html).toContain('padding-bottom:8px')
   })
 
+  // --- SectionBlock (email-builder nesting, iter 1) -----------------------
+
+  it('SectionBlock renders children recursively with preset padding + own border', async () => {
+    const blocks: Block[] = [
+      {
+        id: 'sec',
+        type: 'section',
+        padding: 'lg',
+        backgroundColor: '#f1f5f9',
+        borderColor: '#e2e8f0',
+        children: [
+          { id: 'h', type: 'heading', text: 'Karta', level: 'h2', color: '#0f172a' },
+          { id: 't', type: 'text', content: '<p>Wewnątrz sekcji</p>', marginBottom: 'compact' },
+        ],
+      },
+    ]
+    const html = await renderEmailBlocks(blocks)
+    expect(html).toContain('Karta')
+    expect(html).toContain('Wewnątrz sekcji')
+    // padding preset lg = 32px na wewnętrznym divie
+    expect(html).toContain('padding:32px')
+    // border + tło na własnym <Section> sekcji (BORDER_ON_CHILD_TYPES)
+    expect(html).toContain('#f1f5f9')
+    expect(html).toContain('#e2e8f0')
+    // default borderRadius 'soft' dla sekcji
+    expect(html).toContain('border-radius:8px')
+  })
+
+  it('SectionBlock in section (depth 2) renders nested children', async () => {
+    const blocks: Block[] = [
+      {
+        id: 'outer',
+        type: 'section',
+        padding: 'none',
+        children: [
+          {
+            id: 'inner',
+            type: 'section',
+            padding: 'sm',
+            children: [{ id: 't', type: 'text', content: '<p>Głęboko</p>' }],
+          },
+        ],
+      },
+    ]
+    const html = await renderEmailBlocks(blocks)
+    expect(html).toContain('Głęboko')
+    expect(html).toContain('padding:12px')
+  })
+
   // --- Baked v2 padding (AAA-T-221 2026-05-15) ---------------------------
 
   it('TextBlock emits baked padding 12px 24px', async () => {

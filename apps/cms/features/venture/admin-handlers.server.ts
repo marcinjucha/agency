@@ -1046,7 +1046,12 @@ export interface BonusTemplateOption {
 function hasBonusListMarker(blocks: unknown): boolean {
   if (!Array.isArray(blocks)) return false
   return blocks.some((b) => {
-    const block = b as { type?: unknown; content?: unknown }
+    const block = b as { type?: unknown; content?: unknown; children?: unknown }
+    // Rekurencja w `section.children` — parytet ze splicerem send-patha
+    // (`spliceBonusList`), który podmienia marker także wewnątrz sekcji.
+    // Dzieci columns celowo NIE są skanowane (zachowanie sprzed sekcji bez
+    // zmian — splicer też ich nie przeszukuje).
+    if (block.type === 'section') return hasBonusListMarker(block.children)
     return (
       block.type === 'text' &&
       typeof block.content === 'string' &&

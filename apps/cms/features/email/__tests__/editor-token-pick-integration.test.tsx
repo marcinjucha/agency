@@ -12,7 +12,7 @@ vi.mock('lucide-react', () => {
     AlignLeft: stub, AlignCenter: stub, AlignRight: stub, RotateCcw: stub,
     // block-registry + editors
     FileText: stub, Minus: stub, Heading: stub, ImageIcon: stub,
-    AlignVerticalSpaceAround: stub, Columns2: stub, Image: stub, Braces: stub,
+    AlignVerticalSpaceAround: stub, Columns2: stub, LayoutPanelTop: stub, Image: stub, Braces: stub,
     Type: stub, Palette: stub, GripVertical: stub, Pencil: stub, X: stub, Check: stub,
   }
 })

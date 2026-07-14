@@ -78,6 +78,26 @@ describe('extractTemplateVariableKeys', () => {
     expect(result).toEqual(['clientName'])
   })
 
+  it('5b. znajduje zmienne wewnątrz section.children (także sekcja-w-sekcji)', () => {
+    const blocks: Block[] = [
+      {
+        id: 's1',
+        type: 'section',
+        children: [
+          textBlock('Cześć {{firstName}}'),
+          {
+            id: 's2',
+            type: 'section',
+            children: [textBlock('Głęboko {{deepKey}}')],
+          },
+        ],
+      },
+    ]
+    const result = extractTemplateVariableKeys('', blocks)
+    expect(result).toContain('firstName')
+    expect(result).toContain('deepKey')
+  })
+
   it('6. zwraca [] gdy brak zmiennych', () => {
     const result = extractTemplateVariableKeys(
       'Zwykły temat bez zmiennych',

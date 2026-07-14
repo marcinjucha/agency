@@ -1,5 +1,5 @@
 import { substituteTokens, substitutePlain } from '@agency/email'
-import type { Block, NonColumnsBlock } from '../types'
+import type { Block, NonColumnsBlock, SectionChildBlock } from '../types'
 
 // ---------------------------------------------------------------------------
 // Display-only sample-token substitution for the canvas preview.
@@ -38,6 +38,13 @@ export function substituteBlockSampleTokens(
       }
     case 'image':
       return { ...block, alt: substitutePlain(block.alt, values) }
+    case 'section':
+      return {
+        ...block,
+        children: block.children.map(
+          (child) => substituteBlockSampleTokens(child, values) as SectionChildBlock,
+        ),
+      }
     case 'columns':
       return {
         ...block,
