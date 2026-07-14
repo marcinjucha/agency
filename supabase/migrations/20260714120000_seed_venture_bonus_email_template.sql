@@ -7,8 +7,13 @@
 --
 -- The copy blocks below reproduce the CURRENT hardcoded bonus-email copy
 -- (features/venture/mail/bonus-email.ts) VERBATIM so that, for the same bonuses,
--- the hybrid render is BYTE-IDENTICAL to today's output (regression guard:
--- features/venture/__tests__/bonus-email-template.test.ts). Blocks are themeless
+-- the hybrid render is BYTE-IDENTICAL to today's output FOR THE SEEDED STATIC COPY
+-- (which contains no ' or " — the only chars whose entity encoding differs between
+-- the escapeHtml body path and React's JSX escaping). Runtime {{companyName}}
+-- substitution of a brand containing ' or " is SEMANTICALLY equivalent (both paths
+-- escape it — no raw quote leaks) but may differ in entity FORM (&#39; vs &#x27;),
+-- so it is NOT asserted byte-for-byte. Regression guard:
+-- features/venture/__tests__/bonus-email-template.test.ts. Blocks are themeless
 -- + tokenised — the send path overlays the dynamically-resolved
 -- campaign→client→tenant theme by role (client-theming preserved). theme_id stays
 -- NULL: the venture path IGNORES per-template theme and applies the resolved
@@ -34,7 +39,7 @@ SELECT
   'Twoje bonusy od {{companyName}}',
   '[
     {"id":"bonus-header","type":"header","companyName":"{{companyName}}","textColor":"#ffffff"},
-    {"id":"bonus-heading","type":"heading","text":"Twoje bonusy są gotowe","level":"h2"},
+    {"id":"bonus-heading","type":"heading","text":"Twoje bonusy są gotowe","level":"h2","color":"#1a1a2e"},
     {"id":"bonus-intro","type":"text","content":"<p>Dziękujemy! Poniżej znajdziesz materiały, które dla Ciebie przygotowaliśmy.</p>"},
     {"id":"bonus-list-marker","type":"text","content":"{{bonus_list}}"},
     {"id":"bonus-inbox-note","type":"text","content":"<p>Sprawdź swoją skrzynkę — wkrótce odezwiemy się z informacją o starcie.</p>"},
