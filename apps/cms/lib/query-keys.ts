@@ -116,6 +116,10 @@ export const queryKeys = {
     // (e.g. editing the client's sender, or the campaign) also refreshes it.
     effectiveSend: (campaignId: string) =>
       ['venture', 'effective-send', campaignId] as const,
+    // Tenant-scoped list of BONUS-CAPABLE email templates for the campaign picker
+    // (no per-campaign input — filtered by the {{bonus_list}} marker). Nested under
+    // the venture root so a mutation invalidating `venture.all` also refreshes it.
+    bonusTemplates: ['venture', 'bonus-templates'] as const,
     // Per-user client assignments (iter 3a). Keyed by target user so the
     // assignment editor pre-fills the right set; still nested under the venture
     // root so a mutation that invalidates `venture.all` also refreshes it.

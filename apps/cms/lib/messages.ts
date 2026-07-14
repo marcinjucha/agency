@@ -243,6 +243,14 @@ export const messages = {
     effectiveTemplateEditLink: 'Otwórz edytor szablonu',
     effectiveTemplateMissingNote:
       'Brak własnego szablonu — użyty zostanie wbudowany układ.',
+    // Resolved template row (the template the send would ACTUALLY pick) + picker card.
+    effectiveResolvedTemplateRowLabel: 'Aktywny szablon',
+    effectiveResolvedTemplateBuiltin: 'Wbudowany układ (brak szablonu)',
+    bonusTemplateCardTitle: 'Szablon e-maila bonusowego',
+    bonusTemplateEmptyHint:
+      'Brak szablonów z listą bonusów. Dodaj blok „Lista bonusów” w edytorze e-maili.',
+    bonusTemplatePickerWarning:
+      'Wybrany szablon nie zawiera już listy bonusów — sprawdź go w edytorze.',
 
     // Publish/status
     publishedLabel: 'Opublikowana',
@@ -899,6 +907,15 @@ export const messages = {
     addBlock: 'Dodaj blok',
     addBlockSearch: 'Szukaj bloku…',
     addBlockClear: 'Wyczyść',
+    // Reusable EmailTemplatePicker (bind an email template to a surface).
+    templatePickerLabel: 'Szablon e-maila',
+    templatePickerDefault: 'Domyślny',
+    templatePickerEdit: 'Edytuj szablon',
+    // "Lista bonusów" affordance — inserts a text block pre-filled with the
+    // {{bonus_list}} marker (a shortcut, NOT a registry block type).
+    bonusListGroupLabel: 'SPECJALNE',
+    bonusListBlockLabel: 'Lista bonusów',
+    bonusListBlockDescription: 'Wstawia znacznik listy bonusów (generowanej przy wysyłce)',
     unsavedChanges: 'Niezapisane zmiany',
     canvasTitle: 'Podgląd na żywo',
     canvasSubjectLabel: 'Temat:',
@@ -922,6 +939,7 @@ export const messages = {
     sampleCompanyName: 'Twoja Firma',
     sampleBonusList: 'Przykładowy bonus 1 · Przykładowy bonus 2',
     canvasBlockUnknown: 'Nieznany typ bloku',
+    bonusListCanvasChip: 'Lista bonusów — generowana automatycznie przy wysyłce',
     canvasMoveUp: 'Przesuń blok w górę',
     canvasMoveDown: 'Przesuń blok w dół',
     canvasDuplicate: 'Duplikuj blok',

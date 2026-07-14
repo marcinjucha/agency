@@ -41,6 +41,7 @@ import { evaluateEditorPublishGate } from '../utils/lead-source-publish-gate'
 import { resolveMessageKey } from '../utils/resolve-message-key'
 import { VentureClientSelect } from './VentureClientSelect'
 import { CampaignThemeCard } from './CampaignThemeCard'
+import { CampaignBonusTemplateCard } from './CampaignBonusTemplateCard'
 import { CampaignEffectiveSendCard } from './CampaignEffectiveSendCard'
 import { VentureBonusManager } from './VentureBonusManager'
 import { LeadSourceConfigFields } from './LeadSourceConfigFields'
@@ -401,6 +402,17 @@ export function VentureCampaignEditor({ campaign }: VentureCampaignEditorProps) 
             <div className="flex flex-col gap-6">
               {/* Wygląd kampanii — 3-way theme (inherit / library / own brand) */}
               <CampaignThemeCard register={register} watch={watch} setValue={setValue} />
+
+              {/* Bonus email template picker (MUTATION surface) — assigns
+                  so_campaigns.email_template_id. Placed just above the read-only
+                  effective-send mirror. Edit-mode only (needs a persisted campaign
+                  id + client-owned chain). */}
+              {isEditing && campaign && (
+                <CampaignBonusTemplateCard
+                  campaignId={campaign.id}
+                  currentTemplateId={campaign.email_template_id}
+                />
+              )}
 
               {/* Read-only "Ten launch wysyła" surface — effective sender +
                   appearance cross-ref + template deep-link. Edit-mode only (needs a

@@ -1,6 +1,6 @@
 import { renderEmailBlocks, substituteTokens, substitutePlain, sanitizeHtmlUrls, type Block } from '@agency/email'
 import type { ResolvedTheme } from '@/lib/theme'
-import { VENTURE_BONUS_MARKER_KEY, type VentureBonusAppKey } from '@/lib/app-sent-variables'
+import { VENTURE_BONUS_MARKER, type VentureBonusAppKey } from '@/lib/app-sent-variables'
 import {
   buildBonusListBlock,
   type BonusEmail,
@@ -42,7 +42,7 @@ import {
  * the position regardless of surrounding-block reordering; survives edits in the
  * Phase-1 editor (it's an ordinary text block — no venture-specific block type).
  */
-export const BONUS_LIST_MARKER = `{{${VENTURE_BONUS_MARKER_KEY}}}`
+export const BONUS_LIST_MARKER = VENTURE_BONUS_MARKER
 
 /**
  * Copy variables the surrounding blocks may reference. Derived from the canonical

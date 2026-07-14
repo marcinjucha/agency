@@ -116,10 +116,11 @@ describe('listBonusTemplatesHandler', () => {
     const result = await listBonusTemplatesHandler()
 
     expect(result.success).toBe(true)
+    // Each option now carries `type` (powers the picker's editor deep-link).
     expect(result.data).toEqual([
-      { id: TEMPLATE_ID, label: 'Domyślny' },
-      { id: 'other', label: 'Wariant' },
-      { id: 'nolabel', label: 'venture_bonus' },
+      { id: TEMPLATE_ID, label: 'Domyślny', type: 'venture_bonus' },
+      { id: 'other', label: 'Wariant', type: 'venture_bonus' },
+      { id: 'nolabel', label: 'venture_bonus', type: 'venture_bonus' },
     ])
     // marker-less + malformed rows excluded.
     expect(result.data?.some((t) => t.id === 'plain')).toBe(false)

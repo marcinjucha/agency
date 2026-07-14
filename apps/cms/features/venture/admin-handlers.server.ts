@@ -298,7 +298,7 @@ export function deleteClientHandler(id: string): Promise<VoidResult> {
 // insert/update defaults to '*' → also uses this list. The route/webhook verify
 // path (ingest.server.ts) reads the real secret via a separate select.
 const ADMIN_CAMPAIGN_COLUMNS =
-  'id, client_id, slug, display_name, brand, theme_id, esp_provider, esp_audience_ref, esp_tag_launch, published, created_at, updated_at, has_webhook_secret, lead_source_provider, lead_source_config'
+  'id, client_id, slug, display_name, brand, theme_id, email_template_id, esp_provider, esp_audience_ref, esp_tag_launch, published, created_at, updated_at, has_webhook_secret, lead_source_provider, lead_source_config'
 
 // ---------------------------------------------------------------------------
 // Publish gate (iter 2b backend). A campaign may go published=true ONLY when a
@@ -485,6 +485,10 @@ export interface CampaignEffectiveSend extends EffectiveSender {
   // hardcoded builder, "wbudowany szablon"). The card MUST NOT drift from ingest.
   resolvedTemplateId: string | null
   resolvedTemplateName: string | null
+  // The resolved template's `type` slug — powers the "Edytuj szablon" deep-link
+  // (routes.admin.emailTemplate(type), the type-keyed editor). Null when the send
+  // falls back to the hardcoded builder (no resolved row).
+  resolvedTemplateType: string | null
 }
 
 /**
@@ -568,6 +572,9 @@ function fetchBonusTemplateExists(auth: AuthContextFull): ResultAsync<boolean, s
 interface VentureTemplateChoice {
   id: string
   label: string
+  // The type slug — needed by the effective-send card to build the type-keyed
+  // editor deep-link (routes.admin.emailTemplate(type)).
+  type: string
 }
 
 /**
@@ -582,7 +589,7 @@ function readVentureTemplateChoiceById(
 ): ResultAsync<VentureTemplateChoice | null, string> {
   return ResultAsync.fromPromise(
     tbl(auth, 'email_templates')
-      .select('id, label')
+      .select('id, label, type')
       .eq('id', templateId)
       .eq('tenant_id', auth.tenantId)
       .maybeSingle(),
@@ -603,7 +610,7 @@ function readDefaultVentureTemplateChoice(
 ): ResultAsync<VentureTemplateChoice | null, string> {
   return ResultAsync.fromPromise(
     tbl(auth, 'email_templates')
-      .select('id, label')
+      .select('id, label, type')
       .eq('type', BONUS_TEMPLATE_TYPE)
       .eq('tenant_id', auth.tenantId)
       .maybeSingle(),
@@ -671,6 +678,7 @@ export function getCampaignEffectiveSendHandler(
                   templateExists,
                   resolvedTemplateId: resolved?.id ?? null,
                   resolvedTemplateName: resolved?.label ?? null,
+                  resolvedTemplateType: resolved?.type ?? null,
                 }
               }),
             ),
@@ -695,6 +703,9 @@ export function getCampaignEffectiveSendHandler(
 export interface BonusTemplateOption {
   id: string
   label: string
+  // The type slug — lets the picker build the type-keyed editor deep-link for the
+  // currently-selected option (routes.admin.emailTemplate(type)).
+  type: string
 }
 
 /**
@@ -748,7 +759,7 @@ export function listBonusTemplatesHandler(): Promise<
         return ok(
           (r.data ?? [])
             .filter((t) => hasBonusListMarker(t.blocks))
-            .map((t) => ({ id: t.id, label: t.label ?? t.type })),
+            .map((t) => ({ id: t.id, label: t.label ?? t.type, type: t.type })),
         )
       }),
     ),

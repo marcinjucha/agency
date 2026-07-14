@@ -25,6 +25,15 @@
 /** The one app-owned bonus-list marker key. `{{bonus_list}}` is derived from this. */
 export const VENTURE_BONUS_MARKER_KEY = 'bonus_list'
 
+/**
+ * The braces-wrapped structural marker (`{{bonus_list}}`). Single source of truth
+ * for BOTH the send-path builder (`features/venture/mail/bonus-email-template.ts`
+ * re-exports it as `BONUS_LIST_MARKER`) AND the email editor's "Lista bonusów"
+ * block affordance + canvas chip detection. Lives in `lib/` (not a feature) so the
+ * generic email editor can consume it without importing the venture feature.
+ */
+export const VENTURE_BONUS_MARKER = `{{${VENTURE_BONUS_MARKER_KEY}}}`
+
 export interface AppSentVariableSource {
   /** Scalar keys the CMS send path supplies as literal values (e.g. companyName). */
   readonly appKeys: readonly string[]

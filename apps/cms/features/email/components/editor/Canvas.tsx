@@ -1,12 +1,13 @@
 import { useState, useRef, useEffect, Fragment } from 'react'
-import { Eye, Monitor, Smartphone, ChevronUp, ChevronDown, Copy, Trash2, Plus, Mail, FlaskConical } from 'lucide-react'
+import { Eye, Monitor, Smartphone, ChevronUp, ChevronDown, Copy, Trash2, Plus, Mail, FlaskConical, ListChecks } from 'lucide-react'
 import { renderBlock, resolveBlockMarginBottom, substitutePlain } from '@agency/email'
 import { CMS_BLOCK_REGISTRY } from '../../block-registry'
 import { useEmailThemeMap } from '../../contexts/email-theme-context'
 import { buildSampleValues } from '../../utils/sample-values'
 import { substituteBlockSampleTokens } from '../../utils/substitute-block-tokens'
 import { messages } from '@/lib/messages'
-import type { Block, BlockType } from '../../types'
+import type { AddBlockPick, Block } from '../../types'
+import { isBonusListMarkerBlock } from '../../utils/bonus-list-marker'
 import { AddBlockPopover } from './AddBlockPopover'
 
 // ---------------------------------------------------------------------------
@@ -19,7 +20,7 @@ export interface CanvasProps {
   setSubject: (v: string) => void
   selectedBlockId: string | null
   setSelectedBlockId: (id: string | null) => void
-  onAddAt: (type: BlockType, index: number) => void
+  onAddAt: (pick: AddBlockPick, index: number) => void
   onDelete: (id: string) => void
   onDuplicate: (id: string) => void
   onMove: (id: string, dir: -1 | 1) => void
@@ -371,7 +372,7 @@ interface EmailFrameProps {
   blocks: Block[]
   selectedBlockId: string | null
   setSelectedBlockId: (id: string | null) => void
-  onAddAt: (type: BlockType, index: number) => void
+  onAddAt: (pick: AddBlockPick, index: number) => void
   onDelete: (id: string) => void
   onDuplicate: (id: string) => void
   onMove: (id: string, dir: -1 | 1) => void
@@ -548,6 +549,19 @@ function IconBtn({ children, disabled, className = '', ...props }: IconBtnProps)
 // ---------------------------------------------------------------------------
 
 function CanvasBlockRenderer({ block, isLast }: { block: Block; isLast: boolean }) {
+  // The {{bonus_list}} marker block is stored as an ordinary text block (the send
+  // path splices the real bonus list there). Render it as a friendly placeholder
+  // chip instead of the raw token so authors see what it means.
+  if (isBonusListMarkerBlock(block)) {
+    return (
+      <div className="mx-6 my-4 flex items-center gap-2 rounded-md border border-dashed border-primary/40 bg-primary/5 px-3 py-2.5">
+        <ListChecks className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+        <span className="text-xs text-muted-foreground">
+          {messages.email.bonusListCanvasChip}
+        </span>
+      </div>
+    )
+  }
   // Pass paddingBottom so the canvas preview shows the same vertical rhythm
   // (marginBottom preset) as the rendered email HTML. Last block gets 0 to
   // avoid trailing whitespace.
@@ -572,7 +586,7 @@ function CanvasBlockRenderer({ block, isLast }: { block: Block; isLast: boolean 
 
 interface InsertZoneProps {
   index: number
-  onAdd: (type: BlockType, index: number) => void
+  onAdd: (pick: AddBlockPick, index: number) => void
 }
 
 function InsertZone({ index, onAdd }: InsertZoneProps) {

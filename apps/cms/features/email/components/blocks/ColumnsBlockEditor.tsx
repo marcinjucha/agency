@@ -26,6 +26,7 @@ import {
 import { Button } from '@agency/ui'
 import { messages } from '@/lib/messages'
 import type { ColumnsBlock, NonColumnsBlock, Block, BlockType } from '../../types'
+import { BONUS_LIST_PICK } from '../../types'
 import type { TriggerVariable } from '@/lib/trigger-schemas'
 import { CMS_BLOCK_REGISTRY } from '../../block-registry'
 import { BlockEditor } from '../BlockEditor'
@@ -176,7 +177,12 @@ function ColumnPanel({ label, children, onChange, variables }: ColumnPanelProps)
       </Button>
       {pickerOpen && (
         <AddBlockPopover
-          onPick={(type) => addBlock(type)}
+          // Nested columns never host the {{bonus_list}} marker (the send-path
+          // splicer only scans top-level blocks) → hide the bonus-list shortcut.
+          showBonusList={false}
+          onPick={(pick) => {
+            if (pick !== BONUS_LIST_PICK) addBlock(pick)
+          }}
           onClose={() => setPickerOpen(false)}
           exclude={EXCLUDED_NESTED_TYPES}
           anchorRef={addBtnRef}

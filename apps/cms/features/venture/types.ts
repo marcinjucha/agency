@@ -45,6 +45,13 @@ export type AdminCampaign = Omit<Tables<'so_campaigns'>, 'tally_webhook_secret'>
   // them. Drop this augmentation once main is regenerated.
   lead_source_provider: string | null
   lead_source_config: Json
+  // Explicitly-assigned bonus email template (Phase 4, model B — so_campaigns
+  // .email_template_id FK, NULL = use the tenant default → hardcoded builder).
+  // Explicit augmentation for the same worktree gotcha as the columns above: the
+  // shared pnpm node_modules resolves `@agency/database` to the MAIN checkout,
+  // whose generated types.ts may predate this column. No-op intersection (identical
+  // `string | null`) once main is regenerated.
+  email_template_id: string | null
 }
 
 // Single source of truth for the fixed DB CHECK on so_bonuses.type. Derived

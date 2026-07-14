@@ -101,6 +101,32 @@ export function CampaignEffectiveSendCard({
               {messages.venture.effectiveTemplateEditLink}
             </Button>
           </Row>
+
+          {/* Row 4 — the template the send would ACTUALLY use (resolved by the
+              same precedence as the send path), with a deep-link to ITS editor.
+              Read-only mirror of the picker's selection. */}
+          <Row label={messages.venture.effectiveResolvedTemplateRowLabel}>
+            {data.data.resolvedTemplateName ? (
+              <p className="text-sm text-foreground">{data.data.resolvedTemplateName}</p>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                {messages.venture.effectiveResolvedTemplateBuiltin}
+              </p>
+            )}
+            {data.data.resolvedTemplateType && (
+              <Button
+                type="button"
+                variant="link"
+                size="sm"
+                onClick={() =>
+                  navigate({ to: routes.admin.emailTemplate(data.data!.resolvedTemplateType!) })
+                }
+                className="mt-1 block h-auto w-fit p-0 text-xs"
+              >
+                {messages.venture.effectiveTemplateEditLink}
+              </Button>
+            )}
+          </Row>
         </div>
       )}
     </CollapsibleCard>
