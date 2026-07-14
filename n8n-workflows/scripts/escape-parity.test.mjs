@@ -30,59 +30,17 @@ const HANDLER_FILE = resolve(
 );
 
 // ---------------------------------------------------------------------------
-// GOLDEN FIXTURE — copied verbatim from
-// packages/email/src/__tests__/substitute.test.ts (SUBSTITUTE_CASES).
+// GOLDEN FIXTURE — SINGLE SOURCE OF TRUTH read from
+// packages/email/src/__tests__/substitute-cases.json (the SAME file the TS
+// vitest imports). No hand-copied duplicate here — the two paths cannot drift.
 // `values` == n8n `resolvedBindings` (both flat Record<string,string>).
-// Keep this table in sync with the TS fixture — it IS the parity contract.
 // ---------------------------------------------------------------------------
-const GOLDEN_CASES = [
-  {
-    name: 'missing key is left LITERAL (leave-literal parity with n8n)',
-    html: 'Hello {{missing}}!',
-    values: {},
-    expected: 'Hello {{missing}}!',
-  },
-  {
-    name: 'padded key has whitespace trimmed and resolves',
-    html: 'Hi {{ name }}',
-    values: { name: 'Ada' },
-    expected: 'Hi Ada',
-  },
-  {
-    name: 'escape order via "<a&b>" -> &lt;a&amp;b&gt;',
-    html: '{{v}}',
-    values: { v: '<a&b>' },
-    expected: '&lt;a&amp;b&gt;',
-  },
-  {
-    name: 'value containing {{x}} is NOT re-substituted (single-pass proof)',
-    html: '{{outer}}',
-    values: { outer: 'literal {{x}} here', x: 'LEAKED' },
-    expected: 'literal {{x}} here',
-  },
-  {
-    name: 'both double-quote and single-quote are escaped',
-    html: '{{q}}',
-    values: { q: `"quote" 'apos'` },
-    expected: '&quot;quote&quot; &#39;apos&#39;',
-  },
-  {
-    name: 'multiple tokens in one string, mixed present/missing',
-    html: '{{a}}-{{b}}-{{a}}',
-    values: { a: 'X' },
-    expected: 'X-{{b}}-X',
-  },
-  {
-    // Dotted key: guards that n8n's substituteBindingsHtml regex accepts the dot
-    // grammar (`[\w.]`) exactly like the TS substituteTokens primitive. Before
-    // alignment, n8n's `[\w]` regex left `{{a.b}}` literal while TS resolved it.
-    // Keep in sync with packages/email/src/__tests__/substitute.test.ts.
-    name: 'dotted key matches the dot grammar and resolves (TS↔n8n parity)',
-    html: 'x {{a.b}} y',
-    values: { 'a.b': 'Z' },
-    expected: 'x Z y',
-  },
-];
+const GOLDEN_CASES = JSON.parse(
+  readFileSync(
+    resolve(__dirname, '../../packages/email/src/__tests__/substitute-cases.json'),
+    'utf8',
+  ),
+);
 
 // ---------------------------------------------------------------------------
 // Extract the ACTUAL deployed escapeHtml + substituteBindingsHtml from the
@@ -123,9 +81,10 @@ function extractDeployedFns() {
 
 // ---------------------------------------------------------------------------
 // URL-sanitization parity fixture — the deployed n8n `sanitizeHtmlUrls` and the
-// TS `sanitizeHtmlUrls` (packages/email/src/substitute.ts) MUST agree: a
-// javascript:/data: href → '#', an https:// href unchanged. Guards the [2]
-// finding (n8n-side href/src scheme guard) against drift from the TS copy.
+// TS `sanitizeHtmlUrls` (packages/email/src/substitute.ts) MUST agree under the
+// ALLOW-list posture: only http/https/mailto (+ data:image/…) pass; every other
+// scheme → '#'; attribute-name anchoring leaves data-href untouched; unquoted
+// hrefs are covered. Guards the n8n-side href/src scheme guard against drift.
 // ---------------------------------------------------------------------------
 const URL_SANITIZE_CASES = [
   {
@@ -134,7 +93,7 @@ const URL_SANITIZE_CASES = [
     expected: '<a href="#">x</a>',
   },
   {
-    name: 'data: src (single-quoted) neutralized to #',
+    name: 'data:text/html src (single-quoted) neutralized to #',
     html: `<img src='data:text/html,x' />`,
     expected: `<img src='#' />`,
   },
@@ -142,6 +101,26 @@ const URL_SANITIZE_CASES = [
     name: 'https:// href unchanged',
     html: '<a href="https://ok">x</a>',
     expected: '<a href="https://ok">x</a>',
+  },
+  {
+    name: 'data:image/ inline image passes unchanged (allow-list)',
+    html: '<img src="data:image/png;base64,AAA">',
+    expected: '<img src="data:image/png;base64,AAA">',
+  },
+  {
+    name: 'intent:// href neutralized to # (allow-list)',
+    html: '<a href="intent://x">y</a>',
+    expected: '<a href="#">y</a>',
+  },
+  {
+    name: 'data-href untouched (attribute-name anchoring)',
+    html: '<div data-href="javascript:x">y</div>',
+    expected: '<div data-href="javascript:x">y</div>',
+  },
+  {
+    name: 'unquoted href=javascript neutralized to #',
+    html: '<a href=javascript:alert(1)>y</a>',
+    expected: '<a href=#>y</a>',
   },
 ];
 

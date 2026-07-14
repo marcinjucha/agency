@@ -92,52 +92,37 @@ export function substitutePlain(text: string, values: Record<string, string>): s
   return substituteWith(text, values, (value) => value)
 }
 
-const DANGEROUS_URL_SCHEMES = new Set(['javascript:', 'data:', 'vbscript:', 'file:'])
+const SAFE_URL_SCHEMES = new Set(['http:', 'https:', 'mailto:'])
 const NEUTRALIZED_URL = '#'
 
 /**
- * Scheme DENY-list for a token value destined for an `href`/`src` ATTRIBUTE
- * context (the venture bonus href drops author-supplied `{{bonus_N_url}}` here).
+ * Scheme ALLOW-list for a token value destined for an `href`/`src` ATTRIBUTE
+ * context. Only http/https/mailto pass; `data:image/…` is additionally allowed
+ * to match the email image-block validator (`block-registry.ts` imageSrcSchema,
+ * which accepts base64 inline images). EVERY other scheme — `javascript:`,
+ * `vbscript:`, `file:`, `data:` non-image, `tel:`, `sms:`, `intent:`,
+ * `android-app:`, custom deep-links — is neutralized to `#`.
  *
- * Threat model for an email href is narrow: the browser/mail-client must not be
- * tricked into executing SCRIPT when the recipient clicks. Only script-executing
- * (or local-file-reading) schemes are dangerous — `javascript:`, `data:`,
- * `vbscript:`, `file:`. Entity-escaping (see `substituteTokens`) prevents
- * attribute breakout but does NOT neutralize these protocol payloads —
- * `escapeHtml` leaves `javascript:alert(1)` intact and the browser still runs it
- * on click. This is the second, scheme-level line of defense.
+ * WHY allow-list (reversed from an earlier deny-list): entity-escaping prevents
+ * attribute breakout but does NOT neutralize a protocol payload — the browser
+ * still runs `javascript:alert(1)` on click. An allow-list is the conservative
+ * default: it neutralizes the whole open-ended space of non-http schemes
+ * (app-launch intents, etc.) rather than trying to enumerate the dangerous ones.
+ * There are no legitimate non-http links in any email today; if a real deep-link
+ * need appears, add that one scheme to SAFE_URL_SCHEMES then.
  *
- * Posture — DENY-list, not allow-list. The bonus URL is ADMIN-authored (trusted),
- * and mail clients further sanitize on render, so a strict allow-list only
- * over-restricts legitimate non-http schemes (`tel:`, `sms:`, `ftp:`, `s3:`,
- * custom deep-links like `myapp://`) — silently neutralizing reachable links to
- * `#`. Blocking exactly the known-dangerous schemes and passing everything else
- * is the right trade-off here.
- *
- * Policy:
- *   - dangerous scheme (`javascript:`, `data:`, `vbscript:`, `file:`,
- *     case-insensitive) → neutralized to `#`
- *   - ANY other scheme (`tel:`, `sms:`, `ftp:`, `s3:`, `myapp://…`), plus
- *     scheme-relative (`//host`), root-relative (`/path`), relative
- *     (`./x`, `../x`, `foo/bar`), and anchors (`#id`) — allowed
- *   - empty (after control-char strip) → neutralized to `#`
- *
- * Implemented WITHOUT the `URL` constructor so it stays portable to the n8n
- * sandbox (which lacks `URL`). This is the exported primitive the `href` build
- * wires in — it is NOT called by `substituteTokens` itself.
+ * Relative / anchor / scheme-relative (`/path`, `#id`, `//host`) have no scheme
+ * and are passed through. Implemented WITHOUT the `URL` constructor so it stays
+ * portable to the n8n sandbox.
  */
 export function safeUrlValue(value: string): string {
   const trimmed = value.trim()
 
   // Mirror what a browser's URL parser strips BEFORE resolving an href: ASCII
-  // whitespace and C0 control chars (\x00-\x1F) — notably TAB, LF, CR — are
-  // removed from ANYWHERE in the string, not just the ends. Without this,
-  // `java\tscript:...` / `\x01javascript:...` pass the scheme test unchanged
-  // (`.trim()` only touches the ends) yet the browser collapses them back to
-  // `javascript:` and executes. `escapeHtml` does NOT neutralize these — the
-  // control chars aren't escaped and don't break the attribute. We test the
-  // CLEANED string but RETURN the original `trimmed` value when safe, so
-  // legitimate URLs are never silently altered.
+  // whitespace and C0 control chars (\x00-\x1F) are removed from ANYWHERE, not
+  // just the ends. Without this, `java\tscript:...` passes the scheme test yet
+  // the browser collapses it back to `javascript:`. Test the CLEANED string but
+  // RETURN the original `trimmed` when safe, so legitimate URLs are unaltered.
   const cleaned = trimmed.replace(/[\x00-\x20]/g, '')
   if (cleaned === '') return NEUTRALIZED_URL
 
@@ -146,30 +131,25 @@ export function safeUrlValue(value: string): string {
   if (!schemeMatch) return trimmed
 
   const scheme = schemeMatch[1].toLowerCase() + ':'
-  return DANGEROUS_URL_SCHEMES.has(scheme) ? NEUTRALIZED_URL : trimmed
+  if (SAFE_URL_SCHEMES.has(scheme)) return trimmed
+  // Inline base64 images only (data:image/…) — matches the CMS image validator.
+  if (cleaned.toLowerCase().startsWith('data:image/')) return trimmed
+  return NEUTRALIZED_URL
 }
 
 /**
- * Sanitize `href` and `src` ATTRIBUTE values in a FINAL, fully-substituted email
- * HTML string by running each through `safeUrlValue`. Pure, ZERO-dependency,
- * regex-only (no DOM, no `URL`) so it is portable to the n8n Code-node sandbox.
+ * Sanitize `href`/`src` ATTRIBUTE values in a FINAL, fully-substituted email
+ * HTML string by running each through `safeUrlValue`. Pure, zero-dependency,
+ * regex-only (portable to the n8n sandbox).
  *
- * WHY scan the final HTML instead of guarding at substitution time: blind
- * `{{token}}` substitution can't know whether a resolved value lands inside an
- * `href`/`src` or in visible text — so a lead-supplied `javascript:` that gets
- * substituted into an editable copy template's `href` would survive HTML-escaping
- * (escaping doesn't neutralize the protocol) and reach the recipient. Scanning
- * attribute values after substitution catches every href/src regardless of how
- * the value got there. A `javascript:` occurrence in visible TEXT (not inside an
- * attribute) is left untouched — it is inert text, not a live link.
- *
- * Handles BOTH double- and single-quoted attribute values. The value is fed to
- * `safeUrlValue` verbatim (it is the raw attribute value, already entity-escaped
- * upstream — `safeUrlValue`'s control-char strip + scheme test still classify it
- * correctly, and only the scheme is what matters for neutralization).
+ * The attribute name is anchored with a `(^|\s)` prefix so `href`/`src` only
+ * match as a WHOLE attribute name — `data-href`, `xlink:href`, `data-src` are
+ * NOT touched. All three quoting styles are covered: double-quoted,
+ * single-quoted, and unquoted (`href=javascript:…`).
  */
 export function sanitizeHtmlUrls(html: string): string {
   return html
-    .replace(/(href|src)\s*=\s*"([^"]*)"/gi, (_m, attr: string, val: string) => `${attr}="${safeUrlValue(val)}"`)
-    .replace(/(href|src)\s*=\s*'([^']*)'/gi, (_m, attr: string, val: string) => `${attr}='${safeUrlValue(val)}'`)
+    .replace(/(^|\s)(href|src)\s*=\s*"([^"]*)"/gi, (_m, pre: string, attr: string, val: string) => `${pre}${attr}="${safeUrlValue(val)}"`)
+    .replace(/(^|\s)(href|src)\s*=\s*'([^']*)'/gi, (_m, pre: string, attr: string, val: string) => `${pre}${attr}='${safeUrlValue(val)}'`)
+    .replace(/(^|\s)(href|src)\s*=\s*([^\s"'>]+)/gi, (_m, pre: string, attr: string, val: string) => `${pre}${attr}=${safeUrlValue(val)}`)
 }

@@ -23,11 +23,18 @@
 // enforced by scripts/escape-parity.test.mjs (asserts the deployed
 // n8n copy against the same fixture as the TS vitest).
 // =============================================================
-// Behavior (DENY-list, regex-only, no URL constructor):
-//   - href/src attribute values (double- AND single-quoted) whose
-//     scheme is javascript:/data:/vbscript:/file: (case-insensitive,
-//     after stripping \x00-\x20 control chars) → neutralized to '#'.
-//   - every other scheme + relative/anchor/scheme-relative → passes.
+// Behavior (ALLOW-list, regex-only, no URL constructor):
+//   - href/src attribute values (double-quoted, single-quoted, AND
+//     unquoted) whose scheme is NOT http:/https:/mailto: (case-
+//     insensitive, after stripping \x00-\x20 control chars) →
+//     neutralized to '#'. `data:image/…` is additionally allowed
+//     (inline base64 images, matches the CMS image validator).
+//   - relative/anchor/scheme-relative (no scheme) → passes.
+//   - EVERY other scheme (javascript:/vbscript:/file:/data: non-image/
+//     tel:/sms:/intent:/android-app:/custom deep-links) → '#'.
+//   - the attribute name is anchored with (^|\s) so href/src match only
+//     as a WHOLE attribute name — data-href / xlink:href / data-src are
+//     NOT touched.
 //   - a "javascript:" occurrence in visible TEXT (not an attribute) is
 //     left untouched — it is inert text, not a live link.
 // =============================================================
@@ -39,12 +46,15 @@ function safeUrlValue(value) {
   const schemeMatch = cleaned.match(/^([a-z][a-z0-9+.-]*):/i);
   if (!schemeMatch) return trimmed;
   const scheme = schemeMatch[1].toLowerCase() + ':';
-  const DANGEROUS = ['javascript:', 'data:', 'vbscript:', 'file:'];
-  return DANGEROUS.indexOf(scheme) !== -1 ? '#' : trimmed;
+  const SAFE = ['http:', 'https:', 'mailto:'];
+  if (SAFE.indexOf(scheme) !== -1) return trimmed;
+  if (cleaned.toLowerCase().indexOf('data:image/') === 0) return trimmed;
+  return '#';
 }
 
 function sanitizeHtmlUrls(html) {
   return String(html)
-    .replace(/(href|src)\s*=\s*"([^"]*)"/gi, (_m, attr, val) => `${attr}="${safeUrlValue(val)}"`)
-    .replace(/(href|src)\s*=\s*'([^']*)'/gi, (_m, attr, val) => `${attr}='${safeUrlValue(val)}'`);
+    .replace(/(^|\s)(href|src)\s*=\s*"([^"]*)"/gi, (_m, pre, attr, val) => `${pre}${attr}="${safeUrlValue(val)}"`)
+    .replace(/(^|\s)(href|src)\s*=\s*'([^']*)'/gi, (_m, pre, attr, val) => `${pre}${attr}='${safeUrlValue(val)}'`)
+    .replace(/(^|\s)(href|src)\s*=\s*([^\s"'>]+)/gi, (_m, pre, attr, val) => `${pre}${attr}=${safeUrlValue(val)}`);
 }

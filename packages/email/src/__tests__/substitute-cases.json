@@ -1,0 +1,44 @@
+[
+  {
+    "name": "missing key is left LITERAL (leave-literal parity with n8n)",
+    "html": "Hello {{missing}}!",
+    "values": {},
+    "expected": "Hello {{missing}}!"
+  },
+  {
+    "name": "padded key has whitespace trimmed and resolves",
+    "html": "Hi {{ name }}",
+    "values": { "name": "Ada" },
+    "expected": "Hi Ada"
+  },
+  {
+    "name": "escape order via \"<a&b>\" -> &lt;a&amp;b&gt;",
+    "html": "{{v}}",
+    "values": { "v": "<a&b>" },
+    "expected": "&lt;a&amp;b&gt;"
+  },
+  {
+    "name": "value containing {{x}} is NOT re-substituted (single-pass proof)",
+    "html": "{{outer}}",
+    "values": { "outer": "literal {{x}} here", "x": "LEAKED" },
+    "expected": "literal {{x}} here"
+  },
+  {
+    "name": "both double-quote and single-quote are escaped",
+    "html": "{{q}}",
+    "values": { "q": "\"quote\" 'apos'" },
+    "expected": "&quot;quote&quot; &#39;apos&#39;"
+  },
+  {
+    "name": "multiple tokens in one string, mixed present/missing",
+    "html": "{{a}}-{{b}}-{{a}}",
+    "values": { "a": "X" },
+    "expected": "X-{{b}}-X"
+  },
+  {
+    "name": "dotted key matches the dot grammar and resolves (TS<->n8n parity)",
+    "html": "x {{a.b}} y",
+    "values": { "a.b": "Z" },
+    "expected": "x Z y"
+  }
+]
