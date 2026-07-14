@@ -38,7 +38,12 @@ export interface ClientMailConfig {
   sender_name: string | null
 }
 
-const SHARED_RESEND_SENDER: MailSender = { send: sendEmailViaResend }
+// The agency-shared Resend sender — the fallback `resolveMailSender` returns when
+// a client has no own provider (or an incomplete one). Exported so the read-only
+// "effective sender" describe path (effective-sender.server.ts) can detect the
+// fallback by IDENTITY against the REAL resolver, rather than re-deriving the
+// factory's completeness rules.
+export const SHARED_RESEND_SENDER: MailSender = { send: sendEmailViaResend }
 
 function hasValue(value: string | null): value is string {
   return typeof value === 'string' && value.trim().length > 0

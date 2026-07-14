@@ -111,6 +111,11 @@ export const queryKeys = {
         ? (['venture', 'campaigns', clientId] as const)
         : (['venture', 'campaigns'] as const),
     bonuses: (campaignId: string) => ['venture', 'bonuses', campaignId] as const,
+    // Read-only effective-send surface for a campaign ("Ten launch wysyła" card).
+    // Nested under the venture root so a mutation invalidating `venture.all`
+    // (e.g. editing the client's sender, or the campaign) also refreshes it.
+    effectiveSend: (campaignId: string) =>
+      ['venture', 'effective-send', campaignId] as const,
     // Per-user client assignments (iter 3a). Keyed by target user so the
     // assignment editor pre-fills the right set; still nested under the venture
     // root so a mutation that invalidates `venture.all` also refreshes it.

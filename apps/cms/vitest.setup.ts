@@ -94,6 +94,8 @@ vi.mock('lucide-react', () => {
     // Email block-registry icons (features/email/block-registry.ts)
     AlignLeft: stub, MousePointerClick: stub, Heading: stub, ImageIcon: stub,
     AlignVerticalSpaceAround: stub, Columns2: stub,
+    // Email canvas toolbar (sample-data toggle)
+    Eye: stub, Monitor: stub, Smartphone: stub, ChevronUp: stub, Copy: stub, FlaskConical: stub,
   }
 })
 

@@ -41,6 +41,7 @@ import { evaluateEditorPublishGate } from '../utils/lead-source-publish-gate'
 import { resolveMessageKey } from '../utils/resolve-message-key'
 import { VentureClientSelect } from './VentureClientSelect'
 import { CampaignThemeCard } from './CampaignThemeCard'
+import { CampaignEffectiveSendCard } from './CampaignEffectiveSendCard'
 import { VentureBonusManager } from './VentureBonusManager'
 import { LeadSourceConfigFields } from './LeadSourceConfigFields'
 
@@ -400,6 +401,16 @@ export function VentureCampaignEditor({ campaign }: VentureCampaignEditorProps) 
             <div className="flex flex-col gap-6">
               {/* Wygląd kampanii — 3-way theme (inherit / library / own brand) */}
               <CampaignThemeCard register={register} watch={watch} setValue={setValue} />
+
+              {/* Read-only "Ten launch wysyła" surface — effective sender +
+                  appearance cross-ref + template deep-link. Edit-mode only (needs a
+                  persisted campaign id to resolve the send chain). */}
+              {isEditing && campaign && (
+                <CampaignEffectiveSendCard
+                  campaignId={campaign.id}
+                  clientId={campaign.client_id}
+                />
+              )}
 
               <CollapsibleCard title={messages.venture.espTitle} defaultOpen>
                 <div className="space-y-5">

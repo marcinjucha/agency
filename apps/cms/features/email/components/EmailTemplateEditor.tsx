@@ -360,6 +360,7 @@ export function EmailTemplateEditor({ templateType, initialTemplate }: EmailTemp
         setViewport={setViewport}
         onBackdropClick={onCanvasBackdropClick}
         detectedKeys={detectedKeys}
+        templateType={templateType}
       />
 
       {/* Inspector (right) */}

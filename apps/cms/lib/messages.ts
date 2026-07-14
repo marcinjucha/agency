@@ -226,6 +226,24 @@ export const messages = {
     publishRequiresLeadSourceConfig:
       'Aby opublikować kampanię, uzupełnij wymaganą konfigurację źródła leadów (dla Tally: sekret webhooka).',
 
+    // --- Effective send ("Ten launch wysyła" — read-only surface) ---
+    // A read-only mirror of what a bonus-email send will actually use for this
+    // campaign: the effective sender (from the SAME resolveMailSender), the
+    // appearance cross-reference, and the bonus template slug + deep-link.
+    effectiveSendTitle: 'Ten launch wysyła',
+    effectiveSendLoadFailed: 'Nie udało się wczytać informacji o wysyłce',
+    effectiveSenderRowLabel: 'Efektywny nadawca',
+    effectiveSenderSharedFallbackNote:
+      'Klient nie ma własnego nadawcy — wyśle z konta agencji (noreply@haloefekt.pl).',
+    effectiveSenderFixLink: 'Ustaw nadawcę klienta',
+    effectiveThemeRowLabel: 'Wygląd',
+    effectiveThemeCrossRef: 'Motyw ustawiasz w sekcji „Wygląd kampanii” powyżej.',
+    effectiveTemplateRowLabel: 'Szablon',
+    effectiveTemplateSends: 'wysyła szablon:',
+    effectiveTemplateEditLink: 'Otwórz edytor szablonu',
+    effectiveTemplateMissingNote:
+      'Brak własnego szablonu — użyty zostanie wbudowany układ.',
+
     // Publish/status
     publishedLabel: 'Opublikowana',
     statusTitle: 'Status',
@@ -896,6 +914,13 @@ export const messages = {
     canvasEmptyHint: 'Dodaj blok przez panel Struktura po lewej',
     canvasViewportDesktop: 'Desktop',
     canvasViewportMobile: 'Mobile',
+    // Sample-data preview toggle (display-only — never persisted). When ON, only
+    // CODE-KNOWN tokens are filled (app scalars + the structural marker); every
+    // workflow/unresolvable/custom token stays bracketed so the honest "won't be
+    // filled" signal survives.
+    canvasSampleDataToggle: 'Dane przykładowe',
+    sampleCompanyName: 'Twoja Firma',
+    sampleBonusList: 'Przykładowy bonus 1 · Przykładowy bonus 2',
     canvasBlockUnknown: 'Nieznany typ bloku',
     canvasMoveUp: 'Przesuń blok w górę',
     canvasMoveDown: 'Przesuń blok w dół',

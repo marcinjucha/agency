@@ -18,6 +18,10 @@ import {
 } from './handler-base.server'
 import type { AdminCampaign, AdminClient, Bonus } from './types'
 import {
+  describeEffectiveSender,
+  type EffectiveSender,
+} from './mail/effective-sender.server'
+import {
   evaluatePublishGate,
   sanitizeLeadSourceConfig,
 } from './lead-sources/specs'
@@ -454,6 +458,126 @@ export function deleteCampaignHandler(id: string): Promise<VoidResult> {
           tbl(auth, 'so_campaigns').delete().eq('id', id),
           dbError,
         ).andThen(fromSupabaseVoidSafe('deleteCampaign')),
+      ),
+    ),
+  )
+}
+
+// ===========================================================================
+// Effective send (READ-ONLY surface — "Ten launch wysyła" card)
+// ===========================================================================
+
+// email_templates.type slug for the venture bonus email (mirrors ingest.server.ts).
+const BONUS_TEMPLATE_TYPE = 'venture_bonus'
+
+// What the campaign editor's read-only "Ten launch wysyła" card consumes. The
+// sender fields come from the SAME resolveMailSender the send path uses (via
+// describeEffectiveSender); templateType/templateExists surface the tenant's
+// editable bonus copy without exposing schema.
+export interface CampaignEffectiveSend extends EffectiveSender {
+  templateType: string
+  templateExists: boolean
+}
+
+/** Resolve a campaign's owning client id (existence hidden behind no-permission). */
+function fetchCampaignClientId(
+  auth: AuthContextFull,
+  campaignId: string,
+): ResultAsync<string, string> {
+  return ResultAsync.fromPromise(
+    tbl(auth, 'so_campaigns').select('client_id').eq('id', campaignId).maybeSingle(),
+    dbError,
+  ).andThen((res) => {
+    const r = res as { data: { client_id: string } | null; error: DbErrorShape }
+    if (r.error) return err(mapDbError(r.error, 'fetchCampaignClientId'))
+    if (!r.data) return err(messages.common.noPermission)
+    return ok(r.data.client_id)
+  })
+}
+
+// Non-secret mail config + secret-presence booleans for a tenant-owned client.
+// NEVER selects the plaintext resend_api_key/gmail_app_password (GRANT revoked
+// for `authenticated`) — the has_* generated booleans stand in for presence.
+interface ClientMailDescribeRow {
+  mail_provider: string
+  resend_from_email: string | null
+  gmail_address: string | null
+  sender_name: string | null
+  has_resend_api_key: boolean
+  has_gmail_app_password: boolean
+}
+
+function fetchClientMailForDescribe(
+  auth: AuthContextFull,
+  clientId: string,
+): ResultAsync<ClientMailDescribeRow, string> {
+  return ResultAsync.fromPromise(
+    tbl(auth, 'so_clients')
+      .select(
+        'mail_provider, resend_from_email, gmail_address, sender_name, has_resend_api_key, has_gmail_app_password',
+      )
+      .eq('id', clientId)
+      .eq('tenant_id', auth.tenantId)
+      .maybeSingle(),
+    dbError,
+  ).andThen((res) => {
+    const r = res as { data: ClientMailDescribeRow | null; error: DbErrorShape }
+    if (r.error) return err(mapDbError(r.error, 'fetchClientMailForDescribe'))
+    if (!r.data) return err(messages.common.noPermission)
+    return ok(r.data)
+  })
+}
+
+/** Whether the caller's tenant has an editable `venture_bonus` template row. */
+function fetchBonusTemplateExists(auth: AuthContextFull): ResultAsync<boolean, string> {
+  return ResultAsync.fromPromise(
+    tbl(auth, 'email_templates')
+      .select('type')
+      .eq('tenant_id', auth.tenantId)
+      .eq('type', BONUS_TEMPLATE_TYPE)
+      .maybeSingle(),
+    dbError,
+  ).andThen((res) => {
+    const r = res as { data: { type: string } | null; error: DbErrorShape }
+    if (r.error) return err(mapDbError(r.error, 'fetchBonusTemplateExists'))
+    return ok(r.data !== null)
+  })
+}
+
+/**
+ * Describe the effective send for a campaign — the sender a real bonus email
+ * would use (via the SAME resolveMailSender), plus the template slug + whether
+ * the tenant has an editable copy. Gated on `bonus_funnel.campaigns` (the route
+ * map does NOT gate createServerFn — this is the server-side gate). Tenant-scoped:
+ * the campaign → client chain is verified owned before any mail config is read.
+ */
+export function getCampaignEffectiveSendHandler(
+  campaignId: string,
+): Promise<MutationResult<CampaignEffectiveSend>> {
+  return toMutation(
+    gated(PERM.campaigns, (auth) =>
+      fetchCampaignClientId(auth, campaignId).andThen((clientId) =>
+        assertClientOwned(auth, clientId).andThen(() =>
+          fetchClientMailForDescribe(auth, clientId).andThen((mail) =>
+            fetchBonusTemplateExists(auth).map((templateExists) => {
+              const sender = describeEffectiveSender({
+                mailProvider: mail.mail_provider,
+                resendFromEmail: mail.resend_from_email,
+                gmailAddress: mail.gmail_address,
+                senderName: mail.sender_name,
+                hasResendApiKey: mail.has_resend_api_key,
+                hasGmailAppPassword: mail.has_gmail_app_password,
+                // Agency-shared "From" — the address a fallback send originates from.
+                sharedFromEmail: process.env.RESEND_FROM_EMAIL ?? 'noreply@haloefekt.pl',
+              })
+              return {
+                ...sender,
+                templateType: BONUS_TEMPLATE_TYPE,
+                templateExists,
+              }
+            }),
+          ),
+        ),
       ),
     ),
   )

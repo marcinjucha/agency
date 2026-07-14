@@ -1,8 +1,10 @@
 import { useState, useRef, useEffect, Fragment } from 'react'
-import { Eye, Monitor, Smartphone, ChevronUp, ChevronDown, Copy, Trash2, Plus, Mail } from 'lucide-react'
-import { renderBlock, resolveBlockMarginBottom } from '@agency/email'
+import { Eye, Monitor, Smartphone, ChevronUp, ChevronDown, Copy, Trash2, Plus, Mail, FlaskConical } from 'lucide-react'
+import { renderBlock, resolveBlockMarginBottom, substitutePlain } from '@agency/email'
 import { CMS_BLOCK_REGISTRY } from '../../block-registry'
 import { useEmailThemeMap } from '../../contexts/email-theme-context'
+import { buildSampleValues } from '../../utils/sample-values'
+import { substituteBlockSampleTokens } from '../../utils/substitute-block-tokens'
 import { messages } from '@/lib/messages'
 import type { Block, BlockType } from '../../types'
 import { AddBlockPopover } from './AddBlockPopover'
@@ -25,6 +27,8 @@ export interface CanvasProps {
   setViewport: (v: 'desktop' | 'mobile') => void
   onBackdropClick: (e: React.MouseEvent) => void
   detectedKeys: string[]
+  // Template slug — drives which tokens the "Dane przykładowe" toggle can fill.
+  templateType: string
 }
 
 // ---------------------------------------------------------------------------
@@ -45,8 +49,17 @@ export function Canvas({
   setViewport,
   onBackdropClick,
   detectedKeys,
+  templateType,
 }: CanvasProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
+
+  // Sample-data preview — display-only, NEVER persisted (no state lift to the
+  // editor, no save). Fills only code-known tokens; the rest stay bracketed.
+  const [sampleData, setSampleData] = useState(false)
+  const sampleValues = buildSampleValues(templateType)
+  const displayBlocks = sampleData
+    ? blocks.map((b) => substituteBlockSampleTokens(b, sampleValues))
+    : blocks
 
   // Reset scroll to top on mount (fires when navigating to a different template)
   useEffect(() => {
@@ -55,7 +68,12 @@ export function Canvas({
 
   return (
     <section className="flex flex-col bg-muted/20 overflow-hidden" aria-label={messages.email.canvasTitle}>
-      <CanvasToolbar viewport={viewport} setViewport={setViewport} />
+      <CanvasToolbar
+        viewport={viewport}
+        setViewport={setViewport}
+        sampleData={sampleData}
+        setSampleData={setSampleData}
+      />
       <div
         ref={scrollRef}
         className="flex-1 overflow-y-auto p-6"
@@ -66,9 +84,11 @@ export function Canvas({
           setSubject={setSubject}
           viewport={viewport}
           detectedKeys={detectedKeys}
+          sampleData={sampleData}
+          sampleValues={sampleValues}
         />
         <EmailFrame
-          blocks={blocks}
+          blocks={displayBlocks}
           selectedBlockId={selectedBlockId}
           setSelectedBlockId={setSelectedBlockId}
           onAddAt={onAddAt}
@@ -89,13 +109,28 @@ export function Canvas({
 interface CanvasToolbarProps {
   viewport: 'desktop' | 'mobile'
   setViewport: (v: 'desktop' | 'mobile') => void
+  sampleData: boolean
+  setSampleData: (v: boolean) => void
 }
 
-function CanvasToolbar({ viewport, setViewport }: CanvasToolbarProps) {
+function CanvasToolbar({ viewport, setViewport, sampleData, setSampleData }: CanvasToolbarProps) {
   return (
     <div className="flex items-center gap-2 border-b border-border/60 bg-background/60 px-4 py-2 shrink-0">
       <Eye className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
       <span className="text-xs font-medium text-muted-foreground">{messages.email.canvasTitle}</span>
+      <button
+        type="button"
+        aria-pressed={sampleData}
+        onClick={() => setSampleData(!sampleData)}
+        className={`ml-3 flex items-center gap-1 rounded px-2 py-0.5 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 ${
+          sampleData
+            ? 'bg-primary text-primary-foreground'
+            : 'text-muted-foreground hover:text-foreground'
+        }`}
+      >
+        <FlaskConical className="h-3 w-3" aria-hidden="true" />
+        <span>{messages.email.canvasSampleDataToggle}</span>
+      </button>
       <div className="ml-auto flex items-center rounded-md border border-border bg-card p-0.5 gap-0.5">
         <button
           type="button"
@@ -139,13 +174,18 @@ interface EnvelopeProps {
   setSubject: (v: string) => void
   viewport: 'desktop' | 'mobile'
   detectedKeys: string[]
+  sampleData: boolean
+  sampleValues: Record<string, string>
 }
 
-function Envelope({ subject, setSubject, viewport, detectedKeys }: EnvelopeProps) {
+function Envelope({ subject, setSubject, viewport, detectedKeys, sampleData, sampleValues }: EnvelopeProps) {
   const [editSubject, setEditSubject] = useState(false)
   const [showVarPicker, setShowVarPicker] = useState(false)
   const subjectRef = useRef<HTMLInputElement>(null)
   const maxWidth = viewport === 'mobile' ? 'max-w-[390px]' : 'max-w-[640px]'
+  // Sample mode substitutes only code-known subject tokens (substitutePlain —
+  // subjects are plaintext); unknown tokens stay bracketed → shown as chips.
+  const displaySubject = sampleData ? substitutePlain(subject, sampleValues) : subject
 
   function insertVarAtCursor(key: string) {
     const el = subjectRef.current
@@ -207,7 +247,7 @@ function Envelope({ subject, setSubject, viewport, detectedKeys }: EnvelopeProps
               subject ? 'text-foreground' : 'text-muted-foreground/60'
             }`}
           >
-            {subject ? renderSubjectWithVars(subject) : messages.email.canvasSubjectClickPlaceholder}
+            {subject ? renderSubjectWithVars(displaySubject) : messages.email.canvasSubjectClickPlaceholder}
           </button>
         )}
 

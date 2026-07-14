@@ -20,6 +20,7 @@ import {
   deleteBonusHandler,
   deleteCampaignHandler,
   deleteClientHandler,
+  getCampaignEffectiveSendHandler,
   listBonusesHandler,
   listCampaignsHandler,
   listClientsHandler,
@@ -97,6 +98,18 @@ export const updateCampaignFn = createServerFn({ method: 'POST' })
 export const deleteCampaignFn = createServerFn({ method: 'POST' })
   .inputValidator((v: z.infer<typeof idInputSchema>) => idInputSchema.parse(v))
   .handler(({ data }) => deleteCampaignHandler(data.id))
+
+// Read-only "Ten launch wysyła" surface — the effective sender (via the SAME
+// resolveMailSender) + bonus template presence for a campaign. Gated inside the
+// handler (bonus_funnel.campaigns) — the route map does NOT protect
+// createServerFn (project Authz gotcha).
+const campaignEffectiveSendInputSchema = z.object({ campaignId: z.string().uuid() })
+
+export const getCampaignEffectiveSendFn = createServerFn({ method: 'POST' })
+  .inputValidator((v: z.infer<typeof campaignEffectiveSendInputSchema>) =>
+    campaignEffectiveSendInputSchema.parse(v),
+  )
+  .handler(({ data }) => getCampaignEffectiveSendHandler(data.campaignId))
 
 // --- Bonuses --------------------------------------------------------------
 

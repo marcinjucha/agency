@@ -8,7 +8,7 @@ vi.mock('lucide-react', () => {
   const stub = () => null
   return {
     Eye: stub, Monitor: stub, Smartphone: stub, ChevronUp: stub, ChevronDown: stub,
-    Copy: stub, Trash2: stub, Plus: stub, Mail: stub, MousePointerClick: stub,
+    Copy: stub, Trash2: stub, Plus: stub, Mail: stub, FlaskConical: stub, MousePointerClick: stub,
     AlignLeft: stub, AlignCenter: stub, AlignRight: stub, RotateCcw: stub,
     // block-registry + editors
     FileText: stub, Minus: stub, Heading: stub, ImageIcon: stub,
