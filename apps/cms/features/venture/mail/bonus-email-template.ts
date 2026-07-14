@@ -1,4 +1,11 @@
-import { renderEmailBlocks, substituteTokens, substitutePlain, sanitizeHtmlUrls, type Block } from '@agency/email'
+import {
+  renderEmailBlocks,
+  substituteTokens,
+  substitutePlain,
+  sanitizeHtmlUrls,
+  type Block,
+  type ThemeColorMap,
+} from '@agency/email'
 import type { ResolvedTheme } from '@/lib/theme'
 import { VENTURE_BONUS_MARKER, type VentureBonusAppKey } from '@/lib/app-sent-variables'
 import {
@@ -171,7 +178,17 @@ export async function buildBonusEmailFromTemplateHtml(
   input: BonusTemplateRenderInput,
 ): Promise<BonusEmail> {
   const blocks = buildBonusEmailFromTemplate(input)
-  const rendered = await renderEmailBlocks(blocks)
+  // Build the renderer's ThemeColorMap from the resolved theme (SAME spread the
+  // email editor's `resolveEmailThemeMap` uses — a ResolvedTheme's 9 colour tokens
+  // are exactly the map's token keys; logoUrl/fontFamily are inert extras). Passing
+  // it lets TOKEN-BOUND blocks (`textColorToken`/`backgroundColorToken`, e.g. a CTA
+  // with backgroundColorToken='accent') resolve to the per-campaign brand instead
+  // of the block default — the editor preview already does this via its map, and
+  // the send must match. `applyThemeToCopyBlock`'s raw hex (rung b) still WINS over
+  // the map (rung c) for header/heading/text/footer, so those are unchanged and the
+  // seeded raw-hex/token-free venture_bonus template stays BYTE-IDENTICAL.
+  const themeMap: ThemeColorMap = { ...input.theme }
+  const rendered = await renderEmailBlocks(blocks, themeMap)
   const substituted = substituteTokens(rendered, input.values as unknown as Record<string, string>)
   // Belt-and-suspenders: scheme-guard every href/src in the FINAL HTML. The bonus
   // LIST href already goes through `safeUrlValue` directly (`buildBonusListBlock`),

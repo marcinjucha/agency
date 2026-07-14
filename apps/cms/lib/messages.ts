@@ -839,6 +839,12 @@ export const messages = {
     deleteConfirmKeyLabel: 'klucz',
     deleteWarning:
       'Workflowy używające tego klucza przestaną działać. Tej operacji nie można cofnąć.',
+    // Delete-guard warning — campaigns that explicitly selected this template via
+    // so_campaigns.email_template_id (ON DELETE SET NULL → they get un-assigned).
+    deleteCampaignUsageWarning: (n: number) =>
+      `Ten szablon jest używany przez ${n} ${
+        n === 1 ? 'kampanię' : n >= 2 && n <= 4 ? 'kampanie' : 'kampanii'
+      } — zostaną odpięte i wrócą do domyślnego szablonu.`,
     // Variables editor
     variablesSection: 'Zmienne szablonu',
     variablesSectionLabel: 'Zmienne szablonu',

@@ -115,7 +115,6 @@ export const Route = createFileRoute('/api/venture/leads/$client/$slug')({
         // PRESENCE/length (never its value), the provider id, and the signature
         // HEADER presence + verify RESULT (never the header value, the secret, or
         // the computed HMAC).
-        console.log('[venture-webhook] request received', { client: clientSlug, slug })
         if (!clientSlug || !slug) {
           // Server-log only — never surfaced in the HTTP response, so
           // distinguishing the reason here does not create an enumeration
@@ -175,14 +174,6 @@ export const Route = createFileRoute('/api/venture/leads/$client/$slug')({
           )
           return invalidSignature()
         }
-        // Safe: `lead_source_provider` is a registry id (e.g. "tally"), not a secret.
-        console.log('[venture-webhook] lead-source provider resolved', {
-          client: clientSlug,
-          slug,
-          campaignId: campaign.id,
-          provider: campaign.lead_source_provider,
-        })
-
         const secret = campaign.tally_webhook_secret
         if (!secret) {
           console.error(
@@ -191,15 +182,6 @@ export const Route = createFileRoute('/api/venture/leads/$client/$slug')({
           )
           return invalidSignature()
         }
-        // Presence + length ONLY — never the secret value.
-        console.log('[venture-webhook] webhook secret present', {
-          client: clientSlug,
-          slug,
-          campaignId: campaign.id,
-          secretPresent: true,
-          secretLen: secret.length,
-        })
-
         // Verify over the RAW body BEFORE parsing (do not re-serialize). The
         // provider reads its own signature header internally (header-agnostic).
         const rawBody = await request.text()
@@ -222,13 +204,6 @@ export const Route = createFileRoute('/api/venture/leads/$client/$slug')({
           })
           return invalidSignature()
         }
-        console.log('[venture-webhook] signature verified', {
-          client: clientSlug,
-          slug,
-          campaignId: campaign.id,
-          signatureHeaderPresent,
-          verifyResult: 'valid',
-        })
 
         let parsed: unknown
         try {
@@ -254,15 +229,6 @@ export const Route = createFileRoute('/api/venture/leads/$client/$slug')({
           })
           return json({ error: 'bad_request' }, 400)
         }
-        // submissionId (idempotency key) + email PRESENCE only — never the full
-        // lead payload.
-        console.log('[venture-webhook] payload mapped', {
-          client: clientSlug,
-          slug,
-          campaignId: campaign.id,
-          submissionId: mapped.value.submissionId,
-          emailPresent: mapped.value.email !== null,
-        })
 
         // Post-validation. ESP/mail failures stay 200 (handled inside ingest),
         // but a genuine lead-WRITE failure (insert_error) → 500 so Tally retries.
@@ -283,24 +249,6 @@ export const Route = createFileRoute('/api/venture/leads/$client/$slug')({
               reason: outcome.status,
             })
             return json({ error: 'ingest_failed' }, httpStatus)
-          }
-          if (outcome.status === 'ingested') {
-            console.log('[venture-webhook] ingested', {
-              client: clientSlug,
-              slug,
-              campaignId: campaign.id,
-              status: outcome.status,
-              leadId: outcome.leadId,
-              espSynced: outcome.espSynced,
-              emailSent: outcome.emailSent,
-            })
-          } else {
-            console.log('[venture-webhook] duplicate', {
-              client: clientSlug,
-              slug,
-              campaignId: campaign.id,
-              status: outcome.status,
-            })
           }
           return json({ ok: true }, 200)
         } catch (error) {

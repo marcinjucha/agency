@@ -132,6 +132,58 @@ describe('byte-identical regression (load-bearing AC)', () => {
   })
 })
 
+// [2] TOKEN-BOUND blocks must resolve to the per-campaign RESOLVED theme at send.
+// The send now passes a ThemeColorMap (built from the ResolvedTheme) to
+// renderEmailBlocks — SAME as the editor preview — so a block bound to a theme
+// token (textColorToken / backgroundColorToken) renders the resolved brand colour
+// instead of the block default. Before the fix the send rendered with NO map, so a
+// token-bound block silently fell back to the default while the editor showed the
+// brand colour.
+describe('token-bound blocks resolve to the resolved theme (map passed to renderer)', () => {
+  // A distinctive accent so the assertion is unambiguous (not equal to any default).
+  const THEMED = { ...HALO_EFEKT_DEFAULT, accent: '#abcdef' } as typeof HALO_EFEKT_DEFAULT
+
+  const CTA_TOKEN_BLOCKS: Block[] = [
+    { id: 'bonus-list-marker', type: 'text', content: BONUS_LIST_MARKER },
+    // CTA background bound to the `accent` token — NO raw backgroundColor, so the
+    // themed default/token ref is what resolves.
+    {
+      id: 'cta',
+      type: 'cta',
+      label: 'Zrób kopię',
+      url: 'https://cta.example.com',
+      textColor: '#ffffff',
+      backgroundColorToken: 'accent',
+    },
+  ]
+
+  it('a CTA bound to the accent token renders the resolved accent hex', async () => {
+    const { html } = await buildBonusEmailFromTemplateHtml({
+      templateBlocks: CTA_TOKEN_BLOCKS,
+      subjectTemplate: SUBJECT_TEMPLATE,
+      bonuses: BONUSES,
+      theme: THEMED,
+      values: { companyName: 'Kacper Launch' },
+    })
+    // The per-campaign accent reached the delivered HTML (token resolved via the map).
+    expect(html).toContain('#abcdef')
+  })
+
+  it('the accent hex is sourced FROM the resolved theme (default theme → no #abcdef)', async () => {
+    // Same token-bound CTA, but the DEFAULT theme (whose accent is NOT #abcdef).
+    // The distinctive hex must be absent — proving the #abcdef above came from the
+    // resolved theme's accent flowing through the map, not from anything incidental.
+    const { html } = await buildBonusEmailFromTemplateHtml({
+      templateBlocks: CTA_TOKEN_BLOCKS,
+      subjectTemplate: SUBJECT_TEMPLATE,
+      bonuses: BONUSES,
+      theme: HALO_EFEKT_DEFAULT,
+      values: { companyName: 'Kacper Launch' },
+    })
+    expect(html).not.toContain('#abcdef')
+  })
+})
+
 describe('brand with an apostrophe — SEMANTIC equivalence, NOT byte-identical', () => {
   // The byte-identical AC holds only for special-char-free copy. A brand with a
   // `'` is escaped by BOTH paths (no raw quote leaks that could break an

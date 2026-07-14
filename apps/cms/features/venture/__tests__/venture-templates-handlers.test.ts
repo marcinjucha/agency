@@ -129,6 +129,31 @@ describe('listBonusTemplatesHandler', () => {
     expect(chains.email_templates.eq).toHaveBeenCalledWith('tenant_id', TENANT)
     expect(chains.email_templates.eq).not.toHaveBeenCalledWith('type', 'venture_bonus')
   })
+
+  // [3] workflow_custom is the ONE non-unique-per-tenant type, and the picker's
+  // "Edytuj szablon" deep-link is TYPE-keyed → the editor's
+  // .eq('type','workflow_custom').maybeSingle() errors on multiple rows. So
+  // workflow_custom must be excluded from the bonus-capable list AT THE QUERY, even
+  // when a workflow_custom row bears the {{bonus_list}} marker. (The exclusion is a
+  // DB .neq filter — the mock does not apply it, so we assert the filter was
+  // requested; the JS marker filter alone would NOT drop a marker-bearing row.)
+  it('excludes workflow_custom via a DB .neq filter (even a marker-bearing one)', async () => {
+    const { chains } = setupAuth({
+      email_templates: {
+        data: [
+          { id: TEMPLATE_ID, label: 'Domyślny', type: 'venture_bonus', blocks: MARKER_BLOCKS },
+        ],
+        error: null,
+      },
+    })
+
+    const result = await listBonusTemplatesHandler()
+
+    expect(result.success).toBe(true)
+    // The type-keyed deep-link is only sound for unique-per-tenant types → filter
+    // workflow_custom out at the query layer.
+    expect(chains.email_templates.neq).toHaveBeenCalledWith('type', 'workflow_custom')
+  })
 })
 
 // ===========================================================================

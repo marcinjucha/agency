@@ -190,6 +190,35 @@ describe('getPublishedCampaignBySlug', () => {
     })
   })
 
+  it('MERGE: an extra freeform brand key survives; the resolved theme still wins the 5 canonical keys', async () => {
+    // so_campaigns.brand is a LIVE public contract — the deployed landing may read
+    // freeform keys beyond the 5 canonical ones. The payload MERGES the raw brand
+    // UNDER the theme-derived brand: `primary` here is overridden by the resolved
+    // theme, but `tagline`/`secondary` pass through untouched.
+    setupClient({
+      campaign: {
+        data: {
+          id: 'c4',
+          slug: 'extra',
+          display_name: null,
+          brand: { primary: '#OLDPRIMARY', tagline: 'Zbuduj startup', secondary: '#654321' },
+        },
+        error: null,
+      },
+      bonuses: { data: [], error: null },
+    })
+
+    const result = await getPublishedCampaignBySlug('przystan-inwestorow', 'extra')
+
+    expect(result._unsafeUnwrap()?.brand).toEqual({
+      // Resolved theme WINS the 5 canonical keys (raw primary '#OLDPRIMARY' dropped).
+      ...EXPECTED_BRAND,
+      // Extra freeform keys survive the merge.
+      tagline: 'Zbuduj startup',
+      secondary: '#654321',
+    })
+  })
+
   it('returns null (→ 404) when the client slug does not resolve — never queries the campaign', async () => {
     const mock = setupClient({
       client: { data: null, error: null },

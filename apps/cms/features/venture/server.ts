@@ -1,5 +1,5 @@
 import { ResultAsync, ok, err } from 'neverthrow'
-import type { Tables } from '@agency/database'
+import type { Json, Tables } from '@agency/database'
 import { createAnonServerClient } from '@/lib/supabase/anon.server'
 import type { ResolvedTheme } from '@/lib/theme'
 import { resolvePublicCampaignTheme } from './public-theme.server'
@@ -40,15 +40,16 @@ import type { CampaignBrand, PublicBonus, PublicCampaign } from './types'
 // filters the query independent of the select projection (PostgREST resolves
 // WHERE-filter columns from the table, not from the selected columns) — no
 // need to add client_id to the projection just to filter by it.
-// `brand` is intentionally NOT in the anon projection anymore (iter E3): the
-// public payload's `brand` is DERIVED from the resolved theme (whose campaign
-// tier reads so_campaigns.brand server-side via resolvePublicCampaignTheme), so
-// the anon path only needs the row's identity + published gate. `id` is required
-// to hand Phase B the already-published-confirmed campaign id.
-export const CAMPAIGN_PUBLIC_COLUMNS = 'id, slug, display_name'
+// `brand` IS in the anon projection: the public payload MERGES the raw
+// so_campaigns.brand JSONB under the theme-derived brand (see toPublicCampaign) so
+// any FREEFORM key the deployed VPS landing still reads survives, while the
+// resolved theme wins the 5 canonical keys. `brand` is anon-readable (column
+// GRANT) and non-secret. `id` is required to hand Phase B the
+// already-published-confirmed campaign id.
+export const CAMPAIGN_PUBLIC_COLUMNS = 'id, slug, display_name, brand'
 export const BONUS_PUBLIC_COLUMNS = 'title, description, type, url'
 
-type CampaignRow = Pick<Tables<'so_campaigns'>, 'id' | 'slug' | 'display_name'>
+type CampaignRow = Pick<Tables<'so_campaigns'>, 'id' | 'slug' | 'display_name' | 'brand'>
 type BonusRow = Pick<Tables<'so_bonuses'>, 'title' | 'description' | 'type' | 'url'>
 type ClientIdRow = Pick<Tables<'so_clients'>, 'id'>
 
@@ -176,14 +177,25 @@ function toPublicCampaign(
     slug: row.slug,
     display_name: row.display_name,
     theme,
-    // brand is DERIVED from the resolved theme (inverse BRAND_TO_THEME) — an
-    // additive dual-write for the currently-deployed landing that reads
-    // brand.logo_url/brand.primary. Because it's built from the fully-backfilled
-    // theme, a named-theme-only campaign (empty raw brand) STILL yields a
-    // populated brand instead of {} — the landing never crashes on brand.primary.
-    brand: brandFromResolvedTheme(theme),
+    // brand MERGES the raw so_campaigns.brand JSONB UNDER the theme-derived brand:
+    // the resolved theme WINS the 5 canonical keys (primary/accent/bg/logo_url/font
+    // — inverse BRAND_TO_THEME, so a named-theme-only campaign still yields a
+    // populated brand and the landing never crashes on brand.primary), while any
+    // extra FREEFORM key the deployed landing still consumes passes through
+    // untouched. so_campaigns.brand is a LIVE public contract (memory 2026-07-11) —
+    // do NOT drop freeform keys.
+    brand: { ...toRawBrand(row.brand), ...brandFromResolvedTheme(theme) } as CampaignBrand,
     bonuses,
   }
+}
+
+// Narrow the freeform `brand` JSONB to a plain object for spreading. A null /
+// primitive / array `brand` (never the shape the landing reads) → {} so the merge
+// contributes nothing beyond the theme-derived keys.
+function toRawBrand(brand: Json | null): Record<string, unknown> {
+  return brand && typeof brand === 'object' && !Array.isArray(brand)
+    ? (brand as Record<string, unknown>)
+    : {}
 }
 
 // Inverse of BRAND_TO_THEME (lib/theme/types.ts): project the resolved theme

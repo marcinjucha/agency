@@ -549,9 +549,19 @@ function IconBtn({ children, disabled, className = '', ...props }: IconBtnProps)
 // ---------------------------------------------------------------------------
 
 function CanvasBlockRenderer({ block, isLast }: { block: Block; isLast: boolean }) {
+  // Hooks MUST run unconditionally, BEFORE any early return. The "Dane
+  // przykładowe" toggle can flip a block into/out of the {{bonus_list}} marker
+  // state across renders of the SAME fiber; a hook placed after the marker-chip
+  // early return would change the render's hook count and crash React with
+  // "Rendered more hooks than during the previous render".
+  // The resolved theme map (from the picked theme_id) recolours token-based
+  // block colours live — same map the server bakes into html_body at save.
+  const theme = useEmailThemeMap()
+
   // The {{bonus_list}} marker block is stored as an ordinary text block (the send
   // path splices the real bonus list there). Render it as a friendly placeholder
-  // chip instead of the raw token so authors see what it means.
+  // chip instead of the raw token so authors see what it means. (The chip does
+  // not use `theme` — the hook above stays unconditional regardless.)
   if (isBonusListMarkerBlock(block)) {
     return (
       <div className="mx-6 my-4 flex items-center gap-2 rounded-md border border-dashed border-primary/40 bg-primary/5 px-3 py-2.5">
@@ -566,9 +576,6 @@ function CanvasBlockRenderer({ block, isLast }: { block: Block; isLast: boolean 
   // (marginBottom preset) as the rendered email HTML. Last block gets 0 to
   // avoid trailing whitespace.
   const paddingBottom = isLast ? 0 : resolveBlockMarginBottom(block)
-  // The resolved theme map (from the picked theme_id) recolours token-based
-  // block colours live — same map the server bakes into html_body at save.
-  const theme = useEmailThemeMap()
   const rendered = renderBlock(block, paddingBottom, theme)
   if (!rendered) {
     return (

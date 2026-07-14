@@ -248,7 +248,7 @@ describe('getCampaignEffectiveSendHandler — resolved template (drift guard)', 
   })
 
   it('no assignment → the tenant default row id + type (default tier)', async () => {
-    setupAuth({
+    const { chains } = setupAuth({
       so_campaigns: { data: { client_id: CLIENT_ID, email_template_id: null }, error: null },
       so_clients: { data: clientRow({}), error: null },
       email_templates: {
@@ -260,6 +260,11 @@ describe('getCampaignEffectiveSendHandler — resolved template (drift guard)', 
     expect(result.data?.resolvedTemplateId).toBe(DEFAULT_ID)
     expect(result.data?.resolvedTemplateName).toBe('Domyślny')
     expect(result.data?.resolvedTemplateType).toBe('venture_bonus')
+    // [7] SINGLE QUERY: the tenant venture_bonus default row is read exactly ONCE
+    // (readTenantDefaultBonusTemplate) — templateExists + the default-tier choice
+    // are derived from that one read; no assignment → no by-id query, and the
+    // default reader passed to the precedence resolver is a NO-QUERY cached one.
+    expect(chains.email_templates.maybeSingle).toHaveBeenCalledTimes(1)
   })
 
   it('no assignment + no default → null ("wbudowany szablon")', async () => {
@@ -281,17 +286,21 @@ describe('getCampaignEffectiveSendHandler — resolved template (drift guard)', 
   // (exists check → by-id unusable → default usable), so it bypasses the
   // single-chain setupAuth helper.
   it('assigned template with EMPTY blocks → falls through to tenant default (mirrors ingest)', async () => {
+    // [7] read order after the single-read refactor: (1) readTenantDefaultBonusTemplate
+    // (the venture_bonus default, eager — powers templateExists AND the cached
+    // default-tier choice), then (2) the by-id read for the assignment. The default
+    // reader handed to the precedence resolver is the CACHED choice → no 3rd query.
     const emailQueue: Array<{ data: unknown; error: unknown }> = [
-      // 1. fetchBonusTemplateExists (type=venture_bonus) → a row exists.
-      { data: { type: 'venture_bonus' }, error: null },
-      // 2. by-id read → the assigned row, but blocks emptied → UNUSABLE → absent.
-      {
-        data: { id: ASSIGNED, label: 'Pusty wariant', type: 'marketing_blast', blocks: [] },
-        error: null,
-      },
-      // 3. default read → the usable tenant venture_bonus singleton.
+      // 1. readTenantDefaultBonusTemplate → the usable tenant venture_bonus singleton
+      //    (present=true, choice=DEFAULT_ID).
       {
         data: { id: DEFAULT_ID, label: 'Domyślny', type: 'venture_bonus', blocks: USABLE_BLOCKS },
+        error: null,
+      },
+      // 2. by-id read → the assigned row, but blocks emptied → UNUSABLE → absent →
+      //    precedence falls to the cached default (DEFAULT_ID), NOT the assigned one.
+      {
+        data: { id: ASSIGNED, label: 'Pusty wariant', type: 'marketing_blast', blocks: [] },
         error: null,
       },
     ]
@@ -327,5 +336,10 @@ describe('getCampaignEffectiveSendHandler — resolved template (drift guard)', 
     expect(result.data?.resolvedTemplateId).toBe(DEFAULT_ID)
     expect(result.data?.resolvedTemplateName).toBe('Domyślny')
     expect(result.data?.resolvedTemplateType).toBe('venture_bonus')
+    // A venture_bonus row exists (even the by-id was empty, not this one) → true.
+    expect(result.data?.templateExists).toBe(true)
+    // Exactly TWO email_templates reads: the eager default + the by-id. The default
+    // is NOT re-queried for the precedence tier (cached) — [7].
+    expect(emailIdx).toBe(2)
   })
 })

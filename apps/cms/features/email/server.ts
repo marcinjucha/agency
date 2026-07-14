@@ -311,6 +311,81 @@ export const deleteEmailTemplateFn = createServerFn({ method: 'POST' })
   })
 
 // ---------------------------------------------------------------------------
+// Delete-guard usage count (email_templates ← so_campaigns.email_template_id)
+// ---------------------------------------------------------------------------
+
+/** Campaigns that explicitly select this template (delete-warning payload). */
+export interface EmailTemplateUsage {
+  campaigns: number
+  campaignNames: string[]
+}
+
+/**
+ * Count campaigns that reference this template via
+ * `so_campaigns.email_template_id` (reverse FK, ON DELETE SET NULL). Deleting the
+ * template neither blocks nor cascades — it SILENTLY un-assigns every campaign
+ * that selected it (each falls back to the tenant `venture_bonus` singleton) — so
+ * the delete dialog must WARN the operator with this count first. Mirrors the
+ * `so_themes` app-level delete-guard counters (`getThemeReferences` /
+ * `getThemeUsage` in features/themes/server.ts) required by the memory rule
+ * "every new FK to a delete-guarded reference table must be wired into its usage
+ * counter".
+ *
+ * `deleteEmailTemplateFn` deletes by (tenant_id, type); campaign references are
+ * keyed by the template's `id`, so we resolve the id under the caller's tenant
+ * first. `so_campaigns` has NO `tenant_id` column, but filtering by
+ * `email_template_id` alone is tenant-safe: the id is this tenant's own template,
+ * the cross-tenant template write guard forbids a foreign campaign from pointing
+ * at it, and RLS on `so_campaigns` scopes the read to the tenant regardless.
+ */
+export function getEmailTemplateUsage(
+  auth: AuthContext,
+  type: EmailTemplateType
+): ResultAsync<EmailTemplateUsage, string> {
+  return ResultAsync.fromPromise(
+    (async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const supabase = auth.supabase as any
+      const { data: template } = await supabase
+        .from('email_templates')
+        .select('id')
+        .eq('tenant_id', auth.tenantId)
+        .eq('type', type)
+        .maybeSingle()
+      // No persisted row (tenant still on the seeded default) → nothing can
+      // select it, so there is nothing to un-assign.
+      if (!template?.id) return { campaigns: 0, campaignNames: [] }
+
+      const { data, error } = await supabase
+        .from('so_campaigns')
+        .select('display_name')
+        .eq('email_template_id', template.id)
+      if (error) throw new Error(dbError(error))
+      const rows = (data ?? []) as { display_name: string | null }[]
+      const campaignNames = rows
+        .map((row) => row.display_name?.trim())
+        .filter((name): name is string => Boolean(name))
+      return { campaigns: rows.length, campaignNames }
+    })(),
+    dbError
+  )
+}
+
+export const getEmailTemplateUsageFn = createServerFn({ method: 'POST' })
+  .inputValidator((input: z.infer<typeof getEmailTemplateInputSchema>) =>
+    getEmailTemplateInputSchema.parse(input)
+  )
+  .handler(async ({ data }): Promise<EmailTemplateUsage> => {
+    const result = await requireAuthContext().andThen((auth) =>
+      getEmailTemplateUsage(auth, data.type)
+    )
+    return result.match(
+      (usage) => usage,
+      () => ({ campaigns: 0, campaignNames: [] })
+    )
+  })
+
+// ---------------------------------------------------------------------------
 // DB helpers
 // ---------------------------------------------------------------------------
 

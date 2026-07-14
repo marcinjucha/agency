@@ -1,3 +1,4 @@
+import { ResultAsync } from 'neverthrow'
 import type { Json } from '@agency/database'
 import type { Block } from '@agency/email'
 import type { createServiceClient } from '@/lib/supabase/service'
@@ -6,6 +7,7 @@ import type { EspProvider, EspProviderId } from './esp/types'
 import type { MappedLead } from './lead-sources/types'
 import { buildBonusEmail, resolveBonusBrand, type BonusEmail } from './mail/bonus-email'
 import { buildBonusEmailFromTemplateHtml } from './mail/bonus-email-template'
+import { resolveBonusTemplateByPrecedence } from './mail/resolve-bonus-template'
 import { resolveMailSender, type ClientMailConfig } from './mail/resolve.server'
 import type { MailSender } from './mail/types'
 import { brandToThemeTokens, resolveClientTheme, type ResolvedTheme } from '@/lib/theme'
@@ -263,7 +265,6 @@ export async function resolveCampaign(
     return { kind: RESOLVE_RESULT_KINDS.notFound }
   }
   const clientRow = clientResult.row
-  console.log('[venture-webhook] client resolution: found', { client: clientSlug })
 
   const { data, error } = await supabase
     .from('so_campaigns')
@@ -324,12 +325,6 @@ export async function resolveCampaign(
     | 'campaignThemeId'
     | 'campaignBrand'
   > & { theme_id: string | null; brand: Json | null }
-
-  console.log('[venture-webhook] campaign resolution: found', {
-    client: clientSlug,
-    slug,
-    campaignId: campaignRow.id,
-  })
 
   return {
     kind: RESOLVE_RESULT_KINDS.found,
@@ -649,29 +644,34 @@ async function readDefaultBonusTemplate(
 
 /**
  * Resolve the `venture_bonus` copy template for a send, honouring the INV-4
- * precedence (see `resolveVentureBonusTemplateId`): the campaign's EXPLICITLY
- * assigned template wins, else the tenant's DEFAULT, else null. Implemented as a
- * short-circuiting tiered read (the default's id isn't known until queried):
+ * precedence via the SHARED `resolveBonusTemplateByPrecedence` mechanism (the
+ * SAME one the effective-send card uses, so the two cannot drift): the campaign's
+ * EXPLICITLY assigned template wins, else the tenant's DEFAULT, else null.
  *   1. `campaignTemplateId` set + a usable row found (tenant match, ANY type) → use it
  *   2. otherwise the tenant's `venture_bonus` singleton slug row, if usable
  *   3. otherwise null → caller uses the hardcoded builder (INV-1 NO-DROP)
- * Every read is wrapped to degrade to the next tier — NEVER throws upward, so a
- * missing/unreadable/malformed template silently falls back with no lead-send
- * drop. `tenantId` MUST originate from the campaign row (F3 — cross-tenant leak
- * guard on the service-role read).
+ * Each reader (`readBonusTemplateById`/`readDefaultBonusTemplate`) already
+ * degrades to null on error and NEVER throws — wrapped here in `fromSafePromise`
+ * so the shared resolver's error channel is `never`; `unwrapOr(null)` restores the
+ * caller's `Promise<… | null>` contract. The default read is LAZY (only when
+ * by-id yields nothing), so a resolved assignment still short-circuits it.
+ * `tenantId` MUST originate from the campaign row (F3 — cross-tenant leak guard
+ * on the service-role read).
  */
-async function fetchBonusTemplate(
+function fetchBonusTemplate(
   supabase: ServiceClient,
   tenantId: string,
   campaignTemplateId: string | null,
 ): Promise<BonusTemplateRow | null> {
-  if (campaignTemplateId) {
-    const byId = await readBonusTemplateById(supabase, tenantId, campaignTemplateId)
-    if (byId) return byId
-  }
-  const byDefault = await readDefaultBonusTemplate(supabase, tenantId)
-  if (byDefault) return byDefault
-  return null
+  const readById = (): ResultAsync<BonusTemplateRow | null, never> =>
+    ResultAsync.fromSafePromise(
+      campaignTemplateId
+        ? readBonusTemplateById(supabase, tenantId, campaignTemplateId)
+        : Promise.resolve(null),
+    )
+  const readDefault = (): ResultAsync<BonusTemplateRow | null, never> =>
+    ResultAsync.fromSafePromise(readDefaultBonusTemplate(supabase, tenantId))
+  return resolveBonusTemplateByPrecedence(readById, readDefault).unwrapOr(null)
 }
 
 /**
@@ -724,15 +724,21 @@ async function sendBonusEmail(
     return false
   }
   try {
-    const bonuses = await fetchPublishedBonuses(deps.supabase, campaign.id)
-    // Resolve each tier's tokens from its named-theme FK (falling back to the
-    // inline JSONB), then resolve campaign-over-client-over-tenant with the
-    // neutral default backfilling any absent token. fetchThemeTokens never throws
-    // → {} on any failure, so a bad/missing theme degrades to the default (never
-    // blocks send). The campaign tier's inline fallback is the legacy `brand`
-    // JSONB adapted via brandToThemeTokens; a campaign with theme_id NULL + brand
-    // NULL yields {} → falls to client/tenant exactly as before the campaign tier.
-    const [tenantTheme, clientTheme, campaignTheme] = await Promise.all([
+    // All five reads derive SOLELY from the already-resolved campaign row and are
+    // mutually independent — issue them concurrently to cut ~2 sequential DB
+    // round-trips from the webhook-timeout window. Order of EFFECTS is preserved
+    // (build + send run only after all reads resolve); every reader never throws
+    // (each degrades: bonuses → [], theme tokens → {}, template → null), so the
+    // no-drop contract is intact. Per tier: resolve tokens from the named-theme FK
+    // (falling back to the inline JSONB), then resolve
+    // campaign-over-client-over-tenant with the neutral default backfilling any
+    // absent token. The campaign tier's inline fallback is the legacy `brand`
+    // JSONB adapted via brandToThemeTokens; theme_id NULL + brand NULL yields {} →
+    // falls to client/tenant exactly as before the campaign tier. The template is
+    // resolved by INV-4 precedence (campaign assignment → tenant default →
+    // hardcoded builder); tenantId comes from the campaign ROW (F3 guard).
+    const [bonuses, tenantTheme, clientTheme, campaignTheme, template] = await Promise.all([
+      fetchPublishedBonuses(deps.supabase, campaign.id),
       fetchThemeTokens(deps.supabase, campaign.tenantThemeId, campaign.tenantTheme),
       fetchThemeTokens(deps.supabase, campaign.clientThemeId, campaign.clientTheme),
       fetchThemeTokens(
@@ -740,17 +746,9 @@ async function sendBonusEmail(
         campaign.campaignThemeId,
         brandToThemeTokens(campaign.campaignBrand) as unknown as Json,
       ),
+      fetchBonusTemplate(deps.supabase, campaign.tenantId, campaign.email_template_id),
     ])
     const theme = resolveClientTheme({ tenantTheme, clientTheme, campaignTheme })
-    // Phase 4: resolve the venture_bonus template by INV-4 precedence — the
-    // campaign's explicit assignment (email_template_id) first, else the tenant
-    // default, else the hardcoded builder. tenantId comes from the campaign ROW
-    // (F3 cross-tenant guard). Never throws → null on absent/error (no send drop).
-    const template = await fetchBonusTemplate(
-      deps.supabase,
-      campaign.tenantId,
-      campaign.email_template_id,
-    )
     const { subject, html } = await buildBonusEmailBody(template, campaign, bonuses, theme)
     const resolveSender = deps.resolveMailSender ?? resolveMailSender
     const sender = resolveSender(campaign.clientMail)

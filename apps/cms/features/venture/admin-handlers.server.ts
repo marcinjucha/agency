@@ -35,6 +35,7 @@ import type {
   UpdateClientInput,
 } from './validation'
 import { BONUS_LIST_MARKER } from './mail/bonus-email-template'
+import { resolveBonusTemplateByPrecedence } from './mail/resolve-bonus-template'
 import { isUsableTemplateBlocks } from './utils/template-blocks'
 
 // ---------------------------------------------------------------------------
@@ -551,19 +552,44 @@ function fetchClientMailForDescribe(
   })
 }
 
-/** Whether the caller's tenant has an editable `venture_bonus` template row. */
-function fetchBonusTemplateExists(auth: AuthContextFull): ResultAsync<boolean, string> {
+// One read of the tenant's venture_bonus singleton, yielding BOTH facets the card
+// needs — collapsing the former fetchBonusTemplateExists + readDefaultVentureTemplateChoice
+// pair (which queried the SAME row twice).
+interface DefaultBonusTemplateRead {
+  // Whether the tenant has a venture_bonus row AT ALL (any blocks) — powers the
+  // card's "brak edytowalnej kopii" note (templateExists). A row with empty blocks
+  // still EXISTS and is editable, so presence must NOT require usable blocks
+  // (preserves the prior fetchBonusTemplateExists semantics exactly).
+  present: boolean
+  // The row as a resolvable DEFAULT-tier choice — null when the row is missing OR
+  // its blocks are unusable (mirrors ingest's coerceBonusTemplateRow degrade), so
+  // the resolved-template tier never names a template the send would skip.
+  choice: VentureTemplateChoice | null
+}
+
+/**
+ * Read the tenant's `venture_bonus` singleton default ONCE, deriving BOTH the
+ * presence flag (templateExists) AND the usable default-tier choice. Replaces the
+ * former fetchBonusTemplateExists + readDefaultVentureTemplateChoice pair — the
+ * card queried this same row twice; this collapses them into a single read ([7]).
+ */
+function readTenantDefaultBonusTemplate(
+  auth: AuthContextFull,
+): ResultAsync<DefaultBonusTemplateRead, string> {
   return ResultAsync.fromPromise(
     tbl(auth, 'email_templates')
-      .select('type')
-      .eq('tenant_id', auth.tenantId)
+      .select('id, label, type, blocks')
       .eq('type', BONUS_TEMPLATE_TYPE)
+      .eq('tenant_id', auth.tenantId)
       .maybeSingle(),
     dbError,
   ).andThen((res) => {
-    const r = res as { data: { type: string } | null; error: DbErrorShape }
-    if (r.error) return err(mapDbError(r.error, 'fetchBonusTemplateExists'))
-    return ok(r.data !== null)
+    const r = res as { data: VentureTemplateChoiceRow | null; error: DbErrorShape }
+    if (r.error) return err(mapDbError(r.error, 'readTenantDefaultBonusTemplate'))
+    const present = r.data !== null
+    const choice =
+      r.data && isUsableTemplateBlocks(r.data.blocks) ? toTemplateChoice(r.data) : null
+    return ok<DefaultBonusTemplateRead, string>({ present, choice })
   })
 }
 
@@ -619,49 +645,26 @@ function readVentureTemplateChoiceById(
 }
 
 /**
- * Read the tenant's DEFAULT bonus template — the `venture_bonus` SINGLETON slug
- * row (model B: the unique-per-tenant slug IS the tenant default), or null. Same
- * blocks-usability degrade as the by-id read (mirrors ingest's
- * `readDefaultBonusTemplate` → `coerceBonusTemplateRow`).
- */
-function readDefaultVentureTemplateChoice(
-  auth: AuthContextFull,
-): ResultAsync<VentureTemplateChoice | null, string> {
-  return ResultAsync.fromPromise(
-    tbl(auth, 'email_templates')
-      .select('id, label, type, blocks')
-      .eq('type', BONUS_TEMPLATE_TYPE)
-      .eq('tenant_id', auth.tenantId)
-      .maybeSingle(),
-    dbError,
-  ).andThen((res) => {
-    const r = res as { data: VentureTemplateChoiceRow | null; error: DbErrorShape }
-    if (r.error) return err(mapDbError(r.error, 'readDefaultVentureTemplateChoice'))
-    if (!r.data || !isUsableTemplateBlocks(r.data.blocks)) return ok(null)
-    return ok(toTemplateChoice(r.data))
-  })
-}
-
-/**
- * Resolve the template a send would ACTUALLY use, mirroring ingest's
- * fetchBonusTemplate precedence AND blocks-usability degrade (INV-4, one-rule):
- * the campaign's explicitly assigned template (if it resolves under the tenant,
- * ANY type, AND has usable blocks) wins, else the tenant DEFAULT (if usable), else
- * null. Short-circuiting tiered read — the by-id read runs only when a template is
- * assigned; the default read only when by-id yields nothing (missing OR unusable).
- * This is the READ-ONLY card mirror of the send-path decision so the two cannot
- * drift.
+ * Resolve the template a send would ACTUALLY use, via the SHARED
+ * `resolveBonusTemplateByPrecedence` mechanism (the SAME one ingest's
+ * `fetchBonusTemplate` calls — closes the prior parallel-copy drift, INV-4): the
+ * campaign's explicitly assigned template (if it resolves under the tenant, ANY
+ * type, AND has usable blocks) wins, else the tenant DEFAULT (if usable), else
+ * null. The by-id read runs only when a template is assigned; `readDefault` is
+ * supplied by the caller — the card passes a NO-QUERY cached reader (the tenant
+ * default was already read once for `templateExists`, see [7]), so the default
+ * row is never queried twice.
  */
 function resolveEffectiveVentureTemplate(
   auth: AuthContextFull,
   campaignTemplateId: string | null,
+  readDefault: () => ResultAsync<VentureTemplateChoice | null, string>,
 ): ResultAsync<VentureTemplateChoice | null, string> {
-  const byId = campaignTemplateId
-    ? readVentureTemplateChoiceById(auth, campaignTemplateId)
-    : okAsync<VentureTemplateChoice | null, string>(null)
-  return byId.andThen((row) =>
-    row ? okAsync<VentureTemplateChoice | null, string>(row) : readDefaultVentureTemplateChoice(auth),
-  )
+  const readById = (): ResultAsync<VentureTemplateChoice | null, string> =>
+    campaignTemplateId
+      ? readVentureTemplateChoiceById(auth, campaignTemplateId)
+      : okAsync<VentureTemplateChoice | null, string>(null)
+  return resolveBonusTemplateByPrecedence(readById, readDefault)
 }
 
 /**
@@ -681,8 +684,12 @@ export function getCampaignEffectiveSendHandler(
       fetchCampaignForEffectiveSend(auth, campaignId).andThen(({ clientId, campaignTemplateId }) =>
         assertClientOwned(auth, clientId).andThen(() =>
           fetchClientMailForDescribe(auth, clientId).andThen((mail) =>
-            fetchBonusTemplateExists(auth).andThen((templateExists) =>
-              resolveEffectiveVentureTemplate(auth, campaignTemplateId).map((resolved) => {
+            // ONE read of the tenant venture_bonus default → both templateExists
+            // (present) AND the default-tier choice reused below ([7], no 2nd query).
+            readTenantDefaultBonusTemplate(auth).andThen((def) =>
+              resolveEffectiveVentureTemplate(auth, campaignTemplateId, () =>
+                okAsync<VentureTemplateChoice | null, string>(def.choice),
+              ).map((resolved) => {
                 const sender = describeEffectiveSender({
                   mailProvider: mail.mail_provider,
                   resendFromEmail: mail.resend_from_email,
@@ -696,7 +703,7 @@ export function getCampaignEffectiveSendHandler(
                 return {
                   ...sender,
                   templateType: BONUS_TEMPLATE_TYPE,
-                  templateExists,
+                  templateExists: def.present,
                   resolvedTemplateId: resolved?.id ?? null,
                   resolvedTemplateName: resolved?.label ?? null,
                   resolvedTemplateType: resolved?.type ?? null,
@@ -764,7 +771,14 @@ export function listBonusTemplatesHandler(): Promise<
       ResultAsync.fromPromise(
         tbl(auth, 'email_templates')
           .select('id, label, type, blocks')
-          .eq('tenant_id', auth.tenantId),
+          .eq('tenant_id', auth.tenantId)
+          // EXCLUDE workflow_custom — it is the ONE non-unique-per-tenant type, but
+          // the picker's "Edytuj szablon" deep-link is TYPE-keyed
+          // (routes.admin.emailTemplate(type) → editor .eq('type',…).maybeSingle()),
+          // which ERRORS on multiple rows. Every remaining type is unique per
+          // tenant, so the type-keyed link is sound. (workflow_custom = n8n workflow
+          // templates, never bonus templates.)
+          .neq('type', 'workflow_custom'),
         dbError,
       ).andThen((res) => {
         const r = res as {
