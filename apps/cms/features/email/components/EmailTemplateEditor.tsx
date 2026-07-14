@@ -25,6 +25,14 @@ import { extractTemplateVariableKeys } from '../utils/extract-variable-keys'
 import { validateVariableKey } from '../utils/validate-variable-key'
 import { collectUnresolvableTokens } from '../utils/resolve-variable-source'
 import { queryKeys } from '@/lib/query-keys'
+import {
+  updateBlockDeep,
+  deleteBlockDeep,
+  duplicateBlockDeep,
+  moveBlockDeep,
+  insertBlockDeep,
+  findBlockDeep,
+} from '../utils/block-tree'
 import { resolveClientTheme } from '@/lib/theme'
 import type { ThemeWithUsage } from '@/features/themes/types'
 import { useResolvedEmailTheme } from '../hooks/use-resolved-email-theme'
@@ -120,10 +128,12 @@ export function EmailTemplateEditor({ templateType, initialTemplate }: EmailTemp
     userEditedVariables.map((v) => v.key),
   )
 
-  // ---- Block operations (passed down to OutlinePanel) ----
+  // ---- Block operations (passed down to OutlinePanel / Canvas / Inspector) ----
+  // Iter 2: wszystkie operacje przeszły na GŁĘBOKIE odpowiedniki z block-tree.ts,
+  // więc działają na blokach zagnieżdżonych w sekcjach tak samo jak na top-level.
 
   function updateBlock(updated: Block) {
-    setBlocks((prev) => prev.map((b) => (b.id === updated.id ? updated : b)))
+    setBlocks((prev) => updateBlockDeep(prev, updated))
   }
 
   // Build a new block from a pick. The BONUS_LIST_PICK sentinel is NOT a registry
@@ -143,29 +153,35 @@ export function EmailTemplateEditor({ templateType, initialTemplate }: EmailTemp
   }
 
   function addBlock(pick: AddBlockPick) {
+    // Append na końcu najwyższego poziomu (parentId = null). Funkcyjny updater —
+    // `prev.length` zamiast `blocks.length` z closure, żeby batching nie
+    // wstawił bloku pod złym indeksem.
     const newBlock = buildBlockFromPick(pick)
     if (!newBlock) return
-    setBlocks((prev) => [...prev, newBlock])
+    setBlocks((prev) => insertBlockDeep(prev, newBlock, null, prev.length))
     setSelectedBlockId(newBlock.id)
   }
 
   function deleteBlock(id: string) {
-    setBlocks((prev) => prev.filter((b) => b.id !== id))
-    if (selectedBlockId === id) setSelectedBlockId(null)
+    const next = deleteBlockDeep(blocks, id)
+    setBlocks(next)
+    // Czyścimy selekcję gdy zaznaczony blok zniknął (także jako dziecko
+    // usuniętej sekcji — dlatego sprawdzamy po fakcie, na nowym drzewie).
+    if (selectedBlockId && !findBlockDeep(next, selectedBlockId)) {
+      setSelectedBlockId(null)
+    }
   }
 
   function duplicateBlock(id: string) {
-    const idx = blocks.findIndex((b) => b.id === id)
-    if (idx < 0) return
-    const copy = { ...blocks[idx], id: crypto.randomUUID() } as Block
-    setBlocks((prev) => {
-      const next = prev.slice()
-      next.splice(idx + 1, 0, copy)
-      return next
-    })
-    setSelectedBlockId(copy.id)
+    const { blocks: next, newId } = duplicateBlockDeep(blocks, id)
+    if (!newId) return
+    setBlocks(next)
+    setSelectedBlockId(newId)
   }
 
+  // Reorder po indeksach TOP-LEVEL — konsument to drag&drop w OutlinePanel,
+  // który celowo działa tylko na najwyższym poziomie (zagnieżdżone rzędy nie
+  // są draggable; kolejność wewnątrz sekcji zmieniają strzałki na canvasie).
   function reorderBlock(from: number, to: number) {
     setBlocks((prev) => {
       const next = prev.slice()
@@ -175,23 +191,16 @@ export function EmailTemplateEditor({ templateType, initialTemplate }: EmailTemp
     })
   }
 
-  function insertBlockAt(pick: AddBlockPick, index: number) {
+  function insertBlockAt(pick: AddBlockPick, index: number, parentId: string | null = null) {
     const newBlock = buildBlockFromPick(pick)
     if (!newBlock) return
-    setBlocks((prev) => {
-      const next = prev.slice()
-      next.splice(index, 0, newBlock)
-      return next
-    })
+    setBlocks((prev) => insertBlockDeep(prev, newBlock, parentId, index))
     setSelectedBlockId(newBlock.id)
   }
 
   function moveBlock(id: string, dir: -1 | 1) {
-    const idx = blocks.findIndex((b) => b.id === id)
-    if (idx < 0) return
-    const to = idx + dir
-    if (to < 0 || to >= blocks.length) return
-    reorderBlock(idx, to)
+    // moveBlockDeep jest sibling-scoped — ruch poza granicę tablicy = no-op.
+    setBlocks((prev) => moveBlockDeep(prev, id, dir))
   }
 
   function onCanvasBackdropClick(e: React.MouseEvent) {

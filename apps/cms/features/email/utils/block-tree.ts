@@ -197,3 +197,26 @@ export function sectionDepth(block: Block): number {
 export function exceedsSectionDepth(blocks: Block[], max: number): boolean {
   return blocks.some((block) => sectionDepth(block) > max)
 }
+
+/**
+ * Łączna liczba bloków w drzewie WŁĄCZNIE z zagnieżdżonymi dziećmi (sekcje,
+ * kolumny). Zasila licznik w nagłówku OutlinePanel — płaski `blocks.length`
+ * kłamałby po Iter 2 (sekcja z 5 dziećmi liczyłaby się jako 1).
+ */
+export function countBlocksDeep(blocks: Block[]): number {
+  return blocks.reduce(
+    (sum, block) =>
+      sum + 1 + childArraysOf(block).reduce((inner, children) => inner + countBlocksDeep(children), 0),
+    0,
+  )
+}
+
+/**
+ * Typy bloków WYKLUCZONE z pickera na danej głębokości zagnieżdżenia.
+ * `depth` = liczba sekcji-przodków punktu wstawiania (0 = najwyższy poziom).
+ * Wstawienie sekcji na depth >= MAX_SECTION_DEPTH przekroczyłoby limit —
+ * picker w ogóle jej wtedy nie oferuje (guard w UI, walidacja CMS to backstop).
+ */
+export function insertExclusionsForDepth(depth: number): ReadonlyArray<'section'> {
+  return depth >= MAX_SECTION_DEPTH ? ['section'] : []
+}

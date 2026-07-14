@@ -24,6 +24,7 @@ import {
   TYPOGRAPHY_SECTION_KEYS,
   BORDER_SECTION_KEYS,
 } from '../../utils/apply-section-patch'
+import { findBlockDeep } from '../../utils/block-tree'
 import { TypographySection } from './controls/TypographySection'
 import { BorderSection } from './controls/BorderSection'
 import { SegmentedControl } from './controls/SegmentedControl'
@@ -203,7 +204,8 @@ function PropertiesTab({
   onDuplicateBlock,
   detectedKeys,
 }: PropertiesTabProps) {
-  const selected = blocks.find((b) => b.id === selectedBlockId)
+  // findBlockDeep — selekcja działa też dla bloków zagnieżdżonych w sekcjach.
+  const selected = selectedBlockId ? findBlockDeep(blocks, selectedBlockId) : null
 
   if (!selected) {
     return <EmptySelection />

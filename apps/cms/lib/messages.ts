@@ -956,6 +956,8 @@ export const messages = {
     canvasDuplicate: 'Duplikuj blok',
     canvasDelete: 'Usuń blok',
     canvasInsertBlock: 'Dodaj blok tutaj',
+    // Afordancja w PUSTEJ sekcji na canvasie (Iter 2 zagnieżdżania)
+    canvasEmptySectionAdd: 'Dodaj blok do sekcji',
     inspectorTitle: 'Inspector',
     inspectorEmpty: 'Zaznacz blok, aby edytować właściwości',
     inspectorSelected: 'Zaznaczony blok: {id}',

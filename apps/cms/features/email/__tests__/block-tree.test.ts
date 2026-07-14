@@ -11,6 +11,8 @@ import {
   getParentId,
   sectionDepth,
   exceedsSectionDepth,
+  countBlocksDeep,
+  insertExclusionsForDepth,
 } from '../utils/block-tree'
 
 // ---------------------------------------------------------------------------
@@ -254,5 +256,33 @@ describe('updateEmailTemplateSchema — limit głębokości sekcji (schema-level
       )
       expect(depthIssue).toBeDefined()
     }
+  })
+})
+
+describe('countBlocksDeep', () => {
+  it('liczy WSZYSTKIE bloki włącznie z zagnieżdżonymi (sekcje + kolumny)', () => {
+    // makeTree: top-1, sec-outer(sec-child, sec-inner(deep-text)), cols(col-left, col-right), top-2
+    expect(countBlocksDeep(makeTree())).toBe(9)
+  })
+
+  it('pusta lista = 0, płaska lista = length', () => {
+    expect(countBlocksDeep([])).toBe(0)
+    expect(countBlocksDeep([text('a'), text('b')])).toBe(2)
+  })
+
+  it('pusta sekcja liczy się jako 1', () => {
+    expect(countBlocksDeep([section('s', [])])).toBe(1)
+  })
+})
+
+describe('insertExclusionsForDepth', () => {
+  it('nie wyklucza sekcji poniżej limitu głębokości', () => {
+    expect(insertExclusionsForDepth(0)).toEqual([])
+    expect(insertExclusionsForDepth(MAX_SECTION_DEPTH - 1)).toEqual([])
+  })
+
+  it('wyklucza sekcję na (i powyżej) MAX_SECTION_DEPTH — wstawienie przekroczyłoby limit', () => {
+    expect(insertExclusionsForDepth(MAX_SECTION_DEPTH)).toEqual(['section'])
+    expect(insertExclusionsForDepth(MAX_SECTION_DEPTH + 1)).toEqual(['section'])
   })
 })
