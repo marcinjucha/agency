@@ -432,7 +432,6 @@ export type Database = {
           html_body: string | null
           id: string
           is_active: boolean
-          is_default: boolean
           label: string
           name: string | null
           subject: string
@@ -448,7 +447,6 @@ export type Database = {
           html_body?: string | null
           id?: string
           is_active?: boolean
-          is_default?: boolean
           label: string
           name?: string | null
           subject?: string
@@ -464,7 +462,6 @@ export type Database = {
           html_body?: string | null
           id?: string
           is_active?: boolean
-          is_default?: boolean
           label?: string
           name?: string | null
           subject?: string
