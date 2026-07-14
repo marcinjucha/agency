@@ -213,3 +213,50 @@ describe('getCampaignEffectiveSendHandler — template presence', () => {
     expect(result.data?.templateExists).toBe(false)
   })
 })
+
+// ===========================================================================
+// DRIFT-GUARD (INV-4, one-rule): resolvedTemplateId MUST match the id
+// fetchBonusTemplate (ingest.server.ts) would pick for the SAME campaign —
+// campaign.email_template_id if it resolves to a valid tenant venture_bonus row,
+// else the tenant DEFAULT (is_default), else null. The card must not drift from
+// the send path. (email_templates is a single mock chain per table, so each
+// scenario exercises exactly ONE resolution read tier — by-id OR default.)
+// ===========================================================================
+
+describe('getCampaignEffectiveSendHandler — resolved template (drift guard)', () => {
+  const ASSIGNED = '99999999-9999-9999-9999-999999999999'
+  const DEFAULT_ID = '88888888-8888-8888-8888-888888888888'
+
+  it('campaign.email_template_id set + resolves → that id (by-id tier)', async () => {
+    setupAuth({
+      so_campaigns: { data: { client_id: CLIENT_ID, email_template_id: ASSIGNED }, error: null },
+      so_clients: { data: clientRow({}), error: null },
+      email_templates: { data: { id: ASSIGNED, label: 'Wariant klienta' }, error: null },
+    })
+    const result = await getCampaignEffectiveSendHandler(CAMPAIGN_ID)
+    expect(result.data?.resolvedTemplateId).toBe(ASSIGNED)
+    expect(result.data?.resolvedTemplateName).toBe('Wariant klienta')
+  })
+
+  it('no assignment → the tenant default row id (default tier)', async () => {
+    setupAuth({
+      so_campaigns: { data: { client_id: CLIENT_ID, email_template_id: null }, error: null },
+      so_clients: { data: clientRow({}), error: null },
+      email_templates: { data: { id: DEFAULT_ID, label: 'Domyślny' }, error: null },
+    })
+    const result = await getCampaignEffectiveSendHandler(CAMPAIGN_ID)
+    expect(result.data?.resolvedTemplateId).toBe(DEFAULT_ID)
+    expect(result.data?.resolvedTemplateName).toBe('Domyślny')
+  })
+
+  it('no assignment + no default → null ("wbudowany szablon")', async () => {
+    setupAuth({
+      so_campaigns: { data: { client_id: CLIENT_ID, email_template_id: null }, error: null },
+      so_clients: { data: clientRow({}), error: null },
+      email_templates: { data: null, error: null },
+    })
+    const result = await getCampaignEffectiveSendHandler(CAMPAIGN_ID)
+    expect(result.data?.resolvedTemplateId).toBeNull()
+    expect(result.data?.resolvedTemplateName).toBeNull()
+  })
+})

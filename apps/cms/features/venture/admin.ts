@@ -4,11 +4,13 @@ import {
   createBonusSchema,
   createCampaignSchema,
   createClientSchema,
+  createVentureTemplateSchema,
   idInputSchema,
   listBonusesInputSchema,
   listCampaignsInputSchema,
   listClientsInputSchema,
   reorderBonusesSchema,
+  selectTemplateForCampaignSchema,
   updateBonusInputSchema,
   updateCampaignInputSchema,
   updateClientInputSchema,
@@ -17,6 +19,7 @@ import {
   createBonusHandler,
   createCampaignHandler,
   createClientHandler,
+  createVentureTemplateHandler,
   deleteBonusHandler,
   deleteCampaignHandler,
   deleteClientHandler,
@@ -24,7 +27,9 @@ import {
   listBonusesHandler,
   listCampaignsHandler,
   listClientsHandler,
+  listVentureTemplatesHandler,
   reorderBonusesHandler,
+  selectTemplateForCampaignHandler,
   updateBonusHandler,
   updateClientHandler,
   updateCampaignHandler,
@@ -110,6 +115,32 @@ export const getCampaignEffectiveSendFn = createServerFn({ method: 'POST' })
     campaignEffectiveSendInputSchema.parse(v),
   )
   .handler(({ data }) => getCampaignEffectiveSendHandler(data.campaignId))
+
+// --- Venture bonus email templates (Phase 4, increment 2) -----------------
+
+// List the tenant's venture_bonus templates for the campaign dropdown. Gated in
+// the handler (bonus_funnel.campaigns) — the route map does NOT protect
+// createServerFn (project Authz gotcha). No input.
+export const listVentureTemplatesFn = createServerFn({ method: 'POST' }).handler(() =>
+  listVentureTemplatesHandler(),
+)
+
+// Create a new venture_bonus library template. Gated in the handler on
+// system.email_templates (TEMPLATE authority). Function-form inputValidator.
+export const createVentureTemplateFn = createServerFn({ method: 'POST' })
+  .inputValidator((v: z.infer<typeof createVentureTemplateSchema>) =>
+    createVentureTemplateSchema.parse(v),
+  )
+  .handler(({ data }) => createVentureTemplateHandler(data))
+
+// Assign (or clear) a campaign's explicit venture_bonus template. Gated in the
+// handler on bonus_funnel.campaigns + F5 cross-tenant forged-id guard. templateId
+// nullable (null = clear → use default).
+export const selectTemplateForCampaignFn = createServerFn({ method: 'POST' })
+  .inputValidator((v: z.infer<typeof selectTemplateForCampaignSchema>) =>
+    selectTemplateForCampaignSchema.parse(v),
+  )
+  .handler(({ data }) => selectTemplateForCampaignHandler(data.campaignId, data.templateId))
 
 // --- Bonuses --------------------------------------------------------------
 
