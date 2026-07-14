@@ -832,6 +832,20 @@ export const messages = {
     variableRemove: 'Usuń zmienną',
     detectFromContent: 'Wykryj z treści',
     detectFromContentTooltip: 'Dodaj wszystkie {{klucze}} obecne w treści, których nie ma jeszcze na liście',
+    // Per-variable provenance badge (variable-discoverability slice).
+    // Derived from resolveVariableSource(key, templateType) — NOT from the
+    // stored `source` field (unreliable: manual-add and "Wykryj z treści" both
+    // write source:'manual'). Real text labels, never colour-only (a11y).
+    varSourceApp: 'z aplikacji (kampania)',
+    varSourceStructural: 'wstawiane automatycznie',
+    varSourceWorkflow: 'wypełniane przez workflow',
+    varSourceManual: 'ręcznie',
+    varSourceUnresolvable: 'nie zostanie wypełnione — trafi dosłownie',
+    // Persistent inline advisory at the top of the Zmienne tab + save-time echo.
+    // Only ever populated for APP-OWNED template types (venture_bonus) — n8n
+    // resolvability lives in workflow bindings the editor can't see.
+    unresolvableNoteTitle: 'Te zmienne nie zostaną wypełnione i trafią do maila dosłownie:',
+    unresolvableSaveWarning: 'Zapisano. Uwaga — niektóre zmienne nie zostaną wypełnione:',
     // Columns block inspector
     columnsGapLabel: 'Odstęp',
     columnsGapAriaLabel: 'Odstęp między kolumnami',

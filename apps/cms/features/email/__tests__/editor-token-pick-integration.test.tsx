@@ -95,6 +95,7 @@ function EditorHarness() {
         setUserEditedVariables={() => {}}
         detectedKeys={[]}
         templateType="venture_bonus"
+        unresolvableTokens={[]}
         onDelete={() => {}}
       />
     </EmailThemeProvider>

@@ -21,6 +21,7 @@ import { routes } from '@/lib/routes'
 import { CMS_BLOCK_REGISTRY } from '../block-registry'
 import { extractTemplateVariableKeys } from '../utils/extract-variable-keys'
 import { validateVariableKey } from '../utils/validate-variable-key'
+import { collectUnresolvableTokens } from '../utils/resolve-variable-source'
 import { queryKeys } from '@/lib/query-keys'
 import { resolveClientTheme } from '@/lib/theme'
 import type { ThemeWithUsage } from '@/features/themes/types'
@@ -63,6 +64,9 @@ export function EmailTemplateEditor({ templateType, initialTemplate }: EmailTemp
   // Save state
   const [saveState, setSaveState] = useState<SaveState>('idle')
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  // Non-blocking save-time advisory (APP-OWNED unresolvable tokens). role="status",
+  // auto-dismissed on the same timeout as saveState — NOT an error, never blocks.
+  const [saveWarning, setSaveWarning] = useState<string | null>(null)
   const [dirty, setDirty] = useState(false)
 
   // Delete dialog
@@ -101,6 +105,17 @@ export function EmailTemplateEditor({ templateType, initialTemplate }: EmailTemp
   const detectedKeys = extractTemplateVariableKeys(subject, blocks)
   const hasInvalidVariableKey = userEditedVariables.some((v, i) =>
     validateVariableKey(v.key, i, userEditedVariables) !== null,
+  )
+
+  // Content tokens that will reach the recipient LITERALLY (APP-OWNED types only —
+  // always [] for n8n/custom). Single computed set feeding two render sites: the
+  // persistent Zmienne-tab note (via Inspector) and the save-time overlay echo.
+  // Display + advisory ONLY — never blocks save (the `hasInvalidVariableKey`
+  // malformed-syntax gate is the only legitimate block).
+  const unresolvableTokens = collectUnresolvableTokens(
+    detectedKeys,
+    templateType,
+    userEditedVariables.map((v) => v.key),
   )
 
   // ---- Block operations (passed down to OutlinePanel) ----
@@ -200,6 +215,7 @@ export function EmailTemplateEditor({ templateType, initialTemplate }: EmailTemp
     if (saveState === 'saving' || hasInvalidVariableKey) return
     setSaveState('saving')
     setErrorMessage(null)
+    setSaveWarning(null)
 
     const cleanedVariables = userEditedVariables.filter((v) => v.key.trim().length > 0)
 
@@ -213,6 +229,12 @@ export function EmailTemplateEditor({ templateType, initialTemplate }: EmailTemp
       if (result && result.success) {
         setSaveState('saved')
         setDirty(false)
+        // Non-blocking echo of the unresolvable-token advisory (save succeeded).
+        if (unresolvableTokens.length > 0) {
+          setSaveWarning(
+            `${messages.email.unresolvableSaveWarning} ${unresolvableTokens.map((t) => `{{${t}}}`).join(', ')}`,
+          )
+        }
         void queryClient.invalidateQueries({ queryKey: queryKeys.email.all })
         void queryClient.invalidateQueries({ queryKey: queryKeys.workflows.all })
       } else {
@@ -223,7 +245,10 @@ export function EmailTemplateEditor({ templateType, initialTemplate }: EmailTemp
       setSaveState('error')
       setErrorMessage(err instanceof Error ? err.message : messages.common.unknownError)
     } finally {
-      setTimeout(() => setSaveState('idle'), 2500)
+      setTimeout(() => {
+        setSaveState('idle')
+        setSaveWarning(null)
+      }, 2500)
     }
   }
 
@@ -352,6 +377,7 @@ export function EmailTemplateEditor({ templateType, initialTemplate }: EmailTemp
         setUserEditedVariables={setUserEditedVariables}
         detectedKeys={detectedKeys}
         templateType={templateType}
+        unresolvableTokens={unresolvableTokens}
         onDelete={() => setDeleteOpen(true)}
       />
 
@@ -361,6 +387,15 @@ export function EmailTemplateEditor({ templateType, initialTemplate }: EmailTemp
           className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-2 text-sm text-destructive shadow-md"
         >
           {errorMessage}
+        </div>
+      )}
+
+      {!errorMessage && saveWarning && (
+        <div
+          role="status"
+          className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-2 text-sm text-amber-700 dark:text-amber-300 shadow-md"
+        >
+          {saveWarning}
         </div>
       )}
 

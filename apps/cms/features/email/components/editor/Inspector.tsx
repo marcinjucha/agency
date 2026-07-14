@@ -61,6 +61,12 @@ export interface InspectorProps {
   setUserEditedVariables: (vars: TemplateVariable[]) => void
   detectedKeys: string[]
   templateType: string
+  /**
+   * Content tokens that will NOT be filled (APP-OWNED types only). Computed once
+   * in EmailTemplateEditor via `collectUnresolvableTokens` and rendered here as a
+   * persistent inline advisory at the top of the Zmienne tab. Empty otherwise.
+   */
+  unresolvableTokens: string[]
   onDelete: () => void
 }
 
@@ -84,6 +90,7 @@ export function Inspector({
   setUserEditedVariables,
   detectedKeys,
   templateType,
+  unresolvableTokens,
   onDelete,
 }: InspectorProps) {
   const [tab, setTab] = useState<InspectorTab>('props')
@@ -125,6 +132,8 @@ export function Inspector({
             userEditedVariables={userEditedVariables}
             setUserEditedVariables={setUserEditedVariables}
             detectedKeys={detectedKeys}
+            templateType={templateType}
+            unresolvableTokens={unresolvableTokens}
           />
         )}
         {tab === 'settings' && (
@@ -548,9 +557,17 @@ interface VariablesTabProps {
   userEditedVariables: TemplateVariable[]
   setUserEditedVariables: (vars: TemplateVariable[]) => void
   detectedKeys: string[]
+  templateType: string
+  unresolvableTokens: string[]
 }
 
-function VariablesTab({ userEditedVariables, setUserEditedVariables, detectedKeys }: VariablesTabProps) {
+function VariablesTab({
+  userEditedVariables,
+  setUserEditedVariables,
+  detectedKeys,
+  templateType,
+  unresolvableTokens,
+}: VariablesTabProps) {
   return (
     <>
       <div className="flex items-center gap-2 border-b border-border/60 px-3 py-2.5 shrink-0">
@@ -560,14 +577,38 @@ function VariablesTab({ userEditedVariables, setUserEditedVariables, detectedKey
           {messages.email.inspectorPreviewDataHint}
         </span>
       </div>
+      {unresolvableTokens.length > 0 ? (
+        <UnresolvableNote tokens={unresolvableTokens} />
+      ) : null}
       <div className="p-3">
         <VariablesEditor
           variables={userEditedVariables}
           onChange={setUserEditedVariables}
           detectedKeys={detectedKeys}
+          templateType={templateType}
         />
       </div>
     </>
+  )
+}
+
+/**
+ * Persistent, always-on advisory — the discoverability surface for content
+ * tokens that will reach the recipient literally (APP-OWNED types only).
+ * `role="status"` (NOT `role="alert"`) + muted/amber: informational, never
+ * save-blocking. Real text lists the tokens (a11y — not colour-only).
+ */
+function UnresolvableNote({ tokens }: { tokens: string[] }) {
+  return (
+    <div
+      role="status"
+      className="mx-3 mt-3 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-700 dark:text-amber-300"
+    >
+      <p className="font-medium">{messages.email.unresolvableNoteTitle}</p>
+      <p className="mt-1 font-mono text-amber-800 dark:text-amber-200">
+        {tokens.map((t) => `{{${t}}}`).join(', ')}
+      </p>
+    </div>
   )
 }
 

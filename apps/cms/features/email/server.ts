@@ -404,7 +404,9 @@ function insertTemplate(
 ): ResultAsync<undefined, string> {
   return ResultAsync.fromPromise(
     (async () => {
-      const defaultSubject = 'Temat wiadomości — {{firstName}}'
+      // Neutral default with NO token — `{{firstName}}` was filled by NOTHING
+      // (no trigger schema, no injector) → a guaranteed-literal leak at creation.
+      const defaultSubject = 'Powiadomienie'
       // New templates inherit the tenant theme (theme_id null) — resolve with a
       // null override so html_body bakes the tenant-default colours.
       const theme = await resolveEmailThemeMap(auth.supabase, {

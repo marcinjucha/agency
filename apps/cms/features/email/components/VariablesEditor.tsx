@@ -3,6 +3,7 @@ import { Plus, Trash2, Sparkles } from 'lucide-react'
 import { messages } from '@/lib/messages'
 import type { TemplateVariable } from '../types'
 import { validateVariableKey } from '../utils/validate-variable-key'
+import { resolveVariableSource, type VariableSource } from '../utils/resolve-variable-source'
 
 interface VariablesEditorProps {
   variables: TemplateVariable[]
@@ -15,9 +16,20 @@ interface VariablesEditorProps {
    * mutates the saved list silently.
    */
   detectedKeys?: ReadonlyArray<string>
+  /**
+   * Template slug — drives the per-variable provenance badge via
+   * `resolveVariableSource(key, templateType)`. Threaded Inspector → VariablesTab
+   * → here so the badge can tell app / structural / workflow / manual apart.
+   */
+  templateType: string
 }
 
-export function VariablesEditor({ variables, onChange, detectedKeys = [] }: VariablesEditorProps) {
+export function VariablesEditor({
+  variables,
+  onChange,
+  detectedKeys = [],
+  templateType,
+}: VariablesEditorProps) {
   function updateVariable(index: number, patch: Partial<TemplateVariable>) {
     onChange(variables.map((v, i) => (i === index ? { ...v, ...patch } : v)))
   }
@@ -72,6 +84,7 @@ export function VariablesEditor({ variables, onChange, detectedKeys = [] }: Vari
               index={index}
               isFirst={index === 0}
               keyError={keyError}
+              templateType={templateType}
               onKeyChange={(key) => updateVariable(index, { key })}
               onLabelChange={(label) => updateVariable(index, { label })}
               onDescriptionChange={(description) => updateVariable(index, { description })}
@@ -165,6 +178,7 @@ interface VariableRowProps {
   index: number
   isFirst: boolean
   keyError: string | null
+  templateType: string
   onKeyChange: (key: string) => void
   onLabelChange: (label: string) => void
   onDescriptionChange: (description: string | undefined) => void
@@ -176,6 +190,7 @@ function VariableRow({
   index,
   isFirst,
   keyError,
+  templateType,
   onKeyChange,
   onLabelChange,
   onDescriptionChange,
@@ -185,6 +200,12 @@ function VariableRow({
   const labelAria = `${messages.email.variableLabelGeneric} ${variable.key || `#${index + 1}`}`
   const descriptionAria = `${messages.email.variableDescriptionGeneric} ${variable.key || `#${index + 1}`}`
 
+  // Provenance badge — derived from the KEY + templateType (not `variable.source`,
+  // which is unreliable). Suppressed for blank rows (freshly-added, key='') to
+  // avoid a spurious "unresolvable" warning while the user is still typing.
+  const trimmedKey = variable.key.trim()
+  const source = trimmedKey.length > 0 ? resolveVariableSource(trimmedKey, templateType) : null
+
   // Stacked layout — all rows fully editable + deletable (AAA-T-221, 2026-05-15).
   // Row 1: editable {{key}} chip + delete button.
   // Row 2: full-width label input.
@@ -193,25 +214,28 @@ function VariableRow({
   return (
     <div className={`group ${isFirst ? '' : 'border-t border-border/40'}`}>
       <div className="flex flex-col gap-1.5 px-3 py-2.5 transition-colors hover:bg-card/60 focus-within:bg-card/60">
-        {/* Row 1 — editable key chip + delete */}
+        {/* Row 1 — editable key chip + provenance badge + delete */}
         <div className="flex items-center justify-between gap-2">
-          <div
-            className={`flex items-center rounded border bg-primary/10 px-1.5 py-0.5 font-mono text-[11px] font-semibold text-primary focus-within:ring-1 focus-within:ring-primary/40 ${
-              keyError ? 'border-destructive/60' : 'border-primary/25'
-            }`}
-          >
-            <span className="text-primary/50">{'{{'}</span>
-            <Input
-              value={variable.key}
-              onChange={(e) => onKeyChange(e.target.value)}
-              placeholder={messages.email.variableKeyPlaceholder}
-              aria-label={messages.email.variableKeyAriaLabel}
-              aria-invalid={keyError ? true : undefined}
-              aria-describedby={errorId}
-              size={Math.max(8, variable.key.length + 2)}
-              className="h-5 w-auto min-w-[80px] max-w-[200px] border-none bg-transparent p-0 text-[11px] font-mono font-semibold text-primary placeholder:text-primary/40 focus-visible:ring-0"
-            />
-            <span className="text-primary/50">{'}}'}</span>
+          <div className="flex min-w-0 items-center gap-1.5">
+            <div
+              className={`flex items-center rounded border bg-primary/10 px-1.5 py-0.5 font-mono text-[11px] font-semibold text-primary focus-within:ring-1 focus-within:ring-primary/40 ${
+                keyError ? 'border-destructive/60' : 'border-primary/25'
+              }`}
+            >
+              <span className="text-primary/50">{'{{'}</span>
+              <Input
+                value={variable.key}
+                onChange={(e) => onKeyChange(e.target.value)}
+                placeholder={messages.email.variableKeyPlaceholder}
+                aria-label={messages.email.variableKeyAriaLabel}
+                aria-invalid={keyError ? true : undefined}
+                aria-describedby={errorId}
+                size={Math.max(8, variable.key.length + 2)}
+                className="h-5 w-auto min-w-[80px] max-w-[200px] border-none bg-transparent p-0 text-[11px] font-mono font-semibold text-primary placeholder:text-primary/40 focus-visible:ring-0"
+              />
+              <span className="text-primary/50">{'}}'}</span>
+            </div>
+            {source ? <VariableSourceBadge source={source} /> : null}
           </div>
 
           <Button
@@ -260,5 +284,25 @@ function VariableRow({
         </p>
       )}
     </div>
+  )
+}
+
+/**
+ * Read-only provenance badge shown right of the {{key}} chip. Real text (never
+ * colour-only — a11y). The `unresolvable` kind renders as a quiet amber warning
+ * chip; every other kind is a neutral muted label.
+ */
+function VariableSourceBadge({ source }: { source: VariableSource }) {
+  const isWarning = source.kind === 'unresolvable'
+  return (
+    <span
+      className={
+        isWarning
+          ? 'shrink-0 rounded border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[10px] text-amber-600 dark:text-amber-400'
+          : 'shrink-0 truncate text-[10px] text-muted-foreground'
+      }
+    >
+      {source.label}
+    </span>
   )
 }
