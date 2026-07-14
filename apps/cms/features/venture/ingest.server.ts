@@ -250,13 +250,20 @@ export async function resolveCampaign(
   slug: string,
 ): Promise<ResolveCampaignResult> {
   const clientResult = await resolveClientRow(supabase, clientSlug)
+  // Diagnostic (prefix `[venture-webhook]`) — this is the ONLY place the
+  // client-vs-campaign resolution discriminator exists; the route collapses both
+  // to a single uniform outcome. Logs the outcome only (safe: clientSlug is in
+  // the URL) — no secret / row content.
   if (clientResult.kind === RESOLVE_RESULT_KINDS.dbError) {
+    console.error('[venture-webhook] client resolution: db_error', { client: clientSlug })
     return { kind: RESOLVE_RESULT_KINDS.dbError }
   }
   if (clientResult.kind === RESOLVE_RESULT_KINDS.notFound) {
+    console.error('[venture-webhook] client resolution: not_found', { client: clientSlug })
     return { kind: RESOLVE_RESULT_KINDS.notFound }
   }
   const clientRow = clientResult.row
+  console.log('[venture-webhook] client resolution: found', { client: clientSlug })
 
   const { data, error } = await supabase
     .from('so_campaigns')
@@ -275,9 +282,13 @@ export async function resolveCampaign(
     .maybeSingle()
   if (error) {
     console.error('[venture-ingest] campaign lookup failed:', error.message)
+    console.error('[venture-webhook] campaign resolution: db_error', { client: clientSlug, slug })
     return { kind: RESOLVE_RESULT_KINDS.dbError }
   }
-  if (!data) return { kind: RESOLVE_RESULT_KINDS.notFound }
+  if (!data) {
+    console.error('[venture-webhook] campaign resolution: not_found', { client: clientSlug, slug })
+    return { kind: RESOLVE_RESULT_KINDS.notFound }
+  }
 
   // Tenant (agency) theme is the neutral fallback under the client's own brand.
   // Fetched only once the campaign is confirmed to exist — never throws.
@@ -313,6 +324,12 @@ export async function resolveCampaign(
     | 'campaignThemeId'
     | 'campaignBrand'
   > & { theme_id: string | null; brand: Json | null }
+
+  console.log('[venture-webhook] campaign resolution: found', {
+    client: clientSlug,
+    slug,
+    campaignId: campaignRow.id,
+  })
 
   return {
     kind: RESOLVE_RESULT_KINDS.found,
