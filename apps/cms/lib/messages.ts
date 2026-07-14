@@ -895,7 +895,7 @@ export const messages = {
     // Inspector tabs (Iter 3)
     inspectorTabProperties: 'Właściwości',
     inspectorTabVariables: 'Zmienne',
-    inspectorTabSettings: 'Email',
+    inspectorTabSettings: 'Ustawienia',
     inspectorNothingSelected: 'Nic nie jest zaznaczone',
     inspectorNothingSelectedHint: 'Kliknij blok w podglądzie lub panelu Struktura',
     inspectorNoEditor: 'Brak edytora dla tego typu bloku',
@@ -951,7 +951,7 @@ export const messages = {
     inspectorColorSourceCustom: 'Własny kolor',
     // Coexistence hint under a per-block theme-token select: reminds the operator
     // that the palette is owned by the template theme (picked in the Email tab).
-    inspectorThemeTokenSourceHint: 'Kolory pochodzą z motywu szablonu (zakładka Email)',
+    inspectorThemeTokenSourceHint: 'Kolory pochodzą z motywu szablonu (zakładka Ustawienia)',
     // Etykiety 9 tokenów motywu (THEME_COLOR_TOKEN_KEYS)
     themeTokenLabels: {
       primary: 'Podstawowy',
