@@ -227,6 +227,8 @@ describe('getCampaignEffectiveSendHandler — template presence', () => {
 describe('getCampaignEffectiveSendHandler — resolved template (drift guard)', () => {
   const ASSIGNED = '99999999-9999-9999-9999-999999999999'
   const DEFAULT_ID = '88888888-8888-8888-8888-888888888888'
+  // A usable `blocks` value — a non-empty array (mirrors ingest's usability rule).
+  const USABLE_BLOCKS = [{ type: 'text', content: 'hej' }]
 
   it('campaign.email_template_id set + resolves → that id + type (by-id tier)', async () => {
     // Model B: the assigned template may be ANY type — the type slug flows through
@@ -235,7 +237,7 @@ describe('getCampaignEffectiveSendHandler — resolved template (drift guard)', 
       so_campaigns: { data: { client_id: CLIENT_ID, email_template_id: ASSIGNED }, error: null },
       so_clients: { data: clientRow({}), error: null },
       email_templates: {
-        data: { id: ASSIGNED, label: 'Wariant klienta', type: 'marketing_blast' },
+        data: { id: ASSIGNED, label: 'Wariant klienta', type: 'marketing_blast', blocks: USABLE_BLOCKS },
         error: null,
       },
     })
@@ -249,7 +251,10 @@ describe('getCampaignEffectiveSendHandler — resolved template (drift guard)', 
     setupAuth({
       so_campaigns: { data: { client_id: CLIENT_ID, email_template_id: null }, error: null },
       so_clients: { data: clientRow({}), error: null },
-      email_templates: { data: { id: DEFAULT_ID, label: 'Domyślny', type: 'venture_bonus' }, error: null },
+      email_templates: {
+        data: { id: DEFAULT_ID, label: 'Domyślny', type: 'venture_bonus', blocks: USABLE_BLOCKS },
+        error: null,
+      },
     })
     const result = await getCampaignEffectiveSendHandler(CAMPAIGN_ID)
     expect(result.data?.resolvedTemplateId).toBe(DEFAULT_ID)
@@ -267,5 +272,60 @@ describe('getCampaignEffectiveSendHandler — resolved template (drift guard)', 
     expect(result.data?.resolvedTemplateId).toBeNull()
     expect(result.data?.resolvedTemplateName).toBeNull()
     expect(result.data?.resolvedTemplateType).toBeNull()
+  })
+
+  // The reason this fix exists: an assigned template whose blocks were later
+  // emptied via the generic editor is SKIPPED by ingest (coerceBonusTemplateRow →
+  // isUsableTemplateBlocks). The card must degrade to the SAME default, never name
+  // the assigned-but-unusable one. Needs DISTINCT data per email_templates read
+  // (exists check → by-id unusable → default usable), so it bypasses the
+  // single-chain setupAuth helper.
+  it('assigned template with EMPTY blocks → falls through to tenant default (mirrors ingest)', async () => {
+    const emailQueue: Array<{ data: unknown; error: unknown }> = [
+      // 1. fetchBonusTemplateExists (type=venture_bonus) → a row exists.
+      { data: { type: 'venture_bonus' }, error: null },
+      // 2. by-id read → the assigned row, but blocks emptied → UNUSABLE → absent.
+      {
+        data: { id: ASSIGNED, label: 'Pusty wariant', type: 'marketing_blast', blocks: [] },
+        error: null,
+      },
+      // 3. default read → the usable tenant venture_bonus singleton.
+      {
+        data: { id: DEFAULT_ID, label: 'Domyślny', type: 'venture_bonus', blocks: USABLE_BLOCKS },
+        error: null,
+      },
+    ]
+    let emailIdx = 0
+    const staticChains: Record<string, ReturnType<typeof mockChain>> = {
+      so_campaigns: mockChain({
+        data: { client_id: CLIENT_ID, email_template_id: ASSIGNED },
+        error: null,
+      }),
+      so_clients: mockChain({ data: clientRow({}), error: null }),
+    }
+    const from = vi.fn((name: string) => {
+      if (name === 'email_templates') {
+        const res = emailQueue[emailIdx] ?? emailQueue[emailQueue.length - 1]
+        emailIdx++
+        return mockChain(res)
+      }
+      return staticChains[name]
+    })
+    mockRequireAuth.mockReturnValue(
+      okAsync({
+        supabase: { from },
+        userId: 'user-1',
+        tenantId: TENANT,
+        isSuperAdmin: false,
+        roleName: 'owner',
+        permissions: ALL_PERMS,
+      }),
+    )
+
+    const result = await getCampaignEffectiveSendHandler(CAMPAIGN_ID)
+    // NOT the assigned-but-unusable ASSIGNED id — the default, exactly as ingest.
+    expect(result.data?.resolvedTemplateId).toBe(DEFAULT_ID)
+    expect(result.data?.resolvedTemplateName).toBe('Domyślny')
+    expect(result.data?.resolvedTemplateType).toBe('venture_bonus')
   })
 })

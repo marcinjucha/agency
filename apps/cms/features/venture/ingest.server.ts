@@ -10,6 +10,7 @@ import { resolveMailSender, type ClientMailConfig } from './mail/resolve.server'
 import type { MailSender } from './mail/types'
 import { brandToThemeTokens, resolveClientTheme, type ResolvedTheme } from '@/lib/theme'
 import { fetchThemeTokens } from '@/lib/theme/fetch.server'
+import { isUsableTemplateBlocks } from './utils/template-blocks'
 
 // ---------------------------------------------------------------------------
 // Venture bonus-funnel — lead ingest orchestrator (iter 3).
@@ -564,7 +565,7 @@ type BonusTemplateRow = { blocks: Block[]; subject: string }
 function coerceBonusTemplateRow(data: unknown): BonusTemplateRow | null {
   if (!data) return null
   const row = data as { blocks: unknown; subject: string | null }
-  if (!Array.isArray(row.blocks) || row.blocks.length === 0) return null
+  if (!isUsableTemplateBlocks(row.blocks)) return null
   return { blocks: row.blocks as Block[], subject: row.subject ?? '' }
 }
 

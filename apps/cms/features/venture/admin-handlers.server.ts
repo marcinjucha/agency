@@ -35,6 +35,7 @@ import type {
   UpdateClientInput,
 } from './validation'
 import { BONUS_LIST_MARKER } from './mail/bonus-email-template'
+import { isUsableTemplateBlocks } from './utils/template-blocks'
 
 // ---------------------------------------------------------------------------
 // Venture bonus-funnel — ADMIN CRUD handlers (iter 5a). AUTHENTICATED layer.
@@ -577,11 +578,26 @@ interface VentureTemplateChoice {
   type: string
 }
 
+// The raw row the resolution reads select — adds `blocks` so the card can apply
+// the SAME blocks-usability degrade as ingest (`coerceBonusTemplateRow`). A row
+// whose `blocks` is non-array/empty is what the send path SKIPS, so the card must
+// treat it as ABSENT too — otherwise the card would name a template the send
+// silently falls through.
+type VentureTemplateChoiceRow = VentureTemplateChoice & { blocks: unknown }
+
+/** Trim the DB row to the card shape once blocks-usability is confirmed. */
+function toTemplateChoice(row: VentureTemplateChoiceRow): VentureTemplateChoice {
+  return { id: row.id, label: row.label, type: row.type }
+}
+
 /**
  * Read the campaign's EXPLICITLY-assigned template by id, SCOPED to the caller's
  * tenant (F5 parity with ingest's F3 — the id must resolve under this tenant or
  * it is treated as absent). Model B: a campaign may assign ANY tenant-owned
- * template by id, so this read does NOT filter on `type`. Null when not found.
+ * template by id, so this read does NOT filter on `type`. A row whose `blocks` is
+ * non-array/empty is treated as ABSENT (mirrors ingest's `coerceBonusTemplateRow`
+ * so the card can never name a template the send would skip). Null when not found
+ * OR unusable.
  */
 function readVentureTemplateChoiceById(
   auth: AuthContextFull,
@@ -589,47 +605,52 @@ function readVentureTemplateChoiceById(
 ): ResultAsync<VentureTemplateChoice | null, string> {
   return ResultAsync.fromPromise(
     tbl(auth, 'email_templates')
-      .select('id, label, type')
+      .select('id, label, type, blocks')
       .eq('id', templateId)
       .eq('tenant_id', auth.tenantId)
       .maybeSingle(),
     dbError,
   ).andThen((res) => {
-    const r = res as { data: VentureTemplateChoice | null; error: DbErrorShape }
+    const r = res as { data: VentureTemplateChoiceRow | null; error: DbErrorShape }
     if (r.error) return err(mapDbError(r.error, 'readVentureTemplateChoiceById'))
-    return ok(r.data ?? null)
+    if (!r.data || !isUsableTemplateBlocks(r.data.blocks)) return ok(null)
+    return ok(toTemplateChoice(r.data))
   })
 }
 
 /**
  * Read the tenant's DEFAULT bonus template — the `venture_bonus` SINGLETON slug
- * row (model B: the unique-per-tenant slug IS the tenant default), or null.
+ * row (model B: the unique-per-tenant slug IS the tenant default), or null. Same
+ * blocks-usability degrade as the by-id read (mirrors ingest's
+ * `readDefaultBonusTemplate` → `coerceBonusTemplateRow`).
  */
 function readDefaultVentureTemplateChoice(
   auth: AuthContextFull,
 ): ResultAsync<VentureTemplateChoice | null, string> {
   return ResultAsync.fromPromise(
     tbl(auth, 'email_templates')
-      .select('id, label, type')
+      .select('id, label, type, blocks')
       .eq('type', BONUS_TEMPLATE_TYPE)
       .eq('tenant_id', auth.tenantId)
       .maybeSingle(),
     dbError,
   ).andThen((res) => {
-    const r = res as { data: VentureTemplateChoice | null; error: DbErrorShape }
+    const r = res as { data: VentureTemplateChoiceRow | null; error: DbErrorShape }
     if (r.error) return err(mapDbError(r.error, 'readDefaultVentureTemplateChoice'))
-    return ok(r.data ?? null)
+    if (!r.data || !isUsableTemplateBlocks(r.data.blocks)) return ok(null)
+    return ok(toTemplateChoice(r.data))
   })
 }
 
 /**
  * Resolve the template a send would ACTUALLY use, mirroring ingest's
- * fetchBonusTemplate precedence (INV-4, one-rule): the campaign's explicitly
- * assigned template (if it resolves under the tenant, ANY type) wins, else the
- * tenant DEFAULT, else null. Short-circuiting tiered read — the by-id read runs
- * only when a template is assigned; the default read only when by-id yields
- * nothing. This is the READ-ONLY card mirror of the send-path decision so the
- * two cannot drift.
+ * fetchBonusTemplate precedence AND blocks-usability degrade (INV-4, one-rule):
+ * the campaign's explicitly assigned template (if it resolves under the tenant,
+ * ANY type, AND has usable blocks) wins, else the tenant DEFAULT (if usable), else
+ * null. Short-circuiting tiered read — the by-id read runs only when a template is
+ * assigned; the default read only when by-id yields nothing (missing OR unusable).
+ * This is the READ-ONLY card mirror of the send-path decision so the two cannot
+ * drift.
  */
 function resolveEffectiveVentureTemplate(
   auth: AuthContextFull,
