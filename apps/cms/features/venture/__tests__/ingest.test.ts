@@ -4,8 +4,22 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 // covered in bonus-email.test.ts. Here we only assert send-vs-not.
 vi.mock('../mail/bonus-email', () => ({
   buildBonusEmail: vi.fn(async () => ({ subject: 'Subj', html: '<p>html</p>' })),
+  // The presence-fork path computes the {{companyName}} value via resolveBonusBrand;
+  // keep the real trivial impl so the fork test asserts a real brand string.
+  resolveBonusBrand: (name: string | null) => name?.trim() || 'Halo Efekt',
 }))
 import { buildBonusEmail } from '../mail/bonus-email'
+
+// Isolate the hybrid template builder — the real render is covered in
+// bonus-email-template.test.ts. Here we only assert the presence-based fork
+// (template present → hybrid used; absent/error → hardcoded fallback).
+vi.mock('../mail/bonus-email-template', () => ({
+  buildBonusEmailFromTemplateHtml: vi.fn(async () => ({
+    subject: 'TemplateSubj',
+    html: '<p>template-html</p>',
+  })),
+}))
+import { buildBonusEmailFromTemplateHtml } from '../mail/bonus-email-template'
 
 // Isolate the real `resolveMailSender` path (used by the new gmail_smtp test
 // below, exercising resolveMailSender for real rather than injecting a fake)
@@ -41,6 +55,7 @@ const LEAD: MappedLead = {
 // any unrecognized provider) to the agency-shared Resend sender.
 const CAMPAIGN = {
   id: 'campaign-1',
+  tenantId: 'tenant-1',
   tally_webhook_secret: 'whsec_test',
   esp_provider: 'beehiiv',
   esp_audience_ref: 'pub_123',
@@ -95,6 +110,7 @@ function makeSupabase(cfg: {
   insert?: Result
   bonuses?: Result
   themeRow?: Result
+  template?: Result
 }) {
   const clientBuilder = {
     select: vi.fn(() => clientBuilder),
@@ -160,6 +176,15 @@ function makeSupabase(cfg: {
     order: vi.fn(() => Promise.resolve(cfg.bonuses ?? { data: [], error: null })),
   }
 
+  // email_templates(blocks, subject) lookup — the hybrid `venture_bonus` copy
+  // template, scoped by (tenant_id, type). Default null → template absent →
+  // sendBonusEmail falls back to the hardcoded builder.
+  const emailTemplatesBuilder = {
+    select: vi.fn(() => emailTemplatesBuilder),
+    eq: vi.fn(() => emailTemplatesBuilder),
+    maybeSingle: vi.fn(() => Promise.resolve(cfg.template ?? { data: null, error: null })),
+  }
+
   const syncLogInsert = vi.fn(() => Promise.resolve({ error: null }))
   const syncLogBuilder = { insert: syncLogInsert }
 
@@ -177,6 +202,8 @@ function makeSupabase(cfg: {
         return bonusesBuilder
       case 'so_themes':
         return themesBuilder
+      case 'email_templates':
+        return emailTemplatesBuilder
       case 'so_esp_sync_log':
         return syncLogBuilder
       default:
@@ -190,6 +217,7 @@ function makeSupabase(cfg: {
     campaignBuilder,
     tenantBuilder,
     themesBuilder,
+    emailTemplatesBuilder,
     leadsBuilder,
     leadsUpdateChain,
     bonusesBuilder,
@@ -439,6 +467,129 @@ describe('ingestLead', () => {
 
     expect(outcome).toMatchObject({ status: 'ingested', emailSent: true })
     expect(gmailSendSpy).toHaveBeenCalledWith({
+      to: 'jan@example.com',
+      subject: 'Subj',
+      html: '<p>html</p>',
+    })
+  })
+
+  it('presence fork: NO venture_bonus template → hardcoded builder used, hybrid skipped', async () => {
+    const supabase = makeSupabase({}) // cfg.template default null → template absent
+    const sender = makeMailSender()
+    const deps = makeDeps(supabase, makeProvider(), sender)
+
+    const outcome = await ingestLead(deps, CAMPAIGN, LEAD)
+
+    expect(outcome).toMatchObject({ status: 'ingested', emailSent: true })
+    expect(buildBonusEmail).toHaveBeenCalledTimes(1)
+    expect(buildBonusEmailFromTemplateHtml).not.toHaveBeenCalled()
+    // Hardcoded builder's output reached the sender.
+    expect(sender.send).toHaveBeenCalledWith({
+      to: 'jan@example.com',
+      subject: 'Subj',
+      html: '<p>html</p>',
+    })
+  })
+
+  it('presence fork: venture_bonus template present → hybrid builder used, hardcoded skipped', async () => {
+    const supabase = makeSupabase({
+      template: {
+        data: {
+          blocks: [{ id: 'h', type: 'header', companyName: '{{companyName}}', textColor: '#fff' }],
+          subject: 'Twoje bonusy od {{companyName}}',
+        },
+        error: null,
+      },
+    })
+    const sender = makeMailSender()
+    const deps = makeDeps(supabase, makeProvider(), sender)
+
+    const outcome = await ingestLead(deps, CAMPAIGN, LEAD)
+
+    expect(outcome).toMatchObject({ status: 'ingested', emailSent: true })
+    expect(buildBonusEmailFromTemplateHtml).toHaveBeenCalledTimes(1)
+    expect(buildBonusEmail).not.toHaveBeenCalled()
+    // The template lookup is scoped to the campaign's tenant + the venture slug.
+    expect(supabase.emailTemplatesBuilder.eq).toHaveBeenCalledWith('tenant_id', 'tenant-1')
+    expect(supabase.emailTemplatesBuilder.eq).toHaveBeenCalledWith('type', 'venture_bonus')
+    // Hybrid output reached the sender.
+    expect(sender.send).toHaveBeenCalledWith({
+      to: 'jan@example.com',
+      subject: 'TemplateSubj',
+      html: '<p>template-html</p>',
+    })
+  })
+
+  it('presence fork: template render THROWS → falls back to hardcoded builder (no lead-send drop)', async () => {
+    const supabase = makeSupabase({
+      template: {
+        data: {
+          blocks: [{ id: 'h', type: 'header', companyName: 'x', textColor: '#fff' }],
+          subject: 's',
+        },
+        error: null,
+      },
+    })
+    vi.mocked(buildBonusEmailFromTemplateHtml).mockRejectedValueOnce(new Error('render boom'))
+    const sender = makeMailSender()
+    const deps = makeDeps(supabase, makeProvider(), sender)
+
+    const outcome = await ingestLead(deps, CAMPAIGN, LEAD)
+
+    expect(outcome).toMatchObject({ status: 'ingested', emailSent: true })
+    expect(buildBonusEmailFromTemplateHtml).toHaveBeenCalledTimes(1)
+    // Fell back to the hardcoded builder — the email still went out.
+    expect(buildBonusEmail).toHaveBeenCalledTimes(1)
+    expect(sender.send).toHaveBeenCalledWith({
+      to: 'jan@example.com',
+      subject: 'Subj',
+      html: '<p>html</p>',
+    })
+  })
+
+  it('no-drop fork: venture_bonus template with NON-ARRAY blocks ({}) → hardcoded builder, hybrid skipped', async () => {
+    const supabase = makeSupabase({
+      template: {
+        data: { blocks: {}, subject: 'Twoje bonusy od {{companyName}}' },
+        error: null,
+      },
+    })
+    const sender = makeMailSender()
+    const deps = makeDeps(supabase, makeProvider(), sender)
+
+    const outcome = await ingestLead(deps, CAMPAIGN, LEAD)
+
+    // Lead still persists + email still attempted — a malformed template never drops a send.
+    expect(outcome).toMatchObject({ status: 'ingested', emailSent: true })
+    expect(supabase.leadsBuilder.insert).toHaveBeenCalledTimes(1)
+    // fetchBonusTemplate treats a non-array `blocks` as absent → hardcoded builder wins.
+    expect(buildBonusEmail).toHaveBeenCalledTimes(1)
+    expect(buildBonusEmailFromTemplateHtml).not.toHaveBeenCalled()
+    expect(sender.send).toHaveBeenCalledWith({
+      to: 'jan@example.com',
+      subject: 'Subj',
+      html: '<p>html</p>',
+    })
+  })
+
+  it('no-drop fork: venture_bonus template with EMPTY blocks ([]) → hardcoded builder, hybrid skipped', async () => {
+    const supabase = makeSupabase({
+      template: {
+        data: { blocks: [], subject: 'Twoje bonusy od {{companyName}}' },
+        error: null,
+      },
+    })
+    const sender = makeMailSender()
+    const deps = makeDeps(supabase, makeProvider(), sender)
+
+    const outcome = await ingestLead(deps, CAMPAIGN, LEAD)
+
+    // Same no-drop safety branch: empty block list is treated as absent.
+    expect(outcome).toMatchObject({ status: 'ingested', emailSent: true })
+    expect(supabase.leadsBuilder.insert).toHaveBeenCalledTimes(1)
+    expect(buildBonusEmail).toHaveBeenCalledTimes(1)
+    expect(buildBonusEmailFromTemplateHtml).not.toHaveBeenCalled()
+    expect(sender.send).toHaveBeenCalledWith({
       to: 'jan@example.com',
       subject: 'Subj',
       html: '<p>html</p>',

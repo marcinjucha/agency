@@ -37,8 +37,18 @@ export interface BonusEmail {
   html: string
 }
 
-const FALLBACK_BRAND = 'Halo Efekt'
+export const FALLBACK_BRAND = 'Halo Efekt'
 const BONUS_LINK_LABEL = 'Zrób kopię' // TODO(OQ-5): final PL copy
+
+/**
+ * The brand string shown in the header / heading / footer copy. Exported so the
+ * template-driven builder (`bonus-email-template.ts`) computes the exact same
+ * `{{companyName}}` value the hardcoded builder bakes inline — the two paths MUST
+ * agree for the byte-identical regression guard to hold.
+ */
+export function resolveBonusBrand(campaignDisplayName: string | null): string {
+  return campaignDisplayName?.trim() || FALLBACK_BRAND
+}
 
 /** Only bonuses with a usable link can be delivered. */
 function deliverableBonuses(bonuses: BonusEmailBonus[]): Array<{ title: string; url: string }> {
@@ -47,10 +57,31 @@ function deliverableBonuses(bonuses: BonusEmailBonus[]): Array<{ title: string; 
     .map((b) => ({ title: b.title?.trim() || 'Bonus', url: b.url }))
 }
 
+/**
+ * Build the DYNAMIC bonus-list block: one line per deliverable bonus with a
+ * hardened `href` (`escapeHtml(safeUrlValue(...))`) + escaped title, or the
+ * empty-case fallback copy when nothing is deliverable. NO count cap, NO fixed
+ * slots. Shared verbatim by the hardcoded builder (below) AND the hybrid
+ * template builder (`bonus-email-template.ts`) so the programmatic list is
+ * IDENTICAL regardless of which surrounding copy wraps it.
+ */
+export function buildBonusListBlock(bonuses: BonusEmailBonus[], theme: ResolvedTheme): Block {
+  const deliverable = deliverableBonuses(bonuses)
+  const content =
+    deliverable.length > 0
+      ? deliverable
+          .map(
+            (b) =>
+              `<p><strong>${escapeHtml(b.title)}</strong> — <a href="${escapeHtml(safeUrlValue(b.url))}">${BONUS_LINK_LABEL}</a></p>`,
+          )
+          .join('')
+      : '<p>Bonusy pojawią się wkrótce.</p>' // TODO(OQ-5)
+  return { id: 'bonus-list', type: 'text', content, textColor: theme.text }
+}
+
 /** PLACEHOLDER PL subject. TODO(OQ-5): final copy from Marcin. */
 export function buildBonusEmailSubject(input: BonusEmailInput): string {
-  const brand = input.campaignDisplayName?.trim() || FALLBACK_BRAND
-  return `Twoje bonusy od ${brand}`
+  return `Twoje bonusy od ${resolveBonusBrand(input.campaignDisplayName)}`
 }
 
 /**
@@ -59,8 +90,7 @@ export function buildBonusEmailSubject(input: BonusEmailInput): string {
  * "sprawdź skrzynkę" note. PLACEHOLDER PL copy — TODO(OQ-5).
  */
 export function buildBonusEmailBlocks(input: BonusEmailInput): Block[] {
-  const brand = input.campaignDisplayName?.trim() || FALLBACK_BRAND
-  const bonuses = deliverableBonuses(input.bonuses)
+  const brand = resolveBonusBrand(input.campaignDisplayName)
   const { theme } = input
 
   // Theme tokens flow as INLINE LITERAL HEX (never var()/hsl() — email clients
@@ -72,16 +102,6 @@ export function buildBonusEmailBlocks(input: BonusEmailInput): Block[] {
   // text '#334155', footer '#94a3b8'). Setting the token explicitly is
   // byte-identical when it equals that inherited default — HALO_EFEKT_DEFAULT
   // matches all three — enforced by the regression test.
-
-  const bonusListHtml =
-    bonuses.length > 0
-      ? bonuses
-          .map(
-            (b) =>
-              `<p><strong>${escapeHtml(b.title)}</strong> — <a href="${escapeHtml(safeUrlValue(b.url))}">${BONUS_LINK_LABEL}</a></p>`,
-          )
-          .join('')
-      : '<p>Bonusy pojawią się wkrótce.</p>' // TODO(OQ-5)
 
   return [
     {
@@ -114,12 +134,7 @@ export function buildBonusEmailBlocks(input: BonusEmailInput): Block[] {
         '<p>Dziękujemy! Poniżej znajdziesz materiały, które dla Ciebie przygotowaliśmy.</p>',
       textColor: theme.text,
     },
-    {
-      id: 'bonus-list',
-      type: 'text',
-      content: bonusListHtml,
-      textColor: theme.text,
-    },
+    buildBonusListBlock(input.bonuses, theme),
     {
       id: 'bonus-inbox-note',
       type: 'text',

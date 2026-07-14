@@ -1,12 +1,14 @@
 import type { Json } from '@agency/database'
+import type { Block } from '@agency/email'
 import type { createServiceClient } from '@/lib/supabase/service'
 import { EspApiError } from './esp/http.server'
 import type { EspProvider, EspProviderId } from './esp/types'
 import type { MappedLead } from './lead-sources/types'
-import { buildBonusEmail } from './mail/bonus-email'
+import { buildBonusEmail, resolveBonusBrand, type BonusEmail } from './mail/bonus-email'
+import { buildBonusEmailFromTemplateHtml } from './mail/bonus-email-template'
 import { resolveMailSender, type ClientMailConfig } from './mail/resolve.server'
 import type { MailSender } from './mail/types'
-import { brandToThemeTokens, resolveClientTheme } from '@/lib/theme'
+import { brandToThemeTokens, resolveClientTheme, type ResolvedTheme } from '@/lib/theme'
 import { fetchThemeTokens } from '@/lib/theme/fetch.server'
 
 // ---------------------------------------------------------------------------
@@ -95,6 +97,10 @@ type EspSyncAction = (typeof ESP_SYNC_ACTIONS)[keyof typeof ESP_SYNC_ACTIONS]
 // admin editor are the only two places in the codebase that need them).
 export type CampaignRow = {
   id: string
+  // The campaign's OWNING CLIENT's tenant. Attached by `resolveCampaign` from the
+  // resolved so_clients row (NOT a so_campaigns column). Scopes the tenant-level
+  // `email_templates` lookup for the hybrid `venture_bonus` template.
+  tenantId: string
   tally_webhook_secret: string | null
   esp_provider: string
   esp_audience_ref: string | null
@@ -289,6 +295,7 @@ export async function resolveCampaign(
   // out of the spread so no stray column names land on the domain row).
   const { theme_id, brand, ...campaignRow } = data as unknown as Omit<
     CampaignRow,
+    | 'tenantId'
     | 'clientMail'
     | 'clientThemeId'
     | 'clientTheme'
@@ -302,6 +309,7 @@ export async function resolveCampaign(
     kind: RESOLVE_RESULT_KINDS.found,
     campaign: {
       ...campaignRow,
+      tenantId: clientRow.tenant_id,
       clientMail: {
         mail_provider,
         resend_api_key,
@@ -534,6 +542,75 @@ async function fetchPublishedBonuses(
   return (data as Array<{ title: string | null; url: string | null }> | null) ?? []
 }
 
+// email_templates.type slug for the hybrid bonus email's surrounding copy.
+const BONUS_TEMPLATE_TYPE = 'venture_bonus'
+
+type BonusTemplateRow = { blocks: Block[]; subject: string }
+
+/**
+ * Fetch the tenant's editable `venture_bonus` copy template (service-role read of
+ * `email_templates` by (tenant_id, type)). Returns null when absent / on any
+ * error — NEVER throws, so a missing or unreadable template silently falls back
+ * to the hardcoded builder (no lead-send drop). `blocks` is JSONB → cast to
+ * Block[]; a non-array blob is treated as absent.
+ */
+async function fetchBonusTemplate(
+  supabase: ServiceClient,
+  tenantId: string,
+): Promise<BonusTemplateRow | null> {
+  try {
+    const { data, error } = await supabase
+      .from('email_templates')
+      .select('blocks, subject')
+      .eq('tenant_id', tenantId)
+      .eq('type', BONUS_TEMPLATE_TYPE)
+      .maybeSingle()
+    if (error || !data) return null
+    const row = data as { blocks: unknown; subject: string | null }
+    if (!Array.isArray(row.blocks) || row.blocks.length === 0) return null
+    return { blocks: row.blocks as Block[], subject: row.subject ?? '' }
+  } catch (error) {
+    console.error(
+      '[venture-ingest] bonus template lookup failed:',
+      error instanceof Error ? error.message : String(error),
+    )
+    return null
+  }
+}
+
+/**
+ * Build subject + HTML for the bonus email. HYBRID: when a `venture_bonus`
+ * template exists, render the editable copy from it + splice the programmatic
+ * bonus list; on ANY error building from it, fall back to the hardcoded builder.
+ * When absent, use the hardcoded builder directly. Either way the dynamic list
+ * (0 / 1 / many, no cap) and the resolved theme are identical.
+ */
+async function buildBonusEmailBody(
+  template: BonusTemplateRow | null,
+  campaign: CampaignRow,
+  bonuses: Array<{ title: string | null; url: string | null }>,
+  theme: ResolvedTheme,
+): Promise<BonusEmail> {
+  if (template) {
+    try {
+      return await buildBonusEmailFromTemplateHtml({
+        templateBlocks: template.blocks,
+        subjectTemplate: template.subject,
+        bonuses,
+        theme,
+        values: { companyName: resolveBonusBrand(campaign.display_name) },
+      })
+    } catch (error) {
+      // A broken/edited template must NEVER degrade a live send — fall through.
+      console.error(
+        '[venture-ingest] bonus template render failed — falling back to hardcoded builder:',
+        error instanceof Error ? error.message : String(error),
+      )
+    }
+  }
+  return buildBonusEmail({ campaignDisplayName: campaign.display_name, bonuses, theme })
+}
+
 /**
  * Send the transactional bonus email. Returns true on success. Never throws —
  * a mail failure is logged and does not fail the request.
@@ -569,11 +646,10 @@ async function sendBonusEmail(
       ),
     ])
     const theme = resolveClientTheme({ tenantTheme, clientTheme, campaignTheme })
-    const { subject, html } = await buildBonusEmail({
-      campaignDisplayName: campaign.display_name,
-      bonuses,
-      theme,
-    })
+    // Presence-based fork: editable copy template if present, else hardcoded
+    // builder. Template fetch never throws → null on absent/error (no send drop).
+    const template = await fetchBonusTemplate(deps.supabase, campaign.tenantId)
+    const { subject, html } = await buildBonusEmailBody(template, campaign, bonuses, theme)
     const resolveSender = deps.resolveMailSender ?? resolveMailSender
     const sender = resolveSender(campaign.clientMail)
     await sender.send({ to: mapped.email, subject, html })
