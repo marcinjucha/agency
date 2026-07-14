@@ -32,10 +32,10 @@ import type { Block, BlockType, TemplateVariable } from '../../types'
 import type { TriggerVariable } from '@/lib/trigger-schemas'
 
 /**
- * Block types that carry typography (5/9 types). Mirrors DEFAULT_BLOCK_TYPOGRAPHY
+ * Block types that carry typography. Mirrors DEFAULT_BLOCK_TYPOGRAPHY
  * keys — divider/spacer/image/columns have no inline text content.
  */
-type TypographicBlockType = 'header' | 'heading' | 'text' | 'cta' | 'footer'
+type TypographicBlockType = 'header' | 'heading' | 'text' | 'cta' | 'footer' | 'link'
 
 const TYPOGRAPHIC_BLOCK_TYPES: ReadonlySet<BlockType> = new Set<BlockType>([
   'header',
@@ -43,6 +43,7 @@ const TYPOGRAPHIC_BLOCK_TYPES: ReadonlySet<BlockType> = new Set<BlockType>([
   'text',
   'cta',
   'footer',
+  'link',
 ])
 
 function isTypographicBlock(type: BlockType): type is TypographicBlockType {

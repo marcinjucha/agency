@@ -703,6 +703,21 @@ function CanvasBlockRenderer({ block, isLast }: { block: Block; isLast: boolean 
       </div>
     )
   }
+  // Blok preheadera renderuje się w mailu jako UKRYTY <Preview> — na kanwie
+  // pokazujemy zamiast tego chip (jak marker bonus_list), żeby autor widział,
+  // że blok istnieje i co zawiera. Uwaga hooki: ta gałąź jest PO hooku
+  // useEmailThemeMap powyżej — detekcja typu/treści nigdy nie bramkuje hooka.
+  if (block.type === 'preview') {
+    return (
+      <div className="mx-6 my-4 flex items-center gap-2 rounded-md border border-dashed border-border bg-muted/30 px-3 py-2.5">
+        <Eye className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+        <span className="text-xs text-muted-foreground">
+          {messages.email.canvasPreviewChip}
+          {block.text.trim() ? <span className="italic"> — „{block.text.slice(0, 60)}"</span> : null}
+        </span>
+      </div>
+    )
+  }
   // Pass paddingBottom so the canvas preview shows the same vertical rhythm
   // (marginBottom preset) as the rendered email HTML. Last block gets 0 to
   // avoid trailing whitespace.

@@ -36,6 +36,15 @@ export function substituteBlockSampleTokens(
         label: substitutePlain(block.label, values),
         url: substitutePlain(block.url, values),
       }
+    case 'link':
+      return {
+        ...block,
+        label: substitutePlain(block.label, values),
+        url: substitutePlain(block.url, values),
+      }
+    case 'preview':
+      // Preheader jest plaintext (snippet skrzynki) — substitutePlain.
+      return { ...block, text: substitutePlain(block.text, values) }
     case 'image':
       return { ...block, alt: substitutePlain(block.alt, values) }
     case 'section':

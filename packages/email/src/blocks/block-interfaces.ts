@@ -145,16 +145,52 @@ export type FooterBlock = {
   BlockTypography &
   BlockBorder
 
+/**
+ * Poziomy nagłówka. 'eyebrow' (Iter 3, parytet React Email) to mała etykieta
+ * nadtytułowa — uppercase, letter-spacing, muted (np. "TWOJE MATERIAŁY").
+ * Renderowana jako akapit (<Text>), nie tag h* — semantycznie to label, nie
+ * nagłówek dokumentu. Rozszerzenie enum jest ADDITIVE — istniejące wiersze
+ * JSONB (h1/h2/h3) nietknięte.
+ */
+export type HeadingLevel = 'h1' | 'h2' | 'h3' | 'eyebrow'
+
 export type HeadingBlock = {
   id: string
   type: 'heading'
   text: string
-  level: 'h1' | 'h2' | 'h3'
+  level: HeadingLevel
   /** Legacy block-specific color — nadal czytany przez renderer. */
   color: string
 } & BlockStyleCommon &
   BlockTypography &
   BlockBorder
+
+/**
+ * LinkBlock (Iter 3, parytet React Email <Link>) — samodzielny link tekstowy
+ * we własnym wierszu; odrębny od przycisku CTA (kotwica, nie button).
+ * Typograficzny (textAlign + textColor/token), ale ŚWIADOMIE nie-borderowalny —
+ * link ma być minimalny (bez tła/ramki; do tego służy CTA).
+ */
+export type LinkBlock = {
+  id: string
+  type: 'link'
+  label: string
+  url: string
+} & BlockStyleCommon &
+  BlockTypography
+
+/**
+ * PreviewBlock (Iter 3, parytet React Email <Preview>) — ukryty preheader
+ * (snippet widoczny na liście skrzynki odbiorczej obok tematu). Renderowany
+ * przez @react-email <Preview> (ukryte divy w body — pozycjonowanie w treści
+ * nie ma znaczenia dla klientów pocztowych). ŚWIADOMIE jako BLOK (nie kolumna
+ * DB) — zero zmian schematu, addytywne dla istniejących szablonów.
+ */
+export type PreviewBlock = {
+  id: string
+  type: 'preview'
+  text: string
+} & BlockStyleCommon
 
 export type ImageBlock = {
   id: string
@@ -179,6 +215,9 @@ export type SpacerBlock = {
   size: SpacerSize
 } & BlockStyleCommon
 
+// UWAGA (drift trap): nowy typ bloku-liścia trzeba dodać i TU, i do `Block`
+// w types.ts, i do SectionChildBlock (przez ten union) — inaczej blok jest
+// renderowalny na najwyższym poziomie, ale niewstawialny do kolumn/sekcji.
 export type NonColumnsBlock =
   | HeaderBlock
   | TextBlock
@@ -188,6 +227,8 @@ export type NonColumnsBlock =
   | HeadingBlock
   | ImageBlock
   | SpacerBlock
+  | LinkBlock
+  | PreviewBlock
 
 export type ColumnsBlock = {
   id: string

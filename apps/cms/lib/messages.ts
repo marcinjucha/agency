@@ -1044,6 +1044,19 @@ export const messages = {
     inspectorCtaUrl: 'URL',
     inspectorCtaUrlPlaceholder: 'https://example.com lub {{responseUrl}}',
     inspectorHeaderCompanyName: 'Nazwa firmy',
+    // Link (Iter 3 — parytet React Email <Link>)
+    inspectorLinkLabel: 'Tekst linku',
+    inspectorLinkLabelPlaceholder: 'Zobacz więcej',
+    inspectorLinkUrl: 'URL',
+    inspectorLinkUrlPlaceholder: 'https://example.com lub {{responseUrl}}',
+    // Preheader / tekst podglądu (Iter 3 — parytet React Email <Preview>)
+    inspectorPreviewText: 'Tekst podglądu',
+    inspectorPreviewTextPlaceholder: 'Krótki opis widoczny w skrzynce…',
+    inspectorPreviewTextHint:
+      'Niewidoczny w treści maila — klienty pocztowe pokazują go na liście wiadomości obok tematu.',
+    canvasPreviewChip: 'Tekst podglądu (preheader) — niewidoczny w treści maila',
+    // Poziom eyebrow w HeadingBlock (Iter 3)
+    inspectorHeadingLevelEyebrow: 'Etykieta (eyebrow)',
     // Spacer — 4 presety
     inspectorSpacerHeightXl: 'XL',
     inspectorSpacerSizeLabel: 'Rozmiar odstępu',

@@ -92,8 +92,28 @@ const headingSchema = blockIdSchema.merge(
   CMS_BLOCK_REGISTRY.heading.validationSchema as z.ZodObject<{
     type: z.ZodLiteral<'heading'>
     text: z.ZodString
-    level: z.ZodEnum<['h1', 'h2', 'h3']>
+    level: z.ZodEnum<['h1', 'h2', 'h3', 'eyebrow']>
     color: z.ZodString
+  } & BlockStyleCommonTypes>
+)
+
+// Link (Iter 3) — jak cta: rejestr akceptuje dowolny string url, tu nakładamy
+// templateOrUrl (poprawny URL lub {{zmienna}}).
+const linkSchema = blockIdSchema
+  .merge(
+    CMS_BLOCK_REGISTRY.link.validationSchema as z.ZodObject<{
+      type: z.ZodLiteral<'link'>
+      label: z.ZodString
+      url: z.ZodString
+    } & BlockStyleCommonTypes>
+  )
+  .extend({ url: templateOrUrl })
+
+// Preview / preheader (Iter 3) — pojedyncze pole tekstowe.
+const previewSchema = blockIdSchema.merge(
+  CMS_BLOCK_REGISTRY.preview.validationSchema as z.ZodObject<{
+    type: z.ZodLiteral<'preview'>
+    text: z.ZodString
   } & BlockStyleCommonTypes>
 )
 
@@ -136,6 +156,8 @@ const nonColumnsBlockSchema: z.ZodType = z.lazy(() =>
     headingSchema,
     imageSchema,
     spacerSchema,
+    linkSchema,
+    previewSchema,
   ])
 )
 
@@ -186,6 +208,8 @@ const blockSchema = z.discriminatedUnion('type', [
   headingSchema,
   imageSchema,
   spacerSchema,
+  linkSchema,
+  previewSchema,
   columnsSchema,
   sectionSchema,
 ])

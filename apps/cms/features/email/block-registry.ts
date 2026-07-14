@@ -12,10 +12,10 @@
 
 import type { ComponentType } from 'react'
 import type { LucideIcon } from 'lucide-react'
-import { Mail, AlignLeft, FileText, MousePointerClick, Minus, Heading, ImageIcon, AlignVerticalSpaceAround, Columns2, LayoutPanelTop } from 'lucide-react'
+import { Mail, AlignLeft, FileText, MousePointerClick, Minus, Heading, ImageIcon, AlignVerticalSpaceAround, Columns2, LayoutPanelTop, Link, Eye } from 'lucide-react'
 import { z } from 'zod'
 import type { Block, BlockType } from './types'
-import type { HeaderBlock, TextBlock, CtaBlock, DividerBlock, FooterBlock, HeadingBlock, ImageBlock, SpacerBlock, ColumnsBlock, SectionBlock } from '@agency/email'
+import type { HeaderBlock, TextBlock, CtaBlock, DividerBlock, FooterBlock, HeadingBlock, ImageBlock, SpacerBlock, LinkBlock, PreviewBlock, ColumnsBlock, SectionBlock } from '@agency/email'
 import { BLOCK_DEFAULT_VALUES } from '@agency/email'
 import type { TriggerVariable } from '@/lib/trigger-schemas'
 import { HeaderBlockEditor } from './components/blocks/HeaderBlockEditor'
@@ -28,6 +28,8 @@ import { ImageBlockEditor } from './components/blocks/ImageBlockEditor'
 import { SpacerBlockEditor } from './components/blocks/SpacerBlockEditor'
 import { ColumnsBlockEditor } from './components/blocks/ColumnsBlockEditor'
 import { SectionBlockEditor } from './components/blocks/SectionBlockEditor'
+import { LinkBlockEditor } from './components/blocks/LinkBlockEditor'
+import { PreviewBlockEditor } from './components/blocks/PreviewBlockEditor'
 
 // ---------------------------------------------------------------------------
 // Schematy Zod per-block
@@ -145,7 +147,8 @@ const footerBlockSchema = z.object({
 const headingBlockSchema = z.object({
   type: z.literal('heading'),
   text: z.string().max(500),
-  level: z.enum(['h1', 'h2', 'h3']),
+  // 'eyebrow' (Iter 3) — mała etykieta nadtytułowa; rozszerzenie ADDITIVE.
+  level: z.enum(['h1', 'h2', 'h3', 'eyebrow']),
   color: hexColorSchema,
   ...blockStyleCommonShape,
   ...blockTypographyShape,
@@ -185,6 +188,27 @@ const imageBlockSchema = z.object({
 const spacerBlockSchema = z.object({
   type: z.literal('spacer'),
   size: z.enum(['sm', 'md', 'lg', 'xl']),
+  ...blockStyleCommonShape,
+})
+
+// Link (Iter 3) — typograficzny (mixin Typography), ŚWIADOMIE bez BlockBorder
+// (link ma być minimalny — tło/ramka to domena CTA). URL luźny na poziomie
+// rejestru; templateOrUrl (URL lub {{zmienna}}) nakładany w validation.ts jak
+// dla cta.
+const linkBlockSchema = z.object({
+  type: z.literal('link'),
+  label: z.string().min(1, 'Tekst linku jest wymagany'),
+  url: z.string(),
+  ...blockStyleCommonShape,
+  ...blockTypographyShape,
+})
+
+// Preview / preheader (Iter 3) — pojedyncze pole tekstowe. Blok jest ukryty w
+// treści maila (renderowany przez @react-email <Preview>), więc bez typografii
+// i bordera.
+const previewBlockSchema = z.object({
+  type: z.literal('preview'),
+  text: z.string().max(300),
   ...blockStyleCommonShape,
 })
 
@@ -376,6 +400,33 @@ export const CMS_BLOCK_REGISTRY: Record<BlockType, CmsBlockRegistryEntry> = {
     EditorComponent: SpacerBlockEditor as EditorComponentType,
     validationSchema: spacerBlockSchema,
     defaultValue: BLOCK_DEFAULT_VALUES.spacer,
+  },
+
+  link: {
+    id: 'link',
+    label: 'Link',
+    description: 'Pojedynczy link tekstowy',
+    icon: Link,
+    group: 'akcja',
+    getSummary: (block) => `Link: „${(block as LinkBlock).label.slice(0, 40)}"`,
+    EditorComponent: LinkBlockEditor as EditorComponentType,
+    validationSchema: linkBlockSchema,
+    defaultValue: BLOCK_DEFAULT_VALUES.link,
+  },
+
+  preview: {
+    id: 'preview',
+    label: 'Tekst podglądu (preheader)',
+    description: 'Ukryty tekst widoczny na liście skrzynki obok tematu',
+    icon: Eye,
+    group: 'treść',
+    getSummary: (block) => {
+      const text = (block as PreviewBlock).text
+      return text ? `Preheader: „${text.slice(0, 40)}"` : 'Pusty preheader'
+    },
+    EditorComponent: PreviewBlockEditor as EditorComponentType,
+    validationSchema: previewBlockSchema,
+    defaultValue: BLOCK_DEFAULT_VALUES.preview,
   },
 
   columns: {

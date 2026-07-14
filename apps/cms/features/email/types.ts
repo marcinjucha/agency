@@ -13,6 +13,8 @@ export type {
   HeadingBlock,
   ImageBlock,
   SpacerBlock,
+  LinkBlock,
+  PreviewBlock,
   ColumnsBlock,
   SectionBlock,
   SectionChildBlock,

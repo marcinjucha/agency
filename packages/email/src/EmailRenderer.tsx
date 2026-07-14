@@ -52,6 +52,7 @@ const TYPOGRAPHIC_BLOCK_TYPES: ReadonlySet<BlockType> = new Set([
   'text',
   'cta',
   'footer',
+  'link',
 ] satisfies BlockType[])
 
 /**
@@ -67,7 +68,7 @@ export function computeTypographyStyle(
 ): React.CSSProperties {
   if (!TYPOGRAPHIC_BLOCK_TYPES.has(block.type as BlockType)) return {}
 
-  const blockType = block.type as 'header' | 'heading' | 'text' | 'cta' | 'footer'
+  const blockType = block.type as 'header' | 'heading' | 'text' | 'cta' | 'footer' | 'link'
   const defaults = DEFAULT_BLOCK_TYPOGRAPHY[blockType]
   const overrides = block as Partial<BlockTypography>
 

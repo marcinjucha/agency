@@ -118,6 +118,13 @@ export function parseTemplateVariables(raw: unknown): TemplateVariable[] {
 
 // `themeId` (optional) lets the preview reflect the theme currently PICKED in
 // the editor before it is saved — null/absent = the tenant default.
+//
+// UWAGA (bezpieczeństwo): zwracany HTML NIE przechodzi sanitizeHtmlUrls — jest
+// bezpieczny WYŁĄCZNIE dlatego, że jedyny konsument (EmailPreview) renderuje go
+// w iframe z sandbox="" (javascript: href jest inertny). Każde NOWE użycie tego
+// fn poza sandboxowanym iframe (np. "wyślij testowy mail") MUSI przepuścić
+// wynik przez sanitizeHtmlUrls — ścieżki wysyłkowe (n8n, venture) robią to
+// na finalnym HTML po substytucji zmiennych.
 const renderEmailPreviewSchema = z.object({
   blocks: updateEmailTemplateSchema.shape.blocks,
   themeId: themeIdFieldSchema,

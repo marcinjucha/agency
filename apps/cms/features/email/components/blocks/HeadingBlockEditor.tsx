@@ -1,5 +1,6 @@
 import { useRef } from 'react'
 import { Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@agency/ui'
+import { messages } from '@/lib/messages'
 import { VariableInserter } from '../VariableInserter'
 import type { HeadingBlock, Block } from '../../types'
 import type { TriggerVariable } from '@/lib/trigger-schemas'
@@ -55,6 +56,7 @@ export function HeadingBlockEditor({ block, onChange, variables = [] }: HeadingB
             <SelectItem value="h1">H1 — Tytuł główny</SelectItem>
             <SelectItem value="h2">H2 — Podtytuł</SelectItem>
             <SelectItem value="h3">H3 — Nagłówek sekcji</SelectItem>
+            <SelectItem value="eyebrow">{messages.email.inspectorHeadingLevelEyebrow}</SelectItem>
           </SelectContent>
         </Select>
       </div>

@@ -20,6 +20,8 @@ import type {
   HeadingBlock,
   ImageBlock,
   SpacerBlock,
+  LinkBlock,
+  PreviewBlock,
   ColumnsBlock,
   SectionBlock,
   SectionPadding,
@@ -41,6 +43,8 @@ type AnyBlock =
   | HeadingBlock
   | ImageBlock
   | SpacerBlock
+  | LinkBlock
+  | PreviewBlock
   | ColumnsBlock
   | SectionBlock
 
@@ -53,6 +57,8 @@ type BlockTypeKey =
   | 'heading'
   | 'image'
   | 'spacer'
+  | 'link'
+  | 'preview'
   | 'columns'
   | 'section'
 
@@ -63,7 +69,7 @@ type BlockTypeKey =
  * (font-family/size/weight/line-height/letter-spacing) NIE są konfigurowalne
  * po stronie usera — żyją w hardcoded stylach bloków w rendererze.
  */
-type TypographicBlockType = 'header' | 'heading' | 'text' | 'cta' | 'footer'
+type TypographicBlockType = 'header' | 'heading' | 'text' | 'cta' | 'footer' | 'link'
 
 // Token-reference fields (textColorToken) are ADDITIVE overrides — a default
 // block carries a literal color, never a token — so they are excluded from the
@@ -76,6 +82,9 @@ export const DEFAULT_BLOCK_TYPOGRAPHY: Record<TypographicBlockType, TypographyDe
   text: { textAlign: 'left', textColor: '#334155' },
   cta: { textAlign: 'center', textColor: '#ffffff' },
   footer: { textAlign: 'center', textColor: '#94a3b8' },
+  // Link — "linkowy" ciemny default; przy motywie rung (c) nadpisuje go
+  // tokenem 'primary' (BLOCK_TEXT_COLOR_TOKEN w theme.ts).
+  link: { textAlign: 'left', textColor: '#1a1a2e' },
 }
 
 /**
@@ -182,6 +191,10 @@ export const DEFAULT_BLOCK_MARGIN_BOTTOM_PRESET: Record<BlockTypeKey, MarginBott
   divider: 'none',
   spacer: 'none',
   footer: 'none',
+  link: 'none',
+  // preview jest niewidzialny w treści — margines i tak byłby inert, ale klucz
+  // musi istnieć (Record<BlockTypeKey> jest exhaustive).
+  preview: 'none',
   columns: 'none',
   section: 'none',
 }
@@ -198,6 +211,8 @@ export const BLOCK_DEFAULT_VALUES: {
   heading: BlockWithoutId<HeadingBlock>
   image: BlockWithoutId<ImageBlock>
   spacer: BlockWithoutId<SpacerBlock>
+  link: BlockWithoutId<LinkBlock>
+  preview: BlockWithoutId<PreviewBlock>
   columns: BlockWithoutId<ColumnsBlock>
   section: BlockWithoutId<SectionBlock>
 } = {
@@ -242,6 +257,15 @@ export const BLOCK_DEFAULT_VALUES: {
   spacer: {
     type: 'spacer' as const,
     size: 'md',
+  },
+  link: {
+    type: 'link' as const,
+    label: 'Zobacz więcej',
+    url: '',
+  },
+  preview: {
+    type: 'preview' as const,
+    text: '',
   },
   columns: {
     type: 'columns' as const,
