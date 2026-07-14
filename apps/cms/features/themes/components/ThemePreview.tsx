@@ -26,13 +26,18 @@ import { messages } from '@/lib/messages'
 
 interface ThemePreviewProps {
   tokens: ThemeTokens
+  // When provided, the "Podgląd e-mail" tab renders this node (the REAL rendered
+  // email) INSTEAD of the generic token mock. The theme editor omits it (shows the
+  // mock); the venture campaign card injects the byte-faithful send render. The
+  // contrast badge + resolved-swatch grid stay in both cases.
+  emailPreviewSlot?: React.ReactNode
 }
 
 function isValidHex(value: unknown): value is HexColor {
   return hexColorSchema.safeParse(value).success
 }
 
-export function ThemePreview({ tokens }: ThemePreviewProps) {
+export function ThemePreview({ tokens, emailPreviewSlot }: ThemePreviewProps) {
   const resolved = resolveClientTheme({ tenantTheme: null, clientTheme: tokens })
 
   // The header text the operator INTENDED (before the readability guard). When
@@ -89,57 +94,59 @@ export function ThemePreview({ tokens }: ThemePreviewProps) {
         text={resolved.headerText}
       />
 
-      {/* Mock email */}
-      <div
-        className="overflow-hidden rounded-xl border border-border shadow-sm"
-        style={{ backgroundColor: resolved.background, fontFamily }}
-      >
-        {/* Header */}
+      {/* Email preview — REAL rendered email (slot) or the generic token mock */}
+      {emailPreviewSlot ?? (
         <div
-          className="flex items-center gap-3 px-6 py-5"
-          style={{
-            backgroundColor: resolved.headerBackground,
-            color: resolved.headerText,
-          }}
+          className="overflow-hidden rounded-xl border border-border shadow-sm"
+          style={{ backgroundColor: resolved.background, fontFamily }}
         >
-          {resolved.logoUrl ? (
-            <Image
-              src={resolved.logoUrl}
-              alt={messages.themes.logoAlt}
-              layout="constrained"
-              width={32}
-              height={32}
-              className="h-8 w-8 rounded object-contain"
-            />
-          ) : null}
-          <span className="text-base font-semibold" style={{ color: resolved.headerText }}>
-            {messages.themes.mockEmailHeading}
-          </span>
-        </div>
-
-        {/* Body */}
-        <div className="space-y-4 px-6 py-6">
-          <p className="text-sm leading-relaxed" style={{ color: resolved.text }}>
-            {messages.themes.mockEmailBody}
-          </p>
-          <span
-            className="inline-flex items-center rounded-md px-4 py-2 text-sm font-semibold"
+          {/* Header */}
+          <div
+            className="flex items-center gap-3 px-6 py-5"
             style={{
-              backgroundColor: resolved.primary,
-              color: resolved.primaryText,
+              backgroundColor: resolved.headerBackground,
+              color: resolved.headerText,
             }}
           >
-            {messages.themes.mockEmailCta}
-          </span>
-        </div>
+            {resolved.logoUrl ? (
+              <Image
+                src={resolved.logoUrl}
+                alt={messages.themes.logoAlt}
+                layout="constrained"
+                width={32}
+                height={32}
+                className="h-8 w-8 rounded object-contain"
+              />
+            ) : null}
+            <span className="text-base font-semibold" style={{ color: resolved.headerText }}>
+              {messages.themes.mockEmailHeading}
+            </span>
+          </div>
 
-        {/* Footer */}
-        <div className="border-t border-black/5 px-6 py-4">
-          <p className="text-xs" style={{ color: resolved.footerText }}>
-            {messages.themes.mockEmailFooter}
-          </p>
+          {/* Body */}
+          <div className="space-y-4 px-6 py-6">
+            <p className="text-sm leading-relaxed" style={{ color: resolved.text }}>
+              {messages.themes.mockEmailBody}
+            </p>
+            <span
+              className="inline-flex items-center rounded-md px-4 py-2 text-sm font-semibold"
+              style={{
+                backgroundColor: resolved.primary,
+                color: resolved.primaryText,
+              }}
+            >
+              {messages.themes.mockEmailCta}
+            </span>
+          </div>
+
+          {/* Footer */}
+          <div className="border-t border-black/5 px-6 py-4">
+            <p className="text-xs" style={{ color: resolved.footerText }}>
+              {messages.themes.mockEmailFooter}
+            </p>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Resolved swatch grid */}
       <div className="space-y-2">

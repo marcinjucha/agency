@@ -34,8 +34,15 @@ import type {
   UpdateCampaignInput,
   UpdateClientInput,
 } from './validation'
+import type { Json } from '@agency/database'
 import { BONUS_LIST_MARKER } from './mail/bonus-email-template'
 import { resolveBonusTemplateByPrecedence } from './mail/resolve-bonus-template'
+import {
+  buildBonusEmailBody,
+  coerceBonusTemplateRow,
+  resolveVentureSendTheme,
+  type BonusTemplateRow,
+} from './mail/render-bonus-email.server'
 import { isUsableTemplateBlocks } from './utils/template-blocks'
 
 // ---------------------------------------------------------------------------
@@ -209,17 +216,26 @@ export function createClientHandler(
 ): Promise<MutationResult<AdminClient>> {
   return toMutation(
     gated(PERM.clients, (auth) =>
-      // Defense-in-depth over the so_clients INSERT WITH CHECK gate in
-      // 20260709120000: client creation is UNSCOPED-only. A scoped member's DB
-      // insert would fail with an opaque RLS error — reject it cleanly here
-      // first with the standard no-permission message.
+      // Client creation is UNSCOPED-only (app-layer mirror of the so_clients INSERT
+      // WITH CHECK gate in 20260709120000). A scoped member is rejected cleanly here
+      // BEFORE any DB call rather than hitting an opaque RLS error.
       isUnscopedActor(auth)
         ? // A non-null theme_id must belong to the caller's tenant (cross-tenant
           // theme write guard) BEFORE the insert.
-          assertThemeOwnedIfPresent(auth, input.theme_id).andThen(() =>
-            ResultAsync.fromPromise(
-              tbl(auth, 'so_clients')
-                .insert({
+          assertThemeOwnedIfPresent(auth, input.theme_id)
+            .andThen(() =>
+              // INSERT WITHOUT `.select()` (no RETURNING), then read the row back in a
+              // SEPARATE statement below. WHY: the so_clients SELECT RLS policy calls
+              // the self-referential can_access_so_client(id), which runs its OWN
+              // `SELECT … FROM so_clients WHERE id = <the new id>`. During an
+              // `INSERT … RETURNING` that sub-select runs under the insert's snapshot
+              // and cannot see the row being inserted, so it returns false and blocks
+              // RETURNING → 42501 for every NON-super creator (super_admin escapes only
+              // because is_super_admin() short-circuits can_access without reading the
+              // row). Reading the row back once it is committed (a fresh snapshot) lets
+              // can_access_so_client resolve true.
+              ResultAsync.fromPromise(
+                tbl(auth, 'so_clients').insert({
                   name: input.name,
                   slug: input.slug,
                   tenant_id: auth.tenantId,
@@ -231,12 +247,25 @@ export function createClientHandler(
                   sender_name: input.sender_name ?? null,
                   // NULL = inherit the organization's theme (design § Assignment UX).
                   theme_id: input.theme_id ?? null,
-                })
-                .select(ADMIN_CLIENT_COLUMNS)
-                .single(),
-              dbError,
-            ).andThen(fromSupabaseSafe<AdminClient>('createClient')),
-          )
+                }),
+                dbError,
+              )
+                // Still maps 23505 unique_violation → slugTaken (other DB errors →
+                // generic); the error now surfaces on the INSERT, not the read-back.
+                .andThen(fromSupabaseVoidSafe('createClient')),
+            )
+            .andThen(() =>
+              // slug is GLOBALLY unique (20260709180000), so (tenant_id, slug)
+              // uniquely identifies the just-committed row.
+              ResultAsync.fromPromise(
+                tbl(auth, 'so_clients')
+                  .select(ADMIN_CLIENT_COLUMNS)
+                  .eq('tenant_id', auth.tenantId)
+                  .eq('slug', input.slug)
+                  .single(),
+                dbError,
+              ).andThen(fromSupabaseSafe<AdminClient>('createClient')),
+            )
         : errAsync<AdminClient, string>(messages.common.noPermission),
     ),
   )
@@ -709,6 +738,278 @@ export function getCampaignEffectiveSendHandler(
                   resolvedTemplateType: resolved?.type ?? null,
                 }
               }),
+            ),
+          ),
+        ),
+      ),
+    ),
+  )
+}
+
+// ===========================================================================
+// Bonus email preview (real render — "Podgląd e-mail" tab)
+//
+// The campaign editor's "Wygląd kampanii" card must show the REAL bonus email a
+// send would deliver, NOT a generic theme swatch mock (the mock coloured the
+// header from the `headerBackground` role, while a selected template's header can
+// be TOKEN-BOUND to `primary` — the mock lied). This handler renders BYTE-
+// IDENTICALLY to the send path by reusing the SHARED render mechanism
+// (resolveVentureSendTheme + buildBonusEmailBody) and the SAME template precedence
+// (resolveBonusTemplateByPrecedence) — so the preview cannot drift from ingest.
+//
+// AUTHENTICATED/owned path (NOT the public service client): gated on
+// bonus_funnel.campaigns + assertCampaignOwned (campaign → client → tenant walk =
+// the tenant boundary; so_campaigns has no tenant_id). Every read is tenant-
+// scoped. Never throws to the client (toMutation maps the error channel).
+// ===========================================================================
+
+/** The rendered bonus email a send would deliver for a campaign (preview). */
+export interface CampaignBonusEmailPreview {
+  html: string
+}
+
+// The campaign fields the preview needs: owning client (for the client theme tier
+// + ownership), the display name (→ {{companyName}}), the campaign theme tier
+// (theme_id / brand), and the explicitly-assigned template id.
+interface CampaignPreviewRow {
+  clientId: string
+  displayName: string | null
+  campaignThemeId: string | null
+  campaignBrand: Json | null
+  campaignTemplateId: string | null
+}
+
+function fetchCampaignPreviewRow(
+  auth: AuthContextFull,
+  campaignId: string,
+): ResultAsync<CampaignPreviewRow, string> {
+  return ResultAsync.fromPromise(
+    tbl(auth, 'so_campaigns')
+      .select('client_id, display_name, theme_id, brand, email_template_id')
+      .eq('id', campaignId)
+      .maybeSingle(),
+    dbError,
+  ).andThen((res) => {
+    const r = res as {
+      data: {
+        client_id: string
+        display_name: string | null
+        theme_id: string | null
+        brand: Json | null
+        email_template_id: string | null
+      } | null
+      error: DbErrorShape
+    }
+    if (r.error) return err(mapDbError(r.error, 'fetchCampaignPreviewRow'))
+    if (!r.data) return err(messages.common.noPermission)
+    return ok<CampaignPreviewRow, string>({
+      clientId: r.data.client_id,
+      displayName: r.data.display_name,
+      campaignThemeId: r.data.theme_id,
+      campaignBrand: r.data.brand,
+      campaignTemplateId: r.data.email_template_id,
+    })
+  })
+}
+
+// (named-theme FK + inline JSONB fallback) for one brand tier.
+interface ThemeTierRead {
+  themeId: string | null
+  inline: Json | null
+}
+
+/** Read the owning client's theme tier, tenant-scoped (defense over the FK walk). */
+function fetchClientThemeTier(
+  auth: AuthContextFull,
+  clientId: string,
+): ResultAsync<ThemeTierRead, string> {
+  return ResultAsync.fromPromise(
+    tbl(auth, 'so_clients')
+      .select('theme_id, theme')
+      .eq('id', clientId)
+      .eq('tenant_id', auth.tenantId)
+      .maybeSingle(),
+    dbError,
+  ).andThen((res) => {
+    const r = res as {
+      data: { theme_id: string | null; theme: Json | null } | null
+      error: DbErrorShape
+    }
+    if (r.error) return err(mapDbError(r.error, 'fetchClientThemeTier'))
+    if (!r.data) return err(messages.common.noPermission)
+    return ok<ThemeTierRead, string>({ themeId: r.data.theme_id, inline: r.data.theme })
+  })
+}
+
+/**
+ * Read the tenant (agency) theme tier — the neutral fallback under the client's
+ * brand. Degrades to {null, null} on a missing row AND on a transient read error
+ * (never blocks the preview), mirroring ingest's fetchTenantTheme no-drop
+ * behaviour. Parity matters: the preview must reflect what a real send produces,
+ * and a send degrades the tenant tier to the neutral default rather than aborting
+ * on a tenant read error (client brand still wins). The client- and campaign-tier
+ * reads deliberately do NOT degrade here — ingest propagates their read errors
+ * too (resolveClientRow/resolveCampaign → db_error abort).
+ */
+function fetchTenantThemeTier(auth: AuthContextFull): ResultAsync<ThemeTierRead, string> {
+  return ResultAsync.fromPromise(
+    tbl(auth, 'tenants').select('theme_id, theme').eq('id', auth.tenantId).maybeSingle(),
+    dbError,
+  ).andThen((res) => {
+    const r = res as {
+      data: { theme_id: string | null; theme: Json | null } | null
+      error: DbErrorShape
+    }
+    if (r.error) {
+      // Degrade to the neutral default instead of erroring (mirrors ingest's
+      // fetchTenantTheme) so the preview still renders what a send would produce.
+      console.error('[venture-preview] tenant theme lookup failed:', mapDbError(r.error, 'fetchTenantThemeTier'))
+      return ok<ThemeTierRead, string>({ themeId: null, inline: null })
+    }
+    return ok<ThemeTierRead, string>({
+      themeId: r.data?.theme_id ?? null,
+      inline: r.data?.theme ?? null,
+    })
+  })
+}
+
+/** Published bonuses in send order — the SAME set + order the send splices in. */
+function fetchPublishedBonusesForPreview(
+  auth: AuthContextFull,
+  campaignId: string,
+): ResultAsync<Array<{ title: string | null; url: string | null }>, string> {
+  return ResultAsync.fromPromise(
+    tbl(auth, 'so_bonuses')
+      .select('title, url')
+      .eq('campaign_id', campaignId)
+      .eq('published', true)
+      .order('sort_order', { ascending: true }),
+    dbError,
+  ).andThen((res) => {
+    const r = res as {
+      data: Array<{ title: string | null; url: string | null }> | null
+      error: DbErrorShape
+    }
+    if (r.error) return err(mapDbError(r.error, 'fetchPublishedBonusesForPreview'))
+    return ok(r.data ?? [])
+  })
+}
+
+/** Read a template row (blocks + subject) by id, tenant-scoped, coerced to usable-or-null. */
+function readBonusTemplateRowById(
+  auth: AuthContextFull,
+  templateId: string,
+): ResultAsync<BonusTemplateRow | null, string> {
+  return ResultAsync.fromPromise(
+    tbl(auth, 'email_templates')
+      .select('blocks, subject')
+      .eq('id', templateId)
+      .eq('tenant_id', auth.tenantId)
+      .maybeSingle(),
+    dbError,
+  ).andThen((res) => {
+    const r = res as { data: unknown; error: DbErrorShape }
+    if (r.error) return err(mapDbError(r.error, 'readBonusTemplateRowById'))
+    return ok(coerceBonusTemplateRow(r.data))
+  })
+}
+
+/** Read the tenant DEFAULT (venture_bonus singleton) row (blocks + subject), coerced. */
+function readDefaultBonusTemplateRow(
+  auth: AuthContextFull,
+): ResultAsync<BonusTemplateRow | null, string> {
+  return ResultAsync.fromPromise(
+    tbl(auth, 'email_templates')
+      .select('blocks, subject')
+      .eq('type', BONUS_TEMPLATE_TYPE)
+      .eq('tenant_id', auth.tenantId)
+      .maybeSingle(),
+    dbError,
+  ).andThen((res) => {
+    const r = res as { data: unknown; error: DbErrorShape }
+    if (r.error) return err(mapDbError(r.error, 'readDefaultBonusTemplateRow'))
+    return ok(coerceBonusTemplateRow(r.data))
+  })
+}
+
+/**
+ * Resolve the actual template (blocks + subject) the send would use, via the
+ * SHARED precedence (campaign assignment → tenant default → null). Mirrors
+ * ingest's fetchBonusTemplate exactly — the by-id read runs only when a template
+ * is assigned; the default read is lazy.
+ */
+function resolveEffectiveBonusTemplateRow(
+  auth: AuthContextFull,
+  campaignTemplateId: string | null,
+): ResultAsync<BonusTemplateRow | null, string> {
+  const readById = (): ResultAsync<BonusTemplateRow | null, string> =>
+    campaignTemplateId
+      ? readBonusTemplateRowById(auth, campaignTemplateId)
+      : okAsync<BonusTemplateRow | null, string>(null)
+  return resolveBonusTemplateByPrecedence(readById, () => readDefaultBonusTemplateRow(auth))
+}
+
+/**
+ * Render the preview HTML — the FINAL step, reusing the SHARED send mechanism so
+ * it is byte-identical to a real send: per-tier theme resolution then the hybrid
+ * copy-template / hardcoded-builder body. Never throws (each dep degrades).
+ */
+async function renderBonusPreviewHtml(args: {
+  supabase: AuthContextFull['supabase']
+  displayName: string | null
+  tenant: ThemeTierRead
+  client: ThemeTierRead
+  campaignThemeId: string | null
+  campaignBrand: Json | null
+  bonuses: Array<{ title: string | null; url: string | null }>
+  template: BonusTemplateRow | null
+}): Promise<CampaignBonusEmailPreview> {
+  const theme = await resolveVentureSendTheme(args.supabase, {
+    tenantThemeId: args.tenant.themeId,
+    tenantTheme: args.tenant.inline,
+    clientThemeId: args.client.themeId,
+    clientTheme: args.client.inline,
+    campaignThemeId: args.campaignThemeId,
+    campaignBrand: args.campaignBrand,
+  })
+  const { html } = await buildBonusEmailBody(args.template, args.displayName, args.bonuses, theme)
+  return { html }
+}
+
+/**
+ * Render the REAL bonus email a send would deliver for a campaign — for the
+ * campaign editor's "Podgląd e-mail" tab. Gated on bonus_funnel.campaigns (the
+ * route map does NOT protect createServerFn); tenant-scoped via assertCampaignOwned
+ * + explicit tenant filters. Reuses the send path's shared theme + body mechanism
+ * and the shared template precedence so the preview cannot drift from ingest.
+ */
+export function renderCampaignBonusEmailPreviewHandler(
+  campaignId: string,
+): Promise<MutationResult<CampaignBonusEmailPreview>> {
+  return toMutation(
+    gated(PERM.campaigns, (auth) =>
+      assertCampaignOwned(auth, campaignId).andThen(() =>
+        fetchCampaignPreviewRow(auth, campaignId).andThen((campaign) =>
+          fetchClientThemeTier(auth, campaign.clientId).andThen((client) =>
+            fetchTenantThemeTier(auth).andThen((tenant) =>
+              ResultAsync.combine([
+                fetchPublishedBonusesForPreview(auth, campaignId),
+                resolveEffectiveBonusTemplateRow(auth, campaign.campaignTemplateId),
+              ]).andThen(([bonuses, template]) =>
+                ResultAsync.fromPromise(
+                  renderBonusPreviewHtml({
+                    supabase: auth.supabase,
+                    displayName: campaign.displayName,
+                    tenant,
+                    client,
+                    campaignThemeId: campaign.campaignThemeId,
+                    campaignBrand: campaign.campaignBrand,
+                    bonuses,
+                    template,
+                  }),
+                  dbError,
+                ),
+              ),
             ),
           ),
         ),

@@ -179,6 +179,10 @@ describe('tenant scoping', () => {
   })
 
   it('createClient injects tenant_id from auth, never from input', async () => {
+    // Two so_clients statements now: the INSERT (no .select()/RETURNING) followed by
+    // a SEPARATE read-back. setupAuth returns one cached chain per table, so the
+    // single { data: row, error: null } value serves BOTH — the insert's void mapper
+    // reads error (null → ok), the read-back's data mapper returns the row.
     const row = { id: 'c1', name: 'Kacper', slug: 'kacper', tenant_id: TENANT }
     const { chains } = setupAuth({ so_clients: { data: row, error: null } }, ALL_PERMS, OWNER)
 
@@ -264,6 +268,48 @@ describe('createClient unscoped-actor guard', () => {
 
     expect(result.success).toBe(true)
     expect(chains.so_clients.insert).toHaveBeenCalled()
+  })
+
+  // Pins the prod-42501 fix structurally: the self-referential so_clients SELECT
+  // RLS policy (can_access_so_client) cannot see the new row during an
+  // INSERT … RETURNING, so the insert must NOT chain .select() — the row is read
+  // back in a SEPARATE statement once committed. Uses a bespoke mock giving the
+  // insert and the read-back DISTINCT chains so the row's SOURCE is provable.
+  it('createClient reads the row back in a SEPARATE statement (INSERT without RETURNING) so the self-referential SELECT policy cannot block it', async () => {
+    const readBackRow = { id: 'c1', name: 'Kacper', slug: 'kacper', tenant_id: TENANT }
+    // Insert chain carries NO data → if the handler wrongly derived the row from the
+    // insert's RETURNING, result.data could not equal readBackRow.
+    const insertChain = mockChain({ error: null })
+    const selectChain = mockChain({ data: readBackRow, error: null })
+    let soClientsCall = 0
+    const from = vi.fn((name: string) => {
+      if (name !== 'so_clients') return mockChain({ data: null, error: null })
+      soClientsCall += 1
+      return soClientsCall === 1 ? insertChain : selectChain
+    })
+    mockRequireAuth.mockReturnValue(
+      okAsync({
+        supabase: { from },
+        userId: 'user-1',
+        tenantId: TENANT,
+        isSuperAdmin: false,
+        roleName: 'owner',
+        permissions: ALL_PERMS,
+      }),
+    )
+
+    const result = await createClientHandler({ name: 'Kacper', slug: 'kacper' })
+
+    expect(result.success).toBe(true)
+    // (a) the INSERT is made WITHOUT a chained .select() (no RETURNING).
+    expect(insertChain.insert).toHaveBeenCalled()
+    expect(insertChain.select).not.toHaveBeenCalled()
+    // (b) a SEPARATE read-back select scoped by (tenant_id, slug) occurred.
+    expect(selectChain.select).toHaveBeenCalledWith(expect.stringContaining('id'))
+    expect(selectChain.eq).toHaveBeenCalledWith('tenant_id', TENANT)
+    expect(selectChain.eq).toHaveBeenCalledWith('slug', 'kacper')
+    // (c) the returned data is the row from the read-back, not the insert.
+    expect(result.data).toEqual(readBackRow)
   })
 })
 
@@ -511,7 +557,7 @@ describe('db-error mapping (no raw error leak)', () => {
     const rawDbMessage =
       'duplicate key value violates unique constraint "so_clients_tenant_slug_key"'
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
-    setupAuth(
+    const { chains } = setupAuth(
       { so_clients: { data: null, error: { code: '23505', message: rawDbMessage } } },
       ALL_PERMS,
       OWNER,
@@ -525,6 +571,8 @@ describe('db-error mapping (no raw error leak)', () => {
     expect(result.error).not.toContain('constraint')
     // …but it IS logged for developers.
     expect(consoleSpy).toHaveBeenCalled()
+    // The error surfaces on the INSERT → the read-back select is never reached.
+    expect(chains.so_clients.select).not.toHaveBeenCalled()
     consoleSpy.mockRestore()
   })
 
@@ -555,7 +603,7 @@ describe('db-error mapping (no raw error leak)', () => {
     const rawRlsMessage =
       'new row violates row-level security policy for table "so_clients"'
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
-    setupAuth(
+    const { chains } = setupAuth(
       { so_clients: { data: null, error: { code: '42501', message: rawRlsMessage } } },
       ALL_PERMS,
       OWNER,
@@ -566,6 +614,8 @@ describe('db-error mapping (no raw error leak)', () => {
     expect(result.success).toBe(false)
     expect(result.error).toBe(messages.venture.operationFailed)
     expect(result.error).not.toContain('row-level security')
+    // The error surfaces on the INSERT → the read-back select is never reached.
+    expect(chains.so_clients.select).not.toHaveBeenCalled()
     consoleSpy.mockRestore()
   })
 })

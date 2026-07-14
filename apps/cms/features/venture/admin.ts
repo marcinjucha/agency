@@ -26,6 +26,7 @@ import {
   listBonusTemplatesHandler,
   listCampaignsHandler,
   listClientsHandler,
+  renderCampaignBonusEmailPreviewHandler,
   reorderBonusesHandler,
   selectTemplateForCampaignHandler,
   updateBonusHandler,
@@ -113,6 +114,20 @@ export const getCampaignEffectiveSendFn = createServerFn({ method: 'POST' })
     campaignEffectiveSendInputSchema.parse(v),
   )
   .handler(({ data }) => getCampaignEffectiveSendHandler(data.campaignId))
+
+// Render the REAL bonus email a send would deliver — powers the campaign editor's
+// "Podgląd e-mail" tab (byte-identical to the send path). Gated in the handler
+// (bonus_funnel.campaigns + assertCampaignOwned) — the route map does NOT protect
+// createServerFn (project Authz gotcha).
+const renderCampaignBonusEmailPreviewInputSchema = z.object({
+  campaignId: z.string().uuid(),
+})
+
+export const renderCampaignBonusEmailPreviewFn = createServerFn({ method: 'POST' })
+  .inputValidator((v: z.infer<typeof renderCampaignBonusEmailPreviewInputSchema>) =>
+    renderCampaignBonusEmailPreviewInputSchema.parse(v),
+  )
+  .handler(({ data }) => renderCampaignBonusEmailPreviewHandler(data.campaignId))
 
 // --- Bonus-capable email templates (Phase 4, model B) ---------------------
 

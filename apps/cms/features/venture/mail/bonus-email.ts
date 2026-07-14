@@ -38,7 +38,7 @@ export interface BonusEmail {
 }
 
 export const FALLBACK_BRAND = 'Halo Efekt'
-const BONUS_LINK_LABEL = 'Zrób kopię' // TODO(OQ-5): final PL copy
+const BONUS_LINK_LABEL = 'Pobierz'
 
 /**
  * The brand string shown in the header / heading / footer copy. Exported so the
@@ -86,8 +86,8 @@ export function buildBonusEmailSubject(input: BonusEmailInput): string {
 
 /**
  * Build the email block list. PURE — no async, no @react-email. Renders each
- * deliverable bonus as its own line with a "Zrób kopię" link, plus a
- * "sprawdź skrzynkę" note. PLACEHOLDER PL copy — TODO(OQ-5).
+ * deliverable bonus as its own line with a download link (label = `BONUS_LINK_LABEL`),
+ * plus a "sprawdź skrzynkę" note. PLACEHOLDER PL copy — TODO(OQ-5).
  */
 export function buildBonusEmailBlocks(input: BonusEmailInput): Block[] {
   const brand = resolveBonusBrand(input.campaignDisplayName)
