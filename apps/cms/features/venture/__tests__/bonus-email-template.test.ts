@@ -243,7 +243,13 @@ describe('copy variable substitution', () => {
     expect(html).not.toContain(BONUS_LIST_MARKER)
   })
 
-  it('leaves an unknown token literal (n8n parity — mis-binding stays detectable)', async () => {
+  // NO-LEAK backstop (INV-3) — Phase 4. venture_bonus is APP-OWNED: the send path
+  // fills only companyName + the structural bonus_list marker, so ANY residual
+  // `{{token}}` after substitution is guaranteed unfillable and must be stripped
+  // (a seeded literal {{firstName}} once leaked to a recipient). This DELIBERATELY
+  // reverses the earlier n8n-parity "leave it literal" behaviour, which only holds
+  // for n8n-sent templates whose bindings are not code-knowable — not here.
+  it('NO-LEAK: a stray {{unknownToken}} is stripped from the final HTML (not left literal)', async () => {
     const { html } = await buildBonusEmailFromTemplateHtml({
       templateBlocks: [
         { id: 'x', type: 'text', content: '<p>{{unknownKey}}</p>' },
@@ -254,6 +260,37 @@ describe('copy variable substitution', () => {
       theme: HALO_EFEKT_DEFAULT,
       values: { companyName: 'X' },
     })
-    expect(html).toContain('{{unknownKey}}')
+    expect(html).not.toContain('{{unknownKey}}')
+    // Zero residual tokens of ANY name reach the recipient.
+    expect(html).not.toMatch(/\{\{\s*[\w.]+\s*\}\}/)
+  })
+
+  it('NO-LEAK: stray token AND a missing bonus_list marker → no {{...}} leaks, list still present', async () => {
+    const { html } = await buildBonusEmailFromTemplateHtml({
+      // A stray token, and the bonus_list marker embedded in content (not a
+      // standalone block) so it escapes block-splicing → the list falls back to
+      // before-footer and the literal marker would otherwise survive.
+      templateBlocks: [
+        { id: 'stray', type: 'text', content: '<p>{{unresolved.deep}}</p>' },
+        { id: 'mis-marker', type: 'text', content: `<p>${BONUS_LIST_MARKER}</p>` },
+        {
+          id: 'bonus-footer',
+          type: 'footer',
+          text: 'Wysłano przez {{companyName}}.',
+        },
+      ],
+      subjectTemplate: SUBJECT_TEMPLATE,
+      bonuses: BONUSES,
+      theme: HALO_EFEKT_DEFAULT,
+      values: { companyName: 'Kacper Launch' },
+    })
+    // No residual token of any kind (stray token AND the escaped bonus_list marker).
+    expect(html).not.toMatch(/\{\{\s*[\w.]+\s*\}\}/)
+    expect(html).not.toContain(BONUS_LIST_MARKER)
+    // The programmatic bonus list is STILL present (spliced before-footer) — the
+    // no-leak strip must not remove the real content.
+    expect(html).toContain('href="https://drive.example.com/notion"')
+    // The filled app token survived.
+    expect(html).toContain('Kacper Launch')
   })
 })

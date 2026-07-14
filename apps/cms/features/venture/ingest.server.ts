@@ -133,6 +133,12 @@ export type CampaignRow = {
   // to the pre-campaign-tier render).
   campaignThemeId: string | null
   campaignBrand: Json | null
+  // Phase 4 (increment 1): the campaign's EXPLICITLY-selected `venture_bonus`
+  // template (so_campaigns.email_template_id FK → email_templates.id). NULL when
+  // the campaign has no explicit assignment → the send falls back to the tenant's
+  // DEFAULT `venture_bonus` template, then to the hardcoded builder. Resolved on
+  // the SEND path only (fetchBonusTemplate) — no UI reads it yet.
+  email_template_id: string | null
 }
 
 // Row shape fetched from so_clients — id + tenant_id + the theme FK + inline
@@ -259,7 +265,9 @@ export async function resolveCampaign(
       // the SERVICE-role verify path, so the plaintext secret column IS read
       // here (it is not exposed to the authenticated/admin layer). iter E2:
       // theme_id + brand are the campaign-theme tier (FK + inline fallback).
-      'id, tally_webhook_secret, esp_provider, esp_audience_ref, esp_tag_launch, display_name, lead_source_provider, theme_id, brand',
+      // email_template_id (Phase 4) is the campaign's explicit venture_bonus
+      // template assignment — read on the send path (fetchBonusTemplate).
+      'id, tally_webhook_secret, esp_provider, esp_audience_ref, esp_tag_launch, display_name, lead_source_provider, theme_id, brand, email_template_id',
     )
     .eq('client_id', clientRow.id)
     .eq('slug', slug)
@@ -548,13 +556,55 @@ const BONUS_TEMPLATE_TYPE = 'venture_bonus'
 type BonusTemplateRow = { blocks: Block[]; subject: string }
 
 /**
- * Fetch the tenant's editable `venture_bonus` copy template (service-role read of
- * `email_templates` by (tenant_id, type)). Returns null when absent / on any
- * error — NEVER throws, so a missing or unreadable template silently falls back
- * to the hardcoded builder (no lead-send drop). `blocks` is JSONB → cast to
- * Block[]; a non-array blob is treated as absent.
+ * Coerce a raw `email_templates` row into a usable BonusTemplateRow, or null when
+ * unusable. `blocks` is JSONB → a non-array or empty blob is treated as ABSENT
+ * (no-drop: an unusable template must fall through to the next tier / builder,
+ * never render broken copy). Pure.
  */
-async function fetchBonusTemplate(
+function coerceBonusTemplateRow(data: unknown): BonusTemplateRow | null {
+  if (!data) return null
+  const row = data as { blocks: unknown; subject: string | null }
+  if (!Array.isArray(row.blocks) || row.blocks.length === 0) return null
+  return { blocks: row.blocks as Block[], subject: row.subject ?? '' }
+}
+
+/**
+ * Read a specific `venture_bonus` template by id, SCOPED to the tenant (F3 —
+ * the tenant id comes from the campaign ROW, never the payload, so the
+ * service-role read cannot surface another tenant's content). NEVER throws — any
+ * query/thrown error degrades to null so the caller falls to the next tier.
+ */
+async function readBonusTemplateById(
+  supabase: ServiceClient,
+  tenantId: string,
+  templateId: string,
+): Promise<BonusTemplateRow | null> {
+  try {
+    const { data, error } = await supabase
+      .from('email_templates')
+      .select('blocks, subject')
+      .eq('id', templateId)
+      .eq('tenant_id', tenantId)
+      .eq('type', BONUS_TEMPLATE_TYPE)
+      .maybeSingle()
+    if (error) return null
+    return coerceBonusTemplateRow(data)
+  } catch (error) {
+    console.error(
+      '[venture-ingest] bonus template by-id lookup failed:',
+      error instanceof Error ? error.message : String(error),
+    )
+    return null
+  }
+}
+
+/**
+ * Read the tenant's DEFAULT `venture_bonus` template (is_default = true). The
+ * migration's partial-unique index guarantees ≤1 default per (tenant, type), so
+ * `maybeSingle` is safe. NEVER throws — degrades to null (no-drop → hardcoded
+ * builder).
+ */
+async function readDefaultBonusTemplate(
   supabase: ServiceClient,
   tenantId: string,
 ): Promise<BonusTemplateRow | null> {
@@ -562,20 +612,46 @@ async function fetchBonusTemplate(
     const { data, error } = await supabase
       .from('email_templates')
       .select('blocks, subject')
-      .eq('tenant_id', tenantId)
       .eq('type', BONUS_TEMPLATE_TYPE)
+      .eq('is_default', true)
+      .eq('tenant_id', tenantId)
       .maybeSingle()
-    if (error || !data) return null
-    const row = data as { blocks: unknown; subject: string | null }
-    if (!Array.isArray(row.blocks) || row.blocks.length === 0) return null
-    return { blocks: row.blocks as Block[], subject: row.subject ?? '' }
+    if (error) return null
+    return coerceBonusTemplateRow(data)
   } catch (error) {
     console.error(
-      '[venture-ingest] bonus template lookup failed:',
+      '[venture-ingest] default bonus template lookup failed:',
       error instanceof Error ? error.message : String(error),
     )
     return null
   }
+}
+
+/**
+ * Resolve the `venture_bonus` copy template for a send, honouring the INV-4
+ * precedence (see `resolveVentureBonusTemplateId`): the campaign's EXPLICITLY
+ * assigned template wins, else the tenant's DEFAULT, else null. Implemented as a
+ * short-circuiting tiered read (the default's id isn't known until queried):
+ *   1. `campaignTemplateId` set + a usable row found (tenant + type match) → use it
+ *   2. otherwise the tenant's is_default row, if usable
+ *   3. otherwise null → caller uses the hardcoded builder (INV-1 NO-DROP)
+ * Every read is wrapped to degrade to the next tier — NEVER throws upward, so a
+ * missing/unreadable/malformed template silently falls back with no lead-send
+ * drop. `tenantId` MUST originate from the campaign row (F3 — cross-tenant leak
+ * guard on the service-role read).
+ */
+async function fetchBonusTemplate(
+  supabase: ServiceClient,
+  tenantId: string,
+  campaignTemplateId: string | null,
+): Promise<BonusTemplateRow | null> {
+  if (campaignTemplateId) {
+    const byId = await readBonusTemplateById(supabase, tenantId, campaignTemplateId)
+    if (byId) return byId
+  }
+  const byDefault = await readDefaultBonusTemplate(supabase, tenantId)
+  if (byDefault) return byDefault
+  return null
 }
 
 /**
@@ -646,9 +722,15 @@ async function sendBonusEmail(
       ),
     ])
     const theme = resolveClientTheme({ tenantTheme, clientTheme, campaignTheme })
-    // Presence-based fork: editable copy template if present, else hardcoded
-    // builder. Template fetch never throws → null on absent/error (no send drop).
-    const template = await fetchBonusTemplate(deps.supabase, campaign.tenantId)
+    // Phase 4: resolve the venture_bonus template by INV-4 precedence — the
+    // campaign's explicit assignment (email_template_id) first, else the tenant
+    // default, else the hardcoded builder. tenantId comes from the campaign ROW
+    // (F3 cross-tenant guard). Never throws → null on absent/error (no send drop).
+    const template = await fetchBonusTemplate(
+      deps.supabase,
+      campaign.tenantId,
+      campaign.email_template_id,
+    )
     const { subject, html } = await buildBonusEmailBody(template, campaign, bonuses, theme)
     const resolveSender = deps.resolveMailSender ?? resolveMailSender
     const sender = resolveSender(campaign.clientMail)

@@ -432,6 +432,7 @@ export type Database = {
           html_body: string | null
           id: string
           is_active: boolean
+          is_default: boolean
           label: string
           name: string | null
           subject: string
@@ -447,6 +448,7 @@ export type Database = {
           html_body?: string | null
           id?: string
           is_active?: boolean
+          is_default?: boolean
           label: string
           name?: string | null
           subject?: string
@@ -462,6 +464,7 @@ export type Database = {
           html_body?: string | null
           id?: string
           is_active?: boolean
+          is_default?: boolean
           label?: string
           name?: string | null
           subject?: string
@@ -1239,6 +1242,7 @@ export type Database = {
           client_id: string
           created_at: string
           display_name: string | null
+          email_template_id: string | null
           esp_audience_ref: string | null
           esp_provider: string
           esp_tag_launch: string
@@ -1257,6 +1261,7 @@ export type Database = {
           client_id: string
           created_at?: string
           display_name?: string | null
+          email_template_id?: string | null
           esp_audience_ref?: string | null
           esp_provider?: string
           esp_tag_launch?: string
@@ -1275,6 +1280,7 @@ export type Database = {
           client_id?: string
           created_at?: string
           display_name?: string | null
+          email_template_id?: string | null
           esp_audience_ref?: string | null
           esp_provider?: string
           esp_tag_launch?: string
@@ -1294,6 +1300,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "so_clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "so_campaigns_email_template_id_fkey"
+            columns: ["email_template_id"]
+            isOneToOne: false
+            referencedRelation: "email_templates"
             referencedColumns: ["id"]
           },
           {

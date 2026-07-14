@@ -63,20 +63,28 @@ function isMarkerBlock(block: Block): boolean {
 }
 
 /**
- * Belt-and-suspenders: strip any RESIDUAL literal `{{bonus_list}}` from the
- * rendered HTML. The marker is recognised as a splice point ONLY when it is a
- * STANDALONE text block (`isMarkerBlock`). If an author mis-formats it inside
- * content (e.g. `<p>{{bonus_list}}</p>`), the programmatic list is still safely
- * appended before-footer (never dropped), but the literal token would otherwise
- * survive into the sent HTML and reach the recipient. Remove any leftover
- * occurrence — and a now-empty wrapping `<p>` if trivial — so it never leaks.
- * Pure.
+ * NO-LEAK backstop (INV-3). `venture_bonus` is APP-OWNED: the send path fills
+ * exactly the app keys (`companyName`) plus the STRUCTURAL `{{bonus_list}}`
+ * marker (spliced in as a block, never token-substituted). Therefore any
+ * `{{token}}` still present in the FINAL HTML after substitution is GUARANTEED
+ * unfillable — a stray author token, a mis-bound key, or a mis-formatted
+ * `{{bonus_list}}` that escaped block-splicing (e.g. `<p>{{bonus_list}}</p>`) —
+ * and must NOT reach the recipient (a seeded literal `{{firstName}}` once leaked
+ * into a live send, 2026-07-14). Strip every residual `{{ token }}`, plus a
+ * now-empty wrapping `<p>`. Pure.
+ *
+ * This is app-owned-path behaviour ONLY (deliberately UNLIKE the n8n-sent path,
+ * where an unresolved token stays literal so a mis-binding is detectable): here
+ * resolvability is code-knowable, so an unresolved token is always a defect.
+ *
+ * No-op — hence BYTE-IDENTICAL — for the seeded static copy, whose only token
+ * `{{companyName}}` is always filled and whose `{{bonus_list}}` marker is spliced
+ * out before this runs → zero residual tokens → nothing to strip.
  */
-function stripResidualBonusMarker(html: string): string {
-  const marker = BONUS_LIST_MARKER.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+function stripResidualTokens(html: string): string {
   return html
-    .replace(new RegExp(`<p>\\s*${marker}\\s*</p>`, 'g'), '')
-    .replace(new RegExp(marker, 'g'), '')
+    .replace(/<p>\s*\{\{\s*[\w.]+\s*\}\}\s*<\/p>/g, '')
+    .replace(/\{\{\s*[\w.]+\s*\}\}/g, '')
 }
 
 /**
@@ -163,7 +171,7 @@ export async function buildBonusEmailFromTemplateHtml(
   input: BonusTemplateRenderInput,
 ): Promise<BonusEmail> {
   const blocks = buildBonusEmailFromTemplate(input)
-  const rendered = stripResidualBonusMarker(await renderEmailBlocks(blocks))
+  const rendered = await renderEmailBlocks(blocks)
   const substituted = substituteTokens(rendered, input.values as unknown as Record<string, string>)
   // Belt-and-suspenders: scheme-guard every href/src in the FINAL HTML. The bonus
   // LIST href already goes through `safeUrlValue` directly (`buildBonusListBlock`),
@@ -171,7 +179,12 @@ export async function buildBonusEmailFromTemplateHtml(
   // token substitution can't see — sanitize the whole rendered body. No-op (and
   // byte-identical) when no dangerous scheme is present, which is the case for the
   // seeded static copy → the byte-identical regression guard still holds.
-  const html = sanitizeHtmlUrls(substituted)
+  const sanitized = sanitizeHtmlUrls(substituted)
+  // NO-LEAK backstop (INV-3): AFTER substitution, strip any residual `{{token}}`.
+  // Runs on the final HTML so it also catches a `{{bonus_list}}` that escaped
+  // block-splicing (mis-formatted marker). No-op for the seeded copy →
+  // byte-identical guard preserved.
+  const html = stripResidualTokens(sanitized)
   const subject = substituteSubject(input.subjectTemplate, input.values)
   return { subject, html }
 }

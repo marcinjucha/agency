@@ -80,12 +80,16 @@ const CAMPAIGN = {
   tenantTheme: null,
   campaignThemeId: null,
   campaignBrand: null,
+  // Phase 4: no explicit venture_bonus template assignment by default → the send
+  // path falls to the tenant default, then the hardcoded builder.
+  email_template_id: null,
 }
 
 // The raw so_campaigns SELECT row (DB column names) that resolveCampaign maps
 // into the domain CampaignRow above. `theme_id`/`brand` are the DB columns that
-// become `campaignThemeId`/`campaignBrand`. Used as the campaign-query default so
-// resolveCampaign's DB→domain mapping is exercised faithfully.
+// become `campaignThemeId`/`campaignBrand`; `email_template_id` maps straight
+// through. Used as the campaign-query default so resolveCampaign's DB→domain
+// mapping is exercised faithfully.
 const CAMPAIGN_DB_ROW = {
   id: 'campaign-1',
   tally_webhook_secret: 'whsec_test',
@@ -96,6 +100,7 @@ const CAMPAIGN_DB_ROW = {
   lead_source_provider: null,
   theme_id: null,
   brand: null,
+  email_template_id: null,
 }
 
 type Result = { data: unknown; error: { message: string; code?: string } | null }
@@ -110,7 +115,13 @@ function makeSupabase(cfg: {
   insert?: Result
   bonuses?: Result
   themeRow?: Result
+  // Single-read case (existing tests): the one email_templates read returns this.
   template?: Result
+  // Two-read case (Phase 4): fetchBonusTemplate may issue TWO email_templates
+  // reads — by-id (campaign.email_template_id) THEN the tenant default. Each
+  // `.maybeSingle()` consumes the next entry; a missing entry defaults to
+  // { data: null }. Lets a test simulate "by-id missing → default hit".
+  templates?: Result[]
 }) {
   const clientBuilder = {
     select: vi.fn(() => clientBuilder),
@@ -177,12 +188,20 @@ function makeSupabase(cfg: {
   }
 
   // email_templates(blocks, subject) lookup — the hybrid `venture_bonus` copy
-  // template, scoped by (tenant_id, type). Default null → template absent →
-  // sendBonusEmail falls back to the hardcoded builder.
+  // template. Phase 4: fetchBonusTemplate may issue TWO reads (by-id then the
+  // tenant default), so `.maybeSingle()` pulls from a per-call queue. `templates`
+  // (array) drives the multi-read case; `template` (single) covers the legacy
+  // one-read tests; default → absent → hardcoded builder.
+  const templateQueue: Result[] = cfg.templates ?? (cfg.template ? [cfg.template] : [])
+  let templateCallIndex = 0
   const emailTemplatesBuilder = {
     select: vi.fn(() => emailTemplatesBuilder),
     eq: vi.fn(() => emailTemplatesBuilder),
-    maybeSingle: vi.fn(() => Promise.resolve(cfg.template ?? { data: null, error: null })),
+    maybeSingle: vi.fn(() => {
+      const next = templateQueue[templateCallIndex] ?? { data: null, error: null }
+      templateCallIndex += 1
+      return Promise.resolve(next)
+    }),
   }
 
   const syncLogInsert = vi.fn(() => Promise.resolve({ error: null }))
@@ -594,6 +613,135 @@ describe('ingestLead', () => {
       subject: 'Subj',
       html: '<p>html</p>',
     })
+  })
+
+  // ---------------------------------------------------------------------------
+  // Phase 4 (increment 1): SEND-PATH template resolution by campaign assignment.
+  // INV-4 precedence: campaign.email_template_id (by-id) → tenant default
+  // (is_default) → hardcoded builder. INV-1 no-drop asserted throughout: the
+  // lead is always ingested + an email is always attempted. F3: the by-id read
+  // is tenant-scoped (id + tenant_id + type).
+  // ---------------------------------------------------------------------------
+  it('Phase 4: campaign.email_template_id set + row exists → that template rendered (by-id only, default read short-circuited)', async () => {
+    const supabase = makeSupabase({
+      templates: [
+        {
+          data: {
+            blocks: [{ id: 'h', type: 'header', companyName: '{{companyName}}', textColor: '#fff' }],
+            subject: 'Assigned subject',
+          },
+          error: null,
+        },
+      ],
+    })
+    const sender = makeMailSender()
+    const deps = makeDeps(supabase, makeProvider(), sender)
+
+    const outcome = await ingestLead(deps, { ...CAMPAIGN, email_template_id: 'tmpl-assigned' }, LEAD)
+
+    expect(outcome).toMatchObject({ status: 'ingested', emailSent: true })
+    expect(buildBonusEmailFromTemplateHtml).toHaveBeenCalledTimes(1)
+    expect(buildBonusEmail).not.toHaveBeenCalled()
+    // F3: the by-id read is scoped to id + the campaign-row tenant + the venture slug.
+    expect(supabase.emailTemplatesBuilder.eq).toHaveBeenCalledWith('id', 'tmpl-assigned')
+    expect(supabase.emailTemplatesBuilder.eq).toHaveBeenCalledWith('tenant_id', 'tenant-1')
+    expect(supabase.emailTemplatesBuilder.eq).toHaveBeenCalledWith('type', 'venture_bonus')
+    // Only the by-id read fired — a found assignment short-circuits the default read.
+    expect(supabase.emailTemplatesBuilder.maybeSingle).toHaveBeenCalledTimes(1)
+  })
+
+  it('Phase 4: email_template_id set but by-id row MISSING (or wrong tenant) → falls to the tenant default', async () => {
+    const supabase = makeSupabase({
+      templates: [
+        { data: null, error: null }, // by-id: no row for (id, tenant, type)
+        {
+          data: {
+            blocks: [{ id: 'h', type: 'header', companyName: '{{companyName}}', textColor: '#fff' }],
+            subject: 'Default subject',
+          },
+          error: null,
+        },
+      ],
+    })
+    const sender = makeMailSender()
+    const deps = makeDeps(supabase, makeProvider(), sender)
+
+    const outcome = await ingestLead(deps, { ...CAMPAIGN, email_template_id: 'tmpl-missing' }, LEAD)
+
+    expect(outcome).toMatchObject({ status: 'ingested', emailSent: true })
+    // Two reads: by-id (miss) then the tenant default (hit).
+    expect(supabase.emailTemplatesBuilder.maybeSingle).toHaveBeenCalledTimes(2)
+    expect(supabase.emailTemplatesBuilder.eq).toHaveBeenCalledWith('id', 'tmpl-missing')
+    expect(supabase.emailTemplatesBuilder.eq).toHaveBeenCalledWith('is_default', true)
+    expect(buildBonusEmailFromTemplateHtml).toHaveBeenCalledTimes(1)
+    expect(buildBonusEmail).not.toHaveBeenCalled()
+  })
+
+  it('Phase 4: by-id row has NON-ARRAY blocks → treated as absent, falls to the tenant default', async () => {
+    const supabase = makeSupabase({
+      templates: [
+        { data: { blocks: {}, subject: 's' }, error: null }, // by-id: malformed
+        {
+          data: {
+            blocks: [{ id: 'h', type: 'header', companyName: '{{companyName}}', textColor: '#fff' }],
+            subject: 'Default subject',
+          },
+          error: null,
+        },
+      ],
+    })
+    const sender = makeMailSender()
+    const deps = makeDeps(supabase, makeProvider(), sender)
+
+    const outcome = await ingestLead(deps, { ...CAMPAIGN, email_template_id: 'tmpl-malformed' }, LEAD)
+
+    expect(outcome).toMatchObject({ status: 'ingested', emailSent: true })
+    expect(supabase.emailTemplatesBuilder.maybeSingle).toHaveBeenCalledTimes(2)
+    expect(buildBonusEmailFromTemplateHtml).toHaveBeenCalledTimes(1)
+    expect(buildBonusEmail).not.toHaveBeenCalled()
+  })
+
+  it('Phase 4 NO-DROP: id set but neither by-id nor default resolves → hardcoded builder', async () => {
+    const supabase = makeSupabase({
+      templates: [
+        { data: null, error: null }, // by-id miss
+        { data: null, error: null }, // default miss
+      ],
+    })
+    const sender = makeMailSender()
+    const deps = makeDeps(supabase, makeProvider(), sender)
+
+    const outcome = await ingestLead(deps, { ...CAMPAIGN, email_template_id: 'tmpl-x' }, LEAD)
+
+    expect(outcome).toMatchObject({ status: 'ingested', emailSent: true })
+    expect(supabase.leadsBuilder.insert).toHaveBeenCalledTimes(1)
+    expect(supabase.emailTemplatesBuilder.maybeSingle).toHaveBeenCalledTimes(2)
+    expect(buildBonusEmail).toHaveBeenCalledTimes(1)
+    expect(buildBonusEmailFromTemplateHtml).not.toHaveBeenCalled()
+  })
+
+  it('Phase 4 NO-DROP: by-id read ERRORS → degrades to the default tier (never throws upward)', async () => {
+    const supabase = makeSupabase({
+      templates: [
+        { data: null, error: { message: 'statement timeout' } }, // by-id errored
+        {
+          data: {
+            blocks: [{ id: 'h', type: 'header', companyName: '{{companyName}}', textColor: '#fff' }],
+            subject: 'Default subject',
+          },
+          error: null,
+        },
+      ],
+    })
+    const sender = makeMailSender()
+    const deps = makeDeps(supabase, makeProvider(), sender)
+
+    const outcome = await ingestLead(deps, { ...CAMPAIGN, email_template_id: 'tmpl-x' }, LEAD)
+
+    // A template-read error never drops the lead — the default tier answers.
+    expect(outcome).toMatchObject({ status: 'ingested', emailSent: true })
+    expect(supabase.emailTemplatesBuilder.maybeSingle).toHaveBeenCalledTimes(2)
+    expect(buildBonusEmailFromTemplateHtml).toHaveBeenCalledTimes(1)
   })
 
   it('resolves the client theme override and feeds it to the bonus email builder', async () => {
