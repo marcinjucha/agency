@@ -155,6 +155,25 @@ Ratified target, built only when the Claude-API+MCP executor is designed (it def
 - Building the full `CONTEXT_PROVIDERS` registry against the to-be-retired n8n executor (YAGNI; gated on the new executor design).
 - **Auto-iterating collections / the `repeater` block / render-at-send class** — deep-deferred. Ask #3 is delivered by **manual fixed variable slots** on a flat template (user's explicit "keep it simple" choice); the repeater returns only if dynamic-length auto-listing is ever genuinely required.
 
+## Email sending model — surface-and-defer (council 2026-07-14)
+
+Follow-on design (4-member council) answering "is a unified email control worth it?" for the felt heaviness of choosing/using emails. **Verdict: NO unified control (overengineering at this scale) — surface the connections, defer the model.** The send-time wiring is already sound and centralized: `sendBonusEmail` / `CampaignRow` (`features/venture/ingest.server.ts`) is a de-facto "sending context" that resolves template + sender + theme + values. The pain is that these 5 surfaces are authored across 4 unconnected nav destinations with no cross-references — a **surfacing** gap, not a re-architecture.
+
+**Sending context = a resolution chain across tiers** (each concern owned at a different tier): template → tenant (`email_templates` `(tenant_id,type)`); sender → client (`resolveMailSender(so_clients.mail_provider)`); theme → campaign→client→tenant (`resolveClientTheme`); values → code by template slug (`APP_SENT_VARIABLE_SOURCES`).
+
+**BUILD NOW (read-only, zero schema):** a `CollapsibleCard` "Ten launch wysyła" on the campaign editor —
+- **Effective sender** computed via the SAME `resolveMailSender` (not reimplemented), behind its own `createServerFn` `hasPermission` gate; **amber note when it silently falls back to the shared agency account** (`noreply@haloefekt.pl`) — the one invisible hazard.
+- **Effective theme** chip (resolver exists) + **read-only "wysyła szablon: `venture_bonus`" label + deep-link** to the template editor. Chips/labels, NOT editors (editing stays at source: template in `/admin/email-templates`, sender in `VentureClientEditor`).
+- **Sample-data preview** toggle in the email editor: fill only code-known tokens (`app`: companyName; `structural`: bonus_list → sample block); leave `workflow`/`unresolvable` tokens BRACKETED (never fabricate values — the honest "won't be filled" signal must survive).
+
+**ALREADY SHIPPED (bank as the answer to "variables confusing"):** per-variable provenance badge + unresolvable warning (`resolve-variable-source.ts`, commit 8176f8f).
+
+**LOCKED DIRECTION, DEFERRED build:** campaign→template link = **context→template, many:1, slug (not FK)** (a nullable `so_campaigns.template_type` + campaign picker) → **Phase 3** (only when >1 bonus template genuinely exists; a picker now fabricates a selection model that doesn't exist). Reuse is preserved (many contexts → one template).
+
+**DEFERRED (unchanged):** `CONTEXT_PROVIDERS` typed registry (gated on the Claude-API+MCP executor; `APP_SENT_VARIABLE_SOURCES` is its already-laid seed → additive later, not a rewrite); no `bound_contexts`/persisted binding on the template; no unified email hub page; no provider/ESP registry over 3 enum values; repeater/render-at-send.
+
+**Rejected (overengineering now):** a unified "email control" / builder / aggregating dashboard — it becomes a 4th place to look, duplicates the existing editors, and pre-designs against the retiring n8n path. "The cure is a chip, not a control plane."
+
 ---
 
 **Cross-references:** [`THEMING_DESIGN.md`](./THEMING_DESIGN.md) (theme/token layer, locked hex + anon-secret invariants), [`THEME_MANAGER_DESIGN.md`](./THEME_MANAGER_DESIGN.md) (`so_themes` library + `/admin/themes`). Theme domain: `apps/cms/lib/theme/`. Email domain: `apps/cms/features/email/`, `packages/email/`. Variable catalog: `apps/cms/lib/trigger-schemas.ts`. n8n substitution: `n8n-workflows/scripts/evaluators/resolve-variables.js`.
