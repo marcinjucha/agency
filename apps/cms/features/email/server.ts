@@ -312,9 +312,11 @@ export interface EmailTemplateUsage {
 /**
  * Count campaigns that reference this template via
  * `so_campaigns.email_template_id` (reverse FK, ON DELETE SET NULL). Deleting the
- * template neither blocks nor cascades — it SILENTLY un-assigns every campaign
- * that selected it (each falls back to the tenant `venture_bonus` singleton) — so
- * the delete dialog must WARN the operator with this count first. Mirrors the
+ * template neither blocks nor cascades — it SILENTLY sets each referencing
+ * campaign's `email_template_id` to NULL, which means those campaigns revert to
+ * "no template selected = no bonus email sent" (product decision 2026-07-15 — there
+ * is no implicit tenant-default fallback). So the delete dialog must WARN the
+ * operator with this count first. Mirrors the
  * `so_themes` app-level delete-guard counters (`getThemeReferences` /
  * `getThemeUsage` in features/themes/server.ts) required by the memory rule
  * "every new FK to a delete-guarded reference table must be wired into its usage

@@ -251,7 +251,6 @@ export const messages = {
     bonusEmailPreviewFrameTitle: 'Podgląd e-maila bonusowego',
     bonusEmailPreviewLoading: 'Generowanie podglądu…',
     bonusEmailPreviewError: 'Nie udało się wczytać podglądu e-maila',
-    bonusEmailPreviewEmpty: 'Podgląd pojawi się po zapisaniu treści kampanii.',
     bonusTemplateCardTitle: 'Szablon e-maila bonusowego',
     bonusTemplateEmptyHint:
       'Brak szablonów e-maili. Utwórz szablon w edytorze e-maili, aby wybrać go tutaj.',

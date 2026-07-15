@@ -88,9 +88,6 @@ function PreviewBody({
   if (data.data.kind === 'no-template') {
     return <PreviewNote text={messages.venture.noTemplateNoSend} status />
   }
-  if (!data.data.html) {
-    return <PreviewNote text={messages.venture.bonusEmailPreviewEmpty} />
-  }
   return (
     <iframe
       srcDoc={data.data.html}

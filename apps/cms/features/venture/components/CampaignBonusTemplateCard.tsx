@@ -23,9 +23,12 @@ import {
 // READ-ONLY mirror. On success we invalidate BOTH the effective-send query (the
 // mirror) and the venture root (the campaign row) so the two never drift.
 //
-// editHref points at the EFFECTIVE template's type-keyed editor (resolved by the
-// same precedence as the send path) — the picker itself is presentational and
-// venture-agnostic; all venture knowledge lives here.
+// editHref points at the EFFECTIVE template's type-keyed editor. It derives
+// directly from the effective template's `kind === 'template'` state (only a
+// resolved template has an editable target) — there is no precedence resolution
+// anymore (resolveBonusTemplateByPrecedence was deleted with the tenant-default
+// tier). The picker itself is presentational and venture-agnostic; all venture
+// knowledge lives here.
 // ---------------------------------------------------------------------------
 
 interface CampaignBonusTemplateCardProps {

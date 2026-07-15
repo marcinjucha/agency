@@ -120,8 +120,10 @@ export const queryKeys = {
     // the venture root so a mutation invalidating `venture.all` (theme/template
     // change, campaign edit) also refreshes it — byte-identical to the send path.
     // `themeKey` = a stable serialization of the in-flight (unsaved) theme override,
-    // so the query refetches when the editor changes the picked theme without a save;
-    // omitted (`__saved__`) → the persisted campaign theme.
+    // so the query refetches when the editor changes the picked theme without a save.
+    // The current sole caller (CampaignBonusEmailPreview) ALWAYS supplies the override;
+    // `__saved__` is the defensive default for any future caller that omits it (→ the
+    // persisted campaign theme).
     bonusEmailPreview: (campaignId: string, themeKey?: string) =>
       ['venture', 'bonus-email-preview', campaignId, themeKey ?? '__saved__'] as const,
     // Tenant-scoped list of ALL campaign-selectable email templates for the

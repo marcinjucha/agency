@@ -212,6 +212,11 @@ export function CampaignThemeCard({
         <ThemePreview
           tokens={previewTokens}
           emailPreviewSlot={
+            // ACCEPTED NO-OP (F4): editing the theme here refetches the preview even
+            // when the sibling template card has NO template selected (→ a "no-template"
+            // render, theme-independent). Suppressing it would couple this card to the
+            // template card's live selection state (only reliably known after a refetch)
+            // — a worse trade than one instant server round-trip. Left intentionally.
             campaignId ? (
               <CampaignBonusEmailPreview campaignId={campaignId} themeOverride={themeOverride} />
             ) : undefined

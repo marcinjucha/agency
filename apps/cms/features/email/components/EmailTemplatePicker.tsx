@@ -19,11 +19,16 @@ import { messages } from '@/lib/messages'
 // from the app-level `messages` singleton (same as every other email component).
 //
 // The control is a shadcn Select with one selectable option per template (by
-// label). Nothing selected is represented by `value === null`, which renders the
-// "Wybierz szablon" placeholder — there is NO synthetic "default" item, because a
-// campaign with no template selected sends no email (product decision 2026-07-15).
-// Also renders an optional trailing "Edytuj szablon" deep-link and a non-blocking
-// `role="status"` warning chip.
+// label). Nothing selected is represented by `value === null`. It maps to a
+// controlled EMPTY-STRING root value (`value ?? ''`) — never `undefined` — so the
+// Select stays CONTROLLED at all times: a null value renders the "Wybierz szablon"
+// placeholder (no SelectItem matches ''), and CLEARING a selection visibly resets
+// to the placeholder instead of Radix silently retaining the last value on a
+// controlled→uncontrolled flip. Template ids are never '' so `onChange` only ever
+// emits a real id; '' is not a selectable item. There is NO synthetic "default"
+// item, because a campaign with no template selected sends no email (product
+// decision 2026-07-15). Also renders an optional trailing "Edytuj szablon"
+// deep-link and a non-blocking `role="status"` warning chip.
 // ---------------------------------------------------------------------------
 
 export interface EmailTemplatePickerOption {
@@ -67,7 +72,10 @@ export function EmailTemplatePicker({
       </Label>
 
       <Select
-        value={value ?? undefined}
+        // Controlled at all times: null → '' (no item matches → placeholder).
+        // Never `undefined`, which would flip Radix to uncontrolled and retain
+        // the just-cleared value. See the header comment for the full rationale.
+        value={value ?? ''}
         onValueChange={onChange}
         disabled={controlDisabled}
       >
