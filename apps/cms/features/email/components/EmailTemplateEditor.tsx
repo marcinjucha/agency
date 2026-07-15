@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { Button, Input } from '@agency/ui'
-import { ArrowLeft, Save } from 'lucide-react'
+import { ArrowLeft, Save, AlertTriangle, X } from 'lucide-react'
 import { OutlinePanel } from './editor/OutlinePanel'
 import { Canvas } from './editor/Canvas'
 import { Inspector } from './editor/Inspector'
@@ -427,23 +427,34 @@ export function EmailTemplateEditor({ templateType, initialTemplate }: EmailTemp
         onDelete={() => setDeleteOpen(true)}
       />
 
-      {errorMessage && (
+      {/* Banery — pełna szerokość, TUŻ POD topbarem (top-[52px]), nad canvasem.
+          Zastępują dawne pływające pigułki na dole (łatwe do przeoczenia).
+          Błąd wygrywa nad ostrzeżeniem; błąd jest odrzucalny (X). */}
+      {errorMessage ? (
         <div
           role="alert"
-          className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-2 text-sm text-destructive shadow-md"
+          className="absolute top-[52px] inset-x-0 z-20 flex items-center gap-2.5 border-b border-destructive/40 bg-destructive/10 px-4 py-2.5 text-sm text-destructive shadow-sm"
         >
-          {errorMessage}
+          <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" />
+          <span className="flex-1">{errorMessage}</span>
+          <button
+            type="button"
+            onClick={() => setErrorMessage(null)}
+            aria-label={messages.common.close}
+            className="shrink-0 rounded p-0.5 text-destructive/70 hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/50"
+          >
+            <X className="h-3.5 w-3.5" aria-hidden="true" />
+          </button>
         </div>
-      )}
-
-      {!errorMessage && saveWarning && (
+      ) : saveWarning ? (
         <div
           role="status"
-          className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-2 text-sm text-amber-700 dark:text-amber-300 shadow-md"
+          className="absolute top-[52px] inset-x-0 z-20 flex items-center gap-2.5 border-b border-amber-500/40 bg-amber-500/10 px-4 py-2.5 text-sm text-amber-700 dark:text-amber-300 shadow-sm"
         >
-          {saveWarning}
+          <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" />
+          <span className="flex-1">{saveWarning}</span>
         </div>
-      )}
+      ) : null}
 
       <DeleteTemplateDialog
         template={initialTemplate}
