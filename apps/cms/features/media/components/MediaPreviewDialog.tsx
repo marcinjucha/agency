@@ -12,9 +12,10 @@ import {
   Input,
   Label,
 } from '@agency/ui'
-import { FileText, Download, Loader2 } from 'lucide-react'
+import { FileText, Download, Loader2, Link2, Check } from 'lucide-react'
 import type { MediaItem, MediaType } from '../types'
 import { extractVideoId, formatBytes, buildEmbedUrl } from '../utils'
+import { useCopyToClipboard } from '../use-copy-to-clipboard'
 import { messages } from '@/lib/messages'
 
 type MediaPreviewDialogProps = {
@@ -223,6 +224,8 @@ export function MediaPreviewDialog({
   isSavingAlt = false,
   altSaveError = null,
 }: MediaPreviewDialogProps) {
+  const { copied, copy } = useCopyToClipboard()
+
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-3xl">
@@ -256,6 +259,19 @@ export function MediaPreviewDialog({
                   {formatDate(item.created_at)}
                 </span>
               )}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 gap-1.5 px-1.5 text-sm text-muted-foreground hover:text-foreground"
+                onClick={() => copy(item.url)}
+              >
+                {copied ? (
+                  <Check className="h-3.5 w-3.5 text-status-success-foreground" aria-hidden="true" />
+                ) : (
+                  <Link2 className="h-3.5 w-3.5" aria-hidden="true" />
+                )}
+                {messages.common.copyLink}
+              </Button>
             </div>
 
             {/* Alt text editor — image items only (alt is meaningless for video/
