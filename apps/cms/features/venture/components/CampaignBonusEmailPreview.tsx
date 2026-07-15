@@ -2,6 +2,9 @@ import { useQuery } from '@tanstack/react-query'
 import { messages } from '@/lib/messages'
 import { queryKeys } from '@/lib/query-keys'
 import { renderCampaignBonusEmailPreviewFn } from '../admin'
+// Type-only: the discriminated union is the handler's exported return contract —
+// erased at build, so no server code reaches the client bundle. Keep it `import type`.
+import type { CampaignBonusEmailPreview as CampaignBonusEmailPreviewData } from '../admin-handlers.server'
 
 // ---------------------------------------------------------------------------
 // CampaignBonusEmailPreview — the REAL bonus email a send would deliver, for the
@@ -46,7 +49,7 @@ function PreviewBody({
   data:
     | {
         success: boolean
-        data?: { kind: 'no-template' } | { kind: 'render'; html: string }
+        data?: CampaignBonusEmailPreviewData
         error?: string
       }
     | undefined

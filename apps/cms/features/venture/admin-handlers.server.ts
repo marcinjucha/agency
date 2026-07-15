@@ -1206,20 +1206,24 @@ export function getCampaignTemplateVariablesHandler(
             // variables, matching the send path.
             campaignTemplateId === null
               ? okAsync<CampaignTemplateVariables, string>({ fields: [], values: savedValues })
-              : readVentureTemplateChoiceById(auth, campaignTemplateId).andThen((resolved) =>
-                  resolved
-                    ? readTemplateVariableSource(auth, resolved.id).map((src) => ({
-                        fields: src
-                          ? resolveTemplateVariableFields({
-                              templateVariables: parseTemplateVariables(src.templateVariables),
-                              subject: src.subject,
-                              blocks: src.blocks,
-                            })
-                          : [],
-                        values: savedValues,
-                      }))
-                    : okAsync<CampaignTemplateVariables, string>({ fields: [], values: savedValues }),
-                ),
+              : // Single read of the selected row (blocks + subject + template_variables),
+                // tenant-scoped by id. Usability is derived from the SAME blocks via
+                // isUsableTemplateBlocks — a missing row OR unusable blocks (broken/
+                // deleted, or the hardcoded-builder fall-through) yields no fields; a
+                // usable row yields declared-first fields. Saved values are always
+                // returned. (Replaces the prior readVentureTemplateChoiceById +
+                // readTemplateVariableSource double round-trip to the same row.)
+                readTemplateVariableSource(auth, campaignTemplateId).map((src) => ({
+                  fields:
+                    src && isUsableTemplateBlocks(src.blocks)
+                      ? resolveTemplateVariableFields({
+                          templateVariables: parseTemplateVariables(src.templateVariables),
+                          subject: src.subject,
+                          blocks: src.blocks,
+                        })
+                      : [],
+                  values: savedValues,
+                })),
           ),
       ),
     ),

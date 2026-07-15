@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { CollapsibleCard } from '@agency/ui'
+import { Button, CollapsibleCard } from '@agency/ui'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
 import { queryKeys } from '@/lib/query-keys'
@@ -53,7 +53,10 @@ export function CampaignBonusTemplateCard({
   })
 
   const mutation = useMutation({
-    mutationFn: (templateId: string) =>
+    // Accepts null so the "Wyczyść szablon" affordance can clear the selection
+    // (email_template_id → null → no email sent). The picker itself only ever
+    // passes a string; the null path is exclusive to handleClear.
+    mutationFn: (templateId: string | null) =>
       selectTemplateForCampaignFn({ data: { campaignId, templateId } }),
     onSuccess: (result) => {
       // Server rejected (e.g. forged id) → revert the optimistic selection.
@@ -86,6 +89,13 @@ export function CampaignBonusTemplateCard({
     mutation.mutate(id)
   }
 
+  // Clear the selection → email_template_id becomes null → no bonus email is sent.
+  // Shown only when a template is currently selected (see the guarded render below).
+  function handleClear() {
+    setSelected(null)
+    mutation.mutate(null)
+  }
+
   return (
     <CollapsibleCard title={messages.venture.bonusTemplateCardTitle} defaultOpen>
       <div className="space-y-4">
@@ -98,6 +108,23 @@ export function CampaignBonusTemplateCard({
           disabled={mutation.isPending}
           emptyHint={messages.venture.bonusTemplateEmptyHint}
         />
+
+        {/* Clear affordance — the picker can only SELECT (onChange: string), so this
+            is the sole UI path back to "no template" (null → no email sent). Only
+            rendered when a template is selected. Button (not a raw element) → a
+            guaranteed focus-visible ring. */}
+        {selected !== null && (
+          <Button
+            type="button"
+            variant="link"
+            size="sm"
+            className="h-auto px-0 text-muted-foreground"
+            onClick={handleClear}
+            disabled={mutation.isPending}
+          >
+            {messages.venture.clearTemplateSelection}
+          </Button>
+        )}
 
         {/* Fill the selected template's variables with literal values (Iter 3b).
             Keyed by the selected template id so switching templates fully resets

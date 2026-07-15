@@ -256,6 +256,7 @@ export const messages = {
     bonusTemplateEmptyHint:
       'Brak szablonów e-maili. Utwórz szablon w edytorze e-maili, aby wybrać go tutaj.',
     noTemplateNoSendHint: 'Bez wybranego szablonu wiadomość nie zostanie wysłana.',
+    clearTemplateSelection: 'Wyczyść szablon',
 
     // Publish/status
     publishedLabel: 'Opublikowana',

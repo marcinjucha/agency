@@ -100,8 +100,9 @@ describe('getCampaignTemplateVariablesHandler', () => {
         error: null,
       },
       so_clients: { data: { id: 'c1' }, error: null },
-      // The selected template — usable blocks + declared vars. This one row answers
-      // BOTH the by-id choice read and the variable-source read.
+      // The selected template — usable blocks + declared vars. Read in a SINGLE
+      // tenant-scoped-by-id fetch (blocks + subject + template_variables); usability
+      // is derived from the same blocks.
       email_templates: {
         data: {
           id: 'tpl-1',
