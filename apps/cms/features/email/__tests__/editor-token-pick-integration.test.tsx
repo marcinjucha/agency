@@ -11,8 +11,8 @@ vi.mock('lucide-react', () => {
     Copy: stub, Trash2: stub, Plus: stub, Mail: stub, FlaskConical: stub, MousePointerClick: stub,
     AlignLeft: stub, AlignCenter: stub, AlignRight: stub, RotateCcw: stub,
     // block-registry + editors
-    FileText: stub, Minus: stub, Heading: stub, ImageIcon: stub,
-    AlignVerticalSpaceAround: stub, Columns2: stub, Image: stub, Braces: stub,
+    FileText: stub, Minus: stub, Heading: stub, ImageIcon: stub, Link: stub,
+    AlignVerticalSpaceAround: stub, Columns2: stub, LayoutPanelTop: stub, Image: stub, Braces: stub,
     Type: stub, Palette: stub, GripVertical: stub, Pencil: stub, X: stub, Check: stub,
   }
 })

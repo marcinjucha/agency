@@ -1,6 +1,14 @@
 import { useState, useRef, useEffect, Fragment } from 'react'
 import { Eye, Monitor, Smartphone, ChevronUp, ChevronDown, Copy, Trash2, Plus, Mail, FlaskConical, ListChecks } from 'lucide-react'
-import { renderBlock, resolveBlockMarginBottom, substitutePlain } from '@agency/email'
+import {
+  renderBlock,
+  resolveBlockMarginBottom,
+  substitutePlain,
+  computeBorderStyle,
+  SECTION_PADDING_PX,
+  type SectionBlock,
+} from '@agency/email'
+import { insertExclusionsForDepth } from '../../utils/block-tree'
 import { CMS_BLOCK_REGISTRY } from '../../block-registry'
 import { useEmailThemeMap } from '../../contexts/email-theme-context'
 import { buildSampleValues } from '../../utils/sample-values'
@@ -20,7 +28,8 @@ export interface CanvasProps {
   setSubject: (v: string) => void
   selectedBlockId: string | null
   setSelectedBlockId: (id: string | null) => void
-  onAddAt: (pick: AddBlockPick, index: number) => void
+  // parentId: null/undefined = najwyższy poziom; id sekcji = wstawienie do jej children.
+  onAddAt: (pick: AddBlockPick, index: number, parentId?: string | null) => void
   onDelete: (id: string) => void
   onDuplicate: (id: string) => void
   onMove: (id: string, dir: -1 | 1) => void
@@ -368,11 +377,23 @@ function renderSubjectWithVars(s: string): React.ReactNode {
 // EmailFrame — white email body with blocks + insert zones
 // ---------------------------------------------------------------------------
 
+// Operacje na blokach przekazywane w dół REKURENCYJNIE (sekcja renderuje swoje
+// dzieci przez te same komponenty) — jeden obiekt zamiast 6 osobnych propów,
+// żeby nested BlockOnCanvas nie wymagał re-bindowania closerów na każdym poziomie.
+interface CanvasBlockOps {
+  selectedBlockId: string | null
+  setSelectedBlockId: (id: string | null) => void
+  onAddAt: (pick: AddBlockPick, index: number, parentId?: string | null) => void
+  onDelete: (id: string) => void
+  onDuplicate: (id: string) => void
+  onMove: (id: string, dir: -1 | 1) => void
+}
+
 interface EmailFrameProps {
   blocks: Block[]
   selectedBlockId: string | null
   setSelectedBlockId: (id: string | null) => void
-  onAddAt: (pick: AddBlockPick, index: number) => void
+  onAddAt: (pick: AddBlockPick, index: number, parentId?: string | null) => void
   onDelete: (id: string) => void
   onDuplicate: (id: string) => void
   onMove: (id: string, dir: -1 | 1) => void
@@ -390,6 +411,14 @@ function EmailFrame({
   viewport,
 }: EmailFrameProps) {
   const maxWidth = viewport === 'mobile' ? 'max-w-[390px]' : 'max-w-[640px]'
+  const ops: CanvasBlockOps = {
+    selectedBlockId,
+    setSelectedBlockId,
+    onAddAt,
+    onDelete,
+    onDuplicate,
+    onMove,
+  }
 
   return (
     <div
@@ -398,27 +427,43 @@ function EmailFrame({
       {blocks.length === 0 ? (
         <EmptyEmailState />
       ) : (
-        <>
-          <InsertZone index={0} onAdd={onAddAt} />
-          {blocks.map((block, i) => (
-            <Fragment key={block.id}>
-              <BlockOnCanvas
-                block={block}
-                selected={selectedBlockId === block.id}
-                isFirst={i === 0}
-                isLast={i === blocks.length - 1}
-                onSelect={() => setSelectedBlockId(block.id)}
-                onDelete={() => onDelete(block.id)}
-                onDuplicate={() => onDuplicate(block.id)}
-                onMoveUp={() => onMove(block.id, -1)}
-                onMoveDown={() => onMove(block.id, 1)}
-              />
-              <InsertZone index={i + 1} onAdd={onAddAt} />
-            </Fragment>
-          ))}
-        </>
+        <BlockListOnCanvas blocks={blocks} parentId={null} depth={0} ops={ops} />
       )}
     </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// BlockListOnCanvas — lista rodzeństwa (top-level LUB children sekcji) z
+// InsertZone pomiędzy. Rekurencja: sekcja renderuje swoje dzieci tą samą listą
+// z depth+1 (głębokość ograniczona walidacją MAX_SECTION_DEPTH, nie rekurencją).
+// ---------------------------------------------------------------------------
+
+interface BlockListOnCanvasProps {
+  blocks: Block[]
+  parentId: string | null
+  depth: number
+  ops: CanvasBlockOps
+}
+
+function BlockListOnCanvas({ blocks, parentId, depth, ops }: BlockListOnCanvasProps) {
+  const exclude = insertExclusionsForDepth(depth)
+  return (
+    <>
+      <InsertZone index={0} parentId={parentId} exclude={exclude} onAdd={ops.onAddAt} />
+      {blocks.map((block, i) => (
+        <Fragment key={block.id}>
+          <BlockOnCanvas
+            block={block}
+            isFirst={i === 0}
+            isLast={i === blocks.length - 1}
+            depth={depth}
+            ops={ops}
+          />
+          <InsertZone index={i + 1} parentId={parentId} exclude={exclude} onAdd={ops.onAddAt} />
+        </Fragment>
+      ))}
+    </>
   )
 }
 
@@ -444,28 +489,21 @@ function EmptyEmailState() {
 
 interface BlockOnCanvasProps {
   block: Block
-  selected: boolean
   isFirst: boolean
   isLast: boolean
-  onSelect: () => void
-  onDelete: () => void
-  onDuplicate: () => void
-  onMoveUp: () => void
-  onMoveDown: () => void
+  depth: number
+  ops: CanvasBlockOps
 }
 
-function BlockOnCanvas({
-  block,
-  selected,
-  isFirst,
-  isLast,
-  onSelect,
-  onDelete,
-  onDuplicate,
-  onMoveUp,
-  onMoveDown,
-}: BlockOnCanvasProps) {
+function BlockOnCanvas({ block, isFirst, isLast, depth, ops }: BlockOnCanvasProps) {
+  // REGUŁA HOOKÓW: hook wywołany bezwarunkowo NAD gałęzią zależną od TYPU bloku.
+  // Ten komponent branchuje po block.type (sekcja vs liść) — hook poniżej gałęzi
+  // zmieniałby liczbę hooków przy zmianie typu na tym samym fiberze (patrz crash
+  // "Rendered more hooks..." udokumentowany przy CanvasBlockRenderer).
+  const theme = useEmailThemeMap()
   const entry = CMS_BLOCK_REGISTRY[block.type as keyof typeof CMS_BLOCK_REGISTRY]
+  const selected = ops.selectedBlockId === block.id
+  const isSection = block.type === 'section'
 
   return (
     <div
@@ -475,8 +513,10 @@ function BlockOnCanvas({
           : 'hover:ring-1 hover:ring-primary/30 hover:ring-inset'
       }`}
       onClick={(e) => {
+        // stopPropagation — klik w dziecko sekcji nie może wyselekcjonować
+        // rodzica (zagnieżdżony BlockOnCanvas zatrzymuje event niżej).
         e.stopPropagation()
-        onSelect()
+        ops.setSelectedBlockId(block.id)
       }}
     >
       {/* Floating toolbar — visible only when selected */}
@@ -488,25 +528,25 @@ function BlockOnCanvas({
             </span>
             <div className="h-3 w-px bg-border/60" />
             <IconBtn
-              onClick={onMoveUp}
+              onClick={() => ops.onMove(block.id, -1)}
               disabled={isFirst}
               aria-label={messages.email.canvasMoveUp}
             >
               <ChevronUp className="h-3 w-3" aria-hidden="true" />
             </IconBtn>
             <IconBtn
-              onClick={onMoveDown}
+              onClick={() => ops.onMove(block.id, 1)}
               disabled={isLast}
               aria-label={messages.email.canvasMoveDown}
             >
               <ChevronDown className="h-3 w-3" aria-hidden="true" />
             </IconBtn>
-            <IconBtn onClick={onDuplicate} aria-label={messages.email.canvasDuplicate}>
+            <IconBtn onClick={() => ops.onDuplicate(block.id)} aria-label={messages.email.canvasDuplicate}>
               <Copy className="h-3 w-3" aria-hidden="true" />
             </IconBtn>
             <div className="h-3 w-px bg-border/60" />
             <IconBtn
-              onClick={onDelete}
+              onClick={() => ops.onDelete(block.id)}
               aria-label={messages.email.canvasDelete}
               className="text-destructive hover:text-destructive hover:bg-destructive/10"
             >
@@ -515,7 +555,98 @@ function BlockOnCanvas({
           </div>
         </div>
       )}
-      <CanvasBlockRenderer block={block} isLast={isLast} />
+      {isSection ? (
+        // Rytm pionowy przez paddingBottom na WRAPPERZE (jak dla liści w
+        // renderBlock) — nie marginBottom na stylowanym divie: ring selekcji
+        // obejmuje odstęp spójnie z resztą bloków i nie ma margin-collapse.
+        <div style={{ paddingBottom: isLast ? 0 : resolveBlockMarginBottom(block) }}>
+          <SectionOnCanvas
+            block={block as SectionBlock}
+            depth={depth}
+            ops={ops}
+            // Parytet z mailem: border/tło takie same jak w wyrenderowanym HTML.
+            themeStyle={computeBorderStyle(block, theme)}
+          />
+        </div>
+      ) : (
+        <CanvasBlockRenderer block={block} isLast={isLast} />
+      )}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// SectionOnCanvas — sekcja renderowana jako EDYTOWALNY kontener (nie inert lump
+// z renderBlock): wrapper wizualnie zgodny z mailem (computeBorderStyle +
+// SECTION_PADDING_PX), w środku rekurencyjna lista dzieci z insert zones.
+// ---------------------------------------------------------------------------
+
+interface SectionOnCanvasProps {
+  block: SectionBlock
+  depth: number
+  ops: CanvasBlockOps
+  themeStyle: React.CSSProperties
+}
+
+function SectionOnCanvas({ block, depth, ops, themeStyle }: SectionOnCanvasProps) {
+  const children = block.children as Block[]
+  const padding = SECTION_PADDING_PX[block.padding ?? 'md']
+
+  return (
+    <div style={{ ...themeStyle, padding }}>
+      {children.length === 0 ? (
+        <EmptySectionAdd
+          sectionId={block.id}
+          depth={depth + 1}
+          onAdd={ops.onAddAt}
+        />
+      ) : (
+        <BlockListOnCanvas blocks={children} parentId={block.id} depth={depth + 1} ops={ops} />
+      )}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// EmptySectionAdd — afordancja "Dodaj blok do sekcji" w pustej sekcji
+// ---------------------------------------------------------------------------
+
+interface EmptySectionAddProps {
+  sectionId: string
+  depth: number
+  onAdd: (pick: AddBlockPick, index: number, parentId?: string | null) => void
+}
+
+function EmptySectionAdd({ sectionId, depth, onAdd }: EmptySectionAddProps) {
+  const [open, setOpen] = useState(false)
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation()
+          setOpen((v) => !v)
+        }}
+        aria-expanded={open}
+        className="flex w-full items-center justify-center gap-2 rounded-md border border-dashed border-primary/40 bg-primary/5 px-3 py-4 text-xs text-muted-foreground hover:bg-primary/10 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+      >
+        <Plus className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
+        <span>{messages.email.canvasEmptySectionAdd}</span>
+      </button>
+
+      {open && (
+        <div className="absolute left-1/2 -translate-x-1/2 z-20 top-full">
+          <AddBlockPopover
+            exclude={insertExclusionsForDepth(depth)}
+            onPick={(pick) => {
+              onAdd(pick, 0, sectionId)
+              setOpen(false)
+            }}
+            onClose={() => setOpen(false)}
+          />
+        </div>
+      )}
     </div>
   )
 }
@@ -572,6 +703,21 @@ function CanvasBlockRenderer({ block, isLast }: { block: Block; isLast: boolean 
       </div>
     )
   }
+  // Blok preheadera renderuje się w mailu jako UKRYTY <Preview> — na kanwie
+  // pokazujemy zamiast tego chip (jak marker bonus_list), żeby autor widział,
+  // że blok istnieje i co zawiera. Uwaga hooki: ta gałąź jest PO hooku
+  // useEmailThemeMap powyżej — detekcja typu/treści nigdy nie bramkuje hooka.
+  if (block.type === 'preview') {
+    return (
+      <div className="mx-6 my-4 flex items-center gap-2 rounded-md border border-dashed border-border bg-muted/30 px-3 py-2.5">
+        <Eye className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+        <span className="text-xs text-muted-foreground">
+          {messages.email.canvasPreviewChip}
+          {block.text.trim() ? <span className="italic"> — „{block.text.slice(0, 60)}"</span> : null}
+        </span>
+      </div>
+    )
+  }
   // Pass paddingBottom so the canvas preview shows the same vertical rhythm
   // (marginBottom preset) as the rendered email HTML. Last block gets 0 to
   // avoid trailing whitespace.
@@ -593,10 +739,14 @@ function CanvasBlockRenderer({ block, isLast }: { block: Block; isLast: boolean 
 
 interface InsertZoneProps {
   index: number
-  onAdd: (pick: AddBlockPick, index: number) => void
+  // null = najwyższy poziom; id sekcji = wstawienie do jej children
+  parentId: string | null
+  // typy wykluczone z pickera (np. 'section' na maksymalnej głębokości)
+  exclude: ReadonlyArray<'section'>
+  onAdd: (pick: AddBlockPick, index: number, parentId?: string | null) => void
 }
 
-function InsertZone({ index, onAdd }: InsertZoneProps) {
+function InsertZone({ index, parentId, exclude, onAdd }: InsertZoneProps) {
   const [open, setOpen] = useState(false)
 
   return (
@@ -621,8 +771,9 @@ function InsertZone({ index, onAdd }: InsertZoneProps) {
       {open && (
         <div className="absolute left-1/2 -translate-x-1/2 z-20 top-full">
           <AddBlockPopover
+            exclude={exclude}
             onPick={(type) => {
-              onAdd(type, index)
+              onAdd(type, index, parentId)
               setOpen(false)
             }}
             onClose={() => setOpen(false)}

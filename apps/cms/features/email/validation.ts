@@ -1,6 +1,8 @@
 import { z } from 'zod'
 import { messages } from '@/lib/messages'
 import { CMS_BLOCK_REGISTRY } from './block-registry'
+import { MAX_SECTION_DEPTH, exceedsSectionDepth } from './utils/block-tree'
+import type { Block } from './types'
 
 // ---------------------------------------------------------------------------
 // blockSchema derive'owany z CMS_BLOCK_REGISTRY — SSoT dla schematów bloków.
@@ -90,8 +92,28 @@ const headingSchema = blockIdSchema.merge(
   CMS_BLOCK_REGISTRY.heading.validationSchema as z.ZodObject<{
     type: z.ZodLiteral<'heading'>
     text: z.ZodString
-    level: z.ZodEnum<['h1', 'h2', 'h3']>
+    level: z.ZodEnum<['h1', 'h2', 'h3', 'eyebrow']>
     color: z.ZodString
+  } & BlockStyleCommonTypes>
+)
+
+// Link (Iter 3) — jak cta: rejestr akceptuje dowolny string url, tu nakładamy
+// templateOrUrl (poprawny URL lub {{zmienna}}).
+const linkSchema = blockIdSchema
+  .merge(
+    CMS_BLOCK_REGISTRY.link.validationSchema as z.ZodObject<{
+      type: z.ZodLiteral<'link'>
+      label: z.ZodString
+      url: z.ZodString
+    } & BlockStyleCommonTypes>
+  )
+  .extend({ url: templateOrUrl })
+
+// Preview / preheader (Iter 3) — pojedyncze pole tekstowe.
+const previewSchema = blockIdSchema.merge(
+  CMS_BLOCK_REGISTRY.preview.validationSchema as z.ZodObject<{
+    type: z.ZodLiteral<'preview'>
+    text: z.ZodString
   } & BlockStyleCommonTypes>
 )
 
@@ -134,6 +156,8 @@ const nonColumnsBlockSchema: z.ZodType = z.lazy(() =>
     headingSchema,
     imageSchema,
     spacerSchema,
+    linkSchema,
+    previewSchema,
   ])
 )
 
@@ -152,6 +176,29 @@ const columnsSchema = blockIdSchema.merge(
   rightChildren: z.array(nonColumnsBlockSchema),
 })
 
+// sectionSchema — children to PEŁNA rekurencja (sekcja może zawierać dowolny
+// blok, w tym columns i kolejną sekcję). z.lazy() wymagane: blockSchema jest
+// zdefiniowany PONIŻEJ (TDZ) — arrow odracza odczyt do czasu parse'owania,
+// kiedy const jest już zainicjalizowany. Limit głębokości sekcji NIE jest
+// kodowany w schemacie (schemat rekurencyjny bez głębokości) — egzekwuje go
+// superRefine na updateEmailTemplateSchema.blocks (exceedsSectionDepth).
+// Dzieci columns pozostają leaf-only (nonColumnsBlockSchema — BEZ zmian).
+// Jawna anotacja `z.ZodType` przerywa cykl inferencji TS (TS7022) — ten sam
+// wzorzec co nonColumnsBlockSchema powyżej.
+const lazyBlockSchema: z.ZodType = z.lazy(() => blockSchema)
+
+const sectionSchema = blockIdSchema
+  .merge(
+    CMS_BLOCK_REGISTRY.section.validationSchema as z.ZodObject<{
+      type: z.ZodLiteral<'section'>
+      children: z.ZodArray<z.ZodUnknown>
+      padding: z.ZodOptional<z.ZodEnum<['none', 'sm', 'md', 'lg']>>
+    } & BlockStyleCommonTypes>
+  )
+  .extend({
+    children: z.array(lazyBlockSchema),
+  })
+
 const blockSchema = z.discriminatedUnion('type', [
   headerSchema,
   textSchema,
@@ -161,7 +208,10 @@ const blockSchema = z.discriminatedUnion('type', [
   headingSchema,
   imageSchema,
   spacerSchema,
+  linkSchema,
+  previewSchema,
   columnsSchema,
+  sectionSchema,
 ])
 
 const templateVariableSchema = z.object({
@@ -199,7 +249,19 @@ export type CreateEmailTemplateInput = z.infer<typeof createEmailTemplateSchema>
 
 export const updateEmailTemplateSchema = z.object({
   subject: z.string().min(1, messages.validation.subjectRequired).max(200, messages.validation.subjectTooLong),
-  blocks: z.array(blockSchema).min(1, messages.validation.templateNeedsBlock),
+  blocks: z
+    .array(blockSchema)
+    .min(1, messages.validation.templateNeedsBlock)
+    // Limit zagnieżdżenia sekcji (MAX_SECTION_DEPTH=2) — schemat jest
+    // rekurencyjny bez kodowania głębokości, więc głębokość pilnuje refine.
+    .superRefine((blocks, ctx) => {
+      if (exceedsSectionDepth(blocks as unknown as Block[], MAX_SECTION_DEPTH)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: messages.validation.sectionDepthExceeded,
+        })
+      }
+    }),
   template_variables: z.array(templateVariableSchema).optional(),
   label: templateLabelSchema.optional(),
   theme_id: themeIdFieldSchema,

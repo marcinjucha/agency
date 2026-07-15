@@ -956,6 +956,8 @@ export const messages = {
     canvasDuplicate: 'Duplikuj blok',
     canvasDelete: 'Usuń blok',
     canvasInsertBlock: 'Dodaj blok tutaj',
+    // Afordancja w PUSTEJ sekcji na canvasie (Iter 2 zagnieżdżania)
+    canvasEmptySectionAdd: 'Dodaj blok do sekcji',
     inspectorTitle: 'Inspector',
     inspectorEmpty: 'Zaznacz blok, aby edytować właściwości',
     inspectorSelected: 'Zaznaczony blok: {id}',
@@ -1042,9 +1044,27 @@ export const messages = {
     inspectorCtaUrl: 'URL',
     inspectorCtaUrlPlaceholder: 'https://example.com lub {{responseUrl}}',
     inspectorHeaderCompanyName: 'Nazwa firmy',
+    // Link (Iter 3 — parytet React Email <Link>)
+    inspectorLinkLabel: 'Tekst linku',
+    inspectorLinkLabelPlaceholder: 'Zobacz więcej',
+    inspectorLinkUrl: 'URL',
+    inspectorLinkUrlPlaceholder: 'https://example.com lub {{responseUrl}}',
+    // Preheader / tekst podglądu (Iter 3 — parytet React Email <Preview>)
+    inspectorPreviewText: 'Tekst podglądu',
+    inspectorPreviewTextPlaceholder: 'Krótki opis widoczny w skrzynce…',
+    inspectorPreviewTextHint:
+      'Niewidoczny w treści maila — klienty pocztowe pokazują go na liście wiadomości obok tematu.',
+    canvasPreviewChip: 'Tekst podglądu (preheader) — niewidoczny w treści maila',
+    // Poziom eyebrow w HeadingBlock (Iter 3)
+    inspectorHeadingLevelEyebrow: 'Etykieta (eyebrow)',
     // Spacer — 4 presety
     inspectorSpacerHeightXl: 'XL',
     inspectorSpacerSizeLabel: 'Rozmiar odstępu',
+    // Sekcja (kontener) — preset paddingu + hint o dzieciach (edytor dzieci = kanwa/Struktura, Iter 2)
+    inspectorSectionPaddingLabel: 'Odstęp wewnętrzny',
+    inspectorSectionPaddingNone: 'Brak',
+    inspectorSectionChildrenHint:
+      'Bloki wewnątrz sekcji dodajesz i układasz na kanwie lub w panelu Struktura',
   },
 
   landing: {
@@ -2474,6 +2494,7 @@ export const messages = {
     templateLabelRequired: 'Nazwa szablonu jest wymagana',
     templateLabelMax: 'Nazwa szablonu może mieć maksymalnie 100 znaków',
     duplicateVariableKey: 'Zmienna o tym kluczu już istnieje',
+    sectionDepthExceeded: 'Sekcje można zagnieżdżać maksymalnie na 2 poziomach (sekcja w sekcji)',
     invalidVariableKey: 'Klucz może zawierać tylko litery, cyfry i podkreślniki',
     // Workflows
     workflowNameRequired: 'Nazwa workflow jest wymagana',
@@ -2522,6 +2543,13 @@ export const templates = {
   blog: {
     addCategory: (name: string) => `Dodaj: ${name}`,
     selectDownloadAriaLabel: (name: string) => `Wstaw plik: ${name}`,
+  },
+  email: {
+    // Przyjazny komunikat zapisu wskazujący konkretny wadliwy blok (zamiast
+    // surowego zrzutu zod). `field` = ludzka nazwa pola (np. „adres URL"),
+    // `blockLabel` = etykieta bloku z rejestru (np. „Przycisk CTA").
+    saveBlockError: (blockLabel: string, field: string) =>
+      `Uzupełnij ${field} w bloku „${blockLabel}" — bez tego nie zapiszę szablonu.`,
   },
   media: {
     fileTooLarge: (limitMB: number) => `Plik za duży. Max: ${limitMB}MB.`,

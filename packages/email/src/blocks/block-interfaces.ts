@@ -89,6 +89,7 @@ export type BorderableBlockType =
   | 'footer'
   | 'image'
   | 'columns'
+  | 'section'
 
 export type HeaderBlock = {
   id: string
@@ -144,16 +145,52 @@ export type FooterBlock = {
   BlockTypography &
   BlockBorder
 
+/**
+ * Poziomy nagłówka. 'eyebrow' (Iter 3, parytet React Email) to mała etykieta
+ * nadtytułowa — uppercase, letter-spacing, muted (np. "TWOJE MATERIAŁY").
+ * Renderowana jako akapit (<Text>), nie tag h* — semantycznie to label, nie
+ * nagłówek dokumentu. Rozszerzenie enum jest ADDITIVE — istniejące wiersze
+ * JSONB (h1/h2/h3) nietknięte.
+ */
+export type HeadingLevel = 'h1' | 'h2' | 'h3' | 'eyebrow'
+
 export type HeadingBlock = {
   id: string
   type: 'heading'
   text: string
-  level: 'h1' | 'h2' | 'h3'
+  level: HeadingLevel
   /** Legacy block-specific color — nadal czytany przez renderer. */
   color: string
 } & BlockStyleCommon &
   BlockTypography &
   BlockBorder
+
+/**
+ * LinkBlock (Iter 3, parytet React Email <Link>) — samodzielny link tekstowy
+ * we własnym wierszu; odrębny od przycisku CTA (kotwica, nie button).
+ * Typograficzny (textAlign + textColor/token), ale ŚWIADOMIE nie-borderowalny —
+ * link ma być minimalny (bez tła/ramki; do tego służy CTA).
+ */
+export type LinkBlock = {
+  id: string
+  type: 'link'
+  label: string
+  url: string
+} & BlockStyleCommon &
+  BlockTypography
+
+/**
+ * PreviewBlock (Iter 3, parytet React Email <Preview>) — ukryty preheader
+ * (snippet widoczny na liście skrzynki odbiorczej obok tematu). Renderowany
+ * przez @react-email <Preview> (ukryte divy w body — pozycjonowanie w treści
+ * nie ma znaczenia dla klientów pocztowych). ŚWIADOMIE jako BLOK (nie kolumna
+ * DB) — zero zmian schematu, addytywne dla istniejących szablonów.
+ */
+export type PreviewBlock = {
+  id: string
+  type: 'preview'
+  text: string
+} & BlockStyleCommon
 
 export type ImageBlock = {
   id: string
@@ -178,6 +215,9 @@ export type SpacerBlock = {
   size: SpacerSize
 } & BlockStyleCommon
 
+// UWAGA (drift trap): nowy typ bloku-liścia trzeba dodać i TU, i do `Block`
+// w types.ts, i do SectionChildBlock (przez ten union) — inaczej blok jest
+// renderowalny na najwyższym poziomie, ale niewstawialny do kolumn/sekcji.
 export type NonColumnsBlock =
   | HeaderBlock
   | TextBlock
@@ -187,6 +227,8 @@ export type NonColumnsBlock =
   | HeadingBlock
   | ImageBlock
   | SpacerBlock
+  | LinkBlock
+  | PreviewBlock
 
 export type ColumnsBlock = {
   id: string
@@ -195,5 +237,35 @@ export type ColumnsBlock = {
   rightChildren: NonColumnsBlock[]
   gap: 'sm' | 'md' | 'lg'
   verticalAlign: 'top' | 'middle' | 'bottom'
+} & BlockStyleCommon &
+  BlockBorder
+
+/**
+ * SectionBlock — kontener grupujący bloki (parytet z React Email <Section>).
+ *
+ * padding: JEDEN preset (nigdy per-side) — ŚWIADOME odstępstwo od modelu v2
+ * "baked padding". Kontener musi przełączać się między kartą (padded) a
+ * full-bleed (padding 'none'); baked per-type padding nie wyraziłby obu.
+ * Mapowanie presetu na px żyje w defaults.ts (SECTION_PADDING_PX).
+ *
+ * Zagnieżdżanie: sekcja-w-sekcji dozwolona do MAX_SECTION_DEPTH=2 (egzekwowane
+ * w walidacji CMS + edytorze, NIE w typach — typy pozostają rekurencyjne bez
+ * kodowania głębokości). Kolumny mogą siedzieć w sekcji; kolumny NIE mogą
+ * zawierać sekcji (NonColumnsBlock bez zmian) — brak możliwych cykli.
+ */
+export type SectionPadding = 'none' | 'sm' | 'md' | 'lg'
+
+/**
+ * Union bloków dopuszczalnych jako dzieci sekcji — lustrzane odbicie pełnego
+ * `Block` z types.ts, zdefiniowane lokalnie żeby uniknąć circular dependency
+ * (types.ts importuje registry.ts, który importuje ten plik).
+ */
+export type SectionChildBlock = NonColumnsBlock | ColumnsBlock | SectionBlock
+
+export type SectionBlock = {
+  id: string
+  type: 'section'
+  children: SectionChildBlock[]
+  padding?: SectionPadding
 } & BlockStyleCommon &
   BlockBorder

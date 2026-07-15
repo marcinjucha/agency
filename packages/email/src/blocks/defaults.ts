@@ -20,7 +20,11 @@ import type {
   HeadingBlock,
   ImageBlock,
   SpacerBlock,
+  LinkBlock,
+  PreviewBlock,
   ColumnsBlock,
+  SectionBlock,
+  SectionPadding,
   BlockTypography,
   BlockBorder,
   BorderRadiusToken,
@@ -39,7 +43,10 @@ type AnyBlock =
   | HeadingBlock
   | ImageBlock
   | SpacerBlock
+  | LinkBlock
+  | PreviewBlock
   | ColumnsBlock
+  | SectionBlock
 
 type BlockTypeKey =
   | 'header'
@@ -50,7 +57,10 @@ type BlockTypeKey =
   | 'heading'
   | 'image'
   | 'spacer'
+  | 'link'
+  | 'preview'
   | 'columns'
+  | 'section'
 
 /**
  * Typografia per-typ bloku — defaults rzeczywiście używane przez renderer.
@@ -59,7 +69,7 @@ type BlockTypeKey =
  * (font-family/size/weight/line-height/letter-spacing) NIE są konfigurowalne
  * po stronie usera — żyją w hardcoded stylach bloków w rendererze.
  */
-type TypographicBlockType = 'header' | 'heading' | 'text' | 'cta' | 'footer'
+type TypographicBlockType = 'header' | 'heading' | 'text' | 'cta' | 'footer' | 'link'
 
 // Token-reference fields (textColorToken) are ADDITIVE overrides — a default
 // block carries a literal color, never a token — so they are excluded from the
@@ -72,6 +82,9 @@ export const DEFAULT_BLOCK_TYPOGRAPHY: Record<TypographicBlockType, TypographyDe
   text: { textAlign: 'left', textColor: '#334155' },
   cta: { textAlign: 'center', textColor: '#ffffff' },
   footer: { textAlign: 'center', textColor: '#94a3b8' },
+  // Link — "linkowy" ciemny default; przy motywie rung (c) nadpisuje go
+  // tokenem 'primary' (BLOCK_TEXT_COLOR_TOKEN w theme.ts).
+  link: { textAlign: 'left', textColor: '#1a1a2e' },
 }
 
 /**
@@ -99,6 +112,20 @@ export const SPACER_HEIGHT_PX: Record<SpacerSize, number> = {
 }
 
 /**
+ * Section padding presets — jeden preset dla wszystkich stron (nigdy per-side).
+ *
+ * ŚWIADOME odstępstwo od modelu v2 "baked padding" (per-typ, nie-konfigurowalne):
+ * kontener musi przełączać się między kartą (padded) a full-bleed ('none') —
+ * baked padding nie wyraziłby obu ról jednym typem bloku.
+ */
+export const SECTION_PADDING_PX: Record<SectionPadding, number> = {
+  none: 0,
+  sm: 12,
+  md: 24,
+  lg: 32,
+}
+
+/**
  * Border defaults per-typ — używane przez renderer jako fallback.
  *
  * Wszystkie defaultują na borderRadius='none' i brak borderColor.
@@ -112,6 +139,8 @@ export const DEFAULT_BLOCK_BORDER: Record<BorderableBlockType, Required<Pick<Blo
   footer: { borderRadius: 'none' },
   image: { borderRadius: 'soft' },
   columns: { borderRadius: 'none' },
+  // Sekcje to zwykle karty — 'soft' jak cta/image.
+  section: { borderRadius: 'soft' },
 }
 
 /** Set of borderable block types — runtime check used by renderer. */
@@ -123,6 +152,7 @@ export const BORDERABLE_BLOCK_TYPES: ReadonlySet<BorderableBlockType> = new Set<
   'footer',
   'image',
   'columns',
+  'section',
 ])
 
 export function isBorderableBlockType(type: string): type is BorderableBlockType {
@@ -161,7 +191,12 @@ export const DEFAULT_BLOCK_MARGIN_BOTTOM_PRESET: Record<BlockTypeKey, MarginBott
   divider: 'none',
   spacer: 'none',
   footer: 'none',
+  link: 'none',
+  // preview jest niewidzialny w treści — margines i tak byłby inert, ale klucz
+  // musi istnieć (Record<BlockTypeKey> jest exhaustive).
+  preview: 'none',
   columns: 'none',
+  section: 'none',
 }
 
 // Typ pomocniczy — blok bez pola `id` (id nadawane przez edytor)
@@ -176,7 +211,10 @@ export const BLOCK_DEFAULT_VALUES: {
   heading: BlockWithoutId<HeadingBlock>
   image: BlockWithoutId<ImageBlock>
   spacer: BlockWithoutId<SpacerBlock>
+  link: BlockWithoutId<LinkBlock>
+  preview: BlockWithoutId<PreviewBlock>
   columns: BlockWithoutId<ColumnsBlock>
+  section: BlockWithoutId<SectionBlock>
 } = {
   header: {
     type: 'header' as const,
@@ -220,12 +258,26 @@ export const BLOCK_DEFAULT_VALUES: {
     type: 'spacer' as const,
     size: 'md',
   },
+  link: {
+    type: 'link' as const,
+    label: 'Zobacz więcej',
+    url: '',
+  },
+  preview: {
+    type: 'preview' as const,
+    text: '',
+  },
   columns: {
     type: 'columns' as const,
     leftChildren: [],
     rightChildren: [],
     gap: 'md',
     verticalAlign: 'top',
+  },
+  section: {
+    type: 'section' as const,
+    children: [],
+    padding: 'md',
   },
 }
 

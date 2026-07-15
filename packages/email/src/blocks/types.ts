@@ -18,8 +18,14 @@ export type {
   HeadingBlock,
   ImageBlock,
   SpacerBlock,
+  LinkBlock,
+  PreviewBlock,
   ColumnsBlock,
+  SectionBlock,
+  SectionChildBlock,
+  SectionPadding,
   NonColumnsBlock,
+  HeadingLevel,
 } from './block-interfaces'
 
 import { BLOCK_REGISTRY } from './registry'
@@ -32,7 +38,10 @@ import type {
   HeadingBlock,
   ImageBlock,
   SpacerBlock,
+  LinkBlock,
+  PreviewBlock,
   ColumnsBlock,
+  SectionBlock,
 } from './block-interfaces'
 
 /**
@@ -45,7 +54,7 @@ export type BlockType = keyof typeof BLOCK_REGISTRY
  * Union wszystkich interfejsów bloków.
  * Jawnie wymieniony discriminated union — zapewnia TypeScript exhaustiveness checking.
  */
-export type Block = HeaderBlock | TextBlock | CtaBlock | DividerBlock | FooterBlock | HeadingBlock | ImageBlock | SpacerBlock | ColumnsBlock
+export type Block = HeaderBlock | TextBlock | CtaBlock | DividerBlock | FooterBlock | HeadingBlock | ImageBlock | SpacerBlock | LinkBlock | PreviewBlock | ColumnsBlock | SectionBlock
 
 /**
  * Lista bloków dostępnych w edytorze — derived z BLOCK_REGISTRY.

@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { Button, Input } from '@agency/ui'
-import { ArrowLeft, Save } from 'lucide-react'
+import { ArrowLeft, Save, AlertTriangle, X } from 'lucide-react'
 import { OutlinePanel } from './editor/OutlinePanel'
 import { Canvas } from './editor/Canvas'
 import { Inspector } from './editor/Inspector'
@@ -18,6 +18,8 @@ import type {
 import { BONUS_LIST_PICK } from '../types'
 import { VENTURE_BONUS_MARKER } from '@/lib/app-sent-variables'
 import { updateEmailTemplateFn, parseTemplateVariables } from '../server'
+import { updateEmailTemplateSchema } from '../validation'
+import { describeSaveError } from '../utils/describe-save-error'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
 import { CMS_BLOCK_REGISTRY } from '../block-registry'
@@ -25,6 +27,14 @@ import { extractTemplateVariableKeys } from '../utils/extract-variable-keys'
 import { validateVariableKey } from '../utils/validate-variable-key'
 import { collectUnresolvableTokens } from '../utils/resolve-variable-source'
 import { queryKeys } from '@/lib/query-keys'
+import {
+  updateBlockDeep,
+  deleteBlockDeep,
+  duplicateBlockDeep,
+  moveBlockDeep,
+  insertBlockDeep,
+  findBlockDeep,
+} from '../utils/block-tree'
 import { resolveClientTheme } from '@/lib/theme'
 import type { ThemeWithUsage } from '@/features/themes/types'
 import { useResolvedEmailTheme } from '../hooks/use-resolved-email-theme'
@@ -120,10 +130,12 @@ export function EmailTemplateEditor({ templateType, initialTemplate }: EmailTemp
     userEditedVariables.map((v) => v.key),
   )
 
-  // ---- Block operations (passed down to OutlinePanel) ----
+  // ---- Block operations (passed down to OutlinePanel / Canvas / Inspector) ----
+  // Iter 2: wszystkie operacje przeszły na GŁĘBOKIE odpowiedniki z block-tree.ts,
+  // więc działają na blokach zagnieżdżonych w sekcjach tak samo jak na top-level.
 
   function updateBlock(updated: Block) {
-    setBlocks((prev) => prev.map((b) => (b.id === updated.id ? updated : b)))
+    setBlocks((prev) => updateBlockDeep(prev, updated))
   }
 
   // Build a new block from a pick. The BONUS_LIST_PICK sentinel is NOT a registry
@@ -143,29 +155,35 @@ export function EmailTemplateEditor({ templateType, initialTemplate }: EmailTemp
   }
 
   function addBlock(pick: AddBlockPick) {
+    // Append na końcu najwyższego poziomu (parentId = null). Funkcyjny updater —
+    // `prev.length` zamiast `blocks.length` z closure, żeby batching nie
+    // wstawił bloku pod złym indeksem.
     const newBlock = buildBlockFromPick(pick)
     if (!newBlock) return
-    setBlocks((prev) => [...prev, newBlock])
+    setBlocks((prev) => insertBlockDeep(prev, newBlock, null, prev.length))
     setSelectedBlockId(newBlock.id)
   }
 
   function deleteBlock(id: string) {
-    setBlocks((prev) => prev.filter((b) => b.id !== id))
-    if (selectedBlockId === id) setSelectedBlockId(null)
+    const next = deleteBlockDeep(blocks, id)
+    setBlocks(next)
+    // Czyścimy selekcję gdy zaznaczony blok zniknął (także jako dziecko
+    // usuniętej sekcji — dlatego sprawdzamy po fakcie, na nowym drzewie).
+    if (selectedBlockId && !findBlockDeep(next, selectedBlockId)) {
+      setSelectedBlockId(null)
+    }
   }
 
   function duplicateBlock(id: string) {
-    const idx = blocks.findIndex((b) => b.id === id)
-    if (idx < 0) return
-    const copy = { ...blocks[idx], id: crypto.randomUUID() } as Block
-    setBlocks((prev) => {
-      const next = prev.slice()
-      next.splice(idx + 1, 0, copy)
-      return next
-    })
-    setSelectedBlockId(copy.id)
+    const { blocks: next, newId } = duplicateBlockDeep(blocks, id)
+    if (!newId) return
+    setBlocks(next)
+    setSelectedBlockId(newId)
   }
 
+  // Reorder po indeksach TOP-LEVEL — konsument to drag&drop w OutlinePanel,
+  // który celowo działa tylko na najwyższym poziomie (zagnieżdżone rzędy nie
+  // są draggable; kolejność wewnątrz sekcji zmieniają strzałki na canvasie).
   function reorderBlock(from: number, to: number) {
     setBlocks((prev) => {
       const next = prev.slice()
@@ -175,23 +193,16 @@ export function EmailTemplateEditor({ templateType, initialTemplate }: EmailTemp
     })
   }
 
-  function insertBlockAt(pick: AddBlockPick, index: number) {
+  function insertBlockAt(pick: AddBlockPick, index: number, parentId: string | null = null) {
     const newBlock = buildBlockFromPick(pick)
     if (!newBlock) return
-    setBlocks((prev) => {
-      const next = prev.slice()
-      next.splice(index, 0, newBlock)
-      return next
-    })
+    setBlocks((prev) => insertBlockDeep(prev, newBlock, parentId, index))
     setSelectedBlockId(newBlock.id)
   }
 
   function moveBlock(id: string, dir: -1 | 1) {
-    const idx = blocks.findIndex((b) => b.id === id)
-    if (idx < 0) return
-    const to = idx + dir
-    if (to < 0 || to >= blocks.length) return
-    reorderBlock(idx, to)
+    // moveBlockDeep jest sibling-scoped — ruch poza granicę tablicy = no-op.
+    setBlocks((prev) => moveBlockDeep(prev, id, dir))
   }
 
   function onCanvasBackdropClick(e: React.MouseEvent) {
@@ -232,6 +243,26 @@ export function EmailTemplateEditor({ templateType, initialTemplate }: EmailTemp
     setSaveWarning(null)
 
     const cleanedVariables = userEditedVariables.filter((v) => v.key.trim().length > 0)
+
+    // Pre-walidacja klient-side: łapiemy błędy zod ZANIM polecą do serwera i
+    // zamiast surowego zrzutu (`blocks[3].children[2].url`) pokazujemy przyjazny
+    // komunikat + ZAZNACZAMY wadliwy blok (także zagnieżdżony w sekcji), żeby
+    // user od razu wiedział, który przycisk/pole poprawić.
+    const parsed = updateEmailTemplateSchema.safeParse({
+      subject,
+      blocks,
+      template_variables: cleanedVariables,
+      label,
+      theme_id: themeId,
+    })
+    if (!parsed.success) {
+      const { blockId, message } = describeSaveError(blocks, parsed.error)
+      if (blockId) setSelectedBlockId(blockId)
+      setSaveState('error')
+      setErrorMessage(message)
+      setTimeout(() => setSaveState('idle'), 2500)
+      return
+    }
 
     try {
       const result = await updateEmailTemplateFn({
@@ -297,7 +328,7 @@ export function EmailTemplateEditor({ templateType, initialTemplate }: EmailTemp
 
   return (
     <EmailThemeProvider theme={resolvedTheme}>
-    <div className="absolute inset-0 grid grid-rows-[52px_1fr] grid-cols-[280px_1fr_360px] bg-background">
+    <div className="absolute inset-0 grid grid-rows-[52px_auto_1fr] grid-cols-[280px_1fr_360px] bg-background">
       {/* Topbar — spans all 3 columns */}
       <header className="col-span-3 z-10 flex items-center gap-3 border-b border-border bg-background px-4">
         <Button
@@ -348,7 +379,32 @@ export function EmailTemplateEditor({ templateType, initialTemplate }: EmailTemp
         </div>
       </header>
 
-      {/* Outline (left) */}
+      {errorMessage ? (
+        <div
+          role="alert"
+          className="col-span-3 flex items-center gap-2.5 border-b border-destructive/40 bg-destructive/10 px-4 py-2.5 text-sm text-destructive"
+        >
+          <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" />
+          <span className="flex-1">{errorMessage}</span>
+          <button
+            type="button"
+            onClick={() => setErrorMessage(null)}
+            aria-label={messages.common.close}
+            className="shrink-0 rounded p-0.5 text-destructive/70 hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/50"
+          >
+            <X className="h-3.5 w-3.5" aria-hidden="true" />
+          </button>
+        </div>
+      ) : saveWarning ? (
+        <div
+          role="status"
+          className="col-span-3 flex items-center gap-2.5 border-b border-amber-500/40 bg-amber-500/10 px-4 py-2.5 text-sm text-amber-700 dark:text-amber-300"
+        >
+          <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" />
+          <span className="flex-1">{saveWarning}</span>
+        </div>
+      ) : null}
+
       <OutlinePanel
         blocks={blocks}
         selectedId={selectedBlockId}
@@ -395,24 +451,6 @@ export function EmailTemplateEditor({ templateType, initialTemplate }: EmailTemp
         unresolvableTokens={unresolvableTokens}
         onDelete={() => setDeleteOpen(true)}
       />
-
-      {errorMessage && (
-        <div
-          role="alert"
-          className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-2 text-sm text-destructive shadow-md"
-        >
-          {errorMessage}
-        </div>
-      )}
-
-      {!errorMessage && saveWarning && (
-        <div
-          role="status"
-          className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-2 text-sm text-amber-700 dark:text-amber-300 shadow-md"
-        >
-          {saveWarning}
-        </div>
-      )}
 
       <DeleteTemplateDialog
         template={initialTemplate}

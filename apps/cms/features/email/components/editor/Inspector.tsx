@@ -19,6 +19,12 @@ import { ThemePicker } from '@/features/themes/components/ThemePicker'
 import { CMS_BLOCK_REGISTRY } from '../../block-registry'
 import { VariablesEditor } from '../VariablesEditor'
 import { useInspectorSectionState } from '../../hooks/use-inspector-section-state'
+import {
+  applySectionPatch,
+  TYPOGRAPHY_SECTION_KEYS,
+  BORDER_SECTION_KEYS,
+} from '../../utils/apply-section-patch'
+import { findBlockDeep } from '../../utils/block-tree'
 import { TypographySection } from './controls/TypographySection'
 import { BorderSection } from './controls/BorderSection'
 import { SegmentedControl } from './controls/SegmentedControl'
@@ -26,10 +32,10 @@ import type { Block, BlockType, TemplateVariable } from '../../types'
 import type { TriggerVariable } from '@/lib/trigger-schemas'
 
 /**
- * Block types that carry typography (5/9 types). Mirrors DEFAULT_BLOCK_TYPOGRAPHY
+ * Block types that carry typography. Mirrors DEFAULT_BLOCK_TYPOGRAPHY
  * keys — divider/spacer/image/columns have no inline text content.
  */
-type TypographicBlockType = 'header' | 'heading' | 'text' | 'cta' | 'footer'
+type TypographicBlockType = 'header' | 'heading' | 'text' | 'cta' | 'footer' | 'link'
 
 const TYPOGRAPHIC_BLOCK_TYPES: ReadonlySet<BlockType> = new Set<BlockType>([
   'header',
@@ -37,6 +43,7 @@ const TYPOGRAPHIC_BLOCK_TYPES: ReadonlySet<BlockType> = new Set<BlockType>([
   'text',
   'cta',
   'footer',
+  'link',
 ])
 
 function isTypographicBlock(type: BlockType): type is TypographicBlockType {
@@ -198,7 +205,8 @@ function PropertiesTab({
   onDuplicateBlock,
   detectedKeys,
 }: PropertiesTabProps) {
-  const selected = blocks.find((b) => b.id === selectedBlockId)
+  // findBlockDeep — selekcja działa też dla bloków zagnieżdżonych w sekcjach.
+  const selected = selectedBlockId ? findBlockDeep(blocks, selectedBlockId) : null
 
   if (!selected) {
     return <EmptySelection />
@@ -419,7 +427,12 @@ function TypographySectionWrapper({ selected, onUpdateBlock }: TypographySection
     <TypographySection
       value={current}
       defaults={defaults}
-      onChange={(next) => onUpdateBlock({ ...selected, ...next } as Block)}
+      // applySectionPatch (nie spread): klucz USUNIĘTY w sekcji (delete merged[key])
+      // nie istnieje w `next` — spread zachowywałby starą wartość z bloku i token
+      // koloru byłby nieusuwalny. Helper usuwa klucze sekcji, potem nakłada patch.
+      onChange={(next) =>
+        onUpdateBlock(applySectionPatch(selected, TYPOGRAPHY_SECTION_KEYS, next))
+      }
     />
   )
 }
@@ -447,7 +460,10 @@ function BorderSectionWrapper({ selected, onUpdateBlock }: BorderSectionWrapperP
       blockType={blockType}
       value={current}
       defaults={defaults}
-      onChange={(next) => onUpdateBlock({ ...selected, ...next } as Block)}
+      // applySectionPatch (nie spread) — patrz komentarz w TypographySectionWrapper.
+      onChange={(next) =>
+        onUpdateBlock(applySectionPatch(selected, BORDER_SECTION_KEYS, next))
+      }
     />
   )
 }

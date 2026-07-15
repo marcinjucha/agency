@@ -40,6 +40,55 @@ describe('EmailRenderer', () => {
     expect(html).toContain('padding-bottom:8px')
   })
 
+  // --- SectionBlock (email-builder nesting, iter 1) -----------------------
+
+  it('SectionBlock renders children recursively with preset padding + own border', async () => {
+    const blocks: Block[] = [
+      {
+        id: 'sec',
+        type: 'section',
+        padding: 'lg',
+        backgroundColor: '#f1f5f9',
+        borderColor: '#e2e8f0',
+        children: [
+          { id: 'h', type: 'heading', text: 'Karta', level: 'h2', color: '#0f172a' },
+          { id: 't', type: 'text', content: '<p>Wewnątrz sekcji</p>', marginBottom: 'compact' },
+        ],
+      },
+    ]
+    const html = await renderEmailBlocks(blocks)
+    expect(html).toContain('Karta')
+    expect(html).toContain('Wewnątrz sekcji')
+    // padding preset lg = 32px na wewnętrznym divie
+    expect(html).toContain('padding:32px')
+    // border + tło na własnym <Section> sekcji (BORDER_ON_CHILD_TYPES)
+    expect(html).toContain('#f1f5f9')
+    expect(html).toContain('#e2e8f0')
+    // default borderRadius 'soft' dla sekcji
+    expect(html).toContain('border-radius:8px')
+  })
+
+  it('SectionBlock in section (depth 2) renders nested children', async () => {
+    const blocks: Block[] = [
+      {
+        id: 'outer',
+        type: 'section',
+        padding: 'none',
+        children: [
+          {
+            id: 'inner',
+            type: 'section',
+            padding: 'sm',
+            children: [{ id: 't', type: 'text', content: '<p>Głęboko</p>' }],
+          },
+        ],
+      },
+    ]
+    const html = await renderEmailBlocks(blocks)
+    expect(html).toContain('Głęboko')
+    expect(html).toContain('padding:12px')
+  })
+
   // --- Baked v2 padding (AAA-T-221 2026-05-15) ---------------------------
 
   it('TextBlock emits baked padding 12px 24px', async () => {
@@ -365,5 +414,96 @@ describe('renderEmailBlocks theme support', () => {
       footerText: '#94a3b8',
     })
     expect(haloDefault).toBe(noTheme)
+  })
+})
+
+// --- Iter 3: Link / eyebrow / Preview (parytet React Email) ---------------
+
+describe('LinkBlock (Iter 3)', () => {
+  it('renders anchor with href, label, underline and baked padding', async () => {
+    const blocks: Block[] = [
+      { id: 'l', type: 'link', label: 'Zobacz więcej', url: 'https://example.com' },
+    ]
+    const html = await renderEmailBlocks(blocks)
+    expect(html).toContain('href="https://example.com"')
+    expect(html).toContain('Zobacz więcej')
+    expect(html).toContain('text-decoration:underline')
+    expect(html).toContain('padding:12px 24px')
+    // default "linkowy" ciemny kolor z DEFAULT_BLOCK_TYPOGRAPHY.link
+    expect(html).toContain('color:#1a1a2e')
+  })
+
+  it('typography mixin: textAlign + explicit textColor win', async () => {
+    const blocks: Block[] = [
+      { id: 'l', type: 'link', label: 'X', url: '#', textAlign: 'center', textColor: '#ff0000' },
+    ]
+    const html = await renderEmailBlocks(blocks)
+    expect(html).toContain('text-align:center')
+    expect(html).toContain('color:#ff0000')
+  })
+
+  it('themed default: link text takes the primary token when no explicit color', async () => {
+    const blocks: Block[] = [{ id: 'l', type: 'link', label: 'X', url: '#' }]
+    const html = await renderEmailBlocks(blocks, { primary: '#aa00bb' })
+    expect(html).toContain('color:#aa00bb')
+    expect(html).not.toContain('color:#1a1a2e')
+  })
+})
+
+describe('HeadingBlock eyebrow (Iter 3)', () => {
+  it('renders uppercase, letter-spaced, small, muted paragraph (not h-tag)', async () => {
+    const blocks: Block[] = [
+      { id: 'e', type: 'heading', text: 'Twoje materiały', level: 'eyebrow', color: '#1a1a2e' },
+    ]
+    const html = await renderEmailBlocks(blocks)
+    expect(html).toContain('text-transform:uppercase')
+    expect(html).toContain('letter-spacing:0.08em')
+    expect(html).toContain('font-size:12px')
+    // muted default (brak jawnego textColor/textColorToken)
+    expect(html).toContain('color:#64748b')
+    expect(html).toContain('Twoje materiały')
+    // akapit, nie tag nagłówka
+    expect(html).not.toMatch(/<h[1-3][\s>][^>]*>Twoje materiały/)
+  })
+
+  it('explicit textColor wins over the muted eyebrow default', async () => {
+    const blocks: Block[] = [
+      { id: 'e', type: 'heading', text: 'E', level: 'eyebrow', color: '#1a1a2e', textColor: '#ff0000' },
+    ]
+    const html = await renderEmailBlocks(blocks)
+    expect(html).toContain('color:#ff0000')
+    expect(html).not.toContain('color:#64748b')
+  })
+
+  it('h1/h2/h3 output unchanged (additive enum)', async () => {
+    const blocks: Block[] = [
+      { id: 'h', type: 'heading', text: 'Cześć!', level: 'h1', color: '#0f172a' },
+    ]
+    const html = await renderEmailBlocks(blocks)
+    expect(html).toContain('font-size:26px')
+    expect(html).toContain('letter-spacing:-0.01em')
+    expect(html).toContain('Cześć!')
+  })
+})
+
+describe('PreviewBlock (Iter 3)', () => {
+  it('emits the hidden preheader text into the output HTML', async () => {
+    const blocks: Block[] = [
+      { id: 'p', type: 'preview', text: 'Twoje materiały czekają w środku' },
+      { id: 't', type: 'text', content: '<p>Treść</p>' },
+    ]
+    const html = await renderEmailBlocks(blocks)
+    expect(html).toContain('Twoje materiały czekają w środku')
+    // ukryty kontener @react-email <Preview>
+    expect(html.toLowerCase()).toContain('display:none')
+  })
+
+  it('empty preview text renders nothing', async () => {
+    const blocks: Block[] = [
+      { id: 'p', type: 'preview', text: '   ' },
+      { id: 't', type: 'text', content: '<p>Treść</p>' },
+    ]
+    const html = await renderEmailBlocks(blocks)
+    expect(html.toLowerCase()).not.toContain('display:none')
   })
 })

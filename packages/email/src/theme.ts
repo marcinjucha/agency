@@ -41,6 +41,9 @@ export const BLOCK_TEXT_COLOR_TOKEN: Partial<Record<BlockType, string>> = {
   text: 'text',
   cta: 'primaryText',
   footer: 'footerText',
+  // Link (Iter 3) — brand color; nowy typ bloku, brak istniejących wierszy →
+  // zero wpływu na byte-stabilność starych szablonów.
+  link: 'primary',
 }
 
 /**

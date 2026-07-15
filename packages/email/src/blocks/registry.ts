@@ -7,7 +7,10 @@ import { FooterBlockComponent } from './FooterBlock'
 import { HeadingBlockComponent } from './HeadingBlock'
 import { ImageBlockComponent } from './ImageBlock'
 import { SpacerBlockComponent } from './SpacerBlock'
+import { LinkBlockComponent } from './LinkBlock'
+import { PreviewBlockComponent } from './PreviewBlock'
 import { ColumnsBlockComponent } from './ColumnsBlock'
+import { SectionBlockComponent } from './SectionBlock'
 import { BLOCK_DEFAULT_VALUES } from './defaults'
 import type {
   HeaderBlock,
@@ -18,7 +21,10 @@ import type {
   HeadingBlock,
   ImageBlock,
   SpacerBlock,
+  LinkBlock,
+  PreviewBlock,
   ColumnsBlock,
+  SectionBlock,
 } from './block-interfaces'
 
 /**
@@ -112,6 +118,22 @@ export const BLOCK_REGISTRY = {
     defaultValue: BLOCK_DEFAULT_VALUES.spacer,
   } satisfies BlockRegistryEntry<SpacerBlock>,
 
+  link: {
+    id: 'link',
+    label: 'Link',
+    description: 'Pojedynczy link tekstowy',
+    RendererComponent: LinkBlockComponent,
+    defaultValue: BLOCK_DEFAULT_VALUES.link,
+  } satisfies BlockRegistryEntry<LinkBlock>,
+
+  preview: {
+    id: 'preview',
+    label: 'Tekst podglądu (preheader)',
+    description: 'Ukryty tekst widoczny na liście skrzynki obok tematu',
+    RendererComponent: PreviewBlockComponent,
+    defaultValue: BLOCK_DEFAULT_VALUES.preview,
+  } satisfies BlockRegistryEntry<PreviewBlock>,
+
   columns: {
     id: 'columns',
     label: 'Kolumny',
@@ -119,4 +141,12 @@ export const BLOCK_REGISTRY = {
     RendererComponent: ColumnsBlockComponent,
     defaultValue: BLOCK_DEFAULT_VALUES.columns,
   } satisfies BlockRegistryEntry<ColumnsBlock>,
+
+  section: {
+    id: 'section',
+    label: 'Sekcja',
+    description: 'Kontener grupujący bloki — karta z tłem/ramką lub sekcja pełnej szerokości',
+    RendererComponent: SectionBlockComponent,
+    defaultValue: BLOCK_DEFAULT_VALUES.section,
+  } satisfies BlockRegistryEntry<SectionBlock>,
 } as const

@@ -52,6 +52,7 @@ const TYPOGRAPHIC_BLOCK_TYPES: ReadonlySet<BlockType> = new Set([
   'text',
   'cta',
   'footer',
+  'link',
 ] satisfies BlockType[])
 
 /**
@@ -67,7 +68,7 @@ export function computeTypographyStyle(
 ): React.CSSProperties {
   if (!TYPOGRAPHIC_BLOCK_TYPES.has(block.type as BlockType)) return {}
 
-  const blockType = block.type as 'header' | 'heading' | 'text' | 'cta' | 'footer'
+  const blockType = block.type as 'header' | 'heading' | 'text' | 'cta' | 'footer' | 'link'
   const defaults = DEFAULT_BLOCK_TYPOGRAPHY[blockType]
   const overrides = block as Partial<BlockTypography>
 
@@ -165,11 +166,14 @@ export function resolveBlockMarginBottom(block: Block): number {
  *   - cta: border on the <Button> (button is the visual element users perceive)
  *   - image: borderRadius/border on <Img> (radius on wrapper doesn't clip the image)
  *   - header: header owns its own colored <Section> — pass border directly
+ *   - section: kontener aplikuje border/tło/radius na WŁASNYM <Section>
+ *     (unikamy double-wrappingu drugą tabelą wokół kontenera)
  */
 const BORDER_ON_CHILD_TYPES: ReadonlySet<BlockType> = new Set<BlockType>([
   'cta',
   'image',
   'header',
+  'section',
 ])
 
 export function renderBlock(block: Block, paddingBottom?: number, theme?: ThemeColorMap) {
