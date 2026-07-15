@@ -76,13 +76,6 @@ export function CampaignBonusTemplateCard({
       : null
   const editHref = resolvedType ? routes.admin.emailTemplate(resolvedType) : null
 
-  // Guard for a stale/foreign persisted selection: a non-null id that is not in the
-  // pre-filtered bonus-capable list (shouldn't happen — the list gates the options —
-  // but a template could lose its marker after assignment).
-  const staleSelection =
-    selected !== null && options.length > 0 && !options.some((o) => o.id === selected)
-  const warning = staleSelection ? messages.venture.bonusTemplatePickerWarning : null
-
   function handleChange(id: string | null) {
     setSelected(id)
     mutation.mutate(id)
@@ -98,7 +91,6 @@ export function CampaignBonusTemplateCard({
           editHref={editHref}
           loading={optionsQuery.isLoading}
           disabled={mutation.isPending}
-          warning={warning}
           emptyHint={messages.venture.bonusTemplateEmptyHint}
         />
 

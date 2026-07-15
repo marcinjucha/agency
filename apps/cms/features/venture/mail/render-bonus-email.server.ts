@@ -87,11 +87,11 @@ export async function resolveVentureSendTheme(
 }
 
 /**
- * Build subject + HTML for the bonus email. HYBRID: when a `venture_bonus`-style
- * template exists, render the editable copy from it + splice the programmatic
- * bonus list; on ANY error building from it, fall back to the hardcoded builder.
- * When absent, use the hardcoded builder directly. Either way the dynamic list
- * (0 / 1 / many, no cap) and the resolved theme are identical.
+ * Build subject + HTML for the bonus email. When a `venture_bonus`-style template
+ * exists, render the editable copy from it AS-IS (bonus links come from
+ * per-campaign template variables — no programmatic list splice); on ANY error
+ * building from it, fall back to the hardcoded builder. When absent, use the
+ * hardcoded builder directly (that path still lists `bonuses` programmatically).
  *
  * Takes `displayName` (not the whole campaign row) so the preview handler — which
  * reads campaigns via the authenticated/cookie client — can call it without the
@@ -118,7 +118,6 @@ export async function buildBonusEmailBody(
       return await buildBonusEmailFromTemplateHtml({
         templateBlocks: template.blocks,
         subjectTemplate: template.subject,
-        bonuses,
         theme,
         values: { companyName: resolveBonusBrand(displayName) },
         templateValues,

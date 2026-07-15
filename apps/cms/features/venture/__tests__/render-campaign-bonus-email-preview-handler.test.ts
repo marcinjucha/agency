@@ -31,7 +31,9 @@ vi.mock('@/lib/server-auth.server', () => {
 import { requireAuthContextFull } from '@/lib/server-auth.server'
 import { renderCampaignBonusEmailPreviewHandler } from '../admin-handlers.server'
 import { buildBonusEmailBody, resolveVentureSendTheme } from '../mail/render-bonus-email.server'
-import { BONUS_LIST_MARKER } from '../mail/bonus-email-template'
+// Legacy marker text block: no longer spliced (Iter 4b) — left unresolved and
+// stripped on BOTH the preview and the send, so the byte-equality oracle still holds.
+import { VENTURE_BONUS_MARKER as BONUS_LIST_MARKER } from '@/lib/app-sent-variables'
 
 const mockRequireAuth = requireAuthContextFull as ReturnType<typeof vi.fn>
 

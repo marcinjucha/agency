@@ -4,17 +4,20 @@ import { buildBonusEmailBlocks } from '../mail/bonus-email'
 import {
   buildBonusEmailFromTemplate,
   buildBonusEmailFromTemplateHtml,
-  BONUS_LIST_MARKER,
 } from '../mail/bonus-email-template'
+// The `{{bonus_list}}` marker is NO LONGER a structural splice point (Iter 4b):
+// the template path renders authored blocks as-is and the marker, if present in a
+// legacy template, is left unresolved → stripped by stripResidualTokens. We import
+// it from its canonical home (the venture builder no longer re-exports it) purely
+// to build legacy-marker fixtures and assert the token is stripped, not spliced.
+import { VENTURE_BONUS_MARKER as BONUS_LIST_MARKER } from '@/lib/app-sent-variables'
 import { HALO_EFEKT_DEFAULT } from '@/lib/theme'
 
-// The seed copy blocks (mirror of the seed migration
-// 20260714_..._seed_venture_bonus_email_template.sql). Themeless + tokenised:
+// The seed copy blocks (mirror of the seed migration). Themeless + tokenised:
 //   - header / footer carry {{companyName}}
-//   - a text block whose content is the {{bonus_list}} marker pins the splice
-//     position between the intro and the inbox-note (== today's list position)
-// The builder overlays the resolved theme by role, so the DEFAULT theme yields
-// the SAME colours the hardcoded builder bakes inline — the byte-identical AC.
+//   - a legacy text block whose content is the {{bonus_list}} marker (kept here to
+//     prove it is now stripped, NOT spliced into a programmatic list)
+// The builder overlays the resolved theme by role.
 const SEED_BONUS_TEMPLATE_BLOCKS: Block[] = [
   { id: 'bonus-header', type: 'header', companyName: '{{companyName}}', textColor: '#ffffff' },
   { id: 'bonus-heading', type: 'heading', text: 'Twoje bonusy są gotowe', level: 'h2', color: '#1a1a2e' },
@@ -38,51 +41,34 @@ const SEED_BONUS_TEMPLATE_BLOCKS: Block[] = [
 
 const SUBJECT_TEMPLATE = 'Twoje bonusy od {{companyName}}'
 
+// Only used by the HARDCODED builder (`buildBonusEmailBlocks`) — the template path
+// no longer accepts a bonuses input (bonus links now come from campaign variables).
 const BONUSES = [
   { title: 'Szablon Notion', url: 'https://drive.example.com/notion' },
   { title: 'Checklista PDF', url: 'https://drive.example.com/pdf' },
 ]
 
-describe('buildBonusEmailFromTemplate (pure)', () => {
-  it('replaces the {{bonus_list}} marker with the programmatic list, in place', () => {
+describe('buildBonusEmailFromTemplate (pure) — themes authored blocks AS-IS, no splice', () => {
+  it('renders the authored blocks unchanged in order (a legacy marker block is NOT replaced)', () => {
     const blocks = buildBonusEmailFromTemplate({
       templateBlocks: SEED_BONUS_TEMPLATE_BLOCKS,
-      bonuses: BONUSES,
       theme: HALO_EFEKT_DEFAULT,
     })
-    const ids = blocks.map((b) => b.id)
-    // Marker gone; the list sits exactly where the marker was (index 3).
-    expect(ids).toEqual([
+    // No block is added or removed — the legacy marker text block stays in place
+    // (it will be rendered then stripped at the HTML stage, never spliced).
+    expect(blocks.map((b) => b.id)).toEqual([
       'bonus-header',
       'bonus-heading',
       'bonus-intro',
-      'bonus-list',
+      'bonus-list-marker',
       'bonus-inbox-note',
       'bonus-footer',
     ])
-    const list = blocks[3] as { content: string }
-    expect(list.content).toContain('href="https://drive.example.com/notion"')
+    const marker = blocks.find((b) => b.id === 'bonus-list-marker') as { content: string }
+    expect(marker.content).toBe(BONUS_LIST_MARKER)
   })
 
-  it('falls back to before-footer when the marker was removed (list never dropped)', () => {
-    const noMarker = SEED_BONUS_TEMPLATE_BLOCKS.filter((b) => b.id !== 'bonus-list-marker')
-    const blocks = buildBonusEmailFromTemplate({
-      templateBlocks: noMarker,
-      bonuses: BONUSES,
-      theme: HALO_EFEKT_DEFAULT,
-    })
-    const ids = blocks.map((b) => b.id)
-    expect(ids).toEqual([
-      'bonus-header',
-      'bonus-heading',
-      'bonus-intro',
-      'bonus-inbox-note',
-      'bonus-list',
-      'bonus-footer',
-    ])
-  })
-
-  it('splices the marker and themes copy blocks INSIDE a section (nesting Iter 1)', () => {
+  it('themes copy blocks INSIDE a section by role, without altering structure', () => {
     const withSection: Block[] = [
       { id: 'bonus-header', type: 'header', companyName: '{{companyName}}', textColor: '#ffffff' },
       {
@@ -98,14 +84,14 @@ describe('buildBonusEmailFromTemplate (pure)', () => {
     ]
     const blocks = buildBonusEmailFromTemplate({
       templateBlocks: withSection,
-      bonuses: BONUSES,
       theme: HALO_EFEKT_DEFAULT,
     })
-    const card = blocks[1] as { children: Array<{ id: string; content?: string; textColor?: string }> }
-    // Marker podmieniony NA MIEJSCU wewnątrz sekcji (nie doklejony przed stopką).
-    expect(card.children.map((c) => c.id)).toEqual(['card-text', 'bonus-list'])
-    expect(card.children[1].content).toContain('href="https://drive.example.com/notion"')
-    // Dziecko sekcji tematyzowane po roli jak na najwyższym poziomie.
+    const card = blocks[1] as {
+      children: Array<{ id: string; content?: string; textColor?: string }>
+    }
+    // Section children unchanged in count/order (no splice into the section).
+    expect(card.children.map((c) => c.id)).toEqual(['card-text', 'card-marker'])
+    // Child copy still themed by role like the top level.
     expect(card.children[0].textColor).toBe(HALO_EFEKT_DEFAULT.text)
     expect(blocks.map((b) => b.id)).toEqual(['bonus-header', 'card', 'bonus-footer'])
   })
@@ -113,7 +99,6 @@ describe('buildBonusEmailFromTemplate (pure)', () => {
   it('overlays the resolved theme onto copy blocks by role', () => {
     const blocks = buildBonusEmailFromTemplate({
       templateBlocks: SEED_BONUS_TEMPLATE_BLOCKS,
-      bonuses: BONUSES,
       theme: HALO_EFEKT_DEFAULT,
     })
     const header = blocks.find((b) => b.id === 'bonus-header') as {
@@ -127,32 +112,11 @@ describe('buildBonusEmailFromTemplate (pure)', () => {
   })
 })
 
-describe('byte-identical regression (load-bearing AC)', () => {
-  it('hybrid render == hardcoded buildBonusEmailBlocks output for the same bonuses + default theme', async () => {
-    const legacyHtml = await renderEmailBlocks(
-      buildBonusEmailBlocks({
-        campaignDisplayName: 'Kacper Launch',
-        bonuses: BONUSES,
-        theme: HALO_EFEKT_DEFAULT,
-      }),
-    )
-
-    const { html } = await buildBonusEmailFromTemplateHtml({
-      templateBlocks: SEED_BONUS_TEMPLATE_BLOCKS,
-      subjectTemplate: SUBJECT_TEMPLATE,
-      bonuses: BONUSES,
-      theme: HALO_EFEKT_DEFAULT,
-      values: { companyName: 'Kacper Launch' },
-    })
-
-    expect(html).toBe(legacyHtml)
-  })
-
-  it('subject matches the hardcoded subject for the same brand', async () => {
+describe('subject substitution', () => {
+  it('subject resolves {{companyName}} for the given brand', async () => {
     const { subject } = await buildBonusEmailFromTemplateHtml({
       templateBlocks: SEED_BONUS_TEMPLATE_BLOCKS,
       subjectTemplate: SUBJECT_TEMPLATE,
-      bonuses: BONUSES,
       theme: HALO_EFEKT_DEFAULT,
       values: { companyName: 'Kacper Launch' },
     })
@@ -161,18 +125,15 @@ describe('byte-identical regression (load-bearing AC)', () => {
 })
 
 // [2] TOKEN-BOUND blocks must resolve to the per-campaign RESOLVED theme at send.
-// The send now passes a ThemeColorMap (built from the ResolvedTheme) to
+// The send passes a ThemeColorMap (built from the ResolvedTheme) to
 // renderEmailBlocks — SAME as the editor preview — so a block bound to a theme
 // token (textColorToken / backgroundColorToken) renders the resolved brand colour
-// instead of the block default. Before the fix the send rendered with NO map, so a
-// token-bound block silently fell back to the default while the editor showed the
-// brand colour.
+// instead of the block default.
 describe('token-bound blocks resolve to the resolved theme (map passed to renderer)', () => {
   // A distinctive accent so the assertion is unambiguous (not equal to any default).
   const THEMED = { ...HALO_EFEKT_DEFAULT, accent: '#abcdef' } as typeof HALO_EFEKT_DEFAULT
 
   const CTA_TOKEN_BLOCKS: Block[] = [
-    { id: 'bonus-list-marker', type: 'text', content: BONUS_LIST_MARKER },
     // CTA background bound to the `accent` token — NO raw backgroundColor, so the
     // themed default/token ref is what resolves.
     {
@@ -189,7 +150,6 @@ describe('token-bound blocks resolve to the resolved theme (map passed to render
     const { html } = await buildBonusEmailFromTemplateHtml({
       templateBlocks: CTA_TOKEN_BLOCKS,
       subjectTemplate: SUBJECT_TEMPLATE,
-      bonuses: BONUSES,
       theme: THEMED,
       values: { companyName: 'Kacper Launch' },
     })
@@ -198,13 +158,9 @@ describe('token-bound blocks resolve to the resolved theme (map passed to render
   })
 
   it('the accent hex is sourced FROM the resolved theme (default theme → no #abcdef)', async () => {
-    // Same token-bound CTA, but the DEFAULT theme (whose accent is NOT #abcdef).
-    // The distinctive hex must be absent — proving the #abcdef above came from the
-    // resolved theme's accent flowing through the map, not from anything incidental.
     const { html } = await buildBonusEmailFromTemplateHtml({
       templateBlocks: CTA_TOKEN_BLOCKS,
       subjectTemplate: SUBJECT_TEMPLATE,
-      bonuses: BONUSES,
       theme: HALO_EFEKT_DEFAULT,
       values: { companyName: 'Kacper Launch' },
     })
@@ -213,11 +169,12 @@ describe('token-bound blocks resolve to the resolved theme (map passed to render
 })
 
 describe('brand with an apostrophe — SEMANTIC equivalence, NOT byte-identical', () => {
-  // The byte-identical AC holds only for special-char-free copy. A brand with a
-  // `'` is escaped by BOTH paths (no raw quote leaks that could break an
-  // attribute) but in a DIFFERENT entity FORM: the hybrid path substitutes via
-  // escapeHtml (`'` → `&#39;`), the hardcoded builder emits the brand through
-  // React JSX (`'` → `&#x27;`). Assert equivalence, not byte equality.
+  // A brand with a `'` is escaped by BOTH the template path and the hardcoded
+  // builder (no raw quote leaks that could break an attribute) but in a DIFFERENT
+  // entity FORM: the template path substitutes via escapeHtml (`'` → `&#39;`), the
+  // hardcoded builder emits the brand through React JSX (`'` → `&#x27;`). Assert
+  // escape equivalence (not byte equality — the paths also differ because the
+  // hardcoded builder still injects the programmatic bonus list, the template does not).
   const BRAND_WITH_APOS = "Ala's Launch"
 
   it('both paths escape the apostrophe (no raw quote), differing only in entity form', async () => {
@@ -228,10 +185,9 @@ describe('brand with an apostrophe — SEMANTIC equivalence, NOT byte-identical'
         theme: HALO_EFEKT_DEFAULT,
       }),
     )
-    const { html: hybridHtml } = await buildBonusEmailFromTemplateHtml({
+    const { html: templateHtml } = await buildBonusEmailFromTemplateHtml({
       templateBlocks: SEED_BONUS_TEMPLATE_BLOCKS,
       subjectTemplate: SUBJECT_TEMPLATE,
-      bonuses: BONUSES,
       theme: HALO_EFEKT_DEFAULT,
       values: { companyName: BRAND_WITH_APOS },
     })
@@ -239,63 +195,24 @@ describe('brand with an apostrophe — SEMANTIC equivalence, NOT byte-identical'
     // Neither path leaks the raw brand (raw `'` would be an injection risk in an
     // attribute context).
     expect(legacyHtml).not.toContain(BRAND_WITH_APOS)
-    expect(hybridHtml).not.toContain(BRAND_WITH_APOS)
+    expect(templateHtml).not.toContain(BRAND_WITH_APOS)
 
     // Both escape the apostrophe (either valid entity form is accepted).
     expect(legacyHtml).toMatch(/Ala(&#x27;|&#39;)s Launch/)
-    expect(hybridHtml).toMatch(/Ala(&#x27;|&#39;)s Launch/)
+    expect(templateHtml).toMatch(/Ala(&#x27;|&#39;)s Launch/)
 
-    // They are NOT byte-identical here — this is exactly why the byte-identical
-    // regression is scoped to the special-char-free seed copy.
-    expect(hybridHtml).not.toBe(legacyHtml)
-  })
-})
-
-describe('dynamic bonus list — 0 / 1 / many (no cap, empty fallback preserved)', () => {
-  async function renderWith(bonuses: Array<{ title: string | null; url: string | null }>) {
-    const { html } = await buildBonusEmailFromTemplateHtml({
-      templateBlocks: SEED_BONUS_TEMPLATE_BLOCKS,
-      subjectTemplate: SUBJECT_TEMPLATE,
-      bonuses,
-      theme: HALO_EFEKT_DEFAULT,
-      values: { companyName: 'Kacper Launch' },
-    })
-    return html
-  }
-
-  it('0 bonuses → empty-case fallback copy', async () => {
-    const html = await renderWith([])
-    expect(html).toContain('Bonusy pojawią się wkrótce.')
-  })
-
-  it('1 bonus → exactly that link', async () => {
-    const html = await renderWith([{ title: 'Solo', url: 'https://a' }])
-    expect(html).toContain('href="https://a"')
-    expect(html).toContain('Solo')
-  })
-
-  it('many bonuses → all rendered, no count cap', async () => {
-    const many = Array.from({ length: 7 }, (_, i) => ({
-      title: `Bonus ${i}`,
-      url: `https://drive.example.com/${i}`,
-    }))
-    const html = await renderWith(many)
-    for (const b of many) {
-      expect(html).toContain(`href="${b.url}"`)
-      expect(html).toContain(b.title)
-    }
+    // They are NOT byte-identical.
+    expect(templateHtml).not.toBe(legacyHtml)
   })
 })
 
 // Iter 3c — per-campaign literal variable values flow into the delivered email:
 // merged OVER the app-auto { companyName } with empty entries dropped, applied to
-// BOTH the HTML body AND the subject. The seeded no-variable render must stay
-// byte-identical to the pre-3c baseline (empty/absent campaign values).
+// BOTH the HTML body AND the subject.
 describe('per-campaign template variable values (Iter 3c)', () => {
   // A template that references a per-campaign token in a Link href + a text body.
   const TOKEN_TEMPLATE_BLOCKS: Block[] = [
     { id: 'bonus-header', type: 'header', companyName: '{{companyName}}', textColor: '#ffffff' },
-    { id: 'bonus-list-marker', type: 'text', content: BONUS_LIST_MARKER },
     { id: 'cta-link', type: 'text', content: '<p><a href="{{bonusUrl}}">Pobierz</a></p>' },
     { id: 'greeting', type: 'text', content: '<p>Cześć {{firstName}}!</p>' },
     { id: 'bonus-footer', type: 'footer', text: 'Stopka {{companyName}}' },
@@ -305,7 +222,6 @@ describe('per-campaign template variable values (Iter 3c)', () => {
     const { html } = await buildBonusEmailFromTemplateHtml({
       templateBlocks: TOKEN_TEMPLATE_BLOCKS,
       subjectTemplate: SUBJECT_TEMPLATE,
-      bonuses: BONUSES,
       theme: HALO_EFEKT_DEFAULT,
       values: { companyName: 'Kacper Launch' },
       templateValues: { bonusUrl: 'https://drive.example.com/x', firstName: 'Marek' },
@@ -320,7 +236,6 @@ describe('per-campaign template variable values (Iter 3c)', () => {
     const { subject } = await buildBonusEmailFromTemplateHtml({
       templateBlocks: TOKEN_TEMPLATE_BLOCKS,
       subjectTemplate: 'Bonusy dla {{firstName}} od {{companyName}}',
-      bonuses: BONUSES,
       theme: HALO_EFEKT_DEFAULT,
       values: { companyName: 'Kacper Launch' },
       templateValues: { firstName: 'Marek' },
@@ -332,7 +247,6 @@ describe('per-campaign template variable values (Iter 3c)', () => {
     const { html, subject } = await buildBonusEmailFromTemplateHtml({
       templateBlocks: SEED_BONUS_TEMPLATE_BLOCKS,
       subjectTemplate: SUBJECT_TEMPLATE,
-      bonuses: BONUSES,
       theme: HALO_EFEKT_DEFAULT,
       values: { companyName: 'App Auto Brand' },
       templateValues: { companyName: 'Campaign Override' },
@@ -346,7 +260,6 @@ describe('per-campaign template variable values (Iter 3c)', () => {
     const { html, subject } = await buildBonusEmailFromTemplateHtml({
       templateBlocks: SEED_BONUS_TEMPLATE_BLOCKS,
       subjectTemplate: SUBJECT_TEMPLATE,
-      bonuses: BONUSES,
       theme: HALO_EFEKT_DEFAULT,
       values: { companyName: 'App Auto Brand' },
       templateValues: { companyName: '' },
@@ -355,43 +268,32 @@ describe('per-campaign template variable values (Iter 3c)', () => {
     expect(subject).toBe('Twoje bonusy od App Auto Brand')
   })
 
-  it('REGRESSION: empty/absent templateValues → byte-identical to the pre-3c baseline', async () => {
-    // The pre-3c output: the hardcoded builder for the seeded no-variable copy.
-    const legacyHtml = await renderEmailBlocks(
-      buildBonusEmailBlocks({
-        campaignDisplayName: 'Kacper Launch',
-        bonuses: BONUSES,
-        theme: HALO_EFEKT_DEFAULT,
-      }),
-    )
-    // Absent templateValues (omitted).
+  it('PARITY: empty/blank templateValues produce output identical to omitting them', async () => {
+    // The invariant Iter 3c guards: empty entries are dropped, so a blank campaign
+    // value never clobbers an app-auto one — absent and empty maps must be equal.
     const absent = await buildBonusEmailFromTemplateHtml({
       templateBlocks: SEED_BONUS_TEMPLATE_BLOCKS,
       subjectTemplate: SUBJECT_TEMPLATE,
-      bonuses: BONUSES,
       theme: HALO_EFEKT_DEFAULT,
       values: { companyName: 'Kacper Launch' },
     })
-    // Empty map + a blank override — both must be dropped so nothing changes.
     const empty = await buildBonusEmailFromTemplateHtml({
       templateBlocks: SEED_BONUS_TEMPLATE_BLOCKS,
       subjectTemplate: SUBJECT_TEMPLATE,
-      bonuses: BONUSES,
       theme: HALO_EFEKT_DEFAULT,
       values: { companyName: 'Kacper Launch' },
       templateValues: { companyName: '', firstName: '' },
     })
-    expect(absent.html).toBe(legacyHtml)
-    expect(empty.html).toBe(legacyHtml)
+    expect(empty.html).toBe(absent.html)
+    expect(empty.subject).toBe(absent.subject)
   })
 })
 
-describe('copy variable substitution', () => {
+describe('copy variable substitution + no-leak backstop', () => {
   it('substitutes {{companyName}} in header + footer, leaves no literal token', async () => {
     const { html } = await buildBonusEmailFromTemplateHtml({
       templateBlocks: SEED_BONUS_TEMPLATE_BLOCKS,
       subjectTemplate: SUBJECT_TEMPLATE,
-      bonuses: BONUSES,
       theme: HALO_EFEKT_DEFAULT,
       values: { companyName: 'Przystań Inwestorów' },
     })
@@ -399,12 +301,14 @@ describe('copy variable substitution', () => {
     expect(html).not.toContain('{{companyName}}')
   })
 
-  it('mis-formatted marker (<p>{{bonus_list}}</p>) → list still renders, no literal marker leaks', async () => {
+  // Iter 4b core AC: the TEMPLATE path no longer injects a programmatic bonus list.
+  // A legacy `{{bonus_list}}` marker is left unresolved → stripped (the intended
+  // migration). No links, no empty-case fallback copy — nothing is spliced in.
+  it('leaves a legacy {{bonus_list}} token unrendered (stripped), injecting NO programmatic list', async () => {
     const { html } = await buildBonusEmailFromTemplateHtml({
-      // The marker is embedded inside a <p>, so it is NOT recognised as a
-      // standalone marker block → the list falls back to before-footer.
       templateBlocks: [
-        { id: 'intro', type: 'text', content: `<p>${BONUS_LIST_MARKER}</p>` },
+        { id: 'intro', type: 'text', content: '<p>Cześć</p>' },
+        { id: 'legacy-marker', type: 'text', content: BONUS_LIST_MARKER },
         {
           id: 'bonus-footer',
           type: 'footer',
@@ -412,30 +316,32 @@ describe('copy variable substitution', () => {
         },
       ],
       subjectTemplate: SUBJECT_TEMPLATE,
-      bonuses: BONUSES,
       theme: HALO_EFEKT_DEFAULT,
       values: { companyName: 'Kacper Launch' },
     })
-    // List still rendered (before-footer fallback) …
-    expect(html).toContain('href="https://drive.example.com/notion"')
-    // … and the literal token never leaked into the sent HTML.
+    // The legacy marker token is stripped — never rendered literally, never spliced.
     expect(html).not.toContain(BONUS_LIST_MARKER)
+    expect(html).not.toMatch(/\{\{\s*[\w.]+\s*\}\}/)
+    // No programmatic bonus list injected — neither links nor the hardcoded
+    // builder's empty-case fallback copy.
+    expect(html).not.toContain('Bonusy pojawią się wkrótce.')
+    expect(html).not.toContain('href=')
+    // Surrounding authored copy still rendered; the filled app token survived.
+    expect(html).toContain('Cześć')
+    expect(html).toContain('Kacper Launch')
   })
 
-  // NO-LEAK backstop (INV-3) — Phase 4. venture_bonus is APP-OWNED: the send path
-  // fills only companyName + the structural bonus_list marker, so ANY residual
-  // `{{token}}` after substitution is guaranteed unfillable and must be stripped
-  // (a seeded literal {{firstName}} once leaked to a recipient). This DELIBERATELY
-  // reverses the earlier n8n-parity "leave it literal" behaviour, which only holds
-  // for n8n-sent templates whose bindings are not code-knowable — not here.
+  // NO-LEAK backstop (INV-3). venture_bonus is APP-OWNED: the send path fills only
+  // companyName + per-campaign variables, so ANY residual `{{token}}` after
+  // substitution is guaranteed unfillable and must be stripped (a seeded literal
+  // {{firstName}} once leaked to a recipient).
   it('NO-LEAK: a stray {{unknownToken}} is stripped from the final HTML (not left literal)', async () => {
     const { html } = await buildBonusEmailFromTemplateHtml({
       templateBlocks: [
         { id: 'x', type: 'text', content: '<p>{{unknownKey}}</p>' },
-        { id: 'bonus-list-marker', type: 'text', content: BONUS_LIST_MARKER },
+        { id: 'bonus-footer', type: 'footer', text: 'Stopka {{companyName}}' },
       ],
       subjectTemplate: SUBJECT_TEMPLATE,
-      bonuses: BONUSES,
       theme: HALO_EFEKT_DEFAULT,
       values: { companyName: 'X' },
     })
@@ -444,14 +350,11 @@ describe('copy variable substitution', () => {
     expect(html).not.toMatch(/\{\{\s*[\w.]+\s*\}\}/)
   })
 
-  it('NO-LEAK: stray token AND a missing bonus_list marker → no {{...}} leaks, list still present', async () => {
+  it('NO-LEAK: a stray token AND a legacy bonus_list marker both stripped; filled token survives', async () => {
     const { html } = await buildBonusEmailFromTemplateHtml({
-      // A stray token, and the bonus_list marker embedded in content (not a
-      // standalone block) so it escapes block-splicing → the list falls back to
-      // before-footer and the literal marker would otherwise survive.
       templateBlocks: [
         { id: 'stray', type: 'text', content: '<p>{{unresolved.deep}}</p>' },
-        { id: 'mis-marker', type: 'text', content: `<p>${BONUS_LIST_MARKER}</p>` },
+        { id: 'legacy-marker', type: 'text', content: BONUS_LIST_MARKER },
         {
           id: 'bonus-footer',
           type: 'footer',
@@ -459,16 +362,12 @@ describe('copy variable substitution', () => {
         },
       ],
       subjectTemplate: SUBJECT_TEMPLATE,
-      bonuses: BONUSES,
       theme: HALO_EFEKT_DEFAULT,
       values: { companyName: 'Kacper Launch' },
     })
-    // No residual token of any kind (stray token AND the escaped bonus_list marker).
+    // No residual token of any kind (stray token AND the legacy bonus_list marker).
     expect(html).not.toMatch(/\{\{\s*[\w.]+\s*\}\}/)
     expect(html).not.toContain(BONUS_LIST_MARKER)
-    // The programmatic bonus list is STILL present (spliced before-footer) — the
-    // no-leak strip must not remove the real content.
-    expect(html).toContain('href="https://drive.example.com/notion"')
     // The filled app token survived.
     expect(html).toContain('Kacper Launch')
   })

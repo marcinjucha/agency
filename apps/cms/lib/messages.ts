@@ -254,8 +254,6 @@ export const messages = {
     bonusTemplateCardTitle: 'Szablon e-maila bonusowego',
     bonusTemplateEmptyHint:
       'Brak szablonów e-maili. Utwórz szablon w edytorze e-maili, aby wybrać go tutaj.',
-    bonusTemplatePickerWarning:
-      'Wybrany szablon nie zawiera już listy bonusów — sprawdź go w edytorze.',
 
     // Publish/status
     publishedLabel: 'Opublikowana',

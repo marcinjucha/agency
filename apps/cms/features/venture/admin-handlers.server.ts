@@ -35,7 +35,6 @@ import type {
   UpdateClientInput,
 } from './validation'
 import type { Json } from '@agency/database'
-import { BONUS_LIST_MARKER } from './mail/bonus-email-template'
 import { resolveBonusTemplateByPrecedence } from './mail/resolve-bonus-template'
 import {
   buildBonusEmailBody,
@@ -1057,29 +1056,6 @@ export interface BonusTemplateOption {
   // The type slug — lets the picker build the type-keyed editor deep-link for the
   // currently-selected option (routes.admin.emailTemplate(type)).
   type: string
-}
-
-/**
- * A template is "bonus-capable" when its `blocks` is an array containing a `text`
- * block whose trimmed `content` equals the structural `{{bonus_list}}` marker —
- * the same predicate the send-path splicer (`isMarkerBlock`) uses. The marker
- * constant is imported from the builder so this check cannot drift from it.
- */
-function hasBonusListMarker(blocks: unknown): boolean {
-  if (!Array.isArray(blocks)) return false
-  return blocks.some((b) => {
-    const block = b as { type?: unknown; content?: unknown; children?: unknown }
-    // Rekurencja w `section.children` — parytet ze splicerem send-patha
-    // (`spliceBonusList`), który podmienia marker także wewnątrz sekcji.
-    // Dzieci columns celowo NIE są skanowane (zachowanie sprzed sekcji bez
-    // zmian — splicer też ich nie przeszukuje).
-    if (block.type === 'section') return hasBonusListMarker(block.children)
-    return (
-      block.type === 'text' &&
-      typeof block.content === 'string' &&
-      block.content.trim() === BONUS_LIST_MARKER
-    )
-  })
 }
 
 /**
