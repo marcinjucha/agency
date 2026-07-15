@@ -243,6 +243,25 @@ export const selectTemplateForCampaignSchema = z.object({
   templateId: z.string().uuid().nullable(),
 })
 
+// Per-campaign literal values for the effective template's variables (Iter 3b).
+// A flat { templateTokenKey: literalValue } map persisted to
+// so_campaigns.template_variable_values (JSONB, default {}). Both key and value
+// are free-form strings — the fillable-key SET is derived server-side from the
+// effective template (getCampaignTemplateVariablesHandler); this write does NOT
+// constrain the keys (a stale key simply becomes inert), only their string shape.
+export const saveCampaignTemplateVariablesSchema = z.object({
+  campaignId: z.string().uuid(),
+  // Wire-boundary sanity guard (NOT business logic): the fillable-key SET is
+  // derived server-side; this only bounds the shape so an authenticated actor
+  // cannot stash an oversized JSONB blob on their own campaign. Keys are short
+  // token names, values are URLs / short text.
+  values: z
+    .record(z.string().max(200), z.string().max(2000))
+    .refine((rec) => Object.keys(rec).length <= 100, {
+      message: 'Too many template variable entries (max 100)',
+    }),
+})
+
 // --- Per-user client assignments (iter 3a) --------------------------------
 // REPLACE-SET wire input: userId + the FULL desired set of client ids. The
 // handler diffs against the current set (add/remove), verifies the target user
@@ -285,6 +304,9 @@ export type UpdateBonusInput = z.infer<typeof updateBonusSchema>
 export type ReorderBonusesInput = z.infer<typeof reorderBonusesSchema>
 export type SelectTemplateForCampaignInput = z.infer<
   typeof selectTemplateForCampaignSchema
+>
+export type SaveCampaignTemplateVariablesInput = z.infer<
+  typeof saveCampaignTemplateVariablesSchema
 >
 export type SetUserClientAssignmentsInput = z.infer<
   typeof setUserClientAssignmentsSchema

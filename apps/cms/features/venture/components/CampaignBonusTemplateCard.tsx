@@ -1,11 +1,18 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { CollapsibleCard } from '@agency/ui'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
 import { queryKeys } from '@/lib/query-keys'
 import { EmailTemplatePicker } from '@/features/email/components/EmailTemplatePicker'
-import { listBonusTemplatesFn, selectTemplateForCampaignFn, getCampaignEffectiveSendFn } from '../admin'
+import { TemplateVariablesFields } from '@/features/email/components/TemplateVariablesFields'
+import {
+  listBonusTemplatesFn,
+  selectTemplateForCampaignFn,
+  getCampaignEffectiveSendFn,
+  getCampaignTemplateVariablesFn,
+  saveCampaignTemplateVariablesFn,
+} from '../admin'
 
 // ---------------------------------------------------------------------------
 // CampaignBonusTemplateCard — venture wrapper around the reusable
@@ -60,7 +67,7 @@ export function CampaignBonusTemplateCard({
     onError: () => setSelected(currentTemplateId),
   })
 
-  const options = optionsQuery.data?.success ? optionsQuery.data.data : []
+  const options = optionsQuery.data?.success ? optionsQuery.data.data ?? [] : []
 
   // The template the send would ACTUALLY use — powers the "Edytuj szablon" link.
   const resolvedType =
@@ -83,16 +90,154 @@ export function CampaignBonusTemplateCard({
 
   return (
     <CollapsibleCard title={messages.venture.bonusTemplateCardTitle} defaultOpen>
-      <EmailTemplatePicker
-        templates={options}
-        value={selected}
-        onChange={handleChange}
-        editHref={editHref}
-        loading={optionsQuery.isLoading}
-        disabled={mutation.isPending}
-        warning={warning}
-        emptyHint={messages.venture.bonusTemplateEmptyHint}
-      />
+      <div className="space-y-4">
+        <EmailTemplatePicker
+          templates={options}
+          value={selected}
+          onChange={handleChange}
+          editHref={editHref}
+          loading={optionsQuery.isLoading}
+          disabled={mutation.isPending}
+          warning={warning}
+          emptyHint={messages.venture.bonusTemplateEmptyHint}
+        />
+
+        {/* Fill the effective template's variables with literal values (Iter 3b).
+            Keyed by the selected template id so switching templates fully resets
+            the section's local edit state (a different template = different
+            variables). Reads the campaign's EFFECTIVE template server-side, so
+            "Domyślny" (selected === null) still shows the default template's vars. */}
+        <div className="border-t border-border pt-4">
+          <p className="mb-3 text-sm font-medium">{messages.email.templateVariablesTitle}</p>
+          <CampaignTemplateVariablesSection
+            key={selected ?? '__default__'}
+            campaignId={campaignId}
+            selectedTemplateId={selected}
+            selectionPending={mutation.isPending}
+          />
+        </div>
+      </div>
     </CollapsibleCard>
   )
+}
+
+interface CampaignTemplateVariablesSectionProps {
+  campaignId: string
+  /** The picker's current (optimistic) selection — drives the query key + remount. */
+  selectedTemplateId: string | null
+  /**
+   * Parent's selectTemplateForCampaign mutation in-flight flag. While true the DB
+   * still holds the PREVIOUS template id, so the variables read (which resolves the
+   * EFFECTIVE template from the committed row) must NOT run yet — it would return
+   * the old template's fields and the seededRef guard would latch to stale data.
+   */
+  selectionPending: boolean
+}
+
+// Owns the fetch (which fields) + persistence (debounced autosave) for the
+// per-campaign template variable values. The presentational TemplateVariablesFields
+// is fed local edit state; this wrapper is the venture-specific data/save seam.
+//
+// SAVE UX — debounced autosave (~800ms) + a saving/saved/error status line. Chosen
+// to match the card's existing low-friction interaction (template selection already
+// immediate-saves) and the CMS "low-impact fields → autosave with debounce"
+// convention; literal-value inputs are low-impact (no live surface breaks).
+function CampaignTemplateVariablesSection({
+  campaignId,
+  selectedTemplateId,
+  selectionPending,
+}: CampaignTemplateVariablesSectionProps) {
+  const queryClient = useQueryClient()
+
+  const variablesQuery = useQuery({
+    queryKey: queryKeys.venture.templateVariables(campaignId, selectedTemplateId),
+    queryFn: () => getCampaignTemplateVariablesFn({ data: { campaignId } }),
+    // Gate against uncommitted DB state: the handler resolves the effective
+    // template from the COMMITTED so_campaigns.email_template_id, so we must not
+    // read while the selection write is still in flight (race → stale fields).
+    // On a template switch the section remounts (key change) with this disabled,
+    // then fetches once the write settles (committed row).
+    enabled: !selectionPending,
+  })
+
+  const [values, setValues] = useState<Record<string, string>>({})
+  // Seed local edit state ONCE from the first successful load (guarded so a
+  // post-save refetch never clobbers in-flight typing). Resets on remount when
+  // the selected template changes (parent `key`).
+  const seededRef = useRef(false)
+  useEffect(() => {
+    const result = variablesQuery.data
+    if (!seededRef.current && result?.success && result.data) {
+      setValues(result.data.values)
+      seededRef.current = true
+    }
+  }, [variablesQuery.data])
+
+  const saveMutation = useMutation({
+    mutationFn: (next: Record<string, string>) =>
+      saveCampaignTemplateVariablesFn({ data: { campaignId, values: next } }),
+    onSuccess: () => {
+      // Invalidate the venture ROOT (not the exact key) so every nested venture
+      // query refreshes consistently (agency-tanstack-query-root-key-invalidation).
+      queryClient.invalidateQueries({ queryKey: queryKeys.venture.all })
+    },
+  })
+
+  // Debounced autosave — one timer, cleared on each edit and on unmount.
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(
+    () => () => {
+      if (timerRef.current) clearTimeout(timerRef.current)
+    },
+    [],
+  )
+
+  function handleValuesChange(next: Record<string, string>) {
+    setValues(next)
+    if (timerRef.current) clearTimeout(timerRef.current)
+    timerRef.current = setTimeout(() => saveMutation.mutate(next), 800)
+  }
+
+  // Loading window = the selection write is in flight (query disabled) OR the query
+  // has not yet produced data. In TanStack Query v5 a disabled query has
+  // isLoading === false (nothing is fetching) but isPending === true (no data yet),
+  // so isPending — not isLoading — is what keeps the loading line up through the
+  // whole switch-then-fetch window and prevents an empty-state/stale flash. Once
+  // data lands, background refetches keep status 'success' (isPending stays false),
+  // so the autosave-invalidation refetch does not re-flash this.
+  if (selectionPending || variablesQuery.isPending) {
+    return <p className="text-xs text-muted-foreground">{messages.common.loading}</p>
+  }
+
+  if (variablesQuery.isError || variablesQuery.data?.success === false) {
+    return (
+      <p className="text-xs text-destructive">{messages.email.templateVariablesLoadError}</p>
+    )
+  }
+
+  const fields = variablesQuery.data?.success ? variablesQuery.data.data?.fields ?? [] : []
+
+  return (
+    <div className="space-y-3">
+      <TemplateVariablesFields variables={fields} values={values} onChange={handleValuesChange} />
+      {fields.length > 0 && <SaveStatus mutation={saveMutation} />}
+    </div>
+  )
+}
+
+function SaveStatus({
+  mutation,
+}: {
+  mutation: { isPending: boolean; isError: boolean; isSuccess: boolean }
+}) {
+  if (mutation.isPending) {
+    return <p className="text-xs text-muted-foreground">{messages.common.saving}</p>
+  }
+  if (mutation.isError) {
+    return <p className="text-xs text-destructive">{messages.common.saveError}</p>
+  }
+  if (mutation.isSuccess) {
+    return <p className="text-xs text-muted-foreground">{messages.common.saved}</p>
+  }
+  return null
 }

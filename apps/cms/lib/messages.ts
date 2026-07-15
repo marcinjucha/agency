@@ -1065,6 +1065,13 @@ export const messages = {
     inspectorSectionPaddingNone: 'Brak',
     inspectorSectionChildrenHint:
       'Bloki wewnątrz sekcji dodajesz i układasz na kanwie lub w panelu Struktura',
+    // Reusable TemplateVariablesFields — per-variable literal-value inputs shown
+    // below a template picker (fill {{token}} values for a specific surface).
+    templateVariablesTitle: 'Zmienne szablonu',
+    templateVariablesHint: 'Uzupełnij wartości, którymi podstawimy zmienne {{...}} przy wysyłce.',
+    templateVariablesEmpty: 'Ten szablon nie ma zmiennych do uzupełnienia.',
+    templateVariablesValuePlaceholder: 'Wpisz wartość…',
+    templateVariablesLoadError: 'Nie udało się wczytać zmiennych szablonu.',
   },
 
   landing: {

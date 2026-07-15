@@ -125,6 +125,13 @@ export const queryKeys = {
     // (no per-campaign input — filtered by the {{bonus_list}} marker). Nested under
     // the venture root so a mutation invalidating `venture.all` also refreshes it.
     bonusTemplates: ['venture', 'bonus-templates'] as const,
+    // Fillable variable fields + saved values for a campaign's EFFECTIVE template
+    // (Iter 3b). Keyed by campaignId AND the selected template id so the query
+    // refetches when the picker changes the template (a different template has
+    // different variables). Nested under the venture root so a mutation
+    // invalidating `venture.all` also refreshes it.
+    templateVariables: (campaignId: string, templateId: string | null) =>
+      ['venture', 'template-variables', campaignId, templateId ?? '__default__'] as const,
     // Per-user client assignments (iter 3a). Keyed by target user so the
     // assignment editor pre-fills the right set; still nested under the venture
     // root so a mutation that invalidates `venture.all` also refreshes it.

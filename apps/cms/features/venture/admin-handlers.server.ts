@@ -44,6 +44,12 @@ import {
   type BonusTemplateRow,
 } from './mail/render-bonus-email.server'
 import { isUsableTemplateBlocks } from './utils/template-blocks'
+import type { Block } from '@agency/email'
+import { parseTemplateVariables } from '@/features/email/utils/parse-template-variables'
+import {
+  resolveTemplateVariableFields,
+  type TemplateVariableField,
+} from '@/features/email/utils/resolve-template-variables'
 
 // ---------------------------------------------------------------------------
 // Venture bonus-funnel — ADMIN CRUD handlers (iter 5a). AUTHENTICATED layer.
@@ -1170,6 +1176,178 @@ export function selectTemplateForCampaignHandler(
             dbError,
           ).andThen(fromSupabaseVoidSafe('selectTemplateForCampaign')),
         ),
+    ),
+  )
+}
+
+// ===========================================================================
+// Per-campaign template variable values (Iter 3b)
+//
+// Below the campaign's email-template picker the operator fills a literal value
+// per template variable, saved per campaign in so_campaigns.template_variable_values
+// (JSONB, flat { templateTokenKey: literalValue }). The FILLABLE fields are
+// derived from the EFFECTIVE template — resolved by the SAME precedence as the
+// send path (campaign.email_template_id ?? tenant venture_bonus default ??
+// hardcoded builder) so variables show even for the "Domyślny" selection. When
+// the send falls back to the hardcoded builder (no resolved row) there are no
+// fillable fields, but any previously-saved values are still returned.
+// ===========================================================================
+
+/** What the campaign template-variable editor consumes: the fillable fields + saved values. */
+export interface CampaignTemplateVariables {
+  fields: TemplateVariableField[]
+  /** The campaign's persisted { templateTokenKey: literalValue } map (default {}). */
+  values: Record<string, string>
+}
+
+/**
+ * Coerce a JSONB value into a flat string→string map, dropping any non-string
+ * entry defensively (the column is free-form JSONB; only string scalars are
+ * meaningful substitution values). Null / non-object → {}.
+ */
+function coerceStringRecord(raw: unknown): Record<string, string> {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {}
+  const out: Record<string, string> = {}
+  for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
+    if (typeof value === 'string') out[key] = value
+  }
+  return out
+}
+
+/** The campaign fields the variable editor needs: owning client, effective template id, saved values. */
+interface CampaignVariablesRow {
+  clientId: string
+  campaignTemplateId: string | null
+  savedValues: Record<string, string>
+}
+
+function fetchCampaignForVariables(
+  auth: AuthContextFull,
+  campaignId: string,
+): ResultAsync<CampaignVariablesRow, string> {
+  return ResultAsync.fromPromise(
+    tbl(auth, 'so_campaigns')
+      .select('client_id, email_template_id, template_variable_values')
+      .eq('id', campaignId)
+      .maybeSingle(),
+    dbError,
+  ).andThen((res) => {
+    const r = res as {
+      data: {
+        client_id: string
+        email_template_id: string | null
+        template_variable_values: unknown
+      } | null
+      error: DbErrorShape
+    }
+    if (r.error) return err(mapDbError(r.error, 'fetchCampaignForVariables'))
+    if (!r.data) return err(messages.common.noPermission)
+    return ok<CampaignVariablesRow, string>({
+      clientId: r.data.client_id,
+      campaignTemplateId: r.data.email_template_id,
+      savedValues: coerceStringRecord(r.data.template_variable_values),
+    })
+  })
+}
+
+// The effective template's variable SOURCE — declared variables + the body the
+// extraction fallback scans. Tenant-scoped by id (the id already came from the
+// tenant-scoped resolution, this read is defence-in-depth). Null when the row
+// vanished between resolution and read (treated as "no fields").
+interface TemplateVariableSource {
+  subject: string
+  blocks: Block[]
+  templateVariables: unknown
+}
+
+function readTemplateVariableSource(
+  auth: AuthContextFull,
+  templateId: string,
+): ResultAsync<TemplateVariableSource | null, string> {
+  return ResultAsync.fromPromise(
+    tbl(auth, 'email_templates')
+      .select('subject, blocks, template_variables')
+      .eq('id', templateId)
+      .eq('tenant_id', auth.tenantId)
+      .maybeSingle(),
+    dbError,
+  ).andThen((res) => {
+    const r = res as {
+      data: { subject: string | null; blocks: unknown; template_variables: unknown } | null
+      error: DbErrorShape
+    }
+    if (r.error) return err(mapDbError(r.error, 'readTemplateVariableSource'))
+    if (!r.data) return ok<TemplateVariableSource | null, string>(null)
+    return ok<TemplateVariableSource | null, string>({
+      subject: r.data.subject ?? '',
+      blocks: Array.isArray(r.data.blocks) ? (r.data.blocks as Block[]) : [],
+      templateVariables: r.data.template_variables,
+    })
+  })
+}
+
+/**
+ * Resolve the fillable variable fields for a campaign's EFFECTIVE template plus
+ * the campaign's currently-saved values. Gated on `bonus_funnel.campaigns` (the
+ * route map does NOT protect createServerFn — this is the server-side gate).
+ * Tenant-scoped: the campaign → client chain is verified owned before any read.
+ */
+export function getCampaignTemplateVariablesHandler(
+  campaignId: string,
+): Promise<MutationResult<CampaignTemplateVariables>> {
+  return toMutation(
+    gated(PERM.campaigns, (auth) =>
+      fetchCampaignForVariables(auth, campaignId).andThen(
+        ({ clientId, campaignTemplateId, savedValues }) =>
+          assertClientOwned(auth, clientId).andThen(() =>
+            // ONE read of the tenant venture_bonus default → reused as the
+            // default-tier choice (no 2nd query), mirroring the effective-send card.
+            readTenantDefaultBonusTemplate(auth).andThen((def) =>
+              resolveEffectiveVentureTemplate(auth, campaignTemplateId, () =>
+                okAsync<VentureTemplateChoice | null, string>(def.choice),
+              ).andThen((resolved) =>
+                resolved
+                  ? readTemplateVariableSource(auth, resolved.id).map((src) => ({
+                      fields: src
+                        ? resolveTemplateVariableFields({
+                            templateVariables: parseTemplateVariables(src.templateVariables),
+                            subject: src.subject,
+                            blocks: src.blocks,
+                          })
+                        : [],
+                      values: savedValues,
+                    }))
+                  : okAsync<CampaignTemplateVariables, string>({ fields: [], values: savedValues }),
+              ),
+            ),
+          ),
+      ),
+    ),
+  )
+}
+
+/**
+ * Persist a campaign's per-variable literal values (Iter 3b). Gated on
+ * `bonus_funnel.campaigns` + assertCampaignOwned (campaign → client → tenant walk;
+ * so_campaigns has no tenant_id, so the FK-chain walk IS the tenant scope —
+ * mirrors selectTemplateForCampaignHandler). `values` is a flat string map; the
+ * JSONB column is written directly (the `tbl` accessor is untyped, so no inline
+ * `as Json` cast is needed at the call site — the centralised untyped boundary).
+ */
+export function saveCampaignTemplateVariablesHandler(
+  campaignId: string,
+  values: Record<string, string>,
+): Promise<VoidResult> {
+  return toVoid(
+    gated(PERM.campaigns, (auth) =>
+      assertCampaignOwned(auth, campaignId).andThen(() =>
+        ResultAsync.fromPromise(
+          tbl(auth, 'so_campaigns')
+            .update({ template_variable_values: values })
+            .eq('id', campaignId),
+          dbError,
+        ).andThen(fromSupabaseVoidSafe('saveCampaignTemplateVariables')),
+      ),
     ),
   )
 }
