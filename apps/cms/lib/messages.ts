@@ -253,7 +253,7 @@ export const messages = {
     bonusEmailPreviewEmpty: 'Podgląd pojawi się po zapisaniu treści kampanii.',
     bonusTemplateCardTitle: 'Szablon e-maila bonusowego',
     bonusTemplateEmptyHint:
-      'Brak szablonów z listą bonusów. Dodaj blok „Lista bonusów” w edytorze e-maili.',
+      'Brak szablonów e-maili. Utwórz szablon w edytorze e-maili, aby wybrać go tutaj.',
     bonusTemplatePickerWarning:
       'Wybrany szablon nie zawiera już listy bonusów — sprawdź go w edytorze.',
 

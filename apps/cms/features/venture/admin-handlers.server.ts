@@ -1061,13 +1061,15 @@ function hasBonusListMarker(blocks: unknown): boolean {
 }
 
 /**
- * List the caller-tenant's BONUS-CAPABLE templates for the campaign dropdown
- * (model B: a campaign may select ANY template that carries the `{{bonus_list}}`
- * marker, not only the `venture_bonus` slug). Fetches the tenant's templates and
- * filters IN JS on the marker predicate (a JSONB array-contains that PostgREST
- * cannot express as a static eq filter). Gated on `bonus_funnel.campaigns` (the
- * reader is the campaign editor; the route map does NOT gate createServerFn).
- * Tenant-scoped via the RLS/cookie client + explicit tenant_id filter.
+ * List ALL the caller-tenant's email templates for the campaign dropdown
+ * (model B: a campaign may select ANY tenant-owned template). We no longer
+ * filter on the `{{bonus_list}}` marker — bonus links are moving to per-campaign
+ * template variables, so restricting the dropdown to marker-bearing templates
+ * would hide most of a tenant's templates. Only `workflow_custom` is excluded
+ * (internal n8n templates, and the ONE non-unique-per-tenant type — see below).
+ * Gated on `bonus_funnel.campaigns` (the reader is the campaign editor; the
+ * route map does NOT gate createServerFn). Tenant-scoped via the RLS/cookie
+ * client + explicit tenant_id filter.
  */
 export function listBonusTemplatesHandler(): Promise<
   MutationResult<BonusTemplateOption[]>
@@ -1076,7 +1078,7 @@ export function listBonusTemplatesHandler(): Promise<
     gated(PERM.campaigns, (auth) =>
       ResultAsync.fromPromise(
         tbl(auth, 'email_templates')
-          .select('id, label, type, blocks')
+          .select('id, label, type')
           .eq('tenant_id', auth.tenantId)
           // EXCLUDE workflow_custom — it is the ONE non-unique-per-tenant type, but
           // the picker's "Edytuj szablon" deep-link is TYPE-keyed
@@ -1092,15 +1094,16 @@ export function listBonusTemplatesHandler(): Promise<
             id: string
             label: string | null
             type: string
-            blocks: unknown
           }> | null
           error: DbErrorShape
         }
         if (r.error) return err(mapDbError(r.error, 'listBonusTemplates'))
         return ok(
-          (r.data ?? [])
-            .filter((t) => hasBonusListMarker(t.blocks))
-            .map((t) => ({ id: t.id, label: t.label ?? t.type, type: t.type })),
+          (r.data ?? []).map((t) => ({
+            id: t.id,
+            label: t.label ?? t.type,
+            type: t.type,
+          })),
         )
       }),
     ),
