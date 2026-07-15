@@ -32,11 +32,11 @@ describe('linkSchema (Iter 3)', () => {
     expect(result.success).toBe(false)
   })
 
-  it('accepts an EMPTY url (draft — link bez adresu nie blokuje zapisu)', () => {
+  it('rejects an empty url (link musi mieć adres)', () => {
     const result = updateEmailTemplateSchema.safeParse(
       payload([{ id: 'l1', type: 'link', label: 'Zobacz', url: '' }]),
     )
-    expect(result.success).toBe(true)
+    expect(result.success).toBe(false)
   })
 
   it('rejects an empty label', () => {
@@ -109,15 +109,15 @@ describe('heading level eyebrow (Iter 3)', () => {
   })
 })
 
-describe('ctaSchema — pusty URL (regresja: zapis blokowany przez pusty przycisk)', () => {
-  it('accepts a CTA with empty url (draft)', () => {
+describe('ctaSchema — URL wymagany (zapis zablokowany przez pusty przycisk)', () => {
+  it('rejects a CTA with empty url', () => {
     const result = updateEmailTemplateSchema.safeParse(
       payload([{ id: 'c1', type: 'cta', label: 'Zrób kopię', url: '', textColor: '#ffffff' } as unknown as Block]),
     )
-    expect(result.success).toBe(true)
+    expect(result.success).toBe(false)
   })
 
-  it('accepts empty-url CTA nested inside a section (real failing case)', () => {
+  it('reports the path to an empty-url CTA nested inside a section', () => {
     const result = updateEmailTemplateSchema.safeParse(
       payload([
         {
@@ -130,7 +130,12 @@ describe('ctaSchema — pusty URL (regresja: zapis blokowany przez pusty przycis
         } as unknown as Block,
       ]),
     )
-    expect(result.success).toBe(true)
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      // ścieżka błędu prowadzi do children[2].url — używa jej findFirstUrlError
+      const urlIssue = result.error.issues.find((i) => i.path.at(-1) === 'url')
+      expect(urlIssue?.path).toContain('children')
+    }
   })
 
   it('still rejects a garbage CTA url', () => {

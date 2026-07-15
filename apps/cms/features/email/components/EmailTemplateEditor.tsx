@@ -18,6 +18,8 @@ import type {
 import { BONUS_LIST_PICK } from '../types'
 import { VENTURE_BONUS_MARKER } from '@/lib/app-sent-variables'
 import { updateEmailTemplateFn, parseTemplateVariables } from '../server'
+import { updateEmailTemplateSchema } from '../validation'
+import { describeSaveError } from '../utils/describe-save-error'
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
 import { CMS_BLOCK_REGISTRY } from '../block-registry'
@@ -241,6 +243,26 @@ export function EmailTemplateEditor({ templateType, initialTemplate }: EmailTemp
     setSaveWarning(null)
 
     const cleanedVariables = userEditedVariables.filter((v) => v.key.trim().length > 0)
+
+    // Pre-walidacja klient-side: łapiemy błędy zod ZANIM polecą do serwera i
+    // zamiast surowego zrzutu (`blocks[3].children[2].url`) pokazujemy przyjazny
+    // komunikat + ZAZNACZAMY wadliwy blok (także zagnieżdżony w sekcji), żeby
+    // user od razu wiedział, który przycisk/pole poprawić.
+    const parsed = updateEmailTemplateSchema.safeParse({
+      subject,
+      blocks,
+      template_variables: cleanedVariables,
+      label,
+      theme_id: themeId,
+    })
+    if (!parsed.success) {
+      const { blockId, message } = describeSaveError(blocks, parsed.error)
+      if (blockId) setSelectedBlockId(blockId)
+      setSaveState('error')
+      setErrorMessage(message)
+      setTimeout(() => setSaveState('idle'), 2500)
+      return
+    }
 
     try {
       const result = await updateEmailTemplateFn({

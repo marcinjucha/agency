@@ -2544,6 +2544,13 @@ export const templates = {
     addCategory: (name: string) => `Dodaj: ${name}`,
     selectDownloadAriaLabel: (name: string) => `Wstaw plik: ${name}`,
   },
+  email: {
+    // Przyjazny komunikat zapisu wskazujący konkretny wadliwy blok (zamiast
+    // surowego zrzutu zod). `field` = ludzka nazwa pola (np. „adres URL"),
+    // `blockLabel` = etykieta bloku z rejestru (np. „Przycisk CTA").
+    saveBlockError: (blockLabel: string, field: string) =>
+      `Uzupełnij ${field} w bloku „${blockLabel}" — bez tego nie zapiszę szablonu.`,
+  },
   media: {
     fileTooLarge: (limitMB: number) => `Plik za duży. Max: ${limitMB}MB.`,
     fileTypeNotAllowed: (types: string) => `Niedozwolony typ pliku. Dozwolone: ${types}`,
