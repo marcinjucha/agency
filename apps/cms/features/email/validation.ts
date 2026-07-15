@@ -34,11 +34,14 @@ type BlockStyleCommonTypes = {
   marginBottom: z.ZodOptional<z.ZodEnum<['none', 'compact', 'normal', 'large']>>
 }
 
-// URL field allows both real URLs and template variables like {{responseUrl}}
-// CTA: nadpisujemy schemat url z registry — rejestr akceptuje dowolny string,
-// tu wymagamy poprawnego URL lub szablonu {{zmienna}}.
-const templateOrUrl = z.string().min(1, messages.validation.invalidUrl).refine(
-  (val) => /^\{\{.+\}\}$/.test(val) || z.string().url().safeParse(val).success,
+// URL field allows real URLs, template variables like {{responseUrl}}, ORAZ
+// PUSTY string (draft — przycisk/link jeszcze bez linku). Pusty URL nie może
+// blokować zapisu CAŁEGO szablonu: builder pozwala komponować mail i uzupełnić
+// linki później (pusty href renderuje nieaktywny przycisk, nie jest błędem
+// integralności). Niepusta wartość nadal musi być poprawnym URL-em lub
+// szablonem {{zmienna}}.
+const templateOrUrl = z.string().refine(
+  (val) => val === '' || /^\{\{.+\}\}$/.test(val) || z.string().url().safeParse(val).success,
   { message: messages.validation.invalidUrl }
 )
 
