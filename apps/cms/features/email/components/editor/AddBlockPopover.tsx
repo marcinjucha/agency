@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect, useLayoutEffect, type CSSProperties, type RefObject } from 'react'
 import { createPortal } from 'react-dom'
-import { ListChecks, Search, X } from 'lucide-react'
+import { Search, X } from 'lucide-react'
 import { BLOCK_GROUPS, type CmsBlockRegistryEntry } from '../../block-registry'
 import { messages } from '@/lib/messages'
-import { BONUS_LIST_PICK, type AddBlockPick, type BlockType } from '../../types'
+import { type AddBlockPick, type BlockType } from '../../types'
 
 interface AddBlockPopoverProps {
   onPick: (pick: AddBlockPick) => void
@@ -11,12 +11,6 @@ interface AddBlockPopoverProps {
   style?: CSSProperties
   /** Block types to exclude from the picker (e.g. ['columns'] inside a ColumnsBlock — max nesting = 1). */
   exclude?: ReadonlyArray<BlockType>
-  /**
-   * Show the "Lista bonusów" affordance — a shortcut that inserts a pre-filled
-   * text block carrying the {{bonus_list}} marker (NOT a registry block type).
-   * Defaults to true; nested contexts (columns) omit it (default off there).
-   */
-  showBonusList?: boolean
   /**
    * Optional anchor element for PORTAL mode. When provided, the popover
    * renders into document.body with `position: fixed`, positioned below the
@@ -35,7 +29,6 @@ export function AddBlockPopover({
   style,
   exclude,
   anchorRef,
-  showBonusList = true,
 }: AddBlockPopoverProps) {
   const [query, setQuery] = useState('')
   const [portalStyle, setPortalStyle] = useState<CSSProperties | null>(null)
@@ -154,37 +147,6 @@ export function AddBlockPopover({
           </div>
         )
       })}
-
-      {/* "Lista bonusów" — a SHORTCUT (not a registry block type) that inserts a
-          text block pre-filled with the {{bonus_list}} marker, killing the typo
-          risk of hand-typing it. Routed through the same onPick path via a sentinel. */}
-      {showBonusList &&
-        (!ql ||
-          messages.email.bonusListBlockLabel.toLowerCase().includes(ql) ||
-          messages.email.bonusListBlockDescription.toLowerCase().includes(ql)) && (
-          <div className="py-1 border-t border-border/60">
-            <p className="px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
-              {messages.email.bonusListGroupLabel}
-            </p>
-            <button
-              type="button"
-              onClick={() => onPick(BONUS_LIST_PICK)}
-              className="flex w-full items-center gap-2 px-2 py-1.5 text-left hover:bg-accent transition-colors"
-            >
-              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-muted/40 text-muted-foreground">
-                <ListChecks className="h-3.5 w-3.5" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium text-foreground">
-                  {messages.email.bonusListBlockLabel}
-                </p>
-                <p className="text-[11px] text-muted-foreground truncate">
-                  {messages.email.bonusListBlockDescription}
-                </p>
-              </div>
-            </button>
-          </div>
-        )}
     </div>
   )
 

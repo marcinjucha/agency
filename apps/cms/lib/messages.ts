@@ -922,11 +922,6 @@ export const messages = {
     templatePickerLabel: 'Szablon e-maila',
     templatePickerDefault: 'Domyślny',
     templatePickerEdit: 'Edytuj szablon',
-    // "Lista bonusów" affordance — inserts a text block pre-filled with the
-    // {{bonus_list}} marker (a shortcut, NOT a registry block type).
-    bonusListGroupLabel: 'SPECJALNE',
-    bonusListBlockLabel: 'Lista bonusów',
-    bonusListBlockDescription: 'Wstawia znacznik listy bonusów (generowanej przy wysyłce)',
     unsavedChanges: 'Niezapisane zmiany',
     canvasTitle: 'Podgląd na żywo',
     canvasSubjectLabel: 'Temat:',
@@ -948,9 +943,7 @@ export const messages = {
     // filled" signal survives.
     canvasSampleDataToggle: 'Dane przykładowe',
     sampleCompanyName: 'Twoja Firma',
-    sampleBonusList: 'Przykładowy bonus 1 · Przykładowy bonus 2',
     canvasBlockUnknown: 'Nieznany typ bloku',
-    bonusListCanvasChip: 'Lista bonusów — generowana automatycznie przy wysyłce',
     canvasMoveUp: 'Przesuń blok w górę',
     canvasMoveDown: 'Przesuń blok w dół',
     canvasDuplicate: 'Duplikuj blok',

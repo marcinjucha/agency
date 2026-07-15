@@ -15,8 +15,6 @@ import type {
   EmailTemplateType,
   TemplateVariable,
 } from '../types'
-import { BONUS_LIST_PICK } from '../types'
-import { VENTURE_BONUS_MARKER } from '@/lib/app-sent-variables'
 import { updateEmailTemplateFn, parseTemplateVariables } from '../server'
 import { updateEmailTemplateSchema } from '../validation'
 import { describeSaveError } from '../utils/describe-save-error'
@@ -138,17 +136,8 @@ export function EmailTemplateEditor({ templateType, initialTemplate }: EmailTemp
     setBlocks((prev) => updateBlockDeep(prev, updated))
   }
 
-  // Build a new block from a pick. The BONUS_LIST_PICK sentinel is NOT a registry
-  // type — it yields a text block pre-filled with the {{bonus_list}} marker (import
-  // the constant, never hand-type it). Returns null for an unknown block type.
+  // Build a new block from a pick. Returns null for an unknown block type.
   function buildBlockFromPick(pick: AddBlockPick): Block | null {
-    if (pick === BONUS_LIST_PICK) {
-      return {
-        id: crypto.randomUUID(),
-        ...CMS_BLOCK_REGISTRY.text.defaultValue,
-        content: VENTURE_BONUS_MARKER,
-      } as Block
-    }
     const entry = CMS_BLOCK_REGISTRY[pick]
     if (!entry) return null
     return { id: crypto.randomUUID(), ...entry.defaultValue } as Block
