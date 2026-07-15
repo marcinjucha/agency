@@ -328,7 +328,7 @@ export function EmailTemplateEditor({ templateType, initialTemplate }: EmailTemp
 
   return (
     <EmailThemeProvider theme={resolvedTheme}>
-    <div className="absolute inset-0 grid grid-rows-[52px_1fr] grid-cols-[280px_1fr_360px] bg-background">
+    <div className="absolute inset-0 grid grid-rows-[52px_auto_1fr] grid-cols-[280px_1fr_360px] bg-background">
       {/* Topbar — spans all 3 columns */}
       <header className="col-span-3 z-10 flex items-center gap-3 border-b border-border bg-background px-4">
         <Button
@@ -379,7 +379,32 @@ export function EmailTemplateEditor({ templateType, initialTemplate }: EmailTemp
         </div>
       </header>
 
-      {/* Outline (left) */}
+      {errorMessage ? (
+        <div
+          role="alert"
+          className="col-span-3 flex items-center gap-2.5 border-b border-destructive/40 bg-destructive/10 px-4 py-2.5 text-sm text-destructive"
+        >
+          <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" />
+          <span className="flex-1">{errorMessage}</span>
+          <button
+            type="button"
+            onClick={() => setErrorMessage(null)}
+            aria-label={messages.common.close}
+            className="shrink-0 rounded p-0.5 text-destructive/70 hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/50"
+          >
+            <X className="h-3.5 w-3.5" aria-hidden="true" />
+          </button>
+        </div>
+      ) : saveWarning ? (
+        <div
+          role="status"
+          className="col-span-3 flex items-center gap-2.5 border-b border-amber-500/40 bg-amber-500/10 px-4 py-2.5 text-sm text-amber-700 dark:text-amber-300"
+        >
+          <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" />
+          <span className="flex-1">{saveWarning}</span>
+        </div>
+      ) : null}
+
       <OutlinePanel
         blocks={blocks}
         selectedId={selectedBlockId}
@@ -426,35 +451,6 @@ export function EmailTemplateEditor({ templateType, initialTemplate }: EmailTemp
         unresolvableTokens={unresolvableTokens}
         onDelete={() => setDeleteOpen(true)}
       />
-
-      {/* Banery — pełna szerokość, TUŻ POD topbarem (top-[52px]), nad canvasem.
-          Zastępują dawne pływające pigułki na dole (łatwe do przeoczenia).
-          Błąd wygrywa nad ostrzeżeniem; błąd jest odrzucalny (X). */}
-      {errorMessage ? (
-        <div
-          role="alert"
-          className="absolute top-[52px] inset-x-0 z-20 flex items-center gap-2.5 border-b border-destructive/40 bg-destructive/10 px-4 py-2.5 text-sm text-destructive shadow-sm"
-        >
-          <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" />
-          <span className="flex-1">{errorMessage}</span>
-          <button
-            type="button"
-            onClick={() => setErrorMessage(null)}
-            aria-label={messages.common.close}
-            className="shrink-0 rounded p-0.5 text-destructive/70 hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/50"
-          >
-            <X className="h-3.5 w-3.5" aria-hidden="true" />
-          </button>
-        </div>
-      ) : saveWarning ? (
-        <div
-          role="status"
-          className="absolute top-[52px] inset-x-0 z-20 flex items-center gap-2.5 border-b border-amber-500/40 bg-amber-500/10 px-4 py-2.5 text-sm text-amber-700 dark:text-amber-300 shadow-sm"
-        >
-          <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" />
-          <span className="flex-1">{saveWarning}</span>
-        </div>
-      ) : null}
 
       <DeleteTemplateDialog
         template={initialTemplate}
