@@ -122,6 +122,33 @@ describe('subject substitution', () => {
     })
     expect(subject).toBe('Twoje bonusy od Kacper Launch')
   })
+
+  // F3 (INV-3): an UNFILLED subject token is unfillable by construction on this
+  // app-owned path and must NOT ship literally in the inbox subject line. Previously
+  // `substituteSubject` left it as `{{firstName}}` (e.g. the seeded default subject).
+  it('strips an unfilled subject token instead of shipping it literally', async () => {
+    const { subject } = await buildBonusEmailFromTemplateHtml({
+      templateBlocks: SEED_BONUS_TEMPLATE_BLOCKS,
+      subjectTemplate: 'Cześć {{firstName}}, bonusy od {{companyName}}',
+      theme: HALO_EFEKT_DEFAULT,
+      values: { companyName: 'Kacper Launch' },
+    })
+    // The filled token resolved; the unfilled one was stripped (not left literal).
+    expect(subject).not.toContain('{{firstName}}')
+    expect(subject).not.toMatch(/\{\{\s*[\w.]+\s*\}\}/)
+    expect(subject).toContain('Kacper Launch')
+  })
+
+  it('strips a padded/dotted unfilled subject token too (grammar parity with the body)', async () => {
+    const { subject } = await buildBonusEmailFromTemplateHtml({
+      templateBlocks: SEED_BONUS_TEMPLATE_BLOCKS,
+      subjectTemplate: 'Od {{companyName}} {{ mystery.key }}',
+      theme: HALO_EFEKT_DEFAULT,
+      values: { companyName: 'Kacper Launch' },
+    })
+    expect(subject).not.toMatch(/\{\{\s*[\w.]+\s*\}\}/)
+    expect(subject).toContain('Kacper Launch')
+  })
 })
 
 // [2] TOKEN-BOUND blocks must resolve to the per-campaign RESOLVED theme at send.

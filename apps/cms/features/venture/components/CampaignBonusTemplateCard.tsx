@@ -175,19 +175,48 @@ function CampaignTemplateVariablesSection({
     },
   })
 
-  // Debounced autosave — one timer, cleared on each edit and on unmount.
+  // Debounced autosave — one timer, cleared on each edit and flushed on unmount.
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Latest values with a debounced edit not yet persisted; null = nothing pending.
+  const pendingValuesRef = useRef<Record<string, string> | null>(null)
+  // Latest save invoker, kept in a ref so the unmount-only cleanup (empty deps)
+  // never flushes through a stale mutation instance.
+  const saveRef = useRef<(next: Record<string, string>) => void>(() => {})
+  useEffect(() => {
+    saveRef.current = (next) => saveMutation.mutate(next)
+  })
+
+  // Flush a pending debounced edit on unmount. Switching the template remounts
+  // this section (parent `key`) and navigating/collapsing unmounts it, so a value
+  // typed within the 800ms debounce window would otherwise be dropped (the timer
+  // is cleared without ever firing the save). If a timer is still pending we fire
+  // the save synchronously with the latest values. No double-save: the debounced
+  // callback nulls timerRef + pendingValuesRef when it fires, so a later unmount
+  // sees nothing pending. Empty deps → this runs only on unmount.
   useEffect(
     () => () => {
-      if (timerRef.current) clearTimeout(timerRef.current)
+      if (timerRef.current) {
+        clearTimeout(timerRef.current)
+        if (pendingValuesRef.current !== null) {
+          saveRef.current(pendingValuesRef.current)
+          pendingValuesRef.current = null
+        }
+      }
     },
     [],
   )
 
   function handleValuesChange(next: Record<string, string>) {
     setValues(next)
+    pendingValuesRef.current = next
     if (timerRef.current) clearTimeout(timerRef.current)
-    timerRef.current = setTimeout(() => saveMutation.mutate(next), 800)
+    timerRef.current = setTimeout(() => {
+      // Debounced save fired → nothing pending (prevents a double-save if the
+      // component later unmounts before another edit).
+      timerRef.current = null
+      pendingValuesRef.current = null
+      saveMutation.mutate(next)
+    }, 800)
   }
 
   // Loading window = the selection write is in flight (query disabled) OR the query

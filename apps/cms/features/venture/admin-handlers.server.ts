@@ -1278,25 +1278,26 @@ export function getCampaignTemplateVariablesHandler(
       fetchCampaignForVariables(auth, campaignId).andThen(
         ({ clientId, campaignTemplateId, savedValues }) =>
           assertClientOwned(auth, clientId).andThen(() =>
-            // ONE read of the tenant venture_bonus default → reused as the
-            // default-tier choice (no 2nd query), mirroring the effective-send card.
-            readTenantDefaultBonusTemplate(auth).andThen((def) =>
-              resolveEffectiveVentureTemplate(auth, campaignTemplateId, () =>
-                okAsync<VentureTemplateChoice | null, string>(def.choice),
-              ).andThen((resolved) =>
-                resolved
-                  ? readTemplateVariableSource(auth, resolved.id).map((src) => ({
-                      fields: src
-                        ? resolveTemplateVariableFields({
-                            templateVariables: parseTemplateVariables(src.templateVariables),
-                            subject: src.subject,
-                            blocks: src.blocks,
-                          })
-                        : [],
-                      values: savedValues,
-                    }))
-                  : okAsync<CampaignTemplateVariables, string>({ fields: [], values: savedValues }),
-              ),
+            // Resolve the effective template by the shared precedence. The tenant
+            // venture_bonus default is read LAZILY — `readDefault` runs ONLY on a
+            // by-id miss — so the default query is skipped entirely when the
+            // campaign has a valid explicit template. Unlike the effective-send
+            // card, `def.present` is not needed here, so there is no eager read.
+            resolveEffectiveVentureTemplate(auth, campaignTemplateId, () =>
+              readTenantDefaultBonusTemplate(auth).map((def) => def.choice),
+            ).andThen((resolved) =>
+              resolved
+                ? readTemplateVariableSource(auth, resolved.id).map((src) => ({
+                    fields: src
+                      ? resolveTemplateVariableFields({
+                          templateVariables: parseTemplateVariables(src.templateVariables),
+                          subject: src.subject,
+                          blocks: src.blocks,
+                        })
+                      : [],
+                    values: savedValues,
+                  }))
+                : okAsync<CampaignTemplateVariables, string>({ fields: [], values: savedValues }),
             ),
           ),
       ),

@@ -12,7 +12,7 @@ import {
   Input,
   Label,
 } from '@agency/ui'
-import { FileText, Download, Loader2, Link2, Check } from 'lucide-react'
+import { FileText, Download, Loader2, Link2, Check, AlertCircle } from 'lucide-react'
 import type { MediaItem, MediaType } from '../types'
 import { extractVideoId, formatBytes, buildEmbedUrl } from '../utils'
 import { useCopyToClipboard } from '../use-copy-to-clipboard'
@@ -224,7 +224,7 @@ export function MediaPreviewDialog({
   isSavingAlt = false,
   altSaveError = null,
 }: MediaPreviewDialogProps) {
-  const { copied, copy } = useCopyToClipboard()
+  const { copied, failed, copy } = useCopyToClipboard()
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
@@ -265,12 +265,14 @@ export function MediaPreviewDialog({
                 className="h-6 gap-1.5 px-1.5 text-sm text-muted-foreground hover:text-foreground"
                 onClick={() => copy(item.url)}
               >
-                {copied ? (
+                {failed ? (
+                  <AlertCircle className="h-3.5 w-3.5 text-destructive" aria-hidden="true" />
+                ) : copied ? (
                   <Check className="h-3.5 w-3.5 text-status-success-foreground" aria-hidden="true" />
                 ) : (
                   <Link2 className="h-3.5 w-3.5" aria-hidden="true" />
                 )}
-                {messages.common.copyLink}
+                {failed ? messages.common.copyFailed : messages.common.copyLink}
               </Button>
             </div>
 

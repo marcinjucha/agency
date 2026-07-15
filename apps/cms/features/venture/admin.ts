@@ -132,12 +132,14 @@ export const renderCampaignBonusEmailPreviewFn = createServerFn({ method: 'POST'
   )
   .handler(({ data }) => renderCampaignBonusEmailPreviewHandler(data.campaignId))
 
-// --- Bonus-capable email templates (Phase 4, model B) ---------------------
+// --- Campaign-selectable email templates (Phase 4, model B) ---------------
 
-// List the tenant's BONUS-CAPABLE templates (blocks contain the {{bonus_list}}
-// marker) for the campaign dropdown. Gated in the handler (bonus_funnel.campaigns)
-// — the route map does NOT protect createServerFn (project Authz gotcha). No input.
-// Creation/edit/delete of templates uses the existing generic email-templates CRUD.
+// List ALL the tenant's email templates (only workflow_custom excluded) for the
+// campaign dropdown — model B lets a campaign assign ANY tenant-owned template,
+// so this is NOT filtered by the {{bonus_list}} marker. Gated in the handler
+// (bonus_funnel.campaigns) — the route map does NOT protect createServerFn
+// (project Authz gotcha). No input. Creation/edit/delete of templates uses the
+// existing generic email-templates CRUD.
 export const listBonusTemplatesFn = createServerFn({ method: 'POST' }).handler(() =>
   listBonusTemplatesHandler(),
 )

@@ -98,6 +98,18 @@ describe('extractTemplateVariableKeys', () => {
     expect(result).toContain('deepKey')
   })
 
+  it('5c. wykrywa token z OTACZAJĄCYMI SPACJAMI i zwraca przycięty klucz', () => {
+    // Send-path grammar (@agency/email TOKEN_PATTERN) trymuje i podstawia `{{ url }}`;
+    // ekstraktor MUSI go wykryć jako to samo pole `url`, inaczej token po cichu znika.
+    const result = extractTemplateVariableKeys('Kliknij {{ url }}', [textBlock('Też {{url}} tutaj')])
+    expect(result).toEqual(['url'])
+  })
+
+  it('5d. wykrywa klucz z KROPKĄ (dotted key), przycięty', () => {
+    const result = extractTemplateVariableKeys('', [textBlock('{{ user.firstName }}')])
+    expect(result).toEqual(['user.firstName'])
+  })
+
   it('6. zwraca [] gdy brak zmiennych', () => {
     const result = extractTemplateVariableKeys(
       'Zwykły temat bez zmiennych',

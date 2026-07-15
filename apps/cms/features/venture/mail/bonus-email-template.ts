@@ -71,10 +71,28 @@ export interface BonusTemplateInput {
  * No-op for copy whose tokens are all filled (e.g. `{{companyName}}`) and which
  * carries no legacy marker → zero residual tokens → nothing to strip.
  */
+
+/**
+ * The bare residual-token pattern shared by the HTML and plaintext strippers so
+ * they cannot drift. Mirrors `@agency/email`'s `TOKEN_PATTERN` grammar (padded +
+ * dotted keys). A global regex resets `lastIndex` on every `.replace` call, so
+ * sharing this module-level constant across strip sites is stateless and safe.
+ */
+const RESIDUAL_TOKEN = /\{\{\s*[\w.]+\s*\}\}/g
+
 function stripResidualTokens(html: string): string {
-  return html
-    .replace(/<p>\s*\{\{\s*[\w.]+\s*\}\}\s*<\/p>/g, '')
-    .replace(/\{\{\s*[\w.]+\s*\}\}/g, '')
+  return html.replace(/<p>\s*\{\{\s*[\w.]+\s*\}\}\s*<\/p>/g, '').replace(RESIDUAL_TOKEN, '')
+}
+
+/**
+ * Plaintext residual-token strip for the SUBJECT (INV-3). Same no-leak guarantee
+ * as `stripResidualTokens` but WITHOUT the `<p>`-wrapper rule — a subject is
+ * plaintext, not HTML. An unfilled subject token (e.g. a seeded default
+ * `{{firstName}}` that no send context supplies) is unfillable by construction on
+ * this app-owned path and must NOT ship literally in the inbox subject line.
+ */
+function stripResidualTokensPlain(text: string): string {
+  return text.replace(RESIDUAL_TOKEN, '')
 }
 
 /**
@@ -210,6 +228,9 @@ export async function buildBonusEmailFromTemplateHtml(
   // Runs on the final HTML so it also strips a legacy `{{bonus_list}}` marker (no
   // longer spliced — left unresolved by design). No-op when every token is filled.
   const html = stripResidualTokens(sanitized)
-  const subject = substituteSubject(input.subjectTemplate, values)
+  // NO-LEAK backstop (INV-3), subject edition: after plaintext substitution, strip
+  // any residual `{{token}}` so an unfilled subject token (e.g. a seeded default
+  // `{{firstName}}`) never ships literally in the inbox subject line.
+  const subject = stripResidualTokensPlain(substituteSubject(input.subjectTemplate, values))
   return { subject, html }
 }

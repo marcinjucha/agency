@@ -29,6 +29,7 @@ export const messages = {
     draft: 'Szkic',
     unpublish: 'Cofnij publikację',
     copyLink: 'Kopiuj link',
+    copyFailed: 'Nie udało się skopiować',
     change: 'Zmień',
     insert: 'Wstaw',
     done: 'Gotowe',
@@ -872,6 +873,7 @@ export const messages = {
     // stored `source` field (unreliable: manual-add and "Wykryj z treści" both
     // write source:'manual'). Real text labels, never colour-only (a11y).
     varSourceApp: 'z aplikacji (kampania)',
+    varSourceCampaign: 'wypełniane w kampanii',
     varSourceStructural: 'wstawiane automatycznie',
     varSourceWorkflow: 'wypełniane przez workflow',
     varSourceManual: 'ręcznie',

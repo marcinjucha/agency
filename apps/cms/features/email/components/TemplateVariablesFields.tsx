@@ -1,3 +1,4 @@
+import { useId } from 'react'
 import { Input, Label } from '@agency/ui'
 import { messages } from '@/lib/messages'
 import type { TemplateVariableField } from '../utils/resolve-template-variables'
@@ -67,7 +68,11 @@ interface TemplateVariableRowProps {
 }
 
 function TemplateVariableRow({ field, value, onChange, disabled }: TemplateVariableRowProps) {
-  const inputId = `template-variable-${field.key}`
+  // useId keeps the label/input association unique across multiple mounted
+  // instances of this reusable component (two editors on one page would
+  // otherwise collide on `template-variable-<key>`).
+  const uid = useId()
+  const inputId = `template-variable-${uid}-${field.key}`
   return (
     <div className="space-y-1.5">
       <div className="flex flex-wrap items-center gap-2">

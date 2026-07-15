@@ -13,12 +13,20 @@ describe('resolveVariableSource', () => {
       expect(resolveVariableSource('companyName', 'venture_bonus').kind).toBe('app')
     })
 
-    it('classifies the bonus-list marker key as "structural"', () => {
-      expect(resolveVariableSource('bonus_list', 'venture_bonus').kind).toBe('structural')
+    it('classifies the legacy bonus-list marker as "campaign" (NO longer "structural")', () => {
+      // Iter 4b: the marker is no longer spliced → it must not read as auto-filled.
+      expect(resolveVariableSource('bonus_list', 'venture_bonus').kind).toBe('campaign')
     })
 
-    it('classifies any other token as "unresolvable"', () => {
-      expect(resolveVariableSource('firstName', 'venture_bonus').kind).toBe('unresolvable')
+    it('classifies any other token as informational "campaign" (NOT "unresolvable")', () => {
+      // Filled per-campaign via so_campaigns.template_variable_values — the editor
+      // cannot know which campaign fills what, so it is never a leak warning.
+      expect(resolveVariableSource('firstName', 'venture_bonus').kind).toBe('campaign')
+    })
+
+    it('NEVER marks an app-owned token "unresolvable"', () => {
+      expect(resolveVariableSource('anything', 'venture_bonus').kind).not.toBe('unresolvable')
+      expect(resolveVariableSource('anything', 'venture_bonus').kind).not.toBe('structural')
     })
   })
 
@@ -48,26 +56,12 @@ describe('resolveVariableSource', () => {
 })
 
 describe('collectUnresolvableTokens', () => {
-  it('flags app-owned tokens that are neither app-supplied, marker, nor manual', () => {
-    const result = collectUnresolvableTokens(
-      ['companyName', 'firstName', 'bonus_list'],
-      'venture_bonus',
-      [],
-    )
-    expect(result).toEqual(['firstName'])
-  })
-
-  it('whitelists the bonus_list marker (never flagged)', () => {
-    expect(collectUnresolvableTokens(['bonus_list'], 'venture_bonus', [])).toEqual([])
-  })
-
-  it('whitelists app-supplied keys', () => {
-    expect(collectUnresolvableTokens(['companyName'], 'venture_bonus', [])).toEqual([])
-  })
-
-  it('whitelists operator-registered manual keys', () => {
+  // Post Iter 3/4b: no token is editor-knowably unresolvable. venture_bonus fills
+  // companyName from the app AND any other token PER-CAMPAIGN (invisible to the
+  // editor) — so nothing can be asserted as "will reach the recipient literally".
+  it('ALWAYS returns [] for an app-owned type (per-campaign resolvability unknowable)', () => {
     expect(
-      collectUnresolvableTokens(['firstName'], 'venture_bonus', ['firstName']),
+      collectUnresolvableTokens(['companyName', 'firstName', 'bonus_list'], 'venture_bonus', []),
     ).toEqual([])
   })
 

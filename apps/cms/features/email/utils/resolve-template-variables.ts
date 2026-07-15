@@ -16,10 +16,12 @@ import type { TemplateVariable } from '../types'
 //   2. Otherwise fall back to scanning the subject + blocks for {{key}} tokens
 //      (fields with just `key` — no human label available).
 //
-// In BOTH paths the structural `{{bonus_list}}` marker is excluded: it is
-// replaced by a programmatically-built block at send time, never a scalar the
-// user types (see lib/app-sent-variables.ts). Result is deduped by key with
-// first-seen order preserved.
+// In BOTH paths the `{{bonus_list}}` marker is excluded. Since Iter 4b it is NO
+// LONGER spliced into a programmatically-built block at send — a legacy marker is
+// left unresolved and stripped, not replaced. It stays excluded here because it is
+// a structural leftover, never a user-fillable scalar the operator types (this
+// guards legacy templates); see lib/app-sent-variables.ts. Result is deduped by
+// key with first-seen order preserved.
 //
 // Pure — no hooks, no JSX, no data access. TDD:
 // features/email/__tests__/resolve-template-variables.test.ts
