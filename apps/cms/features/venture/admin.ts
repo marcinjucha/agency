@@ -9,7 +9,9 @@ import {
   listCampaignsInputSchema,
   listClientsInputSchema,
   reorderBonusesSchema,
+  saveCampaignTemplateVariablesSchema,
   selectTemplateForCampaignSchema,
+  themeOverrideSchema,
   updateBonusInputSchema,
   updateCampaignInputSchema,
   updateClientInputSchema,
@@ -22,12 +24,14 @@ import {
   deleteCampaignHandler,
   deleteClientHandler,
   getCampaignEffectiveSendHandler,
+  getCampaignTemplateVariablesHandler,
   listBonusesHandler,
   listBonusTemplatesHandler,
   listCampaignsHandler,
   listClientsHandler,
   renderCampaignBonusEmailPreviewHandler,
   reorderBonusesHandler,
+  saveCampaignTemplateVariablesHandler,
   selectTemplateForCampaignHandler,
   updateBonusHandler,
   updateClientHandler,
@@ -119,22 +123,30 @@ export const getCampaignEffectiveSendFn = createServerFn({ method: 'POST' })
 // "Podgląd e-mail" tab (byte-identical to the send path). Gated in the handler
 // (bonus_funnel.campaigns + assertCampaignOwned) — the route map does NOT protect
 // createServerFn (project Authz gotcha).
+// `themeOverride` (optional) is the IN-FLIGHT (unsaved) campaign theme tier — when
+// present the preview resolves that tier instead of the persisted campaign theme,
+// WITHOUT any DB write (approach B). Absent → the persisted campaign theme (default).
 const renderCampaignBonusEmailPreviewInputSchema = z.object({
   campaignId: z.string().uuid(),
+  themeOverride: themeOverrideSchema.optional(),
 })
 
 export const renderCampaignBonusEmailPreviewFn = createServerFn({ method: 'POST' })
   .inputValidator((v: z.infer<typeof renderCampaignBonusEmailPreviewInputSchema>) =>
     renderCampaignBonusEmailPreviewInputSchema.parse(v),
   )
-  .handler(({ data }) => renderCampaignBonusEmailPreviewHandler(data.campaignId))
+  .handler(({ data }) =>
+    renderCampaignBonusEmailPreviewHandler(data.campaignId, data.themeOverride),
+  )
 
-// --- Bonus-capable email templates (Phase 4, model B) ---------------------
+// --- Campaign-selectable email templates (Phase 4, model B) ---------------
 
-// List the tenant's BONUS-CAPABLE templates (blocks contain the {{bonus_list}}
-// marker) for the campaign dropdown. Gated in the handler (bonus_funnel.campaigns)
-// — the route map does NOT protect createServerFn (project Authz gotcha). No input.
-// Creation/edit/delete of templates uses the existing generic email-templates CRUD.
+// List ALL the tenant's email templates (only workflow_custom excluded) for the
+// campaign dropdown — model B lets a campaign assign ANY tenant-owned template,
+// so this is NOT filtered by the {{bonus_list}} marker. Gated in the handler
+// (bonus_funnel.campaigns) — the route map does NOT protect createServerFn
+// (project Authz gotcha). No input. Creation/edit/delete of templates uses the
+// existing generic email-templates CRUD.
 export const listBonusTemplatesFn = createServerFn({ method: 'POST' }).handler(() =>
   listBonusTemplatesHandler(),
 )
@@ -147,6 +159,27 @@ export const selectTemplateForCampaignFn = createServerFn({ method: 'POST' })
     selectTemplateForCampaignSchema.parse(v),
   )
   .handler(({ data }) => selectTemplateForCampaignHandler(data.campaignId, data.templateId))
+
+// --- Per-campaign template variable values (Iter 3b) ----------------------
+
+// Fillable variable fields for a campaign's EFFECTIVE template + the campaign's
+// currently-saved values. Gated in the handler (bonus_funnel.campaigns +
+// assertClientOwned) — the route map does NOT protect createServerFn.
+const campaignTemplateVariablesInputSchema = z.object({ campaignId: z.string().uuid() })
+
+export const getCampaignTemplateVariablesFn = createServerFn({ method: 'POST' })
+  .inputValidator((v: z.infer<typeof campaignTemplateVariablesInputSchema>) =>
+    campaignTemplateVariablesInputSchema.parse(v),
+  )
+  .handler(({ data }) => getCampaignTemplateVariablesHandler(data.campaignId))
+
+// Persist a campaign's per-variable literal values. Gated in the handler
+// (bonus_funnel.campaigns + assertCampaignOwned).
+export const saveCampaignTemplateVariablesFn = createServerFn({ method: 'POST' })
+  .inputValidator((v: z.infer<typeof saveCampaignTemplateVariablesSchema>) =>
+    saveCampaignTemplateVariablesSchema.parse(v),
+  )
+  .handler(({ data }) => saveCampaignTemplateVariablesHandler(data.campaignId, data.values))
 
 // --- Bonuses --------------------------------------------------------------
 

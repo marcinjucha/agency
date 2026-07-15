@@ -119,12 +119,26 @@ export const queryKeys = {
     // Rendered REAL bonus email for a campaign ("Podgląd e-mail" tab). Nested under
     // the venture root so a mutation invalidating `venture.all` (theme/template
     // change, campaign edit) also refreshes it — byte-identical to the send path.
-    bonusEmailPreview: (campaignId: string) =>
-      ['venture', 'bonus-email-preview', campaignId] as const,
-    // Tenant-scoped list of BONUS-CAPABLE email templates for the campaign picker
-    // (no per-campaign input — filtered by the {{bonus_list}} marker). Nested under
-    // the venture root so a mutation invalidating `venture.all` also refreshes it.
+    // `themeKey` = a stable serialization of the in-flight (unsaved) theme override,
+    // so the query refetches when the editor changes the picked theme without a save.
+    // The current sole caller (CampaignBonusEmailPreview) ALWAYS supplies the override;
+    // `__saved__` is the defensive default for any future caller that omits it (→ the
+    // persisted campaign theme).
+    bonusEmailPreview: (campaignId: string, themeKey?: string) =>
+      ['venture', 'bonus-email-preview', campaignId, themeKey ?? '__saved__'] as const,
+    // Tenant-scoped list of ALL campaign-selectable email templates for the
+    // campaign picker (no per-campaign input; lists all templates except
+    // workflow_custom — NOT filtered by the {{bonus_list}} marker, model B).
+    // Nested under the venture root so a mutation invalidating `venture.all`
+    // also refreshes it.
     bonusTemplates: ['venture', 'bonus-templates'] as const,
+    // Fillable variable fields + saved values for a campaign's EFFECTIVE template
+    // (Iter 3b). Keyed by campaignId AND the selected template id so the query
+    // refetches when the picker changes the template (a different template has
+    // different variables). Nested under the venture root so a mutation
+    // invalidating `venture.all` also refreshes it.
+    templateVariables: (campaignId: string, templateId: string | null) =>
+      ['venture', 'template-variables', campaignId, templateId ?? '__default__'] as const,
     // Per-user client assignments (iter 3a). Keyed by target user so the
     // assignment editor pre-fills the right set; still nested under the venture
     // root so a mutation that invalidates `venture.all` also refreshes it.

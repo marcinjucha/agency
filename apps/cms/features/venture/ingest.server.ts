@@ -1,10 +1,8 @@
-import { ResultAsync } from 'neverthrow'
 import type { Json } from '@agency/database'
 import type { createServiceClient } from '@/lib/supabase/service'
 import { EspApiError } from './esp/http.server'
 import type { EspProvider, EspProviderId } from './esp/types'
 import type { MappedLead } from './lead-sources/types'
-import { resolveBonusTemplateByPrecedence } from './mail/resolve-bonus-template'
 import { resolveMailSender, type ClientMailConfig } from './mail/resolve.server'
 import type { MailSender } from './mail/types'
 import {
@@ -13,6 +11,7 @@ import {
   resolveVentureSendTheme,
   type BonusTemplateRow,
 } from './mail/render-bonus-email.server'
+import { coerceStringRecord } from './utils/template-values'
 
 // ---------------------------------------------------------------------------
 // Venture bonus-funnel — lead ingest orchestrator (iter 3).
@@ -71,7 +70,22 @@ export interface IngestDeps {
 export type IngestOutcome =
   | { status: 'insert_error' }
   | { status: 'duplicate'; leadId: string | null }
-  | { status: 'ingested'; leadId: string; espSynced: boolean; emailSent: boolean }
+  | { status: 'ingested'; leadId: string; espSynced: boolean; emailResult: BonusEmailResult }
+
+// Why the bonus email did (or did not) go out — a discriminated result instead of
+// a bare boolean so a DELIBERATE non-send is never conflated with a send FAILURE
+// (product decision 2026-07-15). All three are non-fatal to the request (the lead
+// is always kept, HTTP 200):
+//   - sent    : the email was handed to the sender
+//   - skipped : nothing to send — no recipient OR no template selected. A campaign
+//               with `email_template_id = null` sends NO bonus email BY DESIGN.
+//   - failed  : the send was attempted and threw (logged; still 200, never retried)
+const BONUS_EMAIL_RESULTS = {
+  sent: 'sent',
+  skipped: 'skipped',
+  failed: 'failed',
+} as const
+export type BonusEmailResult = (typeof BONUS_EMAIL_RESULTS)[keyof typeof BONUS_EMAIL_RESULTS]
 
 /**
  * Map an ingest outcome to the HTTP status the webhook returns to Tally.
@@ -136,12 +150,19 @@ export type CampaignRow = {
   // to the pre-campaign-tier render).
   campaignThemeId: string | null
   campaignBrand: Json | null
-  // Phase 4 (increment 1): the campaign's EXPLICITLY-selected `venture_bonus`
-  // template (so_campaigns.email_template_id FK → email_templates.id). NULL when
-  // the campaign has no explicit assignment → the send falls back to the tenant's
-  // DEFAULT `venture_bonus` template, then to the hardcoded builder. Resolved on
-  // the SEND path only (fetchBonusTemplate) — no UI reads it yet.
+  // The campaign's EXPLICITLY-selected bonus email template
+  // (so_campaigns.email_template_id FK → email_templates.id). NULL = NO bonus email
+  // is sent (product decision 2026-07-15) — the send is SKIPPED, the lead is still
+  // kept. When set, the send reads that row by id; if it is broken/deleted/
+  // unrenderable the hardcoded builder is the safety net (selected-but-broken ≠
+  // no-selection). There is NO implicit "tenant default" tier anymore.
   email_template_id: string | null
+  // Iter 3c: per-campaign literal values for the effective template's variables
+  // (so_campaigns.template_variable_values JSONB, flat { tokenKey: literalValue }).
+  // Coerced to a string map by resolveCampaign, then passed to buildBonusEmailBody
+  // and merged OVER the app-auto { companyName } at the substitution site (non-empty
+  // entries win; an empty campaign value does NOT clobber the app-auto value).
+  templateValues: Record<string, string>
 }
 
 // Row shape fetched from so_clients — id + tenant_id + the theme FK + inline
@@ -276,7 +297,9 @@ export async function resolveCampaign(
       // theme_id + brand are the campaign-theme tier (FK + inline fallback).
       // email_template_id (Phase 4) is the campaign's explicit venture_bonus
       // template assignment — read on the send path (fetchBonusTemplate).
-      'id, tally_webhook_secret, esp_provider, esp_audience_ref, esp_tag_launch, display_name, lead_source_provider, theme_id, brand, email_template_id',
+      // template_variable_values (Iter 3c) are the per-campaign literal values
+      // substituted into the effective template's {{tokens}}.
+      'id, tally_webhook_secret, esp_provider, esp_audience_ref, esp_tag_launch, display_name, lead_source_provider, theme_id, brand, email_template_id, template_variable_values',
     )
     .eq('client_id', clientRow.id)
     .eq('slug', slug)
@@ -314,7 +337,7 @@ export async function resolveCampaign(
   // are regenerated. The DB row uses column names `theme_id`/`brand`; they are
   // remapped to the domain `campaignThemeId`/`campaignBrand` below (destructured
   // out of the spread so no stray column names land on the domain row).
-  const { theme_id, brand, ...campaignRow } = data as unknown as Omit<
+  const { theme_id, brand, template_variable_values, ...campaignRow } = data as unknown as Omit<
     CampaignRow,
     | 'tenantId'
     | 'clientMail'
@@ -324,7 +347,8 @@ export async function resolveCampaign(
     | 'tenantTheme'
     | 'campaignThemeId'
     | 'campaignBrand'
-  > & { theme_id: string | null; brand: Json | null }
+    | 'templateValues'
+  > & { theme_id: string | null; brand: Json | null; template_variable_values: unknown }
 
   return {
     kind: RESOLVE_RESULT_KINDS.found,
@@ -348,6 +372,9 @@ export async function resolveCampaign(
       tenantTheme: tenantTheme.inline,
       campaignThemeId: theme_id,
       campaignBrand: brand,
+      // Iter 3c: coerced to a flat string map (drops non-string JSONB entries);
+      // merged over the app-auto { companyName } at the substitution site.
+      templateValues: coerceStringRecord(template_variable_values),
     },
   }
 }
@@ -563,17 +590,14 @@ async function fetchPublishedBonuses(
   return (data as Array<{ title: string | null; url: string | null }> | null) ?? []
 }
 
-// email_templates.type slug for the hybrid bonus email's surrounding copy.
-const BONUS_TEMPLATE_TYPE = 'venture_bonus'
-
 /**
  * Read the campaign's EXPLICITLY-selected template by id, SCOPED to the tenant
  * (F3 — the tenant id comes from the campaign ROW, never the payload, so the
  * service-role read cannot surface another tenant's content). Model B: a campaign
  * may select ANY tenant-owned template by id (NOT only the `venture_bonus` slug),
  * so this read does NOT filter on `type` — the id + tenant scope is the whole
- * guard. NEVER throws — any query/thrown error degrades to null so the caller
- * falls to the next tier.
+ * guard. NEVER throws — any query/thrown error degrades to null, so a selected but
+ * broken/deleted template falls to the hardcoded builder (the send's safety net).
  */
 async function readBonusTemplateById(
   supabase: ServiceClient,
@@ -599,81 +623,38 @@ async function readBonusTemplateById(
 }
 
 /**
- * Read the tenant's DEFAULT bonus template — the `venture_bonus` SINGLETON slug
- * row (model B: `venture_bonus` is a unique-per-tenant slug = the tenant default,
- * NOT an is_default flag). The UNIQUE(tenant_id, type) guarantees ≤1 such row, so
- * `maybeSingle` is safe. NEVER throws — degrades to null (no-drop → hardcoded
- * builder).
- */
-async function readDefaultBonusTemplate(
-  supabase: ServiceClient,
-  tenantId: string,
-): Promise<BonusTemplateRow | null> {
-  try {
-    const { data, error } = await supabase
-      .from('email_templates')
-      .select('blocks, subject')
-      .eq('type', BONUS_TEMPLATE_TYPE)
-      .eq('tenant_id', tenantId)
-      .maybeSingle()
-    if (error) return null
-    return coerceBonusTemplateRow(data)
-  } catch (error) {
-    console.error(
-      '[venture-ingest] default bonus template lookup failed:',
-      error instanceof Error ? error.message : String(error),
-    )
-    return null
-  }
-}
-
-/**
- * Resolve the `venture_bonus` copy template for a send, honouring the INV-4
- * precedence via the SHARED `resolveBonusTemplateByPrecedence` mechanism (the
- * SAME one the effective-send card uses, so the two cannot drift): the campaign's
- * EXPLICITLY assigned template wins, else the tenant's DEFAULT, else null.
- *   1. `campaignTemplateId` set + a usable row found (tenant match, ANY type) → use it
- *   2. otherwise the tenant's `venture_bonus` singleton slug row, if usable
- *   3. otherwise null → caller uses the hardcoded builder (INV-1 NO-DROP)
- * Each reader (`readBonusTemplateById`/`readDefaultBonusTemplate`) already
- * degrades to null on error and NEVER throws — wrapped here in `fromSafePromise`
- * so the shared resolver's error channel is `never`; `unwrapOr(null)` restores the
- * caller's `Promise<… | null>` contract. The default read is LAZY (only when
- * by-id yields nothing), so a resolved assignment still short-circuits it.
- * `tenantId` MUST originate from the campaign row (F3 — cross-tenant leak guard
- * on the service-role read).
- */
-function fetchBonusTemplate(
-  supabase: ServiceClient,
-  tenantId: string,
-  campaignTemplateId: string | null,
-): Promise<BonusTemplateRow | null> {
-  const readById = (): ResultAsync<BonusTemplateRow | null, never> =>
-    ResultAsync.fromSafePromise(
-      campaignTemplateId
-        ? readBonusTemplateById(supabase, tenantId, campaignTemplateId)
-        : Promise.resolve(null),
-    )
-  const readDefault = (): ResultAsync<BonusTemplateRow | null, never> =>
-    ResultAsync.fromSafePromise(readDefaultBonusTemplate(supabase, tenantId))
-  return resolveBonusTemplateByPrecedence(readById, readDefault).unwrapOr(null)
-}
-
-/**
- * Send the transactional bonus email. Returns true on success. Never throws —
- * a mail failure is logged and does not fail the request.
+ * Send the transactional bonus email. Never throws — a mail failure is logged and
+ * does not fail the request. Returns a discriminated `BonusEmailResult`:
+ *   - `skipped` when there is nothing to send: no recipient, OR the campaign has
+ *     NO template selected (`email_template_id = null`). A missing selection means
+ *     NO email is sent BY DESIGN (product decision 2026-07-15) — the lead is still
+ *     kept; this is NOT a failure and is logged with `console.warn`, never retried.
+ *   - `sent` on a successful hand-off to the sender.
+ *   - `failed` when the send was attempted and threw (logged; lead still kept).
+ * When a template IS selected but its row is broken/deleted/unrenderable, the
+ * hardcoded builder is the safety net (selected-but-broken ≠ no-selection).
  */
 async function sendBonusEmail(
   deps: IngestDeps,
   campaign: CampaignRow,
   mapped: MappedLead,
-): Promise<boolean> {
+): Promise<BonusEmailResult> {
   // Guard BEFORE any work — the sender's `to` is typed as a non-null string;
   // never pass null. Nowhere to send the bonus without an email. This guard
   // runs regardless of which mail provider the client is configured for.
   if (!mapped.email) {
     console.warn('[venture-ingest] lead has no email — skipping bonus email (lead kept)')
-    return false
+    return BONUS_EMAIL_RESULTS.skipped
+  }
+  // No template selected → NO bonus email is sent (product decision 2026-07-15).
+  // A clean, DISTINCT non-error skip: warn (not error), no send, no retry. The
+  // lead is already persisted by the caller — only the email is skipped.
+  const templateId = campaign.email_template_id
+  if (!templateId) {
+    console.warn(
+      '[venture-ingest] campaign has no email template selected — skipping bonus email (lead kept)',
+    )
+    return BONUS_EMAIL_RESULTS.skipped
   }
   try {
     // All five reads derive SOLELY from the already-resolved campaign row and are
@@ -687,8 +668,8 @@ async function sendBonusEmail(
     // absent token. The campaign tier's inline fallback is the legacy `brand`
     // JSONB adapted via brandToThemeTokens; theme_id NULL + brand NULL yields {} →
     // falls to client/tenant exactly as before the campaign tier. The template is
-    // resolved by INV-4 precedence (campaign assignment → tenant default →
-    // hardcoded builder); tenantId comes from the campaign ROW (F3 guard).
+    // read by the campaign's EXPLICIT selection (id, tenant-scoped from the campaign
+    // ROW — F3 guard); a broken/deleted row degrades to null → hardcoded builder.
     const [bonuses, theme, template] = await Promise.all([
       fetchPublishedBonuses(deps.supabase, campaign.id),
       // Per-tier theme resolution (campaign → client → tenant) — the SHARED
@@ -701,24 +682,26 @@ async function sendBonusEmail(
         campaignThemeId: campaign.campaignThemeId,
         campaignBrand: campaign.campaignBrand,
       }),
-      fetchBonusTemplate(deps.supabase, campaign.tenantId, campaign.email_template_id),
+      readBonusTemplateById(deps.supabase, campaign.tenantId, templateId),
     ])
     const { subject, html } = await buildBonusEmailBody(
       template,
       campaign.display_name,
       bonuses,
       theme,
+      // Iter 3c: per-campaign literal values, merged over app-auto { companyName }.
+      campaign.templateValues,
     )
     const resolveSender = deps.resolveMailSender ?? resolveMailSender
     const sender = resolveSender(campaign.clientMail)
     await sender.send({ to: mapped.email, subject, html })
-    return true
+    return BONUS_EMAIL_RESULTS.sent
   } catch (error) {
     console.error(
       '[venture-ingest] bonus email send failed:',
       error instanceof Error ? error.message : String(error),
     )
-    return false
+    return BONUS_EMAIL_RESULTS.failed
   }
 }
 
@@ -756,7 +739,7 @@ export async function ingestLead(
 
   const leadId = insertResult.id
   const espSynced = await syncToEsp(deps, campaign, leadId, mapped)
-  const emailSent = await sendBonusEmail(deps, campaign, mapped)
+  const emailResult = await sendBonusEmail(deps, campaign, mapped)
 
-  return { status: 'ingested', leadId, espSynced, emailSent }
+  return { status: 'ingested', leadId, espSynced, emailResult }
 }

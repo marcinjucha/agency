@@ -18,9 +18,17 @@ import { messages } from '@/lib/messages'
 // an email template to something can reuse this exact primitive. i18n strings come
 // from the app-level `messages` singleton (same as every other email component).
 //
-// The control is a shadcn Select with a "Domyślny" option (→ null) plus one option
-// per template (by label), an optional trailing "Edytuj szablon" deep-link, and a
-// non-blocking `role="status"` warning chip.
+// The control is a shadcn Select with one selectable option per template (by
+// label). Nothing selected is represented by `value === null`. It maps to a
+// controlled EMPTY-STRING root value (`value ?? ''`) — never `undefined` — so the
+// Select stays CONTROLLED at all times: a null value renders the "Wybierz szablon"
+// placeholder (no SelectItem matches ''), and CLEARING a selection visibly resets
+// to the placeholder instead of Radix silently retaining the last value on a
+// controlled→uncontrolled flip. Template ids are never '' so `onChange` only ever
+// emits a real id; '' is not a selectable item. There is NO synthetic "default"
+// item, because a campaign with no template selected sends no email (product
+// decision 2026-07-15). Also renders an optional trailing "Edytuj szablon"
+// deep-link and a non-blocking `role="status"` warning chip.
 // ---------------------------------------------------------------------------
 
 export interface EmailTemplatePickerOption {
@@ -31,9 +39,9 @@ export interface EmailTemplatePickerOption {
 
 interface EmailTemplatePickerProps {
   templates: EmailTemplatePickerOption[]
-  /** Currently-selected template id, or null for the "Domyślny" (default) option. */
+  /** Currently-selected template id, or null when nothing is selected yet (placeholder). */
   value: string | null
-  onChange: (id: string | null) => void
+  onChange: (id: string) => void
   /** Deep-link to edit the EFFECTIVE template; hides the edit link when null/undefined. */
   editHref?: string | null
   loading?: boolean
@@ -43,10 +51,6 @@ interface EmailTemplatePickerProps {
   /** Shown (muted) when `templates` is empty — e.g. "no bonus-capable templates yet". */
   emptyHint?: string
 }
-
-// shadcn Select forbids an empty-string value, so null is carried by this token
-// and mapped back to null in onValueChange.
-const DEFAULT_OPTION = '__default__'
 
 export function EmailTemplatePicker({
   templates,
@@ -68,17 +72,17 @@ export function EmailTemplatePicker({
       </Label>
 
       <Select
-        value={value ?? DEFAULT_OPTION}
-        onValueChange={(v) => onChange(v === DEFAULT_OPTION ? null : v)}
+        // Controlled at all times: null → '' (no item matches → placeholder).
+        // Never `undefined`, which would flip Radix to uncontrolled and retain
+        // the just-cleared value. See the header comment for the full rationale.
+        value={value ?? ''}
+        onValueChange={onChange}
         disabled={controlDisabled}
       >
         <SelectTrigger id={selectId} className="text-sm">
-          <SelectValue placeholder={messages.email.templatePickerDefault} />
+          <SelectValue placeholder={messages.email.templatePickerPlaceholder} />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value={DEFAULT_OPTION}>
-            {messages.email.templatePickerDefault}
-          </SelectItem>
           {templates.map((t) => (
             <SelectItem key={t.id} value={t.id}>
               {t.label}

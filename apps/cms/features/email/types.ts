@@ -25,12 +25,9 @@ export type {
   BlockBorder,
 } from '@agency/email'
 
-// Sentinel emitted by the "Lista bonusów" affordance in AddBlockPopover. It is
-// NOT a real block type (never enters the registry) — the add-block handlers
-// recognise it and insert a pre-filled `text` block carrying the {{bonus_list}}
-// marker instead. Distinct string literal so TS discriminates it from BlockType.
-export const BONUS_LIST_PICK = '__bonus_list__' as const
-export type AddBlockPick = import('@agency/email').BlockType | typeof BONUS_LIST_PICK
+// The value emitted by AddBlockPopover when the user picks a block to insert —
+// always a real registry block type.
+export type AddBlockPick = import('@agency/email').BlockType
 
 // EmailTemplate from DB with typed blocks
 export type EmailTemplate = Omit<Tables<'email_templates'>, 'blocks'> & {

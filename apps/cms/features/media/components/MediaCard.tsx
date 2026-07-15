@@ -17,9 +17,10 @@ import {
   AlertDialogCancel,
   Button,
 } from '@agency/ui'
-import { Trash2, Video, Play, Image as ImageIcon, Edit2, Download, FileText, Music } from 'lucide-react'
+import { Trash2, Video, Play, Image as ImageIcon, Edit2, Download, FileText, Music, Link2, Check, AlertCircle } from 'lucide-react'
 import type { MediaItemListItem, MediaType } from '../types'
 import { formatBytes } from '../utils'
+import { useCopyToClipboard } from '../use-copy-to-clipboard'
 import { messages, templates } from '@/lib/messages'
 
 type MediaCardProps = {
@@ -249,6 +250,8 @@ export function MediaCardInner({
   selectable,
   isDragOverlay,
 }: MediaCardProps & { size: string | null; isDragOverlay?: boolean }) {
+  const { copied, failed, copy } = useCopyToClipboard()
+
   return (
     <Card
       className={[
@@ -292,35 +295,54 @@ export function MediaCardInner({
         </div>
 
         {!selectable && !isDragOverlay && (
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 w-7 shrink-0 p-0 text-muted-foreground hover:text-destructive"
-                aria-label={templates.media.deleteAriaLabel(item.name)}
-              >
-                <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>{messages.media.deleteConfirmTitle}</AlertDialogTitle>
-                <AlertDialogDescription>
-                  {messages.media.deleteConfirmDescription}
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>{messages.common.cancel}</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={() => onDelete(item.id)}
-                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          <div className="flex shrink-0 items-center gap-0.5">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 w-7 shrink-0 p-0 text-muted-foreground hover:text-foreground"
+              aria-label={failed ? messages.common.copyFailed : messages.common.copyLink}
+              title={failed ? messages.common.copyFailed : messages.common.copyLink}
+              onClick={() => copy(item.url)}
+            >
+              {failed ? (
+                <AlertCircle className="h-3.5 w-3.5 text-destructive" aria-hidden="true" />
+              ) : copied ? (
+                <Check className="h-3.5 w-3.5 text-status-success-foreground" aria-hidden="true" />
+              ) : (
+                <Link2 className="h-3.5 w-3.5" aria-hidden="true" />
+              )}
+            </Button>
+
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 w-7 shrink-0 p-0 text-muted-foreground hover:text-destructive"
+                  aria-label={templates.media.deleteAriaLabel(item.name)}
                 >
-                  {messages.common.delete}
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+                  <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>{messages.media.deleteConfirmTitle}</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    {messages.media.deleteConfirmDescription}
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>{messages.common.cancel}</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => onDelete(item.id)}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    {messages.common.delete}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
         )}
       </div>
     </Card>

@@ -87,31 +87,40 @@ export async function resolveVentureSendTheme(
 }
 
 /**
- * Build subject + HTML for the bonus email. HYBRID: when a `venture_bonus`-style
- * template exists, render the editable copy from it + splice the programmatic
- * bonus list; on ANY error building from it, fall back to the hardcoded builder.
- * When absent, use the hardcoded builder directly. Either way the dynamic list
- * (0 / 1 / many, no cap) and the resolved theme are identical.
+ * Build subject + HTML for the bonus email. When a `venture_bonus`-style template
+ * exists, render the editable copy from it AS-IS (bonus links come from
+ * per-campaign template variables — no programmatic list splice); on ANY error
+ * building from it, fall back to the hardcoded builder. When absent, use the
+ * hardcoded builder directly (that path still lists `bonuses` programmatically).
  *
  * Takes `displayName` (not the whole campaign row) so the preview handler — which
  * reads campaigns via the authenticated/cookie client — can call it without the
  * ingest CampaignRow shape. `resolveBonusBrand(displayName)` is the exact
  * `{{companyName}}` value both paths substitute.
+ *
+ * `templateValues` (Iter 3c) are the per-campaign literal variable values
+ * (`so_campaigns.template_variable_values`, flat { tokenKey: value }). They are
+ * merged OVER the app-auto `{ companyName }` at the substitution site (non-empty
+ * entries win — see `buildBonusEmailFromTemplateHtml`) so preview == send. The
+ * hardcoded-builder fallback has no user variables (fields are [] when no
+ * template resolves), so it deliberately ignores `templateValues`. Defaults to
+ * `{}` → the seeded no-variable render stays BYTE-IDENTICAL to the pre-3c output.
  */
 export async function buildBonusEmailBody(
   template: BonusTemplateRow | null,
   displayName: string | null,
   bonuses: Array<{ title: string | null; url: string | null }>,
   theme: ResolvedTheme,
+  templateValues: Record<string, string> = {},
 ): Promise<BonusEmail> {
   if (template) {
     try {
       return await buildBonusEmailFromTemplateHtml({
         templateBlocks: template.blocks,
         subjectTemplate: template.subject,
-        bonuses,
         theme,
         values: { companyName: resolveBonusBrand(displayName) },
+        templateValues,
       })
     } catch (error) {
       // A broken/edited template must NEVER degrade a live send — fall through.

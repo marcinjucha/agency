@@ -1250,6 +1250,7 @@ export type Database = {
           published: boolean
           slug: string
           tally_webhook_secret: string | null
+          template_variable_values: Json
           theme_id: string | null
           updated_at: string
         }
@@ -1269,6 +1270,7 @@ export type Database = {
           published?: boolean
           slug: string
           tally_webhook_secret?: string | null
+          template_variable_values?: Json
           theme_id?: string | null
           updated_at?: string
         }
@@ -1288,6 +1290,7 @@ export type Database = {
           published?: boolean
           slug?: string
           tally_webhook_secret?: string | null
+          template_variable_values?: Json
           theme_id?: string | null
           updated_at?: string
         }

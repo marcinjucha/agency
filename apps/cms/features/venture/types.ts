@@ -45,8 +45,8 @@ export type AdminCampaign = Omit<Tables<'so_campaigns'>, 'tally_webhook_secret'>
   // them. Drop this augmentation once main is regenerated.
   lead_source_provider: string | null
   lead_source_config: Json
-  // Explicitly-assigned bonus email template (Phase 4, model B — so_campaigns
-  // .email_template_id FK, NULL = use the tenant default → hardcoded builder).
+  // Explicitly-assigned bonus email template (model B — so_campaigns
+  // .email_template_id FK, NULL = NO bonus email is sent; product decision 2026-07-15).
   // Explicit augmentation for the same worktree gotcha as the columns above: the
   // shared pnpm node_modules resolves `@agency/database` to the MAIN checkout,
   // whose generated types.ts may predate this column. No-op intersection (identical
@@ -98,6 +98,22 @@ export interface CampaignBrand {
   bg?: string | null
   logo_url?: string | null
   font?: string | null
+}
+
+/**
+ * In-flight (unsaved) campaign theme selection passed to the bonus-email preview
+ * as a NON-PERSISTED override, so the "Podgląd e-mail" tab reflects a theme the
+ * editor has picked but not yet saved WITHOUT writing to the DB (approach B).
+ *
+ * Mirrors the 3-way campaign theme card: exactly one of {themeId, brand} carries
+ * a value (inherit = both empty, library = themeId set, own = brand set). When
+ * absent from a preview request the handler uses the PERSISTED campaign theme.
+ * Only the CAMPAIGN tier is overridable — client + tenant tiers always come from
+ * the DB.
+ */
+export interface CampaignThemeOverride {
+  themeId: string | null
+  brand: CampaignBrand | null
 }
 
 /** A published bonus, projected to the public-safe columns only. */

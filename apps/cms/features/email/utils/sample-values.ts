@@ -6,11 +6,10 @@ import { messages } from '@/lib/messages'
 //
 // Council 2026-07-14: fill ONLY code-known tokens. For an APP-OWNED template
 // type (the CMS builds the values object), that means the `app` scalars
-// (companyName → "Twoja Firma") and the `structural` marker (bonus_list → a
-// sample line). EVERYTHING else — workflow/unresolvable/custom tokens — is
-// deliberately OMITTED from the record so the shared substitution primitives
-// leave it BRACKETED (`{{token}}`). The honest "won't be filled" signal must
-// survive; never fabricate a value for a token the system cannot resolve.
+// (companyName → "Twoja Firma"). EVERYTHING else — workflow/unresolvable/custom
+// tokens — is deliberately OMITTED from the record so the shared substitution
+// primitives leave it BRACKETED (`{{token}}`). The honest "won't be filled"
+// signal must survive; never fabricate a value for a token the system cannot resolve.
 //
 // Display-only: the caller applies these to a COPY of the blocks/subject; the
 // stored template (html_body / blocks) is never touched.
@@ -37,7 +36,5 @@ export function buildSampleValues(templateType: string): Record<string, string> 
     const sample = APP_KEY_SAMPLE[key]
     if (sample) values[key] = sample
   }
-  // The structural marker (bonus_list) → a small sample line spliced at send.
-  values[source.markerKey] = messages.email.sampleBonusList
   return values
 }

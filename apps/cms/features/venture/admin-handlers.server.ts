@@ -16,7 +16,7 @@ import {
   toMutation,
   toVoid,
 } from './handler-base.server'
-import type { AdminCampaign, AdminClient, Bonus } from './types'
+import type { AdminCampaign, AdminClient, Bonus, CampaignThemeOverride } from './types'
 import {
   describeEffectiveSender,
   type EffectiveSender,
@@ -35,8 +35,6 @@ import type {
   UpdateClientInput,
 } from './validation'
 import type { Json } from '@agency/database'
-import { BONUS_LIST_MARKER } from './mail/bonus-email-template'
-import { resolveBonusTemplateByPrecedence } from './mail/resolve-bonus-template'
 import {
   buildBonusEmailBody,
   coerceBonusTemplateRow,
@@ -44,6 +42,13 @@ import {
   type BonusTemplateRow,
 } from './mail/render-bonus-email.server'
 import { isUsableTemplateBlocks } from './utils/template-blocks'
+import { coerceStringRecord } from './utils/template-values'
+import type { Block } from '@agency/email'
+import { parseTemplateVariables } from '@/features/email/utils/parse-template-variables'
+import {
+  resolveTemplateVariableFields,
+  type TemplateVariableField,
+} from '@/features/email/utils/resolve-template-variables'
 
 // ---------------------------------------------------------------------------
 // Venture bonus-funnel — ADMIN CRUD handlers (iter 5a). AUTHENTICATED layer.
@@ -499,33 +504,31 @@ export function deleteCampaignHandler(id: string): Promise<VoidResult> {
 // Effective send (READ-ONLY surface — "Ten launch wysyła" card)
 // ===========================================================================
 
-// email_templates.type slug for the venture bonus email (mirrors ingest.server.ts).
-const BONUS_TEMPLATE_TYPE = 'venture_bonus'
+// The bonus-email template state a send would use, mirrored on the read-only
+// "Ten launch wysyła" card. A discriminated union — the card must NOT drift from
+// the send path (ingest.server.ts `sendBonusEmail`):
+//   - 'none'     : the campaign has NO template selected → NO email is sent
+//                  (product decision 2026-07-15). There is NO implicit default.
+//   - 'template' : the selected, tenant-owned, usable template (name + type slug
+//                  → powers the "Edytuj szablon" deep-link)
+//   - 'builtin'  : a template IS selected but broken/deleted/unusable → the send
+//                  falls back to the hardcoded builder (selected-but-broken)
+export type EffectiveTemplateState =
+  | { kind: 'none' }
+  | { kind: 'template'; id: string; name: string; type: string }
+  | { kind: 'builtin' }
 
 // What the campaign editor's read-only "Ten launch wysyła" card consumes. The
 // sender fields come from the SAME resolveMailSender the send path uses (via
-// describeEffectiveSender); templateType/templateExists surface the tenant's
-// editable bonus copy without exposing schema.
+// describeEffectiveSender); `template` mirrors WHICH template the send resolves.
 export interface CampaignEffectiveSend extends EffectiveSender {
-  templateType: string
-  templateExists: boolean
-  // The template the send would ACTUALLY use, resolved by the SAME precedence as
-  // the n8n-free CMS send path (fetchBonusTemplate / resolveVentureBonusTemplateId,
-  // INV-4): campaign.email_template_id if it resolves to a valid tenant-owned
-  // row, else the tenant DEFAULT (venture_bonus singleton slug), else null (→ the
-  // hardcoded builder, "wbudowany szablon"). The card MUST NOT drift from ingest.
-  resolvedTemplateId: string | null
-  resolvedTemplateName: string | null
-  // The resolved template's `type` slug — powers the "Edytuj szablon" deep-link
-  // (routes.admin.emailTemplate(type), the type-keyed editor). Null when the send
-  // falls back to the hardcoded builder (no resolved row).
-  resolvedTemplateType: string | null
+  template: EffectiveTemplateState
 }
 
 /**
  * Resolve the campaign fields the effective-send card needs: the owning client
  * id (existence hidden behind no-permission) AND the explicitly-assigned
- * template id (Phase 4 — so_campaigns.email_template_id, NULL when none).
+ * template id (so_campaigns.email_template_id, NULL when none → NO email is sent).
  */
 function fetchCampaignForEffectiveSend(
   auth: AuthContextFull,
@@ -581,50 +584,9 @@ function fetchClientMailForDescribe(
   })
 }
 
-// One read of the tenant's venture_bonus singleton, yielding BOTH facets the card
-// needs — collapsing the former fetchBonusTemplateExists + readDefaultVentureTemplateChoice
-// pair (which queried the SAME row twice).
-interface DefaultBonusTemplateRead {
-  // Whether the tenant has a venture_bonus row AT ALL (any blocks) — powers the
-  // card's "brak edytowalnej kopii" note (templateExists). A row with empty blocks
-  // still EXISTS and is editable, so presence must NOT require usable blocks
-  // (preserves the prior fetchBonusTemplateExists semantics exactly).
-  present: boolean
-  // The row as a resolvable DEFAULT-tier choice — null when the row is missing OR
-  // its blocks are unusable (mirrors ingest's coerceBonusTemplateRow degrade), so
-  // the resolved-template tier never names a template the send would skip.
-  choice: VentureTemplateChoice | null
-}
-
-/**
- * Read the tenant's `venture_bonus` singleton default ONCE, deriving BOTH the
- * presence flag (templateExists) AND the usable default-tier choice. Replaces the
- * former fetchBonusTemplateExists + readDefaultVentureTemplateChoice pair — the
- * card queried this same row twice; this collapses them into a single read ([7]).
- */
-function readTenantDefaultBonusTemplate(
-  auth: AuthContextFull,
-): ResultAsync<DefaultBonusTemplateRead, string> {
-  return ResultAsync.fromPromise(
-    tbl(auth, 'email_templates')
-      .select('id, label, type, blocks')
-      .eq('type', BONUS_TEMPLATE_TYPE)
-      .eq('tenant_id', auth.tenantId)
-      .maybeSingle(),
-    dbError,
-  ).andThen((res) => {
-    const r = res as { data: VentureTemplateChoiceRow | null; error: DbErrorShape }
-    if (r.error) return err(mapDbError(r.error, 'readTenantDefaultBonusTemplate'))
-    const present = r.data !== null
-    const choice =
-      r.data && isUsableTemplateBlocks(r.data.blocks) ? toTemplateChoice(r.data) : null
-    return ok<DefaultBonusTemplateRead, string>({ present, choice })
-  })
-}
-
-// A venture_bonus template row for the effective-send card: enough to name it
-// (label) and identify it (id). NEVER selects blocks/secrets — the card only
-// needs to mirror WHICH template ingest would pick, not render it.
+// A template row for the effective-send card: enough to name it (label) and
+// identify it (id). NEVER selects blocks/secrets — the card only needs to mirror
+// WHICH template ingest would pick, not render it.
 interface VentureTemplateChoice {
   id: string
   label: string
@@ -674,36 +636,32 @@ function readVentureTemplateChoiceById(
 }
 
 /**
- * Resolve the template a send would ACTUALLY use, via the SHARED
- * `resolveBonusTemplateByPrecedence` mechanism (the SAME one ingest's
- * `fetchBonusTemplate` calls — closes the prior parallel-copy drift, INV-4): the
- * campaign's explicitly assigned template (if it resolves under the tenant, ANY
- * type, AND has usable blocks) wins, else the tenant DEFAULT (if usable), else
- * null. The by-id read runs only when a template is assigned; `readDefault` is
- * supplied by the caller — the card passes a NO-QUERY cached reader (the tenant
- * default was already read once for `templateExists`, see [7]), so the default
- * row is never queried twice.
+ * Resolve the template STATE a send would ACTUALLY use for the card — mirroring
+ * ingest's `sendBonusEmail` exactly (product decision 2026-07-15, no default tier):
+ *   - no selection (`campaignTemplateId === null`) → 'none' (NO email is sent)
+ *   - selected + resolves usable under the tenant → 'template' (name + type)
+ *   - selected but broken/deleted/unusable → 'builtin' (hardcoded builder)
+ * The by-id read runs ONLY when a template is assigned.
  */
-function resolveEffectiveVentureTemplate(
+function resolveEffectiveTemplateState(
   auth: AuthContextFull,
   campaignTemplateId: string | null,
-  readDefault: () => ResultAsync<VentureTemplateChoice | null, string>,
-): ResultAsync<VentureTemplateChoice | null, string> {
-  const readById = (): ResultAsync<VentureTemplateChoice | null, string> =>
-    campaignTemplateId
-      ? readVentureTemplateChoiceById(auth, campaignTemplateId)
-      : okAsync<VentureTemplateChoice | null, string>(null)
-  return resolveBonusTemplateByPrecedence(readById, readDefault)
+): ResultAsync<EffectiveTemplateState, string> {
+  if (campaignTemplateId === null) return okAsync<EffectiveTemplateState, string>({ kind: 'none' })
+  return readVentureTemplateChoiceById(auth, campaignTemplateId).map((choice) =>
+    choice
+      ? { kind: 'template', id: choice.id, name: choice.label, type: choice.type }
+      : { kind: 'builtin' },
+  )
 }
 
 /**
- * Describe the effective send for a campaign — the sender a real bonus email
- * would use (via the SAME resolveMailSender), the template slug + whether the
- * tenant has an editable copy, AND the template the send would ACTUALLY pick
- * (resolvedTemplateId/Name — same precedence as ingest, INV-4). Gated on
- * `bonus_funnel.campaigns` (the route map does NOT gate createServerFn — this is
- * the server-side gate). Tenant-scoped: the campaign → client chain is verified
- * owned before any mail config is read.
+ * Describe the effective send for a campaign — the sender a real bonus email would
+ * use (via the SAME resolveMailSender) AND the template STATE the send would pick
+ * (mirrors ingest exactly: no selection → no send; selected → that template;
+ * selected-but-broken → hardcoded builder). Gated on `bonus_funnel.campaigns` (the
+ * route map does NOT gate createServerFn — this is the server-side gate). Tenant-
+ * scoped: the campaign → client chain is verified owned before any mail config is read.
  */
 export function getCampaignEffectiveSendHandler(
   campaignId: string,
@@ -713,32 +671,19 @@ export function getCampaignEffectiveSendHandler(
       fetchCampaignForEffectiveSend(auth, campaignId).andThen(({ clientId, campaignTemplateId }) =>
         assertClientOwned(auth, clientId).andThen(() =>
           fetchClientMailForDescribe(auth, clientId).andThen((mail) =>
-            // ONE read of the tenant venture_bonus default → both templateExists
-            // (present) AND the default-tier choice reused below ([7], no 2nd query).
-            readTenantDefaultBonusTemplate(auth).andThen((def) =>
-              resolveEffectiveVentureTemplate(auth, campaignTemplateId, () =>
-                okAsync<VentureTemplateChoice | null, string>(def.choice),
-              ).map((resolved) => {
-                const sender = describeEffectiveSender({
-                  mailProvider: mail.mail_provider,
-                  resendFromEmail: mail.resend_from_email,
-                  gmailAddress: mail.gmail_address,
-                  senderName: mail.sender_name,
-                  hasResendApiKey: mail.has_resend_api_key,
-                  hasGmailAppPassword: mail.has_gmail_app_password,
-                  // Agency-shared "From" — the address a fallback send originates from.
-                  sharedFromEmail: process.env.RESEND_FROM_EMAIL ?? 'noreply@haloefekt.pl',
-                })
-                return {
-                  ...sender,
-                  templateType: BONUS_TEMPLATE_TYPE,
-                  templateExists: def.present,
-                  resolvedTemplateId: resolved?.id ?? null,
-                  resolvedTemplateName: resolved?.label ?? null,
-                  resolvedTemplateType: resolved?.type ?? null,
-                }
-              }),
-            ),
+            resolveEffectiveTemplateState(auth, campaignTemplateId).map((template) => {
+              const sender = describeEffectiveSender({
+                mailProvider: mail.mail_provider,
+                resendFromEmail: mail.resend_from_email,
+                gmailAddress: mail.gmail_address,
+                senderName: mail.sender_name,
+                hasResendApiKey: mail.has_resend_api_key,
+                hasGmailAppPassword: mail.has_gmail_app_password,
+                // Agency-shared "From" — the address a fallback send originates from.
+                sharedFromEmail: process.env.RESEND_FROM_EMAIL ?? 'noreply@haloefekt.pl',
+              })
+              return { ...sender, template }
+            }),
           ),
         ),
       ),
@@ -754,8 +699,8 @@ export function getCampaignEffectiveSendHandler(
 // header from the `headerBackground` role, while a selected template's header can
 // be TOKEN-BOUND to `primary` — the mock lied). This handler renders BYTE-
 // IDENTICALLY to the send path by reusing the SHARED render mechanism
-// (resolveVentureSendTheme + buildBonusEmailBody) and the SAME template precedence
-// (resolveBonusTemplateByPrecedence) — so the preview cannot drift from ingest.
+// (resolveVentureSendTheme + buildBonusEmailBody) and reading the SAME selected
+// template by id (no default tier) — so the preview cannot drift from ingest.
 //
 // AUTHENTICATED/owned path (NOT the public service client): gated on
 // bonus_funnel.campaigns + assertCampaignOwned (campaign → client → tenant walk =
@@ -763,10 +708,15 @@ export function getCampaignEffectiveSendHandler(
 // scoped. Never throws to the client (toMutation maps the error channel).
 // ===========================================================================
 
-/** The rendered bonus email a send would deliver for a campaign (preview). */
-export interface CampaignBonusEmailPreview {
-  html: string
-}
+// What the "Podgląd e-mail" tab consumes — a discriminated result mirroring the
+// send (product decision 2026-07-15):
+//   - 'no-template' : the campaign has NO template selected → NO email is sent, so
+//                     there is nothing to preview
+//   - 'render'      : the byte-identical HTML a real send would deliver (a selected
+//                     template, or the hardcoded builder when it is broken/deleted)
+export type CampaignBonusEmailPreview =
+  | { kind: 'no-template' }
+  | { kind: 'render'; html: string }
 
 // The campaign fields the preview needs: owning client (for the client theme tier
 // + ownership), the display name (→ {{companyName}}), the campaign theme tier
@@ -777,6 +727,10 @@ interface CampaignPreviewRow {
   campaignThemeId: string | null
   campaignBrand: Json | null
   campaignTemplateId: string | null
+  // Iter 3c: per-campaign literal variable values, coerced to a flat string map.
+  // Passed to buildBonusEmailBody so the preview substitutes the SAME values the
+  // send does (preview == send parity).
+  templateValues: Record<string, string>
 }
 
 function fetchCampaignPreviewRow(
@@ -785,7 +739,7 @@ function fetchCampaignPreviewRow(
 ): ResultAsync<CampaignPreviewRow, string> {
   return ResultAsync.fromPromise(
     tbl(auth, 'so_campaigns')
-      .select('client_id, display_name, theme_id, brand, email_template_id')
+      .select('client_id, display_name, theme_id, brand, email_template_id, template_variable_values')
       .eq('id', campaignId)
       .maybeSingle(),
     dbError,
@@ -797,6 +751,7 @@ function fetchCampaignPreviewRow(
         theme_id: string | null
         brand: Json | null
         email_template_id: string | null
+        template_variable_values: unknown
       } | null
       error: DbErrorShape
     }
@@ -808,6 +763,7 @@ function fetchCampaignPreviewRow(
       campaignThemeId: r.data.theme_id,
       campaignBrand: r.data.brand,
       campaignTemplateId: r.data.email_template_id,
+      templateValues: coerceStringRecord(r.data.template_variable_values),
     })
   })
 }
@@ -914,45 +870,12 @@ function readBonusTemplateRowById(
   })
 }
 
-/** Read the tenant DEFAULT (venture_bonus singleton) row (blocks + subject), coerced. */
-function readDefaultBonusTemplateRow(
-  auth: AuthContextFull,
-): ResultAsync<BonusTemplateRow | null, string> {
-  return ResultAsync.fromPromise(
-    tbl(auth, 'email_templates')
-      .select('blocks, subject')
-      .eq('type', BONUS_TEMPLATE_TYPE)
-      .eq('tenant_id', auth.tenantId)
-      .maybeSingle(),
-    dbError,
-  ).andThen((res) => {
-    const r = res as { data: unknown; error: DbErrorShape }
-    if (r.error) return err(mapDbError(r.error, 'readDefaultBonusTemplateRow'))
-    return ok(coerceBonusTemplateRow(r.data))
-  })
-}
-
-/**
- * Resolve the actual template (blocks + subject) the send would use, via the
- * SHARED precedence (campaign assignment → tenant default → null). Mirrors
- * ingest's fetchBonusTemplate exactly — the by-id read runs only when a template
- * is assigned; the default read is lazy.
- */
-function resolveEffectiveBonusTemplateRow(
-  auth: AuthContextFull,
-  campaignTemplateId: string | null,
-): ResultAsync<BonusTemplateRow | null, string> {
-  const readById = (): ResultAsync<BonusTemplateRow | null, string> =>
-    campaignTemplateId
-      ? readBonusTemplateRowById(auth, campaignTemplateId)
-      : okAsync<BonusTemplateRow | null, string>(null)
-  return resolveBonusTemplateByPrecedence(readById, () => readDefaultBonusTemplateRow(auth))
-}
-
 /**
  * Render the preview HTML — the FINAL step, reusing the SHARED send mechanism so
  * it is byte-identical to a real send: per-tier theme resolution then the hybrid
- * copy-template / hardcoded-builder body. Never throws (each dep degrades).
+ * copy-template / hardcoded-builder body. Never throws (each dep degrades). Called
+ * ONLY when a template IS selected — a broken/deleted row (`template === null`)
+ * renders the hardcoded builder, exactly as the send's safety net.
  */
 async function renderBonusPreviewHtml(args: {
   supabase: AuthContextFull['supabase']
@@ -963,7 +886,8 @@ async function renderBonusPreviewHtml(args: {
   campaignBrand: Json | null
   bonuses: Array<{ title: string | null; url: string | null }>
   template: BonusTemplateRow | null
-}): Promise<CampaignBonusEmailPreview> {
+  templateValues: Record<string, string>
+}): Promise<string> {
   const theme = await resolveVentureSendTheme(args.supabase, {
     tenantThemeId: args.tenant.themeId,
     tenantTheme: args.tenant.inline,
@@ -972,8 +896,15 @@ async function renderBonusPreviewHtml(args: {
     campaignThemeId: args.campaignThemeId,
     campaignBrand: args.campaignBrand,
   })
-  const { html } = await buildBonusEmailBody(args.template, args.displayName, args.bonuses, theme)
-  return { html }
+  // Pass the SAME per-campaign values the send substitutes (preview == send).
+  const { html } = await buildBonusEmailBody(
+    args.template,
+    args.displayName,
+    args.bonuses,
+    theme,
+    args.templateValues,
+  )
+  return html
 }
 
 /**
@@ -981,20 +912,47 @@ async function renderBonusPreviewHtml(args: {
  * campaign editor's "Podgląd e-mail" tab. Gated on bonus_funnel.campaigns (the
  * route map does NOT protect createServerFn); tenant-scoped via assertCampaignOwned
  * + explicit tenant filters. Reuses the send path's shared theme + body mechanism
- * and the shared template precedence so the preview cannot drift from ingest.
+ * so the preview cannot drift from ingest. When NO template is selected the
+ * campaign sends NO email (product decision 2026-07-15) → returns `no-template`
+ * WITHOUT any theme/bonus/render work; when one IS selected it renders that
+ * template (or the hardcoded builder when it is broken/deleted).
+ *
+ * `themeOverride` (optional) is the IN-FLIGHT (unsaved) campaign theme tier from
+ * the editor — when present the CAMPAIGN tier resolves from it (themeId / brand)
+ * instead of the persisted `campaign.campaignThemeId` / `campaignBrand`, so the
+ * preview reflects a picked-but-not-saved theme WITHOUT any DB write (approach B).
+ * Client + tenant tiers ALWAYS come from the DB. The override themeId flows into
+ * resolveVentureSendTheme → fetchThemeTokens, whose so_themes read is tenant-scoped
+ * by RLS under this cookie client — a foreign-tenant id resolves to no tokens →
+ * the inherit fallback, so it cannot leak another tenant's theme.
  */
 export function renderCampaignBonusEmailPreviewHandler(
   campaignId: string,
+  themeOverride?: CampaignThemeOverride,
 ): Promise<MutationResult<CampaignBonusEmailPreview>> {
   return toMutation(
     gated(PERM.campaigns, (auth) =>
       assertCampaignOwned(auth, campaignId).andThen(() =>
-        fetchCampaignPreviewRow(auth, campaignId).andThen((campaign) =>
-          fetchClientThemeTier(auth, campaign.clientId).andThen((client) =>
+        fetchCampaignPreviewRow(auth, campaignId).andThen((campaign) => {
+          const templateId = campaign.campaignTemplateId
+          // No selection → NO email is sent → nothing to preview (skip all reads).
+          // Theme (persisted OR override) is irrelevant here — short-circuit first.
+          if (templateId === null) {
+            return okAsync<CampaignBonusEmailPreview, string>({ kind: 'no-template' })
+          }
+          // In-flight override wins for the CAMPAIGN tier; else the persisted campaign
+          // theme. Client + tenant tiers stay from the DB either way.
+          const campaignThemeId = themeOverride ? themeOverride.themeId : campaign.campaignThemeId
+          const campaignBrand = themeOverride
+            ? (themeOverride.brand as Json | null)
+            : campaign.campaignBrand
+          return fetchClientThemeTier(auth, campaign.clientId).andThen((client) =>
             fetchTenantThemeTier(auth).andThen((tenant) =>
               ResultAsync.combine([
                 fetchPublishedBonusesForPreview(auth, campaignId),
-                resolveEffectiveBonusTemplateRow(auth, campaign.campaignTemplateId),
+                // Selected id → read by id; a broken/deleted row degrades to null →
+                // the render below uses the hardcoded builder (selected-but-broken).
+                readBonusTemplateRowById(auth, templateId),
               ]).andThen(([bonuses, template]) =>
                 ResultAsync.fromPromise(
                   renderBonusPreviewHtml({
@@ -1002,17 +960,18 @@ export function renderCampaignBonusEmailPreviewHandler(
                     displayName: campaign.displayName,
                     tenant,
                     client,
-                    campaignThemeId: campaign.campaignThemeId,
-                    campaignBrand: campaign.campaignBrand,
+                    campaignThemeId,
+                    campaignBrand,
                     bonuses,
                     template,
+                    templateValues: campaign.templateValues,
                   }),
                   dbError,
-                ),
+                ).map((html) => ({ kind: 'render', html }) as CampaignBonusEmailPreview),
               ),
             ),
-          ),
-        ),
+          )
+        }),
       ),
     ),
   )
@@ -1038,36 +997,15 @@ export interface BonusTemplateOption {
 }
 
 /**
- * A template is "bonus-capable" when its `blocks` is an array containing a `text`
- * block whose trimmed `content` equals the structural `{{bonus_list}}` marker —
- * the same predicate the send-path splicer (`isMarkerBlock`) uses. The marker
- * constant is imported from the builder so this check cannot drift from it.
- */
-function hasBonusListMarker(blocks: unknown): boolean {
-  if (!Array.isArray(blocks)) return false
-  return blocks.some((b) => {
-    const block = b as { type?: unknown; content?: unknown; children?: unknown }
-    // Rekurencja w `section.children` — parytet ze splicerem send-patha
-    // (`spliceBonusList`), który podmienia marker także wewnątrz sekcji.
-    // Dzieci columns celowo NIE są skanowane (zachowanie sprzed sekcji bez
-    // zmian — splicer też ich nie przeszukuje).
-    if (block.type === 'section') return hasBonusListMarker(block.children)
-    return (
-      block.type === 'text' &&
-      typeof block.content === 'string' &&
-      block.content.trim() === BONUS_LIST_MARKER
-    )
-  })
-}
-
-/**
- * List the caller-tenant's BONUS-CAPABLE templates for the campaign dropdown
- * (model B: a campaign may select ANY template that carries the `{{bonus_list}}`
- * marker, not only the `venture_bonus` slug). Fetches the tenant's templates and
- * filters IN JS on the marker predicate (a JSONB array-contains that PostgREST
- * cannot express as a static eq filter). Gated on `bonus_funnel.campaigns` (the
- * reader is the campaign editor; the route map does NOT gate createServerFn).
- * Tenant-scoped via the RLS/cookie client + explicit tenant_id filter.
+ * List ALL the caller-tenant's email templates for the campaign dropdown
+ * (model B: a campaign may select ANY tenant-owned template). We no longer
+ * filter on the `{{bonus_list}}` marker — bonus links are moving to per-campaign
+ * template variables, so restricting the dropdown to marker-bearing templates
+ * would hide most of a tenant's templates. Only `workflow_custom` is excluded
+ * (internal n8n templates, and the ONE non-unique-per-tenant type — see below).
+ * Gated on `bonus_funnel.campaigns` (the reader is the campaign editor; the
+ * route map does NOT gate createServerFn). Tenant-scoped via the RLS/cookie
+ * client + explicit tenant_id filter.
  */
 export function listBonusTemplatesHandler(): Promise<
   MutationResult<BonusTemplateOption[]>
@@ -1076,7 +1014,7 @@ export function listBonusTemplatesHandler(): Promise<
     gated(PERM.campaigns, (auth) =>
       ResultAsync.fromPromise(
         tbl(auth, 'email_templates')
-          .select('id, label, type, blocks')
+          .select('id, label, type')
           .eq('tenant_id', auth.tenantId)
           // EXCLUDE workflow_custom — it is the ONE non-unique-per-tenant type, but
           // the picker's "Edytuj szablon" deep-link is TYPE-keyed
@@ -1092,15 +1030,16 @@ export function listBonusTemplatesHandler(): Promise<
             id: string
             label: string | null
             type: string
-            blocks: unknown
           }> | null
           error: DbErrorShape
         }
         if (r.error) return err(mapDbError(r.error, 'listBonusTemplates'))
         return ok(
-          (r.data ?? [])
-            .filter((t) => hasBonusListMarker(t.blocks))
-            .map((t) => ({ id: t.id, label: t.label ?? t.type, type: t.type })),
+          (r.data ?? []).map((t) => ({
+            id: t.id,
+            label: t.label ?? t.type,
+            type: t.type,
+          })),
         )
       }),
     ),
@@ -1148,8 +1087,8 @@ function assertVentureTemplateOwnedIfPresent(
  *       when foreign/absent;
  *   (c) then UPDATE so_campaigns.email_template_id scoped by campaign id.
  * A cross-tenant forged campaign id OR template id is therefore impossible to
- * assign — independent of the send path's own F3 guard. NULL clears → the send
- * falls back to the tenant default, then the hardcoded builder (INV-4 / INV-1).
+ * assign — independent of the send path's own F3 guard. NULL clears the selection
+ * → the campaign then sends NO bonus email (product decision 2026-07-15).
  */
 export function selectTemplateForCampaignHandler(
   campaignId: string,
@@ -1167,6 +1106,169 @@ export function selectTemplateForCampaignHandler(
             dbError,
           ).andThen(fromSupabaseVoidSafe('selectTemplateForCampaign')),
         ),
+    ),
+  )
+}
+
+// ===========================================================================
+// Per-campaign template variable values (Iter 3b)
+//
+// Below the campaign's email-template picker the operator fills a literal value
+// per template variable, saved per campaign in so_campaigns.template_variable_values
+// (JSONB, flat { templateTokenKey: literalValue }). The FILLABLE fields are derived
+// from the SELECTED template (so_campaigns.email_template_id). With NO template
+// selected NO email is sent (product decision 2026-07-15) → there are no fillable
+// fields; a template selected but broken/deleted also yields no fields (the send's
+// hardcoded-builder safety net has no user variables). Any previously-saved values
+// are still returned in every case.
+// ===========================================================================
+
+/** What the campaign template-variable editor consumes: the fillable fields + saved values. */
+export interface CampaignTemplateVariables {
+  fields: TemplateVariableField[]
+  /** The campaign's persisted { templateTokenKey: literalValue } map (default {}). */
+  values: Record<string, string>
+}
+
+/** The campaign fields the variable editor needs: owning client, effective template id, saved values. */
+interface CampaignVariablesRow {
+  clientId: string
+  campaignTemplateId: string | null
+  savedValues: Record<string, string>
+}
+
+function fetchCampaignForVariables(
+  auth: AuthContextFull,
+  campaignId: string,
+): ResultAsync<CampaignVariablesRow, string> {
+  return ResultAsync.fromPromise(
+    tbl(auth, 'so_campaigns')
+      .select('client_id, email_template_id, template_variable_values')
+      .eq('id', campaignId)
+      .maybeSingle(),
+    dbError,
+  ).andThen((res) => {
+    const r = res as {
+      data: {
+        client_id: string
+        email_template_id: string | null
+        template_variable_values: unknown
+      } | null
+      error: DbErrorShape
+    }
+    if (r.error) return err(mapDbError(r.error, 'fetchCampaignForVariables'))
+    if (!r.data) return err(messages.common.noPermission)
+    return ok<CampaignVariablesRow, string>({
+      clientId: r.data.client_id,
+      campaignTemplateId: r.data.email_template_id,
+      savedValues: coerceStringRecord(r.data.template_variable_values),
+    })
+  })
+}
+
+// The effective template's variable SOURCE — declared variables + the body the
+// extraction fallback scans. Tenant-scoped by id (the id already came from the
+// tenant-scoped resolution, this read is defence-in-depth). Null when the row
+// vanished between resolution and read (treated as "no fields").
+interface TemplateVariableSource {
+  subject: string
+  blocks: Block[]
+  templateVariables: unknown
+}
+
+function readTemplateVariableSource(
+  auth: AuthContextFull,
+  templateId: string,
+): ResultAsync<TemplateVariableSource | null, string> {
+  return ResultAsync.fromPromise(
+    tbl(auth, 'email_templates')
+      .select('subject, blocks, template_variables')
+      .eq('id', templateId)
+      .eq('tenant_id', auth.tenantId)
+      .maybeSingle(),
+    dbError,
+  ).andThen((res) => {
+    const r = res as {
+      data: { subject: string | null; blocks: unknown; template_variables: unknown } | null
+      error: DbErrorShape
+    }
+    if (r.error) return err(mapDbError(r.error, 'readTemplateVariableSource'))
+    if (!r.data) return ok<TemplateVariableSource | null, string>(null)
+    return ok<TemplateVariableSource | null, string>({
+      subject: r.data.subject ?? '',
+      blocks: Array.isArray(r.data.blocks) ? (r.data.blocks as Block[]) : [],
+      templateVariables: r.data.template_variables,
+    })
+  })
+}
+
+/**
+ * Resolve the fillable variable fields for a campaign's EFFECTIVE template plus
+ * the campaign's currently-saved values. Gated on `bonus_funnel.campaigns` (the
+ * route map does NOT protect createServerFn — this is the server-side gate).
+ * Tenant-scoped: the campaign → client chain is verified owned before any read.
+ */
+export function getCampaignTemplateVariablesHandler(
+  campaignId: string,
+): Promise<MutationResult<CampaignTemplateVariables>> {
+  return toMutation(
+    gated(PERM.campaigns, (auth) =>
+      fetchCampaignForVariables(auth, campaignId).andThen(
+        ({ clientId, campaignTemplateId, savedValues }) =>
+          assertClientOwned(auth, clientId).andThen(() =>
+            // No template selected → NO email is sent → no fillable fields (product
+            // decision 2026-07-15). Saved values are still returned. When a template
+            // IS selected, read it by id; a broken/deleted row (choice === null)
+            // yields no fields too — the hardcoded-builder safety net has no user
+            // variables, matching the send path.
+            campaignTemplateId === null
+              ? okAsync<CampaignTemplateVariables, string>({ fields: [], values: savedValues })
+              : // Single read of the selected row (blocks + subject + template_variables),
+                // tenant-scoped by id. Usability is derived from the SAME blocks via
+                // isUsableTemplateBlocks — a missing row OR unusable blocks (broken/
+                // deleted, or the hardcoded-builder fall-through) yields no fields; a
+                // usable row yields declared-first fields. Saved values are always
+                // returned. (Replaces the prior readVentureTemplateChoiceById +
+                // readTemplateVariableSource double round-trip to the same row.)
+                readTemplateVariableSource(auth, campaignTemplateId).map((src) => ({
+                  fields:
+                    src && isUsableTemplateBlocks(src.blocks)
+                      ? resolveTemplateVariableFields({
+                          templateVariables: parseTemplateVariables(src.templateVariables),
+                          subject: src.subject,
+                          blocks: src.blocks,
+                        })
+                      : [],
+                  values: savedValues,
+                })),
+          ),
+      ),
+    ),
+  )
+}
+
+/**
+ * Persist a campaign's per-variable literal values (Iter 3b). Gated on
+ * `bonus_funnel.campaigns` + assertCampaignOwned (campaign → client → tenant walk;
+ * so_campaigns has no tenant_id, so the FK-chain walk IS the tenant scope —
+ * mirrors selectTemplateForCampaignHandler). `values` is a flat string map; the
+ * JSONB column is written directly (the `tbl` accessor is untyped, so no inline
+ * `as Json` cast is needed at the call site — the centralised untyped boundary).
+ */
+export function saveCampaignTemplateVariablesHandler(
+  campaignId: string,
+  values: Record<string, string>,
+): Promise<VoidResult> {
+  return toVoid(
+    gated(PERM.campaigns, (auth) =>
+      assertCampaignOwned(auth, campaignId).andThen(() =>
+        ResultAsync.fromPromise(
+          tbl(auth, 'so_campaigns')
+            .update({ template_variable_values: values })
+            .eq('id', campaignId),
+          dbError,
+        ).andThen(fromSupabaseVoidSafe('saveCampaignTemplateVariables')),
+      ),
     ),
   )
 }

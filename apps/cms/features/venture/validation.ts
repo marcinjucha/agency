@@ -107,6 +107,17 @@ export const campaignBrandSchema = z.object({
   font: z.string().nullable().optional(),
 })
 
+// --- In-flight campaign theme override (bonus-email preview only) ----------
+// The unsaved campaign theme tier the editor passes to the preview so it reflects
+// a picked-but-not-saved theme WITHOUT persisting (approach B). Mirrors the 3-way
+// card: exactly one of {themeId, brand} is populated. themeId is a library
+// so_themes FK (uuid) — reads are tenant-scoped by so_themes RLS under the
+// cookie client, so a foreign-tenant id resolves to no tokens → inherit fallback.
+export const themeOverrideSchema = z.object({
+  themeId: z.string().uuid().nullable(),
+  brand: campaignBrandSchema.nullable(),
+})
+
 // --- Campaign -------------------------------------------------------------
 
 export const createCampaignSchema = z.object({
@@ -234,13 +245,32 @@ export const listBonusesInputSchema = z.object({ campaign_id: z.string().uuid() 
 // the existing generic email-templates CRUD — no venture-specific create schema.
 
 // Assign (or clear) a campaign's explicit venture_bonus template. `templateId`
-// nullable: null CLEARS the assignment → the send falls back to the tenant
-// default, then the hardcoded builder (INV-4 precedence). The handler validates
-// a non-null id belongs to the caller's tenant BEFORE the write (F5 —
-// cross-tenant forged-id assign must be impossible).
+// nullable: null CLEARS the assignment → the campaign then sends NO bonus email
+// (product decision 2026-07-15). The handler validates a non-null id belongs to
+// the caller's tenant BEFORE the write (F5 — cross-tenant forged-id assign must be
+// impossible).
 export const selectTemplateForCampaignSchema = z.object({
   campaignId: z.string().uuid(),
   templateId: z.string().uuid().nullable(),
+})
+
+// Per-campaign literal values for the effective template's variables (Iter 3b).
+// A flat { templateTokenKey: literalValue } map persisted to
+// so_campaigns.template_variable_values (JSONB, default {}). Both key and value
+// are free-form strings — the fillable-key SET is derived server-side from the
+// effective template (getCampaignTemplateVariablesHandler); this write does NOT
+// constrain the keys (a stale key simply becomes inert), only their string shape.
+export const saveCampaignTemplateVariablesSchema = z.object({
+  campaignId: z.string().uuid(),
+  // Wire-boundary sanity guard (NOT business logic): the fillable-key SET is
+  // derived server-side; this only bounds the shape so an authenticated actor
+  // cannot stash an oversized JSONB blob on their own campaign. Keys are short
+  // token names, values are URLs / short text.
+  values: z
+    .record(z.string().max(200), z.string().max(2000))
+    .refine((rec) => Object.keys(rec).length <= 100, {
+      message: 'Too many template variable entries (max 100)',
+    }),
 })
 
 // --- Per-user client assignments (iter 3a) --------------------------------
@@ -285,6 +315,9 @@ export type UpdateBonusInput = z.infer<typeof updateBonusSchema>
 export type ReorderBonusesInput = z.infer<typeof reorderBonusesSchema>
 export type SelectTemplateForCampaignInput = z.infer<
   typeof selectTemplateForCampaignSchema
+>
+export type SaveCampaignTemplateVariablesInput = z.infer<
+  typeof saveCampaignTemplateVariablesSchema
 >
 export type SetUserClientAssignmentsInput = z.infer<
   typeof setUserClientAssignmentsSchema

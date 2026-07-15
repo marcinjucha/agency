@@ -10,12 +10,13 @@ import { buildSampleValues } from '../utils/sample-values'
 import { substituteBlockSampleTokens } from '../utils/substitute-block-tokens'
 
 describe('buildSampleValues', () => {
-  it('fills app scalars + the structural marker for an APP-OWNED type', () => {
+  it('fills app scalars for an APP-OWNED type', () => {
     const values = buildSampleValues('venture_bonus')
     // app scalar
     expect(values.companyName).toBe(messages.email.sampleCompanyName)
-    // structural marker
-    expect(values.bonus_list).toBe(messages.email.sampleBonusList)
+    // the structural marker (bonus_list) is no longer inserted via the editor,
+    // so it is not among the sample values — the token stays bracketed
+    expect(values.bonus_list).toBeUndefined()
   })
 
   it('returns {} for a non-app-owned (workflow/custom) type — nothing code-known', () => {
@@ -40,7 +41,7 @@ describe('substituteBlockSampleTokens', () => {
     expect(out.id).toBe('h1')
   })
 
-  it('fills the structural marker + an app token in text HTML, brackets the unknown', () => {
+  it('fills an app token in text HTML, brackets the unresolvable tokens', () => {
     const block: TextBlock = {
       id: 't1',
       type: 'text',
@@ -48,7 +49,8 @@ describe('substituteBlockSampleTokens', () => {
     }
     const out = substituteBlockSampleTokens(block, values) as TextBlock
     expect(out.content).toContain(messages.email.sampleCompanyName)
-    expect(out.content).toContain(messages.email.sampleBonusList)
+    // the marker is no longer a sample value — stays bracketed like any unknown
+    expect(out.content).toContain('{{bonus_list}}')
     // an unknown token is never fabricated — stays literal
     expect(out.content).toContain('{{mystery}}')
   })

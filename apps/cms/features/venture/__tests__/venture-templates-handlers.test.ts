@@ -12,8 +12,9 @@
  *
  * What MUST be correct:
  *   - each handler self-gates (route map does NOT protect createServerFn);
- *   - list returns ONLY the caller-tenant templates that carry the {{bonus_list}}
- *     marker (a marker-less template is excluded), label ?? type fallback;
+ *   - list returns ALL the caller-tenant templates (no {{bonus_list}} marker
+ *     filter — bonus links move to per-campaign variables), label ?? type
+ *     fallback, workflow_custom excluded at the query;
  *   - F5: a template id belonging to ANOTHER tenant can never be assigned;
  *   - a non-venture_bonus but owned template id IS accepted (model B — any type).
  */
@@ -45,8 +46,6 @@ const CAMPAIGN_ID = '11111111-1111-1111-1111-111111111111'
 const TEMPLATE_ID = '22222222-2222-2222-2222-222222222222'
 // bonus_funnel.campaigns covers both list + assign in model B.
 const ALL_PERMS = ['bonus_funnel.campaigns', 'system.email_templates']
-// A text block whose trimmed content is exactly the structural marker.
-const MARKER_BLOCKS = [{ id: 'm', type: 'text', content: '{{bonus_list}}' }]
 
 function setupAuth(
   tableResults: Record<string, unknown>,
@@ -89,25 +88,18 @@ describe('listBonusTemplatesHandler', () => {
     expect(from).not.toHaveBeenCalled()
   })
 
-  it('returns only tenant templates that carry the {{bonus_list}} marker (label ?? type fallback)', async () => {
+  it('returns ALL caller-tenant templates regardless of the {{bonus_list}} marker (label ?? type fallback)', async () => {
     const { chains } = setupAuth({
       email_templates: {
         data: [
-          // venture_bonus singleton default — carries the marker → included.
-          { id: TEMPLATE_ID, label: 'Domyślny', type: 'venture_bonus', blocks: MARKER_BLOCKS },
-          // another bonus-capable template (any type) → included.
-          { id: 'other', label: 'Wariant', type: 'venture_bonus', blocks: MARKER_BLOCKS },
+          // venture_bonus singleton default (carries the marker) → included.
+          { id: TEMPLATE_ID, label: 'Domyślny', type: 'venture_bonus' },
+          // another template (any type) → included.
+          { id: 'other', label: 'Wariant', type: 'venture_bonus' },
           // label null → falls back to the type slug.
-          { id: 'nolabel', label: null, type: 'venture_bonus', blocks: MARKER_BLOCKS },
-          // marker-less template → EXCLUDED.
-          {
-            id: 'plain',
-            label: 'Zwykły',
-            type: 'form_confirmation',
-            blocks: [{ id: 'x', type: 'text', content: '<p>hej</p>' }],
-          },
-          // non-array blocks → EXCLUDED (never crashes the filter).
-          { id: 'broken', label: 'Zepsuty', type: 'venture_bonus', blocks: {} },
+          { id: 'nolabel', label: null, type: 'venture_bonus' },
+          // marker-LESS template → now ALSO included (no marker filter anymore).
+          { id: 'plain', label: 'Zwykły', type: 'form_confirmation' },
         ],
         error: null,
       },
@@ -116,15 +108,16 @@ describe('listBonusTemplatesHandler', () => {
     const result = await listBonusTemplatesHandler()
 
     expect(result.success).toBe(true)
-    // Each option now carries `type` (powers the picker's editor deep-link).
+    // Every tenant template is listed; each option carries `type` (powers the
+    // picker's editor deep-link). label ?? type fallback for the null-label row.
     expect(result.data).toEqual([
       { id: TEMPLATE_ID, label: 'Domyślny', type: 'venture_bonus' },
       { id: 'other', label: 'Wariant', type: 'venture_bonus' },
       { id: 'nolabel', label: 'venture_bonus', type: 'venture_bonus' },
+      { id: 'plain', label: 'Zwykły', type: 'form_confirmation' },
     ])
-    // marker-less + malformed rows excluded.
-    expect(result.data?.some((t) => t.id === 'plain')).toBe(false)
-    expect(result.data?.some((t) => t.id === 'broken')).toBe(false)
+    // The marker-less template is no longer excluded.
+    expect(result.data?.some((t) => t.id === 'plain')).toBe(true)
     // Scoped to the caller tenant. Model B: NOT restricted to the venture_bonus type.
     expect(chains.email_templates.eq).toHaveBeenCalledWith('tenant_id', TENANT)
     expect(chains.email_templates.eq).not.toHaveBeenCalledWith('type', 'venture_bonus')
@@ -133,15 +126,14 @@ describe('listBonusTemplatesHandler', () => {
   // [3] workflow_custom is the ONE non-unique-per-tenant type, and the picker's
   // "Edytuj szablon" deep-link is TYPE-keyed → the editor's
   // .eq('type','workflow_custom').maybeSingle() errors on multiple rows. So
-  // workflow_custom must be excluded from the bonus-capable list AT THE QUERY, even
-  // when a workflow_custom row bears the {{bonus_list}} marker. (The exclusion is a
-  // DB .neq filter — the mock does not apply it, so we assert the filter was
-  // requested; the JS marker filter alone would NOT drop a marker-bearing row.)
-  it('excludes workflow_custom via a DB .neq filter (even a marker-bearing one)', async () => {
+  // workflow_custom must be excluded from the list AT THE QUERY. (The exclusion is
+  // a DB .neq filter — the mock does not apply it, so we assert the filter was
+  // requested.)
+  it('excludes workflow_custom via a DB .neq filter', async () => {
     const { chains } = setupAuth({
       email_templates: {
         data: [
-          { id: TEMPLATE_ID, label: 'Domyślny', type: 'venture_bonus', blocks: MARKER_BLOCKS },
+          { id: TEMPLATE_ID, label: 'Domyślny', type: 'venture_bonus' },
         ],
         error: null,
       },

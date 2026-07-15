@@ -116,7 +116,7 @@ describe('POST /api/venture/leads — lead-source provider resolution', () => {
       status: 'ingested',
       leadId: 'lead-1',
       espSynced: false,
-      emailSent: false,
+      emailResult: 'skipped',
     })
 
     const rawBody = JSON.stringify({

@@ -88,29 +88,11 @@ function toEmailTemplate(raw: unknown): EmailTemplate {
 }
 
 
-/**
- * Parses raw JSONB template_variables from DB into typed TemplateVariable[].
- * Returns empty array for null / malformed data.
- *
- * `source` zwężamy do unii `'trigger' | 'manual' | undefined` — w DB mogą być
- * inne stringi (legacy / błędne wpisy), traktujemy je jak brak `source`.
- */
-export function parseTemplateVariables(raw: unknown): TemplateVariable[] {
-  if (!Array.isArray(raw)) return []
-  return raw
-    .filter((item) => item && typeof item === 'object' && typeof item.key === 'string')
-    .map((item) => ({
-      key: item.key as string,
-      label: typeof item.label === 'string' ? item.label : (item.key as string),
-      description: typeof item.description === 'string' ? item.description : undefined,
-      source:
-        item.source === 'manual'
-          ? ('manual' as const)
-          : item.source === 'trigger'
-            ? ('trigger' as const)
-            : undefined,
-    }))
-}
+// `parseTemplateVariables` moved to a pure util (utils/parse-template-variables.ts)
+// so server-side readers can import it without pulling this server module into
+// their bundle. Re-exported here to preserve the existing `../server` import site
+// (EmailTemplateEditor).
+export { parseTemplateVariables } from './utils/parse-template-variables'
 
 // ---------------------------------------------------------------------------
 // Server Functions — Preview
@@ -330,9 +312,11 @@ export interface EmailTemplateUsage {
 /**
  * Count campaigns that reference this template via
  * `so_campaigns.email_template_id` (reverse FK, ON DELETE SET NULL). Deleting the
- * template neither blocks nor cascades — it SILENTLY un-assigns every campaign
- * that selected it (each falls back to the tenant `venture_bonus` singleton) — so
- * the delete dialog must WARN the operator with this count first. Mirrors the
+ * template neither blocks nor cascades — it SILENTLY sets each referencing
+ * campaign's `email_template_id` to NULL, which means those campaigns revert to
+ * "no template selected = no bonus email sent" (product decision 2026-07-15 — there
+ * is no implicit tenant-default fallback). So the delete dialog must WARN the
+ * operator with this count first. Mirrors the
  * `so_themes` app-level delete-guard counters (`getThemeReferences` /
  * `getThemeUsage` in features/themes/server.ts) required by the memory rule
  * "every new FK to a delete-guarded reference table must be wired into its usage

@@ -7,34 +7,32 @@ import {
   type ThemeColorMap,
 } from '@agency/email'
 import type { ResolvedTheme } from '@/lib/theme'
-import { VENTURE_BONUS_MARKER, type VentureBonusAppKey } from '@/lib/app-sent-variables'
-import {
-  buildBonusListBlock,
-  type BonusEmail,
-  type BonusEmailBonus,
-} from './bonus-email'
+import type { VentureBonusAppKey } from '@/lib/app-sent-variables'
+import type { BonusEmail } from './bonus-email'
 
 // ---------------------------------------------------------------------------
-// Venture bonus-funnel — HYBRID template builder (Phase 3).
+// Venture bonus-funnel — themed template builder (Phase 3 → Iter 4b).
 //
-// The SURROUNDING COPY of the bonus email (header / heading / intro / inbox-note
-// / footer) lives as an editable, themed `email_templates` row (type slug
-// `venture_bonus`). The DYNAMIC bonus LIST stays rendered PROGRAMMATICALLY from
-// the campaign's published bonuses (no fixed slots, no count cap) and is spliced
-// into the template's copy blocks at send.
+// The bonus email's copy (header / heading / intro / CTA / footer) lives as an
+// editable, themed `email_templates` row. The template path renders the authored
+// blocks AS-IS — there is NO programmatic bonus-list injection here anymore. As
+// of Iter 3 the bonus links are supplied through per-campaign template variables
+// (so_campaigns.template_variable_values), so the operator places a `{{token}}`
+// wherever a link belongs; the marker-splice mechanism was removed in Iter 4b.
+// A LEGACY template still carrying a literal `{{bonus_list}}` text block now
+// leaves that token unresolved → it is stripped by `stripResidualTokens` (the
+// intended migration — no special-casing). The PROGRAMMATIC list survives ONLY
+// on the hardcoded fallback builder (`bonus-email.ts`), the no-template path.
 //
 // Two disjoint, sequenced namespaces (docs/EMAIL_TEMPLATE_ARCHITECTURE.md):
-//   1. STRUCTURE — a marker block (`{{bonus_list}}`) pins WHERE the programmatic
-//      list is spliced. Consumed by THIS builder (block replacement), NOT by
-//      substituteTokens.
-//   2. THEME — resolved campaign→client→tenant per send (client-theming, iter E2)
-//      and applied here as inline literal hex by block role — so the template
-//      render is themed IDENTICALLY to the hardcoded builder. The template's own
+//   1. THEME — resolved campaign→client→tenant per send (client-theming, iter E2)
+//      and applied here as inline literal hex by block role. The template's own
 //      `theme_id` (Phase-1 per-template theme) is DELIBERATELY IGNORED on the
 //      venture path: the dynamically-resolved per-campaign theme must win so
 //      client-theming is preserved with zero regression.
-//   3. COPY VARIABLES — scalar `{{companyName}}` etc., substituted at SEND on the
-//      rendered HTML via `substituteTokens` (escape-first, n8n-parity).
+//   2. COPY VARIABLES — scalar `{{companyName}}` + per-campaign literals,
+//      substituted at SEND on the rendered HTML via `substituteTokens`
+//      (escape-first, n8n-parity).
 //
 // PURE + I/O-free (`buildBonusEmailFromTemplate`) for unit tests; the async
 // wrapper (`buildBonusEmailFromTemplateHtml`) adds render + substitution. The DB
@@ -42,14 +40,6 @@ import {
 // `ingest.server.ts` (`sendBonusEmail`) — a missing/broken template must NEVER
 // fail or degrade a live lead send.
 // ---------------------------------------------------------------------------
-
-/**
- * The structural marker. A `text` block whose trimmed `content` equals this
- * token marks the exact splice position for the programmatic bonus list. Pins
- * the position regardless of surrounding-block reordering; survives edits in the
- * Phase-1 editor (it's an ordinary text block — no venture-specific block type).
- */
-export const BONUS_LIST_MARKER = VENTURE_BONUS_MARKER
 
 /**
  * Copy variables the surrounding blocks may reference. Derived from the canonical
@@ -61,37 +51,48 @@ export type BonusTemplateValues = Record<VentureBonusAppKey, string>
 export interface BonusTemplateInput {
   /** The copy blocks from `email_templates.blocks` (JSONB) — themeless + tokenised. */
   templateBlocks: Block[]
-  bonuses: BonusEmailBonus[]
   theme: ResolvedTheme
-}
-
-function isMarkerBlock(block: Block): boolean {
-  return block.type === 'text' && block.content.trim() === BONUS_LIST_MARKER
 }
 
 /**
  * NO-LEAK backstop (INV-3). `venture_bonus` is APP-OWNED: the send path fills
- * exactly the app keys (`companyName`) plus the STRUCTURAL `{{bonus_list}}`
- * marker (spliced in as a block, never token-substituted). Therefore any
- * `{{token}}` still present in the FINAL HTML after substitution is GUARANTEED
- * unfillable — a stray author token, a mis-bound key, or a mis-formatted
- * `{{bonus_list}}` that escaped block-splicing (e.g. `<p>{{bonus_list}}</p>`) —
- * and must NOT reach the recipient (a seeded literal `{{firstName}}` once leaked
- * into a live send, 2026-07-14). Strip every residual `{{ token }}`, plus a
- * now-empty wrapping `<p>`. Pure.
+ * exactly the app keys (`companyName`) plus the per-campaign template variables.
+ * Therefore any `{{token}}` still present in the FINAL HTML after substitution is
+ * GUARANTEED unfillable — a stray author token, a mis-bound key, or a legacy
+ * `{{bonus_list}}` marker (no longer spliced; left unresolved by design) — and
+ * must NOT reach the recipient (a seeded literal `{{firstName}}` once leaked into
+ * a live send, 2026-07-14). Strip every residual `{{ token }}`, plus a now-empty
+ * wrapping `<p>`. Pure.
  *
  * This is app-owned-path behaviour ONLY (deliberately UNLIKE the n8n-sent path,
  * where an unresolved token stays literal so a mis-binding is detectable): here
  * resolvability is code-knowable, so an unresolved token is always a defect.
  *
- * No-op — hence BYTE-IDENTICAL — for the seeded static copy, whose only token
- * `{{companyName}}` is always filled and whose `{{bonus_list}}` marker is spliced
- * out before this runs → zero residual tokens → nothing to strip.
+ * No-op for copy whose tokens are all filled (e.g. `{{companyName}}`) and which
+ * carries no legacy marker → zero residual tokens → nothing to strip.
  */
+
+/**
+ * The bare residual-token pattern shared by the HTML and plaintext strippers so
+ * they cannot drift. Mirrors `@agency/email`'s `TOKEN_PATTERN` grammar (padded +
+ * dotted keys). A global regex resets `lastIndex` on every `.replace` call, so
+ * sharing this module-level constant across strip sites is stateless and safe.
+ */
+const RESIDUAL_TOKEN = /\{\{\s*[\w.]+\s*\}\}/g
+
 function stripResidualTokens(html: string): string {
-  return html
-    .replace(/<p>\s*\{\{\s*[\w.]+\s*\}\}\s*<\/p>/g, '')
-    .replace(/\{\{\s*[\w.]+\s*\}\}/g, '')
+  return html.replace(/<p>\s*\{\{\s*[\w.]+\s*\}\}\s*<\/p>/g, '').replace(RESIDUAL_TOKEN, '')
+}
+
+/**
+ * Plaintext residual-token strip for the SUBJECT (INV-3). Same no-leak guarantee
+ * as `stripResidualTokens` but WITHOUT the `<p>`-wrapper rule — a subject is
+ * plaintext, not HTML. An unfilled subject token (e.g. a seeded default
+ * `{{firstName}}` that no send context supplies) is unfillable by construction on
+ * this app-owned path and must NOT ship literally in the inbox subject line.
+ */
+function stripResidualTokensPlain(text: string): string {
+  return text.replace(RESIDUAL_TOKEN, '')
 }
 
 /**
@@ -128,61 +129,12 @@ function applyThemeToCopyBlock(block: Block, theme: ResolvedTheme): Block {
 }
 
 /**
- * Splice the programmatic list into the copy blocks. The list REPLACES the
- * marker block in place (exact position). If the author removed the marker, the
- * list is inserted before the first `footer` block, else appended — so the list
- * is NEVER dropped whatever the author did to the template.
- */
-function spliceBonusList(blocks: Block[], listBlock: Block): Block[] {
-  const { blocks: spliced, found } = spliceMarkerDeep(blocks, listBlock)
-  if (found) return spliced
-  const footerIndex = blocks.findIndex((b) => b.type === 'footer')
-  if (footerIndex !== -1) {
-    return [...blocks.slice(0, footerIndex), listBlock, ...blocks.slice(footerIndex)]
-  }
-  return [...blocks, listBlock]
-}
-
-/**
- * Podmienia PIERWSZY marker na listę (przeszukiwanie current-level-first:
- * najpierw wszyscy bracia na danym poziomie, dopiero potem zejście w głąb) —
- * także wewnątrz
- * `section.children` (edytor Iter 2 pozwoli wstawić marker do sekcji-karty;
- * detekcja capability `hasBonusListMarker` widzi go tam, więc splice też musi —
- * inaczej karta obiecywałaby listę, a wysyłka doklejałaby ją przed stopką).
- * Dzieci columns celowo NIE są przeszukiwane (parytet z detekcją; zachowanie
- * sprzed sekcji bez zmian). Fallback footer/append zostaje na najwyższym poziomie.
- */
-function spliceMarkerDeep(
-  blocks: Block[],
-  listBlock: Block,
-): { blocks: Block[]; found: boolean } {
-  const markerIndex = blocks.findIndex(isMarkerBlock)
-  if (markerIndex !== -1) {
-    return {
-      blocks: [...blocks.slice(0, markerIndex), listBlock, ...blocks.slice(markerIndex + 1)],
-      found: true,
-    }
-  }
-  let found = false
-  const next = blocks.map((block) => {
-    if (found || block.type !== 'section') return block
-    const result = spliceMarkerDeep(block.children as Block[], listBlock)
-    if (!result.found) return block
-    found = true
-    return { ...block, children: result.blocks as typeof block.children }
-  })
-  return found ? { blocks: next, found: true } : { blocks, found: false }
-}
-
-/**
- * PURE — theme the copy blocks + splice the programmatic list. No I/O, no token
+ * PURE — theme the authored copy blocks by role, AS-IS (no bonus-list splice; the
+ * bonus links come from per-campaign template variables now). No I/O, no token
  * substitution (that happens on the rendered HTML). Returns the final `Block[]`.
  */
 export function buildBonusEmailFromTemplate(input: BonusTemplateInput): Block[] {
-  const listBlock = buildBonusListBlock(input.bonuses, input.theme)
-  const themed = input.templateBlocks.map((b) => applyThemeToCopyBlock(b, input.theme))
-  return spliceBonusList(themed, listBlock)
+  return input.templateBlocks.map((b) => applyThemeToCopyBlock(b, input.theme))
 }
 
 /**
@@ -193,28 +145,52 @@ export function buildBonusEmailFromTemplate(input: BonusTemplateInput): Block[] 
  * shares its `{{token}}` regex with `substituteTokens`, so the subject and body
  * paths cannot drift on the token grammar. Missing key left literal.
  */
-function substituteSubject(subject: string, values: BonusTemplateValues): string {
-  return substitutePlain(subject, values as unknown as Record<string, string>)
+function substituteSubject(subject: string, values: Record<string, string>): string {
+  return substitutePlain(subject, values)
+}
+
+/**
+ * Drop empty-string entries from a per-campaign value map (Iter 3c). WHY: the
+ * merged substitution map is `{ ...appAuto, ...nonEmpty(templateValues) }` — an
+ * EMPTY campaign value for a key that app-auto fills (e.g. `companyName`) must
+ * NOT clobber the resolved app value with a blank. Only non-empty overrides win;
+ * an absent/blank campaign value falls back to the app-auto value. Pure.
+ */
+function nonEmpty(values: Record<string, string>): Record<string, string> {
+  const out: Record<string, string> = {}
+  for (const [key, value] of Object.entries(values)) {
+    if (value !== '') out[key] = value
+  }
+  return out
 }
 
 export interface BonusTemplateRenderInput extends BonusTemplateInput {
   subjectTemplate: string
+  /**
+   * The app-auto values the CMS send path always supplies (currently
+   * `{ companyName }`). The base of the substitution map — overridden per-key by
+   * non-empty `templateValues`.
+   */
   values: BonusTemplateValues
+  /**
+   * Per-campaign literal variable values (Iter 3c;
+   * `so_campaigns.template_variable_values`). MERGED OVER `values` with empty
+   * entries dropped, so an empty campaign value never clobbers an app-auto one.
+   * Defaults to `{}` — omitting it keeps the seeded no-variable render
+   * BYTE-IDENTICAL to the pre-3c output.
+   */
+  templateValues?: Record<string, string>
 }
 
 /**
- * Build subject + rendered HTML from the stored template. Renders the themed,
- * list-spliced blocks, then substitutes copy `{{tokens}}` on the HTML
+ * Build subject + rendered HTML from the stored template. Renders the themed
+ * authored blocks AS-IS, then substitutes copy `{{tokens}}` on the HTML
  * (escape-first, n8n-parity). Subject uses plaintext substitution.
  *
- * BYTE-IDENTICAL scope (regression guard): the hybrid render equals the
- * hardcoded builder BYTE-FOR-BYTE only for the seeded static copy, whose brand
- * fixture ("Kacper Launch") has no ' or ". A runtime brand containing ' or " is
- * substituted HERE via `substituteTokens` (escapeHtml → `'`=`&#39;`) whereas the
- * hardcoded builder emits the brand through React JSX (`'`=`&#x27;`). Both ESCAPE
- * the quote (semantically equivalent — no raw quote can break an attribute), but
- * the entity FORM differs, so those cases are asserted for semantic equivalence,
- * not byte equality.
+ * Escaping note: a runtime brand containing `'` or `"` is substituted HERE via
+ * `substituteTokens` (escapeHtml → `'`=`&#39;`), semantically equivalent to (but
+ * not byte-identical with) the hardcoded builder's React-JSX escaping
+ * (`'`=`&#x27;`). Both ESCAPE the quote — no raw quote can break an attribute.
  */
 export async function buildBonusEmailFromTemplateHtml(
   input: BonusTemplateRenderInput,
@@ -231,19 +207,30 @@ export async function buildBonusEmailFromTemplateHtml(
   // seeded raw-hex/token-free venture_bonus template stays BYTE-IDENTICAL.
   const themeMap: ThemeColorMap = { ...input.theme }
   const rendered = await renderEmailBlocks(blocks, themeMap)
-  const substituted = substituteTokens(rendered, input.values as unknown as Record<string, string>)
-  // Belt-and-suspenders: scheme-guard every href/src in the FINAL HTML. The bonus
-  // LIST href already goes through `safeUrlValue` directly (`buildBonusListBlock`),
-  // but an editable copy-template block could carry a dangerous href that blind
-  // token substitution can't see — sanitize the whole rendered body. No-op (and
-  // byte-identical) when no dangerous scheme is present, which is the case for the
-  // seeded static copy → the byte-identical regression guard still holds.
+  // Iter 3c precedence: app-auto values (companyName) as the BASE, per-campaign
+  // literal values merged OVER them with empty entries dropped (nonEmpty) — so a
+  // campaign override wins for any key it fills, but a blank campaign value never
+  // clobbers the resolved app-auto value. Empty/absent templateValues → merged
+  // map == input.values → the seeded no-variable render stays BYTE-IDENTICAL.
+  // The SAME merged map feeds BOTH the HTML body AND the subject, so a subject
+  // token like {{firstName}} resolves from the campaign values too.
+  const values: Record<string, string> = {
+    ...(input.values as unknown as Record<string, string>),
+    ...nonEmpty(input.templateValues ?? {}),
+  }
+  const substituted = substituteTokens(rendered, values)
+  // Belt-and-suspenders: scheme-guard every href/src in the FINAL HTML. An
+  // editable copy-template block (or a per-campaign variable value) could carry a
+  // dangerous href that blind token substitution can't see — sanitize the whole
+  // rendered body. No-op when no dangerous scheme is present.
   const sanitized = sanitizeHtmlUrls(substituted)
   // NO-LEAK backstop (INV-3): AFTER substitution, strip any residual `{{token}}`.
-  // Runs on the final HTML so it also catches a `{{bonus_list}}` that escaped
-  // block-splicing (mis-formatted marker). No-op for the seeded copy →
-  // byte-identical guard preserved.
+  // Runs on the final HTML so it also strips a legacy `{{bonus_list}}` marker (no
+  // longer spliced — left unresolved by design). No-op when every token is filled.
   const html = stripResidualTokens(sanitized)
-  const subject = substituteSubject(input.subjectTemplate, input.values)
+  // NO-LEAK backstop (INV-3), subject edition: after plaintext substitution, strip
+  // any residual `{{token}}` so an unfilled subject token (e.g. a seeded default
+  // `{{firstName}}`) never ships literally in the inbox subject line.
+  const subject = stripResidualTokensPlain(substituteSubject(input.subjectTemplate, values))
   return { subject, html }
 }

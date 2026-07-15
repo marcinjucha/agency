@@ -29,6 +29,7 @@ export const messages = {
     draft: 'Szkic',
     unpublish: 'Cofnij publikację',
     copyLink: 'Kopiuj link',
+    copyFailed: 'Nie udało się skopiować',
     change: 'Zmień',
     insert: 'Wstaw',
     done: 'Gotowe',
@@ -239,23 +240,22 @@ export const messages = {
     effectiveThemeRowLabel: 'Wygląd',
     effectiveThemeCrossRef: 'Motyw ustawiasz w sekcji „Wygląd kampanii” powyżej.',
     effectiveTemplateRowLabel: 'Szablon',
-    effectiveTemplateSends: 'wysyła szablon:',
     effectiveTemplateEditLink: 'Otwórz edytor szablonu',
-    effectiveTemplateMissingNote:
-      'Brak własnego szablonu — użyty zostanie wbudowany układ.',
-    // Resolved template row (the template the send would ACTUALLY pick) + picker card.
-    effectiveResolvedTemplateRowLabel: 'Aktywny szablon',
-    effectiveResolvedTemplateBuiltin: 'Wbudowany układ (brak szablonu)',
+    // Template-state copy for the card AND the preview (product decision 2026-07-15):
+    // no selection → NO email is sent; a selected-but-broken template falls back to
+    // the built-in layout (the send's safety net).
+    noTemplateNoSend: 'Wiadomość nie zostanie wysłana (brak wybranego szablonu).',
+    effectiveTemplateBuiltinNote:
+      'Wybrany szablon jest niedostępny — użyty zostanie wbudowany układ.',
     // --- Bonus email preview ("Podgląd e-mail" tab — the REAL rendered send) ---
     bonusEmailPreviewFrameTitle: 'Podgląd e-maila bonusowego',
     bonusEmailPreviewLoading: 'Generowanie podglądu…',
     bonusEmailPreviewError: 'Nie udało się wczytać podglądu e-maila',
-    bonusEmailPreviewEmpty: 'Podgląd pojawi się po zapisaniu treści kampanii.',
     bonusTemplateCardTitle: 'Szablon e-maila bonusowego',
     bonusTemplateEmptyHint:
-      'Brak szablonów z listą bonusów. Dodaj blok „Lista bonusów” w edytorze e-maili.',
-    bonusTemplatePickerWarning:
-      'Wybrany szablon nie zawiera już listy bonusów — sprawdź go w edytorze.',
+      'Brak szablonów e-maili. Utwórz szablon w edytorze e-maili, aby wybrać go tutaj.',
+    noTemplateNoSendHint: 'Bez wybranego szablonu wiadomość nie zostanie wysłana.',
+    clearTemplateSelection: 'Wyczyść szablon',
 
     // Publish/status
     publishedLabel: 'Opublikowana',
@@ -874,6 +874,7 @@ export const messages = {
     // stored `source` field (unreliable: manual-add and "Wykryj z treści" both
     // write source:'manual'). Real text labels, never colour-only (a11y).
     varSourceApp: 'z aplikacji (kampania)',
+    varSourceCampaign: 'wypełniane w kampanii',
     varSourceStructural: 'wstawiane automatycznie',
     varSourceWorkflow: 'wypełniane przez workflow',
     varSourceManual: 'ręcznie',
@@ -920,13 +921,8 @@ export const messages = {
     addBlockClear: 'Wyczyść',
     // Reusable EmailTemplatePicker (bind an email template to a surface).
     templatePickerLabel: 'Szablon e-maila',
-    templatePickerDefault: 'Domyślny',
+    templatePickerPlaceholder: 'Wybierz szablon',
     templatePickerEdit: 'Edytuj szablon',
-    // "Lista bonusów" affordance — inserts a text block pre-filled with the
-    // {{bonus_list}} marker (a shortcut, NOT a registry block type).
-    bonusListGroupLabel: 'SPECJALNE',
-    bonusListBlockLabel: 'Lista bonusów',
-    bonusListBlockDescription: 'Wstawia znacznik listy bonusów (generowanej przy wysyłce)',
     unsavedChanges: 'Niezapisane zmiany',
     canvasTitle: 'Podgląd na żywo',
     canvasSubjectLabel: 'Temat:',
@@ -948,9 +944,7 @@ export const messages = {
     // filled" signal survives.
     canvasSampleDataToggle: 'Dane przykładowe',
     sampleCompanyName: 'Twoja Firma',
-    sampleBonusList: 'Przykładowy bonus 1 · Przykładowy bonus 2',
     canvasBlockUnknown: 'Nieznany typ bloku',
-    bonusListCanvasChip: 'Lista bonusów — generowana automatycznie przy wysyłce',
     canvasMoveUp: 'Przesuń blok w górę',
     canvasMoveDown: 'Przesuń blok w dół',
     canvasDuplicate: 'Duplikuj blok',
@@ -1065,6 +1059,13 @@ export const messages = {
     inspectorSectionPaddingNone: 'Brak',
     inspectorSectionChildrenHint:
       'Bloki wewnątrz sekcji dodajesz i układasz na kanwie lub w panelu Struktura',
+    // Reusable TemplateVariablesFields — per-variable literal-value inputs shown
+    // below a template picker (fill {{token}} values for a specific surface).
+    templateVariablesTitle: 'Zmienne szablonu',
+    templateVariablesHint: 'Uzupełnij wartości, którymi podstawimy zmienne {{...}} przy wysyłce.',
+    templateVariablesEmpty: 'Ten szablon nie ma zmiennych do uzupełnienia.',
+    templateVariablesValuePlaceholder: 'Wpisz wartość…',
+    templateVariablesLoadError: 'Nie udało się wczytać zmiennych szablonu.',
   },
 
   landing: {
