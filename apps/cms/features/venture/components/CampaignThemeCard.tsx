@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { UseFormRegister, UseFormSetValue, UseFormWatch } from 'react-hook-form'
 import { useQuery } from '@tanstack/react-query'
 import { CollapsibleCard, Label, RadioGroup, RadioGroupItem } from '@agency/ui'
@@ -16,6 +16,7 @@ import { ThemePicker } from '@/features/themes/components/ThemePicker'
 import { listThemesFn } from '@/features/themes/server'
 import { ThemePreview } from '@/features/themes/components/ThemePreview'
 import type { CreateCampaignInput } from '../validation'
+import type { CampaignBrand, CampaignThemeOverride } from '../types'
 import { CampaignBrandEditor } from './CampaignBrandEditor'
 import { CampaignBonusEmailPreview } from './CampaignBonusEmailPreview'
 
@@ -86,6 +87,24 @@ export function CampaignThemeCard({
     queryKey: queryKeys.themes.all,
     queryFn: () => listThemesFn(),
   })
+
+  // In-flight (unsaved) campaign theme tier for the "Podgląd e-mail" tab — reflects
+  // the picked-but-not-saved theme WITHOUT a DB write (approach B). Debounced ~400ms
+  // so typing hex values in own-brand mode does not fire a preview request per
+  // keystroke; a discrete library-theme select settles after the same window. Keyed
+  // on a SERIALIZED brand so an in-place brand mutation (RHF register) is still
+  // detected. The re-run/unmount cleanup clears the pending timer.
+  const brandKey = JSON.stringify(brand ?? null)
+  const [themeOverride, setThemeOverride] = useState<CampaignThemeOverride>(() => ({
+    themeId,
+    brand: (brand ?? null) as CampaignBrand | null,
+  }))
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setThemeOverride({ themeId, brand: JSON.parse(brandKey) as CampaignBrand | null })
+    }, 400)
+    return () => clearTimeout(timer)
+  }, [themeId, brandKey])
 
   function selectMode(next: Mode) {
     setMode(next)
@@ -193,7 +212,9 @@ export function CampaignThemeCard({
         <ThemePreview
           tokens={previewTokens}
           emailPreviewSlot={
-            campaignId ? <CampaignBonusEmailPreview campaignId={campaignId} /> : undefined
+            campaignId ? (
+              <CampaignBonusEmailPreview campaignId={campaignId} themeOverride={themeOverride} />
+            ) : undefined
           }
         />
 

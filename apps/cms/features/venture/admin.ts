@@ -11,6 +11,7 @@ import {
   reorderBonusesSchema,
   saveCampaignTemplateVariablesSchema,
   selectTemplateForCampaignSchema,
+  themeOverrideSchema,
   updateBonusInputSchema,
   updateCampaignInputSchema,
   updateClientInputSchema,
@@ -122,15 +123,21 @@ export const getCampaignEffectiveSendFn = createServerFn({ method: 'POST' })
 // "Podgląd e-mail" tab (byte-identical to the send path). Gated in the handler
 // (bonus_funnel.campaigns + assertCampaignOwned) — the route map does NOT protect
 // createServerFn (project Authz gotcha).
+// `themeOverride` (optional) is the IN-FLIGHT (unsaved) campaign theme tier — when
+// present the preview resolves that tier instead of the persisted campaign theme,
+// WITHOUT any DB write (approach B). Absent → the persisted campaign theme (default).
 const renderCampaignBonusEmailPreviewInputSchema = z.object({
   campaignId: z.string().uuid(),
+  themeOverride: themeOverrideSchema.optional(),
 })
 
 export const renderCampaignBonusEmailPreviewFn = createServerFn({ method: 'POST' })
   .inputValidator((v: z.infer<typeof renderCampaignBonusEmailPreviewInputSchema>) =>
     renderCampaignBonusEmailPreviewInputSchema.parse(v),
   )
-  .handler(({ data }) => renderCampaignBonusEmailPreviewHandler(data.campaignId))
+  .handler(({ data }) =>
+    renderCampaignBonusEmailPreviewHandler(data.campaignId, data.themeOverride),
+  )
 
 // --- Campaign-selectable email templates (Phase 4, model B) ---------------
 

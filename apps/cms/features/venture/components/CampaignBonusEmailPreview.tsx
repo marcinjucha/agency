@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { messages } from '@/lib/messages'
 import { queryKeys } from '@/lib/query-keys'
 import { renderCampaignBonusEmailPreviewFn } from '../admin'
+import type { CampaignThemeOverride } from '../types'
 // Type-only: the discriminated union is the handler's exported return contract —
 // erased at build, so no server code reaches the client bundle. Keep it `import type`.
 import type { CampaignBonusEmailPreview as CampaignBonusEmailPreviewData } from '../admin-handlers.server'
@@ -18,18 +19,29 @@ import type { CampaignBonusEmailPreview as CampaignBonusEmailPreviewData } from 
 //
 // Needs a SAVED campaign (campaignId): the card only mounts this when a persisted
 // id exists; the unsaved/new case keeps the swatch fallback (never calls the fn).
-// Reflects the LAST SAVED campaign state — invalidated with the venture root on
-// save, exactly like the effective-send card.
+//
+// `themeOverride` (optional) is the IN-FLIGHT (unsaved) campaign theme tier from the
+// editor: when provided, the preview reflects the picked-but-not-saved theme WITHOUT
+// a DB write (approach B). Its serialization keys the query so a theme change
+// refetches; when omitted the preview shows the LAST SAVED campaign theme (key
+// `__saved__`). The query stays nested under the venture root, so `venture.all`
+// invalidation (template/variable/campaign edits) still refreshes it.
 // ---------------------------------------------------------------------------
 
 interface CampaignBonusEmailPreviewProps {
   campaignId: string
+  themeOverride?: CampaignThemeOverride
 }
 
-export function CampaignBonusEmailPreview({ campaignId }: CampaignBonusEmailPreviewProps) {
+export function CampaignBonusEmailPreview({
+  campaignId,
+  themeOverride,
+}: CampaignBonusEmailPreviewProps) {
+  // Stable, deterministic serialization of the override → the query cache key.
+  const themeKey = themeOverride ? JSON.stringify(themeOverride) : undefined
   const { data, isLoading, isError } = useQuery({
-    queryKey: queryKeys.venture.bonusEmailPreview(campaignId),
-    queryFn: () => renderCampaignBonusEmailPreviewFn({ data: { campaignId } }),
+    queryKey: queryKeys.venture.bonusEmailPreview(campaignId, themeKey),
+    queryFn: () => renderCampaignBonusEmailPreviewFn({ data: { campaignId, themeOverride } }),
   })
 
   const frame = (

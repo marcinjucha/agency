@@ -107,6 +107,17 @@ export const campaignBrandSchema = z.object({
   font: z.string().nullable().optional(),
 })
 
+// --- In-flight campaign theme override (bonus-email preview only) ----------
+// The unsaved campaign theme tier the editor passes to the preview so it reflects
+// a picked-but-not-saved theme WITHOUT persisting (approach B). Mirrors the 3-way
+// card: exactly one of {themeId, brand} is populated. themeId is a library
+// so_themes FK (uuid) — reads are tenant-scoped by so_themes RLS under the
+// cookie client, so a foreign-tenant id resolves to no tokens → inherit fallback.
+export const themeOverrideSchema = z.object({
+  themeId: z.string().uuid().nullable(),
+  brand: campaignBrandSchema.nullable(),
+})
+
 // --- Campaign -------------------------------------------------------------
 
 export const createCampaignSchema = z.object({

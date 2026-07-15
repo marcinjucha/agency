@@ -119,8 +119,11 @@ export const queryKeys = {
     // Rendered REAL bonus email for a campaign ("Podgląd e-mail" tab). Nested under
     // the venture root so a mutation invalidating `venture.all` (theme/template
     // change, campaign edit) also refreshes it — byte-identical to the send path.
-    bonusEmailPreview: (campaignId: string) =>
-      ['venture', 'bonus-email-preview', campaignId] as const,
+    // `themeKey` = a stable serialization of the in-flight (unsaved) theme override,
+    // so the query refetches when the editor changes the picked theme without a save;
+    // omitted (`__saved__`) → the persisted campaign theme.
+    bonusEmailPreview: (campaignId: string, themeKey?: string) =>
+      ['venture', 'bonus-email-preview', campaignId, themeKey ?? '__saved__'] as const,
     // Tenant-scoped list of ALL campaign-selectable email templates for the
     // campaign picker (no per-campaign input; lists all templates except
     // workflow_custom — NOT filtered by the {{bonus_list}} marker, model B).

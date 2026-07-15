@@ -263,6 +263,54 @@ describe('renderCampaignBonusEmailPreviewHandler — send parity', () => {
 })
 
 // ===========================================================================
+// In-flight (unsaved) theme override: when a themeOverride is passed, the CAMPAIGN
+// theme tier must resolve from it — NOT from the persisted campaign theme — WITHOUT
+// any DB write (approach B). Client + tenant tiers stay from the DB.
+// ===========================================================================
+describe('renderCampaignBonusEmailPreviewHandler — in-flight theme override', () => {
+  const PERSISTED_HEX = '#123456'
+  const OVERRIDE_HEX = '#f59e0b'
+
+  it('uses the override campaign theme tier over the persisted campaign theme', async () => {
+    // Persisted brand = PERSISTED_HEX; override brand = OVERRIDE_HEX. The template
+    // header is token-bound to `primary`, so the resolved primary reaches the header.
+    setupAuth(tables({ campaignBrand: { primary: PERSISTED_HEX } as Json }))
+    const result = await renderCampaignBonusEmailPreviewHandler(CAMPAIGN_ID, {
+      themeId: null,
+      brand: { primary: OVERRIDE_HEX },
+    })
+    const html = renderedHtml(result)
+    // Override tier won: its primary hex is in the header, the persisted one is gone.
+    expect(html).toContain(OVERRIDE_HEX)
+    expect(html).not.toContain(PERSISTED_HEX)
+
+    // Parity: byte-identical to the send builder driven by the OVERRIDE tier.
+    const theme = await resolveVentureSendTheme(
+      {
+        from: () => {
+          throw new Error('no theme_id reads expected')
+        },
+      },
+      {
+        tenantThemeId: null,
+        tenantTheme: null,
+        clientThemeId: null,
+        clientTheme: null,
+        campaignThemeId: null,
+        campaignBrand: { primary: OVERRIDE_HEX } as Json,
+      },
+    )
+    const expected = await buildBonusEmailBody(
+      { blocks: TEMPLATE_BLOCKS, subject: TEMPLATE_SUBJECT },
+      DISPLAY_NAME,
+      [],
+      theme,
+    )
+    expect(html).toBe(expected.html)
+  })
+})
+
+// ===========================================================================
 // Iter 3c: the preview must substitute the SAME per-campaign template variable
 // values (so_campaigns.template_variable_values) the send does — byte-identical
 // to buildBonusEmailBody's output for the same (blocks, theme, bonuses, values).

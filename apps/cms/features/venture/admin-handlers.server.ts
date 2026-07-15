@@ -16,7 +16,7 @@ import {
   toMutation,
   toVoid,
 } from './handler-base.server'
-import type { AdminCampaign, AdminClient, Bonus } from './types'
+import type { AdminCampaign, AdminClient, Bonus, CampaignThemeOverride } from './types'
 import {
   describeEffectiveSender,
   type EffectiveSender,
@@ -916,9 +916,19 @@ async function renderBonusPreviewHtml(args: {
  * campaign sends NO email (product decision 2026-07-15) → returns `no-template`
  * WITHOUT any theme/bonus/render work; when one IS selected it renders that
  * template (or the hardcoded builder when it is broken/deleted).
+ *
+ * `themeOverride` (optional) is the IN-FLIGHT (unsaved) campaign theme tier from
+ * the editor — when present the CAMPAIGN tier resolves from it (themeId / brand)
+ * instead of the persisted `campaign.campaignThemeId` / `campaignBrand`, so the
+ * preview reflects a picked-but-not-saved theme WITHOUT any DB write (approach B).
+ * Client + tenant tiers ALWAYS come from the DB. The override themeId flows into
+ * resolveVentureSendTheme → fetchThemeTokens, whose so_themes read is tenant-scoped
+ * by RLS under this cookie client — a foreign-tenant id resolves to no tokens →
+ * the inherit fallback, so it cannot leak another tenant's theme.
  */
 export function renderCampaignBonusEmailPreviewHandler(
   campaignId: string,
+  themeOverride?: CampaignThemeOverride,
 ): Promise<MutationResult<CampaignBonusEmailPreview>> {
   return toMutation(
     gated(PERM.campaigns, (auth) =>
@@ -926,9 +936,16 @@ export function renderCampaignBonusEmailPreviewHandler(
         fetchCampaignPreviewRow(auth, campaignId).andThen((campaign) => {
           const templateId = campaign.campaignTemplateId
           // No selection → NO email is sent → nothing to preview (skip all reads).
+          // Theme (persisted OR override) is irrelevant here — short-circuit first.
           if (templateId === null) {
             return okAsync<CampaignBonusEmailPreview, string>({ kind: 'no-template' })
           }
+          // In-flight override wins for the CAMPAIGN tier; else the persisted campaign
+          // theme. Client + tenant tiers stay from the DB either way.
+          const campaignThemeId = themeOverride ? themeOverride.themeId : campaign.campaignThemeId
+          const campaignBrand = themeOverride
+            ? (themeOverride.brand as Json | null)
+            : campaign.campaignBrand
           return fetchClientThemeTier(auth, campaign.clientId).andThen((client) =>
             fetchTenantThemeTier(auth).andThen((tenant) =>
               ResultAsync.combine([
@@ -943,8 +960,8 @@ export function renderCampaignBonusEmailPreviewHandler(
                     displayName: campaign.displayName,
                     tenant,
                     client,
-                    campaignThemeId: campaign.campaignThemeId,
-                    campaignBrand: campaign.campaignBrand,
+                    campaignThemeId,
+                    campaignBrand,
                     bonuses,
                     template,
                     templateValues: campaign.templateValues,
