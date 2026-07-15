@@ -193,13 +193,41 @@ export function buildBonusEmailFromTemplate(input: BonusTemplateInput): Block[] 
  * shares its `{{token}}` regex with `substituteTokens`, so the subject and body
  * paths cannot drift on the token grammar. Missing key left literal.
  */
-function substituteSubject(subject: string, values: BonusTemplateValues): string {
-  return substitutePlain(subject, values as unknown as Record<string, string>)
+function substituteSubject(subject: string, values: Record<string, string>): string {
+  return substitutePlain(subject, values)
+}
+
+/**
+ * Drop empty-string entries from a per-campaign value map (Iter 3c). WHY: the
+ * merged substitution map is `{ ...appAuto, ...nonEmpty(templateValues) }` — an
+ * EMPTY campaign value for a key that app-auto fills (e.g. `companyName`) must
+ * NOT clobber the resolved app value with a blank. Only non-empty overrides win;
+ * an absent/blank campaign value falls back to the app-auto value. Pure.
+ */
+function nonEmpty(values: Record<string, string>): Record<string, string> {
+  const out: Record<string, string> = {}
+  for (const [key, value] of Object.entries(values)) {
+    if (value !== '') out[key] = value
+  }
+  return out
 }
 
 export interface BonusTemplateRenderInput extends BonusTemplateInput {
   subjectTemplate: string
+  /**
+   * The app-auto values the CMS send path always supplies (currently
+   * `{ companyName }`). The base of the substitution map — overridden per-key by
+   * non-empty `templateValues`.
+   */
   values: BonusTemplateValues
+  /**
+   * Per-campaign literal variable values (Iter 3c;
+   * `so_campaigns.template_variable_values`). MERGED OVER `values` with empty
+   * entries dropped, so an empty campaign value never clobbers an app-auto one.
+   * Defaults to `{}` — omitting it keeps the seeded no-variable render
+   * BYTE-IDENTICAL to the pre-3c output.
+   */
+  templateValues?: Record<string, string>
 }
 
 /**
@@ -231,7 +259,18 @@ export async function buildBonusEmailFromTemplateHtml(
   // seeded raw-hex/token-free venture_bonus template stays BYTE-IDENTICAL.
   const themeMap: ThemeColorMap = { ...input.theme }
   const rendered = await renderEmailBlocks(blocks, themeMap)
-  const substituted = substituteTokens(rendered, input.values as unknown as Record<string, string>)
+  // Iter 3c precedence: app-auto values (companyName) as the BASE, per-campaign
+  // literal values merged OVER them with empty entries dropped (nonEmpty) — so a
+  // campaign override wins for any key it fills, but a blank campaign value never
+  // clobbers the resolved app-auto value. Empty/absent templateValues → merged
+  // map == input.values → the seeded no-variable render stays BYTE-IDENTICAL.
+  // The SAME merged map feeds BOTH the HTML body AND the subject, so a subject
+  // token like {{firstName}} resolves from the campaign values too.
+  const values: Record<string, string> = {
+    ...(input.values as unknown as Record<string, string>),
+    ...nonEmpty(input.templateValues ?? {}),
+  }
+  const substituted = substituteTokens(rendered, values)
   // Belt-and-suspenders: scheme-guard every href/src in the FINAL HTML. The bonus
   // LIST href already goes through `safeUrlValue` directly (`buildBonusListBlock`),
   // but an editable copy-template block could carry a dangerous href that blind
@@ -244,6 +283,6 @@ export async function buildBonusEmailFromTemplateHtml(
   // block-splicing (mis-formatted marker). No-op for the seeded copy →
   // byte-identical guard preserved.
   const html = stripResidualTokens(sanitized)
-  const subject = substituteSubject(input.subjectTemplate, input.values)
+  const subject = substituteSubject(input.subjectTemplate, values)
   return { subject, html }
 }

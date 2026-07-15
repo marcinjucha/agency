@@ -83,6 +83,9 @@ const CAMPAIGN = {
   // Phase 4: no explicit venture_bonus template assignment by default → the send
   // path falls to the tenant default, then the hardcoded builder.
   email_template_id: null,
+  // Iter 3c: per-campaign literal variable values, coerced from the JSONB column
+  // (null DB value → {}). Merged over the app-auto { companyName } at send.
+  templateValues: {},
 }
 
 // The raw so_campaigns SELECT row (DB column names) that resolveCampaign maps
@@ -101,6 +104,7 @@ const CAMPAIGN_DB_ROW = {
   theme_id: null,
   brand: null,
   email_template_id: null,
+  template_variable_values: null,
 }
 
 type Result = { data: unknown; error: { message: string; code?: string } | null }
@@ -649,6 +653,41 @@ describe('ingestLead', () => {
     expect(supabase.emailTemplatesBuilder.eq).not.toHaveBeenCalledWith('type', 'venture_bonus')
     // Only the by-id read fired — a found assignment short-circuits the default read.
     expect(supabase.emailTemplatesBuilder.maybeSingle).toHaveBeenCalledTimes(1)
+  })
+
+  it('Iter 3c: campaign templateValues are threaded into the template render (merged base = companyName)', async () => {
+    const supabase = makeSupabase({
+      templates: [
+        {
+          data: {
+            blocks: [{ id: 'h', type: 'header', companyName: '{{companyName}}', textColor: '#fff' }],
+            subject: 'Assigned subject',
+          },
+          error: null,
+        },
+      ],
+    })
+    const deps = makeDeps(supabase, makeProvider(), makeMailSender())
+
+    const outcome = await ingestLead(
+      deps,
+      {
+        ...CAMPAIGN,
+        email_template_id: 'tmpl-assigned',
+        templateValues: { firstName: 'Marek', bonusUrl: 'https://x' },
+      },
+      LEAD,
+    )
+
+    expect(outcome).toMatchObject({ status: 'ingested', emailSent: true })
+    // The send path passes app-auto { companyName } as `values` AND the campaign's
+    // per-variable literals as `templateValues` (merged at the substitution site).
+    expect(buildBonusEmailFromTemplateHtml).toHaveBeenCalledWith(
+      expect.objectContaining({
+        values: { companyName: 'Kacper Launch' },
+        templateValues: { firstName: 'Marek', bonusUrl: 'https://x' },
+      }),
+    )
   })
 
   it('Phase 4: email_template_id set but by-id row MISSING (or wrong tenant) → falls to the tenant default', async () => {

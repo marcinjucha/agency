@@ -287,6 +287,105 @@ describe('dynamic bonus list — 0 / 1 / many (no cap, empty fallback preserved)
   })
 })
 
+// Iter 3c — per-campaign literal variable values flow into the delivered email:
+// merged OVER the app-auto { companyName } with empty entries dropped, applied to
+// BOTH the HTML body AND the subject. The seeded no-variable render must stay
+// byte-identical to the pre-3c baseline (empty/absent campaign values).
+describe('per-campaign template variable values (Iter 3c)', () => {
+  // A template that references a per-campaign token in a Link href + a text body.
+  const TOKEN_TEMPLATE_BLOCKS: Block[] = [
+    { id: 'bonus-header', type: 'header', companyName: '{{companyName}}', textColor: '#ffffff' },
+    { id: 'bonus-list-marker', type: 'text', content: BONUS_LIST_MARKER },
+    { id: 'cta-link', type: 'text', content: '<p><a href="{{bonusUrl}}">Pobierz</a></p>' },
+    { id: 'greeting', type: 'text', content: '<p>Cześć {{firstName}}!</p>' },
+    { id: 'bonus-footer', type: 'footer', text: 'Stopka {{companyName}}' },
+  ]
+
+  it('substitutes a campaign value into a Link href (token gone, value present)', async () => {
+    const { html } = await buildBonusEmailFromTemplateHtml({
+      templateBlocks: TOKEN_TEMPLATE_BLOCKS,
+      subjectTemplate: SUBJECT_TEMPLATE,
+      bonuses: BONUSES,
+      theme: HALO_EFEKT_DEFAULT,
+      values: { companyName: 'Kacper Launch' },
+      templateValues: { bonusUrl: 'https://drive.example.com/x', firstName: 'Marek' },
+    })
+    expect(html).toContain('href="https://drive.example.com/x"')
+    expect(html).toContain('Cześć Marek!')
+    expect(html).not.toContain('{{bonusUrl}}')
+    expect(html).not.toContain('{{firstName}}')
+  })
+
+  it('applies campaign values to the SUBJECT too (a subject token resolves)', async () => {
+    const { subject } = await buildBonusEmailFromTemplateHtml({
+      templateBlocks: TOKEN_TEMPLATE_BLOCKS,
+      subjectTemplate: 'Bonusy dla {{firstName}} od {{companyName}}',
+      bonuses: BONUSES,
+      theme: HALO_EFEKT_DEFAULT,
+      values: { companyName: 'Kacper Launch' },
+      templateValues: { firstName: 'Marek' },
+    })
+    expect(subject).toBe('Bonusy dla Marek od Kacper Launch')
+  })
+
+  it('a campaign value for companyName OVERRIDES the app-auto brand', async () => {
+    const { html, subject } = await buildBonusEmailFromTemplateHtml({
+      templateBlocks: SEED_BONUS_TEMPLATE_BLOCKS,
+      subjectTemplate: SUBJECT_TEMPLATE,
+      bonuses: BONUSES,
+      theme: HALO_EFEKT_DEFAULT,
+      values: { companyName: 'App Auto Brand' },
+      templateValues: { companyName: 'Campaign Override' },
+    })
+    expect(html).toContain('Campaign Override')
+    expect(html).not.toContain('App Auto Brand')
+    expect(subject).toBe('Twoje bonusy od Campaign Override')
+  })
+
+  it('an EMPTY campaign value does NOT clobber the app-auto companyName', async () => {
+    const { html, subject } = await buildBonusEmailFromTemplateHtml({
+      templateBlocks: SEED_BONUS_TEMPLATE_BLOCKS,
+      subjectTemplate: SUBJECT_TEMPLATE,
+      bonuses: BONUSES,
+      theme: HALO_EFEKT_DEFAULT,
+      values: { companyName: 'App Auto Brand' },
+      templateValues: { companyName: '' },
+    })
+    expect(html).toContain('App Auto Brand')
+    expect(subject).toBe('Twoje bonusy od App Auto Brand')
+  })
+
+  it('REGRESSION: empty/absent templateValues → byte-identical to the pre-3c baseline', async () => {
+    // The pre-3c output: the hardcoded builder for the seeded no-variable copy.
+    const legacyHtml = await renderEmailBlocks(
+      buildBonusEmailBlocks({
+        campaignDisplayName: 'Kacper Launch',
+        bonuses: BONUSES,
+        theme: HALO_EFEKT_DEFAULT,
+      }),
+    )
+    // Absent templateValues (omitted).
+    const absent = await buildBonusEmailFromTemplateHtml({
+      templateBlocks: SEED_BONUS_TEMPLATE_BLOCKS,
+      subjectTemplate: SUBJECT_TEMPLATE,
+      bonuses: BONUSES,
+      theme: HALO_EFEKT_DEFAULT,
+      values: { companyName: 'Kacper Launch' },
+    })
+    // Empty map + a blank override — both must be dropped so nothing changes.
+    const empty = await buildBonusEmailFromTemplateHtml({
+      templateBlocks: SEED_BONUS_TEMPLATE_BLOCKS,
+      subjectTemplate: SUBJECT_TEMPLATE,
+      bonuses: BONUSES,
+      theme: HALO_EFEKT_DEFAULT,
+      values: { companyName: 'Kacper Launch' },
+      templateValues: { companyName: '', firstName: '' },
+    })
+    expect(absent.html).toBe(legacyHtml)
+    expect(empty.html).toBe(legacyHtml)
+  })
+})
+
 describe('copy variable substitution', () => {
   it('substitutes {{companyName}} in header + footer, leaves no literal token', async () => {
     const { html } = await buildBonusEmailFromTemplateHtml({

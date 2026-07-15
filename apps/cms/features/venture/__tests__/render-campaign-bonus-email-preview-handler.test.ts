@@ -91,6 +91,7 @@ function tables(overrides?: {
   campaignTemplateId?: string | null
   template?: { blocks: Block[]; subject: string } | null
   bonuses?: Array<{ title: string | null; url: string | null }>
+  templateValues?: Record<string, string> | null
 }) {
   const brand = overrides?.campaignBrand ?? ({ primary: PRIMARY_HEX } as Json)
   const templateId =
@@ -107,6 +108,7 @@ function tables(overrides?: {
         theme_id: null,
         brand,
         email_template_id: templateId,
+        template_variable_values: overrides?.templateValues ?? null,
       },
       error: null,
     },
@@ -235,5 +237,60 @@ describe('renderCampaignBonusEmailPreviewHandler — send parity', () => {
     expect(result.data?.html).toBe(expected.html)
     // The bug fix: the primary token (#f59e0b) reaches the header, not navy.
     expect(result.data?.html).toContain(PRIMARY_HEX)
+  })
+})
+
+// ===========================================================================
+// Iter 3c: the preview must substitute the SAME per-campaign template variable
+// values (so_campaigns.template_variable_values) the send does — byte-identical
+// to buildBonusEmailBody's output for the same (blocks, theme, bonuses, values).
+// ===========================================================================
+describe('renderCampaignBonusEmailPreviewHandler — per-campaign variable values (Iter 3c)', () => {
+  // A token-bearing template: header brand + a Link href token + a body token.
+  const TOKEN_TEMPLATE_BLOCKS: Block[] = [
+    { id: 'h', type: 'header', companyName: '{{companyName}}', textColor: '#ffffff' },
+    { id: 'm', type: 'text', content: BONUS_LIST_MARKER },
+    { id: 'link', type: 'text', content: '<p><a href="{{bonusUrl}}">Pobierz</a></p>' },
+    { id: 'f', type: 'footer', text: 'Stopka' },
+  ]
+  const CAMPAIGN_VALUES = { bonusUrl: 'https://drive.example.com/x' }
+
+  it('preview substitutes the campaign values AND equals the send builder output', async () => {
+    setupAuth(
+      tables({
+        template: { blocks: TOKEN_TEMPLATE_BLOCKS, subject: TEMPLATE_SUBJECT },
+        templateValues: CAMPAIGN_VALUES,
+      }),
+    )
+    const result = await renderCampaignBonusEmailPreviewHandler(CAMPAIGN_ID)
+    expect(result.success).toBe(true)
+    // The campaign value reached the delivered href; the token is gone.
+    expect(result.data?.html).toContain('href="https://drive.example.com/x"')
+    expect(result.data?.html).not.toContain('{{bonusUrl}}')
+
+    // Reconstruct the EXACT send output for the same inputs (incl. templateValues).
+    const theme = await resolveVentureSendTheme(
+      {
+        from: () => {
+          throw new Error('no theme_id reads expected')
+        },
+      },
+      {
+        tenantThemeId: null,
+        tenantTheme: null,
+        clientThemeId: null,
+        clientTheme: null,
+        campaignThemeId: null,
+        campaignBrand: { primary: PRIMARY_HEX } as Json,
+      },
+    )
+    const expected = await buildBonusEmailBody(
+      { blocks: TOKEN_TEMPLATE_BLOCKS, subject: TEMPLATE_SUBJECT },
+      DISPLAY_NAME,
+      [],
+      theme,
+      CAMPAIGN_VALUES,
+    )
+    expect(result.data?.html).toBe(expected.html)
   })
 })

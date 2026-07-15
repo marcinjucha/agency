@@ -97,12 +97,21 @@ export async function resolveVentureSendTheme(
  * reads campaigns via the authenticated/cookie client — can call it without the
  * ingest CampaignRow shape. `resolveBonusBrand(displayName)` is the exact
  * `{{companyName}}` value both paths substitute.
+ *
+ * `templateValues` (Iter 3c) are the per-campaign literal variable values
+ * (`so_campaigns.template_variable_values`, flat { tokenKey: value }). They are
+ * merged OVER the app-auto `{ companyName }` at the substitution site (non-empty
+ * entries win — see `buildBonusEmailFromTemplateHtml`) so preview == send. The
+ * hardcoded-builder fallback has no user variables (fields are [] when no
+ * template resolves), so it deliberately ignores `templateValues`. Defaults to
+ * `{}` → the seeded no-variable render stays BYTE-IDENTICAL to the pre-3c output.
  */
 export async function buildBonusEmailBody(
   template: BonusTemplateRow | null,
   displayName: string | null,
   bonuses: Array<{ title: string | null; url: string | null }>,
   theme: ResolvedTheme,
+  templateValues: Record<string, string> = {},
 ): Promise<BonusEmail> {
   if (template) {
     try {
@@ -112,6 +121,7 @@ export async function buildBonusEmailBody(
         bonuses,
         theme,
         values: { companyName: resolveBonusBrand(displayName) },
+        templateValues,
       })
     } catch (error) {
       // A broken/edited template must NEVER degrade a live send — fall through.

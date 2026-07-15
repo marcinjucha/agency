@@ -44,6 +44,7 @@ import {
   type BonusTemplateRow,
 } from './mail/render-bonus-email.server'
 import { isUsableTemplateBlocks } from './utils/template-blocks'
+import { coerceStringRecord } from './utils/template-values'
 import type { Block } from '@agency/email'
 import { parseTemplateVariables } from '@/features/email/utils/parse-template-variables'
 import {
@@ -783,6 +784,10 @@ interface CampaignPreviewRow {
   campaignThemeId: string | null
   campaignBrand: Json | null
   campaignTemplateId: string | null
+  // Iter 3c: per-campaign literal variable values, coerced to a flat string map.
+  // Passed to buildBonusEmailBody so the preview substitutes the SAME values the
+  // send does (preview == send parity).
+  templateValues: Record<string, string>
 }
 
 function fetchCampaignPreviewRow(
@@ -791,7 +796,7 @@ function fetchCampaignPreviewRow(
 ): ResultAsync<CampaignPreviewRow, string> {
   return ResultAsync.fromPromise(
     tbl(auth, 'so_campaigns')
-      .select('client_id, display_name, theme_id, brand, email_template_id')
+      .select('client_id, display_name, theme_id, brand, email_template_id, template_variable_values')
       .eq('id', campaignId)
       .maybeSingle(),
     dbError,
@@ -803,6 +808,7 @@ function fetchCampaignPreviewRow(
         theme_id: string | null
         brand: Json | null
         email_template_id: string | null
+        template_variable_values: unknown
       } | null
       error: DbErrorShape
     }
@@ -814,6 +820,7 @@ function fetchCampaignPreviewRow(
       campaignThemeId: r.data.theme_id,
       campaignBrand: r.data.brand,
       campaignTemplateId: r.data.email_template_id,
+      templateValues: coerceStringRecord(r.data.template_variable_values),
     })
   })
 }
@@ -969,6 +976,7 @@ async function renderBonusPreviewHtml(args: {
   campaignBrand: Json | null
   bonuses: Array<{ title: string | null; url: string | null }>
   template: BonusTemplateRow | null
+  templateValues: Record<string, string>
 }): Promise<CampaignBonusEmailPreview> {
   const theme = await resolveVentureSendTheme(args.supabase, {
     tenantThemeId: args.tenant.themeId,
@@ -978,7 +986,14 @@ async function renderBonusPreviewHtml(args: {
     campaignThemeId: args.campaignThemeId,
     campaignBrand: args.campaignBrand,
   })
-  const { html } = await buildBonusEmailBody(args.template, args.displayName, args.bonuses, theme)
+  // Pass the SAME per-campaign values the send substitutes (preview == send).
+  const { html } = await buildBonusEmailBody(
+    args.template,
+    args.displayName,
+    args.bonuses,
+    theme,
+    args.templateValues,
+  )
   return { html }
 }
 
@@ -1012,6 +1027,7 @@ export function renderCampaignBonusEmailPreviewHandler(
                     campaignBrand: campaign.campaignBrand,
                     bonuses,
                     template,
+                    templateValues: campaign.templateValues,
                   }),
                   dbError,
                 ),
@@ -1198,20 +1214,6 @@ export interface CampaignTemplateVariables {
   fields: TemplateVariableField[]
   /** The campaign's persisted { templateTokenKey: literalValue } map (default {}). */
   values: Record<string, string>
-}
-
-/**
- * Coerce a JSONB value into a flat string→string map, dropping any non-string
- * entry defensively (the column is free-form JSONB; only string scalars are
- * meaningful substitution values). Null / non-object → {}.
- */
-function coerceStringRecord(raw: unknown): Record<string, string> {
-  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {}
-  const out: Record<string, string> = {}
-  for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
-    if (typeof value === 'string') out[key] = value
-  }
-  return out
 }
 
 /** The campaign fields the variable editor needs: owning client, effective template id, saved values. */
