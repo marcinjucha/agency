@@ -44,7 +44,11 @@ function PreviewBody({
   isError,
 }: {
   data:
-    | { success: boolean; data?: { html: string }; error?: string }
+    | {
+        success: boolean
+        data?: { kind: 'no-template' } | { kind: 'render'; html: string }
+        error?: string
+      }
     | undefined
   isLoading: boolean
   isError: boolean
@@ -63,6 +67,11 @@ function PreviewBody({
     return (
       <PreviewNote text={data.error ?? messages.venture.bonusEmailPreviewError} status />
     )
+  }
+  // No template selected → NO email is sent (product decision 2026-07-15) → nothing
+  // to render; explain instead of showing an empty/misleading frame.
+  if (data.data.kind === 'no-template') {
+    return <PreviewNote text={messages.venture.noTemplateNoSend} status />
   }
   if (!data.data.html) {
     return <PreviewNote text={messages.venture.bonusEmailPreviewEmpty} />

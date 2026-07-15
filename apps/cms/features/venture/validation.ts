@@ -234,10 +234,10 @@ export const listBonusesInputSchema = z.object({ campaign_id: z.string().uuid() 
 // the existing generic email-templates CRUD — no venture-specific create schema.
 
 // Assign (or clear) a campaign's explicit venture_bonus template. `templateId`
-// nullable: null CLEARS the assignment → the send falls back to the tenant
-// default, then the hardcoded builder (INV-4 precedence). The handler validates
-// a non-null id belongs to the caller's tenant BEFORE the write (F5 —
-// cross-tenant forged-id assign must be impossible).
+// nullable: null CLEARS the assignment → the campaign then sends NO bonus email
+// (product decision 2026-07-15). The handler validates a non-null id belongs to
+// the caller's tenant BEFORE the write (F5 — cross-tenant forged-id assign must be
+// impossible).
 export const selectTemplateForCampaignSchema = z.object({
   campaignId: z.string().uuid(),
   templateId: z.string().uuid().nullable(),

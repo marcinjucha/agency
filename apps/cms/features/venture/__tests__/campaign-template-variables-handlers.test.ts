@@ -11,8 +11,10 @@
  * What MUST be correct:
  *   - each handler self-gates (route map does NOT protect createServerFn);
  *   - variables read is tenant-scoped (campaign → client walk);
- *   - "Domyślny" (email_template_id null) still resolves the tenant default's vars;
- *   - declared template_variables win; saved values are returned verbatim;
+ *   - NO template selected (email_template_id null) → NO fillable fields (NO email
+ *     is sent — product decision 2026-07-15); saved values still returned;
+ *   - a selected + usable template → its declared vars (declared-first);
+ *   - a selected but broken/deleted template → no fields (builder has no user vars);
  *   - save writes template_variable_values scoped to the owned campaign only.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -87,22 +89,23 @@ describe('getCampaignTemplateVariablesHandler', () => {
     expect(result.error).toBe(messages.common.noPermission)
   })
 
-  it('resolves the tenant default (Domyślny) declared vars + returns saved values', async () => {
+  it('a selected + usable template → its declared vars + returns saved values', async () => {
     setupAuth({
       so_campaigns: {
         data: {
           client_id: 'c1',
-          email_template_id: null, // Domyślny → resolve tenant default
+          email_template_id: 'tpl-1',
           template_variable_values: { companyName: 'Acme' },
         },
         error: null,
       },
       so_clients: { data: { id: 'c1' }, error: null },
-      // The tenant venture_bonus default row — usable blocks + declared vars.
+      // The selected template — usable blocks + declared vars. This one row answers
+      // BOTH the by-id choice read and the variable-source read.
       email_templates: {
         data: {
-          id: 'tpl-default',
-          label: 'Domyślny',
+          id: 'tpl-1',
+          label: 'Wariant',
           type: 'venture_bonus',
           subject: 'Cześć {{firstName}}',
           blocks: [{ id: 'b1', type: 'text', content: 'Body' }],
@@ -123,8 +126,8 @@ describe('getCampaignTemplateVariablesHandler', () => {
     expect(result.data?.values).toEqual({ companyName: 'Acme' })
   })
 
-  it('returns empty fields + saved values when no template resolves (hardcoded builder)', async () => {
-    setupAuth({
+  it('NO template selected → empty fields (NO email is sent), saved values still returned', async () => {
+    const { chains } = setupAuth({
       so_campaigns: {
         data: {
           client_id: 'c1',
@@ -134,7 +137,29 @@ describe('getCampaignTemplateVariablesHandler', () => {
         error: null,
       },
       so_clients: { data: { id: 'c1' }, error: null },
-      // No tenant default row → resolution yields null → no fillable fields.
+    })
+
+    const result = await getCampaignTemplateVariablesHandler(CAMPAIGN_ID)
+
+    expect(result.success).toBe(true)
+    expect(result.data?.fields).toEqual([])
+    expect(result.data?.values).toEqual({ companyName: 'Acme' })
+    // No selection → no template read at all.
+    expect(chains.email_templates).toBeUndefined()
+  })
+
+  it('a selected but broken/deleted template → empty fields (hardcoded builder), saved values returned', async () => {
+    setupAuth({
+      so_campaigns: {
+        data: {
+          client_id: 'c1',
+          email_template_id: 'tpl-broken',
+          template_variable_values: { companyName: 'Acme' },
+        },
+        error: null,
+      },
+      so_clients: { data: { id: 'c1' }, error: null },
+      // Row absent (or unusable) → choice null → no fillable fields.
       email_templates: { data: null, error: null },
     })
 
@@ -152,7 +177,6 @@ describe('getCampaignTemplateVariablesHandler', () => {
         error: null,
       },
       so_clients: { data: { id: 'c1' }, error: null },
-      email_templates: { data: null, error: null },
     })
 
     const result = await getCampaignTemplateVariablesHandler(CAMPAIGN_ID)

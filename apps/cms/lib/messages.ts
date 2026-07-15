@@ -240,13 +240,13 @@ export const messages = {
     effectiveThemeRowLabel: 'Wygląd',
     effectiveThemeCrossRef: 'Motyw ustawiasz w sekcji „Wygląd kampanii” powyżej.',
     effectiveTemplateRowLabel: 'Szablon',
-    effectiveTemplateSends: 'wysyła szablon:',
     effectiveTemplateEditLink: 'Otwórz edytor szablonu',
-    effectiveTemplateMissingNote:
-      'Brak własnego szablonu — użyty zostanie wbudowany układ.',
-    // Resolved template row (the template the send would ACTUALLY pick) + picker card.
-    effectiveResolvedTemplateRowLabel: 'Aktywny szablon',
-    effectiveResolvedTemplateBuiltin: 'Wbudowany układ (brak szablonu)',
+    // Template-state copy for the card AND the preview (product decision 2026-07-15):
+    // no selection → NO email is sent; a selected-but-broken template falls back to
+    // the built-in layout (the send's safety net).
+    noTemplateNoSend: 'Wiadomość nie zostanie wysłana (brak wybranego szablonu).',
+    effectiveTemplateBuiltinNote:
+      'Wybrany szablon jest niedostępny — użyty zostanie wbudowany układ.',
     // --- Bonus email preview ("Podgląd e-mail" tab — the REAL rendered send) ---
     bonusEmailPreviewFrameTitle: 'Podgląd e-maila bonusowego',
     bonusEmailPreviewLoading: 'Generowanie podglądu…',

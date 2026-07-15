@@ -5,6 +5,7 @@ import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
 import { queryKeys } from '@/lib/query-keys'
 import { getCampaignEffectiveSendFn } from '../admin'
+import type { EffectiveTemplateState } from '../admin-handlers.server'
 
 // ---------------------------------------------------------------------------
 // CampaignEffectiveSendCard — READ-ONLY "Ten launch wysyła" surface.
@@ -74,58 +75,11 @@ export function CampaignEffectiveSendCard({
             </p>
           </Row>
 
-          {/* Row 3 — bonus template slug label + deep-link (a label, not a picker) */}
+          {/* Row 3 — the template the send would ACTUALLY use (mirrors the send
+              path exactly). No selection → NO email is sent; a selected template
+              → its name + deep-link; selected-but-broken → the built-in layout. */}
           <Row label={messages.venture.effectiveTemplateRowLabel}>
-            <p className="text-sm text-foreground">
-              <span className="text-muted-foreground">
-                {messages.venture.effectiveTemplateSends}{' '}
-              </span>
-              <code className="rounded border border-border/60 bg-muted/40 px-1.5 py-0.5 font-mono text-xs">
-                {data.data.templateType}
-              </code>
-            </p>
-            {!data.data.templateExists && (
-              <p className="mt-1 text-xs text-muted-foreground">
-                {messages.venture.effectiveTemplateMissingNote}
-              </p>
-            )}
-            <Button
-              type="button"
-              variant="link"
-              size="sm"
-              onClick={() =>
-                navigate({ to: routes.admin.emailTemplate(data.data!.templateType) })
-              }
-              className="mt-1 block h-auto w-fit p-0 text-xs"
-            >
-              {messages.venture.effectiveTemplateEditLink}
-            </Button>
-          </Row>
-
-          {/* Row 4 — the template the send would ACTUALLY use (resolved by the
-              same precedence as the send path), with a deep-link to ITS editor.
-              Read-only mirror of the picker's selection. */}
-          <Row label={messages.venture.effectiveResolvedTemplateRowLabel}>
-            {data.data.resolvedTemplateName ? (
-              <p className="text-sm text-foreground">{data.data.resolvedTemplateName}</p>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                {messages.venture.effectiveResolvedTemplateBuiltin}
-              </p>
-            )}
-            {data.data.resolvedTemplateType && (
-              <Button
-                type="button"
-                variant="link"
-                size="sm"
-                onClick={() =>
-                  navigate({ to: routes.admin.emailTemplate(data.data!.resolvedTemplateType!) })
-                }
-                className="mt-1 block h-auto w-fit p-0 text-xs"
-              >
-                {messages.venture.effectiveTemplateEditLink}
-              </Button>
-            )}
+            <TemplateRowContent template={data.data.template} navigate={navigate} />
           </Row>
         </div>
       )}
@@ -140,5 +94,46 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
       <p className="text-xs font-medium text-muted-foreground">{label}</p>
       {children}
     </div>
+  )
+}
+
+// Renders the effective template STATE, mirroring the send path (no default tier):
+//   - 'none'     → no selection → NO email is sent
+//   - 'builtin'  → selected-but-broken → the built-in layout is used
+//   - 'template' → the selected template's name + a deep-link to ITS editor
+function TemplateRowContent({
+  template,
+  navigate,
+}: {
+  template: EffectiveTemplateState
+  navigate: ReturnType<typeof useNavigate>
+}) {
+  if (template.kind === 'none') {
+    return (
+      <p role="status" className="text-sm text-muted-foreground">
+        {messages.venture.noTemplateNoSend}
+      </p>
+    )
+  }
+  if (template.kind === 'builtin') {
+    return (
+      <p className="text-sm text-muted-foreground">
+        {messages.venture.effectiveTemplateBuiltinNote}
+      </p>
+    )
+  }
+  return (
+    <>
+      <p className="text-sm text-foreground">{template.name}</p>
+      <Button
+        type="button"
+        variant="link"
+        size="sm"
+        onClick={() => navigate({ to: routes.admin.emailTemplate(template.type) })}
+        className="mt-1 block h-auto w-fit p-0 text-xs"
+      >
+        {messages.venture.effectiveTemplateEditLink}
+      </Button>
+    </>
   )
 }

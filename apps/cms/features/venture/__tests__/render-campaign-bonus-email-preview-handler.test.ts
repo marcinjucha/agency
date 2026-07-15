@@ -124,6 +124,16 @@ function tables(overrides?: {
   }
 }
 
+// Narrow the discriminated preview result to the rendered HTML. A campaign with a
+// selected template renders ('render'); with none selected it returns 'no-template'.
+function renderedHtml(
+  result: Awaited<ReturnType<typeof renderCampaignBonusEmailPreviewHandler>>,
+): string {
+  expect(result.success).toBe(true)
+  expect(result.data?.kind).toBe('render')
+  return result.data && result.data.kind === 'render' ? result.data.html : ''
+}
+
 beforeEach(() => {
   vi.clearAllMocks()
 })
@@ -170,19 +180,30 @@ describe('renderCampaignBonusEmailPreviewHandler — ownership scoping', () => {
 })
 
 describe('renderCampaignBonusEmailPreviewHandler — render', () => {
-  it('returns HTML from the send builder (theme tiers + effective template)', async () => {
+  it('returns HTML from the send builder (theme tiers + selected template)', async () => {
     setupAuth(tables())
     const result = await renderCampaignBonusEmailPreviewHandler(CAMPAIGN_ID)
-    expect(result.success).toBe(true)
-    expect(typeof result.data?.html).toBe('string')
-    expect(result.data?.html.length).toBeGreaterThan(0)
+    expect(renderedHtml(result).length).toBeGreaterThan(0)
   })
 
-  it('falls back to the hardcoded builder when no template resolves', async () => {
-    setupAuth(tables({ campaignTemplateId: null, template: null }))
+  it('no template selected → { kind: "no-template" } (NO email is sent, nothing to render)', async () => {
+    const { chains } = setupAuth(tables({ campaignTemplateId: null, template: null }))
     const result = await renderCampaignBonusEmailPreviewHandler(CAMPAIGN_ID)
     expect(result.success).toBe(true)
-    expect(result.data?.html.length).toBeGreaterThan(0)
+    expect(result.data?.kind).toBe('no-template')
+    // Short-circuits before any theme/bonus/template render read (so_clients is
+    // still read once by the assertCampaignOwned ownership walk).
+    expect(chains.email_templates).toBeUndefined()
+    expect(chains.so_bonuses).toBeUndefined()
+    expect(chains.tenants).toBeUndefined()
+  })
+
+  it('selected but broken/deleted (row absent) → renders via the hardcoded builder', async () => {
+    // Product decision: selected-but-broken ≠ no-selection — the builder is the
+    // safety net, so a preview is still produced.
+    setupAuth(tables({ campaignTemplateId: ASSIGNED_TEMPLATE_ID, template: null }))
+    const result = await renderCampaignBonusEmailPreviewHandler(CAMPAIGN_ID)
+    expect(renderedHtml(result).length).toBeGreaterThan(0)
   })
 
   it('still renders (neutral tenant tier) when the tenant theme read errors', async () => {
@@ -194,8 +215,7 @@ describe('renderCampaignBonusEmailPreviewHandler — render', () => {
       tenants: { data: null, error: { message: 'boom', code: 'XX000' } },
     })
     const result = await renderCampaignBonusEmailPreviewHandler(CAMPAIGN_ID)
-    expect(result.success).toBe(true)
-    expect(result.data?.html.length).toBeGreaterThan(0)
+    expect(renderedHtml(result).length).toBeGreaterThan(0)
     errorSpy.mockRestore()
   })
 })
@@ -210,7 +230,7 @@ describe('renderCampaignBonusEmailPreviewHandler — send parity', () => {
   it('preview HTML equals the send builder output AND uses the primary token in the header', async () => {
     setupAuth(tables())
     const result = await renderCampaignBonusEmailPreviewHandler(CAMPAIGN_ID)
-    expect(result.success).toBe(true)
+    const actualHtml = renderedHtml(result)
 
     // Reconstruct the EXACT send output: same tier resolution (null theme_ids →
     // inline brand → campaign tier) + same builder + same {{companyName}}. The
@@ -236,9 +256,9 @@ describe('renderCampaignBonusEmailPreviewHandler — send parity', () => {
     )
 
     // Byte-identical to the send builder output — preview cannot drift from ingest.
-    expect(result.data?.html).toBe(expected.html)
+    expect(actualHtml).toBe(expected.html)
     // The bug fix: the primary token (#f59e0b) reaches the header, not navy.
-    expect(result.data?.html).toContain(PRIMARY_HEX)
+    expect(actualHtml).toContain(PRIMARY_HEX)
   })
 })
 
@@ -265,10 +285,10 @@ describe('renderCampaignBonusEmailPreviewHandler — per-campaign variable value
       }),
     )
     const result = await renderCampaignBonusEmailPreviewHandler(CAMPAIGN_ID)
-    expect(result.success).toBe(true)
+    const actualHtml = renderedHtml(result)
     // The campaign value reached the delivered href; the token is gone.
-    expect(result.data?.html).toContain('href="https://drive.example.com/x"')
-    expect(result.data?.html).not.toContain('{{bonusUrl}}')
+    expect(actualHtml).toContain('href="https://drive.example.com/x"')
+    expect(actualHtml).not.toContain('{{bonusUrl}}')
 
     // Reconstruct the EXACT send output for the same inputs (incl. templateValues).
     const theme = await resolveVentureSendTheme(
@@ -293,6 +313,6 @@ describe('renderCampaignBonusEmailPreviewHandler — per-campaign variable value
       theme,
       CAMPAIGN_VALUES,
     )
-    expect(result.data?.html).toBe(expected.html)
+    expect(actualHtml).toBe(expected.html)
   })
 })

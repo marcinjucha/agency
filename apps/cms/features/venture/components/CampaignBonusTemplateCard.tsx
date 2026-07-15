@@ -70,11 +70,16 @@ export function CampaignBonusTemplateCard({
   const options = optionsQuery.data?.success ? optionsQuery.data.data ?? [] : []
 
   // The template the send would ACTUALLY use — powers the "Edytuj szablon" link.
-  const resolvedType =
+  // Only a resolved 'template' state has an editable target (no selection → no
+  // send; selected-but-broken → the built-in layout has no editor).
+  const effectiveTemplate =
     effectiveQuery.data?.success && effectiveQuery.data.data
-      ? effectiveQuery.data.data.resolvedTemplateType
+      ? effectiveQuery.data.data.template
       : null
-  const editHref = resolvedType ? routes.admin.emailTemplate(resolvedType) : null
+  const editHref =
+    effectiveTemplate?.kind === 'template'
+      ? routes.admin.emailTemplate(effectiveTemplate.type)
+      : null
 
   function handleChange(id: string) {
     setSelected(id)

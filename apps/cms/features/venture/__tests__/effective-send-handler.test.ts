@@ -7,8 +7,13 @@
  *
  * What MUST be correct: the effective sender is computed via the SAME
  * resolveMailSender (isSharedFallback true/false), the fn gates itself on
- * bonus_funnel.campaigns (route map does NOT protect createServerFn), and the
- * campaign → client chain is tenant/ownership-scoped.
+ * bonus_funnel.campaigns (route map does NOT protect createServerFn), the
+ * campaign → client chain is tenant/ownership-scoped, AND the mirrored template
+ * STATE matches the send path exactly (product decision 2026-07-15):
+ *   - no selection            → { kind: 'none' }  (NO email is sent)
+ *   - selected + usable        → { kind: 'template', id, name, type }
+ *   - selected but broken/absent → { kind: 'builtin' }  (hardcoded builder)
+ * There is NO implicit tenant-default tier anymore.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { okAsync } from 'neverthrow'
@@ -33,8 +38,11 @@ const mockRequireAuth = requireAuthContextFull as ReturnType<typeof vi.fn>
 const TENANT = 'tenant-1'
 const CAMPAIGN_ID = '11111111-1111-1111-1111-111111111111'
 const CLIENT_ID = 'client-1'
+const ASSIGNED = '99999999-9999-9999-9999-999999999999'
 const SHARED_FROM = 'noreply@haloefekt.pl'
 const ALL_PERMS = ['bonus_funnel.clients', 'bonus_funnel.campaigns', 'bonus_funnel.bonuses']
+// A usable `blocks` value — a non-empty array (mirrors ingest's usability rule).
+const USABLE_BLOCKS = [{ type: 'text', content: 'hej' }]
 
 // Full mail-config row shape the authenticated client reads (NO plaintext
 // secrets — only the has_* generated booleans + non-secret address fields).
@@ -85,12 +93,14 @@ function clientRow(overrides: Partial<ClientMailRow>): ClientMailRow {
   }
 }
 
-function tables(client: ClientMailRow, templateExists: boolean) {
+// A campaign that SELECTS the ASSIGNED template (resolves to a usable row). Used
+// by the sender-focused tests where the template state is incidental.
+function tables(client: ClientMailRow) {
   return {
-    so_campaigns: { data: { client_id: CLIENT_ID }, error: null },
+    so_campaigns: { data: { client_id: CLIENT_ID, email_template_id: ASSIGNED }, error: null },
     so_clients: { data: client, error: null },
     email_templates: {
-      data: templateExists ? { type: 'venture_bonus' } : null,
+      data: { id: ASSIGNED, label: 'Wariant klienta', type: 'venture_bonus', blocks: USABLE_BLOCKS },
       error: null,
     },
   }
@@ -123,7 +133,7 @@ describe('getCampaignEffectiveSendHandler — ownership scoping', () => {
     // so_campaigns yields a client_id, but assertClientOwned finds no row
     // scoped to the tenant → forbidden (cross-tenant read blocked).
     setupAuth({
-      so_campaigns: { data: { client_id: CLIENT_ID }, error: null },
+      so_campaigns: { data: { client_id: CLIENT_ID, email_template_id: null }, error: null },
       so_clients: { data: null, error: null },
     })
     const result = await getCampaignEffectiveSendHandler(CAMPAIGN_ID)
@@ -132,7 +142,7 @@ describe('getCampaignEffectiveSendHandler — ownership scoping', () => {
   })
 
   it('scopes the client read to the caller tenant', async () => {
-    const { chains } = setupAuth(tables(clientRow({}), true))
+    const { chains } = setupAuth(tables(clientRow({})))
     await getCampaignEffectiveSendHandler(CAMPAIGN_ID)
     expect(chains.so_clients.eq).toHaveBeenCalledWith('tenant_id', TENANT)
   })
@@ -140,7 +150,7 @@ describe('getCampaignEffectiveSendHandler — ownership scoping', () => {
 
 describe('getCampaignEffectiveSendHandler — effective sender', () => {
   it('shared agency fallback (resend_shared) → isSharedFallback true, shared address', async () => {
-    setupAuth(tables(clientRow({ mail_provider: 'resend_shared' }), true))
+    setupAuth(tables(clientRow({ mail_provider: 'resend_shared' })))
     const result = await getCampaignEffectiveSendHandler(CAMPAIGN_ID)
     expect(result.success).toBe(true)
     expect(result.data?.isSharedFallback).toBe(true)
@@ -156,7 +166,6 @@ describe('getCampaignEffectiveSendHandler — effective sender', () => {
           resend_from_email: 'kontakt@klient.pl',
           has_resend_api_key: true,
         }),
-        true,
       ),
     )
     const result = await getCampaignEffectiveSendHandler(CAMPAIGN_ID)
@@ -173,7 +182,6 @@ describe('getCampaignEffectiveSendHandler — effective sender', () => {
           resend_from_email: 'kontakt@klient.pl',
           has_resend_api_key: false, // secret absent → factory returns null → shared
         }),
-        true,
       ),
     )
     const result = await getCampaignEffectiveSendHandler(CAMPAIGN_ID)
@@ -189,7 +197,6 @@ describe('getCampaignEffectiveSendHandler — effective sender', () => {
           gmail_address: 'launch@gmail.com',
           has_gmail_app_password: true,
         }),
-        true,
       ),
     )
     const result = await getCampaignEffectiveSendHandler(CAMPAIGN_ID)
@@ -199,41 +206,28 @@ describe('getCampaignEffectiveSendHandler — effective sender', () => {
   })
 })
 
-describe('getCampaignEffectiveSendHandler — template presence', () => {
-  it('templateType is venture_bonus + templateExists true when a row exists', async () => {
-    setupAuth(tables(clientRow({}), true))
-    const result = await getCampaignEffectiveSendHandler(CAMPAIGN_ID)
-    expect(result.data?.templateType).toBe('venture_bonus')
-    expect(result.data?.templateExists).toBe(true)
-  })
-
-  it('templateExists false when no tenant row exists', async () => {
-    setupAuth(tables(clientRow({}), false))
-    const result = await getCampaignEffectiveSendHandler(CAMPAIGN_ID)
-    expect(result.data?.templateExists).toBe(false)
-  })
-})
-
 // ===========================================================================
-// DRIFT-GUARD (INV-4, one-rule): resolvedTemplateId MUST match the id
-// fetchBonusTemplate (ingest.server.ts) would pick for the SAME campaign —
-// campaign.email_template_id if it resolves to a valid tenant-owned row (ANY
-// type, model B), else the tenant DEFAULT (venture_bonus singleton slug), else
-// null. The card must not drift from
-// the send path. (email_templates is a single mock chain per table, so each
-// scenario exercises exactly ONE resolution read tier — by-id OR default.)
+// DRIFT-GUARD: the template STATE MUST match what the send path (ingest.server.ts
+// sendBonusEmail) would use for the SAME campaign — no default tier:
+//   - no selection            → 'none'    (NO email is sent)
+//   - selected + usable        → 'template' (that id/name/type)
+//   - selected but broken/absent → 'builtin' (hardcoded builder)
 // ===========================================================================
 
-describe('getCampaignEffectiveSendHandler — resolved template (drift guard)', () => {
-  const ASSIGNED = '99999999-9999-9999-9999-999999999999'
-  const DEFAULT_ID = '88888888-8888-8888-8888-888888888888'
-  // A usable `blocks` value — a non-empty array (mirrors ingest's usability rule).
-  const USABLE_BLOCKS = [{ type: 'text', content: 'hej' }]
+describe('getCampaignEffectiveSendHandler — template state (drift guard)', () => {
+  it('no template selected → { kind: "none" } and NO template read', async () => {
+    const { chains } = setupAuth({
+      so_campaigns: { data: { client_id: CLIENT_ID, email_template_id: null }, error: null },
+      so_clients: { data: clientRow({}), error: null },
+    })
+    const result = await getCampaignEffectiveSendHandler(CAMPAIGN_ID)
+    expect(result.data?.template).toEqual({ kind: 'none' })
+    // No selection → no email_templates query at all.
+    expect(chains.email_templates).toBeUndefined()
+  })
 
-  it('campaign.email_template_id set + resolves → that id + type (by-id tier)', async () => {
-    // Model B: the assigned template may be ANY type — the type slug flows through
-    // to power the editor deep-link.
-    setupAuth({
+  it('selected + resolves usable → { kind: "template", id, name, type } (by-id read, model B any type)', async () => {
+    const { chains } = setupAuth({
       so_campaigns: { data: { client_id: CLIENT_ID, email_template_id: ASSIGNED }, error: null },
       so_clients: { data: clientRow({}), error: null },
       email_templates: {
@@ -242,104 +236,42 @@ describe('getCampaignEffectiveSendHandler — resolved template (drift guard)', 
       },
     })
     const result = await getCampaignEffectiveSendHandler(CAMPAIGN_ID)
-    expect(result.data?.resolvedTemplateId).toBe(ASSIGNED)
-    expect(result.data?.resolvedTemplateName).toBe('Wariant klienta')
-    expect(result.data?.resolvedTemplateType).toBe('marketing_blast')
-  })
-
-  it('no assignment → the tenant default row id + type (default tier)', async () => {
-    const { chains } = setupAuth({
-      so_campaigns: { data: { client_id: CLIENT_ID, email_template_id: null }, error: null },
-      so_clients: { data: clientRow({}), error: null },
-      email_templates: {
-        data: { id: DEFAULT_ID, label: 'Domyślny', type: 'venture_bonus', blocks: USABLE_BLOCKS },
-        error: null,
-      },
+    expect(result.data?.template).toEqual({
+      kind: 'template',
+      id: ASSIGNED,
+      name: 'Wariant klienta',
+      type: 'marketing_blast',
     })
-    const result = await getCampaignEffectiveSendHandler(CAMPAIGN_ID)
-    expect(result.data?.resolvedTemplateId).toBe(DEFAULT_ID)
-    expect(result.data?.resolvedTemplateName).toBe('Domyślny')
-    expect(result.data?.resolvedTemplateType).toBe('venture_bonus')
-    // [7] SINGLE QUERY: the tenant venture_bonus default row is read exactly ONCE
-    // (readTenantDefaultBonusTemplate) — templateExists + the default-tier choice
-    // are derived from that one read; no assignment → no by-id query, and the
-    // default reader passed to the precedence resolver is a NO-QUERY cached one.
+    // The by-id read is tenant-scoped and NOT type-constrained (model B).
+    expect(chains.email_templates.eq).toHaveBeenCalledWith('id', ASSIGNED)
+    expect(chains.email_templates.eq).toHaveBeenCalledWith('tenant_id', TENANT)
+    expect(chains.email_templates.eq).not.toHaveBeenCalledWith('type', 'venture_bonus')
+    // Exactly ONE email_templates read — there is no default tier.
     expect(chains.email_templates.maybeSingle).toHaveBeenCalledTimes(1)
   })
 
-  it('no assignment + no default → null ("wbudowany szablon")', async () => {
+  it('selected but row MISSING (wrong tenant / deleted) → { kind: "builtin" }', async () => {
     setupAuth({
-      so_campaigns: { data: { client_id: CLIENT_ID, email_template_id: null }, error: null },
+      so_campaigns: { data: { client_id: CLIENT_ID, email_template_id: ASSIGNED }, error: null },
       so_clients: { data: clientRow({}), error: null },
       email_templates: { data: null, error: null },
     })
     const result = await getCampaignEffectiveSendHandler(CAMPAIGN_ID)
-    expect(result.data?.resolvedTemplateId).toBeNull()
-    expect(result.data?.resolvedTemplateName).toBeNull()
-    expect(result.data?.resolvedTemplateType).toBeNull()
+    expect(result.data?.template).toEqual({ kind: 'builtin' })
   })
 
-  // The reason this fix exists: an assigned template whose blocks were later
-  // emptied via the generic editor is SKIPPED by ingest (coerceBonusTemplateRow →
-  // isUsableTemplateBlocks). The card must degrade to the SAME default, never name
-  // the assigned-but-unusable one. Needs DISTINCT data per email_templates read
-  // (exists check → by-id unusable → default usable), so it bypasses the
-  // single-chain setupAuth helper.
-  it('assigned template with EMPTY blocks → falls through to tenant default (mirrors ingest)', async () => {
-    // [7] read order after the single-read refactor: (1) readTenantDefaultBonusTemplate
-    // (the venture_bonus default, eager — powers templateExists AND the cached
-    // default-tier choice), then (2) the by-id read for the assignment. The default
-    // reader handed to the precedence resolver is the CACHED choice → no 3rd query.
-    const emailQueue: Array<{ data: unknown; error: unknown }> = [
-      // 1. readTenantDefaultBonusTemplate → the usable tenant venture_bonus singleton
-      //    (present=true, choice=DEFAULT_ID).
-      {
-        data: { id: DEFAULT_ID, label: 'Domyślny', type: 'venture_bonus', blocks: USABLE_BLOCKS },
-        error: null,
-      },
-      // 2. by-id read → the assigned row, but blocks emptied → UNUSABLE → absent →
-      //    precedence falls to the cached default (DEFAULT_ID), NOT the assigned one.
-      {
+  it('selected but blocks EMPTY (unusable) → { kind: "builtin" } (mirrors ingest coerce)', async () => {
+    setupAuth({
+      so_campaigns: { data: { client_id: CLIENT_ID, email_template_id: ASSIGNED }, error: null },
+      so_clients: { data: clientRow({}), error: null },
+      email_templates: {
         data: { id: ASSIGNED, label: 'Pusty wariant', type: 'marketing_blast', blocks: [] },
         error: null,
       },
-    ]
-    let emailIdx = 0
-    const staticChains: Record<string, ReturnType<typeof mockChain>> = {
-      so_campaigns: mockChain({
-        data: { client_id: CLIENT_ID, email_template_id: ASSIGNED },
-        error: null,
-      }),
-      so_clients: mockChain({ data: clientRow({}), error: null }),
-    }
-    const from = vi.fn((name: string) => {
-      if (name === 'email_templates') {
-        const res = emailQueue[emailIdx] ?? emailQueue[emailQueue.length - 1]
-        emailIdx++
-        return mockChain(res)
-      }
-      return staticChains[name]
     })
-    mockRequireAuth.mockReturnValue(
-      okAsync({
-        supabase: { from },
-        userId: 'user-1',
-        tenantId: TENANT,
-        isSuperAdmin: false,
-        roleName: 'owner',
-        permissions: ALL_PERMS,
-      }),
-    )
-
     const result = await getCampaignEffectiveSendHandler(CAMPAIGN_ID)
-    // NOT the assigned-but-unusable ASSIGNED id — the default, exactly as ingest.
-    expect(result.data?.resolvedTemplateId).toBe(DEFAULT_ID)
-    expect(result.data?.resolvedTemplateName).toBe('Domyślny')
-    expect(result.data?.resolvedTemplateType).toBe('venture_bonus')
-    // A venture_bonus row exists (even the by-id was empty, not this one) → true.
-    expect(result.data?.templateExists).toBe(true)
-    // Exactly TWO email_templates reads: the eager default + the by-id. The default
-    // is NOT re-queried for the precedence tier (cached) — [7].
-    expect(emailIdx).toBe(2)
+    // NOT named — an unusable selected template falls to the hardcoded builder,
+    // exactly as ingest skips it.
+    expect(result.data?.template).toEqual({ kind: 'builtin' })
   })
 })
