@@ -30,7 +30,7 @@ import {
 
 interface CampaignBonusTemplateCardProps {
   campaignId: string
-  /** The campaign's persisted email_template_id (null = use the tenant default). */
+  /** The campaign's persisted email_template_id (null = no template selected → no email is sent). */
   currentTemplateId: string | null
 }
 
@@ -53,7 +53,7 @@ export function CampaignBonusTemplateCard({
   })
 
   const mutation = useMutation({
-    mutationFn: (templateId: string | null) =>
+    mutationFn: (templateId: string) =>
       selectTemplateForCampaignFn({ data: { campaignId, templateId } }),
     onSuccess: (result) => {
       // Server rejected (e.g. forged id) → revert the optimistic selection.
@@ -76,7 +76,7 @@ export function CampaignBonusTemplateCard({
       : null
   const editHref = resolvedType ? routes.admin.emailTemplate(resolvedType) : null
 
-  function handleChange(id: string | null) {
+  function handleChange(id: string) {
     setSelected(id)
     mutation.mutate(id)
   }
@@ -94,15 +94,15 @@ export function CampaignBonusTemplateCard({
           emptyHint={messages.venture.bonusTemplateEmptyHint}
         />
 
-        {/* Fill the effective template's variables with literal values (Iter 3b).
+        {/* Fill the selected template's variables with literal values (Iter 3b).
             Keyed by the selected template id so switching templates fully resets
             the section's local edit state (a different template = different
-            variables). Reads the campaign's EFFECTIVE template server-side, so
-            "Domyślny" (selected === null) still shows the default template's vars. */}
+            variables). When no template is selected the section renders a hint
+            (no email is sent) instead of the fields — see the section body. */}
         <div className="border-t border-border pt-4">
           <p className="mb-3 text-sm font-medium">{messages.email.templateVariablesTitle}</p>
           <CampaignTemplateVariablesSection
-            key={selected ?? '__default__'}
+            key={selected ?? '__none__'}
             campaignId={campaignId}
             selectedTemplateId={selected}
             selectionPending={mutation.isPending}
@@ -148,8 +148,10 @@ function CampaignTemplateVariablesSection({
     // template from the COMMITTED so_campaigns.email_template_id, so we must not
     // read while the selection write is still in flight (race → stale fields).
     // On a template switch the section remounts (key change) with this disabled,
-    // then fetches once the write settles (committed row).
-    enabled: !selectionPending,
+    // then fetches once the write settles (committed row). Also gated on a
+    // non-null selection: with no template selected no email is sent, so there
+    // are no variables to fetch (the fields are replaced by a hint below).
+    enabled: !selectionPending && selectedTemplateId !== null,
   })
 
   const [values, setValues] = useState<Record<string, string>>({})
@@ -217,6 +219,15 @@ function CampaignTemplateVariablesSection({
       pendingValuesRef.current = null
       saveMutation.mutate(next)
     }, 800)
+  }
+
+  // No template selected → no email is sent, so there are no variables to fill.
+  // Render a hint instead of the fields. Placed AFTER all hooks (a disabled query
+  // reports isPending, so this must precede the loading check below).
+  if (selectedTemplateId === null) {
+    return (
+      <p className="text-sm text-muted-foreground">{messages.venture.noTemplateNoSendHint}</p>
+    )
   }
 
   // Loading window = the selection write is in flight (query disabled) OR the query

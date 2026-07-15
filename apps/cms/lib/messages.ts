@@ -255,6 +255,7 @@ export const messages = {
     bonusTemplateCardTitle: 'Szablon e-maila bonusowego',
     bonusTemplateEmptyHint:
       'Brak szablonów e-maili. Utwórz szablon w edytorze e-maili, aby wybrać go tutaj.',
+    noTemplateNoSendHint: 'Bez wybranego szablonu wiadomość nie zostanie wysłana.',
 
     // Publish/status
     publishedLabel: 'Opublikowana',
@@ -920,7 +921,7 @@ export const messages = {
     addBlockClear: 'Wyczyść',
     // Reusable EmailTemplatePicker (bind an email template to a surface).
     templatePickerLabel: 'Szablon e-maila',
-    templatePickerDefault: 'Domyślny',
+    templatePickerPlaceholder: 'Wybierz szablon',
     templatePickerEdit: 'Edytuj szablon',
     unsavedChanges: 'Niezapisane zmiany',
     canvasTitle: 'Podgląd na żywo',
