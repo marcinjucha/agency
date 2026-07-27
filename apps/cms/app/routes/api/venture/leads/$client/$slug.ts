@@ -240,7 +240,26 @@ export const Route = createFileRoute('/api/venture/leads/$client/$slug')({
             campaign,
             mapped.value,
           )
+          // Success-path trace. Every OTHER log in this handler is a rejection —
+          // a 200 left NO trace at all, even though a 200 covers three very
+          // different outcomes (lead ingested + mail sent / mail deliberately
+          // skipped / mail FAILED, all non-fatal by the no-lead-drop contract).
+          // The commit sha is logged deliberately: a past incident was diagnosed
+          // for hours as a logic bug when the real cause was Vercel serving a
+          // STALE branch deploy. Printing the deployed sha makes "is the running
+          // code the code I just pushed?" a one-glance check instead of a
+          // hypothesis.
           const httpStatus = ingestOutcomeStatus(outcome)
+          console.info(`[venture-webhook] ingest outcome -> ${httpStatus}`, {
+            client: clientSlug,
+            slug,
+            campaignId: campaign.id,
+            outcome: outcome.status,
+            espSynced: outcome.status === 'ingested' ? outcome.espSynced : undefined,
+            emailResult: outcome.status === 'ingested' ? outcome.emailResult : undefined,
+            deployedSha: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? 'local',
+            vercelEnv: process.env.VERCEL_ENV ?? 'local',
+          })
           if (httpStatus !== 200) {
             console.error('[venture-webhook] rejected: lead not persisted (retryable) -> 500', {
               client: clientSlug,

@@ -85,7 +85,14 @@ export function resolveMailSender(client: ClientMailConfig): MailSender {
   if (!factory) return SHARED_RESEND_SENDER
 
   const sender = factory(client)
-  if (sender) return sender
+  if (sender) {
+    // The client's OWN provider was selected (no silent degrade). Logged because
+    // the fallback path below is the only branch that used to leave a trace —
+    // so a successful client-provider selection was indistinguishable from
+    // "resolver never ran". Provider id only; no address, no secret.
+    console.info(`[venture mail] using client provider: ${client.mail_provider}`)
+    return sender
+  }
 
   console.warn(
     `[venture mail] client mail_provider=${client.mail_provider} but missing required config — falling back to shared Resend account`,

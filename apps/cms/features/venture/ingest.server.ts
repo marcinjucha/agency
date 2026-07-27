@@ -494,6 +494,36 @@ function describeEspError(error: unknown): { status?: number; statusText?: strin
 }
 
 /**
+ * Extract the safe (non-PII, non-secret) fields from a mail-send failure.
+ *
+ * A bare `error.message` is NOT enough to triage a transport failure: nodemailer
+ * carries the actionable discriminators on non-standard properties (`code` =
+ * EAUTH/ECONNECTION/ETIMEDOUT, `responseCode` = the SMTP numeric like 535,
+ * `command` = the stage that failed). Without them a credential rejection and a
+ * blocked egress port read identically in the logs. Read defensively — these are
+ * untyped, provider-specific extras, absent on a plain Error (e.g. a Resend
+ * failure), and NONE of them can contain the password or the recipient.
+ */
+function describeMailError(error: unknown): {
+  name?: string
+  code?: string
+  responseCode?: number
+  command?: string
+  message: string
+} {
+  const message = error instanceof Error ? error.message : String(error)
+  if (typeof error !== 'object' || error === null) return { message }
+  const extras = error as { name?: unknown; code?: unknown; responseCode?: unknown; command?: unknown }
+  return {
+    name: typeof extras.name === 'string' ? extras.name : undefined,
+    code: typeof extras.code === 'string' ? extras.code : undefined,
+    responseCode: typeof extras.responseCode === 'number' ? extras.responseCode : undefined,
+    command: typeof extras.command === 'string' ? extras.command : undefined,
+    message,
+  }
+}
+
+/**
  * Sync the lead to the campaign's ESP. Returns true on full success. Never
  * throws — provider errors are caught, logged (status/statusText only) and
  * recorded to so_esp_sync_log, leaving the lead intact with esp_synced=false.
@@ -692,15 +722,47 @@ async function sendBonusEmail(
       // Iter 3c: per-campaign literal values, merged over app-auto { companyName }.
       campaign.templateValues,
     )
+    // Pre-send trace. The send is the ONE step whose failure is invisible from
+    // the outside: the request still returns 200 (no-lead-drop), so without this
+    // line the logs cannot tell "delivered" from "rejected by the mail provider"
+    // — nor which of the three senders was even chosen. `resolveMailSender`
+    // decides purely on the PRESENCE of the provider's config fields, so
+    // presence booleans (never the secrets) fully explain its choice; a
+    // configured-but-WRONG credential is indistinguishable here BY DESIGN and
+    // only surfaces in the catch below.
+    const mail = campaign.clientMail
+    console.info('[venture-ingest] bonus email — sending', {
+      campaignId: campaign.id,
+      mailProvider: mail.mail_provider,
+      gmailAddress: mail.gmail_address,
+      resendFromEmail: mail.resend_from_email,
+      hasGmailAppPassword: Boolean(mail.gmail_app_password),
+      hasResendApiKey: Boolean(mail.resend_api_key),
+      senderName: mail.sender_name,
+      // Which body was built: the campaign's selected template, or the hardcoded
+      // builder because that template row was broken/deleted (the safety net).
+      templateId,
+      templateResolved: template !== null,
+      bonusCount: bonuses.length,
+      subjectLength: subject.length,
+      htmlLength: html.length,
+    })
     const resolveSender = deps.resolveMailSender ?? resolveMailSender
     const sender = resolveSender(campaign.clientMail)
     await sender.send({ to: mapped.email, subject, html })
+    console.info('[venture-ingest] bonus email — handed to sender OK', {
+      campaignId: campaign.id,
+      mailProvider: mail.mail_provider,
+    })
     return BONUS_EMAIL_RESULTS.sent
   } catch (error) {
-    console.error(
-      '[venture-ingest] bonus email send failed:',
-      error instanceof Error ? error.message : String(error),
-    )
+    // Log the provider's own discriminators (SMTP code/command), not just the
+    // message — see describeMailError. Never the recipient, never the secret.
+    console.error('[venture-ingest] bonus email send failed:', {
+      campaignId: campaign.id,
+      mailProvider: campaign.clientMail.mail_provider,
+      ...describeMailError(error),
+    })
     return BONUS_EMAIL_RESULTS.failed
   }
 }
