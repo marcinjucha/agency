@@ -564,7 +564,12 @@ async function syncToEsp(
     return false
   }
   if (!campaign.esp_audience_ref) {
-    console.warn('[venture-ingest] campaign has no esp_audience_ref — skipping sync (lead kept)')
+    // `info`, not `warn`: no ESP audience is the CURRENT INTENDED state (beehiiv
+    // is deliberately not in use), so this fires on every single lead. A warning
+    // that is always expected trains everyone to ignore warnings — which is what
+    // has to stay readable for the failures that do matter. Trade-off accepted:
+    // a campaign that SHOULD sync but lost its ref is now info-level too.
+    console.info('[venture-ingest] campaign has no esp_audience_ref — skipping sync (lead kept)')
     return false
   }
 
