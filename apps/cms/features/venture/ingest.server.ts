@@ -494,15 +494,10 @@ function describeEspError(error: unknown): { status?: number; statusText?: strin
 }
 
 /**
- * Extract the safe (non-PII, non-secret) fields from a mail-send failure.
- *
- * A bare `error.message` is NOT enough to triage a transport failure: nodemailer
- * carries the actionable discriminators on non-standard properties (`code` =
- * EAUTH/ECONNECTION/ETIMEDOUT, `responseCode` = the SMTP numeric like 535,
- * `command` = the stage that failed). Without them a credential rejection and a
- * blocked egress port read identically in the logs. Read defensively — these are
- * untyped, provider-specific extras, absent on a plain Error (e.g. a Resend
- * failure), and NONE of them can contain the password or the recipient.
+ * Safe (non-PII, non-secret) fields of a mail-send failure. `message` alone
+ * cannot tell a credential rejection from blocked egress — nodemailer puts the
+ * discriminators on untyped extras (`code` EAUTH/ETIMEDOUT, `responseCode` 535,
+ * `command`), absent on other providers' errors.
  */
 function describeMailError(error: unknown): {
   name?: string
@@ -722,14 +717,9 @@ async function sendBonusEmail(
       // Iter 3c: per-campaign literal values, merged over app-auto { companyName }.
       campaign.templateValues,
     )
-    // Pre-send trace. The send is the ONE step whose failure is invisible from
-    // the outside: the request still returns 200 (no-lead-drop), so without this
-    // line the logs cannot tell "delivered" from "rejected by the mail provider"
-    // — nor which of the three senders was even chosen. `resolveMailSender`
-    // decides purely on the PRESENCE of the provider's config fields, so
-    // presence booleans (never the secrets) fully explain its choice; a
-    // configured-but-WRONG credential is indistinguishable here BY DESIGN and
-    // only surfaces in the catch below.
+    // The send fails invisibly: the request still returns 200 (no-lead-drop).
+    // Presence booleans (never the secrets) fully explain resolveMailSender's
+    // choice, since it decides on presence alone.
     const mail = campaign.clientMail
     console.info('[venture-ingest] bonus email — sending', {
       campaignId: campaign.id,
@@ -739,8 +729,6 @@ async function sendBonusEmail(
       hasGmailAppPassword: Boolean(mail.gmail_app_password),
       hasResendApiKey: Boolean(mail.resend_api_key),
       senderName: mail.sender_name,
-      // Which body was built: the campaign's selected template, or the hardcoded
-      // builder because that template row was broken/deleted (the safety net).
       templateId,
       templateResolved: template !== null,
       bonusCount: bonuses.length,
@@ -756,8 +744,6 @@ async function sendBonusEmail(
     })
     return BONUS_EMAIL_RESULTS.sent
   } catch (error) {
-    // Log the provider's own discriminators (SMTP code/command), not just the
-    // message — see describeMailError. Never the recipient, never the secret.
     console.error('[venture-ingest] bonus email send failed:', {
       campaignId: campaign.id,
       mailProvider: campaign.clientMail.mail_provider,

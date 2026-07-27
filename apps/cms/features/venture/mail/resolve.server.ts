@@ -86,10 +86,8 @@ export function resolveMailSender(client: ClientMailConfig): MailSender {
 
   const sender = factory(client)
   if (sender) {
-    // The client's OWN provider was selected (no silent degrade). Logged because
-    // the fallback path below is the only branch that used to leave a trace —
-    // so a successful client-provider selection was indistinguishable from
-    // "resolver never ran". Provider id only; no address, no secret.
+    // Only the fallback below used to log, so a successful selection was
+    // indistinguishable from "resolver never ran". Provider id only.
     console.info(`[venture mail] using client provider: ${client.mail_provider}`)
     return sender
   }
