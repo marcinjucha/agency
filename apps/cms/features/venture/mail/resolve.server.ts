@@ -18,7 +18,7 @@
 
 import type { MailProvider } from '../types'
 import { createGmailSmtpSender } from './gmail-smtp.server'
-import { createResendMailSender, sendEmailViaResend } from './resend.server'
+import { createResendMailSender, sendEmailViaResend, verifySharedResend } from './resend.server'
 import type { MailSender } from './types'
 
 export interface ClientMailConfig {
@@ -43,7 +43,10 @@ export interface ClientMailConfig {
 // "effective sender" describe path (effective-sender.server.ts) can detect the
 // fallback by IDENTITY against the REAL resolver, rather than re-deriving the
 // factory's completeness rules.
-export const SHARED_RESEND_SENDER: MailSender = { send: sendEmailViaResend }
+export const SHARED_RESEND_SENDER: MailSender = {
+  send: sendEmailViaResend,
+  verify: verifySharedResend,
+}
 
 function hasValue(value: string | null): value is string {
   return typeof value === 'string' && value.trim().length > 0

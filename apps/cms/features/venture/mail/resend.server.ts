@@ -81,6 +81,30 @@ async function sendResendEmail(params: ResendSendParams): Promise<void> {
   }
 }
 
+const RESEND_DOMAINS_ENDPOINT = 'https://api.resend.com/domains'
+
+/**
+ * Authenticate the key without sending mail. `GET /domains` is the cheapest
+ * authenticated read Resend exposes; a 401/403 means the key is rejected.
+ * Throws ResendApiError on non-2xx, matching the send path.
+ */
+export async function verifyResendApiKey(apiKey: string): Promise<void> {
+  const response = await fetch(RESEND_DOMAINS_ENDPOINT, {
+    headers: { Authorization: `Bearer ${apiKey}` },
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+  })
+  if (!response.ok) {
+    throw new ResendApiError(response.status, response.statusText, undefined)
+  }
+}
+
+/** Verify the agency-shared Resend account (env key) — the fallback sender. */
+export async function verifySharedResend(): Promise<void> {
+  const apiKey = process.env.RESEND_API_KEY
+  if (!apiKey) throw new Error('Missing RESEND_API_KEY environment variable')
+  await verifyResendApiKey(apiKey)
+}
+
 /** Backward-compat entry point — agency-shared Resend account via env vars. */
 export async function sendEmailViaResend(input: SendEmailInput): Promise<void> {
   const apiKey = process.env.RESEND_API_KEY
@@ -103,6 +127,7 @@ export function createResendMailSender(config: {
 }): MailSender {
   const from = formatFromHeader(config.fromName, config.from)
   return {
+    verify: () => verifyResendApiKey(config.apiKey),
     send: (input: MailSenderInput) => sendResendEmail({ apiKey: config.apiKey, from, ...input }),
   }
 }

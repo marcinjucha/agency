@@ -39,6 +39,10 @@ export function createGmailSmtpSender(config: {
   const from = formatFromHeader(config.senderName, config.address)
 
   return {
+    // SMTP AUTH handshake only — connects, authenticates, sends no mail.
+    async verify(): Promise<void> {
+      await transporter.verify()
+    },
     async send(input: MailSenderInput): Promise<void> {
       await transporter.sendMail({
         from,

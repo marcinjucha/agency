@@ -25,6 +25,7 @@ import { createClientSchema, type CreateClientInput } from '../validation'
 import { MAIL_PROVIDERS, type AdminClient } from '../types'
 import { updateClientFn } from '../admin'
 import { ThemePicker } from '@/features/themes/components/ThemePicker'
+import { MailConnectionTester } from './MailConnectionTester'
 
 // Mirrors VentureCampaignEditor.tsx 1:1 (top bar, sections in cards, Save +
 // ⌘S, masked secret fields with "leave blank = don't change"). Mail
@@ -372,6 +373,8 @@ export function VentureClientEditor({ client }: VentureClientEditorProps) {
                       </div>
                     </>
                   )}
+
+                  <MailConnectionTester clientId={client.id} />
                 </div>
               </CollapsibleCard>
             </div>

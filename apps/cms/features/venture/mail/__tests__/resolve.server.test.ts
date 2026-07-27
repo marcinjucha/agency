@@ -3,10 +3,12 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 const createResendMailSenderMock = vi.fn()
 const createGmailSmtpSenderMock = vi.fn()
 const sendEmailViaResendMock = vi.fn()
+const verifySharedResendMock = vi.fn()
 
 vi.mock('../resend.server', () => ({
   createResendMailSender: (...args: unknown[]) => createResendMailSenderMock(...args),
   sendEmailViaResend: (...args: unknown[]) => sendEmailViaResendMock(...args),
+  verifySharedResend: () => verifySharedResendMock(),
 }))
 
 vi.mock('../gmail-smtp.server', () => ({

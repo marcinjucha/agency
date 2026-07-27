@@ -337,6 +337,18 @@ export const messages = {
     gmailAppPasswordLabel: 'Hasło aplikacji Gmail',
     gmailAppPasswordHelp:
       '16-znakowe hasło aplikacji Google, wygenerowane w ustawieniach konta. Zostaw puste, aby nie zmieniać. (możesz wkleić ze spacjami, usuniemy je automatycznie)',
+    mailTestButton: 'Testuj połączenie',
+    mailTestRunning: 'Sprawdzam…',
+    mailTestHelp:
+      'Loguje się do dostawcy zapisanymi danymi, nie wysyła żadnej wiadomości. Sprawdza zapisaną konfigurację — zapisz zmiany przed testem.',
+    mailTestOk: 'Połączenie działa — dostawca przyjął dane logowania.',
+    mailTestUnsupported: 'Tego dostawcy nie potrafimy sprawdzić bez wysłania wiadomości.',
+    mailTestAuthRejected:
+      'Dostawca odrzucił dane logowania. Przy Gmailu najczęstsza przyczyna: adres jest aliasem lub grupą, a nie pełnym kontem Google — alias nie może zalogować się do SMTP. Sprawdź też, czy konto ma włączoną weryfikację dwuetapową i czy hasło aplikacji pochodzi z tego konta.',
+    mailTestConnection:
+      'Nie udało się połączyć z serwerem dostawcy. Spróbuj ponownie za chwilę.',
+    mailTestUnknown: 'Test się nie powiódł, ale dostawca nie podał powodu.',
+    mailTestError: 'Nie udało się wykonać testu połączenia',
   },
 
   surveys: {

@@ -30,9 +30,19 @@ function deploymentTag(): { sha: string; env: string } {
 }
 
 // Off in prod: one CMS page fans out to a dozen server fns, and per-call success
-// lines bury the ones that matter.
-function isVerbose(): boolean {
+// lines bury the ones that matter. Exported so feature-level logs gate their
+// error messages on the SAME switch — a second rule would drift.
+export function isVerboseLogging(): boolean {
   return readEnv('SERVER_FN_LOG') === 'all' || import.meta.env?.DEV === true
+}
+
+const isVerbose = isVerboseLogging
+
+/** Drop undefined entries so provider-specific fields don't print as noise. */
+export function compactLogFields<T extends Record<string, unknown>>(fields: T): Partial<T> {
+  return Object.fromEntries(
+    Object.entries(fields).filter(([, value]) => value !== undefined),
+  ) as Partial<T>
 }
 
 // `message` is withheld unless verbose: error text interpolates data, so a

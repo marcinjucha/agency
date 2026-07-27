@@ -1,4 +1,5 @@
 import type { Json } from '@agency/database'
+import { compactLogFields, isVerboseLogging } from '@/lib/server-fn-logger'
 import type { createServiceClient } from '@/lib/supabase/service'
 import { EspApiError } from './esp/http.server'
 import type { EspProvider, EspProviderId } from './esp/types'
@@ -502,7 +503,9 @@ function describeEspError(error: unknown): { status?: number; statusText?: strin
  * Resend account is the fallback every client can land on.
  *
  * `ResendApiError.body` is deliberately NOT read — it can echo recipient data
- * (same rule the ESP path already follows).
+ * (same rule the ESP path already follows), and `message` is withheld outside
+ * verbose mode for the same reason (nodemailer can name the recipient in it) —
+ * gated on the SAME switch as the global server-fn logger.
  */
 function describeMailError(error: unknown): {
   name?: string
@@ -511,10 +514,14 @@ function describeMailError(error: unknown): {
   command?: string
   status?: number
   statusText?: string
-  message: string
+  message?: string
 } {
-  const message = error instanceof Error ? error.message : String(error)
-  if (typeof error !== 'object' || error === null) return { message }
+  const message = isVerboseLogging()
+    ? error instanceof Error
+      ? error.message
+      : String(error)
+    : undefined
+  if (typeof error !== 'object' || error === null) return compactLogFields({ message })
   const extras = error as {
     name?: unknown
     code?: unknown
@@ -523,7 +530,7 @@ function describeMailError(error: unknown): {
     status?: unknown
     statusText?: unknown
   }
-  return {
+  return compactLogFields({
     name: typeof extras.name === 'string' ? extras.name : undefined,
     code: typeof extras.code === 'string' ? extras.code : undefined,
     responseCode: typeof extras.responseCode === 'number' ? extras.responseCode : undefined,
@@ -531,7 +538,7 @@ function describeMailError(error: unknown): {
     status: typeof extras.status === 'number' ? extras.status : undefined,
     statusText: typeof extras.statusText === 'string' ? extras.statusText : undefined,
     message,
-  }
+  })
 }
 
 /**

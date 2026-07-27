@@ -21,6 +21,12 @@ import {
   describeEffectiveSender,
   type EffectiveSender,
 } from './mail/effective-sender.server'
+import { createServiceClient } from '@/lib/supabase/service'
+import { resolveMailSender, type ClientMailConfig } from './mail/resolve.server'
+import {
+  classifyVerifyError,
+  type MailConnectionTest,
+} from './mail/classify-verify-error'
 import {
   evaluatePublishGate,
   sanitizeLeadSourceConfig,
@@ -689,6 +695,72 @@ export function getCampaignEffectiveSendHandler(
       ),
     ),
   )
+}
+
+// ---------------------------------------------------------------------------
+// Mail connection test
+// ---------------------------------------------------------------------------
+
+/**
+ * Verify a client's configured mail credentials WITHOUT sending mail.
+ *
+ * Closes the loop that made the venture SMTP outage expensive: the CMS could
+ * only ever show that a credential was PRESENT, so a wrong one stayed invisible
+ * until a real lead arrived and failed silently behind an HTTP 200.
+ *
+ * Gated on `bonus_funnel.clients` + tenant ownership — the route map does NOT
+ * gate createServerFn, and this reads the plaintext secrets. The secrets require
+ * the SERVICE client (SELECT on those columns is revoked for `authenticated`),
+ * so authorization happens FIRST on the RLS-aware client and the service read is
+ * still double-scoped by id + tenant. Only a classified reason is returned; the
+ * provider's raw error never leaves the server.
+ */
+export function testClientMailConnectionHandler(
+  clientId: string,
+): Promise<MutationResult<MailConnectionTest>> {
+  return toMutation(
+    gated(PERM.clients, (auth) =>
+      assertClientOwned(auth, clientId).andThen(() =>
+        readClientMailSecrets(clientId, auth.tenantId).andThen(runMailVerify),
+      ),
+    ),
+  )
+}
+
+function readClientMailSecrets(
+  clientId: string,
+  tenantId: string,
+): ResultAsync<ClientMailConfig, string> {
+  return ResultAsync.fromPromise(
+    createServiceClient()
+      .from('so_clients')
+      .select(
+        'mail_provider, resend_api_key, resend_from_email, gmail_address, gmail_app_password, sender_name',
+      )
+      .eq('id', clientId)
+      .eq('tenant_id', tenantId)
+      .maybeSingle(),
+    dbError,
+  ).andThen((res) => {
+    const r = res as { data: ClientMailConfig | null; error: DbErrorShape }
+    if (r.error) return err(mapDbError(r.error, 'readClientMailSecrets'))
+    if (!r.data) return err(messages.common.noPermission)
+    return ok(r.data)
+  })
+}
+
+function runMailVerify(config: ClientMailConfig): ResultAsync<MailConnectionTest, string> {
+  const sender = resolveMailSender(config)
+  // A provider with no cheap credential check reports "unsupported" rather than
+  // a false pass.
+  if (!sender.verify) return okAsync<MailConnectionTest, string>({ status: 'unsupported' })
+  // A rejected credential is a legitimate ANSWER, not a handler failure — it maps
+  // to a `failed` payload on the success channel so the UI can explain it.
+  return ResultAsync.fromPromise(sender.verify(), (error) => error)
+    .map((): MailConnectionTest => ({ status: 'ok' }))
+    .orElse((error) =>
+      okAsync<MailConnectionTest, string>({ status: 'failed', ...classifyVerifyError(error) }),
+    )
 }
 
 // ===========================================================================

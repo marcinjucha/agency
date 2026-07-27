@@ -33,6 +33,7 @@ import {
   reorderBonusesHandler,
   saveCampaignTemplateVariablesHandler,
   selectTemplateForCampaignHandler,
+  testClientMailConnectionHandler,
   updateBonusHandler,
   updateClientHandler,
   updateCampaignHandler,
@@ -118,6 +119,13 @@ export const getCampaignEffectiveSendFn = createServerFn({ method: 'POST' })
     campaignEffectiveSendInputSchema.parse(v),
   )
   .handler(({ data }) => getCampaignEffectiveSendHandler(data.campaignId))
+
+// Authenticate the client's saved mail credentials without sending anything.
+// Gated inside the handler (bonus_funnel.clients + tenant ownership) — it reads
+// plaintext secrets, so the route map is NOT the boundary here.
+export const testClientMailConnectionFn = createServerFn({ method: 'POST' })
+  .inputValidator((v: z.infer<typeof idInputSchema>) => idInputSchema.parse(v))
+  .handler(({ data }) => testClientMailConnectionHandler(data.id))
 
 // Render the REAL bonus email a send would deliver — powers the campaign editor's
 // "Podgląd e-mail" tab (byte-identical to the send path). Gated in the handler
