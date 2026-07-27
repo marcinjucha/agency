@@ -9,8 +9,10 @@
 // nothing to opt out of today. When bumping Start, add it here.
 
 import { createStart } from '@tanstack/react-start'
-import { serverFnLoggerMiddleware } from '@/lib/server-fn-logger'
+import { apiRequestLoggerMiddleware, serverFnLoggerMiddleware } from '@/lib/server-fn-logger'
 
 export const startInstance = createStart(() => ({
+  // Runs on EVERY request (SSR included) — the middleware itself filters to /api/.
+  requestMiddleware: [apiRequestLoggerMiddleware],
   functionMiddleware: [serverFnLoggerMiddleware],
 }))

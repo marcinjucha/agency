@@ -495,25 +495,41 @@ function describeEspError(error: unknown): { status?: number; statusText?: strin
 
 /**
  * Safe (non-PII, non-secret) fields of a mail-send failure. `message` alone
- * cannot tell a credential rejection from blocked egress — nodemailer puts the
- * discriminators on untyped extras (`code` EAUTH/ETIMEDOUT, `responseCode` 535,
- * `command`), absent on other providers' errors.
+ * cannot tell a credential rejection from blocked egress — the discriminators
+ * live on untyped extras that differ per provider: nodemailer uses
+ * `code` (EAUTH/ETIMEDOUT) / `responseCode` (535) / `command`, while
+ * ResendApiError uses `status`/`statusText`. Both are read, since the shared
+ * Resend account is the fallback every client can land on.
+ *
+ * `ResendApiError.body` is deliberately NOT read — it can echo recipient data
+ * (same rule the ESP path already follows).
  */
 function describeMailError(error: unknown): {
   name?: string
   code?: string
   responseCode?: number
   command?: string
+  status?: number
+  statusText?: string
   message: string
 } {
   const message = error instanceof Error ? error.message : String(error)
   if (typeof error !== 'object' || error === null) return { message }
-  const extras = error as { name?: unknown; code?: unknown; responseCode?: unknown; command?: unknown }
+  const extras = error as {
+    name?: unknown
+    code?: unknown
+    responseCode?: unknown
+    command?: unknown
+    status?: unknown
+    statusText?: unknown
+  }
   return {
     name: typeof extras.name === 'string' ? extras.name : undefined,
     code: typeof extras.code === 'string' ? extras.code : undefined,
     responseCode: typeof extras.responseCode === 'number' ? extras.responseCode : undefined,
     command: typeof extras.command === 'string' ? extras.command : undefined,
+    status: typeof extras.status === 'number' ? extras.status : undefined,
+    statusText: typeof extras.statusText === 'string' ? extras.statusText : undefined,
     message,
   }
 }
@@ -720,15 +736,18 @@ async function sendBonusEmail(
     // The send fails invisibly: the request still returns 200 (no-lead-drop).
     // Presence booleans (never the secrets) fully explain resolveMailSender's
     // choice, since it decides on presence alone.
+    // Addresses are NOT logged: they would be harvested from the log drain once
+    // per lead, forever. Provider + presence booleans already explain
+    // resolveMailSender's choice, and the addresses are one query away.
     const mail = campaign.clientMail
     console.info('[venture-ingest] bonus email — sending', {
       campaignId: campaign.id,
       mailProvider: mail.mail_provider,
-      gmailAddress: mail.gmail_address,
-      resendFromEmail: mail.resend_from_email,
+      hasGmailAddress: Boolean(mail.gmail_address),
       hasGmailAppPassword: Boolean(mail.gmail_app_password),
+      hasResendFromEmail: Boolean(mail.resend_from_email),
       hasResendApiKey: Boolean(mail.resend_api_key),
-      senderName: mail.sender_name,
+      hasSenderName: Boolean(mail.sender_name),
       templateId,
       templateResolved: template !== null,
       bonusCount: bonuses.length,
