@@ -9,6 +9,7 @@
 // throwing inputValidator — which fires before the handler and is otherwise
 // undiagnosable.
 
+import { isNotFound, isRedirect } from '@tanstack/react-router'
 import { createMiddleware } from '@tanstack/react-start'
 
 const SLOW_SERVER_FN_MS = 1000
@@ -45,16 +46,11 @@ function describeThrown(error: unknown): { name?: string; code?: string; message
   }
 }
 
-// redirect()/notFound() are thrown control flow, not failures — no exported
-// class to instanceof, so detect structurally.
+// redirect()/notFound() are thrown control flow, not failures. Use the router's
+// own predicates — a redirect is a `Response` subtype, so a hand-rolled
+// structural check gets it wrong.
 function isFrameworkControlFlow(error: unknown): boolean {
-  if (typeof error !== 'object' || error === null) return false
-  const candidate = error as { isRedirect?: unknown; isNotFound?: unknown; routerCode?: unknown }
-  return (
-    candidate.isRedirect === true ||
-    candidate.isNotFound === true ||
-    typeof candidate.routerCode === 'string'
-  )
+  return isRedirect(error) || isNotFound(error)
 }
 
 export const serverFnLoggerMiddleware = createMiddleware({ type: 'function' }).server(
