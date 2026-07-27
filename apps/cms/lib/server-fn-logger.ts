@@ -45,24 +45,29 @@ export function compactLogFields<T extends Record<string, unknown>>(fields: T): 
   ) as Partial<T>
 }
 
-// `message` is withheld unless verbose: error text interpolates data, so a
-// rethrown Postgres error reads `Key (email)=(jan@example.pl) already exists` —
-// PII in the log drain, which this module forbids. `name`/`code` stay: Postgres
-// 42501 (RLS denial) / 23505 (unique violation) are actionable on their own, and
-// SERVER_FN_LOG=all is the switch when a message is genuinely needed.
-function describeThrown(error: unknown): { name?: string; code?: string; message?: string } {
-  const message = isVerbose()
-    ? error instanceof Error
-      ? error.message
-      : String(error)
-    : undefined
+const EMAIL_IN_TEXT = /[^\s<>"'()]+@[^\s<>"'()]+/g
+
+/**
+ * Strip email addresses from free text. Error messages interpolate row data — a
+ * rethrown Postgres error reads `Key (email)=(jan@example.pl) already exists` —
+ * so the message cannot be logged raw. Withholding it entirely was worse: an
+ * error carrying no `code` then logged no cause at all. Redacting keeps the
+ * sentence and drops the identifier.
+ */
+export function redactEmails(text: string): string {
+  return text.replace(EMAIL_IN_TEXT, '<email>')
+}
+
+function describeThrown(error: unknown): { name?: string; code?: string; message: string } {
+  const message = redactEmails(error instanceof Error ? error.message : String(error))
   if (typeof error !== 'object' || error === null) return { message }
   const extras = error as { name?: unknown; code?: unknown }
-  return {
+  return compactLogFields({
     name: typeof extras.name === 'string' ? extras.name : undefined,
+    // Postgres 42501 (RLS denial) / 23505 (unique violation).
     code: typeof extras.code === 'string' ? extras.code : undefined,
     message,
-  }
+  }) as { name?: string; code?: string; message: string }
 }
 
 // redirect()/notFound() are thrown control flow, not failures. Use the router's
@@ -106,6 +111,18 @@ export const apiRequestLoggerMiddleware = createMiddleware().server(
   },
 )
 
+/**
+ * The handler's return value rides on the middleware result at runtime but is
+ * absent from its public type, so read it defensively — a future shape change
+ * must degrade to "not a handled failure", never crash the middleware.
+ */
+function isHandledFailure(middlewareResult: unknown): boolean {
+  if (typeof middlewareResult !== 'object' || middlewareResult === null) return false
+  const handlerResult = (middlewareResult as { result?: unknown }).result
+  if (typeof handlerResult !== 'object' || handlerResult === null) return false
+  return (handlerResult as { success?: unknown }).success === false
+}
+
 export const serverFnLoggerMiddleware = createMiddleware({ type: 'function' }).server(
   async ({ next, serverFnMeta, method }) => {
     const startedAt = Date.now()
@@ -117,9 +134,13 @@ export const serverFnLoggerMiddleware = createMiddleware({ type: 'function' }).s
       const ms = Date.now() - startedAt
 
       if (ms >= SLOW_SERVER_FN_MS) {
-        console.warn('[server-fn] slow', { fn, file, method, ms })
+        console.warn('[server-fn] slow', { fn, file, method, ms, handled: isHandledFailure(result) })
       } else if (isVerbose()) {
-        console.info('[server-fn] ok', { fn, file, method, ms })
+        // Most handlers report failure as a returned `{ success: false }` rather
+        // than a throw, so logging every one of those as "ok" would mark the
+        // failing call as successful in the drain.
+        const label = isHandledFailure(result) ? '[server-fn] handled-error' : '[server-fn] ok'
+        console.info(label, { fn, file, method, ms })
       }
       return result
     } catch (error) {

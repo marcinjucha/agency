@@ -345,10 +345,14 @@ export const messages = {
     mailTestUnsupported: 'Tego dostawcy nie potrafimy sprawdzić bez wysłania wiadomości.',
     mailTestSharedFallback:
       'Nie sprawdziliśmy nic: konfiguracja wybranego dostawcy jest niekompletna, więc wysyłka i tak poleci z konta agencyjnego. Uzupełnij brakujące pole i zapisz, albo wybierz "Agencyjny Resend" świadomie.',
-    mailTestAuthRejected:
-      'Dostawca odrzucił dane logowania. Przy Gmailu najczęstsza przyczyna: adres jest aliasem lub grupą, a nie pełnym kontem Google — alias nie może zalogować się do SMTP. Sprawdź też, czy konto ma włączoną weryfikację dwuetapową i czy hasło aplikacji pochodzi z tego konta.',
-    mailTestResendScopeNote:
-      'Uwaga: sprawdzamy klucz odczytem listy domen. Klucz Resend z uprawnieniem wyłącznie do wysyłki zostanie tu odrzucony, mimo że maile wysyła poprawnie.',
+    mailTestAuthRejectedGmail:
+      'Google odrzuciło dane logowania. Najczęstsza przyczyna: adres jest aliasem lub grupą, a nie pełnym kontem Google — alias nie może zalogować się do SMTP. Sprawdź też, czy konto ma włączoną weryfikację dwuetapową i czy hasło aplikacji pochodzi z tego konta.',
+    mailTestAuthRejectedResend:
+      'Resend odrzucił klucz API. Sprawdź, czy klucz nie został usunięty lub odwołany i czy skopiowano go w całości.',
+    mailTestDomainUnverified:
+      'Klucz działa, ale domena adresu nadawcy nie jest zweryfikowana w tym koncie Resend — każda wysyłka zostanie odrzucona. Zweryfikuj domenę w panelu Resend albo zmień adres nadawcy.',
+    mailTestInconclusive:
+      'Nie da się rozstrzygnąć: klucz Resend nie ma uprawnienia do odczytu listy domen, więc nie sprawdzimy go bez wysłania wiadomości. Nie oznacza to, że jest błędny.',
     mailTestConnection:
       'Nie udało się połączyć z serwerem dostawcy. Spróbuj ponownie za chwilę.',
     mailTestUnknown: 'Test się nie powiódł, ale dostawca nie podał powodu.',

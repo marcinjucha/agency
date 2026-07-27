@@ -4,6 +4,10 @@
 const VERIFY_FAILURE_REASONS = {
   authRejected: 'auth_rejected',
   connection: 'connection',
+  /** The From domain is not verified in the provider account — every send 403s. */
+  domainUnverified: 'domain_unverified',
+  /** The check itself could not run (e.g. a sending-scoped Resend key). */
+  inconclusive: 'inconclusive',
   unknown: 'unknown',
 } as const
 
@@ -11,19 +15,10 @@ export type MailVerifyFailureReason =
   (typeof VERIFY_FAILURE_REASONS)[keyof typeof VERIFY_FAILURE_REASONS]
 
 /**
- * Outcome of a connection test.
- *
- * `unsupported` and `shared_fallback` are both DISTINCT from `ok`, for the same
- * reason: reporting anything we did not actually verify as healthy is the false
- * reassurance this feature exists to remove.
- *
- * `shared_fallback` is the sharp one — a client that picked its OWN provider but
- * saved incomplete config degrades to the agency Resend account, so a naive test
- * would authenticate the AGENCY key and cheerfully report success while the
- * client's own credentials were never touched.
- *
- * `provider` rides along on failures so the UI can add provider-specific
- * caveats without re-deriving which sender ran.
+ * Outcome of a connection test. `unsupported` and `shared_fallback` are DISTINCT
+ * from `ok`: reporting anything not actually verified as healthy is the false
+ * reassurance this feature exists to remove. `provider` rides on failures so the
+ * UI can word them per provider.
  */
 export type MailConnectionTest =
   | { status: 'ok' }
@@ -48,6 +43,15 @@ export function classifyVerifyError(error: unknown): MailVerifyFailure {
   if (typeof error !== 'object' || error === null) {
     return { reason: VERIFY_FAILURE_REASONS.unknown }
   }
+  // Matched by name, not instanceof: this module stays free of server imports so
+  // it can be unit-tested and reused on either side.
+  const errorName = (error as { name?: unknown }).name
+  if (errorName === 'ResendDomainUnverifiedError') {
+    return { reason: VERIFY_FAILURE_REASONS.domainUnverified }
+  }
+  if (errorName === 'ResendScopeInconclusiveError') {
+    return { reason: VERIFY_FAILURE_REASONS.inconclusive }
+  }
   const extras = error as { code?: unknown; responseCode?: unknown; status?: unknown }
   const code = typeof extras.code === 'string' ? extras.code : undefined
   const responseCode = typeof extras.responseCode === 'number' ? extras.responseCode : undefined
@@ -60,17 +64,13 @@ export function classifyVerifyError(error: unknown): MailVerifyFailure {
     httpStatus === 401 ||
     httpStatus === 403
 
-  // The fetch-based providers (Resend) never set `code`: an AbortSignal.timeout
-  // surfaces as a DOMException named TimeoutError, and undici reports an
-  // unreachable host as `TypeError: fetch failed` with a `cause`. Without these,
-  // every network failure on that path fell through to `unknown`.
-  const name = typeof (error as { name?: unknown }).name === 'string'
-    ? (error as { name: string }).name
-    : undefined
+  // The fetch-based providers never set `code`: an AbortSignal.timeout surfaces
+  // as a DOMException named TimeoutError, and undici reports an unreachable host
+  // as `TypeError: fetch failed` with a `cause`.
   const isFetchTransportError =
-    name === 'TimeoutError' ||
-    name === 'AbortError' ||
-    (name === 'TypeError' && 'cause' in (error as object))
+    errorName === 'TimeoutError' ||
+    errorName === 'AbortError' ||
+    (errorName === 'TypeError' && 'cause' in (error as object))
 
   const isConnection =
     (code !== undefined && CONNECTION_SMTP_CODES.has(code)) || isFetchTransportError

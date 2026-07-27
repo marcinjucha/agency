@@ -175,3 +175,28 @@ describe('degradesToSharedSender', () => {
     expect(degradesToSharedSender(baseConfig({ mail_provider: 'resend_shared' }))).toBe(true)
   })
 })
+
+describe('resolveMailSender silence', () => {
+  // effective-sender.server.ts calls the resolver as a read-only probe on every
+  // render of the campaign editor's send card. A log here would look like a real
+  // send-path selection in a drain being read to diagnose a send — the exact
+  // misdiagnosis this branch already had to fix once.
+  it.each([
+    ['a fully configured provider', { mail_provider: 'gmail_smtp', gmail_address: 'a@b.pl', gmail_app_password: 'x' }],
+    ['an incomplete provider that degrades', { mail_provider: 'gmail_smtp', gmail_address: 'a@b.pl' }],
+    ['the shared default', { mail_provider: 'resend_shared' }],
+  ])('emits nothing to the console for %s', (_label, overrides) => {
+    createGmailSmtpSenderMock.mockReturnValue({ send: vi.fn() })
+    const info = vi.spyOn(console, 'info').mockImplementation(() => {})
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    resolveMailSender(baseConfig(overrides as Partial<ClientMailConfig>))
+
+    expect(info).not.toHaveBeenCalled()
+    expect(warn).not.toHaveBeenCalled()
+    expect(error).not.toHaveBeenCalled()
+    vi.restoreAllMocks()
+    createGmailSmtpSenderMock.mockReset()
+  })
+})

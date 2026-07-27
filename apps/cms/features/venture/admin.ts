@@ -120,9 +120,7 @@ export const getCampaignEffectiveSendFn = createServerFn({ method: 'POST' })
   )
   .handler(({ data }) => getCampaignEffectiveSendHandler(data.campaignId))
 
-// Authenticate the client's saved mail credentials without sending anything.
-// Gated inside the handler (bonus_funnel.clients + tenant ownership) — it reads
-// plaintext secrets, so the route map is NOT the boundary here.
+// Gated inside the handler — it reads plaintext secrets.
 export const testClientMailConnectionFn = createServerFn({ method: 'POST' })
   .inputValidator((v: z.infer<typeof idInputSchema>) => idInputSchema.parse(v))
   .handler(({ data }) => testClientMailConnectionHandler(data.id))

@@ -59,3 +59,23 @@ describe('classifyVerifyError', () => {
     expect(JSON.stringify(result)).not.toContain('jan@example.pl')
   })
 })
+
+describe('classifyVerifyError — Resend verification outcomes', () => {
+  it('classifies an unverified From domain distinctly from bad credentials', () => {
+    const error = Object.assign(new Error('Resend domain not verified: klient.pl'), {
+      name: 'ResendDomainUnverifiedError',
+    })
+    expect(classifyVerifyError(error).reason).toBe('domain_unverified')
+  })
+
+  it('classifies a sending-scoped key as inconclusive, never as auth_rejected', () => {
+    // A 403 here means the key cannot READ domains — it may still send fine, so
+    // reporting "credentials rejected" would push an operator to rotate a
+    // working production key.
+    const error = Object.assign(new Error('Resend read scope unavailable (403)'), {
+      name: 'ResendScopeInconclusiveError',
+      status: 403,
+    })
+    expect(classifyVerifyError(error).reason).toBe('inconclusive')
+  })
+})

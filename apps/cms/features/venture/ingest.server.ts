@@ -1,10 +1,14 @@
 import type { Json } from '@agency/database'
-import { compactLogFields, isVerboseLogging } from '@/lib/server-fn-logger'
+import { compactLogFields, redactEmails } from '@/lib/server-fn-logger'
 import type { createServiceClient } from '@/lib/supabase/service'
 import { EspApiError } from './esp/http.server'
 import type { EspProvider, EspProviderId } from './esp/types'
 import type { MappedLead } from './lead-sources/types'
-import { resolveMailSender, type ClientMailConfig } from './mail/resolve.server'
+import {
+  degradesToSharedSender,
+  resolveMailSender,
+  type ClientMailConfig,
+} from './mail/resolve.server'
 import type { MailSender } from './mail/types'
 import {
   buildBonusEmailBody,
@@ -503,25 +507,22 @@ function describeEspError(error: unknown): { status?: number; statusText?: strin
  * Resend account is the fallback every client can land on.
  *
  * `ResendApiError.body` is deliberately NOT read — it can echo recipient data
- * (same rule the ESP path already follows), and `message` is withheld outside
- * verbose mode for the same reason (nodemailer can name the recipient in it) —
- * gated on the SAME switch as the global server-fn logger.
+ * (same rule the ESP path already follows); `message` is email-redacted instead
+ * of withheld, so a render throw carrying no provider code still names a cause.
  */
-function describeMailError(error: unknown): {
+interface MailErrorFields {
   name?: string
   code?: string
   responseCode?: number
   command?: string
   status?: number
   statusText?: string
-  message?: string
-} {
-  const message = isVerboseLogging()
-    ? error instanceof Error
-      ? error.message
-      : String(error)
-    : undefined
-  if (typeof error !== 'object' || error === null) return compactLogFields({ message })
+  message: string
+}
+
+function describeMailError(error: unknown): MailErrorFields {
+  const message = redactEmails(error instanceof Error ? error.message : String(error))
+  if (typeof error !== 'object' || error === null) return { message }
   const extras = error as {
     name?: unknown
     code?: unknown
@@ -538,7 +539,7 @@ function describeMailError(error: unknown): {
     status: typeof extras.status === 'number' ? extras.status : undefined,
     statusText: typeof extras.statusText === 'string' ? extras.statusText : undefined,
     message,
-  })
+  }) as MailErrorFields
 }
 
 /**
@@ -745,16 +746,15 @@ async function sendBonusEmail(
       // Iter 3c: per-campaign literal values, merged over app-auto { companyName }.
       campaign.templateValues,
     )
-    // The send fails invisibly: the request still returns 200 (no-lead-drop).
-    // Presence booleans (never the secrets) fully explain resolveMailSender's
-    // choice, since it decides on presence alone.
-    // Addresses are NOT logged: they would be harvested from the log drain once
-    // per lead, forever. Provider + presence booleans already explain
-    // resolveMailSender's choice, and the addresses are one query away.
+    // Addresses are never logged (a drain would harvest one per lead); presence
+    // booleans explain the choice, since resolveMailSender decides on presence
+    // alone. `degradedToShared` is the one that matters: true means this client's
+    // mail ships under the AGENCY identity because its own config is incomplete.
     const mail = campaign.clientMail
     console.info('[venture-ingest] bonus email — sending', {
       campaignId: campaign.id,
       mailProvider: mail.mail_provider,
+      degradedToShared: degradesToSharedSender(mail),
       hasGmailAddress: Boolean(mail.gmail_address),
       hasGmailAppPassword: Boolean(mail.gmail_app_password),
       hasResendFromEmail: Boolean(mail.resend_from_email),

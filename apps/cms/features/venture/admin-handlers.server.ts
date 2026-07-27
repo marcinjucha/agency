@@ -708,16 +708,9 @@ export function getCampaignEffectiveSendHandler(
 /**
  * Verify a client's configured mail credentials WITHOUT sending mail.
  *
- * Closes the loop that made the venture SMTP outage expensive: the CMS could
- * only ever show that a credential was PRESENT, so a wrong one stayed invisible
- * until a real lead arrived and failed silently behind an HTTP 200.
- *
- * Gated on `bonus_funnel.clients` + tenant ownership — the route map does NOT
- * gate createServerFn, and this reads the plaintext secrets. The secrets require
- * the SERVICE client (SELECT on those columns is revoked for `authenticated`),
- * so authorization happens FIRST on the RLS-aware client and the service read is
- * still double-scoped by id + tenant. Only a classified reason is returned; the
- * provider's raw error never leaves the server.
+ * Ordering is load-bearing: authorization runs on the RLS-aware client FIRST,
+ * because the secrets are only readable by the service client (SELECT revoked
+ * for `authenticated`). The service read stays scoped by id + tenant.
  */
 export function testClientMailConnectionHandler(
   clientId: string,
@@ -754,22 +747,17 @@ function readClientMailSecrets(
 }
 
 function runMailVerify(config: ClientMailConfig): ResultAsync<MailConnectionTest, string> {
-  // A client that CHOSE its own provider but saved incomplete config silently
-  // degrades to the agency account. Verifying that would authenticate the
-  // AGENCY key and report success for credentials we never touched — the exact
-  // false pass this feature exists to prevent. `resend_shared` is excluded: for
-  // that provider the agency account IS the configured choice, so testing it is
-  // the right answer.
+  // Verifying a degraded client would authenticate the AGENCY key and report
+  // success for credentials never touched. `resend_shared` is excluded: there the
+  // agency account IS the configured choice.
   if (config.mail_provider !== 'resend_shared' && degradesToSharedSender(config)) {
     return okAsync<MailConnectionTest, string>({ status: 'shared_fallback' })
   }
 
   const sender = resolveMailSender(config)
-  // A provider with no cheap credential check reports "unsupported" rather than
-  // a false pass.
   if (!sender.verify) return okAsync<MailConnectionTest, string>({ status: 'unsupported' })
-  // A rejected credential is a legitimate ANSWER, not a handler failure — it maps
-  // to a `failed` payload on the success channel so the UI can explain it.
+  // A rejected credential is an ANSWER, not a handler failure — it rides the
+  // success channel so the UI can explain it.
   return ResultAsync.fromPromise(sender.verify(), (error) => error)
     .map((): MailConnectionTest => ({ status: 'ok' }))
     .orElse((error) =>
