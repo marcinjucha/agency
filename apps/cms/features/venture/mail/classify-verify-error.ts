@@ -11,14 +11,25 @@ export type MailVerifyFailureReason =
   (typeof VERIFY_FAILURE_REASONS)[keyof typeof VERIFY_FAILURE_REASONS]
 
 /**
- * Outcome of a connection test. `unsupported` is DISTINCT from `ok`: reporting a
- * provider we cannot check as healthy would be the same false reassurance this
- * feature exists to remove.
+ * Outcome of a connection test.
+ *
+ * `unsupported` and `shared_fallback` are both DISTINCT from `ok`, for the same
+ * reason: reporting anything we did not actually verify as healthy is the false
+ * reassurance this feature exists to remove.
+ *
+ * `shared_fallback` is the sharp one — a client that picked its OWN provider but
+ * saved incomplete config degrades to the agency Resend account, so a naive test
+ * would authenticate the AGENCY key and cheerfully report success while the
+ * client's own credentials were never touched.
+ *
+ * `provider` rides along on failures so the UI can add provider-specific
+ * caveats without re-deriving which sender ran.
  */
 export type MailConnectionTest =
   | { status: 'ok' }
   | { status: 'unsupported' }
-  | ({ status: 'failed' } & MailVerifyFailure)
+  | { status: 'shared_fallback' }
+  | ({ status: 'failed'; provider: string } & MailVerifyFailure)
 
 export interface MailVerifyFailure {
   reason: MailVerifyFailureReason
@@ -49,7 +60,20 @@ export function classifyVerifyError(error: unknown): MailVerifyFailure {
     httpStatus === 401 ||
     httpStatus === 403
 
-  const isConnection = code !== undefined && CONNECTION_SMTP_CODES.has(code)
+  // The fetch-based providers (Resend) never set `code`: an AbortSignal.timeout
+  // surfaces as a DOMException named TimeoutError, and undici reports an
+  // unreachable host as `TypeError: fetch failed` with a `cause`. Without these,
+  // every network failure on that path fell through to `unknown`.
+  const name = typeof (error as { name?: unknown }).name === 'string'
+    ? (error as { name: string }).name
+    : undefined
+  const isFetchTransportError =
+    name === 'TimeoutError' ||
+    name === 'AbortError' ||
+    (name === 'TypeError' && 'cause' in (error as object))
+
+  const isConnection =
+    (code !== undefined && CONNECTION_SMTP_CODES.has(code)) || isFetchTransportError
 
   const reason = isAuth
     ? VERIFY_FAILURE_REASONS.authRejected

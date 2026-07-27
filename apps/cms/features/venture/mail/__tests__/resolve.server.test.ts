@@ -15,7 +15,11 @@ vi.mock('../gmail-smtp.server', () => ({
   createGmailSmtpSender: (...args: unknown[]) => createGmailSmtpSenderMock(...args),
 }))
 
-import { resolveMailSender, type ClientMailConfig } from '../resolve.server'
+import {
+  degradesToSharedSender,
+  resolveMailSender,
+  type ClientMailConfig,
+} from '../resolve.server'
 import { sendEmailViaResend } from '../resend.server'
 
 function baseConfig(overrides: Partial<ClientMailConfig> = {}): ClientMailConfig {
@@ -70,7 +74,7 @@ describe('resolveMailSender', () => {
     expect(sender).toBe(RESEND_OWN_SENDER)
   })
 
-  it('resend_own missing resend_from_email falls back to shared sender + warns', () => {
+  it('resend_own missing resend_from_email falls back to the shared sender', () => {
     const config = baseConfig({
       mail_provider: 'resend_own',
       resend_api_key: 'key-123',
@@ -81,7 +85,9 @@ describe('resolveMailSender', () => {
 
     expect(createResendMailSenderMock).not.toHaveBeenCalled()
     expect(sender.send).toBe(sendEmailViaResend)
-    expect(console.warn).toHaveBeenCalled()
+    // Behaviour, not a log line: the resolver is silent so the read-only probe
+    // in effective-sender.server.ts cannot emit send-path-looking logs.
+    expect(degradesToSharedSender(config)).toBe(true)
   })
 
   it('gmail_smtp with full config resolves to a Gmail sender', () => {
@@ -101,7 +107,7 @@ describe('resolveMailSender', () => {
     expect(sender).toBe(GMAIL_SENDER)
   })
 
-  it('gmail_smtp missing gmail_app_password falls back to shared sender + warns', () => {
+  it('gmail_smtp missing gmail_app_password falls back to the shared sender', () => {
     const config = baseConfig({
       mail_provider: 'gmail_smtp',
       gmail_address: 'client@gmail.com',
@@ -112,7 +118,9 @@ describe('resolveMailSender', () => {
 
     expect(createGmailSmtpSenderMock).not.toHaveBeenCalled()
     expect(sender.send).toBe(sendEmailViaResend)
-    expect(console.warn).toHaveBeenCalled()
+    // Behaviour, not a log line: the resolver is silent so the read-only probe
+    // in effective-sender.server.ts cannot emit send-path-looking logs.
+    expect(degradesToSharedSender(config)).toBe(true)
   })
 
   it('unrecognized mail_provider value falls back to shared sender', () => {
@@ -123,5 +131,47 @@ describe('resolveMailSender', () => {
     expect(sender.send).toBe(sendEmailViaResend)
     expect(createResendMailSenderMock).not.toHaveBeenCalled()
     expect(createGmailSmtpSenderMock).not.toHaveBeenCalled()
+  })
+})
+
+describe('degradesToSharedSender', () => {
+  // Mocks are scoped per describe — without this the Gmail factory returns
+  // undefined and every case would look like a degrade.
+  beforeEach(() => {
+    createGmailSmtpSenderMock.mockReturnValue({ send: vi.fn() })
+  })
+  afterEach(() => {
+    createGmailSmtpSenderMock.mockReset()
+  })
+
+  it('is true when a client picked its own provider but saved incomplete config', () => {
+    // The case that made the connection test report a false "OK": the resolver
+    // silently hands back the AGENCY sender, so verifying it would authenticate
+    // the agency key and say nothing about this client's credentials.
+    expect(
+      degradesToSharedSender(
+        baseConfig({
+          mail_provider: 'gmail_smtp',
+          gmail_address: 'client@gmail.com',
+          gmail_app_password: null,
+        }),
+      ),
+    ).toBe(true)
+  })
+
+  it('is false when the client provider is fully configured', () => {
+    expect(
+      degradesToSharedSender(
+        baseConfig({
+          mail_provider: 'gmail_smtp',
+          gmail_address: 'client@gmail.com',
+          gmail_app_password: 'abcd efgh ijkl mnop',
+        }),
+      ),
+    ).toBe(false)
+  })
+
+  it('is true for resend_shared — the agency account IS the configured choice', () => {
+    expect(degradesToSharedSender(baseConfig({ mail_provider: 'resend_shared' }))).toBe(true)
   })
 })

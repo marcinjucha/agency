@@ -343,8 +343,12 @@ export const messages = {
       'Loguje się do dostawcy zapisanymi danymi, nie wysyła żadnej wiadomości. Sprawdza zapisaną konfigurację — zapisz zmiany przed testem.',
     mailTestOk: 'Połączenie działa — dostawca przyjął dane logowania.',
     mailTestUnsupported: 'Tego dostawcy nie potrafimy sprawdzić bez wysłania wiadomości.',
+    mailTestSharedFallback:
+      'Nie sprawdziliśmy nic: konfiguracja wybranego dostawcy jest niekompletna, więc wysyłka i tak poleci z konta agencyjnego. Uzupełnij brakujące pole i zapisz, albo wybierz "Agencyjny Resend" świadomie.',
     mailTestAuthRejected:
       'Dostawca odrzucił dane logowania. Przy Gmailu najczęstsza przyczyna: adres jest aliasem lub grupą, a nie pełnym kontem Google — alias nie może zalogować się do SMTP. Sprawdź też, czy konto ma włączoną weryfikację dwuetapową i czy hasło aplikacji pochodzi z tego konta.',
+    mailTestResendScopeNote:
+      'Uwaga: sprawdzamy klucz odczytem listy domen. Klucz Resend z uprawnieniem wyłącznie do wysyłki zostanie tu odrzucony, mimo że maile wysyła poprawnie.',
     mailTestConnection:
       'Nie udało się połączyć z serwerem dostawcy. Spróbuj ponownie za chwilę.',
     mailTestUnknown: 'Test się nie powiódł, ale dostawca nie podał powodu.',

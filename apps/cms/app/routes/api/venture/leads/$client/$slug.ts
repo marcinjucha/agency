@@ -240,9 +240,6 @@ export const Route = createFileRoute('/api/venture/leads/$client/$slug')({
             campaign,
             mapped.value,
           )
-          // Only rejections were logged before; a 200 covers mail sent / skipped
-          // / failed alike. `deployedSha` guards against diagnosing a stale
-          // Vercel deploy as a logic bug.
           const httpStatus = ingestOutcomeStatus(outcome)
           // Only rejections were logged before; a 200 covers mail sent / skipped
           // / failed alike. Scoped to 200 — the non-200 branch below logs its

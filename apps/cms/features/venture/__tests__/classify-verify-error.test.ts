@@ -34,6 +34,18 @@ describe('classifyVerifyError', () => {
     },
   )
 
+  it('classifies a fetch timeout (Resend path, no `code`) as connection', () => {
+    const timeout = new DOMException('The operation was aborted', 'TimeoutError')
+    expect(classifyVerifyError(timeout).reason).toBe('connection')
+  })
+
+  it('classifies an unreachable host (TypeError with cause) as connection', () => {
+    const unreachable = Object.assign(new TypeError('fetch failed'), {
+      cause: new Error('ENOTFOUND'),
+    })
+    expect(classifyVerifyError(unreachable).reason).toBe('connection')
+  })
+
   it('falls back to unknown rather than guessing', () => {
     expect(classifyVerifyError(new Error('something else')).reason).toBe('unknown')
     expect(classifyVerifyError('a string').reason).toBe('unknown')

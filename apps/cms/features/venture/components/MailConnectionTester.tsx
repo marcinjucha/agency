@@ -18,12 +18,21 @@ function describeResult(result: MailConnectionTest): { ok: boolean; text: string
   if (result.status === 'unsupported') {
     return { ok: false, text: messages.venture.mailTestUnsupported }
   }
+  if (result.status === 'shared_fallback') {
+    return { ok: false, text: messages.venture.mailTestSharedFallback }
+  }
   // Append the provider's own code — "535" is what a Google support page asks for.
   const detail = [result.responseCode, result.httpStatus, result.code]
     .filter(Boolean)
     .join(' · ')
   const base = FAILURE_MESSAGES[result.reason]
-  return { ok: false, text: detail ? `${base} (${detail})` : base }
+  // A Resend key scoped to sending only is refused by the domains read we use to
+  // authenticate, so say so rather than let the Gmail advice mislead.
+  const scopeNote =
+    result.reason === 'auth_rejected' && result.provider.startsWith('resend')
+      ? ` ${messages.venture.mailTestResendScopeNote}`
+      : ''
+  return { ok: false, text: `${detail ? `${base} (${detail})` : base}${scopeNote}` }
 }
 
 export function MailConnectionTester({ clientId }: { clientId: string }) {
@@ -33,13 +42,21 @@ export function MailConnectionTester({ clientId }: { clientId: string }) {
   async function runTest() {
     setRunning(true)
     setOutcome(null)
-    const response = await testClientMailConnectionFn({ data: { id: clientId } })
-    setOutcome(
-      response?.success && response.data
-        ? describeResult(response.data)
-        : { ok: false, text: response?.error ?? messages.venture.mailTestError },
-    )
-    setRunning(false)
+    try {
+      const response = await testClientMailConnectionFn({ data: { id: clientId } })
+      setOutcome(
+        response?.success && response.data
+          ? describeResult(response.data)
+          : { ok: false, text: response?.error ?? messages.venture.mailTestError },
+      )
+    } catch {
+      // The RPC itself can reject (network drop, an unexpected throw in the
+      // handler chain). Without this the button would sit disabled on
+      // "Sprawdzam…" forever, with no error and an unhandled rejection.
+      setOutcome({ ok: false, text: messages.venture.mailTestError })
+    } finally {
+      setRunning(false)
+    }
   }
 
   return (

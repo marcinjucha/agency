@@ -22,7 +22,11 @@ import {
   type EffectiveSender,
 } from './mail/effective-sender.server'
 import { createServiceClient } from '@/lib/supabase/service'
-import { resolveMailSender, type ClientMailConfig } from './mail/resolve.server'
+import {
+  degradesToSharedSender,
+  resolveMailSender,
+  type ClientMailConfig,
+} from './mail/resolve.server'
 import {
   classifyVerifyError,
   type MailConnectionTest,
@@ -750,6 +754,16 @@ function readClientMailSecrets(
 }
 
 function runMailVerify(config: ClientMailConfig): ResultAsync<MailConnectionTest, string> {
+  // A client that CHOSE its own provider but saved incomplete config silently
+  // degrades to the agency account. Verifying that would authenticate the
+  // AGENCY key and report success for credentials we never touched — the exact
+  // false pass this feature exists to prevent. `resend_shared` is excluded: for
+  // that provider the agency account IS the configured choice, so testing it is
+  // the right answer.
+  if (config.mail_provider !== 'resend_shared' && degradesToSharedSender(config)) {
+    return okAsync<MailConnectionTest, string>({ status: 'shared_fallback' })
+  }
+
   const sender = resolveMailSender(config)
   // A provider with no cheap credential check reports "unsupported" rather than
   // a false pass.
@@ -759,7 +773,11 @@ function runMailVerify(config: ClientMailConfig): ResultAsync<MailConnectionTest
   return ResultAsync.fromPromise(sender.verify(), (error) => error)
     .map((): MailConnectionTest => ({ status: 'ok' }))
     .orElse((error) =>
-      okAsync<MailConnectionTest, string>({ status: 'failed', ...classifyVerifyError(error) }),
+      okAsync<MailConnectionTest, string>({
+        status: 'failed',
+        provider: config.mail_provider,
+        ...classifyVerifyError(error),
+      }),
     )
 }
 

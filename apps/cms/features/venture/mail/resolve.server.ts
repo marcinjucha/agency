@@ -87,16 +87,21 @@ export function resolveMailSender(client: ClientMailConfig): MailSender {
   // configuration error, it's the intended default path.
   if (!factory) return SHARED_RESEND_SENDER
 
-  const sender = factory(client)
-  if (sender) {
-    // Only the fallback below used to log, so a successful selection was
-    // indistinguishable from "resolver never ran". Provider id only.
-    console.info(`[venture mail] using client provider: ${client.mail_provider}`)
-    return sender
-  }
+  // Silent by design. This resolver is ALSO called as a read-only probe by
+  // effective-sender.server.ts on every render of the campaign editor's "Ten
+  // launch wysyła" card, so logging here emits send-path-looking lines for
+  // requests that send nothing. Callers that actually send report the choice —
+  // see the pre-send log in ingest.server.ts, which records the degrade via
+  // `degradedToShared`.
+  return factory(client) ?? SHARED_RESEND_SENDER
+}
 
-  console.warn(
-    `[venture mail] client mail_provider=${client.mail_provider} but missing required config — falling back to shared Resend account`,
-  )
-  return SHARED_RESEND_SENDER
+/**
+ * True when `client` will NOT use its own configured provider — either it never
+ * had one (`resend_shared`) or its config is incomplete and silently degrades to
+ * the agency account. Exported so callers can distinguish a deliberate default
+ * from a broken client config without re-deriving the factory rules.
+ */
+export function degradesToSharedSender(client: ClientMailConfig): boolean {
+  return resolveMailSender(client) === SHARED_RESEND_SENDER
 }
