@@ -1,0 +1,335 @@
+{
+  "updatedAt": "2026-05-22T11:17:28.800Z",
+  "createdAt": "2026-05-22T10:58:31.307Z",
+  "id": "Erf8O9VMzOGZ7Lpr",
+  "name": "Social Media — Post Publisher",
+  "description": null,
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "social-media/publish",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "f3a1c2d4-1001-4001-8001-aabbcc000001",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        240,
+        300
+      ],
+      "webhookId": "f3a1c2d4-1001-4001-8001-aabbcc000001"
+    },
+    {
+      "parameters": {
+        "resource": "post",
+        "text": "={{ $json.caption }}",
+        "additionalFields": {
+          "shareMediaCategory": "={{ $json.image_url ? 'IMAGE' : 'NONE' }}"
+        }
+      },
+      "id": "f3a1c2d4-1001-4001-8001-aabbcc000002",
+      "name": "LinkedIn: Publish Post",
+      "type": "n8n-nodes-base.linkedIn",
+      "typeVersion": 1,
+      "position": [
+        460,
+        100
+      ],
+      "credentials": {
+        "linkedInOAuth2Api": {
+          "id": "1",
+          "name": "LinkedIn — Halo Efekt"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "node": "={{ $vars.FACEBOOK_PAGE_ID }}",
+        "edge": "feed",
+        "httpMethod": "POST",
+        "options": {
+          "fields": {
+            "field": [
+              {
+                "name": "message",
+                "value": "={{ $json.caption }}"
+              },
+              {
+                "name": "link",
+                "value": "={{ $json.image_url || '' }}"
+              }
+            ]
+          }
+        }
+      },
+      "id": "f3a1c2d4-1001-4001-8001-aabbcc000003",
+      "name": "Facebook: Publish Post",
+      "type": "n8n-nodes-base.facebookGraphApi",
+      "typeVersion": 1,
+      "position": [
+        460,
+        300
+      ],
+      "credentials": {
+        "facebookGraphApi": {
+          "id": "2",
+          "name": "Facebook — Halo Efekt"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v19.0/{{ $vars.INSTAGRAM_ACCOUNT_ID }}/media",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "facebookGraphApi",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "image_url",
+              "value": "={{ $json.image_url }}"
+            },
+            {
+              "name": "caption",
+              "value": "={{ $json.caption }}"
+            },
+            {
+              "name": "media_type",
+              "value": "IMAGE"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f3a1c2d4-1001-4001-8001-aabbcc000004",
+      "name": "Instagram: Create Container",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        460,
+        500
+      ],
+      "credentials": {
+        "facebookGraphApi": {
+          "id": "2",
+          "name": "Facebook — Halo Efekt"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v19.0/{{ $vars.INSTAGRAM_ACCOUNT_ID }}/media_publish",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "facebookGraphApi",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "creation_id",
+              "value": "={{ $json.id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f3a1c2d4-1001-4001-8001-aabbcc000005",
+      "name": "Instagram: Publish Post",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        680,
+        500
+      ],
+      "credentials": {
+        "facebookGraphApi": {
+          "id": "2",
+          "name": "Facebook — Halo Efekt"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "append"
+      },
+      "id": "f3a1c2d4-1001-4001-8001-aabbcc000006",
+      "name": "Merge Results",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        900,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "assign-01",
+              "name": "success",
+              "value": true,
+              "type": "boolean"
+            },
+            {
+              "id": "assign-02",
+              "name": "published_to",
+              "value": "={{ ['linkedin', 'facebook', 'instagram'].join(', ') }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f3a1c2d4-1001-4001-8001-aabbcc000007",
+      "name": "Set Response",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1100,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "f3a1c2d4-1001-4001-8001-aabbcc000008",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1300,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "LinkedIn: Publish Post",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Facebook: Publish Post",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Instagram: Create Container",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LinkedIn: Publish Post": {
+      "main": [
+        [
+          {
+            "node": "Merge Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Facebook: Publish Post": {
+      "main": [
+        [
+          {
+            "node": "Merge Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Instagram: Create Container": {
+      "main": [
+        [
+          {
+            "node": "Instagram: Publish Post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Instagram: Publish Post": {
+      "main": [
+        [
+          {
+            "node": "Merge Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Results": {
+      "main": [
+        [
+          {
+            "node": "Set Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Response": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "staticData": null,
+  "meta": null,
+  "pinData": null,
+  "versionId": "96a88f4d-658a-4065-845a-2f9181e998d1",
+  "activeVersionId": null,
+  "versionCounter": 2,
+  "triggerCount": 0,
+  "shared": [
+    {
+      "updatedAt": "2026-05-22T10:58:31.307Z",
+      "createdAt": "2026-05-22T10:58:31.307Z",
+      "role": "workflow:owner",
+      "workflowId": "Erf8O9VMzOGZ7Lpr",
+      "projectId": "6mz2RZabdOhUqTp3",
+      "project": {
+        "updatedAt": "2026-03-27T10:47:05.663Z",
+        "createdAt": "2025-10-27T12:38:23.887Z",
+        "id": "6mz2RZabdOhUqTp3",
+        "name": "Marcin Jucha <infra@haloefekt.pl>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "49ef521e-e18f-41c2-b49a-a1beffec0c48"
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": null
+}
