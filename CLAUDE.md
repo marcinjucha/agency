@@ -186,9 +186,22 @@ This monorepo contains two Notion projects with separate PROJECT_SPEC files:
 
 ---
 
-## Notion Integration
+## Task Tracking — Trello is the day-to-day tracker; Notion is the structured backlog
 
-**This project uses the Notion Agency Database as the primary task tracker.**
+**Trello board Agency = the tracker actually in daily use** (owner-confirmed 2026-08-06: used more than Notion). Board `tkOXUJUS`, `idBoard 6a3e8e8e29866edeceaee93f`. Model ENCJA-jako-LISTA since 2026-07-22: **lists are AREAS/CLIENTS** (Venture/leady · Platforma · Website/SEO · Justyna), **not statuses** — status comes from card position plus the `⏳ Czekam` label, and `dueComplete: true` means done. Details in the brain project memory `_halo-efekt.md`.
+
+**Notion Agency Database = the structured backlog** (`AAA-P-*` projects, `AAA-T-N` tasks). It is what `/ag-develop` and `/vps-ops` read and write, and what `PROJECT_SPEC.yaml` mirrors — so it stays authoritative for anything those commands drive.
+
+**Which one to use:** default to a **Trello card**, on the list matching the area or client. Use Notion only when the item is a tracked feature with an `AAA-T-N` id that `/ag-develop` or `/vps-ops` will pick up. Never create the same item in both.
+
+**Trello access (no MCP — plain REST via `curl`):** needs BOTH `TRELLO_API_KEY` and `TRELLO_TOKEN`. **Single source of truth: `claude-marketing/.env.local`** — it holds `TRELLO_API_KEY` + `TRELLO_SECRET` + `TRELLO_TOKEN`, which is also what `/brain-pull` and `/brain-publish` document. Source that one file. Both it and `agency-cms/.env.local` are gitignored.
+
+**Stale-mirror hazard:** `agency-cms/.env.local` contains a DUPLICATE of `TRELLO_TOKEN` (byte-identical copy, no API key). It is redundant, and worse: after renewing the token in `claude-marketing`, sourcing `agency-cms/.env.local` *second* silently overwrites the fresh token with the stale copy. Prefer deleting the duplicate over keeping two copies in sync. Tokens expire; on `invalid token` renew via `/1/authorize`.
+
+**`N8N_STAGING_URL` has no URL scheme** (`n8n-staging.trustcode.pl`, not `https://…`), so `curl` without `-L` gets a `301 Moved Permanently` and the request looks like an auth failure. Always pass `-L`, or add the scheme.
+
+
+## Notion Integration
 
 - **Projects collection:** `collection://29284f14-76e0-802f-a1de-000b357345a9` (database `29284f14-76e0-8065-ae11-ebe3685f4c02`)
 - **Tasks collection:** `collection://29284f14-76e0-8062-a18d-000bfce0cf23` (database `29284f14-76e0-8012-8708-f1c5d3a78386`)
@@ -228,7 +241,7 @@ This monorepo contains two Notion projects with separate PROJECT_SPEC files:
 | **database-patterns**    | `.claude/skills/database-patterns/SKILL.md`    | Supabase RLS policies, PostgreSQL functions, migrations, type regeneration, client selection (server vs browser), fromSupabaseVoid for void operations, is_super_admin() for global tables. Avoids RLS infinite recursion |
 | **development-workflow** | `.claude/skills/development-workflow/SKILL.md` | Testing decisions (3-Question Rule), severity classification (P0/P1/P2), implementation validation, PROJECT_SPEC.yaml updates, validate after each iteration   |
 | **n8n-patterns**         | `.claude/skills/n8n-patterns/SKILL.md`         | N8n background processing — fire-and-forget webhooks, ai_qualification JSONB, credential selection, Sentry Init subworkflow pattern                           |
-| **notion-patterns**      | `.claude/skills/ag-notion-patterns/SKILL.md`   | Notion MCP tools — task status updates, project tracking. Properties are CASE-SENSITIVE. Contains Agency database IDs, filter rules, and reusable Features Overview / Change Log subpage schemas. **Primary tracker skill** |
+| **notion-patterns**      | `.claude/skills/ag-notion-patterns/SKILL.md`   | Notion MCP tools — task status updates, project tracking. Properties are CASE-SENSITIVE. Contains Agency database IDs, filter rules, and reusable Features Overview / Change Log subpage schemas. Covers the Notion side only — Notion is the structured `AAA-T-N` backlog, NOT the day-to-day tracker (that is Trello; see § "Task Tracking"). There is no skill for Trello — it is plain REST via `curl`. |
 | **design-patterns**      | `.claude/skills/ag-ui-components/SKILL.md`     | React components, shadcn/ui design system, WCAG 2.1 AA accessibility, responsive design, visual design decisions (dark/moody tonality, layout/spacing/typography choices, quality gates), edit pattern decisions (RHF form vs inline, DatePicker vs native). Controller for checkbox arrays, TanStack Query CMS-only, 4 UI states |
 | **validation-patterns**  | `.claude/skills/validation-patterns/SKILL.md`  | Two-pass validation (functional + architecture), YAML report formats, severity classification, 8-point architecture checklist. Loaded by validator-agent      |
 | **iterative-planning**   | `.claude/skills/iterative-planning/SKILL.md`   | Task size assessment (S/M/L/XL), iterative breakdown for M/L/XL tasks, dependency graph patterns (sequential/parallel/convergent), iteration sizing, parallelization identification. Used by analyst-agent in /develop Phase 2 |
@@ -245,7 +258,7 @@ This monorepo contains two Notion projects with separate PROJECT_SPEC files:
 
 ## Quick Reference
 
-**When working with Notion (primary task tracker):**
+**When working with Notion** (the structured `AAA-T-N` backlog — day-to-day work goes on Trello, see § "Task Tracking")**:**
 
 1. ALWAYS use TitleCase status values: `To Do`, `In Progress`, `Done`, `Cancelled`, `On Hold`, `Inbox` — wrong case = silent property mismatch
 2. Property names are CASE-SENSITIVE (e.g. `📊 Projects`, `Status`, `Priority`/`Priorytety` — verify against schema before bulk operations)
@@ -309,7 +322,7 @@ This monorepo contains two Notion projects with separate PROJECT_SPEC files:
 - **~~Turbopack barrel re-export bug~~** — Historical (Next.js era, no longer relevant). Removed with TanStack Start migration.
 - **Functional patterns: `remeda` + `neverthrow`** — Project adopts `remeda` for `pipe()`/functional composition and `neverthrow` for typed `Result<T, E>` error handling. **New server functions** use `ok().andThen().asyncAndThen().match()` instead of `try/catch`. Key patterns: `pipe()` for data transformations, `Result`/`ResultAsync` for error handling, `andThen` chaining with final `.match()`, `fromThrowable`/`ResultAsync.fromPromise` for wrapping unsafe code. **Not Effect.js** — lightweight (~5KB neverthrow + tree-shakeable remeda).
 - **Boy Scout Rule** — Always leave code better than you found it. When touching a file: migrate try/catch → Result types, imperative loops → `pipe()`, fix naming, add missing types. Only in files you're already changing — don't refactor untouched code proactively.
-- **React Compiler enabled (cms, website)** — `reactCompiler: true` in cms and website `next.config.ts`. Shop apps (jacek, oleg) use TanStack Start + Vite 8 with `babel-plugin-react-compiler` in `vite.config.ts`. Auto-memoizes — don't add `useCallback`/`useMemo` to new code. Boy Scout Rule: remove manual memoization when touching files.
+- **React Compiler enabled in ALL FOUR apps, one uniform mechanism** — `babel-plugin-react-compiler` in each app's `vite.config.ts` (`react({ babel: { plugins: [['babel-plugin-react-compiler', {}]] } })`): cms, website, shop/jacek, shop/oleg. There is no `next.config.ts` anywhere in the repo and `next` is not a dependency of any package. Auto-memoizes — don't add `useCallback`/`useMemo` to new code. Boy Scout Rule: remove manual memoization when touching files. The plugin is declared in the monorepo **ROOT** `package.json` `devDependencies` (`1.0.0`) and additionally in `apps/website/package.json`; cms, shop/jacek and shop/oleg resolve it from the workspace-root `node_modules` by normal Node upward lookup — this is a supported workspace-root dependency, not fragile hoisting, so a stricter install will not break them.
 - **Type-safe domain modeling** — Never pass plain `string` where a domain type exists. Derive typed unions from `as const` objects (single source of truth), validate at DB boundary with a validator function. Applied in RBAC (`PermissionKey`), should extend to all enum-like domain values (workflow step types, blog statuses, etc.). See `ag-coding-practices` skill for full pattern.
 
 ---
