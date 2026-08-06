@@ -241,6 +241,21 @@ export const Route = createFileRoute('/api/venture/leads/$client/$slug')({
             mapped.value,
           )
           const httpStatus = ingestOutcomeStatus(outcome)
+          // Only rejections were logged before; a 200 covers mail sent / skipped
+          // / failed alike. Scoped to 200 — the non-200 branch below logs its
+          // own line, and duplicating it obscures the path most worth reading.
+          if (httpStatus === 200) {
+            console.info('[venture-webhook] ingest outcome -> 200', {
+              client: clientSlug,
+              slug,
+              campaignId: campaign.id,
+              outcome: outcome.status,
+              espSynced: outcome.status === 'ingested' ? outcome.espSynced : undefined,
+              emailResult: outcome.status === 'ingested' ? outcome.emailResult : undefined,
+              deployedSha: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? 'local',
+              vercelEnv: process.env.VERCEL_ENV ?? 'local',
+            })
+          }
           if (httpStatus !== 200) {
             console.error('[venture-webhook] rejected: lead not persisted (retryable) -> 500', {
               client: clientSlug,

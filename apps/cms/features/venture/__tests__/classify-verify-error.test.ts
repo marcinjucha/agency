@@ -1,0 +1,81 @@
+import { describe, expect, it } from 'vitest'
+import { classifyVerifyError } from '../mail/classify-verify-error'
+
+describe('classifyVerifyError', () => {
+  it('classifies the real Gmail rejection (EAUTH / 535) as auth_rejected', () => {
+    const error = Object.assign(new Error('Invalid login: 535-5.7.8 ...'), {
+      code: 'EAUTH',
+      responseCode: 535,
+      command: 'AUTH PLAIN',
+    })
+    expect(classifyVerifyError(error)).toMatchObject({
+      reason: 'auth_rejected',
+      code: 'EAUTH',
+      responseCode: 535,
+    })
+  })
+
+  it('classifies a 535 reply as auth_rejected even without a code', () => {
+    expect(classifyVerifyError(Object.assign(new Error('nope'), { responseCode: 535 })).reason).toBe(
+      'auth_rejected',
+    )
+  })
+
+  it.each([401, 403])('classifies HTTP %i from an API provider as auth_rejected', (status) => {
+    expect(classifyVerifyError(Object.assign(new Error('x'), { status })).reason).toBe(
+      'auth_rejected',
+    )
+  })
+
+  it.each(['ETIMEDOUT', 'ECONNECTION', 'ESOCKET', 'ECONNREFUSED'])(
+    'classifies %s as connection',
+    (code) => {
+      expect(classifyVerifyError(Object.assign(new Error('x'), { code })).reason).toBe('connection')
+    },
+  )
+
+  it('classifies a fetch timeout (Resend path, no `code`) as connection', () => {
+    const timeout = new DOMException('The operation was aborted', 'TimeoutError')
+    expect(classifyVerifyError(timeout).reason).toBe('connection')
+  })
+
+  it('classifies an unreachable host (TypeError with cause) as connection', () => {
+    const unreachable = Object.assign(new TypeError('fetch failed'), {
+      cause: new Error('ENOTFOUND'),
+    })
+    expect(classifyVerifyError(unreachable).reason).toBe('connection')
+  })
+
+  it('falls back to unknown rather than guessing', () => {
+    expect(classifyVerifyError(new Error('something else')).reason).toBe('unknown')
+    expect(classifyVerifyError('a string').reason).toBe('unknown')
+    expect(classifyVerifyError(null).reason).toBe('unknown')
+  })
+
+  it('never returns the error message — only non-secret discriminators', () => {
+    const result = classifyVerifyError(
+      Object.assign(new Error('user jan@example.pl rejected'), { code: 'EAUTH' }),
+    )
+    expect(JSON.stringify(result)).not.toContain('jan@example.pl')
+  })
+})
+
+describe('classifyVerifyError — Resend verification outcomes', () => {
+  it('classifies an unverified From domain distinctly from bad credentials', () => {
+    const error = Object.assign(new Error('Resend domain not verified: klient.pl'), {
+      name: 'ResendDomainUnverifiedError',
+    })
+    expect(classifyVerifyError(error).reason).toBe('domain_unverified')
+  })
+
+  it('classifies a sending-scoped key as inconclusive, never as auth_rejected', () => {
+    // A 403 here means the key cannot READ domains — it may still send fine, so
+    // reporting "credentials rejected" would push an operator to rotate a
+    // working production key.
+    const error = Object.assign(new Error('Resend read scope unavailable (403)'), {
+      name: 'ResendScopeInconclusiveError',
+      status: 403,
+    })
+    expect(classifyVerifyError(error).reason).toBe('inconclusive')
+  })
+})

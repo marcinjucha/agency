@@ -337,6 +337,26 @@ export const messages = {
     gmailAppPasswordLabel: 'Hasło aplikacji Gmail',
     gmailAppPasswordHelp:
       '16-znakowe hasło aplikacji Google, wygenerowane w ustawieniach konta. Zostaw puste, aby nie zmieniać. (możesz wkleić ze spacjami, usuniemy je automatycznie)',
+    mailTestButton: 'Testuj połączenie',
+    mailTestRunning: 'Sprawdzam…',
+    mailTestHelp:
+      'Loguje się do dostawcy zapisanymi danymi, nie wysyła żadnej wiadomości. Sprawdza zapisaną konfigurację — zapisz zmiany przed testem.',
+    mailTestOk: 'Połączenie działa — dostawca przyjął dane logowania.',
+    mailTestUnsupported: 'Tego dostawcy nie potrafimy sprawdzić bez wysłania wiadomości.',
+    mailTestSharedFallback:
+      'Nie sprawdziliśmy nic: konfiguracja wybranego dostawcy jest niekompletna, więc wysyłka i tak poleci z konta agencyjnego. Uzupełnij brakujące pole i zapisz, albo wybierz "Agencyjny Resend" świadomie.',
+    mailTestAuthRejectedGmail:
+      'Google odrzuciło dane logowania. Najczęstsza przyczyna: adres jest aliasem lub grupą, a nie pełnym kontem Google — alias nie może zalogować się do SMTP. Sprawdź też, czy konto ma włączoną weryfikację dwuetapową i czy hasło aplikacji pochodzi z tego konta.',
+    mailTestAuthRejectedResend:
+      'Resend odrzucił klucz API. Sprawdź, czy klucz nie został usunięty lub odwołany i czy skopiowano go w całości.',
+    mailTestDomainUnverified:
+      'Klucz działa, ale domena adresu nadawcy nie jest zweryfikowana w tym koncie Resend — każda wysyłka zostanie odrzucona. Zweryfikuj domenę w panelu Resend albo zmień adres nadawcy.',
+    mailTestInconclusive:
+      'Nie da się rozstrzygnąć: klucz Resend nie ma uprawnienia do odczytu listy domen, więc nie sprawdzimy go bez wysłania wiadomości. Nie oznacza to, że jest błędny.',
+    mailTestConnection:
+      'Nie udało się połączyć z serwerem dostawcy. Spróbuj ponownie za chwilę.',
+    mailTestUnknown: 'Test się nie powiódł, ale dostawca nie podał powodu.',
+    mailTestError: 'Nie udało się wykonać testu połączenia',
   },
 
   surveys: {

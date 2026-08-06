@@ -1,0 +1,280 @@
+{
+  "updatedAt": "2026-05-22T11:17:31.445Z",
+  "createdAt": "2026-05-22T10:58:30.347Z",
+  "id": "frwUaWJVT0mwn3IF",
+  "name": "Social Media — Engagement Report",
+  "description": null,
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                1
+              ],
+              "triggerAtHour": 9,
+              "triggerAtMinute": 0
+            }
+          ]
+        }
+      },
+      "id": "f3a1c2d4-3001-4003-8003-aabbcc000001",
+      "name": "Schedule: Every Monday 9AM",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "node": "={{ $vars.FACEBOOK_PAGE_ID }}",
+        "edge": "insights",
+        "httpMethod": "GET",
+        "options": {
+          "fields": {
+            "field": [
+              {
+                "name": "metric",
+                "value": "page_impressions,page_engaged_users,page_fans,page_post_engagements"
+              },
+              {
+                "name": "period",
+                "value": "week"
+              }
+            ]
+          }
+        }
+      },
+      "id": "f3a1c2d4-3001-4003-8003-aabbcc000002",
+      "name": "Facebook: Page Insights",
+      "type": "n8n-nodes-base.facebookGraphApi",
+      "typeVersion": 1,
+      "position": [
+        460,
+        200
+      ],
+      "credentials": {
+        "facebookGraphApi": {
+          "id": "2",
+          "name": "Facebook — Halo Efekt"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://api.linkedin.com/v2/organizationalEntityShareStatistics",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "linkedInOAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "q",
+              "value": "organizationalEntity"
+            },
+            {
+              "name": "organizationalEntity",
+              "value": "=urn:li:organization:{{ $vars.LINKEDIN_ORG_ID }}"
+            },
+            {
+              "name": "timeIntervals.timeGranularityType",
+              "value": "WEEK"
+            },
+            {
+              "name": "timeIntervals.timeRange.start",
+              "value": "={{ Date.now() - 7 * 24 * 60 * 60 * 1000 }}"
+            },
+            {
+              "name": "timeIntervals.timeRange.end",
+              "value": "={{ Date.now() }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f3a1c2d4-3001-4003-8003-aabbcc000003",
+      "name": "LinkedIn: Organization Analytics",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        460,
+        400
+      ],
+      "credentials": {
+        "linkedInOAuth2Api": {
+          "id": "1",
+          "name": "LinkedIn — Halo Efekt"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "append"
+      },
+      "id": "f3a1c2d4-3001-4003-8003-aabbcc000004",
+      "name": "Merge Stats",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        680,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "assign-01",
+              "name": "subject",
+              "value": "=📊 Raport Social Media — tydzień {{ new Date().toLocaleDateString('pl-PL') }}",
+              "type": "string"
+            },
+            {
+              "id": "assign-02",
+              "name": "html_body",
+              "value": "=<h2>Raport tygodniowy Social Media — Halo Efekt</h2><p>Okres: ostatnie 7 dni</p><h3>Facebook</h3><pre>{{ JSON.stringify($('Facebook: Page Insights').first().json, null, 2) }}</pre><h3>LinkedIn</h3><pre>{{ JSON.stringify($('LinkedIn: Organization Analytics').first().json, null, 2) }}</pre><hr><p><small>Wygenerowano automatycznie przez n8n</small></p>",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f3a1c2d4-3001-4003-8003-aabbcc000005",
+      "name": "Build Report",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        900,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $vars.REPORT_EMAIL || 'kontakt@haloefekt.pl' }}",
+        "subject": "={{ $json.subject }}",
+        "message": "={{ $json.html_body }}",
+        "options": {
+          "sendAsHtml": true
+        }
+      },
+      "id": "f3a1c2d4-3001-4003-8003-aabbcc000006",
+      "name": "Gmail: Send Report",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1120,
+        300
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "4",
+          "name": "Gmail — Halo Efekt"
+        }
+      },
+      "webhookId": "7d13376b-f47c-47c8-a161-f026847b44ee"
+    }
+  ],
+  "connections": {
+    "Schedule: Every Monday 9AM": {
+      "main": [
+        [
+          {
+            "node": "Facebook: Page Insights",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "LinkedIn: Organization Analytics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Facebook: Page Insights": {
+      "main": [
+        [
+          {
+            "node": "Merge Stats",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LinkedIn: Organization Analytics": {
+      "main": [
+        [
+          {
+            "node": "Merge Stats",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Stats": {
+      "main": [
+        [
+          {
+            "node": "Build Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Report": {
+      "main": [
+        [
+          {
+            "node": "Gmail: Send Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "staticData": null,
+  "meta": null,
+  "pinData": null,
+  "versionId": "8010614c-0687-4ded-bb19-c5709f330365",
+  "activeVersionId": null,
+  "versionCounter": 2,
+  "triggerCount": 0,
+  "shared": [
+    {
+      "updatedAt": "2026-05-22T10:58:30.347Z",
+      "createdAt": "2026-05-22T10:58:30.347Z",
+      "role": "workflow:owner",
+      "workflowId": "frwUaWJVT0mwn3IF",
+      "projectId": "6mz2RZabdOhUqTp3",
+      "project": {
+        "updatedAt": "2026-03-27T10:47:05.663Z",
+        "createdAt": "2025-10-27T12:38:23.887Z",
+        "id": "6mz2RZabdOhUqTp3",
+        "name": "Marcin Jucha <infra@haloefekt.pl>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "49ef521e-e18f-41c2-b49a-a1beffec0c48"
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": null
+}

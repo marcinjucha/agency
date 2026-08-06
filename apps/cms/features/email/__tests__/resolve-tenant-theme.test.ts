@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 // WHY the relative import (not `@agency/email`): this worktree SHARES its
 // node_modules with the main checkout, so `@agency/email` resolves to
-// `legal-mind/packages/email` (main branch) which does NOT yet have the Iter-B
+// `agency-cms/packages/email` (main branch) which does NOT yet have the Iter-B
 // theme-aware renderer. Importing the worktree's OWN renderer via relative path
 // exercises the actual branch code (CI/prod build from the branch resolves it
 // correctly). See CLAUDE.md "pnpm worktree + main share node_modules".

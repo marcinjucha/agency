@@ -16,4 +16,10 @@ export interface MailSenderInput {
 
 export interface MailSender {
   send(input: MailSenderInput): Promise<void>
+  /**
+   * Authenticate WITHOUT sending. Resolves when accepted, throws the provider's
+   * own error otherwise. Optional: a provider with no cheap check omits it and
+   * the caller reports "unsupported" rather than a false pass.
+   */
+  verify?(): Promise<void>
 }

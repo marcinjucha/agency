@@ -21,6 +21,16 @@ import {
   describeEffectiveSender,
   type EffectiveSender,
 } from './mail/effective-sender.server'
+import { createServiceClient } from '@/lib/supabase/service'
+import {
+  degradesToSharedSender,
+  resolveMailSender,
+  type ClientMailConfig,
+} from './mail/resolve.server'
+import {
+  classifyVerifyError,
+  type MailConnectionTest,
+} from './mail/classify-verify-error'
 import {
   evaluatePublishGate,
   sanitizeLeadSourceConfig,
@@ -689,6 +699,74 @@ export function getCampaignEffectiveSendHandler(
       ),
     ),
   )
+}
+
+// ---------------------------------------------------------------------------
+// Mail connection test
+// ---------------------------------------------------------------------------
+
+/**
+ * Verify a client's configured mail credentials WITHOUT sending mail.
+ *
+ * Ordering is load-bearing: authorization runs on the RLS-aware client FIRST,
+ * because the secrets are only readable by the service client (SELECT revoked
+ * for `authenticated`). The service read stays scoped by id + tenant.
+ */
+export function testClientMailConnectionHandler(
+  clientId: string,
+): Promise<MutationResult<MailConnectionTest>> {
+  return toMutation(
+    gated(PERM.clients, (auth) =>
+      assertClientOwned(auth, clientId).andThen(() =>
+        readClientMailSecrets(clientId, auth.tenantId).andThen(runMailVerify),
+      ),
+    ),
+  )
+}
+
+function readClientMailSecrets(
+  clientId: string,
+  tenantId: string,
+): ResultAsync<ClientMailConfig, string> {
+  return ResultAsync.fromPromise(
+    createServiceClient()
+      .from('so_clients')
+      .select(
+        'mail_provider, resend_api_key, resend_from_email, gmail_address, gmail_app_password, sender_name',
+      )
+      .eq('id', clientId)
+      .eq('tenant_id', tenantId)
+      .maybeSingle(),
+    dbError,
+  ).andThen((res) => {
+    const r = res as { data: ClientMailConfig | null; error: DbErrorShape }
+    if (r.error) return err(mapDbError(r.error, 'readClientMailSecrets'))
+    if (!r.data) return err(messages.common.noPermission)
+    return ok(r.data)
+  })
+}
+
+function runMailVerify(config: ClientMailConfig): ResultAsync<MailConnectionTest, string> {
+  // Verifying a degraded client would authenticate the AGENCY key and report
+  // success for credentials never touched. `resend_shared` is excluded: there the
+  // agency account IS the configured choice.
+  if (config.mail_provider !== 'resend_shared' && degradesToSharedSender(config)) {
+    return okAsync<MailConnectionTest, string>({ status: 'shared_fallback' })
+  }
+
+  const sender = resolveMailSender(config)
+  if (!sender.verify) return okAsync<MailConnectionTest, string>({ status: 'unsupported' })
+  // A rejected credential is an ANSWER, not a handler failure — it rides the
+  // success channel so the UI can explain it.
+  return ResultAsync.fromPromise(sender.verify(), (error) => error)
+    .map((): MailConnectionTest => ({ status: 'ok' }))
+    .orElse((error) =>
+      okAsync<MailConnectionTest, string>({
+        status: 'failed',
+        provider: config.mail_provider,
+        ...classifyVerifyError(error),
+      }),
+    )
 }
 
 // ===========================================================================

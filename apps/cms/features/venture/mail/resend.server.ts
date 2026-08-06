@@ -81,6 +81,84 @@ async function sendResendEmail(params: ResendSendParams): Promise<void> {
   }
 }
 
+const RESEND_DOMAINS_ENDPOINT = 'https://api.resend.com/domains'
+
+/**
+ * A `GET /domains` rejection does NOT prove the key is bad: Resend issues
+ * sending-scoped keys that can POST /emails but are refused this read. Reporting
+ * those as "credentials rejected" would send the operator to rotate a working
+ * production key, so the caller must surface them as inconclusive.
+ */
+export class ResendScopeInconclusiveError extends Error {
+  constructor(public status: number) {
+    super(`Resend read scope unavailable (${status})`)
+    this.name = 'ResendScopeInconclusiveError'
+  }
+}
+
+/** The `from` domain is not verified in this account — every send would 403. */
+export class ResendDomainUnverifiedError extends Error {
+  constructor(public domain: string) {
+    super(`Resend domain not verified: ${domain}`)
+    this.name = 'ResendDomainUnverifiedError'
+  }
+}
+
+function domainOf(address: string): string {
+  return address.split('@').pop()?.trim().toLowerCase() ?? ''
+}
+
+/**
+ * Verify a Resend sender without sending: authenticate the key, then confirm the
+ * From domain is actually verified in that account. Authenticating alone is not
+ * enough — a valid key with an unverified domain fails EVERY send with 403, which
+ * is precisely the false pass this check exists to prevent.
+ *
+ * The domain check is best-effort by design: an unrecognised response shape is
+ * treated as "cannot tell" rather than invented as a failure.
+ */
+export async function verifyResendSender(apiKey: string, from: string | null): Promise<void> {
+  const response = await fetch(RESEND_DOMAINS_ENDPOINT, {
+    headers: { Authorization: `Bearer ${apiKey}` },
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+  })
+  if (response.status === 401 || response.status === 403) {
+    throw new ResendScopeInconclusiveError(response.status)
+  }
+  if (!response.ok) {
+    throw new ResendApiError(response.status, response.statusText, undefined)
+  }
+  if (!from) return
+
+  const payload = (await response.json().catch(() => null)) as {
+    data?: Array<{ name?: unknown; status?: unknown }>
+  } | null
+  const domains = payload?.data
+  if (!Array.isArray(domains)) return
+
+  const wanted = domainOf(from)
+  const verified = domains.some(
+    (d) =>
+      typeof d?.name === 'string' &&
+      d.name.trim().toLowerCase() === wanted &&
+      d.status === 'verified',
+  )
+  if (!verified) throw new ResendDomainUnverifiedError(wanted)
+}
+
+/**
+ * Verify the agency-shared Resend account. Checks BOTH env vars the send path
+ * needs — validating only the key would report OK on an environment where
+ * RESEND_FROM_EMAIL is missing and every send throws.
+ */
+export async function verifySharedResend(): Promise<void> {
+  const apiKey = process.env.RESEND_API_KEY
+  const from = process.env.RESEND_FROM_EMAIL
+  if (!apiKey) throw new Error('Missing RESEND_API_KEY environment variable')
+  if (!from) throw new Error('Missing RESEND_FROM_EMAIL environment variable')
+  await verifyResendSender(apiKey, from)
+}
+
 /** Backward-compat entry point — agency-shared Resend account via env vars. */
 export async function sendEmailViaResend(input: SendEmailInput): Promise<void> {
   const apiKey = process.env.RESEND_API_KEY
@@ -103,6 +181,7 @@ export function createResendMailSender(config: {
 }): MailSender {
   const from = formatFromHeader(config.fromName, config.from)
   return {
+    verify: () => verifyResendSender(config.apiKey, config.from),
     send: (input: MailSenderInput) => sendResendEmail({ apiKey: config.apiKey, from, ...input }),
   }
 }

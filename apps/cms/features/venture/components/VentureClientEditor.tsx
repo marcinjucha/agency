@@ -25,6 +25,7 @@ import { createClientSchema, type CreateClientInput } from '../validation'
 import { MAIL_PROVIDERS, type AdminClient } from '../types'
 import { updateClientFn } from '../admin'
 import { ThemePicker } from '@/features/themes/components/ThemePicker'
+import { MailConnectionTester } from './MailConnectionTester'
 
 // Mirrors VentureCampaignEditor.tsx 1:1 (top bar, sections in cards, Save +
 // ⌘S, masked secret fields with "leave blank = don't change"). Mail
@@ -80,6 +81,17 @@ export function VentureClientEditor({ client }: VentureClientEditorProps) {
   })
 
   const mailProvider = useWatch({ control, name: 'mail_provider' })
+  // Remount key for the connection tester: any edit to a mail field invalidates
+  // a previous verdict, and a stale green result sitting under changed
+  // credentials reads as approval of the new ones.
+  const mailConfigSignature = [
+    mailProvider,
+    useWatch({ control, name: 'resend_from_email' }),
+    useWatch({ control, name: 'resend_api_key' }),
+    useWatch({ control, name: 'gmail_address' }),
+    useWatch({ control, name: 'gmail_app_password' }),
+    useWatch({ control, name: 'sender_name' }),
+  ].join('|')
   const resendAlreadySet = !!client.has_resend_api_key
   const gmailAlreadySet = !!client.has_gmail_app_password
 
@@ -372,6 +384,8 @@ export function VentureClientEditor({ client }: VentureClientEditorProps) {
                       </div>
                     </>
                   )}
+
+                  <MailConnectionTester key={mailConfigSignature} clientId={client.id} />
                 </div>
               </CollapsibleCard>
             </div>

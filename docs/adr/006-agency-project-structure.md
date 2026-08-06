@@ -41,7 +41,7 @@ Halo Efekt needs an architecture that supports:
 ### Current shape (2026-05-15)
 
 ```
-legal-mind/
+agency-cms/
 ├── apps/
 │   ├── cms/                # ADMIN: management panel (auth required)
 │   ├── website/            # PUBLIC: marketing + survey/booking forms

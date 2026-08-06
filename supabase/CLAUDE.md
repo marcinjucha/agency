@@ -186,7 +186,7 @@ Format: `YYYYMMDDHHMMSS_description.sql`
 
 Never run `docker exec -i supabase_db_<dir> psql ... < <migration>.sql` + a manual `INSERT INTO supabase_migrations.schema_migrations` to register it.
 
-**Why:** the local Docker DB container is keyed off the MAIN checkout directory name (`supabase_db_legal-mind`), which makes the workflow fragile across worktrees, leaves the local DB hand-edited and divergent from migration history, and bypasses migration bookkeeping — `supabase migration list` becomes a lie until `migration repair` runs. Never bypass the Supabase migration CLI by going straight to the Docker container, regardless of how convenient it seems.
+**Why:** the local Docker DB container is keyed off the MAIN checkout directory name (`supabase_db_agency-cms`), which makes the workflow fragile across worktrees, leaves the local DB hand-edited and divergent from migration history, and bypasses migration bookkeeping — `supabase migration list` becomes a lie until `migration repair` runs. Never bypass the Supabase migration CLI by going straight to the Docker container, regardless of how convenient it seems.
 
 **How to apply instead (in order of preference):**
 1. **Trust staging/prod as source of truth** — `supabase link --project-ref <id>` + `supabase migration list --linked` to verify state, then `supabase db push` to apply remaining migrations through the proper system.

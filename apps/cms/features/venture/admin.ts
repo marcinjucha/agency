@@ -33,6 +33,7 @@ import {
   reorderBonusesHandler,
   saveCampaignTemplateVariablesHandler,
   selectTemplateForCampaignHandler,
+  testClientMailConnectionHandler,
   updateBonusHandler,
   updateClientHandler,
   updateCampaignHandler,
@@ -118,6 +119,11 @@ export const getCampaignEffectiveSendFn = createServerFn({ method: 'POST' })
     campaignEffectiveSendInputSchema.parse(v),
   )
   .handler(({ data }) => getCampaignEffectiveSendHandler(data.campaignId))
+
+// Gated inside the handler — it reads plaintext secrets.
+export const testClientMailConnectionFn = createServerFn({ method: 'POST' })
+  .inputValidator((v: z.infer<typeof idInputSchema>) => idInputSchema.parse(v))
+  .handler(({ data }) => testClientMailConnectionHandler(data.id))
 
 // Render the REAL bonus email a send would deliver — powers the campaign editor's
 // "Podgląd e-mail" tab (byte-identical to the send path). Gated in the handler

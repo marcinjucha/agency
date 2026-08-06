@@ -1,9 +1,14 @@
 import type { Json } from '@agency/database'
+import { compactLogFields, redactEmails } from '@/lib/server-fn-logger'
 import type { createServiceClient } from '@/lib/supabase/service'
 import { EspApiError } from './esp/http.server'
 import type { EspProvider, EspProviderId } from './esp/types'
 import type { MappedLead } from './lead-sources/types'
-import { resolveMailSender, type ClientMailConfig } from './mail/resolve.server'
+import {
+  degradesToSharedSender,
+  resolveMailSender,
+  type ClientMailConfig,
+} from './mail/resolve.server'
 import type { MailSender } from './mail/types'
 import {
   buildBonusEmailBody,
@@ -494,6 +499,50 @@ function describeEspError(error: unknown): { status?: number; statusText?: strin
 }
 
 /**
+ * Safe (non-PII, non-secret) fields of a mail-send failure. `message` alone
+ * cannot tell a credential rejection from blocked egress — the discriminators
+ * live on untyped extras that differ per provider: nodemailer uses
+ * `code` (EAUTH/ETIMEDOUT) / `responseCode` (535) / `command`, while
+ * ResendApiError uses `status`/`statusText`. Both are read, since the shared
+ * Resend account is the fallback every client can land on.
+ *
+ * `ResendApiError.body` is deliberately NOT read — it can echo recipient data
+ * (same rule the ESP path already follows); `message` is email-redacted instead
+ * of withheld, so a render throw carrying no provider code still names a cause.
+ */
+interface MailErrorFields {
+  name?: string
+  code?: string
+  responseCode?: number
+  command?: string
+  status?: number
+  statusText?: string
+  message: string
+}
+
+function describeMailError(error: unknown): MailErrorFields {
+  const message = redactEmails(error instanceof Error ? error.message : String(error))
+  if (typeof error !== 'object' || error === null) return { message }
+  const extras = error as {
+    name?: unknown
+    code?: unknown
+    responseCode?: unknown
+    command?: unknown
+    status?: unknown
+    statusText?: unknown
+  }
+  return compactLogFields({
+    name: typeof extras.name === 'string' ? extras.name : undefined,
+    code: typeof extras.code === 'string' ? extras.code : undefined,
+    responseCode: typeof extras.responseCode === 'number' ? extras.responseCode : undefined,
+    command: typeof extras.command === 'string' ? extras.command : undefined,
+    status: typeof extras.status === 'number' ? extras.status : undefined,
+    statusText: typeof extras.statusText === 'string' ? extras.statusText : undefined,
+    message,
+  }) as MailErrorFields
+}
+
+/**
  * Sync the lead to the campaign's ESP. Returns true on full success. Never
  * throws — provider errors are caught, logged (status/statusText only) and
  * recorded to so_esp_sync_log, leaving the lead intact with esp_synced=false.
@@ -516,7 +565,12 @@ async function syncToEsp(
     return false
   }
   if (!campaign.esp_audience_ref) {
-    console.warn('[venture-ingest] campaign has no esp_audience_ref — skipping sync (lead kept)')
+    // `info`, not `warn`: no ESP audience is the CURRENT INTENDED state (beehiiv
+    // is deliberately not in use), so this fires on every single lead. A warning
+    // that is always expected trains everyone to ignore warnings — which is what
+    // has to stay readable for the failures that do matter. Trade-off accepted:
+    // a campaign that SHOULD sync but lost its ref is now info-level too.
+    console.info('[venture-ingest] campaign has no esp_audience_ref — skipping sync (lead kept)')
     return false
   }
 
@@ -692,15 +746,40 @@ async function sendBonusEmail(
       // Iter 3c: per-campaign literal values, merged over app-auto { companyName }.
       campaign.templateValues,
     )
+    // Addresses are never logged (a drain would harvest one per lead); presence
+    // booleans explain the choice, since resolveMailSender decides on presence
+    // alone. `degradedToShared` is the one that matters: true means this client's
+    // mail ships under the AGENCY identity because its own config is incomplete.
+    const mail = campaign.clientMail
+    console.info('[venture-ingest] bonus email — sending', {
+      campaignId: campaign.id,
+      mailProvider: mail.mail_provider,
+      degradedToShared: degradesToSharedSender(mail),
+      hasGmailAddress: Boolean(mail.gmail_address),
+      hasGmailAppPassword: Boolean(mail.gmail_app_password),
+      hasResendFromEmail: Boolean(mail.resend_from_email),
+      hasResendApiKey: Boolean(mail.resend_api_key),
+      hasSenderName: Boolean(mail.sender_name),
+      templateId,
+      templateResolved: template !== null,
+      bonusCount: bonuses.length,
+      subjectLength: subject.length,
+      htmlLength: html.length,
+    })
     const resolveSender = deps.resolveMailSender ?? resolveMailSender
     const sender = resolveSender(campaign.clientMail)
     await sender.send({ to: mapped.email, subject, html })
+    console.info('[venture-ingest] bonus email — handed to sender OK', {
+      campaignId: campaign.id,
+      mailProvider: mail.mail_provider,
+    })
     return BONUS_EMAIL_RESULTS.sent
   } catch (error) {
-    console.error(
-      '[venture-ingest] bonus email send failed:',
-      error instanceof Error ? error.message : String(error),
-    )
+    console.error('[venture-ingest] bonus email send failed:', {
+      campaignId: campaign.id,
+      mailProvider: campaign.clientMail.mail_provider,
+      ...describeMailError(error),
+    })
     return BONUS_EMAIL_RESULTS.failed
   }
 }
