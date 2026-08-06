@@ -1,0 +1,190 @@
+{
+  "updatedAt": "2026-05-22T11:17:27.481Z",
+  "createdAt": "2026-05-22T10:58:31.820Z",
+  "id": "XUHg6ulmzMbyJTPU",
+  "name": "Social Media — AI Caption Generator",
+  "description": null,
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "social-media/generate-caption",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "f3a1c2d4-2001-4002-8002-aabbcc000001",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        240,
+        300
+      ],
+      "webhookId": "f3a1c2d4-2001-4002-8002-aabbcc000001"
+    },
+    {
+      "parameters": {
+        "resource": "chat",
+        "operation": "message",
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list",
+          "cachedResultName": "gpt-4o"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "Jesteś copywriterem social media dla Halo Efekt — polskiej agencji automatyzacji biznesu opartej na AI. Twój styl: rzeczowy, korzyść-first, bez buzzwordów. Piszesz po polsku.\n\nWygeneruj 3 wersje posta dla różnych platform na podstawie podanego tematu. Odpowiedz WYŁĄCZNIE w formacie JSON:\n{\n  \"linkedin\": \"...\",\n  \"facebook\": \"...\",\n  \"instagram\": \"...\"\n}\n\nWytyczne:\n- LinkedIn: profesjonalny, merytoryczny, 150-200 słów, zakończ CTA\n- Facebook: konwersacyjny, angażujący, 80-120 słów, możesz użyć 1-2 emoji\n- Instagram: zwięzły, energiczny, max 150 słów + 5-8 hashtagów PL na końcu",
+              "role": "system"
+            },
+            {
+              "content": "=Temat: {{ $json.topic }}\nTon: {{ $json.tone || 'profesjonalny' }}",
+              "role": "user"
+            }
+          ]
+        },
+        "jsonOutput": true,
+        "options": {}
+      },
+      "id": "f3a1c2d4-2001-4002-8002-aabbcc000002",
+      "name": "OpenAI: Generate Captions",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [
+        460,
+        300
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "3",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "assign-01",
+              "name": "linkedin",
+              "value": "={{ JSON.parse($json.message.content).linkedin }}",
+              "type": "string"
+            },
+            {
+              "id": "assign-02",
+              "name": "facebook",
+              "value": "={{ JSON.parse($json.message.content).facebook }}",
+              "type": "string"
+            },
+            {
+              "id": "assign-03",
+              "name": "instagram",
+              "value": "={{ JSON.parse($json.message.content).instagram }}",
+              "type": "string"
+            },
+            {
+              "id": "assign-04",
+              "name": "topic",
+              "value": "={{ $('Webhook').first().json.topic }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f3a1c2d4-2001-4002-8002-aabbcc000003",
+      "name": "Format Captions",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        680,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "f3a1c2d4-2001-4002-8002-aabbcc000004",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        900,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "OpenAI: Generate Captions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI: Generate Captions": {
+      "main": [
+        [
+          {
+            "node": "Format Captions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Captions": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "staticData": null,
+  "meta": null,
+  "pinData": null,
+  "versionId": "6d5ced11-67cc-4eb8-a3aa-83649de35b63",
+  "activeVersionId": null,
+  "versionCounter": 2,
+  "triggerCount": 0,
+  "shared": [
+    {
+      "updatedAt": "2026-05-22T10:58:31.820Z",
+      "createdAt": "2026-05-22T10:58:31.820Z",
+      "role": "workflow:owner",
+      "workflowId": "XUHg6ulmzMbyJTPU",
+      "projectId": "6mz2RZabdOhUqTp3",
+      "project": {
+        "updatedAt": "2026-03-27T10:47:05.663Z",
+        "createdAt": "2025-10-27T12:38:23.887Z",
+        "id": "6mz2RZabdOhUqTp3",
+        "name": "Marcin Jucha <infra@haloefekt.pl>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "49ef521e-e18f-41c2-b49a-a1beffec0c48"
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": null
+}

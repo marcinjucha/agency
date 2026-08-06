@@ -1,0 +1,238 @@
+{
+  "updatedAt": "2026-05-22T11:17:30.164Z",
+  "createdAt": "2026-05-22T10:58:30.790Z",
+  "id": "dGWMz801G8BSfU8z",
+  "name": "Social Media — Newsletter",
+  "description": null,
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "social-media/newsletter",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "f3a1c2d4-4001-4004-8004-aabbcc000001",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        240,
+        300
+      ],
+      "webhookId": "f3a1c2d4-4001-4004-8004-aabbcc000001"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "newsletter_subscribers",
+        "returnAll": true,
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "is_active",
+              "keyValue": "true",
+              "condition": "eq"
+            }
+          ]
+        }
+      },
+      "id": "f3a1c2d4-4001-4004-8004-aabbcc000002",
+      "name": "Supabase: Get Active Subscribers",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        460,
+        300
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "f048XNg2A6zhwlWZ",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "batchSize": 50,
+        "options": {}
+      },
+      "id": "f3a1c2d4-4001-4004-8004-aabbcc000003",
+      "name": "Split in Batches",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        680,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.email }}",
+        "subject": "={{ $('Webhook').first().json.subject }}",
+        "message": "={{ $('Webhook').first().json.html_body }}",
+        "options": {
+          "sendAsHtml": true,
+          "replyTo": "kontakt@haloefekt.pl",
+          "appendAttribution": false
+        }
+      },
+      "id": "f3a1c2d4-4001-4004-8004-aabbcc000004",
+      "name": "Gmail: Send Newsletter",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        900,
+        300
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "4",
+          "name": "Gmail — Halo Efekt"
+        }
+      },
+      "webhookId": "f033edf1-9e55-41c9-894e-a0d98176eb65"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "assign-01",
+              "name": "success",
+              "value": true,
+              "type": "boolean"
+            },
+            {
+              "id": "assign-02",
+              "name": "message",
+              "value": "Newsletter wysłany",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f3a1c2d4-4001-4004-8004-aabbcc000005",
+      "name": "Set Response",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1120,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "f3a1c2d4-4001-4004-8004-aabbcc000006",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1340,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Supabase: Get Active Subscribers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase: Get Active Subscribers": {
+      "main": [
+        [
+          {
+            "node": "Split in Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split in Batches": {
+      "main": [
+        [
+          {
+            "node": "Gmail: Send Newsletter",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Set Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail: Send Newsletter": {
+      "main": [
+        [
+          {
+            "node": "Split in Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Response": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "staticData": null,
+  "meta": null,
+  "pinData": null,
+  "versionId": "9af0e936-27a3-43ad-bf47-e5211f6acdf9",
+  "activeVersionId": null,
+  "versionCounter": 2,
+  "triggerCount": 0,
+  "shared": [
+    {
+      "updatedAt": "2026-05-22T10:58:30.790Z",
+      "createdAt": "2026-05-22T10:58:30.790Z",
+      "role": "workflow:owner",
+      "workflowId": "dGWMz801G8BSfU8z",
+      "projectId": "6mz2RZabdOhUqTp3",
+      "project": {
+        "updatedAt": "2026-03-27T10:47:05.663Z",
+        "createdAt": "2025-10-27T12:38:23.887Z",
+        "id": "6mz2RZabdOhUqTp3",
+        "name": "Marcin Jucha <infra@haloefekt.pl>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "49ef521e-e18f-41c2-b49a-a1beffec0c48"
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": null
+}

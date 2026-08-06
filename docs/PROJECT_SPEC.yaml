@@ -1,7 +1,7 @@
 project:
-  name: "Halo Efekt"
+  name: "Halo Efekt CMS"
   type: monorepo
-  tech_stack: "Turborepo, Next.js 16 (App Router), React 19, Tailwind CSS 4, shadcn/ui, Supabase (PostgreSQL 17 + RLS), TanStack Query 5, React Hook Form 7, Zod 3, n8n (self-hosted), Resend, AWS S3, Google Calendar API"
+  tech_stack: "Turborepo, TanStack Start (@tanstack/react-start ^1.120.9) + TanStack Router, Vite 8, React 19.2.5 (React Compiler via babel-plugin-react-compiler in every app's vite.config.ts), Tailwind CSS 4, shadcn/ui, Supabase (PostgreSQL 17 + RLS), TanStack Query 5, React Hook Form 7, Zod 3, n8n (self-hosted), Resend, AWS S3, Google Calendar API. Deployed to Vercel via nitro({ preset: 'vercel' }), build-only. NOTE: Next.js is fully removed — `next` is not a dependency of any package and no next.config.* file exists. Migration history is kept in the features list below."
 
 architecture:
   key_decisions:

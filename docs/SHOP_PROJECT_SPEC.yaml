@@ -1,8 +1,8 @@
 project:
   name: "Platforma Sklepowa"
   type: monorepo-extension
-  parent_monorepo: "legal-mind (Halo Efekt)"
-  tech_stack: "TanStack Start v1.167, Vite 8, React 19, Tailwind CSS 4 (@tailwindcss/vite), shadcn/ui, Supabase (shared DB, shop_ prefix), Plausible Analytics (reuse). CMS features still Next.js 16."
+  parent_monorepo: "agency-cms (Halo Efekt CMS)"
+  tech_stack: "TanStack Start (@tanstack/react-start ^1.120.9), Vite 8, React 19.2.5, Tailwind CSS 4 (@tailwindcss/vite), shadcn/ui, Supabase (shared DB, shop_ prefix), Plausible Analytics (reuse). The CMS is TanStack Start too — the Next.js migration is complete, `next` is not a dependency anywhere in the monorepo."
 
 architecture:
   key_decisions:
