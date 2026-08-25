@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { Link } from '@tanstack/react-router'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Link, useRouter } from '@tanstack/react-router'
 import {
   Button,
   Badge,
@@ -15,11 +15,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@agency/ui'
-import { Gift, Plus } from 'lucide-react'
+import { Copy, Gift, Plus } from 'lucide-react'
 import { queryKeys } from '@/lib/query-keys'
 import { routes } from '@/lib/routes'
 import { messages } from '@/lib/messages'
-import { listCampaignsFn, listClientsFn } from '../admin'
+import { duplicateCampaignFn, listCampaignsFn, listClientsFn } from '../admin'
+import { DuplicateCampaignDialog } from './DuplicateCampaignDialog'
 import type { AdminCampaign, Client } from '../types'
 
 const ALL_CLIENTS = '__all__'
@@ -29,6 +30,34 @@ const ALL_CLIENTS = '__all__'
 
 export function VentureCampaignList() {
   const [clientFilter, setClientFilter] = useState<string>(ALL_CLIENTS)
+  const [duplicateTarget, setDuplicateTarget] = useState<AdminCampaign | null>(null)
+  const [duplicateError, setDuplicateError] = useState<string | null>(null)
+  const queryClient = useQueryClient()
+  const router = useRouter()
+
+  const duplicateMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const result = await duplicateCampaignFn({ data: { id } })
+      if (!result?.success || !result.data) {
+        throw new Error(result?.error ?? messages.venture.duplicateFailed)
+      }
+      return result.data
+    },
+    onMutate: () => setDuplicateError(null),
+    onSuccess: (copy) => {
+      setDuplicateTarget(null)
+      router.navigate({ to: routes.admin.ventureCampaign(copy.id) })
+    },
+    // ROOT key, and on SETTLE rather than on success: a partial duplicate fails
+    // with a campaign row already inserted, and its message sends the operator
+    // to this very list. Campaigns are cached per client filter, so an exact-key
+    // invalidation would leave the other filters stale.
+    onSettled: () => queryClient.invalidateQueries({ queryKey: queryKeys.venture.all }),
+    onError: (mutationError: Error) => {
+      setDuplicateError(mutationError.message)
+      setDuplicateTarget(null)
+    },
+  })
 
   const clientsQuery = useQuery({
     queryKey: queryKeys.venture.clients,
@@ -140,6 +169,7 @@ export function VentureCampaignList() {
                       (campaign.client_id && clientName.get(campaign.client_id)) ||
                       messages.venture.unassignedClient
                     }
+                    onDuplicate={setDuplicateTarget}
                   />
                 ))}
               </div>
@@ -147,17 +177,67 @@ export function VentureCampaignList() {
           ))}
         </div>
       )}
+
+      {duplicateError ? (
+        <p
+          role="alert"
+          className="rounded-md border border-destructive/20 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+        >
+          {duplicateError}
+        </p>
+      ) : null}
+
+      <DuplicateCampaignDialog
+        campaign={duplicateTarget}
+        isPending={duplicateMutation.isPending}
+        onConfirm={(id) => duplicateMutation.mutate(id)}
+        onOpenChange={(open) => {
+          if (!open) setDuplicateTarget(null)
+        }}
+      />
     </div>
   )
 }
 
 // --- Card ---
 
-function CampaignCard({ campaign, clientLabel }: { campaign: AdminCampaign; clientLabel: string }) {
+/**
+ * The card is a `div role="link"` rather than a `<Link>` wrapper so that action
+ * buttons can live INSIDE it without the nested-interactive antipattern — the
+ * twin email-template list already uses this shape (validator P0-2).
+ *
+ * Accepted cost, stated rather than hidden: cmd-click / middle-click no longer
+ * open the campaign in a new tab, because there is no anchor any more.
+ */
+function CampaignCard({
+  campaign,
+  clientLabel,
+  onDuplicate,
+}: {
+  campaign: AdminCampaign
+  clientLabel: string
+  onDuplicate: (campaign: AdminCampaign) => void
+}) {
+  const router = useRouter()
+  const open = () => router.navigate({ to: routes.admin.ventureCampaign(campaign.id) })
+
   return (
-    <Link
-      to={routes.admin.ventureCampaign(campaign.id)}
-      className="block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    <div
+      role="link"
+      tabIndex={0}
+      onClick={open}
+      onKeyDown={(e) => {
+        // Only when the CARD itself has focus: without this, Enter on a nested
+        // action button bubbles here, preventDefault() cancels that button's
+        // native click-on-Enter, and the card navigates instead — leaving the
+        // button keyboard-dead.
+        if (e.target !== e.currentTarget) return
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          open()
+        }
+      }}
+      className="block cursor-pointer rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
       <Card className="h-full overflow-hidden transition-transform hover:-translate-y-0.5">
         <CardContent className="space-y-1.5 p-3">
@@ -165,22 +245,36 @@ function CampaignCard({ campaign, clientLabel }: { campaign: AdminCampaign; clie
             <p className="line-clamp-2 font-semibold text-foreground">
               {campaign.display_name || campaign.slug}
             </p>
-            <Badge
-              variant="outline"
-              className={
-                campaign.published
-                  ? 'shrink-0 border-emerald-500/20 bg-emerald-500/10 text-xs text-emerald-400'
-                  : 'shrink-0 border-border bg-muted text-xs text-muted-foreground'
-              }
-            >
-              {campaign.published ? messages.common.published : messages.common.draft}
-            </Badge>
+            <div className="flex shrink-0 items-center gap-1">
+              <Badge
+                variant="outline"
+                className={
+                  campaign.published
+                    ? 'border-emerald-500/20 bg-emerald-500/10 text-xs text-emerald-400'
+                    : 'border-border bg-muted text-xs text-muted-foreground'
+                }
+              >
+                {campaign.published ? messages.common.published : messages.common.draft}
+              </Badge>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onDuplicate(campaign)
+                }}
+                aria-label={messages.venture.duplicateAction}
+              >
+                <Copy className="h-3.5 w-3.5" />
+              </Button>
+            </div>
           </div>
           <p className="truncate font-mono text-xs text-muted-foreground">/{campaign.slug}</p>
           <p className="truncate text-xs text-muted-foreground">{clientLabel}</p>
         </CardContent>
       </Card>
-    </Link>
+    </div>
   )
 }
 

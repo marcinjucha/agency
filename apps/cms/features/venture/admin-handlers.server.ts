@@ -1,7 +1,8 @@
 import { err, errAsync, ok, okAsync, ResultAsync, type Result } from 'neverthrow'
 import { isUnscopedActor, type AuthContextFull } from '@/lib/server-auth.server'
-import type { PermissionKey } from '@/lib/permissions'
+import { hasPermission, type PermissionKey } from '@/lib/permissions'
 import { messages } from '@/lib/messages'
+import { uniqueCopyName, uniqueCopySlug } from '@/lib/copy-name'
 import {
   type DbErrorShape,
   type MutationResult,
@@ -495,6 +496,244 @@ export function updateCampaignHandler(
         ),
     ),
   )
+}
+
+// ---------------------------------------------------------------------------
+// Duplicate a campaign (same client)
+// ---------------------------------------------------------------------------
+
+// Source projection for a duplicate. EVERY name here must sit inside the
+// column-scoped `GRANT SELECT (...)` for `authenticated`
+// (20260715120000_add_so_campaigns_template_variable_values.sql:45-49) — a column
+// outside it fails CLOSED with "permission denied for column".
+//
+// Deliberately ABSENT: `tally_webhook_secret` (outside the grant anyway, and the
+// copy must not share a credential), `published` and `esp_audience_ref` (the copy
+// forces its own values below).
+const DUPLICATE_CAMPAIGN_SOURCE_COLUMNS =
+  'client_id, slug, display_name, brand, theme_id, email_template_id, esp_provider, esp_tag_launch, lead_source_provider, lead_source_config, template_variable_values'
+
+const DUPLICATE_BONUS_COLUMNS = 'title, description, type, url, media_asset_id, sort_order, published'
+
+type DuplicateCampaignSource = {
+  client_id: string
+  slug: string
+  display_name: string | null
+  brand: unknown
+  theme_id: string | null
+  email_template_id: string | null
+  esp_provider: string
+  esp_tag_launch: string
+  lead_source_provider: string | null
+  lead_source_config: unknown
+  template_variable_values: unknown
+}
+
+function buildCampaignDuplicateInsert(
+  source: DuplicateCampaignSource,
+  slug: string,
+  displayName: string,
+): Record<string, unknown> {
+  return {
+    client_id: source.client_id,
+    slug,
+    display_name: displayName,
+    brand: source.brand ?? null,
+    theme_id: source.theme_id ?? null,
+    // Carried: the copy sends the same mail as the original until edited.
+    email_template_id: source.email_template_id ?? null,
+    template_variable_values: source.template_variable_values ?? {},
+    esp_provider: source.esp_provider,
+    esp_tag_launch: source.esp_tag_launch,
+    // Carried so the copy shows which lead source the operator already chose.
+    // Safe with a NULL secret: evaluatePublishGate blocks publishing, and the
+    // ingest route 401s on both an unresolved provider and a NULL secret.
+    lead_source_provider: source.lead_source_provider ?? null,
+    // ALWAYS re-sanitized against the source's provider — never trust a JSONB
+    // blob written by an older, looser version of the app.
+    lead_source_config: sanitizeLeadSourceConfig(
+      source.lead_source_provider,
+      source.lead_source_config as never,
+    ),
+    // FORCED, not copied.
+    // - a shared webhook secret would let one Tally form feed two campaigns
+    // - esp_audience_ref + esp_tag_launch are what ingest syncs leads into, so a
+    //   copied ref would make both campaigns push leads into the SAME beehiiv
+    //   publication under the same tag, indistinguishable on the ESP side
+    // - published=false follows from the NULL secret: the publish gate demands a
+    //   complete lead source
+    tally_webhook_secret: null,
+    esp_audience_ref: null,
+    published: false,
+  }
+}
+
+/**
+ * Copy a campaign into a new DRAFT under the SAME client, carrying its bonuses.
+ *
+ * FAILURE SEMANTICS — there is no transaction across PostgREST calls, so this is
+ * a two-step write with an explicit compensation:
+ *   1. campaign row inserts, bonuses insert   -> success
+ *   2. campaign row inserts, bonuses FAIL     -> compensating DELETE of the new
+ *      campaign, then the bonus error is returned. The delete is verified via
+ *      `.select('id')`: PostgREST does NOT error when zero rows match, so a
+ *      silent no-op would leave an orphan while we reported a clean rollback.
+ *   3. compensation itself fails              -> the orphan id is logged and
+ *      `duplicatePartial` is returned, so the operator is told the truth rather
+ *      than a rollback that did not happen.
+ * A campaign INSERT that succeeds while its RETURNING projection fails carries
+ * the same exposure as `createCampaignHandler` — accepted at parity, not fixed
+ * here with a two-phase insert.
+ */
+export function duplicateCampaignHandler(
+  sourceId: string,
+): Promise<MutationResult<AdminCampaign>> {
+  return toMutation(
+    gated(PERM.campaigns, (auth) =>
+      // The duplicate WRITES so_bonuses rows, and RLS on so_bonuses is
+      // tenant/client-scoped, never permission-scoped — the app gate is the only
+      // one. Without this, a role holding `campaigns` but not `bonuses` could
+      // create bonuses through the side door. Unconditional (not "only when the
+      // source has bonuses"): data-dependent authorization is harder to reason
+      // about, and the parent `bonus_funnel` key satisfies both via prefix match.
+      (!hasPermission(PERM.bonuses, auth.permissions)
+        ? errAsync<undefined, string>(messages.common.noPermission)
+        : assertCampaignOwned(auth, sourceId)
+      )
+        .andThen(() => fetchCampaignForDuplicate(auth, sourceId))
+        .andThen((source) =>
+          fetchCampaignNamesForClient(auth, source.client_id).andThen((existing) => {
+            const slug = uniqueCopySlug(source.slug, existing.slugs, { sep: '-' })
+            const displayName = uniqueCopyName(
+              source.display_name || source.slug,
+              existing.displayNames,
+            )
+            return insertCampaignDuplicate(auth, source, slug, displayName)
+          }),
+        )
+        .andThen((copy) => copyBonuses(auth, sourceId, copy)),
+    ),
+  )
+}
+
+function fetchCampaignForDuplicate(
+  auth: AuthContextFull,
+  sourceId: string,
+): ResultAsync<DuplicateCampaignSource, string> {
+  return ResultAsync.fromPromise(
+    tbl(auth, 'so_campaigns')
+      .select(DUPLICATE_CAMPAIGN_SOURCE_COLUMNS)
+      .eq('id', sourceId)
+      .maybeSingle(),
+    dbError,
+  ).andThen((res) => {
+    const r = res as { data: DuplicateCampaignSource | null; error: DbErrorShape }
+    if (r.error) return err(mapDbError(r.error, 'fetchCampaignForDuplicate'))
+    if (!r.data) return err(messages.common.noPermission)
+    return ok(r.data)
+  })
+}
+
+/** Sibling slugs + display names, so the copy's names are unique up front. */
+function fetchCampaignNamesForClient(
+  auth: AuthContextFull,
+  clientId: string,
+): ResultAsync<{ slugs: string[]; displayNames: string[] }, string> {
+  return ResultAsync.fromPromise(
+    tbl(auth, 'so_campaigns').select('slug, display_name').eq('client_id', clientId),
+    dbError,
+  ).andThen((res) => {
+    const r = res as {
+      data: { slug: string; display_name: string | null }[] | null
+      error: DbErrorShape
+    }
+    if (r.error) return err(mapDbError(r.error, 'fetchCampaignNamesForClient'))
+    const rows = r.data ?? []
+    return ok({
+      slugs: rows.map((row) => row.slug),
+      displayNames: rows.flatMap((row) => (row.display_name ? [row.display_name] : [])),
+    })
+  })
+}
+
+function insertCampaignDuplicate(
+  auth: AuthContextFull,
+  source: DuplicateCampaignSource,
+  slug: string,
+  displayName: string,
+): ResultAsync<AdminCampaign, string> {
+  return ResultAsync.fromPromise(
+    tbl(auth, 'so_campaigns')
+      .insert(buildCampaignDuplicateInsert(source, slug, displayName))
+      .select(ADMIN_CAMPAIGN_COLUMNS)
+      .single(),
+    dbError,
+  ).andThen(fromSupabaseSafe<AdminCampaign>('duplicateCampaign'))
+}
+
+/**
+ * Copy the source campaign's bonuses onto the new one, or compensate.
+ * Order and publish state are preserved; ids are new. Rows are read raw rather
+ * than through `createBonusSchema`, which would reject legacy rows (a NULL title
+ * is representable in the table but not in the create input).
+ */
+function copyBonuses(
+  auth: AuthContextFull,
+  sourceId: string,
+  copy: AdminCampaign,
+): ResultAsync<AdminCampaign, string> {
+  // The rollback wraps the WHOLE bonus step, read included. A failing SELECT
+  // (transient PostgREST/network error) leaves the same orphan draft as a
+  // failing INSERT, so it must compensate the same way.
+  return ResultAsync.fromPromise(
+    tbl(auth, 'so_bonuses')
+      .select(DUPLICATE_BONUS_COLUMNS)
+      .eq('campaign_id', sourceId)
+      .order('sort_order', { ascending: true }),
+    dbError,
+  )
+    .andThen((res) => {
+      const r = res as { data: Record<string, unknown>[] | null; error: DbErrorShape }
+      if (r.error) return err(mapDbError(r.error, 'fetchBonusesForDuplicate'))
+      return ok(r.data ?? [])
+    })
+    .andThen((bonuses) => {
+      if (bonuses.length === 0) return okAsync<AdminCampaign, string>(copy)
+      const rows = bonuses.map((bonus) => ({ ...bonus, campaign_id: copy.id }))
+      return ResultAsync.fromPromise(tbl(auth, 'so_bonuses').insert(rows), dbError).andThen(
+        (res) => {
+          const r = res as { error: DbErrorShape }
+          return r.error
+            ? err<AdminCampaign, string>(mapDbError(r.error, 'duplicateCampaignBonuses'))
+            : ok<AdminCampaign, string>(copy)
+        },
+      )
+    })
+    .orElse((bonusError) => rollbackCampaign(auth, copy.id, bonusError))
+}
+
+/** Undo the campaign insert after a failed bonus copy — and VERIFY it undid. */
+function rollbackCampaign(
+  auth: AuthContextFull,
+  campaignId: string,
+  bonusError: string,
+): ResultAsync<AdminCampaign, string> {
+  return ResultAsync.fromPromise(
+    tbl(auth, 'so_campaigns').delete().eq('id', campaignId).select('id'),
+    dbError,
+  ).andThen((res) => {
+    const r = res as { data: { id: string }[] | null; error: DbErrorShape }
+    // Zero rows deleted is NOT an error to PostgREST — without the read-back we
+    // would report a rollback that never happened.
+    if (r.error || !r.data || r.data.length === 0) {
+      console.error(
+        '[venture] duplicate rollback failed — orphan campaign left behind:',
+        campaignId,
+      )
+      return err<AdminCampaign, string>(messages.venture.duplicatePartial)
+    }
+    return err<AdminCampaign, string>(bonusError)
+  })
 }
 
 export function deleteCampaignHandler(id: string): Promise<VoidResult> {

@@ -19,6 +19,7 @@ import {
 import {
   createBonusHandler,
   createCampaignHandler,
+  duplicateCampaignHandler,
   createClientHandler,
   deleteBonusHandler,
   deleteCampaignHandler,
@@ -103,6 +104,10 @@ export const updateCampaignFn = createServerFn({ method: 'POST' })
     updateCampaignInputSchema.parse(v),
   )
   .handler(({ data }) => updateCampaignHandler(data.id, data.data))
+
+export const duplicateCampaignFn = createServerFn({ method: 'POST' })
+  .inputValidator((v: z.infer<typeof idInputSchema>) => idInputSchema.parse(v))
+  .handler(({ data }) => duplicateCampaignHandler(data.id))
 
 export const deleteCampaignFn = createServerFn({ method: 'POST' })
   .inputValidator((v: z.infer<typeof idInputSchema>) => idInputSchema.parse(v))

@@ -4,6 +4,7 @@ import { fromSupabaseVoid } from '@/lib/result-helpers'
 import {
   updateEmailTemplateSchema,
   createEmailTemplateSchema,
+  duplicateEmailTemplateSchema,
   templateSlugSchema,
   themeIdFieldSchema,
 } from '@/features/email/validation'
@@ -14,7 +15,14 @@ import type { Tables } from '@agency/database'
 import { messages } from '@/lib/messages'
 import { z } from 'zod'
 import type { EmailTemplate, EmailTemplateType, TemplateVariable } from './types'
-import { type AuthContext, requireAuthContext } from '@/lib/server-auth.server'
+import {
+  type AuthContext,
+  type AuthContextFull,
+  hasPermission,
+  requireAuthContext,
+  requireAuthContextFull,
+} from '@/lib/server-auth.server'
+import { uniqueCopyName, uniqueCopySlug } from '@/lib/copy-name'
 
 // ---------------------------------------------------------------------------
 // Validation schemas
@@ -37,6 +45,8 @@ const resetEmailTemplateInputSchema = z.object({ type: emailTemplateTypeSchema }
 const createEmailTemplateInputSchema = createEmailTemplateSchema
 
 const deleteEmailTemplateInputSchema = z.object({ type: emailTemplateTypeSchema })
+
+const duplicateEmailTemplateInputSchema = duplicateEmailTemplateSchema
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -272,6 +282,161 @@ export const createEmailTemplateFn = createServerFn({ method: 'POST' })
     return result.match(
       () => ({ success: true }),
       (error) => ({ success: false, error })
+    )
+  })
+
+/**
+ * Auth for the duplicate endpoint: authenticated AND holding
+ * `system.email_templates`.
+ *
+ * DELIBERATE divergence from its neighbours in this file, which stop at
+ * `requireAuthContext()`. `ROUTE_PERMISSION_MAP` (lib/permissions.ts) gates
+ * NAVIGATION only — it does not protect a `createServerFn` endpoint — so today
+ * any authenticated tenant member can HTTP-invoke create/update/delete here.
+ * This endpoint WRITES a row, so it carries its own gate. It blocks nobody real
+ * (reaching the list already requires the key via the route map). Retro-fitting
+ * the other six fns is a SEPARATE ticket, not this feature's scope.
+ */
+function requireEmailTemplatesAuth(): ResultAsync<AuthContextFull, string> {
+  return requireAuthContextFull().andThen((ctx) =>
+    hasPermission('system.email_templates', ctx.permissions)
+      ? ok(ctx)
+      : err(messages.common.noPermission),
+  )
+}
+
+/**
+ * Copy an existing template into a new row. Returns the new `type` so the caller
+ * can navigate straight into the copy.
+ *
+ * NOT built on `insertTemplate` (hardcodes subject/blocks/variables/theme — it
+ * produces an EMPTY template, not a copy) and NOT on `saveTemplate` (an upsert
+ * whose payload hardcodes `is_active: true`, so duplicating an inactive template
+ * would silently activate the copy).
+ */
+export function duplicateTemplate(
+  auth: AuthContextFull,
+  sourceId: string,
+): ResultAsync<{ type: string }, string> {
+  return ResultAsync.fromPromise(
+    (async () => {
+      // Explicit projection: skips the dead `name` column and DELIBERATELY skips
+      // the stored `html_body` (see the re-bake below). `email_templates` has a
+      // plain table grant, so this is readability, not privilege.
+      const { data: source, error: readError } = await (auth.supabase as any)
+        .from('email_templates')
+        .select('type, label, subject, blocks, template_variables, theme_id, is_active')
+        .eq('tenant_id', auth.tenantId)
+        .eq('id', sourceId)
+        .maybeSingle()
+      if (readError) throw new Error(dbError(readError))
+      // Missing row and another tenant's row are indistinguishable on purpose —
+      // no existence oracle across tenants.
+      if (!source) throw new Error(messages.common.noPermission)
+
+      return source as {
+        type: string
+        label: string | null
+        subject: string
+        blocks: unknown
+        template_variables: unknown
+        theme_id: string | null
+        is_active: boolean | null
+      }
+    })(),
+    dbError,
+  )
+    // Defence in depth: the stored value is same-tenant by construction, but the
+    // venture send path resolves `so_themes` with a SERVICE-ROLE client (RLS
+    // bypassed), so propagating a historically-bad theme_id into a second row is
+    // a real leak class.
+    .andThen((source) =>
+      assertThemeOwnedIfPresent(auth, source.theme_id).map(() => source),
+    )
+    .andThen((source) =>
+      ResultAsync.fromPromise(
+        (async () => {
+          const { data: siblings, error: siblingsError } = await (auth.supabase as any)
+            .from('email_templates')
+            .select('type, label')
+            .eq('tenant_id', auth.tenantId)
+          if (siblingsError) throw new Error(dbError(siblingsError))
+
+          const rows = (siblings ?? []) as { type: string; label: string | null }[]
+          // maxLength is NOT cosmetic: `templateSlugSchema` is .max(50) and
+          // `templateLabelSchema` .max(100), and the editor re-sends `label` on
+          // EVERY save — an overflowing copy would be permanently unsaveable in
+          // the editor this fn navigates to.
+          const type = uniqueCopySlug(source.type, rows.map((r) => r.type), {
+            sep: '_',
+            maxLength: 50,
+          })
+          const label = uniqueCopyName(
+            source.label ?? source.type,
+            rows.flatMap((r) => (r.label ? [r.label] : [])),
+            100,
+          )
+
+          // RE-BAKE, never copy html_body 1:1. It is a DERIVED, nullable column
+          // and it is exactly what n8n sends (Step - Send Email Handler reads
+          // `tpl.html_body` and never re-renders the blocks). Copying a stale or
+          // NULL bake would produce a copy that looks right in the CMS preview
+          // and mails an empty body. Re-baking with the COPIED theme_id yields
+          // identical bytes for a fresh source and repairs a stale one.
+          const blocks = (Array.isArray(source.blocks) ? source.blocks : []) as Block[]
+          const theme = await resolveEmailThemeMap(auth.supabase, {
+            tenantId: auth.tenantId,
+            templateThemeId: source.theme_id ?? null,
+          })
+          const html_body = await renderEmailBlocks(blocks, theme)
+
+          const payload = {
+            tenant_id: auth.tenantId,
+            type,
+            label,
+            subject: source.subject,
+            blocks,
+            html_body,
+            template_variables: source.template_variables ?? [],
+            theme_id: source.theme_id,
+            // Copied, NOT forced true — an inactive template duplicates inactive.
+            is_active: source.is_active ?? true,
+          }
+
+          const { error: insertError } = await (auth.supabase as any)
+            .from('email_templates')
+            .insert(payload)
+          if (insertError) {
+            // Unreachable on the normal path (the slug is uniquified up front);
+            // this covers two duplications racing each other.
+            const code =
+              typeof insertError === 'object' && insertError && 'code' in insertError
+                ? (insertError as { code: string }).code
+                : null
+            throw new Error(
+              code === '23505' ? messages.email.slugAlreadyExists : dbError(insertError),
+            )
+          }
+
+          return { type }
+        })(),
+        dbError,
+      ),
+    )
+}
+
+export const duplicateEmailTemplateFn = createServerFn({ method: 'POST' })
+  .inputValidator((input: z.infer<typeof duplicateEmailTemplateInputSchema>) =>
+    duplicateEmailTemplateInputSchema.parse(input),
+  )
+  .handler(async ({ data }): Promise<{ success: boolean; type?: string; error?: string }> => {
+    const result = await requireEmailTemplatesAuth().andThen((auth) =>
+      duplicateTemplate(auth, data.id),
+    )
+
+    return result.match(
+      ({ type }) => ({ success: true, type }),
+      (error) => ({ success: false, error }),
     )
   })
 

@@ -247,6 +247,15 @@ export const createEmailTemplateSchema = z.object({
 
 export type CreateEmailTemplateInput = z.infer<typeof createEmailTemplateSchema>
 
+// Duplicate keys the SOURCE by `id`, never by `type`. `email_templates`
+// uniqueness is a PARTIAL index — `UNIQUE (tenant_id, type) WHERE type !=
+// 'workflow_custom'` (20260331000000_create_workflow_schema.sql:36-38, which
+// DROPped the original full UNIQUE) — so a tenant may hold N `workflow_custom`
+// rows and a `.eq('type', …).maybeSingle()` source read would error on them.
+export const duplicateEmailTemplateSchema = z.object({ id: z.string().uuid() })
+
+export type DuplicateEmailTemplateInput = z.infer<typeof duplicateEmailTemplateSchema>
+
 export const updateEmailTemplateSchema = z.object({
   subject: z.string().min(1, messages.validation.subjectRequired).max(200, messages.validation.subjectTooLong),
   blocks: z
