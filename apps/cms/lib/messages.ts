@@ -131,6 +131,8 @@ export const messages = {
     // Raw Supabase/Postgres errors (constraint names, RLS policy text) are
     // logged via console.error but never returned to the client.
     slugTaken: 'Ten slug jest już zajęty',
+    duplicatePartial:
+      'Kopia kampanii powstała, ale nie udało się skopiować bonusów ani cofnąć kopii. Sprawdź listę kampanii.',
     operationFailed: 'Nie udało się wykonać operacji',
 
     // --- Campaign list ---
