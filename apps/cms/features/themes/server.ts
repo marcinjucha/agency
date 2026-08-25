@@ -3,6 +3,7 @@ import { z } from 'zod'
 import type { Json } from '@agency/database'
 import { requireAuthContextFull, hasPermission } from '@/lib/server-auth.server'
 import { parseThemeTokens } from '@/lib/theme'
+import { uniqueCopyName } from '@/lib/copy-name'
 import { messages } from '@/lib/messages'
 import {
   themeIdSchema,
@@ -308,21 +309,6 @@ async function fetchThemeNames(
     .eq('tenant_id', tenantId)
   if (error || !data) return []
   return (data as { name: string }[]).map((row) => row.name)
-}
-
-/**
- * Build `"<base> (kopia)"`, then `"(kopia 2)"`, `"(kopia 3)"`… until it doesn't
- * collide with an existing name (case-insensitive, matching the DB unique index).
- * Pure — unit-tested.
- */
-export function uniqueCopyName(base: string, existing: string[]): string {
-  const taken = new Set(existing.map((n) => n.toLowerCase()))
-  const first = `${base} (kopia)`
-  if (!taken.has(first.toLowerCase())) return first
-  for (let n = 2; ; n += 1) {
-    const candidate = `${base} (kopia ${n})`
-    if (!taken.has(candidate.toLowerCase())) return candidate
-  }
 }
 
 /** Single-theme reverse-FK usage for the library "used by N" line (clients + campaigns). */

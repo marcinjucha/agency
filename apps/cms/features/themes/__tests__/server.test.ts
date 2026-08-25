@@ -25,7 +25,6 @@ import {
   getThemeUsageFn,
   listThemes,
   listThemesFn,
-  uniqueCopyName,
   updateTheme,
   updateThemeFn,
 } from '../server'
@@ -365,15 +364,6 @@ describe('duplicateTheme', () => {
     const result = await duplicateTheme(supabase as never, TENANT, 'missing')
     expect(result).toMatchObject({ success: false })
     expect(supabase.themesBuilder.insert).not.toHaveBeenCalled()
-  })
-})
-
-describe('uniqueCopyName (pure)', () => {
-  it('uses "(kopia)" when free', () => {
-    expect(uniqueCopyName('Navy', [])).toBe('Navy (kopia)')
-  })
-  it('increments past case-insensitive collisions', () => {
-    expect(uniqueCopyName('Navy', ['navy (kopia)', 'NAVY (KOPIA 2)'])).toBe('Navy (kopia 3)')
   })
 })
 
