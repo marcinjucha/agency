@@ -36,7 +36,15 @@ describe('Sidebar logout', () => {
     } as any)
 
     vi.mocked(useNavigate).mockReturnValue(mockPush)
-    vi.mocked(useRouterState).mockReturnValue({ location: { pathname: '/admin' } } as any)
+    // Sidebar calls useRouterState({ select: (s) => s.location.pathname }), so the
+    // mock must APPLY the selector — returning the raw state handed the component
+    // an object where it expects a string (pathname.startsWith crashed the render).
+    vi.mocked(useRouterState).mockImplementation(((opts: {
+      select?: (state: unknown) => unknown
+    }) => {
+      const state = { location: { pathname: '/admin' } }
+      return opts?.select ? opts.select(state) : state
+    }) as never)
 
     vi.mocked(useQueryClient).mockReturnValue({
       clear: mockClear,
