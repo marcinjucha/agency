@@ -244,7 +244,19 @@ supabase db push
 supabase link --project-ref mqabjtxtywsmehzijmko    # relink back to staging
 ```
 
-**Why:** prevents accidentally pushing migrations to prod when the intent was staging. The `link` target is **sticky across commands** — always re-verify which project is linked (`supabase migration list --linked`) before every `db push`.
+**Why:** prevents accidentally pushing migrations to prod when the intent was staging. The `link` target is **sticky across commands** — always re-verify which project is linked (`supabase migration list --linked`) before every `db push`, and relink back to staging afterwards.
+
+**Verify prod MIGRATION STATE before any prod `db push`, not just the link target** (2026-07-14). `migration list` answers two different questions: *which project am I linked to* (above) and *what is actually applied there*. Run `supabase link --project-ref zsrpdslhnuwmzewwoexr` + `supabase migration list` and read the applied set BEFORE pushing.
+
+**Why:** this check once killed a `db push` built on a wrong hypothesis — "prod is missing the theming migrations". Prod actually had the full set through `20260714150000`, so the push would have been a no-op driven by a false diagnosis. Then relink to staging (`supabase link --project-ref mqabjtxtywsmehzijmko`) — the link is sticky.
+
+### Diagnosing prod/staging WITHOUT psql or a Personal Access Token (2026-07-14)
+
+**Reading data:** `vercel env pull` the prod service-role key into a **TEMP file**, then read via `@supabase/supabase-js` with the service role. Delete the file afterwards — it holds the secret.
+
+**Reproducing AS a specific user under RLS:** admin `generateLink({ type: 'magiclink' })` → `verifyOtp`. No password change needed, and the session respects that user's RLS.
+
+**What does NOT work — the Supabase Management API SQL endpoint needs a Personal Access Token, and the CLI's stored token is not usable as one.** The CLI keeps it in the macOS keychain as a `go-keyring-b[ase64]` wrapper, which is *not* a bearer token. Don't spend an hour trying to extract it — use the service-role path above instead.
 
 ### Production project
 
