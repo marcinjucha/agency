@@ -287,7 +287,9 @@ export async function duplicateTheme(
   if (!original) return { success: false, error: messages.common.unknownError }
 
   const existingNames = await fetchThemeNames(supabase, tenantId)
-  const name = uniqueCopyName(original.name, existingNames)
+  // 120 mirrors themeInputSchema.name — without it a max-length source yields a
+  // copy the theme editor's own validation refuses to save.
+  const name = uniqueCopyName(original.name, existingNames, 120)
 
   const { data, error } = await supabase
     .from('so_themes')

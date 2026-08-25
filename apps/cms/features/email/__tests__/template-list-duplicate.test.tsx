@@ -45,6 +45,22 @@ describe('EmailTemplateListClient — duplicate action', () => {
     expect(navigate).not.toHaveBeenCalled()
   })
 
+  it('does not let the card swallow Enter aimed at the action button', () => {
+    vi.mocked(useMutation).mockReturnValue({
+      mutate: vi.fn(),
+      isPending: false,
+      error: null,
+    } as never)
+
+    render(<EmailTemplateListClient templates={[template]} />)
+    fireEvent.keyDown(screen.getByLabelText(messages.email.duplicateAction), {
+      key: 'Enter',
+      bubbles: true,
+    })
+
+    expect(navigate).not.toHaveBeenCalled()
+  })
+
   it('disables the action while a duplicate is in flight', () => {
     vi.mocked(useMutation).mockReturnValue({
       mutate: vi.fn(),

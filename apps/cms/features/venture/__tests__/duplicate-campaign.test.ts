@@ -286,6 +286,18 @@ describe('duplicateCampaignHandler — rollback', () => {
     expect(result.error).not.toBe(messages.venture.duplicatePartial)
   })
 
+  it('rolls back when the bonus READ fails, not just the insert', async () => {
+    const { calls } = setup({
+      campaigns: [...happyCampaignQueue(), { data: [{ id: COPY }] }],
+      bonuses: [{ error: { message: 'read boom' } }],
+    })
+    const result = await duplicateCampaignHandler(SOURCE)
+
+    // A failed SELECT leaves the same orphan draft as a failed INSERT.
+    expect(calls.deleted).toBe(1)
+    expect(result.success).toBe(false)
+  })
+
   it('reports duplicatePartial when the rollback itself removes nothing', async () => {
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined)
     const { calls } = setup({

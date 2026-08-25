@@ -110,6 +110,9 @@ export function EmailTemplateListClient({ templates }: EmailTemplateListClientPr
               className="group cursor-pointer rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               onClick={() => navigate(type)}
               onKeyDown={(e) => {
+                // Card-only: Enter on a nested action button bubbles here, and
+                // preventDefault() would cancel that button's own click.
+                if (e.target !== e.currentTarget) return
                 if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault()
                   navigate(type)
@@ -191,6 +194,9 @@ export function EmailTemplateListClient({ templates }: EmailTemplateListClientPr
               tabIndex={0}
               onClick={() => navigate(type)}
               onKeyDown={(e) => {
+                // Card-only: Enter on a nested action button bubbles here, and
+                // preventDefault() would cancel that button's own click.
+                if (e.target !== e.currentTarget) return
                 if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault()
                   navigate(type)

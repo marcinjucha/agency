@@ -65,6 +65,16 @@ describe('VentureCampaignList — duplicate action', () => {
     expect(screen.getByTestId('dialog')).toHaveProperty('textContent', 'camp-1')
   })
 
+  it('does not let the card swallow Enter aimed at the action button', () => {
+    render(<VentureCampaignList />)
+    const button = screen.getByLabelText(messages.venture.duplicateAction)
+    // Bubbles to the card's onKeyDown. Without the target guard the card would
+    // preventDefault() the button's native click-on-Enter and navigate instead.
+    fireEvent.keyDown(button, { key: 'Enter', bubbles: true })
+
+    expect(navigate).not.toHaveBeenCalled()
+  })
+
   it('does not navigate the card when the action is clicked', () => {
     render(<VentureCampaignList />)
     fireEvent.click(screen.getByLabelText(messages.venture.duplicateAction))

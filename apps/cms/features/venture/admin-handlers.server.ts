@@ -682,6 +682,9 @@ function copyBonuses(
   sourceId: string,
   copy: AdminCampaign,
 ): ResultAsync<AdminCampaign, string> {
+  // The rollback wraps the WHOLE bonus step, read included. A failing SELECT
+  // (transient PostgREST/network error) leaves the same orphan draft as a
+  // failing INSERT, so it must compensate the same way.
   return ResultAsync.fromPromise(
     tbl(auth, 'so_bonuses')
       .select(DUPLICATE_BONUS_COLUMNS)
@@ -695,17 +698,18 @@ function copyBonuses(
       return ok(r.data ?? [])
     })
     .andThen((bonuses) => {
-      if (bonuses.length === 0) return okAsync(copy)
+      if (bonuses.length === 0) return okAsync<AdminCampaign, string>(copy)
       const rows = bonuses.map((bonus) => ({ ...bonus, campaign_id: copy.id }))
-      return ResultAsync.fromPromise(tbl(auth, 'so_bonuses').insert(rows), dbError)
-        .andThen((res) => {
+      return ResultAsync.fromPromise(tbl(auth, 'so_bonuses').insert(rows), dbError).andThen(
+        (res) => {
           const r = res as { error: DbErrorShape }
           return r.error
             ? err<AdminCampaign, string>(mapDbError(r.error, 'duplicateCampaignBonuses'))
             : ok<AdminCampaign, string>(copy)
-        })
-        .orElse((bonusError) => rollbackCampaign(auth, copy.id, bonusError))
+        },
+      )
     })
+    .orElse((bonusError) => rollbackCampaign(auth, copy.id, bonusError))
 }
 
 /** Undo the campaign insert after a failed bonus copy — and VERIFY it undid. */

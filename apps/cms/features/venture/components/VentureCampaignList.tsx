@@ -45,12 +45,14 @@ export function VentureCampaignList() {
     },
     onMutate: () => setDuplicateError(null),
     onSuccess: (copy) => {
-      // ROOT key — campaigns are cached per client filter, so an exact-key
-      // invalidation would leave the other filters stale.
-      queryClient.invalidateQueries({ queryKey: queryKeys.venture.all })
       setDuplicateTarget(null)
       router.navigate({ to: routes.admin.ventureCampaign(copy.id) })
     },
+    // ROOT key, and on SETTLE rather than on success: a partial duplicate fails
+    // with a campaign row already inserted, and its message sends the operator
+    // to this very list. Campaigns are cached per client filter, so an exact-key
+    // invalidation would leave the other filters stale.
+    onSettled: () => queryClient.invalidateQueries({ queryKey: queryKeys.venture.all }),
     onError: (mutationError: Error) => {
       setDuplicateError(mutationError.message)
       setDuplicateTarget(null)
@@ -225,6 +227,11 @@ function CampaignCard({
       tabIndex={0}
       onClick={open}
       onKeyDown={(e) => {
+        // Only when the CARD itself has focus: without this, Enter on a nested
+        // action button bubbles here, preventDefault() cancels that button's
+        // native click-on-Enter, and the card navigates instead — leaving the
+        // button keyboard-dead.
+        if (e.target !== e.currentTarget) return
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault()
           open()

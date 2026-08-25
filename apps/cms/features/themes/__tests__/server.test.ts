@@ -359,6 +359,19 @@ describe('duplicateTheme', () => {
     })
   })
 
+  it('clamps the copy name to the 120 chars themeInputSchema allows', async () => {
+    const longName = 'a'.repeat(120)
+    const supabase = makeClient({
+      themeRow: { data: { id: 't1', tenant_id: TENANT, name: longName, tokens: {} }, error: null },
+      themeNames: { data: [], error: null },
+      themeInsert: { data: { id: 't9', tenant_id: TENANT, name: 'x', tokens: {} }, error: null },
+    })
+    await duplicateTheme(supabase as never, TENANT, 't1')
+
+    const payload = supabase.themesBuilder.insert.mock.calls[0][0] as { name: string }
+    expect(payload.name.length).toBeLessThanOrEqual(120)
+  })
+
   it('fails cleanly when the original theme is missing', async () => {
     const supabase = makeClient({ themeRow: { data: null, error: null } })
     const result = await duplicateTheme(supabase as never, TENANT, 'missing')
