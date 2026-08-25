@@ -131,8 +131,19 @@ export const messages = {
     // Raw Supabase/Postgres errors (constraint names, RLS policy text) are
     // logged via console.error but never returned to the client.
     slugTaken: 'Ten slug jest już zajęty',
+    duplicateAction: 'Duplikuj kampanię',
+    duplicateTitle: 'Zduplikować kampanię?',
+    duplicateDescription: 'Kopia powstanie u tego samego klienta i zostanie zapisana jako szkic.',
+    duplicateCopiedTitle: 'Kopiujemy',
+    duplicateCopiedItems:
+      'markę i motyw, szablon e-maila z wartościami zmiennych, bonusy i wybrane źródło leadów',
+    duplicateSkippedTitle: 'Nie kopiujemy',
+    duplicateSkippedItems:
+      'sekretu webhooka, listy odbiorców w ESP ani leadów. Zanim opublikujesz kopię, uzupełnij źródło leadów.',
+    duplicateConfirm: 'Duplikuj',
+    duplicateFailed: 'Nie udało się zduplikować kampanii',
     duplicatePartial:
-      'Kopia kampanii powstała, ale nie udało się skopiować bonusów ani cofnąć kopii. Sprawdź listę kampanii.',
+      'Kopia powstała, ale nie udało się skopiować bonusów. Nie udało się też jej usunąć — sprawdź listę kampanii.',
     operationFailed: 'Nie udało się wykonać operacji',
 
     // --- Campaign list ---
