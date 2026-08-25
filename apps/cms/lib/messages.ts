@@ -858,6 +858,8 @@ export const messages = {
     createFailed: 'Nie udało się utworzyć szablonu',
     deleted: 'Szablon usunięty',
     deleteFailed: 'Nie udało się usunąć szablonu',
+    duplicateAction: 'Duplikuj szablon',
+    duplicateFailed: 'Nie udało się zduplikować szablonu',
     deleteAction: 'Usuń szablon',
     deleteDialogTitle: 'Usuń szablon',
     deleteConfirmTemplateLabel: 'Szablon',

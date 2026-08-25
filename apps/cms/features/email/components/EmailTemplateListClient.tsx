@@ -1,11 +1,14 @@
 import { useState } from 'react'
 import { useRouter } from '@tanstack/react-router'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Button, Card, CardContent, EmptyState } from '@agency/ui'
-import { Mail, ChevronRight, Plus, Trash2 } from 'lucide-react'
+import { Mail, ChevronRight, Plus, Copy, Trash2 } from 'lucide-react'
 import { messages } from '@/lib/messages'
 import type { EmailTemplate } from '@/features/email/types'
 import { useViewMode } from '@/hooks/use-view-mode'
 import { ViewModeToggle } from '@/components/shared/ViewModeToggle'
+import { queryKeys } from '@/lib/query-keys'
+import { duplicateEmailTemplateFn } from '@/features/email/server'
 import { CreateTemplateDialog } from './CreateTemplateDialog'
 import { DeleteTemplateDialog } from './DeleteTemplateDialog'
 
@@ -20,10 +23,36 @@ export function EmailTemplateListClient({ templates }: EmailTemplateListClientPr
   const router = useRouter()
   const navigate = (type: string) =>
     router.navigate({ to: '/admin/email-templates/$type', params: { type } })
+  const queryClient = useQueryClient()
+  const [duplicateError, setDuplicateError] = useState<string | null>(null)
+
+  const duplicateMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const result = await duplicateEmailTemplateFn({ data: { id } })
+      if (!result.success || !result.type) {
+        throw new Error(result.error ?? messages.email.duplicateFailed)
+      }
+      return result.type
+    },
+    onMutate: () => setDuplicateError(null),
+    onSuccess: (newType) => {
+      // ROOT keys — an exact-key invalidation silently misses the derived lists.
+      // The template picker in venture campaigns and the workflow step config
+      // both read their own copy of this list.
+      queryClient.invalidateQueries({ queryKey: queryKeys.email.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.venture.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.workflows.emailTemplates })
+      navigate(newType)
+    },
+    onError: (error: Error) => setDuplicateError(error.message),
+  })
+
+  const duplicate = (id: string) => duplicateMutation.mutate(id)
 
   // List entries derived directly from DB rows — slugs are tenant-defined now.
   // `label ?? type` is a defensive fallback; the column is NOT NULL post-migration.
   const entries = templates.map((t) => ({
+    id: t.id,
     type: t.type,
     label: t.label ?? t.type,
     template: t,
@@ -61,10 +90,19 @@ export function EmailTemplateListClient({ templates }: EmailTemplateListClientPr
         </Button>
       </div>
 
+      {duplicateError ? (
+        <p
+          role="alert"
+          className="rounded-md border border-destructive/20 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+        >
+          {duplicateError}
+        </p>
+      ) : null}
+
       {viewMode === 'grid' ? (
         /* Grid view */
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
-          {entries.map(({ type, label, template }) => (
+          {entries.map(({ id, type, label, template }) => (
             <div
               key={type}
               role="button"
@@ -92,7 +130,21 @@ export function EmailTemplateListClient({ templates }: EmailTemplateListClientPr
                         {type}
                       </p>
                     </div>
-                    {/* Delete button — stopPropagation in handler avoids card navigation */}
+                    {/* Duplicate + delete — stopPropagation in each handler avoids
+                        card navigation */}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 w-7 p-0 shrink-0 text-muted-foreground hover:text-foreground"
+                      disabled={duplicateMutation.isPending}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        duplicate(id)
+                      }}
+                      aria-label={messages.email.duplicateAction}
+                    >
+                      <Copy className="h-3.5 w-3.5" />
+                    </Button>
                     <Button
                       variant="ghost"
                       size="sm"
@@ -132,7 +184,7 @@ export function EmailTemplateListClient({ templates }: EmailTemplateListClientPr
         /* List view — uses role="link" div instead of <Link> wrapping <Button>
            to avoid nested-interactive antipattern (validator P0-2). */
         <div className="grid gap-4">
-          {entries.map(({ type, label, template }) => (
+          {entries.map(({ id, type, label, template }) => (
             <div
               key={type}
               role="link"
@@ -164,6 +216,19 @@ export function EmailTemplateListClient({ templates }: EmailTemplateListClientPr
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+                    disabled={duplicateMutation.isPending}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      duplicate(id)
+                    }}
+                    aria-label={messages.email.duplicateAction}
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
                   <Button
                     variant="ghost"
                     size="sm"

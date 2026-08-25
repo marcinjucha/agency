@@ -96,6 +96,8 @@ vi.mock('lucide-react', () => {
     AlignVerticalSpaceAround: stub, Columns2: stub, LayoutPanelTop: stub, Link: stub,
     // Email canvas toolbar (sample-data toggle)
     Eye: stub, Monitor: stub, Smartphone: stub, ChevronUp: stub, Copy: stub, FlaskConical: stub,
+    // Email template list (card chevron)
+    ChevronRight: stub,
   }
 })
 
