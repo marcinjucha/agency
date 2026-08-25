@@ -15,19 +15,23 @@ import {
 // No mocks required.
 
 describe('STEP_REGISTRY', () => {
-  it('zawiera dokładnie 7 step types', () => {
-    expect(STEP_REGISTRY).toHaveLength(7)
-  })
-
-  it('zawiera wymagane 7 step type IDs', () => {
-    const ids = STEP_REGISTRY.map((s) => s.id)
-    expect(ids).toContain('send_email')
-    expect(ids).toContain('ai_action')
-    expect(ids).toContain('condition')
-    expect(ids).toContain('delay')
-    expect(ids).toContain('webhook')
-    expect(ids).toContain('get_response')
-    expect(ids).toContain('update_response')
+  // One explicit list instead of a magic count plus a partial `toContain` sweep:
+  // the old pair broke twice (condition -> switch in 55202d5, get_appointment
+  // added in 51d95d5) and its failure said only "expected 7, got 9". Adding or
+  // renaming a step must now be a deliberate one-line edit here, and the diff
+  // names the step.
+  it('zawiera dokładnie te step type IDs, w tej kolejności', () => {
+    expect(STEP_REGISTRY.map((s) => s.id)).toEqual([
+      'send_email',
+      'ai_action',
+      'switch',
+      'delay',
+      'webhook',
+      'get_response',
+      'update_response',
+      'get_survey_link',
+      'get_appointment',
+    ])
   })
 
   it('każdy id jest unikalny', () => {
@@ -128,11 +132,13 @@ describe('STEP_TYPE_LABEL_KEYS (derived z registry)', () => {
     const expectedKeys: Record<StepType, string> = {
       send_email: 'stepSendEmail',
       ai_action: 'stepAiAction',
-      condition: 'stepCondition',
+      switch: 'stepSwitch',
       delay: 'stepDelay',
       webhook: 'stepWebhook',
       get_response: 'stepGetResponse',
       update_response: 'stepUpdateResponse',
+      get_survey_link: 'stepGetSurveyLink',
+      get_appointment: 'stepGetAppointment',
     }
     for (const [stepType, expectedKey] of Object.entries(expectedKeys)) {
       expect(STEP_TYPE_LABEL_KEYS[stepType as StepType]).toBe(expectedKey)
@@ -159,11 +165,13 @@ describe('STEP_TYPE_DESCRIPTION_KEYS (derived z registry)', () => {
     const expectedKeys: Record<StepType, string> = {
       send_email: 'descSendEmail',
       ai_action: 'descAiAction',
-      condition: 'descCondition',
+      switch: 'descSwitch',
       delay: 'descDelay',
       webhook: 'descWebhook',
       get_response: 'descGetResponse',
       update_response: 'descUpdateResponse',
+      get_survey_link: 'descGetSurveyLink',
+      get_appointment: 'descGetAppointment',
     }
     for (const [stepType, expectedKey] of Object.entries(expectedKeys)) {
       expect(STEP_TYPE_DESCRIPTION_KEYS[stepType as StepType]).toBe(expectedKey)

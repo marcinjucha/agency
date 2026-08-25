@@ -369,10 +369,13 @@ describe('collectAvailableVariables', () => {
     expect(step1Vars.some((v) => v.key === 'step1.emailSent')).toBe(true)
   })
 
-  it('branching: both branches see trigger + condition output', () => {
+  // 'condition' became 'switch' in 55202d5 (N-way branch router). The step type
+  // must exist in STEP_REGISTRY or the lookup yields no output schema and the
+  // branch variable silently disappears.
+  it('branching: both branches see trigger + switch output', () => {
     const steps = [
       makeStepBase('trigger', 'survey_submitted'),
-      makeStepBase('cond', 'condition'),
+      makeStepBase('cond', 'switch'),
       makeStepBase('step_a', 'send_email'),
       makeStepBase('step_b', 'webhook'),
     ]
@@ -389,7 +392,7 @@ describe('collectAvailableVariables', () => {
     expect(resultA.filter((v) => v.category === 'Trigger')).toHaveLength(2)
     expect(resultB.filter((v) => v.category === 'Trigger')).toHaveLength(2)
 
-    // Both should see condition output — keys are slug-based (slug = step ID 'cond')
+    // Both should see the switch output — keys are slug-based (slug = step ID 'cond')
     expect(resultA.some((v) => v.key === 'cond.branch')).toBe(true)
     expect(resultB.some((v) => v.key === 'cond.branch')).toBe(true)
   })
