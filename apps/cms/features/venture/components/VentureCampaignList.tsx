@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Link } from '@tanstack/react-router'
+import { Link, useRouter } from '@tanstack/react-router'
 import {
   Button,
   Badge,
@@ -153,11 +153,30 @@ export function VentureCampaignList() {
 
 // --- Card ---
 
+/**
+ * The card is a `div role="link"` rather than a `<Link>` wrapper so that action
+ * buttons can live INSIDE it without the nested-interactive antipattern — the
+ * twin email-template list already uses this shape (validator P0-2).
+ *
+ * Accepted cost, stated rather than hidden: cmd-click / middle-click no longer
+ * open the campaign in a new tab, because there is no anchor any more.
+ */
 function CampaignCard({ campaign, clientLabel }: { campaign: AdminCampaign; clientLabel: string }) {
+  const router = useRouter()
+  const open = () => router.navigate({ to: routes.admin.ventureCampaign(campaign.id) })
+
   return (
-    <Link
-      to={routes.admin.ventureCampaign(campaign.id)}
-      className="block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    <div
+      role="link"
+      tabIndex={0}
+      onClick={open}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          open()
+        }
+      }}
+      className="block cursor-pointer rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
       <Card className="h-full overflow-hidden transition-transform hover:-translate-y-0.5">
         <CardContent className="space-y-1.5 p-3">
@@ -180,7 +199,7 @@ function CampaignCard({ campaign, clientLabel }: { campaign: AdminCampaign; clie
           <p className="truncate text-xs text-muted-foreground">{clientLabel}</p>
         </CardContent>
       </Card>
-    </Link>
+    </div>
   )
 }
 
