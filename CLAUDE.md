@@ -186,17 +186,13 @@ This monorepo contains two Notion projects with separate PROJECT_SPEC files:
 
 ---
 
-## Task Tracking — Trello is the day-to-day tracker; Notion is the structured backlog
+## Task Tracking — Notion is the structured backlog; next-actions live in the brain vault
 
-**Trello board Agency = the tracker actually in daily use** (owner-confirmed 2026-08-06: used more than Notion). Board `tkOXUJUS`, `idBoard 6a3e8e8e29866edeceaee93f`. Model ENCJA-jako-LISTA since 2026-07-22: **lists are AREAS/CLIENTS** (Venture/leady · Platforma · Website/SEO · Justyna), **not statuses** — status comes from card position plus the `⏳ Czekam` label, and `dueComplete: true` means done. Details in the brain project memory `_halo-efekt.md`.
+**Trello is NOT used (since 2026-10-30).** The owner keeps the Agency board privately as his own to-do list after building the brain dashboard — never read it, comment on it, or create/propose cards. Day-to-day next-actions live in the brain vault's CO TERAZ (`01-Projects/agency/<client>/<client>-nastepne-kroki.md` or `halo-efekt-teraz.md`); see the project memory `_halo-efekt.md`.
 
 **Notion Agency Database = the structured backlog** (`AAA-P-*` projects, `AAA-T-N` tasks). It is what `/ag-develop` and `/vps-ops` read and write, and what `PROJECT_SPEC.yaml` mirrors — so it stays authoritative for anything those commands drive.
 
-**Which one to use:** default to a **Trello card**, on the list matching the area or client. Use Notion only when the item is a tracked feature with an `AAA-T-N` id that `/ag-develop` or `/vps-ops` will pick up. Never create the same item in both.
-
-**Trello access (no MCP — plain REST via `curl`):** needs BOTH `TRELLO_API_KEY` and `TRELLO_TOKEN`. **Single source of truth: `claude-marketing/.env.local`** — it holds `TRELLO_API_KEY` + `TRELLO_SECRET` + `TRELLO_TOKEN`, which is also what `/brain-pull` and `/brain-publish` document. Source that one file. Both it and `agency-cms/.env.local` are gitignored.
-
-**Stale-mirror hazard:** `agency-cms/.env.local` contains a DUPLICATE of `TRELLO_TOKEN` (byte-identical copy, no API key). It is redundant, and worse: after renewing the token in `claude-marketing`, sourcing `agency-cms/.env.local` *second* silently overwrites the fresh token with the stale copy. Prefer deleting the duplicate over keeping two copies in sync. Tokens expire; on `invalid token` renew via `/1/authorize`.
+**Which one to use:** a loose item goes to CO TERAZ in the vault. Use Notion only when the item is a tracked feature with an `AAA-T-N` id that `/ag-develop` or `/vps-ops` will pick up. Never record the same item in both.
 
 **`N8N_STAGING_URL` has no URL scheme** (`n8n-staging.trustcode.pl`, not `https://…`), so `curl` without `-L` gets a `301 Moved Permanently` and the request looks like an auth failure. Always pass `-L`, or add the scheme.
 
@@ -258,7 +254,7 @@ This monorepo contains two Notion projects with separate PROJECT_SPEC files:
 
 ## Quick Reference
 
-**When working with Notion** (the structured `AAA-T-N` backlog — day-to-day work goes on Trello, see § "Task Tracking")**:**
+**When working with Notion** (the structured `AAA-T-N` backlog — day-to-day next-actions live in the brain vault, see § "Task Tracking")**:**
 
 1. ALWAYS use TitleCase status values: `To Do`, `In Progress`, `Done`, `Cancelled`, `On Hold`, `Inbox` — wrong case = silent property mismatch
 2. Property names are CASE-SENSITIVE (e.g. `📊 Projects`, `Status`, `Priority`/`Priorytety` — verify against schema before bulk operations)
