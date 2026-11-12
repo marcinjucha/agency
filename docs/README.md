@@ -4,7 +4,7 @@
 
 Welcome to Halo-Efekt documentation. This directory contains architecture, design patterns, and technical context.
 
-**For task tracking and roadmap:** See [Notion workspace](https://notion.so) (Agency Projects & Tasks)
+**For task tracking:** there is no external tracker (since 2026-11-12) — the task list lives in the brain vault (`~/Prywatne/projects/brain-vault/01-Projects/agency/halo-efekt-teraz.md`).
 
 ---
 
@@ -12,10 +12,9 @@ Welcome to Halo-Efekt documentation. This directory contains architecture, desig
 
 **New to the project?** Start here:
 
-1. **[Notion](https://notion.so)** - Current tasks, roadmap, and project status (Source of truth)
-2. **[PROJECT_SPEC.yaml](./PROJECT_SPEC.yaml)** - Architecture decisions and WHY (not WHAT)
-3. **[ARCHITECTURE.md](./ARCHITECTURE.md)** - Technical architecture and system design
-4. **[CODE_PATTERNS.md](./CODE_PATTERNS.md)** - Implementation patterns and examples
+1. **[PROJECT_SPEC.yaml](./PROJECT_SPEC.yaml)** - Architecture decisions and WHY (not WHAT)
+2. **[ARCHITECTURE.md](./ARCHITECTURE.md)** - Technical architecture and system design
+3. **[CODE_PATTERNS.md](./CODE_PATTERNS.md)** - Implementation patterns and examples
 
 ---
 
@@ -25,7 +24,6 @@ Welcome to Halo-Efekt documentation. This directory contains architecture, desig
 
 | Document | Purpose | When to Read |
 |----------|---------|--------------|
-| **[NOTION_INTEGRATION.md](./NOTION_INTEGRATION.md)** | **Notion integration guide** for agents: how to read tasks, update status, and reference local docs | **Essential for AI agents** - read first |
 | **[PROJECT_SPEC.yaml](./PROJECT_SPEC.yaml)** | WHY we made decisions: tech stack rationale, architecture choices, lightweight acceptance criteria | When understanding context and philosophy |
 | **[ARCHITECTURE.md](./ARCHITECTURE.md)** | Technical architecture, system design, cross-app dependencies | When understanding how things work |
 | **[CODE_PATTERNS.md](./CODE_PATTERNS.md)** | Concrete code examples and implementation patterns | When building features |
@@ -54,33 +52,18 @@ Reference guides for learning (12 files in `guides/` directory):
 
 ### For AI Assistants (Claude, ChatGPT, etc.)
 
-**IMPORTANT:** Notion is the source of truth for task tracking and roadmap.
-
 **Read this first:**
-1. **[NOTION_INTEGRATION.md](./NOTION_INTEGRATION.md)** - **CRITICAL: Integration guide with Notion MCP examples**
-2. **Notion** - Query tasks with status "In Progress" to know what to implement
-3. **[PROJECT_SPEC.yaml](./PROJECT_SPEC.yaml)** - WHY decisions were made (architecture, tech stack rationale)
-4. **[ARCHITECTURE.md](./ARCHITECTURE.md)** - System design and cross-cutting concerns
-5. **[CODE_PATTERNS.md](./CODE_PATTERNS.md)** - Implementation patterns
+1. **[PROJECT_SPEC.yaml](./PROJECT_SPEC.yaml)** - WHY decisions were made (architecture, tech stack rationale)
+2. **[ARCHITECTURE.md](./ARCHITECTURE.md)** - System design and cross-cutting concerns
+3. **[CODE_PATTERNS.md](./CODE_PATTERNS.md)** - Implementation patterns
 
-**Integration pattern (see NOTION_INTEGRATION.md for details):**
-- Phase 0: Read from Notion (tasks with status="In Progress")
-- Phase 1-7: Execute implementation
-- Phase 8: Update Notion (change status to "Done")
-- Reference PROJECT_SPEC.yaml for architecture context (WHY)
-
-**Notion MCP Tools:**
-- `mcp__notion__notion-search` - Find tasks by status
-- `mcp__notion__notion-fetch` - Get task details
-- `mcp__notion__notion-update-page` - Update task status
-- `mcp__notion__notion-create-pages` - Create documentation
+Tasks come from the brain vault (`~/Prywatne/projects/brain-vault/01-Projects/agency/halo-efekt-teraz.md`); `/ag-develop` takes one as an argument or picks it from there.
 
 ### For New Developers
 
 **Day 1:**
-1. Check Notion for current project status (Agency Projects & Tasks)
-2. Read PROJECT_SPEC.yaml (Architecture decisions and WHY)
-3. Read ARCHITECTURE.md (Tech Stack)
+1. Read PROJECT_SPEC.yaml (Architecture decisions and WHY)
+2. Read ARCHITECTURE.md (Tech Stack)
 
 **Day 2-7:**
 - Study ADRs to understand patterns (adr/006, adr/008)
@@ -89,10 +72,7 @@ Reference guides for learning (12 files in `guides/` directory):
 
 ### For Project Manager / Stakeholder
 
-**Check Notion for:**
-- Current tasks (status: In Progress, Done, Not Started)
-- Project progress (% complete)
-- Next priorities (what's coming up)
+**Tasks and priorities:** the brain vault (`~/Prywatne/projects/brain-vault/01-Projects/agency/halo-efekt-teraz.md`).
 
 **Check docs/ for:**
 - PROJECT_SPEC.yaml → Architecture and technical context
@@ -113,7 +93,7 @@ Reference guides for learning (12 files in `guides/` directory):
 
 **Next Priority:** Phase 5 - n8n Workflows & AI Analysis
 
-**Task Tracking:** Check [Notion](https://notion.so) for current tasks with status "In Progress"
+**Task Tracking:** the brain vault (`~/Prywatne/projects/brain-vault/01-Projects/agency/halo-efekt-teraz.md`)
 
 ---
 
@@ -123,7 +103,7 @@ Reference guides for learning (12 files in `guides/` directory):
 
 | Question | Document |
 |----------|----------|
-| Know what to build next | **Notion** → Tasks with status "In Progress" |
+| Know what to build next | brain vault → `halo-efekt-teraz.md` |
 | Understand the architecture | ARCHITECTURE.md |
 | Understand code organization | adr/006-agency-project-structure.md (Section 3) |
 | See implementation patterns | CODE_PATTERNS.md |
@@ -143,9 +123,8 @@ Reference guides for learning (12 files in `guides/` directory):
 
 | Question | Document |
 |----------|----------|
-| Overall project progress | **Notion** → Agency Projects |
-| Specific feature progress | **Notion** → Agency Tasks |
-| Next priorities | **Notion** → Tasks with status "Not Started" |
+| Feature status | PROJECT_SPEC.yaml → features[*].status |
+| Next priorities | brain vault → `halo-efekt-teraz.md` |
 | Architecture context | PROJECT_SPEC.yaml → features[*].why |
 
 ---
@@ -155,8 +134,8 @@ Reference guides for learning (12 files in `guides/` directory):
 ### When to Update
 
 **After completing a feature:**
-- [x] Update Notion task status (In Progress → Done) - **PRIMARY**
-- [x] Optionally update PROJECT_SPEC.yaml if architecture decisions changed
+- [x] Update PROJECT_SPEC.yaml feature status (and architecture decisions if they changed)
+- [x] Run `/brain-update` so the vault's task list records it
 - [x] Commit changes with: `docs: update after [feature name]`
 
 **After making architectural decision:**
@@ -165,17 +144,12 @@ Reference guides for learning (12 files in `guides/` directory):
 - [ ] Update PROJECT_SPEC.yaml → architecture.key_decisions if needed
 
 **After major milestone:**
-- [ ] Update Notion project progress
 - [ ] Update PROJECT_SPEC.yaml → status_summary if phase complete
 - [ ] Update README.md → Current Project Status
 
 ### How to Update
 
-**Notion updates (PRIMARY):**
-1. Agents automatically update task status after implementation
-2. User manually updates priorities and creates new tasks
-
-**Local docs updates (SECONDARY):**
+**Local docs updates:**
 1. Edit PROJECT_SPEC.yaml only for architecture changes (WHY, not WHAT)
 2. Update "last_updated" date
 3. Commit with descriptive message
@@ -186,7 +160,7 @@ Reference guides for learning (12 files in `guides/` directory):
 
 ### Our Standards
 
-1. **Notion = Source of Truth:** Task tracking, roadmap, and WHAT to build lives in Notion
+1. **Brain vault = task list:** what to build next lives in the brain vault (`~/Prywatne/projects/brain-vault/01-Projects/agency/halo-efekt-teraz.md`)
 2. **Local Docs = WHY Context:** Architecture decisions, tech stack rationale, design patterns
 3. **Signal vs Noise:** Focus on WHY decisions were made, not detailed acceptance criteria
 4. **Write for Humans:** Clear, concise, scannable
@@ -194,8 +168,7 @@ Reference guides for learning (12 files in `guides/` directory):
 
 ### Document Types
 
-- **Notion (PRIMARY):** Task tracking, roadmap, detailed acceptance criteria (updated daily by agents)
-- **PROJECT_SPEC.yaml (SECONDARY):** WHY we made decisions (architecture, tech stack rationale, lightweight acceptance criteria)
+- **PROJECT_SPEC.yaml:** WHY we made decisions (architecture, tech stack rationale, lightweight acceptance criteria)
 - **ARCHITECTURE.md:** Technical design (stable, updated on major changes)
 - **ADRs:** Immutable decision records (never edit, only add new)
 - **CODE_PATTERNS.md:** Implementation examples (updated with new patterns)
@@ -239,4 +212,4 @@ Reference guides for learning (12 files in `guides/` directory):
 **Maintained By:** Development Team + AI Agents
 **Next Review:** After Phase 5 completion (n8n & AI)
 
-*This README serves as the central index for all documentation. Start with Notion for task tracking, then check PROJECT_SPEC.yaml for architecture context.*
+*This README serves as the central index for all documentation. Tasks live in the brain vault; check PROJECT_SPEC.yaml for architecture context.*

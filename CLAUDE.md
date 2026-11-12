@@ -113,8 +113,8 @@ agency/
 ├── packages/             # Shared packages (ui, database, validators, calendar, email)
 ├── supabase/            # Database migrations and config (19 tables, 28 migrations)
 └── docs/
-    ├── PROJECT_SPEC.yaml       # Halo Efekt Core CMS (AAA-P-4)
-    └── SHOP_PROJECT_SPEC.yaml  # Platforma Sklepowa (AAA-P-9)
+    ├── PROJECT_SPEC.yaml       # Halo Efekt core: email, workflow engine, intake, blog & media, tech
+    └── SHOP_PROJECT_SPEC.yaml  # Platforma Sklepowa
 ```
 
 Note: `apps/shop/jacek/` and `apps/shop/oleg/` migrated from Next.js 16 to TanStack Start v1.167 + Vite 8 (2026-04-15). `apps/shop/tata/` planned but not yet created. Shop CMS features exist in `apps/cms/features/shop-*/`.
@@ -123,20 +123,16 @@ Note: `apps/shop/jacek/` and `apps/shop/oleg/` migrated from Next.js 16 to TanSt
 
 ## PROJECT_SPEC Files (Dual-Project Monorepo)
 
-This monorepo contains two Notion projects with separate PROJECT_SPEC files:
+This monorepo has two PROJECT_SPEC files, routed by the paths a task touches:
 
-| File | Notion Projects | Scope |
-|------|----------------|-------|
-| `docs/PROJECT_SPEC.yaml` | AAA-P-11 Email + AAA-P-12 Workflow Engine + AAA-P-13 Intake + AAA-P-14 Blog & Media + AAA-P-15 Tech + AAA-P-16 Metoda Halo Filter + legacy AAA-P-4 Core CMS | Agency platform: surveys, intake, calendar, email, blog, landing pages, SEO |
-| `docs/SHOP_PROJECT_SPEC.yaml` | AAA-P-9 Platforma Sklepowa | E-commerce: product catalog, shop frontends, CMS shop features |
-
-**Routing rule for `/develop` command:**
-- Tasks under AAA-P-11 Email / AAA-P-12 Workflow Engine / AAA-P-13 Intake / AAA-P-14 Blog & Media / AAA-P-15 Tech / AAA-P-16 Metoda Halo Filter / legacy AAA-P-4 Core CMS → `docs/PROJECT_SPEC.yaml`
-- Tasks under AAA-P-9 Platforma Sklepowa → `docs/SHOP_PROJECT_SPEC.yaml`
+| File | Scope |
+|------|-------|
+| `docs/PROJECT_SPEC.yaml` | Agency platform: email, workflow engine, intake (surveys, calendar), blog & media, landing pages, SEO, tech |
+| `docs/SHOP_PROJECT_SPEC.yaml` | E-commerce: `apps/shop/*`, `apps/cms/features/shop-*`, `shop_*` tables |
 
 **Shared infrastructure:** Both projects share the same Supabase DB (shop tables use `shop_` prefix), the same CMS app (shop features in `features/shop-*/`), and the same packages. Only the public frontends will be separate (`apps/website/` vs future `apps/shop/*/`).
 
-**Cross-project updates:** When working on AAA-P-9 (Shop) tasks, always check if changes affect Core CMS (AAA-P-4). If a shop task modifies shared tables (e.g., `media_items`), shared packages, CMS sidebar, or `lib/` files — update BOTH PROJECT_SPECs. Shop extends CMS, so many shop tasks have core CMS side effects.
+**Cross-project updates:** When working on shop tasks, always check if changes affect the core CMS. If a shop task modifies shared tables (e.g., `media_items`), shared packages, CMS sidebar, or `lib/` files — update BOTH PROJECT_SPECs. Shop extends CMS, so many shop tasks have core CMS side effects.
 
 ---
 
@@ -186,46 +182,11 @@ This monorepo contains two Notion projects with separate PROJECT_SPEC files:
 
 ---
 
-## Task Tracking — Notion is the structured backlog; next-actions live in the brain vault
+## Task Tracking — no external tracker; tasks live in the brain vault
 
-**Trello is NOT used (since 2026-10-30).** The owner keeps the Agency board privately as his own to-do list after building the brain dashboard — never read it, comment on it, or create/propose cards. Day-to-day next-actions live in the brain vault's CO TERAZ (`01-Projects/agency/<client>/<client>-nastepne-kroki.md` or `halo-efekt-teraz.md`); see the project memory `_halo-efekt.md`.
-
-**Notion Agency Database = the structured backlog** (`AAA-P-*` projects, `AAA-T-N` tasks). It is what `/ag-develop` and `/vps-ops` read and write, and what `PROJECT_SPEC.yaml` mirrors — so it stays authoritative for anything those commands drive.
-
-**Which one to use:** a loose item goes to CO TERAZ in the vault. Use Notion only when the item is a tracked feature with an `AAA-T-N` id that `/ag-develop` or `/vps-ops` will pick up. Never record the same item in both.
+**No tracker (Marcin, 2026-11-12).** Notion is not used for agency work (only the shadow-operator context uses it) and Trello is not used (since 2026-10-30 — never read it or create cards). The agency task list is the brain vault's `01-Projects/agency/halo-efekt-teraz.md` (client work: `01-Projects/agency/<klient>/<klient>-nastepne-kroki.md`); project memory `_halo-efekt.md`. `/ag-develop` and `/vps-ops` take the task as an argument or pick it from that CO TERAZ, never write to the vault, and end by suggesting `/brain-update`. Old `AAA-T-N` / `AAA-P-*` ids in notes and commits are history.
 
 **`N8N_STAGING_URL` has no URL scheme** (`n8n-staging.trustcode.pl`, not `https://…`), so `curl` without `-L` gets a `301 Moved Permanently` and the request looks like an auth failure. Always pass `-L`, or add the scheme.
-
-
-## Notion Integration
-
-- **Projects collection:** `collection://29284f14-76e0-802f-a1de-000b357345a9` (database `29284f14-76e0-8065-ae11-ebe3685f4c02`)
-- **Tasks collection:** `collection://29284f14-76e0-8062-a18d-000bfce0cf23` (database `29284f14-76e0-8012-8708-f1c5d3a78386`)
-
-| Notion Project | Project UUID | Scope |
-|---|---|---|
-| AAA-P-11 Email | `35e84f14-76e0-8198-a73c-e02066ed90aa` | Email notifications, templates, provider config (new 2026-05-12) |
-| AAA-P-12 Workflow Engine | `35e84f14-76e0-81a8-bf14-d11966986d82` | Visual builder, n8n, retry, triggers (new 2026-05-12) |
-| AAA-P-13 Intake | `35e84f14-76e0-8131-89f5-c9af874dc516` | Surveys, booking, calendar, confirmations (new 2026-05-12) |
-| AAA-P-14 Blog & Media | `35e84f14-76e0-810b-aef8-d2718ebad9cf` | Blog editor, media library, social embeds (new 2026-05-12) |
-| AAA-P-15 Tech | `35e84f14-76e0-81fe-a6d6-ed0633ed1a9e` | Staging, auth, code review, cross-cutting (new 2026-05-12) |
-| AAA-P-16 Metoda Halo Filter | `35e84f14-76e0-8175-b607-f7f3681c098d` | Offer roadmap tracker (S1/S2/S6/S8/B1-B8/MRR/UP positions + T-* dev subtasks) (new 2026-05-12) |
-| AAA-P-7 Halo Efekt - Website & Content | (existing) | Marketing site content, copy, landing pages |
-| AAA-P-10 Marketing i Social Media | (existing) | Marketing campaigns, social media work |
-| AAA-P-9 Platforma Sklepowa | `33284f14-76e0-816c-943a-c80f812a6f10` | Shop platform |
-| AAA-P-8 Halo Efekt - VPS Infrastructure | `32984f14-76e0-8134-81cc-f44104e84db0` | Hetzner VPS, Docker stacks |
-| AAA-P-6 DocForge - Desktop App | `31a84f14-76e0-814a-a30c-d3d210ad3862` | Desktop app |
-| AAA-P-4 Halo Efekt - Core CMS (archived) | `2e384f14-76e0-8034-8530-f530c28e6641` | Pre-2026-05-12 archive — 0 active tasks, all reparented to AAA-P-11 through AAA-P-15 |
-
-**Agency Clients (unified CRM):** UUID `29284f14-76e0-8046-9c53-e09ac8084aa2`. Extended 2026-05-12 to cover full lifecycle: `Ready to contact` → `Contacted` → `Replied` → `Meeting booked` → `Proposal` → `Negotiation` → `Active` → `Retained` → `Paused` → `Lost`. Adds 10 outreach properties (Outcome, Priorytet, ICP priority, Branża, Tagi, Hook użyty, Następny follow-up, Liczba follow-upów, Czy odpisał?, Źródło renamed from Lead Source). See `.claude/skills/ag-notion-patterns/SKILL.md` for property schemas.
-
-**Task naming:** Notion auto-generates `AAA-T-N` IDs on the Tasks database. Newly created tasks MUST have the title prefixed `[AAA-T-N] <title>` — workflow: `notion-create-pages` → fetch page → read `ID` → `notion-update-page` setting title with prefix.
-
-**Status values (CASE-SENSITIVE):** `Inbox` | `To Do` | `In Progress` | `On Hold` | `Done` | `Cancelled`. Wrong case = silent property mismatch.
-
-**Priority values:** `🔴 Urgent` | `🟠 High` | `🟡 Medium` | `🟢 Low`.
-
-**XL features:** Create separate tasks per iteration with a shared slug prefix (e.g. `booking-flow: iter 1 ...`, `booking-flow: iter 2 ...`) for easy filtering. Single-task-with-checklist for S/M tasks.
 
 ---
 
@@ -237,7 +198,6 @@ This monorepo contains two Notion projects with separate PROJECT_SPEC files:
 | **database-patterns**    | `.claude/skills/database-patterns/SKILL.md`    | Supabase RLS policies, PostgreSQL functions, migrations, type regeneration, client selection (server vs browser), fromSupabaseVoid for void operations, is_super_admin() for global tables. Avoids RLS infinite recursion |
 | **development-workflow** | `.claude/skills/development-workflow/SKILL.md` | Testing decisions (3-Question Rule), severity classification (P0/P1/P2), implementation validation, PROJECT_SPEC.yaml updates, validate after each iteration   |
 | **n8n-patterns**         | `.claude/skills/n8n-patterns/SKILL.md`         | N8n background processing — fire-and-forget webhooks, ai_qualification JSONB, credential selection, Sentry Init subworkflow pattern                           |
-| **notion-patterns**      | `.claude/skills/ag-notion-patterns/SKILL.md`   | Notion MCP tools — task status updates, project tracking. Properties are CASE-SENSITIVE. Contains Agency database IDs, filter rules, and reusable Features Overview / Change Log subpage schemas. Covers the Notion side only — Notion is the structured `AAA-T-N` backlog, NOT the day-to-day tracker (that is Trello; see § "Task Tracking"). There is no skill for Trello — it is plain REST via `curl`. |
 | **design-patterns**      | `.claude/skills/ag-ui-components/SKILL.md`     | React components, shadcn/ui design system, WCAG 2.1 AA accessibility, responsive design, visual design decisions (dark/moody tonality, layout/spacing/typography choices, quality gates), edit pattern decisions (RHF form vs inline, DatePicker vs native). Controller for checkbox arrays, TanStack Query CMS-only, 4 UI states |
 | **validation-patterns**  | `.claude/skills/validation-patterns/SKILL.md`  | Two-pass validation (functional + architecture), YAML report formats, severity classification, 8-point architecture checklist. Loaded by validator-agent      |
 | **iterative-planning**   | `.claude/skills/iterative-planning/SKILL.md`   | Task size assessment (S/M/L/XL), iterative breakdown for M/L/XL tasks, dependency graph patterns (sequential/parallel/convergent), iteration sizing, parallelization identification. Used by analyst-agent in /develop Phase 2 |
@@ -254,41 +214,10 @@ This monorepo contains two Notion projects with separate PROJECT_SPEC files:
 
 ## Quick Reference
 
-**When working with Notion** (the structured `AAA-T-N` backlog — day-to-day next-actions live in the brain vault, see § "Task Tracking")**:**
-
-1. ALWAYS use TitleCase status values: `To Do`, `In Progress`, `Done`, `Cancelled`, `On Hold`, `Inbox` — wrong case = silent property mismatch
-2. Property names are CASE-SENSITIVE (e.g. `📊 Projects`, `Status`, `Priority`/`Priorytety` — verify against schema before bulk operations)
-3. Newly created tasks must get the `[AAA-T-N]` title prefix: `notion-create-pages` → fetch new page → read auto-generated `ID` → `notion-update-page` setting title to `[AAA-T-N] <title>`
-4. See `.claude/skills/ag-notion-patterns/SKILL.md` for database IDs, filter rules, and reusable Features Overview / Change Log subpage schemas
-
-**When working with n8n:**
-
-1. Infrastructure questions → Check `infra/n8n-vps/`
-2. Workflow patterns → Check `.claude/skills/n8n-patterns/SKILL.md`
-3. Background processing → n8n handles async AI operations (see docs)
-4. Workflow engine = backbone → all future features (multi-channel, follow-up, social media) become "add trigger + action blocks" on the workflow engine, not standalone implementations
-
-**When auditing commands:**
-
-1. Check for invented metrics (require source attribution)
-2. Apply signal-vs-noise filter (remove AI-known content)
-3. Verify structure compliance (9 required sections from command-creation skill)
-4. Add production WHY context (not just WHAT)
-
-**Production State:**
-
-- **Tenant "Halo Efekt"** — email: kontakt@haloefekt.pl, id: `19342448-4e4e-49ba-8bf0-694d5376f953`
-- **email_configs table empty** — N8n uses hardcoded Resend fallback (`noreply@haloefekt.pl`)
-
-**When committing:**
-
-- **No Co-Authored-By in commits** — Never add AI attribution footer ("Co-Authored-By: Claude" or similar) to commit messages.
-- **Always use feature branches** — Never commit directly to main. Create `feature/{slug}` branch, implement, test, then merge with `--no-ff`.
-- **All docs commits before merge** — memory.md, PROJECT_SPEC.yaml updates go on the feature branch BEFORE merging to main.
 - **Commit before side-quests** — When user requests work outside current task scope (skill updates, visual audit), commit current progress first.
 - **Worktree needs .env.local** — Git worktrees don't include .env.local (gitignored). Symlink from main (stays in sync): `ln -s $(pwd)/apps/cms/.env.local ./worktree-pnpm/apps/cms/.env.local` (repeat for website, shop/jacek, shop/oleg). Copy (`cp`) also works for one-off setups.
 - **Stage agent-created files explicitly** — The Write tool creates files on disk but does NOT `git add` them. After any file creation step, verify the file appears in `git status` and stage it before committing. WHY: production incident — `docs/polityka-prywatnosci.md` was created by Write but never staged, lost on branch switch.
-- **`chore/` branch prefix for tech-debt without a Notion task** — Use `chore/{slug}` branch naming for internal cleanup/refactoring work that doesn't correspond to a tracked Notion task. Mirrors npm semver convention. Example: `chore/plugin-arch-cleanup`.
+- **`chore/` branch prefix for tech debt** — Use `chore/{slug}` branch naming for internal cleanup/refactoring work that is not a product feature. Mirrors npm semver convention. Example: `chore/plugin-arch-cleanup`.
 - **Clean git history before merge** — Before merging any feature branch, squash/reorganize commits into logical groups using `git reset --soft <base>` + re-commit. WHY: user explicitly confirmed this pattern — prevents WIP/fix commit noise in main history. **File-disjoint pre-flight check (2026-05-15):** `git reset --soft <base>` + group-add cleanup only works if commit groups are FILE-DISJOINT. Before promising N groups to the user, run `git log --name-only` per intended group to verify zero file overlap. If two groups touch the same file, after `git reset --soft` the working tree is merged and you cannot split that file's changes between commits without `git add -p` (interactive, often unavailable). Solution when overlap detected: collapse groups by PATH-PREFIX into 2-3 file-disjoint groups (e.g. `apps/cms/**` + `packages/email/**` + `packages/ui/**` = one commit; `n8n-workflows/**` = another). Also: promising 6 groups and delivering 2 = violation of "scope freeze after ok" rule below.
 - **Bash `cd` persists across tool calls — use absolute paths in git/pnpm/npm commands** — `cd` in one Bash call changes pwd for ALL subsequent Bash calls in the session. Caused accidental commits to wrong branch. Most tools (Read, Edit, Write) are absolute-path so pwd doesn't matter — only Bash carries state. Fix: use `git -C /path/to/worktree ...`, `pnpm -F @agency/cms ...` — never rely on an earlier `cd`.
 - **`git clean -fd` silently deletes untracked directories — always `-fdn` (dry-run) first** — Wiped `apps/shop/jacek/src/` (untracked, never in git history) with zero recovery path. Always run `git clean -fdn` first, read the output carefully, then `-fd`.
@@ -369,7 +298,7 @@ These are durable user-preference rules promoted from `memory.md`. Each has WHY 
 ## Project CLAUDE.md Files
 
 Index of all CLAUDE.md files and their scope:
-- `./CLAUDE.md` — Root project overview, skills reference, Notion integration
+- `./CLAUDE.md` — Root project overview, skills reference, task tracking
 - `./.claude/CLAUDE.md` — Claude-dev artifact repo (agents, skills, commands)
 - `./apps/CLAUDE.md` — Apps directory (CMS vs Website separation, shared patterns)
 - `./apps/cms/CLAUDE.md` — CMS admin panel (auth, routes, TanStack Query, **Permissions & Authorization**: a permission key is never self-enforcing, route map ≠ server gate, coarse `users.role` vs granular RBAC keys, `so_bonuses` app-layer-only gate)

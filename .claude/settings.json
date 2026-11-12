@@ -2,8 +2,6 @@
   "permissions": {
     "allow": [
       "Bash(supabase status *)",
-      "mcp__notion__notion-fetch",
-      "mcp__notion__notion-search",
       "mcp__atlassian__getJiraIssue",
       "mcp__atlassian__searchJiraIssuesUsingJql",
       "mcp__Claude_Preview__preview_logs",
