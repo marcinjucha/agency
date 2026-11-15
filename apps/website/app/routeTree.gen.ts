@@ -9,37 +9,22 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.xml]'
-import { Route as RobotsDottxtRouteImport } from './routes/robots[.txt]'
-import { Route as RegulaminRouteImport } from './routes/regulamin'
-import { Route as PolitykaPrywatnosciRouteImport } from './routes/polityka-prywatnosci'
-import { Route as BlogRouteImport } from './routes/blog'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as BlogRouteImport } from './routes/blog'
+import { Route as PolitykaPrywatnosciRouteImport } from './routes/polityka-prywatnosci'
+import { Route as RegulaminRouteImport } from './routes/regulamin'
+import { Route as RobotsDottxtRouteImport } from './routes/robots[.txt]'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.xml]'
 import { Route as BlogIndexRouteImport } from './routes/blog/index'
-import { Route as SurveyTokenRouteImport } from './routes/survey/$token'
 import { Route as BlogSlugRouteImport } from './routes/blog/$slug'
+import { Route as SurveyTokenRouteImport } from './routes/survey/$token'
+import { Route as BlogPreviewTokenRouteImport } from './routes/blog/preview.$token'
 import { Route as SurveyTokenIndexRouteImport } from './routes/survey/$token.index'
 import { Route as SurveyTokenSuccessRouteImport } from './routes/survey/$token.success'
-import { Route as BlogPreviewTokenRouteImport } from './routes/blog/preview.$token'
 
-const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
-  id: '/sitemap.xml',
-  path: '/sitemap.xml',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const RobotsDottxtRoute = RobotsDottxtRouteImport.update({
-  id: '/robots.txt',
-  path: '/robots.txt',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const RegulaminRoute = RegulaminRouteImport.update({
-  id: '/regulamin',
-  path: '/regulamin',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PolitykaPrywatnosciRoute = PolitykaPrywatnosciRouteImport.update({
-  id: '/polityka-prywatnosci',
-  path: '/polityka-prywatnosci',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BlogRoute = BlogRouteImport.update({
@@ -47,9 +32,24 @@ const BlogRoute = BlogRouteImport.update({
   path: '/blog',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const PolitykaPrywatnosciRoute = PolitykaPrywatnosciRouteImport.update({
+  id: '/polityka-prywatnosci',
+  path: '/polityka-prywatnosci',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RegulaminRoute = RegulaminRouteImport.update({
+  id: '/regulamin',
+  path: '/regulamin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RobotsDottxtRoute = RobotsDottxtRouteImport.update({
+  id: '/robots.txt',
+  path: '/robots.txt',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BlogIndexRoute = BlogIndexRouteImport.update({
@@ -57,14 +57,19 @@ const BlogIndexRoute = BlogIndexRouteImport.update({
   path: '/',
   getParentRoute: () => BlogRoute,
 } as any)
+const BlogSlugRoute = BlogSlugRouteImport.update({
+  id: '/$slug',
+  path: '/$slug',
+  getParentRoute: () => BlogRoute,
+} as any)
 const SurveyTokenRoute = SurveyTokenRouteImport.update({
   id: '/survey/$token',
   path: '/survey/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
-const BlogSlugRoute = BlogSlugRouteImport.update({
-  id: '/$slug',
-  path: '/$slug',
+const BlogPreviewTokenRoute = BlogPreviewTokenRouteImport.update({
+  id: '/preview/$token',
+  path: '/preview/$token',
   getParentRoute: () => BlogRoute,
 } as any)
 const SurveyTokenIndexRoute = SurveyTokenIndexRouteImport.update({
@@ -76,11 +81,6 @@ const SurveyTokenSuccessRoute = SurveyTokenSuccessRouteImport.update({
   id: '/success',
   path: '/success',
   getParentRoute: () => SurveyTokenRoute,
-} as any)
-const BlogPreviewTokenRoute = BlogPreviewTokenRouteImport.update({
-  id: '/preview/$token',
-  path: '/preview/$token',
-  getParentRoute: () => BlogRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -179,32 +179,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/sitemap.xml': {
-      id: '/sitemap.xml'
-      path: '/sitemap.xml'
-      fullPath: '/sitemap.xml'
-      preLoaderRoute: typeof SitemapDotxmlRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/robots.txt': {
-      id: '/robots.txt'
-      path: '/robots.txt'
-      fullPath: '/robots.txt'
-      preLoaderRoute: typeof RobotsDottxtRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/regulamin': {
-      id: '/regulamin'
-      path: '/regulamin'
-      fullPath: '/regulamin'
-      preLoaderRoute: typeof RegulaminRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/polityka-prywatnosci': {
-      id: '/polityka-prywatnosci'
-      path: '/polityka-prywatnosci'
-      fullPath: '/polityka-prywatnosci'
-      preLoaderRoute: typeof PolitykaPrywatnosciRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/blog': {
@@ -214,11 +193,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BlogRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/polityka-prywatnosci': {
+      id: '/polityka-prywatnosci'
+      path: '/polityka-prywatnosci'
+      fullPath: '/polityka-prywatnosci'
+      preLoaderRoute: typeof PolitykaPrywatnosciRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/regulamin': {
+      id: '/regulamin'
+      path: '/regulamin'
+      fullPath: '/regulamin'
+      preLoaderRoute: typeof RegulaminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/robots.txt': {
+      id: '/robots.txt'
+      path: '/robots.txt'
+      fullPath: '/robots.txt'
+      preLoaderRoute: typeof RobotsDottxtRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/blog/': {
@@ -228,6 +228,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BlogIndexRouteImport
       parentRoute: typeof BlogRoute
     }
+    '/blog/$slug': {
+      id: '/blog/$slug'
+      path: '/$slug'
+      fullPath: '/blog/$slug'
+      preLoaderRoute: typeof BlogSlugRouteImport
+      parentRoute: typeof BlogRoute
+    }
     '/survey/$token': {
       id: '/survey/$token'
       path: '/survey/$token'
@@ -235,11 +242,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SurveyTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/blog/$slug': {
-      id: '/blog/$slug'
-      path: '/$slug'
-      fullPath: '/blog/$slug'
-      preLoaderRoute: typeof BlogSlugRouteImport
+    '/blog/preview/$token': {
+      id: '/blog/preview/$token'
+      path: '/preview/$token'
+      fullPath: '/blog/preview/$token'
+      preLoaderRoute: typeof BlogPreviewTokenRouteImport
       parentRoute: typeof BlogRoute
     }
     '/survey/$token/': {
@@ -255,13 +262,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/survey/$token/success'
       preLoaderRoute: typeof SurveyTokenSuccessRouteImport
       parentRoute: typeof SurveyTokenRoute
-    }
-    '/blog/preview/$token': {
-      id: '/blog/preview/$token'
-      path: '/preview/$token'
-      fullPath: '/blog/preview/$token'
-      preLoaderRoute: typeof BlogPreviewTokenRouteImport
-      parentRoute: typeof BlogRoute
     }
   }
 }
