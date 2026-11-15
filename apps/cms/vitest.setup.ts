@@ -1,6 +1,31 @@
 import '@testing-library/jest-dom/vitest'
+import { AsyncLocalStorage } from 'node:async_hooks'
 import { cleanup } from '@testing-library/react'
 import { afterEach, beforeEach, vi } from 'vitest'
+
+// Start 1.168+ reads the request's Start context (global function middleware) on
+// EVERY server fn call; outside the server runtime there is none and the call
+// throws "No Start context found". Unit tests call the *Fn wrappers in-process,
+// so give them an empty context: no global middleware, no request middleware ran —
+// exactly what 1.167 did without a context. Real requests always carry their own
+// context (runWithStartContext wins over this fallback). Same global key as
+// @tanstack/start-storage-context, created here before any Start module loads.
+const startStorageKey = Symbol.for('tanstack-start:start-storage-context')
+const startGlobals = globalThis as Record<symbol, AsyncLocalStorage<unknown> | undefined>
+startGlobals[startStorageKey] ??= new AsyncLocalStorage<unknown>()
+const startStorage = startGlobals[startStorageKey]!
+const realGetStore = startStorage.getStore.bind(startStorage)
+const unitTestStartContext = {
+  startOptions: undefined,
+  contextAfterGlobalMiddlewares: {},
+  executedRequestMiddlewares: new Set(),
+  handlerType: 'serverFn',
+  request: new Request('http://localhost/'),
+  getRouter: () => {
+    throw new Error('No router in unit tests')
+  },
+}
+startStorage.getStore = () => realGetStore() ?? unitTestStartContext
 
 // Cleanup after each test
 afterEach(() => {
