@@ -70,6 +70,17 @@ function describeThrown(error: unknown): { name?: string; code?: string; message
   }) as { name?: string; code?: string; message: string }
 }
 
+/**
+ * Server errors also go to GlitchTip (lib/monitoring.server.ts). Imported lazily from inside the `.server()`
+ * callbacks so the node SDK never reaches the browser bundle; awaited so the report is flushed before the
+ * function's response (Vercel freezes the function after it). A handler that returns `{ success: false }`
+ * instead of throwing is a handled failure and is not reported.
+ */
+async function report(error: unknown, tags: Record<string, string | number | undefined>): Promise<void> {
+  const { reportServerError } = await import('@/lib/monitoring.server')
+  await reportServerError(error, tags)
+}
+
 // redirect()/notFound() are thrown control flow, not failures. Use the router's
 // own predicates — a redirect is a `Response` subtype, so a hand-rolled
 // structural check gets it wrong.
@@ -93,8 +104,14 @@ export const apiRequestLoggerMiddleware = createMiddleware().server(
       const status = result.response.status
       const line = { path: pathname, method: request.method, status, ms }
 
-      if (status >= 500) console.error('[api] server error', { ...line, ...deploymentTag() })
-      else if (status >= 400) console.warn('[api] client error', line)
+      if (status >= 500) {
+        console.error('[api] server error', { ...line, ...deploymentTag() })
+        await report(new Error(`[api] ${status} ${request.method} ${pathname}`), {
+          kind: 'api',
+          path: pathname,
+          status,
+        })
+      } else if (status >= 400) console.warn('[api] client error', line)
       else if (ms >= SLOW_SERVER_FN_MS) console.warn('[api] slow', line)
       else if (isVerbose()) console.info('[api] ok', line)
       return result
@@ -106,6 +123,7 @@ export const apiRequestLoggerMiddleware = createMiddleware().server(
         ...describeThrown(error),
         ...deploymentTag(),
       })
+      await report(error, { kind: 'api', path: pathname })
       throw error
     }
   },
@@ -161,6 +179,7 @@ export const serverFnLoggerMiddleware = createMiddleware({ type: 'function' }).s
         ...describeThrown(error),
         ...deploymentTag(),
       })
+      await report(error, { kind: 'server_fn', fn, file })
       throw error
     }
   },
