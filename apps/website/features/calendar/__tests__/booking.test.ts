@@ -80,7 +80,7 @@ const mockProvider = {
   testConnection: vi.fn(),
   discoverCalendars: vi.fn(),
 }
-const mockCreateCalendarProvider = vi.fn(() => mockProvider)
+const mockCreateCalendarProvider = vi.fn((..._args: unknown[]) => mockProvider)
 
 vi.mock('@agency/calendar', () => ({
   getConnectionForSurveyLink: (...args: unknown[]) => mockGetConnectionForSurveyLink(...args),
@@ -118,7 +118,9 @@ vi.mock('@/lib/routes', () => ({
 // Fetch mock (for workflow trigger)
 // ---------------------------------------------------------------------------
 
-const mockFetch = vi.fn(() => Promise.resolve(new Response('ok', { status: 202 })))
+const mockFetch = vi.fn((_url: string, _init?: RequestInit) =>
+  Promise.resolve(new Response('ok', { status: 202 })),
+)
 vi.stubGlobal('fetch', mockFetch)
 
 // ---------------------------------------------------------------------------
@@ -220,15 +222,6 @@ function mockResponseFound(
   })
 }
 
-function mockNoConflicts() {
-  const q = createChainableQuery()
-  // For appointments conflict check — uses .eq().eq() without .single()
-  // Override the chain so the last .eq() resolves the data
-  const eqMock = vi.fn(() => Promise.resolve({ data: [], error: null }))
-  q.chain['eq'] = vi.fn(() => ({ eq: eqMock }))
-  tableQueries['appointments'] = q
-}
-
 function mockAppointmentCreated() {
   // The insert chain: .insert().select().single()
   // The appointments table does NOT store client_name/client_email/notes —
@@ -253,9 +246,6 @@ function mockAppointmentCreated() {
   //   1st: select().eq('user_id').eq('status') → conflict check
   //   2nd: insert().select().single() → create appointment
   //
-  // We'll use a call counter on the from() mock to differentiate
-  let callCount = 0
-
   const conflictProxy = (() => {
     const eqMock2 = vi.fn(() => Promise.resolve({ data: [], error: null }))
     const eqMock1 = vi.fn(() => ({ eq: eqMock2 }))
@@ -276,7 +266,6 @@ function mockAppointmentCreated() {
     {
       get(_, prop) {
         if (prop === 'select') {
-          callCount++
           return conflictProxy.select
         }
         if (prop === 'insert') return insertMock
@@ -346,7 +335,7 @@ describe('bookAppointment', () => {
   it('creates appointment and calendar event on happy path', async () => {
     mockSurveyLinkFound()
     mockResponseFound()
-    const { appointmentData } = mockAppointmentCreated()
+    mockAppointmentCreated()
     mockCalendarConnectionActive()
     mockCalendarEventCreated('cal-event-456')
 
@@ -538,10 +527,10 @@ describe('bookAppointment', () => {
 
     const [url, options] = mockFetch.mock.calls[0]
     expect(url).toBe('https://cms.test.com/api/workflows/trigger')
-    expect(options.method).toBe('POST')
-    expect(options.headers.Authorization).toBe('Bearer test-secret')
+    expect(options?.method).toBe('POST')
+    expect((options?.headers as Record<string, string>).Authorization).toBe('Bearer test-secret')
 
-    const body = JSON.parse(options.body)
+    const body = JSON.parse(options?.body as string)
     expect(body.trigger_type).toBe('booking_created')
     expect(body.tenant_id).toBe(TENANT_ID)
     expect(body.workflow_id).toBe(BOOKING_WORKFLOW_ID)

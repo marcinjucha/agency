@@ -1420,6 +1420,7 @@ export const messages = {
     noProducts: 'Brak produktów',
     noProductsDescription: 'Dodaj pierwszy produkt do swojego sklepu.',
     productNotFound: 'Nie znaleziono produktu',
+    productNotFoundDescription: 'Produkt mógł zostać usunięty lub nie masz do niego dostępu.',
     createProductFailed: 'Nie udało się dodać produktu',
     updateProductFailed: 'Nie udało się zaktualizować produktu',
     deleteProductFailed: 'Nie udało się usunąć produktu',

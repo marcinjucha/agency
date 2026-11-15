@@ -24,7 +24,7 @@ interface WorkflowEditorHeaderProps {
 }
 
 export function WorkflowEditorHeader({
-  workflowId,
+  workflowId: _workflowId,
   workflowName,
   triggerType,
   isActive,

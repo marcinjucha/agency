@@ -8,7 +8,6 @@ import {
   STEP_OUTPUT_SCHEMA_PRESETS,
   type StepType,
   type OutputSchemaDefinition,
-  type OutputSchemaPreset,
 } from '../step-registry'
 
 // Registry is pure data — no messages.ts, no React, no Zod.

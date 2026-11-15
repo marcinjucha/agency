@@ -1,7 +1,6 @@
 import {
   Zap,
   Mail,
-  GitBranch,
   Clock,
   Globe,
   Sparkles,

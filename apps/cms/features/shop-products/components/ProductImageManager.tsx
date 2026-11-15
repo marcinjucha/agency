@@ -74,6 +74,8 @@ export function ProductImageManager({
                       src={url}
                       alt={`Zdjęcie produktu ${index + 1}`}
                       layout="constrained"
+                      width={400}
+                      height={400}
                       className="h-full w-full object-cover"
                     />
 

@@ -2,7 +2,6 @@ import { Link } from '@tanstack/react-router'
 import type { ShopProductPublic } from '../types'
 import { formatPrice } from '../utils'
 import { messages } from '@/lib/messages'
-import { routes } from '@/lib/routes'
 
 type ProductCardProps = {
   product: ShopProductPublic
@@ -13,7 +12,8 @@ export function ProductCard({ product }: ProductCardProps) {
 
   return (
     <Link
-      to={routes.product(product.slug)}
+      to="/produkty/$slug"
+      params={{ slug: product.slug }}
       className="group block rounded-lg border border-border bg-card overflow-hidden transition-transform hover:-translate-y-0.5"
     >
       <div className="relative aspect-[3/4] bg-muted">

@@ -11,6 +11,6 @@ export default tseslint.config(
     },
   },
   {
-    ignores: ['node_modules/**', '.output/**', '.vinxi/**', 'app/routeTree.gen.ts'],
+    ignores: ['node_modules/**', '.output/**', '.vinxi/**', '.vercel/**', '.tanstack/**', 'app/routeTree.gen.ts'],
   },
 )

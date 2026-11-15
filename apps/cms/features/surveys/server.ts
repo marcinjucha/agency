@@ -11,8 +11,9 @@ import {
 import type { UpdateSurveyLinkFormData } from '@/features/surveys/validation'
 import { messages } from '@/lib/messages'
 import { createServerClient } from '@/lib/supabase/server-start.server'
-import { type AuthContext, requireAuthContext, getAuth } from '@/lib/server-auth.server'
+import { type AuthContext, requireAuthContext } from '@/lib/server-auth.server'
 import type { TriggerType } from '@/features/workflows/types'
+import type { SurveyWithLinks } from '@/features/surveys/types'
 
 // ---------------------------------------------------------------------------
 // Server Functions (public API)
@@ -22,7 +23,7 @@ import type { TriggerType } from '@/features/workflows/types'
  * Fetch all surveys for current tenant (with embedded survey_links).
  * Used by route loader ensureQueryData + SurveyList useQuery.
  */
-export const getSurveysFn = createServerFn({ method: 'POST' }).handler(async () => {
+export const getSurveysFn = createServerFn({ method: 'POST' }).handler(async (): Promise<SurveyWithLinks[]> => {
   const supabase = createServerClient()
 
   const {
@@ -37,7 +38,7 @@ export const getSurveysFn = createServerFn({ method: 'POST' }).handler(async () 
     .order('created_at', { ascending: false })
 
   if (error) throw error
-  return data || []
+  return (data || []) as SurveyWithLinks[]
 })
 
 /**

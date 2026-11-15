@@ -8,7 +8,6 @@ import { messages } from '@/lib/messages'
 import { queryKeys } from '@/lib/query-keys'
 import {
   brandToThemeTokens,
-  HALO_EFEKT_DEFAULT,
   resolveClientTheme,
   type ThemeTokens,
 } from '@/lib/theme'

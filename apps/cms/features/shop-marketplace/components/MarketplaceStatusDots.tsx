@@ -47,7 +47,6 @@ export function MarketplaceStatusDots({ listings, connectedMarketplaces }: Marke
           const label = MARKETPLACE_LABELS[marketplace]
           const statusLabel = listing ? LISTING_STATUS_LABELS[listing.status] : messages.marketplace.noListing
           const dotClass = listing ? getDotClass(listing.status) : 'bg-muted-foreground/30'
-          const ariaLabel = `Status ${label}: ${statusLabel}`
 
           return (
             <Tooltip key={marketplace}>

@@ -18,6 +18,7 @@
  */
 
 import { okAsync, errAsync, ResultAsync } from 'neverthrow'
+import type { Json } from '@agency/database'
 import { createServerClient } from '@/lib/supabase/server-start.server'
 import { messages } from '@/lib/messages'
 import { type AuthContext, requireAuthContext } from '@/lib/server-auth.server'
@@ -103,7 +104,7 @@ function extractOutputSchema(stepConfig: unknown): OutputSchemaField[] {
 function transformToAiActionResult(row: any): AiActionResult {
   return {
     workflowName: row.workflow_executions.workflows.name,
-    outputPayload: row.output_payload as Record<string, unknown>,
+    outputPayload: row.output_payload as { [key: string]: Json | undefined },
     completedAt: row.completed_at,
     outputSchema: extractOutputSchema(row.workflow_steps?.step_config),
   }

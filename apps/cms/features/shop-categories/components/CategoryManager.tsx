@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '@/lib/query-keys'
 import { createShopCategoryFn, updateShopCategoryFn, deleteShopCategoryFn, getShopCategoriesFn } from '../server'
-import type { CreateShopCategoryFormData } from '../validation'
+import type { CreateShopCategoryFormData, UpdateShopCategoryFormData } from '../validation'
 import type { ShopCategory } from '../types'
 import {
   Button,
@@ -79,7 +79,7 @@ export function CategoryManager() {
   })
 
   const updateMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<CreateShopCategoryFormData> }) => {
+    mutationFn: async ({ id, data }: { id: string; data: UpdateShopCategoryFormData }) => {
       const result = await updateShopCategoryFn({ data: { id, data } })
       if (!result) throw new Error('Server error')
       if (!result.success) throw new Error(result.error)

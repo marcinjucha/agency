@@ -18,9 +18,6 @@ import { LicenseTable } from './LicenseTable'
 import { CreateLicenseDialog } from './CreateLicenseDialog'
 import { LicenseDetailPanel } from './LicenseDetailPanel'
 
-/** Breakpoint value matching Tailwind xl (1280px) */
-const XL_BREAKPOINT = 1280
-
 // ---------------------------------------------------------------------------
 // Filtering
 // ---------------------------------------------------------------------------

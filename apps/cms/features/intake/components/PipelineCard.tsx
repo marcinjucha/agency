@@ -4,7 +4,7 @@ import { Badge } from '@agency/ui'
 import { Calendar, Loader2, StickyNote } from 'lucide-react'
 import { messages } from '@/lib/messages'
 import { getAiScoreBgColor } from '../types'
-import type { PipelineResponse, ClosedSubStatus, CLOSED_SUB_STATUSES } from '../types'
+import type { PipelineResponse, ClosedSubStatus } from '../types'
 
 interface PipelineCardProps {
   response: PipelineResponse

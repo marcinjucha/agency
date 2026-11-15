@@ -10,7 +10,10 @@ import {
 import { queryKeys } from '@/lib/query-keys'
 import { ShopProductEditor } from '@/features/shop-products/components/ShopProductEditor'
 import type { ShopProduct } from '@/features/shop-products/types'
-import type { CreateShopProductFormData } from '@/features/shop-products/validation'
+import type {
+  CreateShopProductFormData,
+  UpdateShopProductFormData,
+} from '@/features/shop-products/validation'
 import { useQuery } from '@tanstack/react-query'
 import { LoadingState, ErrorState, EmptyState } from '@agency/ui'
 import { FileX } from 'lucide-react'
@@ -29,7 +32,13 @@ function ShopProductEditorPage() {
 
   if (isLoading) return <LoadingState variant="skeleton-card" rows={4} />
   if (error) return <ErrorState message={error.message} />
-  if (!product) return <EmptyState icon={FileX} title={messages.shop.productNotFound} />
+  if (!product) return (
+    <EmptyState
+      icon={FileX}
+      title={messages.shop.productNotFound}
+      description={messages.shop.productNotFoundDescription}
+    />
+  )
 
   return (
     <ShopProductEditor
@@ -37,7 +46,7 @@ function ShopProductEditorPage() {
       createFn={(data: CreateShopProductFormData) =>
         createShopProductFn({ data }) as Promise<{ success: boolean; data?: ShopProduct; error?: string }>
       }
-      updateFn={(id: string, data: Partial<CreateShopProductFormData>) =>
+      updateFn={(id: string, data: UpdateShopProductFormData) =>
         updateShopProductFn({ data: { id, data } }) as Promise<{ success: boolean; data?: ShopProduct; error?: string }>
       }
       deleteFn={(id: string) =>

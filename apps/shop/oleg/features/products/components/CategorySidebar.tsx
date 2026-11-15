@@ -35,7 +35,8 @@ export function CategorySidebar({ categories }: CategorySidebarProps) {
         {categories.map((cat) => (
           <Link
             key={cat.id}
-            to={`${routes.products}?category=${cat.slug}`}
+            to="/produkty"
+            search={{ category: cat.slug }}
             className={`block px-3 py-1.5 text-sm rounded-md transition-colors ${
               activeCategory === cat.slug
                 ? 'text-primary font-medium bg-primary/5'

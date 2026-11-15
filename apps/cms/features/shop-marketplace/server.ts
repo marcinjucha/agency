@@ -252,7 +252,7 @@ export const publishToMarketplaceFn = createServerFn({ method: 'POST' })
         )
 
       return result.match(
-        ({ listing, connection, product, auth }) => {
+        ({ listing, product }) => {
           const { productId, connectionId, marketplaceCategoryId, marketplaceLocation, marketplaceParams } = publishData
           dispatchMarketplaceWebhook({
             action: 'publish',

@@ -258,7 +258,7 @@ describe('SEC-3: role-rank guard', () => {
     // → nextRole='admin' === current 'admin' → NO real transition → rank check must
     // NOT fire (equal rank would otherwise fail-closed and block the rename).
     setAuth({ roleName: 'admin' })
-    const { chains } = setService({
+    setService({
       users: { data: { is_super_admin: false, role: 'admin', tenant_id: TENANT }, error: null },
     })
 

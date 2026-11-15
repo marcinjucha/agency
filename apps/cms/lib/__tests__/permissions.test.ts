@@ -10,8 +10,6 @@ import {
   getRouteFeature,
   expandPermissionKeys,
   PARENT_KEYS,
-  type PermissionKey,
-  type ParentKey,
 } from '../permissions'
 
 // ---------------------------------------------------------------------------

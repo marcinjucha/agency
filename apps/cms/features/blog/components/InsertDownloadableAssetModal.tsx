@@ -177,6 +177,9 @@ export function InsertDownloadableAssetModal({
         folder_id: created.folder_id,
         is_downloadable: created.is_downloadable,
         created_at: created.created_at,
+        alt_text: created.alt_text,
+        width: created.width,
+        height: created.height,
       })
     } catch (err) {
       setUploadError(

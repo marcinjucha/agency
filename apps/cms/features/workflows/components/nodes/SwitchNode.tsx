@@ -117,7 +117,6 @@ function SwitchNodeComponent({ data, selected }: NodeProps) {
 
       {/* Dynamic source handles + branch labels */}
       {branches.map((branch, index) => {
-        const isLast = index === total - 1
         const topPx = HEADER_HEIGHT + (index + 0.5) * ROW_HEIGHT
 
         return (

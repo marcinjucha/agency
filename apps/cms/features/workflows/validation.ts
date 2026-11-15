@@ -40,12 +40,6 @@ const recipientExpression = z
     }
   })
 
-/** All canvas step types (step types + trigger types that appear as workflow_steps in the canvas) */
-const CANVAS_STEP_TYPE_ENUM = [
-  ...STEP_TYPE_ENUM,
-  ...(TRIGGER_TYPE_IDS as unknown as TriggerType[]),
-] as [StepType | TriggerType, ...(StepType | TriggerType)[]]
-
 // --- Per-step-type config schemas (for config panels) ---
 
 // Trigger configs (discriminated by trigger subtype)
@@ -288,7 +282,7 @@ export const saveCanvasSchema = z.object({
     z.object({
       id: z.string().uuid().optional(),
       // z.string() instead of z.enum — placeholder step types (PLACEHOLDER_REGISTRY)
-      // are valid canvas nodes but are not in CANVAS_STEP_TYPE_ENUM. This schema
+      // are valid canvas nodes but are not in STEP_REGISTRY / TRIGGER_TYPE_IDS. This schema
       // is a DB-write schema; business validation is in validateAllSteps / config panels.
       step_type: z.string().min(1),
       step_config: z.record(z.unknown()).optional().default({}),

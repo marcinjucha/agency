@@ -1,6 +1,6 @@
 import { createServerFn } from '@tanstack/react-start'
 import { ok, err, errAsync, okAsync, ResultAsync } from 'neverthrow'
-import { fromSupabase, fromSupabaseVoid } from '@/lib/result-helpers'
+import { fromSupabase } from '@/lib/result-helpers'
 import { tenantSchema } from './validation'
 import type { TenantFormData, Tenant } from './types'
 import { messages } from '@/lib/messages'

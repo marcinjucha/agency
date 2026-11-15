@@ -33,7 +33,8 @@ export function Navbar() {
               return (
                 <li key={product.id} className="shrink-0">
                   <Link
-                    to={href}
+                    to="/produkty/$slug"
+                    params={{ slug: product.slug }}
                     className={`text-sm transition-colors ${
                       isActive
                         ? 'font-medium text-primary'

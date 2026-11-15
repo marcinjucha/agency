@@ -26,7 +26,7 @@ interface KeywordSelectProps {
   isLoading?: boolean
 }
 
-export function KeywordSelect({ id, value, onChange, pool, isLoading }: KeywordSelectProps) {
+export function KeywordSelect({ id, value, onChange, pool, isLoading: _isLoading }: KeywordSelectProps) {
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
 

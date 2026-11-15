@@ -2,7 +2,6 @@
 
 import { useDraggable } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
-import { Card } from '@agency/ui'
 import { GripVertical } from 'lucide-react'
 import { MediaCard } from './MediaCard'
 import type { MediaItemListItem } from '../types'

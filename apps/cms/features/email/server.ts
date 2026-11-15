@@ -632,7 +632,7 @@ function insertTemplate(
   auth: AuthContext,
   type: EmailTemplateType,
   label: string
-): ResultAsync<undefined, string> {
+): ResultAsync<void, string> {
   return ResultAsync.fromPromise(
     (async () => {
       // Neutral default with NO token — `{{firstName}}` was filled by NOTHING

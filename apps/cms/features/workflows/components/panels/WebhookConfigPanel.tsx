@@ -16,7 +16,6 @@ import {
 import { Plus, Trash2 } from 'lucide-react'
 import { messages } from '@/lib/messages'
 import { VariableInserter } from '@/features/email/components/VariableInserter'
-import { webhookConfigSchema } from '../../validation'
 import { HTTP_METHODS, type HttpMethod } from '../../types'
 import type { ConfigPanelProps } from './index'
 import { z } from 'zod'
