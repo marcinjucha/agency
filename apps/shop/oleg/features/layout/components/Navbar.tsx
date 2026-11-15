@@ -44,7 +44,8 @@ export function Navbar() {
           </ul>
 
           <Link
-            to={`${routes.products}?q=`}
+            to="/produkty"
+            search={{ q: '' }}
             className="text-muted-foreground hover:text-foreground transition-colors"
             aria-label={messages.nav.search}
           >
