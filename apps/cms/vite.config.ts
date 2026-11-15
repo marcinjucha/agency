@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite'
 import { tanstackStart } from '@tanstack/react-start/plugin/vite'
-import viteReact from '@vitejs/plugin-react'
+import viteReact, { reactCompilerPreset } from '@vitejs/plugin-react'
+import babel from '@rolldown/plugin-babel'
 import tailwindcss from '@tailwindcss/vite'
 import tsConfigPaths from 'vite-tsconfig-paths'
 import { nitro } from 'nitro/vite'
@@ -83,9 +84,10 @@ export default defineConfig(({ command }) => ({
         routesDirectory: 'routes',
       },
     }),
-    // @vitejs/plugin-react 6 dropped the `babel` option, so the React Compiler configured here never ran
-    // (no memo-cache code in the build, checked 2026-11-15). Turning it on now = `reactCompilerPreset` +
-    // @rolldown/plugin-babel — a behaviour change, decided separately.
     viteReact(),
+    // React Compiler (Marcin 2026-11-15). @vitejs/plugin-react 6 dropped its `babel` option, so the old
+    // `babel: { plugins: [compiler] }` config was silently ignored and the compiler never ran; v6 runs it through
+    // @rolldown/plugin-babel. Proof it runs: the build carries `react.memo_cache_sentinel` in app chunks.
+    babel({ presets: [reactCompilerPreset()] }),
   ],
 }))
