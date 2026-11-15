@@ -19,7 +19,10 @@
     "BUCKET_ACCESS_KEY",
     "BUCKET_SECRET_KEY",
     "CMS_BASE_URL",
-    "VITE_HOST_URL"
+    "VITE_HOST_URL",
+    "VITE_GLITCHTIP_DSN",
+    "VERCEL_ENV",
+    "VERCEL_GIT_COMMIT_SHA"
   ],
   "tasks": {
     "dev": {

@@ -25,6 +25,7 @@
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@hookform/resolvers": "^3.9.0",
+    "@sentry/node": "9.47.1",
     "@sentry/tanstackstart-react": "^9.47.1",
     "@supabase/ssr": "^0.5.0",
     "@supabase/supabase-js": "^2.45.0",

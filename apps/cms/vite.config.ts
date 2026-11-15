@@ -9,6 +9,12 @@ export default defineConfig(({ command }) => ({
   server: {
     port: 3001,
   },
+  // Build-time tags for browser error reports (app/client.tsx): Vercel sets these during its build; Vite does
+  // not expose non-VITE_ variables to the client, so they are baked in here. Declared in app/globals.d.ts.
+  define: {
+    __APP_ENV__: JSON.stringify(process.env.VERCEL_ENV ?? 'local'),
+    __APP_RELEASE__: JSON.stringify(process.env.VERCEL_GIT_COMMIT_SHA ?? 'local'),
+  },
   // Force single React instance across pre-bundled (optimizeDeps) and excluded
   // packages. Without dedupe, @tanstack/react-router (excluded) resolves react
   // via Node module resolution — different instance than Vite's pre-bundled
