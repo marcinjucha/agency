@@ -1,3 +1,5 @@
+import type { Json } from '@agency/database'
+
 /**
  * Response Management Type Definitions
  *
@@ -177,7 +179,7 @@ export interface AiActionResult {
   /** Name of the workflow that produced this result */
   workflowName: string
   /** Named output fields from the AI action step's output schema */
-  outputPayload: Record<string, unknown>
+  outputPayload: { [key: string]: Json | undefined }
   /** ISO 8601 timestamp when the step completed, or null if still running */
   completedAt: string | null
   /**

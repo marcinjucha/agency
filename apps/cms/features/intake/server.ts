@@ -1,5 +1,6 @@
 import { createServerFn } from '@tanstack/react-start'
 import { ok, err, ResultAsync } from 'neverthrow'
+import type { Json } from '@agency/database'
 import { messages } from '@/lib/messages'
 import { updateStatusSchema, updateNotesSchema } from '@/features/intake/validation'
 import { getAuth, requireAuthContext, type AuthContext } from '@/lib/server-auth.server'
@@ -62,7 +63,7 @@ export const getPipelineResponsesFn = createServerFn({ method: 'POST' }).handler
       statusChangedAt: row.status_changed_at,
       answers: answers as PipelineResponse['answers'],
       surveyTitle: row.survey_links?.surveys?.title ?? 'Nieznana ankieta',
-      surveyQuestions: (row.survey_links?.surveys?.questions ?? []) as unknown[],
+      surveyQuestions: (row.survey_links?.surveys?.questions ?? []) as Json[],
       surveyLinkId: row.survey_link_id,
     }
   })

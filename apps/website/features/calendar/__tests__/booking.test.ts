@@ -80,7 +80,7 @@ const mockProvider = {
   testConnection: vi.fn(),
   discoverCalendars: vi.fn(),
 }
-const mockCreateCalendarProvider = vi.fn(() => mockProvider)
+const mockCreateCalendarProvider = vi.fn((..._args: unknown[]) => mockProvider)
 
 vi.mock('@agency/calendar', () => ({
   getConnectionForSurveyLink: (...args: unknown[]) => mockGetConnectionForSurveyLink(...args),
@@ -118,7 +118,9 @@ vi.mock('@/lib/routes', () => ({
 // Fetch mock (for workflow trigger)
 // ---------------------------------------------------------------------------
 
-const mockFetch = vi.fn(() => Promise.resolve(new Response('ok', { status: 202 })))
+const mockFetch = vi.fn((_url: string, _init?: RequestInit) =>
+  Promise.resolve(new Response('ok', { status: 202 })),
+)
 vi.stubGlobal('fetch', mockFetch)
 
 // ---------------------------------------------------------------------------
@@ -538,10 +540,10 @@ describe('bookAppointment', () => {
 
     const [url, options] = mockFetch.mock.calls[0]
     expect(url).toBe('https://cms.test.com/api/workflows/trigger')
-    expect(options.method).toBe('POST')
-    expect(options.headers.Authorization).toBe('Bearer test-secret')
+    expect(options?.method).toBe('POST')
+    expect((options?.headers as Record<string, string>).Authorization).toBe('Bearer test-secret')
 
-    const body = JSON.parse(options.body)
+    const body = JSON.parse(options?.body as string)
     expect(body.trigger_type).toBe('booking_created')
     expect(body.tenant_id).toBe(TENANT_ID)
     expect(body.workflow_id).toBe(BOOKING_WORKFLOW_ID)

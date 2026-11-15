@@ -28,7 +28,7 @@ const fetchProducts = createServerFn({ method: 'GET' })
   })
 
 export const Route = createFileRoute('/produkty/')({
-  validateSearch: (search: Record<string, unknown>) => ({
+  validateSearch: (search: Record<string, unknown>): { category?: string; q?: string } => ({
     category: search.category as string | undefined,
     q: search.q as string | undefined,
   }),

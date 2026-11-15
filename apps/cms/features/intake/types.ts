@@ -1,3 +1,5 @@
+import type { Json } from '@agency/database'
+
 /**
  * Intake Hub Type Definitions
  *
@@ -83,7 +85,7 @@ export interface PipelineResponse {
   /** Survey title */
   surveyTitle: string
   /** Survey questions JSON (for Q&A display in Sheet) */
-  surveyQuestions: unknown[]
+  surveyQuestions: Json[]
   /** Response's survey link ID */
   surveyLinkId: string
 }

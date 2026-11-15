@@ -25,7 +25,11 @@ import {
 import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
 import { queryKeys } from '@/lib/query-keys'
-import { createShopProductSchema, type CreateShopProductFormData } from '../validation'
+import {
+  createShopProductSchema,
+  type CreateShopProductFormData,
+  type UpdateShopProductFormData,
+} from '../validation'
 // Mutation functions injected as props (framework-agnostic dependency injection)
 // Callers (TanStack route files) pass server fns; legacy Next.js callers pass Server Actions
 import { generateSlug } from '../utils'
@@ -45,7 +49,7 @@ type SaveState = 'idle' | 'saving' | 'saved' | 'error'
 // --- Mutation prop types (same return shapes as actions.ts + server.ts) ---
 
 type CreateFn = (data: CreateShopProductFormData) => Promise<{ success: boolean; data?: ShopProduct; error?: string }>
-type UpdateFn = (id: string, data: Partial<CreateShopProductFormData>) => Promise<{ success: boolean; data?: ShopProduct; error?: string }>
+type UpdateFn = (id: string, data: UpdateShopProductFormData) => Promise<{ success: boolean; data?: ShopProduct; error?: string }>
 type DeleteFn = (id: string) => Promise<{ success: boolean; error?: string }>
 
 interface ShopProductEditorProps {

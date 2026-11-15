@@ -1,3 +1,8 @@
+import type { Json } from '@agency/database'
+
+// JSON from jsonb. Typed as Json, not unknown: Start type-checks that server fn results are serializable.
+type JsonObject = { [key: string]: Json | undefined }
+
 // --- Marketplace enums (TEXT in DB, typed here) ---
 
 export type MarketplaceId = 'olx' | 'allegro'
@@ -39,8 +44,8 @@ export type MarketplaceListing = {
   external_url: string | null
   status: ListingStatus
   marketplace_category_id: string | null
-  marketplace_location: Record<string, unknown> | null
-  marketplace_params: Record<string, unknown> | null
+  marketplace_location: JsonObject | null
+  marketplace_params: JsonObject | null
   last_sync_status: SyncStatus | null
   last_sync_error: string | null
   last_synced_at: string | null
@@ -141,8 +146,8 @@ export function toMarketplaceListing(raw: unknown): MarketplaceListing {
     external_url: (row.external_url as string) ?? null,
     status: row.status as ListingStatus,
     marketplace_category_id: (row.marketplace_category_id as string) ?? null,
-    marketplace_location: (row.marketplace_location as Record<string, unknown>) ?? null,
-    marketplace_params: (row.marketplace_params as Record<string, unknown>) ?? null,
+    marketplace_location: (row.marketplace_location as JsonObject) ?? null,
+    marketplace_params: (row.marketplace_params as JsonObject) ?? null,
     last_sync_status: (row.last_sync_status as SyncStatus) ?? null,
     last_sync_error: (row.last_sync_error as string) ?? null,
     last_synced_at: (row.last_synced_at as string) ?? null,

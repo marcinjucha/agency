@@ -48,6 +48,9 @@ function PreviewContent({ item }: { item: MediaItem }) {
         src={item.url}
         alt={item.name}
         layout="constrained"
+        // Intrinsic size when known; older uploads have none — object-contain keeps them undistorted.
+        width={item.width ?? 1200}
+        height={item.height ?? 900}
         className="max-h-[60vh] max-w-full rounded object-contain"
       />
     )

@@ -77,10 +77,9 @@ export default defineConfig(({ command }) => ({
         routesDirectory: 'routes',
       },
     }),
-    viteReact({
-      babel: {
-        plugins: [['babel-plugin-react-compiler', {}]],
-      },
-    }),
+    // @vitejs/plugin-react 6 dropped the `babel` option, so the React Compiler configured here never ran
+    // (no memo-cache code in the build, checked 2026-11-15). Turning it on now = `reactCompilerPreset` +
+    // @rolldown/plugin-babel — a behaviour change, decided separately.
+    viteReact(),
   ],
 }))
