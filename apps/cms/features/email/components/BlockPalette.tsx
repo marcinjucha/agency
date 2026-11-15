@@ -1,4 +1,4 @@
-import { CMS_BLOCK_REGISTRY, BLOCK_GROUPS } from '../block-registry'
+import { BLOCK_GROUPS } from '../block-registry'
 import type { BlockType } from '../types'
 
 interface BlockPaletteProps {

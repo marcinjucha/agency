@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { ChevronRight, PanelLeftClose, Search, Zap } from 'lucide-react'
-import type { LucideIcon } from 'lucide-react'
 import { Button, Input } from '@agency/ui'
 import { cn } from '@agency/ui'
 import { messages } from '@/lib/messages'

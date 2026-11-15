@@ -38,7 +38,7 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import { restrictToVerticalAxis } from '@dnd-kit/modifiers'
 
-import type { SemanticRole, Question } from '@agency/validators'
+import type { Question } from '@agency/validators'
 
 type SurveyBuilderProps = {
   surveyId: string

@@ -14,7 +14,6 @@ import { validateAllSteps } from '../utils/validate-steps'
 import { LayoutGrid, FlaskConical, History, AlertTriangle } from 'lucide-react'
 import { Button, ErrorState } from '@agency/ui'
 import { ConfigPanelWrapper, getPanelComponent } from './panels'
-import type { ConfigPanelProps } from './panels'
 import { StepLibraryPanel } from './StepLibraryPanel'
 import { TestModePanel } from './TestModePanel'
 import { ExecutionHistoryPanel } from './ExecutionHistoryPanel'
@@ -65,7 +64,7 @@ interface WorkflowEditorContentProps {
   workflowId: string
 }
 
-function WorkflowEditorContent({ workflow, workflowId }: WorkflowEditorContentProps) {
+function WorkflowEditorContent({ workflow, workflowId: _workflowId }: WorkflowEditorContentProps) {
   const queryClient = useQueryClient()
 
   // Stable UUID for synthetic trigger node (when no trigger step exists in DB)

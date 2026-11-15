@@ -29,7 +29,7 @@ import { messages } from '@/lib/messages'
 import { routes } from '@/lib/routes'
 import { RESPONSE_STATUSES } from '../validation'
 import { STATUS_LABELS, APPOINTMENT_STATUS_LABELS } from '../types'
-import type { PipelineResponse, ResponseStatus } from '../types'
+import type { PipelineResponse } from '../types'
 import type { AiActionResult } from '../../responses/types'
 import type { Question, SurveyAnswers } from '../../responses/types'
 

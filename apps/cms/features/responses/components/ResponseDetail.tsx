@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { getResponseFn, getResponseAiActionResultsFn } from '../server'
-import type { ResponseWithRelations, QuestionAnswerPair, AiActionResult } from '../types'
+import type { QuestionAnswerPair, AiActionResult } from '../types'
 import {
   Button, Card, Badge, LoadingState, ErrorState, EmptyState,
   AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader,

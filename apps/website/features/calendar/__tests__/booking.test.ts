@@ -222,15 +222,6 @@ function mockResponseFound(
   })
 }
 
-function mockNoConflicts() {
-  const q = createChainableQuery()
-  // For appointments conflict check — uses .eq().eq() without .single()
-  // Override the chain so the last .eq() resolves the data
-  const eqMock = vi.fn(() => Promise.resolve({ data: [], error: null }))
-  q.chain['eq'] = vi.fn(() => ({ eq: eqMock }))
-  tableQueries['appointments'] = q
-}
-
 function mockAppointmentCreated() {
   // The insert chain: .insert().select().single()
   // The appointments table does NOT store client_name/client_email/notes —
@@ -255,9 +246,6 @@ function mockAppointmentCreated() {
   //   1st: select().eq('user_id').eq('status') → conflict check
   //   2nd: insert().select().single() → create appointment
   //
-  // We'll use a call counter on the from() mock to differentiate
-  let callCount = 0
-
   const conflictProxy = (() => {
     const eqMock2 = vi.fn(() => Promise.resolve({ data: [], error: null }))
     const eqMock1 = vi.fn(() => ({ eq: eqMock2 }))
@@ -278,7 +266,6 @@ function mockAppointmentCreated() {
     {
       get(_, prop) {
         if (prop === 'select') {
-          callCount++
           return conflictProxy.select
         }
         if (prop === 'insert') return insertMock
@@ -348,7 +335,7 @@ describe('bookAppointment', () => {
   it('creates appointment and calendar event on happy path', async () => {
     mockSurveyLinkFound()
     mockResponseFound()
-    const { appointmentData } = mockAppointmentCreated()
+    mockAppointmentCreated()
     mockCalendarConnectionActive()
     mockCalendarEventCreated('cal-event-456')
 

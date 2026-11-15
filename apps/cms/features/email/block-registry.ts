@@ -15,7 +15,7 @@ import type { LucideIcon } from 'lucide-react'
 import { Mail, AlignLeft, FileText, MousePointerClick, Minus, Heading, ImageIcon, AlignVerticalSpaceAround, Columns2, LayoutPanelTop, Link, Eye } from 'lucide-react'
 import { z } from 'zod'
 import type { Block, BlockType } from './types'
-import type { HeaderBlock, TextBlock, CtaBlock, DividerBlock, FooterBlock, HeadingBlock, ImageBlock, SpacerBlock, LinkBlock, PreviewBlock, ColumnsBlock, SectionBlock } from '@agency/email'
+import type { HeaderBlock, TextBlock, CtaBlock, FooterBlock, HeadingBlock, ImageBlock, SpacerBlock, LinkBlock, PreviewBlock, ColumnsBlock, SectionBlock } from '@agency/email'
 import { BLOCK_DEFAULT_VALUES } from '@agency/email'
 import type { TriggerVariable } from '@/lib/trigger-schemas'
 import { HeaderBlockEditor } from './components/blocks/HeaderBlockEditor'
@@ -363,7 +363,7 @@ export const CMS_BLOCK_REGISTRY: Record<BlockType, CmsBlockRegistryEntry> = {
     group: 'treść',
     getSummary: (block) => {
       const h = block as HeadingBlock
-      return `${h.level.toUpperCase()}: „${h.text.slice(0, 40)}"` || 'Pusty nagłówek'
+      return h.text ? `${h.level.toUpperCase()}: „${h.text.slice(0, 40)}"` : 'Pusty nagłówek'
     },
     EditorComponent: HeadingBlockEditor as EditorComponentType,
     validationSchema: headingBlockSchema,

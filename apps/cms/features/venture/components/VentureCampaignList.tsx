@@ -21,7 +21,7 @@ import { routes } from '@/lib/routes'
 import { messages } from '@/lib/messages'
 import { duplicateCampaignFn, listCampaignsFn, listClientsFn } from '../admin'
 import { DuplicateCampaignDialog } from './DuplicateCampaignDialog'
-import type { AdminCampaign, Client } from '../types'
+import type { AdminCampaign } from '../types'
 
 const ALL_CLIENTS = '__all__'
 

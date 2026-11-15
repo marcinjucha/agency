@@ -480,7 +480,7 @@ describe('parent-ownership verification', () => {
   })
 
   it('updateCampaign rejects an id whose campaign is not in the tenant', async () => {
-    const { chains } = setupAuth({
+    setupAuth({
       so_campaigns: { data: null, error: null }, // campaign not found / not visible
     })
 

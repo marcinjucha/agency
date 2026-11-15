@@ -8,7 +8,7 @@ import {
 } from '@agency/ui'
 import { useNavigate } from '@tanstack/react-router'
 import { ArrowRight, FileText, Trash2 } from 'lucide-react'
-import type { ResponseListItem, ResponseStatus } from '../types'
+import type { ResponseListItem } from '../types'
 import { getResponseStatusColor } from '@/lib/utils/status'
 import { queryKeys } from '@/lib/query-keys'
 import { messages } from '@/lib/messages'

@@ -17,7 +17,7 @@ import {
   AlertDialogCancel,
   Button,
 } from '@agency/ui'
-import { Trash2, Video, Play, Image as ImageIcon, Edit2, Download, FileText, Music, Link2, Check, AlertCircle } from 'lucide-react'
+import { Trash2, Video, Play, Edit2, Download, FileText, Music, Link2, Check, AlertCircle } from 'lucide-react'
 import type { MediaItemListItem, MediaType } from '../types'
 import { formatBytes } from '../utils'
 import { useCopyToClipboard } from '../use-copy-to-clipboard'

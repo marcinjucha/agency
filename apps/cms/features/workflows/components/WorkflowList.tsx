@@ -43,7 +43,6 @@ function TriggerBadge({ type }: { type: string }) {
 }
 
 export function WorkflowList() {
-  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [viewMode, setViewMode] = useViewMode('workflow-view-mode', 'grid')

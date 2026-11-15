@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Card, CardContent, Badge, Button, Progress, LoadingState } from '@agency/ui'
+import { Card, CardContent, Badge, Button, Progress } from '@agency/ui'
 import { Store, CheckCircle2, AlertTriangle, ChevronRight, ChevronLeft, Loader2 } from 'lucide-react'
 import { messages, templates } from '@/lib/messages'
 import { differenceInMinutes } from 'date-fns'

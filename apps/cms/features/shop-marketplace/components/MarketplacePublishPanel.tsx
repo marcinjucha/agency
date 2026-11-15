@@ -1,7 +1,7 @@
 
 
 import { useState, useEffect, useRef } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   CollapsibleCard,
   Button,
@@ -77,7 +77,7 @@ interface MarketplaceSectionProps {
 function MarketplaceSection({
   connection,
   listing,
-  productId,
+  productId: _productId,
   onPublish,
   onUpdate,
   onRemove,

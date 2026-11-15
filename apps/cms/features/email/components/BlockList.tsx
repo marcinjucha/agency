@@ -20,7 +20,7 @@ import { GripVertical, ChevronDown, ChevronUp, Trash2 } from 'lucide-react'
 import { Button, Badge } from '@agency/ui'
 import { BlockEditor } from './BlockEditor'
 import { CMS_BLOCK_REGISTRY } from '../block-registry'
-import type { Block, BlockType } from '../types'
+import type { Block } from '../types'
 import type { TriggerVariable } from '@/lib/trigger-schemas'
 import { cn } from '@agency/ui'
 
@@ -177,18 +177,6 @@ export function BlockList({ blocks, onChange, variables = [] }: BlockListProps) 
     onChange(blocks.map((b) => (b.id === updated.id ? updated : b)))
   }
 
-  function addBlock(type: BlockType) {
-    const entry = CMS_BLOCK_REGISTRY[type]
-    if (!entry) return
-
-    const id = crypto.randomUUID()
-    const newBlock = { id, ...entry.defaultValue } as Block
-    onChange([...blocks, newBlock])
-
-    // Automatycznie rozwiń nowo dodany blok
-    setExpandedId(id)
-  }
-
   function toggleExpand(id: string) {
     setExpandedId((prev) => (prev === id ? null : id))
   }
@@ -228,6 +216,5 @@ export function BlockList({ blocks, onChange, variables = [] }: BlockListProps) 
   )
 }
 
-// Eksportuj addBlock jako utility — używany przez EmailTemplateEditor do dodawania bloków z BlockPalette
 export type { BlockListProps }
 export { BlockList as default }

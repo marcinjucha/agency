@@ -11,7 +11,7 @@ import {
 import type { UpdateSurveyLinkFormData } from '@/features/surveys/validation'
 import { messages } from '@/lib/messages'
 import { createServerClient } from '@/lib/supabase/server-start.server'
-import { type AuthContext, requireAuthContext, getAuth } from '@/lib/server-auth.server'
+import { type AuthContext, requireAuthContext } from '@/lib/server-auth.server'
 import type { TriggerType } from '@/features/workflows/types'
 import type { SurveyWithLinks } from '@/features/surveys/types'
 

@@ -10,8 +10,6 @@ import { Lock } from 'lucide-react'
 // Types
 // ---------------------------------------------------------------------------
 
-type PermissionGroup = (typeof PERMISSION_GROUPS)[keyof typeof PERMISSION_GROUPS]
-
 /** Display-only grouping — remaps PERMISSION_GROUPS for UI rendering without changing permission logic. */
 interface DisplayGroup {
   label: string

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { contrastRatio, HALO_EFEKT_DEFAULT, resolveClientTheme } from '../resolve'
 import { brandToThemeTokens, hexColorSchema, parseThemeTokens } from '../validation'
-import type { HexColor, ThemeTokens } from '../types'
+import type { ThemeTokens } from '../types'
 
 // Test helper: build a ThemeTokens without fighting the HexColor brand. Values
 // are cast because tests intentionally pass raw strings (incl. invalid ones).

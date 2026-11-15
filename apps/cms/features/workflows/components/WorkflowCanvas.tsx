@@ -111,13 +111,13 @@ interface WorkflowCanvasProps {
 
 function CanvasInner(
   {
-    workflowId,
+    workflowId: _workflowId,
     initialNodes,
     initialEdges,
     onDirtyChange,
     onNodeSelect,
-    hasTriggerNode: initialHasTrigger,
-    triggerType,
+    hasTriggerNode: _initialHasTrigger,
+    triggerType: _triggerType,
     getLabel,
     invalidStepIds,
   }: WorkflowCanvasProps,
@@ -207,41 +207,6 @@ function CanvasInner(
       setEdges((eds) => addEdge({ ...connection, type: 'smoothstep', animated: true }, eds))
     },
     [setEdges]
-  )
-
-  const onAddNode = useCallback(
-    (stepType: string) => {
-      if (stepType === 'trigger' && hasTrigger) return
-
-      const id = crypto.randomUUID()
-      // Horizontal layout: spread nodes to the right with slight vertical offset
-      const baseX = 100 + nodes.length * 280
-      const baseY = 150 + (nodes.length % 3) * 100
-
-      const isTrigger = stepType === 'trigger'
-      const actualType = isTrigger ? triggerType : stepType
-
-      const existingSlugs = nodes
-        .map((n) => (n.data as { slug?: string }).slug)
-        .filter((s): s is string => typeof s === 'string' && s.length > 0)
-      const slug = isTrigger ? 'trigger' : generateStepSlug(actualType, existingSlugs)
-
-      const newNode: Node = {
-        id,
-        type: isTrigger ? 'trigger' : stepType,
-        position: { x: baseX, y: baseY },
-        deletable: isTrigger ? false : undefined,
-        data: {
-          label: getLabel(actualType),
-          stepType: actualType,
-          stepConfig: { type: actualType },
-          slug,
-        },
-      }
-
-      setNodes((nds) => [...nds, newNode])
-    },
-    [hasTrigger, nodes.length, setNodes, triggerType, getLabel]
   )
 
   const onDragOver = useCallback((event: React.DragEvent) => {
